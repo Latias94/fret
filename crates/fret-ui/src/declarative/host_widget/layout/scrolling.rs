@@ -55,6 +55,10 @@ struct ScrollChildLayoutProfile {
 }
 
 impl ScrollChildLayoutProfile {
+    fn saturating_elapsed_us(elapsed: Duration) -> u64 {
+        elapsed.as_micros() as u64
+    }
+
     fn record_child(
         &mut self,
         child: NodeId,
@@ -68,7 +72,7 @@ impl ScrollChildLayoutProfile {
         bounds_after: Option<Rect>,
         input_bounds: Rect,
     ) {
-        let elapsed_us = elapsed.as_micros() as u64;
+        let elapsed_us = Self::saturating_elapsed_us(elapsed);
         self.nodes_visited = self.nodes_visited.saturating_add(nodes_visited);
         self.nodes_performed = self.nodes_performed.saturating_add(nodes_performed);
         if elapsed_us > self.max_us {
@@ -82,6 +86,23 @@ impl ScrollChildLayoutProfile {
             self.max_bounds_before = bounds_before;
             self.max_bounds_after = bounds_after;
             self.max_input_bounds = input_bounds;
+        }
+    }
+
+    fn merge_from(&mut self, other: &Self) {
+        self.nodes_visited = self.nodes_visited.saturating_add(other.nodes_visited);
+        self.nodes_performed = self.nodes_performed.saturating_add(other.nodes_performed);
+        if other.max_us > self.max_us {
+            self.max_us = other.max_us;
+            self.max_node = other.max_node;
+            self.max_invalidated = other.max_invalidated;
+            self.max_subtree_dirty = other.max_subtree_dirty;
+            self.max_subtree_dirty_count = other.max_subtree_dirty_count;
+            self.max_nodes_visited = other.max_nodes_visited;
+            self.max_nodes_performed = other.max_nodes_performed;
+            self.max_bounds_before = other.max_bounds_before;
+            self.max_bounds_after = other.max_bounds_after;
+            self.max_input_bounds = other.max_input_bounds;
         }
     }
 
@@ -117,6 +138,11 @@ impl ScrollChildLayoutProfile {
         measure_children_us: u64,
         solve_barrier_us: u64,
         layout_children_us: u64,
+        first_pass: Self,
+        first_pass_us: u64,
+        corrected_content: Self,
+        corrected_content_us: u64,
+        corrected_content_relayout: bool,
         total_us: u64,
         element_path: Option<String>,
     ) -> UiDebugScrollLayoutProfile {
@@ -138,6 +164,15 @@ impl ScrollChildLayoutProfile {
             measure_children_us,
             solve_barrier_us,
             layout_children_us,
+            layout_children_first_pass_us: first_pass_us,
+            layout_child_first_pass_nodes_visited: first_pass.nodes_visited,
+            layout_child_first_pass_nodes_performed: first_pass.nodes_performed,
+            layout_child_first_pass_max_us: first_pass.max_us,
+            corrected_content_relayout,
+            layout_children_corrected_content_us: corrected_content_us,
+            layout_child_corrected_content_nodes_visited: corrected_content.nodes_visited,
+            layout_child_corrected_content_nodes_performed: corrected_content.nodes_performed,
+            layout_child_corrected_content_max_us: corrected_content.max_us,
             layout_child_nodes_visited: self.nodes_visited,
             layout_child_nodes_performed: self.nodes_performed,
             layout_child_max_us: self.max_us,
@@ -1604,6 +1639,11 @@ impl ElementHostWidget {
         let mut t_solve_barrier: Duration = Duration::default();
         let mut t_layout_children: Duration = Duration::default();
         let mut child_layout_profile = ScrollChildLayoutProfile::default();
+        let mut t_layout_children_first_pass: Duration = Duration::default();
+        let mut child_layout_first_pass_profile = ScrollChildLayoutProfile::default();
+        let mut t_layout_children_corrected_content: Duration = Duration::default();
+        let mut child_layout_corrected_content_profile = ScrollChildLayoutProfile::default();
+        let mut corrected_content_relayout = false;
 
         let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
@@ -2245,7 +2285,7 @@ impl ElementHostWidget {
                     let child_elapsed = child_started.elapsed();
                     let after = cx.tree.debug_stats();
                     let child_bounds_after = cx.tree.node_bounds(child);
-                    child_layout_profile.record_child(
+                    child_layout_first_pass_profile.record_child(
                         child,
                         child_elapsed,
                         child_invalidated,
@@ -2266,8 +2306,10 @@ impl ElementHostWidget {
                 }
             }
             if let Some(started) = layout_started {
-                t_layout_children = started.elapsed();
+                t_layout_children_first_pass = started.elapsed();
+                t_layout_children = t_layout_children.saturating_add(t_layout_children_first_pass);
             }
+            child_layout_profile.merge_from(&child_layout_first_pass_profile);
         });
 
         if !is_probe_layout {
@@ -2682,6 +2724,7 @@ impl ElementHostWidget {
             }
 
             if relayout_with_updated_content_bounds {
+                corrected_content_relayout = true;
                 // Keep wrapper/layout-barrier geometry in sync with the corrected scroll content
                 // extent in the same frame. Without this pass, the scroll handle can expose the
                 // new range while outer shells (cards, panels, etc.) still retain stale bounds.
@@ -2723,7 +2766,7 @@ impl ElementHostWidget {
                             let child_elapsed = child_started.elapsed();
                             let after = cx.tree.debug_stats();
                             let child_bounds_after = cx.tree.node_bounds(child);
-                            child_layout_profile.record_child(
+                            child_layout_corrected_content_profile.record_child(
                                 child,
                                 child_elapsed,
                                 child_invalidated,
@@ -2744,8 +2787,11 @@ impl ElementHostWidget {
                         }
                     }
                     if let Some(started) = layout_started {
-                        t_layout_children += started.elapsed();
+                        t_layout_children_corrected_content = started.elapsed();
+                        t_layout_children =
+                            t_layout_children.saturating_add(t_layout_children_corrected_content);
                     }
+                    child_layout_profile.merge_from(&child_layout_corrected_content_profile);
                 });
             }
 
@@ -2815,6 +2861,21 @@ impl ElementHostWidget {
                     measure_children_us = t_measure_children.as_micros() as u64,
                     solve_barrier_us = t_solve_barrier.as_micros() as u64,
                     layout_children_us = t_layout_children.as_micros() as u64,
+                    layout_children_first_pass_us = t_layout_children_first_pass.as_micros() as u64,
+                    layout_child_first_pass_nodes_visited =
+                        child_layout_first_pass_profile.nodes_visited,
+                    layout_child_first_pass_nodes_performed =
+                        child_layout_first_pass_profile.nodes_performed,
+                    layout_child_first_pass_max_us = child_layout_first_pass_profile.max_us,
+                    corrected_content_relayout,
+                    layout_children_corrected_content_us =
+                        t_layout_children_corrected_content.as_micros() as u64,
+                    layout_child_corrected_content_nodes_visited =
+                        child_layout_corrected_content_profile.nodes_visited,
+                    layout_child_corrected_content_nodes_performed =
+                        child_layout_corrected_content_profile.nodes_performed,
+                    layout_child_corrected_content_max_us =
+                        child_layout_corrected_content_profile.max_us,
                     layout_child_nodes_visited = child_layout_profile.nodes_visited,
                     layout_child_nodes_performed = child_layout_profile.nodes_performed,
                     layout_child_max_us = child_layout_profile.max_us,
@@ -2871,6 +2932,11 @@ impl ElementHostWidget {
                             t_measure_children.as_micros() as u64,
                             t_solve_barrier.as_micros() as u64,
                             t_layout_children.as_micros() as u64,
+                            child_layout_first_pass_profile,
+                            t_layout_children_first_pass.as_micros() as u64,
+                            child_layout_corrected_content_profile,
+                            t_layout_children_corrected_content.as_micros() as u64,
+                            corrected_content_relayout,
                             total.as_micros() as u64,
                             element_path,
                         )),

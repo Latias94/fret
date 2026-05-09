@@ -473,6 +473,15 @@ pub(super) struct BundleStatsScrollLayoutProfile {
     pub(super) measure_children_us: u64,
     pub(super) solve_barrier_us: u64,
     pub(super) layout_children_us: u64,
+    pub(super) layout_children_first_pass_us: u64,
+    pub(super) layout_child_first_pass_nodes_visited: u32,
+    pub(super) layout_child_first_pass_nodes_performed: u32,
+    pub(super) layout_child_first_pass_max_us: u64,
+    pub(super) corrected_content_relayout: bool,
+    pub(super) layout_children_corrected_content_us: u64,
+    pub(super) layout_child_corrected_content_nodes_visited: u32,
+    pub(super) layout_child_corrected_content_nodes_performed: u32,
+    pub(super) layout_child_corrected_content_max_us: u64,
     pub(super) layout_child_nodes_visited: u32,
     pub(super) layout_child_nodes_performed: u32,
     pub(super) layout_child_max_us: u64,
@@ -1748,7 +1757,7 @@ impl BundleStatsReport {
                             out.push_str(&format!(" axis={axis}"));
                         }
                         out.push_str(&format!(
-                            " resize={} direct_invalidated={} descendant_dirty={} child_dirty={} bounds_changed={:?} size_changed={:?} input_matches_before={:?}",
+                            " resize={} direct_invalidated={} descendant_dirty={} child_dirty={} bounds_changed={:?} size_changed={:?} input_matches_before={:?} first_pass_us={} corrected_us={} corrected_relayout={}",
                             p.interactive_resize,
                             p.direct_children_layout_invalidated,
                             p.descendant_subtree_layout_dirty,
@@ -1756,6 +1765,16 @@ impl BundleStatsReport {
                             p.layout_child_max_bounds_changed,
                             p.layout_child_max_bounds_size_changed,
                             p.layout_child_max_input_matches_before,
+                            p.layout_children_first_pass_us,
+                            p.layout_children_corrected_content_us,
+                            p.corrected_content_relayout,
+                        ));
+                        out.push_str(&format!(
+                            " first_pass_nodes={}/{} corrected_nodes={}/{}",
+                            p.layout_child_first_pass_nodes_visited,
+                            p.layout_child_first_pass_nodes_performed,
+                            p.layout_child_corrected_content_nodes_visited,
+                            p.layout_child_corrected_content_nodes_performed,
                         ));
                         if let Some(test_id) = p.test_id.as_deref()
                             && !test_id.is_empty()
@@ -3836,6 +3855,42 @@ impl BundleStatsReport {
                         p_obj.insert(
                             "layout_children_us".to_string(),
                             Value::from(p.layout_children_us),
+                        );
+                        p_obj.insert(
+                            "layout_children_first_pass_us".to_string(),
+                            Value::from(p.layout_children_first_pass_us),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_nodes_visited".to_string(),
+                            Value::from(p.layout_child_first_pass_nodes_visited),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_nodes_performed".to_string(),
+                            Value::from(p.layout_child_first_pass_nodes_performed),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_max_us".to_string(),
+                            Value::from(p.layout_child_first_pass_max_us),
+                        );
+                        p_obj.insert(
+                            "corrected_content_relayout".to_string(),
+                            Value::from(p.corrected_content_relayout),
+                        );
+                        p_obj.insert(
+                            "layout_children_corrected_content_us".to_string(),
+                            Value::from(p.layout_children_corrected_content_us),
+                        );
+                        p_obj.insert(
+                            "layout_child_corrected_content_nodes_visited".to_string(),
+                            Value::from(p.layout_child_corrected_content_nodes_visited),
+                        );
+                        p_obj.insert(
+                            "layout_child_corrected_content_nodes_performed".to_string(),
+                            Value::from(p.layout_child_corrected_content_nodes_performed),
+                        );
+                        p_obj.insert(
+                            "layout_child_corrected_content_max_us".to_string(),
+                            Value::from(p.layout_child_corrected_content_max_us),
                         );
                         p_obj.insert(
                             "layout_child_nodes_visited".to_string(),

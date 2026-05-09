@@ -1105,14 +1105,34 @@ Perf acceptance:
     are clean state-sync candidates, and those are not the live cached-flow resize frames.
   - Decision: do not implement a clean-child-root apply skip from this sample. Keep optimizing the existing resize
     layout path, especially real bounds-delta scroll child relayout and layout-root scheduling.
-- [ ] Attribute the real bounds-delta scroll resize path before changing layout semantics.
+- [x] Attribute the real bounds-delta scroll resize path before changing layout semantics.
   - Target: split the `layout_child_max_us` cost between unavoidable child bounds application, layout-engine solve
     input churn, and any redundant repeated root scheduling.
   - Start from: `target/fret-diag/codex-scroll-layout-profile-stable-fullsnap/1778292518840/bundle.schema2.json`,
     especially the interactive-resize profiles where `direct_children_layout_invalidated=false`,
     `descendant_subtree_layout_dirty=false`, but `layout_child_max_bounds_changed=true`.
-  - Outcome to decide: whether the next safe optimization belongs in resize scheduling/root coalescing, scroll layout
-    geometry propagation, or layout data-structure costs.
+  - Evidence update: perf log entry `2026-05-09 10:55`; new bundle
+    `target/fret-diag/codex-scroll-layout-pass-split-smoke/1778294912347/bundle.schema2.json`.
+  - Result: live resize cost is first-pass real bounds application / barrier solve, not corrected-content relayout and
+    not repeated root scheduling. In the smoke bundle, `ui-gallery-content-viewport` reports `sum_child=83113us`,
+    `sum_first=83113us`, `sum_corrected=0us`; `ui-gallery-view-cache-root` reports `sum_barrier=43615us`.
+- [ ] Investigate content scroll real bounds application cost.
+  - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
+    `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
+    `layout_child_max_subtree_dirty=false`.
+  - Question: can a clean subtree whose size changed receive final bounds through a narrower geometry-propagation path
+    without rerunning layout-time widget side effects?
+  - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
+    text input layout state, virtual-list visible ranges, and layout query semantics.
+  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled
+    `ui-gallery-window-resize-stress-steady.json` smoke.
+- [ ] Investigate clean view-cache scroll barrier solve cost.
+  - Target: `ui-gallery-view-cache-root` live resize profiles where `solve_barrier_us` dominates while child subtree
+    dirty flags are false.
+  - Question: can viewport-root override / barrier solve input churn be coalesced or made cheaper for clean real bounds
+    deltas without stale layout engine rects?
+  - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
+    model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.

@@ -1669,6 +1669,15 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                         "measure_children_us": 500,
                         "solve_barrier_us": 100,
                         "layout_children_us": 2_200,
+                        "layout_children_first_pass_us": 1_700,
+                        "layout_child_first_pass_nodes_visited": 15,
+                        "layout_child_first_pass_nodes_performed": 6,
+                        "layout_child_first_pass_max_us": 1_500,
+                        "corrected_content_relayout": true,
+                        "layout_children_corrected_content_us": 500,
+                        "layout_child_corrected_content_nodes_visited": 5,
+                        "layout_child_corrected_content_nodes_performed": 2,
+                        "layout_child_corrected_content_max_us": 500,
                         "layout_child_nodes_visited": 20,
                         "layout_child_nodes_performed": 8,
                         "layout_child_max_us": 2_000,
@@ -1805,6 +1814,26 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.as_u64()),
         Some(51)
     );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_children_first_pass_us"))
+            .and_then(|v| v.as_u64()),
+        Some(1_700)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("corrected_content_relayout"))
+            .and_then(|v| v.as_bool()),
+        Some(true)
+    );
     let scroll_profile_examples = triage
         .get("hints")
         .and_then(|v| v.as_array())
@@ -1821,6 +1850,13 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("layout_child_max_input_matches_before"))
             .and_then(|v| v.as_bool()),
         Some(false)
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("layout_children_corrected_content_us"))
+            .and_then(|v| v.as_u64()),
+        Some(500)
     );
     let build_roots_examples = triage
         .get("hints")

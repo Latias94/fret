@@ -51,6 +51,24 @@ pub struct UiScrollLayoutProfileV1 {
     pub measure_children_us: u64,
     pub solve_barrier_us: u64,
     pub layout_children_us: u64,
+    #[serde(default)]
+    pub layout_children_first_pass_us: u64,
+    #[serde(default)]
+    pub layout_child_first_pass_nodes_visited: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_nodes_performed: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_max_us: u64,
+    #[serde(default)]
+    pub corrected_content_relayout: bool,
+    #[serde(default)]
+    pub layout_children_corrected_content_us: u64,
+    #[serde(default)]
+    pub layout_child_corrected_content_nodes_visited: u32,
+    #[serde(default)]
+    pub layout_child_corrected_content_nodes_performed: u32,
+    #[serde(default)]
+    pub layout_child_corrected_content_max_us: u64,
     pub layout_child_nodes_visited: u32,
     pub layout_child_nodes_performed: u32,
     pub layout_child_max_us: u64,
@@ -99,6 +117,18 @@ impl UiScrollLayoutProfileV1 {
             measure_children_us: profile.measure_children_us,
             solve_barrier_us: profile.solve_barrier_us,
             layout_children_us: profile.layout_children_us,
+            layout_children_first_pass_us: profile.layout_children_first_pass_us,
+            layout_child_first_pass_nodes_visited: profile.layout_child_first_pass_nodes_visited,
+            layout_child_first_pass_nodes_performed:
+                profile.layout_child_first_pass_nodes_performed,
+            layout_child_first_pass_max_us: profile.layout_child_first_pass_max_us,
+            corrected_content_relayout: profile.corrected_content_relayout,
+            layout_children_corrected_content_us: profile.layout_children_corrected_content_us,
+            layout_child_corrected_content_nodes_visited:
+                profile.layout_child_corrected_content_nodes_visited,
+            layout_child_corrected_content_nodes_performed:
+                profile.layout_child_corrected_content_nodes_performed,
+            layout_child_corrected_content_max_us: profile.layout_child_corrected_content_max_us,
             layout_child_nodes_visited: profile.layout_child_nodes_visited,
             layout_child_nodes_performed: profile.layout_child_nodes_performed,
             layout_child_max_us: profile.layout_child_max_us,

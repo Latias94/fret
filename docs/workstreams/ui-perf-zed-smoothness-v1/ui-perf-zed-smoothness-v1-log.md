@@ -11069,3 +11069,63 @@ Decision:
 - The next performance step should stay on the measured path: attribute real bounds-delta scroll relayout and decide
   whether the safe optimization belongs in resize scheduling/root coalescing, scroll geometry propagation, or layout
   data-structure cost.
+
+## 2026-05-09 10:55 (diagnostics attribution)
+
+Question:
+- Once clean child-root apply skipping was rejected, is the remaining live resize scroll cost caused by first-pass
+  real bounds application, corrected-content relayout amplification, barrier solve churn, or repeated root scheduling?
+
+Change:
+- Split the opt-in `FRET_SCROLL_LAYOUT_PROFILE=1` payload into first-pass and corrected-content relayout counters:
+  `layout_children_first_pass_us`, `layout_child_first_pass_nodes_visited`,
+  `layout_child_first_pass_nodes_performed`, `layout_child_first_pass_max_us`,
+  `corrected_content_relayout`, `layout_children_corrected_content_us`,
+  `layout_child_corrected_content_nodes_visited`,
+  `layout_child_corrected_content_nodes_performed`, and
+  `layout_child_corrected_content_max_us`.
+- Surfaced the new fields through diagnostics bundle serialization, `fretboard diag stats` human/JSON output, and
+  triage JSON examples. Runtime layout behavior is unchanged.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui scroll` (`147/147` passed)
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild view_cache` (`65/65` passed)
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-scroll-layout-pass-split-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-scroll-layout-pass-split-smoke/1778294912347/bundle.schema2.json`
+- `fretboard diag stats ... --sort time --top 120 --json` classification:
+  - 83 scroll profiles across 28 frames.
+  - `ui-gallery-content-viewport`: 28 profiles / 27 interactive; `sum_child=83113us`,
+    `sum_first=83113us`, `sum_corrected=0us`, `corrected_frames=0`, `max_child=3656us`,
+    max child traversal `1065/1065` nodes.
+  - `ui-gallery-view-cache-root`: 28 profiles / 27 interactive; `sum_child=26162us`,
+    `sum_first=26162us`, `sum_corrected=0us`, `sum_barrier=43615us`, `max_barrier=1954us`.
+  - `ui-gallery-nav-scroll`: low impact after initial/dirty frames; live resize profiles are not the dominant cost.
+- Representative live resize frames:
+  - Frame `223` content viewport: `total/layout/solve=9280/5363/2437us`, content scroll
+    `profile_total=4176us`, `child=first=3656us`, `corrected=0us`,
+    `bounds_changed=true`, `input_matches_before=false`, `child_dirty=false`, `subtree_dirty=false`.
+  - Frame `265` view-cache root: barrier `1954us`, child `1000us`, corrected `0us`, real bounds delta with no dirty
+    subtree.
+
+Decision:
+- Corrected-content relayout is not the live resize amplifier in this sample; every measured content/view-cache
+  resize cost is first-pass work.
+- Repeated root scheduling is not the current culprit in the live resize frames: `roots.model/global=0`, barrier
+  schedule/perform counters are `0`, cache roots are reused, and dirty flags are false.
+- The next safe optimization split is now narrower:
+  - Content viewport: reduce real bounds-size application cost for a clean 1k-node subtree, or prove it is
+    unavoidable without a GPUI-style bounds propagation model.
+  - View-cache scroll root: investigate barrier solve/override cost for clean real bounds deltas; this is Taffy solve
+    input churn, not corrected relayout or dirty frontier amplification.

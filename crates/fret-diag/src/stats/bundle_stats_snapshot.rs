@@ -365,6 +365,50 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     .get("layout_children_us")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0),
+                layout_children_first_pass_us: p
+                    .get("layout_children_first_pass_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_first_pass_nodes_visited: p
+                    .get("layout_child_first_pass_nodes_visited")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_nodes_performed: p
+                    .get("layout_child_first_pass_nodes_performed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_max_us: p
+                    .get("layout_child_first_pass_max_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                corrected_content_relayout: p
+                    .get("corrected_content_relayout")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                layout_children_corrected_content_us: p
+                    .get("layout_children_corrected_content_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_corrected_content_nodes_visited: p
+                    .get("layout_child_corrected_content_nodes_visited")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_corrected_content_nodes_performed: p
+                    .get("layout_child_corrected_content_nodes_performed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_corrected_content_max_us: p
+                    .get("layout_child_corrected_content_max_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
                 layout_child_nodes_visited: p
                     .get("layout_child_nodes_visited")
                     .and_then(|v| v.as_u64())
