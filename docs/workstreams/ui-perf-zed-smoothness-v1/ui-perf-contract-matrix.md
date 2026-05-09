@@ -22,6 +22,8 @@ Related:
   files; add it only by intentionally re-seeding a baseline on the target machine.
 - Use environment-specific baselines. `diag_resize_probes_gate.py` and `.sh` choose the checked-in Windows RTX 4090 or
   macOS baseline by host platform; pass `--baseline` explicitly for another machine profile.
+- Resize gate helpers apply the default font prewarm and reset-diagnostics prelude hooks. Use
+  `--no-default-suite-hooks` only when intentionally debugging setup behavior.
 
 ## Target Budgets
 

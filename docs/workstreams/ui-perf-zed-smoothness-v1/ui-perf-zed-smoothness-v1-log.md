@@ -11579,14 +11579,22 @@ Decision:
 ## 2026-05-09 18:20 (pre-commit evidence)
 
 Question:
-- Can contributors run the resize gate helper on Windows without accidentally enforcing the older macOS baseline?
+- Can contributors run the resize gate helper on Windows without accidentally enforcing the older macOS baseline or
+  missing the normalization hooks required by this workstream?
 
 Change:
 - `tools/perf/diag_resize_probes_gate.py` and `.sh` now choose the checked-in Windows RTX 4090 or macOS baseline by
   host platform when `--baseline` is omitted.
 - Non-Windows/macOS platforms still require an explicit `--baseline`.
+- Both helpers now apply the default font prewarm and reset-diagnostics prelude hooks unless
+  `--no-default-suite-hooks` is passed.
 - Added `.gitattributes` rules for `*.py` and `*.sh` so script files stay LF-normalized; this also fixed the bash
   helper's CRLF `pipefail` failure under local `bash`.
+
+Discovery:
+- A short `ui-resize-probes` smoke without the default hooks selected the correct Windows baseline, but failed before
+  threshold evaluation because `ui-gallery-window-resize-drag-jitter-steady.json` timed out at step 23 and did not
+  produce `check.perf_thresholds.json`.
 
 Validation:
 - Imported `tools/perf/diag_resize_probes_gate.py` and confirmed the current host selects:
@@ -11595,7 +11603,13 @@ Validation:
 - `python tools/perf/diag_resize_probes_gate.py --help`
 - `bash tools/perf/diag_resize_probes_gate.sh --help`
 - `bash -n tools/perf/diag_resize_probes_gate.sh`
+- Short real-gate smoke:
+  `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --out-dir target/fret-diag/codex-resize-gate-default-hooks-smoke --attempts 1 --repeat 1 --warmup-frames 5 --launch-bin target/release/fret-ui-gallery.exe`
+  - Result: PASS, selected Windows baseline, default hooks present in `summary.json`.
+  - `drag-jitter`: `top_total/layout/solve=1728/1103/661us`.
+  - `resize-stress`: `top_total/layout/solve=4021/1664/671us`.
 
 Decision:
 - Keep the helper default platform-aware, but keep machine-profile overrides explicit through `--baseline`; do not infer
   GPU model or loosen thresholds automatically.
+- Keep the normalization hooks on by default; disabling them is a targeted setup-debugging mode, not the normal gate.

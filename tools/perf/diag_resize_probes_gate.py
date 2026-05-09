@@ -16,6 +16,9 @@ import sys
 import time
 from pathlib import Path
 
+DEFAULT_PREWARM_SCRIPT = "tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json"
+DEFAULT_PRELUDE_SCRIPT = "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json"
+
 
 def _workspace_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -103,6 +106,24 @@ def main() -> int:
     ap.add_argument("--attempts", type=int, default=1)
     ap.add_argument("--repeat", type=int, default=7)
     ap.add_argument("--warmup-frames", type=int, default=5)
+    ap.add_argument(
+        "--prewarm-script",
+        action="append",
+        default=[],
+        help="Forwarded to `diag perf --prewarm-script <script.json>` (repeatable).",
+    )
+    ap.add_argument(
+        "--prelude-script",
+        action="append",
+        default=[],
+        help="Forwarded to `diag perf --prelude-script <script.json>` (repeatable).",
+    )
+    ap.add_argument(
+        "--no-default-suite-hooks",
+        action="store_true",
+        default=False,
+        help="Do not add the default font prewarm and reset-diagnostics prelude scripts.",
+    )
 
     args = ap.parse_args()
 
@@ -135,13 +156,27 @@ def main() -> int:
 
     launch_bin_path = _resolve_workspace_path(workspace_root, str(args.launch_bin))
 
+    prewarm_scripts = list(args.prewarm_script)
+    prelude_scripts = list(args.prelude_script)
+    if not bool(args.no_default_suite_hooks):
+        prewarm_scripts.insert(0, DEFAULT_PREWARM_SCRIPT)
+        prelude_scripts.insert(0, DEFAULT_PRELUDE_SCRIPT)
+    prewarm_script_paths = [_resolve_workspace_path(workspace_root, p) for p in prewarm_scripts]
+    prelude_script_paths = [_resolve_workspace_path(workspace_root, p) for p in prelude_scripts]
+
     if not baseline_path.is_file():
         print(f"error: baseline not found: {baseline_path}", file=sys.stderr)
         return 2
+    for hook_path in [*prewarm_script_paths, *prelude_script_paths]:
+        if not hook_path.is_file():
+            print(f"error: suite hook script not found: {hook_path}", file=sys.stderr)
+            return 2
 
     print(f"[gate] {suite} -> {out_dir_path} (attempts={int(args.attempts)})")
     print(f"[gate] baseline: {baseline_path}")
     print(f"[gate] launch-bin: {launch_bin_path}")
+    print(f"[gate] prewarm: {[str(p) for p in prewarm_script_paths]}")
+    print(f"[gate] prelude: {[str(p) for p in prelude_script_paths]}")
 
     passes = 0
     fails = 0
@@ -166,6 +201,12 @@ def main() -> int:
             str(attempt_dir),
             "--timeout-ms",
             str(int(args.timeout_ms)),
+        ]
+        for script in prewarm_script_paths:
+            cmd += ["--prewarm-script", str(script)]
+        for script in prelude_script_paths:
+            cmd += ["--prelude-script", str(script)]
+        cmd += [
             "--reuse-launch",
             "--repeat",
             str(int(args.repeat)),
@@ -253,6 +294,11 @@ def main() -> int:
         "suite": suite,
         "baseline": str(baseline_path),
         "launch_bin": str(launch_bin_path),
+        "suite_hooks": {
+            "prewarm": [str(p) for p in prewarm_script_paths],
+            "prelude": [str(p) for p in prelude_script_paths],
+            "default_suite_hooks": not bool(args.no_default_suite_hooks),
+        },
         "attempts": int(args.attempts),
         "pass_attempts": passes,
         "fail_attempts": fails,
