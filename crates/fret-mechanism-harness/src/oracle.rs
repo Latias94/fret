@@ -60,6 +60,23 @@ pub enum MechanismPredicate {
         sample_id: String,
         target: UiSelectorV1,
     },
+    OverlayExists {
+        overlay_id: String,
+    },
+    OverlayBoundsRect {
+        overlay_id: String,
+        expected: Rect,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    OverlayBoundsMetric {
+        overlay_id: String,
+        metric: UiBoundsMetricV1,
+        comparison: UiComparisonV1,
+        value_px: f32,
+        #[serde(default)]
+        eps_px: f32,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -192,6 +209,41 @@ pub fn evaluate_predicate(
             } else {
                 Ok(PredicatePass)
             }
+        }
+        MechanismPredicate::OverlayExists { overlay_id } => {
+            pass_bool(tree.overlay(overlay_id).is_some(), || {
+                format!("expected overlay to exist: {overlay_id:?}")
+            })
+        }
+        MechanismPredicate::OverlayBoundsRect {
+            overlay_id,
+            expected,
+            eps_px,
+        } => {
+            let have = tree.overlay_bounds_for(overlay_id).map_err(fail)?;
+            if rect_approx_eq(have, *expected, eps_px.max(0.0)) {
+                Ok(PredicatePass)
+            } else {
+                Err(failure(format!(
+                    "overlay_bounds_rect mismatch overlay_id={overlay_id:?} expected={expected:?} actual={have:?} eps={}",
+                    eps_px.max(0.0)
+                )))
+            }
+        }
+        MechanismPredicate::OverlayBoundsMetric {
+            overlay_id,
+            metric,
+            comparison,
+            value_px,
+            eps_px,
+        } => {
+            let bounds = tree.overlay_bounds_for(overlay_id).map_err(fail)?;
+            let have = bounds_metric_value(bounds, *metric);
+            pass_compare(have, *comparison, *value_px, eps_px.max(0.0), || {
+                format!(
+                    "overlay_bounds_metric mismatch overlay_id={overlay_id:?} metric={metric:?} comparison={comparison:?} expected={value_px} actual={have}"
+                )
+            })
         }
     }
 }

@@ -236,6 +236,24 @@ impl ObservedTree {
             .find(|sample| sample.id.as_str() == sample_id)
     }
 
+    pub fn focus_node(&self) -> Option<&ObservedNode> {
+        let focus = self.focus_node_id?;
+        self.nodes.iter().find(|node| node.node_id == Some(focus))
+    }
+
+    pub fn overlay(&self, id: &str) -> Option<&ObservedOverlay> {
+        self.overlays.iter().find(|overlay| overlay.id == id)
+    }
+
+    pub fn overlay_bounds_for(&self, id: &str) -> Result<Rect, QueryError> {
+        let overlay = self
+            .overlay(id)
+            .ok_or_else(|| QueryError::NoOverlay { id: id.to_string() })?;
+        overlay
+            .bounds
+            .ok_or_else(|| QueryError::OverlayMissingBounds { id: id.to_string() })
+    }
+
     fn matches_selector(&self, node: &ObservedNode, selector: &UiSelectorV1) -> bool {
         if !matches_selector_root_z(node, selector) {
             return false;
@@ -436,6 +454,10 @@ pub struct ObservedOverlay {
 pub enum QueryError {
     #[error("selector did not match any observed node: {selector}")]
     NoMatch { selector: String },
+    #[error("observed overlay did not exist: {id}")]
+    NoOverlay { id: String },
+    #[error("observed overlay did not include bounds: {id}")]
+    OverlayMissingBounds { id: String },
 }
 
 pub fn role_label(role: SemanticsRole) -> &'static str {

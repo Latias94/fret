@@ -63,6 +63,20 @@ The promoted seed script
 `tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json` now uses this
 predicate for ButtonGroupText prefix/suffix alignment against the input control.
 
+## Harness vs Diagnostics
+
+The harness crate and diagnostics crates are deliberately different tools:
+
+- `fret-mechanism-harness` is an in-process mechanism lab. It owns fixture loading, observed-tree
+  queries, and oracle predicates over controlled runtime scenarios.
+- `fret-diag-protocol` owns the serialized vocabulary that can cross process and tool boundaries.
+- `fret-bootstrap` owns diagnostics execution inside a running app: script playback, screenshots,
+  sidecars, bundles, and portable evidence.
+
+The shared surface should stay narrow: selectors and predicates that describe runtime facts. The
+harness should not grow a script runner, screenshot pipeline, bundle writer, or UI Gallery launcher;
+diagnostics should not need to link recipe-specific test harnesses to assert basic geometry.
+
 ## Gates
 
 - `cargo nextest run -p fret-mechanism-harness`
@@ -74,8 +88,9 @@ predicate for ButtonGroupText prefix/suffix alignment against the input control.
 
 ## Future Domains
 
-The observed model already has slots for hit-test samples, overlay records, and focus ids. Follow-up
-suites should add domain-specific adapters and predicates in this order:
+The observed model already has slots for hit-test samples, overlay records, and focus ids, plus
+basic overlay bounds predicates. Follow-up suites should add domain-specific adapters and predicates
+in this order:
 
 1. hit-test routing matrices: transformed, clipped, transparent, and overlay roots;
 2. semantics tree invariants: roles, labels, relationships, active descendant, and hidden nodes;

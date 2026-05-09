@@ -206,6 +206,13 @@ fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_shadcn_parity_seed_layout() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_incoming_open_inject_smoke() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-incoming-open-inject-smoke.json"
