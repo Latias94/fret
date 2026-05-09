@@ -37,12 +37,26 @@ def _write_json(path: Path, v: object) -> None:
     path.write_text(json.dumps(v, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
+def _host_platform_key() -> str:
+    if sys.platform.startswith("win"):
+        return "windows"
+    if sys.platform == "darwin":
+        return "macos"
+    return "unknown"
+
+
 def _default_baseline_for_suite(suite: str) -> str:
-    # Keep behavior consistent with the bash gate for now.
+    platform_key = _host_platform_key()
     if suite == "ui-resize-probes":
-        return "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
+        if platform_key == "windows":
+            return "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json"
+        if platform_key == "macos":
+            return "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
     if suite == "ui-code-editor-resize-probes":
-        return "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json"
+        if platform_key == "windows":
+            return "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json"
+        if platform_key == "macos":
+            return "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json"
     raise KeyError(suite)
 
 
@@ -79,7 +93,11 @@ def main() -> int:
     )
     ap.add_argument("--suite", default="ui-resize-probes")
     ap.add_argument("--out-dir", default="")
-    ap.add_argument("--baseline", default="")
+    ap.add_argument(
+        "--baseline",
+        default="",
+        help="Perf baseline JSON path. Defaults to the checked-in Windows RTX4090 or macOS baseline for the host platform.",
+    )
     ap.add_argument("--launch-bin", default="target/release/fret-ui-gallery")
     ap.add_argument("--timeout-ms", type=int, default=300_000)
     ap.add_argument("--attempts", type=int, default=1)
@@ -107,7 +125,11 @@ def main() -> int:
         try:
             baseline_raw = _default_baseline_for_suite(suite)
         except KeyError:
-            print(f"error: unknown --suite {suite!r} (provide --baseline explicitly)", file=sys.stderr)
+            print(
+                f"error: no default baseline for --suite {suite!r} on platform {_host_platform_key()!r} "
+                "(provide --baseline explicitly)",
+                file=sys.stderr,
+            )
             return 2
     baseline_path = _resolve_workspace_path(workspace_root, baseline_raw)
 
@@ -265,4 +287,3 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except KeyboardInterrupt:
         raise SystemExit(130)
-

@@ -20,8 +20,8 @@ Related:
   `measured_max`.
 - Existing checked-in baselines created before `measured_p50` was added remain valid. Do not synthesize p50 into old
   files; add it only by intentionally re-seeding a baseline on the target machine.
-- Use environment-specific baselines. A Windows RTX 4090 gate should pass its Windows baseline explicitly when a helper
-  still defaults to a macOS baseline.
+- Use environment-specific baselines. `diag_resize_probes_gate.py` and `.sh` choose the checked-in Windows RTX 4090 or
+  macOS baseline by host platform; pass `--baseline` explicitly for another machine profile.
 
 ## Target Budgets
 
@@ -37,16 +37,16 @@ Budgets are guidance for representative probes. The committed gate is the script
 | Probe group | Representative script or suite | Checked-in baseline | Gate command | Latest evidence | Reference pressure |
 | --- | --- | --- | --- | --- | --- |
 | Canonical steady gallery | `ui-gallery-steady` | `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json`; macOS history under `ui-gallery-steady.macos-m4.v*.json` | `cargo run -p fretboard --release -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --perf-baseline <baseline> --launch -- cargo run -p fret-ui-gallery --release` | Perf log daily smoke entries `2026-05-07 13:58` and `2026-05-07 14:01` | GPUI cached views, egui repaint/pass accounting |
-| Resize probes | `ui-resize-probes` | `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`; `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json` | `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --attempts 3` | Perf log entries through `2026-05-09 17:52`; view-cache harness repeat=3 p95 `total/layout/solve/paint=4252/1719/717/2352us` after virtualization | GPUI resize coalescing and bounded layout roots; egui bounded extra work |
-| Code editor resize | `ui-code-editor-resize-probes`; `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json` | `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`; `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json` | `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --attempts 3` | Perf log `2026-05-09 18:05`: repeat=3 p95 `total/layout/paint/solve=3995/2137/1747/574us`, 20k-line torture surface active | GPUI visible-window text reuse and idempotent render setters |
+| Resize probes | `ui-resize-probes` | `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`; `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json` | `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3` | Perf log entries through `2026-05-09 17:52`; view-cache harness repeat=3 p95 `total/layout/solve/paint=4252/1719/717/2352us` after virtualization | GPUI resize coalescing and bounded layout roots; egui bounded extra work |
+| Code editor resize | `ui-code-editor-resize-probes`; `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json` | `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`; `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json` | `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3` | Perf log `2026-05-09 18:05`: repeat=3 p95 `total/layout/paint/solve=3995/2137/1747/574us`, 20k-line torture surface active | GPUI visible-window text reuse and idempotent render setters |
 | View-cache resize torture | `tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json`; `tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json` | No dedicated post-virtualization baseline yet; covered indirectly by resize probes | Run single scripts with prewarm/prelude and record `p50/p95/max`; re-seed only after the suite membership is stable | Perf log `2026-05-09 17:52`: page-local view-cache root element count `1104 -> 137`; drag-jitter repeat=3 p95 `2066/1310/754/643us` | GPUI shrinks hot layout boundaries instead of hiding real width deltas |
 | Pointer move / hit test | `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json` | Usually threshold-gated directly rather than baseline-selected | Use `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, and `--max-pointer-move-global-changes` with `FRET_DIAG_SEMANTICS=0` | GPUI gap map section `0.3`; earlier perf log entries for commits `763bf8e7`, `8bc15eda`, `7fa76fd5`, `5ab4ba71` | GPUI bounds-tree hit testing; egui explicit repaint cause discipline |
 | Renderer/effects churn | `tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json`; `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`; SVG/clip/headless stress gates | `clip-mask-stress-headless.windows-local.v1.json`, `quad-material-stress-headless.windows-local.v1.json`, `svg-atlas-stress-headless.windows-local.v1.json`, effect-specific baselines | Use the corresponding `tools/perf/*_gate.py` helper for each renderer contract | GPUI gap map section `Gap D`; renderer telemetry entries in the perf log | GPU resource churn should be explainable, not hidden behind CPU frame time |
 
 ## Current Gaps
 
-- The Windows resize gate helper still needs an explicit `--baseline` for Windows RTX 4090. The helper defaults remain
-  macOS-oriented for `ui-resize-probes` and `ui-code-editor-resize-probes`.
+- Non-Windows/macOS resize gate runs still need an explicit `--baseline` until we add checked-in baselines for those
+  machine profiles.
 - Old baseline JSON files may not contain `measured_p50`. That is expected until each baseline is intentionally
   re-seeded.
 - There is no dedicated post-virtualization baseline for the view-cache resize torture scripts. Keep using them as

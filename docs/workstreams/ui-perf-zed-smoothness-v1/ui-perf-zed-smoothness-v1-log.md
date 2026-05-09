@@ -11575,3 +11575,27 @@ Smoke evidence:
 Decision:
 - Keep old checked-in baseline JSON files untouched. They should gain `measured_p50` only through intentional
   re-seeding on the relevant machine profile.
+
+## 2026-05-09 18:20 (pre-commit evidence)
+
+Question:
+- Can contributors run the resize gate helper on Windows without accidentally enforcing the older macOS baseline?
+
+Change:
+- `tools/perf/diag_resize_probes_gate.py` and `.sh` now choose the checked-in Windows RTX 4090 or macOS baseline by
+  host platform when `--baseline` is omitted.
+- Non-Windows/macOS platforms still require an explicit `--baseline`.
+- Added `.gitattributes` rules for `*.py` and `*.sh` so script files stay LF-normalized; this also fixed the bash
+  helper's CRLF `pipefail` failure under local `bash`.
+
+Validation:
+- Imported `tools/perf/diag_resize_probes_gate.py` and confirmed the current host selects:
+  - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`
+- `python tools/perf/diag_resize_probes_gate.py --help`
+- `bash tools/perf/diag_resize_probes_gate.sh --help`
+- `bash -n tools/perf/diag_resize_probes_gate.sh`
+
+Decision:
+- Keep the helper default platform-aware, but keep machine-profile overrides explicit through `--baseline`; do not infer
+  GPU model or loosen thresholds automatically.

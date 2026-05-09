@@ -17,6 +17,7 @@ Usage:
 Notes:
   - Runs a resize-focused perf suite via `fretboard-dev diag perf` (defaults to `ui-resize-probes`).
   - Intended to be a lightweight "P0 resize must not regress" gate.
+  - If `--baseline` is omitted, selects the checked-in Windows RTX4090 or macOS baseline for the host platform.
   - `--attempts` reruns the suite to reduce flakiness from rare tail outliers.
     The gate passes if a strict majority of attempts pass.
   - Common env profile:
@@ -33,6 +34,42 @@ require_cmd() {
     echo "error: required command not found: $cmd" >&2
     exit 2
   fi
+}
+
+host_platform_key() {
+  case "$(uname -s 2>/dev/null || echo unknown)" in
+    MINGW*|MSYS*|CYGWIN*|Windows_NT)
+      echo "windows"
+      ;;
+    Darwin*)
+      echo "macos"
+      ;;
+    *)
+      echo "unknown"
+      ;;
+  esac
+}
+
+default_baseline_for_suite() {
+  local suite_name="$1"
+  local platform_key="$2"
+  case "$suite_name:$platform_key" in
+    ui-resize-probes:windows)
+      echo "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json"
+      ;;
+    ui-resize-probes:macos)
+      echo "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
+      ;;
+    ui-code-editor-resize-probes:windows)
+      echo "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json"
+      ;;
+    ui-code-editor-resize-probes:macos)
+      echo "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -105,18 +142,11 @@ if [[ "$attempts" -lt 1 ]]; then
 fi
 
 if [[ -z "$baseline" ]]; then
-  case "$suite" in
-    ui-resize-probes)
-      baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
-      ;;
-    ui-code-editor-resize-probes)
-      baseline="docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json"
-      ;;
-    *)
-      echo "error: unknown --suite '$suite' (provide --baseline explicitly)" >&2
-      exit 2
-      ;;
-  esac
+  platform_key="$(host_platform_key)"
+  if ! baseline="$(default_baseline_for_suite "$suite" "$platform_key")"; then
+    echo "error: no default baseline for --suite '$suite' on platform '$platform_key' (provide --baseline explicitly)" >&2
+    exit 2
+  fi
 fi
 
 echo "[gate] ${suite} -> ${out_dir} (attempts=${attempts})"
