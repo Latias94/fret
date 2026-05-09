@@ -567,6 +567,7 @@ fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
         Size::new(Px(200.0), Px(80.0)),
     );
     let mut text = FakeTextService::default();
+    let translated_id = Arc::new(std::sync::Mutex::new(None));
 
     let child = render_root(
         &mut ui,
@@ -575,7 +576,15 @@ fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
         window,
         bounds,
         "precompute-translate-child",
-        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("a"), cx.text("b")])],
+        |cx| {
+            let translated_id = translated_id.clone();
+            vec![
+                cx.pressable_with_id(Default::default(), move |cx, _state, id| {
+                    *translated_id.lock().unwrap() = Some(id);
+                    vec![cx.text("a"), cx.text("b")]
+                }),
+            ]
+        },
     );
 
     let rect_a = Rect::new(
@@ -614,6 +623,147 @@ fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
 
     let child_bounds = ui.debug_node_bounds(child).expect("child bounds");
     assert!((child_bounds.origin.y.0 - rect_b.origin.y.0).abs() < 0.01);
+    let translated_id = translated_id
+        .lock()
+        .unwrap()
+        .expect("translated element id should be recorded");
+    let translated_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, translated_id)
+            .expect("translated element bounds");
+    assert!((translated_bounds.origin.y.0 - rect_b.origin.y.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_engine_solved_size_delta_propagates_geometry_without_relayouting_structure() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let first_row_id = Arc::new(std::sync::Mutex::new(None));
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "clean-engine-geometry-propagation-child",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                gap: Px(1.0).into(),
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let first_row_id = first_row_id.clone();
+            vec![cx.flex(flex, |cx| {
+                (0..16)
+                    .map(|idx| {
+                        let first_row_id = first_row_id.clone();
+                        let props = crate::element::PressableProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Px(Px(8.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+                        cx.pressable_with_id(props, move |_cx, _state, id| {
+                            if idx == 0 {
+                                *first_row_id.lock().unwrap() = Some(id);
+                            }
+                            Vec::<AnyElement>::new()
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(260.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let performed = ui.debug_stats().layout_nodes_performed;
+    assert!(
+        performed <= 20,
+        "clean size-delta propagation should avoid re-running structural layout; performed={performed}"
+    );
+
+    let flex_node = ui.children(child)[0];
+    let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+    assert!((flex_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+
+    let first_row_id = first_row_id
+        .lock()
+        .unwrap()
+        .expect("first row id should be recorded");
+    let first_row_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, first_row_id)
+            .expect("first row element bounds");
+    assert!(
+        (first_row_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "fast-path propagation must refresh current element bounds"
+    );
 }
 
 #[test]

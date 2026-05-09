@@ -11364,3 +11364,54 @@ Decision:
   - view-cache root: reduce or coalesce key-changed 962-node Taffy solves without stale engine rects;
   - content viewport: narrow clean real-bounds application across the 1k-node subtree without skipping required
     layout-time side effects.
+
+## 2026-05-09 16:38 (pre-commit evidence)
+
+Question:
+- Can clean, engine-solved resize frames propagate final geometry without rerunning structural `widget.layout` across
+  a ~1k-node subtree, while preserving Fret's retained runtime semantics and current element bounds contract?
+
+Change:
+- Added a guarded clean engine-solved geometry propagation path in `fret-ui` layout:
+  - only final-pass, clean, non-subtree-dirty nodes are eligible;
+  - supported elements are mechanism-only layout wrappers (`Container`, `Pressable`, `Semantics`, `ViewCache`,
+    `FocusScope`, `ForegroundScope`, `Opacity`, `Stack`, `Grid`, and non-auto-margin
+    `Flex`/`SemanticFlex`/`RovingFlex`);
+  - `Spacer` is eligible only as a leaf, and text leaves are eligible only when size is unchanged.
+- Explicitly rejected side-effectful or policy-heavy nodes from the fast path: `Scroll`, `VirtualList`, text input/area,
+  transforms, anchored overlays, layout-query regions, retained/custom widgets, absolute-positioned children,
+  suppressed dirty-child subtrees, and flex auto margins.
+- Refreshed `current_bounds_for_element` from both the existing translation-only fast path and the new size-delta
+  propagation path, so layout queries and overlay/focus geometry do not read stale element bounds.
+
+Validation:
+- `cargo fmt -p fret-ui --check`
+- `cargo check -p fret-ui`
+- `cargo nextest run -p fret-ui clean_engine_solved_size_delta_propagates_geometry_without_relayouting_structure solve_barrier_flow_root_reuses_solved_root_even_after_other_solves solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes nested_flow_is_solved_once_per_island`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release gallery build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this slice did not clean unrelated warnings.
+
+Perf evidence:
+- Stress final repeat=3 command used the normalized prewarm/prelude setup:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-clean-engine-propagation-stress-final-r3 --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Summary: `target/fret-diag/codex-clean-engine-propagation-stress-final-r3/regression.summary.json`
+  - Worst bundle: `target/fret-diag/codex-clean-engine-propagation-stress-final-r3/1778315800951/bundle.schema2.json`
+  - Result: `total_time_us p50/p95/max=8576/9089/9089`, `layout_time_us=4518/4746/4746`,
+    `paint_time_us=3714/3920/3920`, `layout_engine_solve_time_us=2208/2352/2352`.
+- Drag-jitter final repeat=3 command used the same normalized setup with
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - Summary: `target/fret-diag/codex-clean-engine-propagation-drag-jitter-final-r3/regression.summary.json`
+  - Worst bundle: `target/fret-diag/codex-clean-engine-propagation-drag-jitter-final-r3/1778315862970/bundle.schema2.json`
+  - Result: `total_time_us p50/p95/max=5846/6495/6495`, `layout_time_us=3658/3947/3947`,
+    `paint_time_us=1989/2304/2304`, `layout_engine_solve_time_us=2149/2328/2328`.
+
+Decision:
+- Keep this optimization: it follows the GPUI/Zed-style "reuse solved geometry" direction while preserving Fret's
+  retained state semantics through an explicit safe-element allow list and current element-bound updates.
+- Do not broaden the allow list without a side-effect-specific test. The next open performance lane remains the
+  clean view-cache root barrier solve cost (`reason=new_frame_key_changed`, `subtree_nodes≈962`), not child-rect lookup
+  or broad structural `layout()` replay.
+- Unprewarmed resize script timeouts remain a setup drift around `font_catalog_populated`; perf evidence for this lane
+  should continue to use `tooling-suite-prewarm-fonts.json`.

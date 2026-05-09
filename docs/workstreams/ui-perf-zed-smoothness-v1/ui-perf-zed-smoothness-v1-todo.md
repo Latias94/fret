@@ -1063,7 +1063,7 @@ Perf acceptance:
     selection changes rebuild the semantics snapshot.
   - Follow-up: if real semantic-change frames become the next bottleneck, design incremental semantics/diffing instead
     of broadening the dirty filter.
-- [ ] Audit layout side effects before adding an engine-solved subtree apply fast path.
+- [x] Audit layout side effects for the first engine-solved geometry propagation slice.
   - Scope: `Scroll`, `VirtualList`, text/text input widgets, canvas/viewport surfaces, layout-query regions,
     transforms, and anchored/overlay-related nodes.
   - Rationale: resize profiling shows the remaining `ScrollArea` hotspot is broad `layout_in` recursion after Taffy has
@@ -1071,14 +1071,32 @@ Perf acceptance:
     affected subtree has no layout-time side effects.
   - Evidence: perf log entry `2026-05-08 15:40`; clean or near-clean resize frames can still visit roughly `962-1044`
     child-layout nodes.
-- [ ] Prototype a guarded engine-solved subtree apply path for proven-safe layout nodes.
-  - Candidate safe subset: pure container/flex/grid/wrapper leaves whose bounds and children are already solved by the
-    layout engine and whose layout method only propagates final rects.
-  - Required proof: scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry, text
-    input state, and virtual-list visible ranges stay identical to the full `layout_in` path on targeted scripts.
-  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild` plus a prewarmed
-    `ui-gallery-window-resize-stress-steady.json` perf sample.
-- [x] Reject the guarded engine-solved subtree apply experiment on the current resize-stress sample.
+  - Result: the landed slice only allows mechanism-only nodes whose layout can be represented as solved geometry
+    propagation (`Container`, `Pressable`, `Semantics`, `ViewCache`, `FocusScope`, `ForegroundScope`, `Opacity`,
+    `Stack`, `Grid`, and non-auto-margin `Flex`/`SemanticFlex`/`RovingFlex`). Leaf text stays eligible only when its
+    size is unchanged.
+  - Explicitly rejected in this slice: `Scroll`, `VirtualList`, text input/area, transforms, anchored overlays,
+    layout-query regions, retained/custom widgets, absolute-positioned children, suppressed dirty-child subtrees, and
+    flex auto margins.
+  - Semantic guard: both translation-only and size-delta fast paths refresh `current_bounds_for_element`, so layout
+    queries and overlay/focus geometry do not read stale element bounds.
+  - Evidence: perf log entry `2026-05-09 16:38`.
+- [x] Land a guarded engine-solved subtree apply path for proven-safe layout nodes.
+  - Implementation: clean, final-pass, non-dirty engine-solved nodes can propagate cached child rects without rerunning
+    structural `widget.layout`, falling back to normal layout for unsupported or side-effectful nodes.
+  - Gate:
+    `cargo nextest run -p fret-ui clean_engine_solved_size_delta_propagates_geometry_without_relayouting_structure solve_barrier_flow_root_reuses_solved_root_even_after_other_solves solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes nested_flow_is_solved_once_per_island`.
+  - Release/perf gates: `cargo build -p fretboard --release`, `cargo build -p fret-ui-gallery --release --features
+    gallery-full`, plus prewarmed repeat=3 `ui-gallery-window-resize-stress-steady.json` and
+    `ui-gallery-window-resize-drag-jitter-steady.json`.
+  - Evidence:
+    - Stress final repeat=3:
+      `target/fret-diag/codex-clean-engine-propagation-stress-final-r3/regression.summary.json`
+      (`total/layout/solve p95=9089/4746/2352us`).
+    - Drag-jitter final repeat=3:
+      `target/fret-diag/codex-clean-engine-propagation-drag-jitter-final-r3/regression.summary.json`
+      (`total/layout/solve p95=6495/3947/2328us`).
+- [x] Reject the earlier broad guarded engine-solved subtree apply experiment on the current resize-stress sample.
   - Evidence: perf log entry `2026-05-08 16:45`; `ui-gallery-window-resize-stress` p95 total/layout/paint worsened
     from `8234/4505/3494us` to `8659/4692/3629us`.
   - Decision: do not promote the broad fast path; keep the next implementation pass focused on the narrower
@@ -1139,7 +1157,7 @@ Perf acceptance:
     dominated by `layout_children_first_pass` (`p95=3640us`) with secondary `solve_barrier` (`p95=672us`).
     View-cache root phase cost is dominated by `solve_barrier` (`p95=1674us`) with secondary
     `layout_children_first_pass` (`p95=1296us`). Probe/cache/overflow/handle phases are near-zero.
-- [ ] Investigate content scroll real bounds application cost.
+- [x] Investigate and reduce content scroll real bounds application cost.
   - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
     `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
     `layout_child_max_subtree_dirty=false`.
@@ -1150,10 +1168,13 @@ Perf acceptance:
     shows `layout_children_first_pass` dominates (`p95=3640us`) and measure/probe/overflow phases are negligible.
   - Latest child-rect evidence: `layout_engine_child_rect_queries=1196` costs only `70us` in the latest worst frame,
     so the content lane should stay focused on clean bounds-size application, not child-rect lookup overhead.
+  - Result: safe-subset engine-solved geometry propagation removes most structural relayout churn while keeping
+    side-effectful widgets on the full `layout_in` path. Final normalized stress evidence reports
+    `total/layout/solve p95=9089/4746/2352us`, and drag-jitter reports `6495/3947/2328us`.
   - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
     text input layout state, virtual-list visible ranges, and layout query semantics.
-  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled
-    `ui-gallery-window-resize-stress-steady.json` smoke.
+  - Gate: focused layout-engine regression tests plus prewarmed repeat=3
+    `ui-gallery-window-resize-stress-steady.json` and `ui-gallery-window-resize-drag-jitter-steady.json` perf samples.
 - [ ] Investigate clean view-cache scroll barrier solve cost.
   - Target: `ui-gallery-view-cache-root` live resize profiles where `solve_barrier_us` dominates while child subtree
     dirty flags are false.
