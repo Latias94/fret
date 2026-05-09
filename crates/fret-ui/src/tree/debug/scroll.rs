@@ -30,6 +30,12 @@ pub struct UiDebugScrollLayoutKindProfile {
     pub max_total_us: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollLayoutPhaseProfile {
+    pub phase: &'static str,
+    pub us: u64,
+}
+
 #[derive(Debug, Clone)]
 pub struct UiDebugScrollLayoutProfile {
     pub pass: UiDebugScrollLayoutPassKind,
@@ -43,6 +49,7 @@ pub struct UiDebugScrollLayoutProfile {
     pub direct_children_layout_invalidated: bool,
     pub descendant_subtree_layout_dirty: bool,
     pub force_barrier_child_root_relayout: bool,
+    pub phase_profiles: Vec<UiDebugScrollLayoutPhaseProfile>,
     pub measure_children_us: u64,
     pub solve_barrier_us: u64,
     pub layout_children_us: u64,

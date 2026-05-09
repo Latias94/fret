@@ -27,9 +27,9 @@ pub use layout::{
 };
 pub use scroll::{
     UiDebugScrollAxis, UiDebugScrollHandleChange, UiDebugScrollHandleChangeKind,
-    UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind, UiDebugScrollLayoutProfile,
-    UiDebugScrollNodeTelemetry, UiDebugScrollOverflowObservationTelemetry,
-    UiDebugScrollbarTelemetry,
+    UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind, UiDebugScrollLayoutPhaseProfile,
+    UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
+    UiDebugScrollOverflowObservationTelemetry, UiDebugScrollbarTelemetry,
 };
 pub use text::{UiDebugPaintTextPrepareHotspot, UiDebugTextConstraintsSnapshot};
 pub use view_cache::{UiDebugCacheRootReuseReason, UiDebugCacheRootStats};

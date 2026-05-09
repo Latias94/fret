@@ -470,6 +470,7 @@ pub(super) struct BundleStatsScrollLayoutProfile {
     pub(super) direct_children_layout_invalidated: bool,
     pub(super) descendant_subtree_layout_dirty: bool,
     pub(super) force_barrier_child_root_relayout: bool,
+    pub(super) phase_profiles: Vec<BundleStatsScrollLayoutPhaseProfile>,
     pub(super) measure_children_us: u64,
     pub(super) solve_barrier_us: u64,
     pub(super) layout_children_us: u64,
@@ -513,6 +514,12 @@ pub(super) struct BundleStatsScrollLayoutKindProfile {
     pub(super) total_us: u64,
     pub(super) max_self_us: u64,
     pub(super) max_total_us: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsScrollLayoutPhaseProfile {
+    pub(super) phase: Option<String>,
+    pub(super) us: u64,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1807,6 +1814,22 @@ impl BundleStatsReport {
                                 .join(",");
                             out.push_str(&format!(" child_kind_self=[{kinds}]"));
                         }
+                        if !p.phase_profiles.is_empty() {
+                            let phases = p
+                                .phase_profiles
+                                .iter()
+                                .take(6)
+                                .map(|phase| {
+                                    format!(
+                                        "{}:{}us",
+                                        phase.phase.as_deref().unwrap_or("<unknown>"),
+                                        phase.us
+                                    )
+                                })
+                                .collect::<Vec<_>>()
+                                .join(",");
+                            out.push_str(&format!(" phases=[{phases}]"));
+                        }
                         if let Some(test_id) = p.test_id.as_deref()
                             && !test_id.is_empty()
                         {
@@ -2117,6 +2140,18 @@ impl BundleStatsReport {
             obj.insert("total_us".to_string(), Value::from(p.total_us));
             obj.insert("max_self_us".to_string(), Value::from(p.max_self_us));
             obj.insert("max_total_us".to_string(), Value::from(p.max_total_us));
+            Value::Object(obj)
+        }
+
+        fn scroll_layout_phase_profile_to_json(
+            p: &BundleStatsScrollLayoutPhaseProfile,
+        ) -> Value {
+            let mut obj = Map::new();
+            obj.insert(
+                "phase".to_string(),
+                p.phase.clone().map(Value::from).unwrap_or(Value::Null),
+            );
+            obj.insert("us".to_string(), Value::from(p.us));
             Value::Object(obj)
         }
 
@@ -3893,6 +3928,15 @@ impl BundleStatsReport {
                         p_obj.insert(
                             "force_barrier_child_root_relayout".to_string(),
                             Value::from(p.force_barrier_child_root_relayout),
+                        );
+                        p_obj.insert(
+                            "phase_profiles".to_string(),
+                            Value::Array(
+                                p.phase_profiles
+                                    .iter()
+                                    .map(scroll_layout_phase_profile_to_json)
+                                    .collect(),
+                            ),
                         );
                         p_obj.insert(
                             "measure_children_us".to_string(),

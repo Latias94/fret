@@ -1128,6 +1128,17 @@ Perf acceptance:
     subtree dirty flag. The largest filtered content profile records kind self costs of `Scroll=1805us`,
     `Text=645us`, `Flex=458us`, `Container=201us`, and `Pressable=73us`; inclusive totals still stack through
     container/flex wrappers. Do not spend the next pass on a text-specific fast path without fresh evidence.
+- [x] Add internal phase attribution for Scroll layout before changing the layout data model.
+  - Target: split `Scroll` self/total time into mechanism phases so the next optimization can choose between
+    measure/probe policy, handle telemetry, overflow observation, child-layout application, and barrier solve.
+  - Fields: `phase_profiles[]` under `debug.scroll_nodes[].layout_profile`, surfaced through diagnostics bundle
+    serialization, `fretboard diag stats` text/JSON output, and triage JSON.
+  - Evidence update: perf log entry `2026-05-09 13:31`; smoke bundle
+    `target/fret-diag/codex-scroll-phase-profile-smoke/1778304701572/bundle.schema2.json`.
+  - Result: filtered live-resize real-bounds-delta frames show `measure max=0us`. Content viewport phase cost is
+    dominated by `layout_children_first_pass` (`p95=3640us`) with secondary `solve_barrier` (`p95=672us`).
+    View-cache root phase cost is dominated by `solve_barrier` (`p95=1674us`) with secondary
+    `layout_children_first_pass` (`p95=1296us`). Probe/cache/overflow/handle phases are near-zero.
 - [ ] Investigate content scroll real bounds application cost.
   - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
     `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
@@ -1135,7 +1146,8 @@ Perf acceptance:
   - Question: can a clean subtree whose size changed receive final bounds through a narrower geometry-propagation path
     without rerunning layout-time widget side effects?
   - Latest evidence: kind-level attribution points at structural layout application and inclusive propagation
-    (`Scroll` / `Flex` / `Container` / `Pressable`) rather than a component-local `Text` hotspot.
+    (`Scroll` / `Flex` / `Container` / `Pressable`) rather than a component-local `Text` hotspot; phase attribution
+    shows `layout_children_first_pass` dominates (`p95=3640us`) and measure/probe/overflow phases are negligible.
   - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
     text input layout state, virtual-list visible ranges, and layout query semantics.
   - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled
@@ -1145,6 +1157,8 @@ Perf acceptance:
     dirty flags are false.
   - Question: can viewport-root override / barrier solve input churn be coalesced or made cheaper for clean real bounds
     deltas without stale layout engine rects?
+  - Latest evidence: phase attribution shows `solve_barrier` dominates (`p95=1674us`, max `1712us`) while
+    `measure max=0us` and probe/cache/overflow phases are negligible.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.

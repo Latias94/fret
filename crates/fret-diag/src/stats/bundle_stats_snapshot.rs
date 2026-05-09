@@ -5,7 +5,8 @@ use super::{
     BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
     BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
-    BundleStatsScrollLayoutProfile, BundleStatsWidgetMeasureHotspot,
+    BundleStatsScrollLayoutPhaseProfile, BundleStatsScrollLayoutProfile,
+    BundleStatsWidgetMeasureHotspot,
 };
 
 pub(super) fn snapshot_paint_widget_hotspots(
@@ -317,6 +318,27 @@ pub(super) fn snapshot_scroll_layout_profiles(
             .unwrap_or_default()
     };
 
+    let parse_phase_profiles = |p: &serde_json::Map<String, serde_json::Value>,
+                                key: &str|
+     -> Vec<BundleStatsScrollLayoutPhaseProfile> {
+        p.get(key)
+            .and_then(|v| v.as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_object())
+                    .map(|item| BundleStatsScrollLayoutPhaseProfile {
+                        phase: item
+                            .get("phase")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string()),
+                        us: item.get("us").and_then(|v| v.as_u64()).unwrap_or(0),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
     let mut out: Vec<BundleStatsScrollLayoutProfile> = scroll_nodes
         .iter()
         .filter_map(|n| {
@@ -389,6 +411,7 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     .get("force_barrier_child_root_relayout")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false),
+                phase_profiles: parse_phase_profiles(p, "phase_profiles"),
                 measure_children_us: p
                     .get("measure_children_us")
                     .and_then(|v| v.as_u64())

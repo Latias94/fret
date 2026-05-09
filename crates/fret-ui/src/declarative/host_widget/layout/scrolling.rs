@@ -6,8 +6,9 @@ use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{
     UiDebugInvalidationDetail, UiDebugInvalidationSource, UiDebugScrollAxis,
-    UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind, UiDebugScrollLayoutProfile,
-    UiDebugScrollNodeTelemetry, UiDebugScrollOverflowObservationTelemetry,
+    UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind, UiDebugScrollLayoutPhaseProfile,
+    UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
+    UiDebugScrollOverflowObservationTelemetry,
 };
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
@@ -53,6 +54,33 @@ struct ScrollChildLayoutProfile {
     max_bounds_after: Option<Rect>,
     max_input_bounds: Rect,
     kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ScrollLayoutPhaseProfiles {
+    profiles: Vec<UiDebugScrollLayoutPhaseProfile>,
+}
+
+impl ScrollLayoutPhaseProfiles {
+    fn record(&mut self, phase: &'static str, elapsed: Duration) {
+        const MAX_PHASE_PROFILES: usize = 16;
+        let us = elapsed.as_micros() as u64;
+        if us == 0 {
+            return;
+        }
+        if let Some(existing) = self.profiles.iter_mut().find(|entry| entry.phase == phase) {
+            existing.us = existing.us.saturating_add(us);
+        } else if self.profiles.len() < MAX_PHASE_PROFILES {
+            self.profiles
+                .push(UiDebugScrollLayoutPhaseProfile { phase, us });
+        }
+    }
+
+    fn into_sorted(mut self) -> Vec<UiDebugScrollLayoutPhaseProfile> {
+        self.profiles
+            .sort_by(|a, b| b.us.cmp(&a.us).then_with(|| a.phase.cmp(b.phase)));
+        self.profiles
+    }
 }
 
 impl ScrollChildLayoutProfile {
@@ -161,6 +189,7 @@ impl ScrollChildLayoutProfile {
         direct_children_layout_invalidated: bool,
         descendant_subtree_layout_dirty: bool,
         force_barrier_child_root_relayout: bool,
+        phase_profiles: Vec<UiDebugScrollLayoutPhaseProfile>,
         measure_children_us: u64,
         solve_barrier_us: u64,
         layout_children_us: u64,
@@ -191,6 +220,7 @@ impl ScrollChildLayoutProfile {
             direct_children_layout_invalidated,
             descendant_subtree_layout_dirty,
             force_barrier_child_root_relayout,
+            phase_profiles,
             measure_children_us,
             solve_barrier_us,
             layout_children_us,
@@ -1677,7 +1707,9 @@ impl ElementHostWidget {
         let mut t_layout_children_corrected_content: Duration = Duration::default();
         let mut child_layout_corrected_content_profile = ScrollChildLayoutProfile::default();
         let mut corrected_content_relayout = false;
+        let mut phase_profiles = ScrollLayoutPhaseProfiles::default();
 
+        let state_setup_started = profile_cfg.is_some().then(Instant::now);
         let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
         // The post-layout extents path is the authoritative scroll-range update strategy.
@@ -1778,7 +1810,11 @@ impl ElementHostWidget {
         };
         let force_barrier_child_root_relayout = !forced_barrier_child_roots.is_empty();
         let at_end_with_invalidated_child = at_scroll_extent_edge && children_layout_invalidated;
+        if let Some(started) = state_setup_started {
+            phase_profiles.record("state_handle_setup", started.elapsed());
+        }
 
+        let probe_decision_started = profile_cfg.is_some().then(Instant::now);
         let frame_id = cx.app.frame_id();
         let retained_measured_max_child = resolve_retained_measured_max_child(cx);
         let last_max_child = crate::elements::with_element_state(
@@ -1883,7 +1919,11 @@ impl ElementHostWidget {
                 cx.request_redraw();
             }
         }
+        if let Some(started) = probe_decision_started {
+            phase_profiles.record("probe_defer_decision", started.elapsed());
+        }
 
+        let probe_cache_started = profile_cfg.is_some().then(Instant::now);
         let must_probe_for_growing_extent = pending_extent_probe
             || (at_scroll_extent_edge
                 && (children_layout_invalidated || defer_state.pending_invalidation_probe));
@@ -1947,6 +1987,9 @@ impl ElementHostWidget {
                 cached
             },
         );
+        if let Some(started) = probe_cache_started {
+            phase_profiles.record("probe_cache_lookup", started.elapsed());
+        }
 
         // Some fast paths intentionally reuse cached extents to avoid deep unbounded probe walks
         // during transient invalidation. Those cached extents can temporarily overestimate the true
@@ -2064,6 +2107,7 @@ impl ElementHostWidget {
 
             max_child
         };
+        phase_profiles.record("measure_children", t_measure_children);
 
         // In unbounded probe flows, scroll surfaces frequently sit under auto-sized containers
         // (e.g. `max-height` shells). During intrinsic sizing, parents may pass
@@ -2073,6 +2117,7 @@ impl ElementHostWidget {
         // must avoid feeding a zero "unknown" available size into it. Use the measured content
         // size as an upper bound in that case so the scroll node can participate in intrinsic
         // sizing (similar to how percentage heights behave under `auto` in CSS).
+        let content_compute_started = profile_cfg.is_some().then(Instant::now);
         let mut clamp_available = available;
         if probe_unbounded_for_measure {
             if clamp_available.width.0 <= 0.0 {
@@ -2158,6 +2203,9 @@ impl ElementHostWidget {
         // `AvailableSpace::MaxContent` on the scroll axis.
         let mut content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
         let mut content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
+        if let Some(started) = content_compute_started {
+            phase_profiles.record("content_extent_compute", started.elapsed());
+        }
 
         if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
             && !is_probe_layout
@@ -2217,6 +2265,7 @@ impl ElementHostWidget {
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
         // prematurely.
         if !is_probe_layout {
+            let handle_update_started = profile_cfg.is_some().then(Instant::now);
             handle.set_viewport_size_internal(desired);
             handle.set_content_size_internal(Size::new(content_w, content_h));
             let prev = handle.offset();
@@ -2254,6 +2303,9 @@ impl ElementHostWidget {
                     },
                 );
             }
+            if let Some(started) = handle_update_started {
+                phase_profiles.record("handle_telemetry_update", started.elapsed());
+            }
         }
 
         self.scroll_child_transform = Some(super::super::ScrollChildTransform {
@@ -2261,6 +2313,7 @@ impl ElementHostWidget {
             axis: props.axis,
         });
 
+        let overflow_context_started = profile_cfg.is_some().then(Instant::now);
         let mut content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
         // Install an overflow context so wrapper
@@ -2281,6 +2334,9 @@ impl ElementHostWidget {
         } else {
             cx.overflow_ctx
         };
+        if let Some(started) = overflow_context_started {
+            phase_profiles.record("overflow_context_setup", started.elapsed());
+        }
 
         cx.with_overflow_context(overflow_ctx, |cx| {
             if !is_probe_layout {
@@ -2301,7 +2357,9 @@ impl ElementHostWidget {
                     }
                 }
                 if let Some(started) = solve_started {
-                    t_solve_barrier = started.elapsed();
+                    let elapsed = started.elapsed();
+                    t_solve_barrier = elapsed;
+                    phase_profiles.record("solve_barrier", elapsed);
                 }
             }
 
@@ -2344,6 +2402,7 @@ impl ElementHostWidget {
             if let Some(started) = layout_started {
                 t_layout_children_first_pass = started.elapsed();
                 t_layout_children = t_layout_children.saturating_add(t_layout_children_first_pass);
+                phase_profiles.record("layout_children_first_pass", t_layout_children_first_pass);
             }
             child_layout_profile.merge_from(&child_layout_first_pass_profile);
         });
@@ -2387,6 +2446,7 @@ impl ElementHostWidget {
                 (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
                     || shrink_validation_enabled
                     || post_layout_authoritative_scan;
+            let overflow_observation_started = profile_cfg.is_some().then(Instant::now);
             let (observed, observation) = observe_scroll_overflow_extents(
                 &mut tree,
                 cx.children,
@@ -2396,7 +2456,11 @@ impl ElementHostWidget {
                 extent_may_be_stale,
                 deep_scan_allowed,
             );
+            if let Some(started) = overflow_observation_started {
+                phase_profiles.record("overflow_observation", started.elapsed());
+            }
 
+            let overflow_update_started = profile_cfg.is_some().then(Instant::now);
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
                 && scroll_overflow_observation_needs_follow_up_probe(observation)
             {
@@ -2758,6 +2822,9 @@ impl ElementHostWidget {
                     },
                 );
             }
+            if let Some(started) = overflow_update_started {
+                phase_profiles.record("overflow_extent_update", started.elapsed());
+            }
 
             if relayout_with_updated_content_bounds {
                 corrected_content_relayout = true;
@@ -2784,7 +2851,9 @@ impl ElementHostWidget {
                             }
                         }
                         if let Some(started) = solve_started {
-                            t_solve_barrier += started.elapsed();
+                            let elapsed = started.elapsed();
+                            t_solve_barrier += elapsed;
+                            phase_profiles.record("solve_barrier", elapsed);
                         }
                     }
 
@@ -2829,6 +2898,10 @@ impl ElementHostWidget {
                         t_layout_children_corrected_content = started.elapsed();
                         t_layout_children =
                             t_layout_children.saturating_add(t_layout_children_corrected_content);
+                        phase_profiles.record(
+                            "layout_children_corrected_content",
+                            t_layout_children_corrected_content,
+                        );
                     }
                     child_layout_profile.merge_from(&child_layout_corrected_content_profile);
                 });
@@ -2897,6 +2970,12 @@ impl ElementHostWidget {
                     direct_children_layout_invalidated,
                     descendant_subtree_layout_dirty,
                     force_barrier_child_root_relayout,
+                    phase_profiles = ?phase_profiles
+                        .clone()
+                        .into_sorted()
+                        .iter()
+                        .map(|p| format!("{}:{}us", p.phase, p.us))
+                        .collect::<Vec<_>>(),
                     measure_children_us = t_measure_children.as_micros() as u64,
                     solve_barrier_us = t_solve_barrier.as_micros() as u64,
                     layout_children_us = t_layout_children.as_micros() as u64,
@@ -2968,6 +3047,7 @@ impl ElementHostWidget {
                             direct_children_layout_invalidated,
                             descendant_subtree_layout_dirty,
                             force_barrier_child_root_relayout,
+                            phase_profiles.into_sorted(),
                             t_measure_children.as_micros() as u64,
                             t_solve_barrier.as_micros() as u64,
                             t_layout_children.as_micros() as u64,

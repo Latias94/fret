@@ -78,7 +78,7 @@ pub use debug::{
     UiDebugPrepaintAction, UiDebugPrepaintActionKind, UiDebugRetainedVirtualListReconcile,
     UiDebugRetainedVirtualListReconcileKind, UiDebugScrollAxis, UiDebugScrollHandleChange,
     UiDebugScrollHandleChangeKind, UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind,
-    UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
+    UiDebugScrollLayoutPhaseProfile, UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
     UiDebugScrollOverflowObservationTelemetry, UiDebugScrollbarTelemetry,
     UiDebugTextConstraintsSnapshot, UiDebugVirtualListWindow,
     UiDebugVirtualListWindowShiftApplyMode, UiDebugVirtualListWindowShiftKind,

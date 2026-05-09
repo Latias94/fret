@@ -11203,3 +11203,74 @@ Decision:
   text-specific fast path.
 - Keep the prior rejection of a broad clean-child-root apply skip. The next candidate should be a narrow, proof-backed
   geometry propagation or barrier-solve reduction that preserves layout-time side effects.
+
+## 2026-05-09 13:31 (pre-commit evidence)
+
+Question:
+- The kind-level scroll child layout attribution showed a large `Scroll` self-cost in the filtered live-resize
+  real-bounds-delta frames. Which internal `Scroll` layout phases actually account for that cost?
+
+Change:
+- Added opt-in `FRET_SCROLL_LAYOUT_PROFILE=1` phase attribution for `Scroll` layout profiles.
+- Each captured `debug.scroll_nodes[].layout_profile` can now include `phase_profiles[]`, sorted by descending `us`.
+  Current phase names include:
+  `state_handle_setup`, `probe_defer_decision`, `probe_cache_lookup`, `measure_children`,
+  `content_extent_compute`, `handle_telemetry_update`, `overflow_context_setup`, `solve_barrier`,
+  `layout_children_first_pass`, `overflow_observation`, `overflow_extent_update`, and
+  `layout_children_corrected_content`.
+- Surfaced `phase_profiles[]` through diagnostics bundle serialization, `fretboard diag stats` text/JSON output, and
+  triage JSON examples. Runtime layout behavior is unchanged when profiling is disabled.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-ui scroll` (`147/147` passed)
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-ui interactive_resize_flow_rebuild` (`9/9` passed)
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-ui view_cache` (`57/57` passed)
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this diagnostics change did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-scroll-phase-profile-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-scroll-phase-profile-smoke/1778304701572/bundle.schema2.json`
+- Stats JSON:
+  - `target/fret-diag/codex-scroll-phase-profile-smoke/stats-top1.json`
+  - `target/fret-diag/codex-scroll-phase-profile-smoke/stats-top140.json`
+- Top-frame summary (`--top 1`; schema smoke, not the live-resize optimization target):
+  - frame `209`, top total/layout/solve/paint `15637/12043/584/3471us`
+  - 3 captured scroll profiles, all `interactive_resize=false` and `layout_child_max_bounds_changed=false`
+  - top phase examples:
+    - `total_us=4638`: `layout_children_first_pass=3308us`, `solve_barrier=1257us`,
+      `overflow_observation=66us`
+    - `total_us=3101`: `layout_children_first_pass=1465us`, `solve_barrier=1384us`,
+      `overflow_observation=241us`
+
+Interactive real-bounds-delta classification:
+- Filter: `interactive_resize=true && layout_child_max_bounds_changed=true` over `diag stats --sort time --top 140`.
+- 78 filtered profiles:
+  - `ui-gallery-content-viewport`: 27 profiles, `total p50/p95/max=3689/4225/4291us`,
+    `first-pass p50/p95/max=3142/3640/3656us`, `barrier p50/p95/max=509/672/674us`,
+    `measure max=0us`, max traversal `1042` nodes.
+  - `ui-gallery-view-cache-root`: 27 profiles, `total p50/p95/max=2806/2931/2994us`,
+    `first-pass p50/p95/max=1180/1296/1299us`, `barrier p50/p95/max=1580/1674/1712us`,
+    `measure max=0us`, max traversal `962` nodes.
+  - `ui-gallery-nav-scroll`: 24 profiles, `total p50/p95/max=30/38/52us`; not a target.
+- Phase aggregates:
+  - Content viewport: `layout_children_first_pass` dominates (`p95=3640us`), `solve_barrier` is secondary
+    (`p95=672us`), while `overflow_observation`, probe/cache policy, and handle telemetry are near-zero.
+  - View-cache root: `solve_barrier` dominates (`p95=1674us`), `layout_children_first_pass` is secondary
+    (`p95=1296us`), while overflow/probe/cache policy is near-zero.
+
+Decision:
+- Live-resize scroll cost is not currently an unbounded measure/probe/cache/overflow-observation problem; filtered
+  resize frames have `measure max=0us` and phase time is concentrated in first-pass child layout plus barrier solve.
+- The next optimization should not be a broad Scroll skip or a text-only fast path. Keep the two measured lanes split:
+  - Content viewport: investigate whether clean real-bounds application across a ~1k-node subtree can use a narrower
+    geometry-propagation path without skipping required layout-time side effects.
+  - View-cache root: investigate whether clean viewport-root barrier solve input churn can be reduced or coalesced
+    without stale layout-engine rects.

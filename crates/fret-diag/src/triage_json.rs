@@ -397,6 +397,12 @@ pub(crate) fn triage_json_from_stats(
                         "direct_children_layout_invalidated": p.direct_children_layout_invalidated,
                         "descendant_subtree_layout_dirty": p.descendant_subtree_layout_dirty,
                         "post_layout_extents_mode": p.post_layout_extents_mode,
+                        "phase_profiles": p.phase_profiles.iter().map(|phase| {
+                            json!({
+                                "phase": phase.phase,
+                                "us": phase.us,
+                            })
+                        }).collect::<Vec<_>>(),
                         "element_path": p.element_path,
                     })
                 })
@@ -1014,6 +1020,12 @@ pub(crate) fn triage_json_from_stats(
                     "direct_children_layout_invalidated": p.direct_children_layout_invalidated,
                     "descendant_subtree_layout_dirty": p.descendant_subtree_layout_dirty,
                     "force_barrier_child_root_relayout": p.force_barrier_child_root_relayout,
+                    "phase_profiles": p.phase_profiles.iter().map(|phase| {
+                        json!({
+                            "phase": phase.phase,
+                            "us": phase.us,
+                        })
+                    }).collect::<Vec<_>>(),
                     "measure_children_us": p.measure_children_us,
                     "solve_barrier_us": p.solve_barrier_us,
                     "layout_children_us": p.layout_children_us,

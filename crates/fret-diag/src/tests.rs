@@ -1661,12 +1661,16 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                         "desired_h": 400.0,
                         "content_w": 600.0,
                         "content_h": 1200.0,
-                        "post_layout_extents_mode": true,
-                        "interactive_resize": true,
-                        "direct_children_layout_invalidated": true,
-                        "descendant_subtree_layout_dirty": true,
-                        "force_barrier_child_root_relayout": false,
-                        "measure_children_us": 500,
+                    "post_layout_extents_mode": true,
+                    "interactive_resize": true,
+                    "direct_children_layout_invalidated": true,
+                    "descendant_subtree_layout_dirty": true,
+                    "force_barrier_child_root_relayout": false,
+                    "phase_profiles": [{
+                        "phase": "measure_children",
+                        "us": 500
+                    }],
+                    "measure_children_us": 500,
                         "solve_barrier_us": 100,
                         "layout_children_us": 2_200,
                         "layout_children_first_pass_us": 1_700,
@@ -1874,6 +1878,19 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("scroll_layout_profiles"))
             .and_then(|v| v.as_array())
             .and_then(|v| v.first())
+            .and_then(|v| v.get("phase_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("phase"))
+            .and_then(|v| v.as_str()),
+        Some("measure_children")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
             .and_then(|v| v.get("layout_child_first_pass_kind_profiles"))
             .and_then(|v| v.as_array())
             .and_then(|v| v.first())
@@ -1937,6 +1954,16 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("kind"))
             .and_then(|v| v.as_str()),
         Some("Text")
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("phase_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("phase"))
+            .and_then(|v| v.as_str()),
+        Some("measure_children")
     );
     let build_roots_examples = triage
         .get("hints")

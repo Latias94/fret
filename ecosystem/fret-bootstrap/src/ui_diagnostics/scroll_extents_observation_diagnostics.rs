@@ -56,6 +56,21 @@ impl UiScrollLayoutKindProfileV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollLayoutPhaseProfileV1 {
+    pub phase: String,
+    pub us: u64,
+}
+
+impl UiScrollLayoutPhaseProfileV1 {
+    fn from_profile(profile: &fret_ui::tree::UiDebugScrollLayoutPhaseProfile) -> Self {
+        Self {
+            phase: profile.phase.to_string(),
+            us: profile.us,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiScrollLayoutProfileV1 {
     pub pass: UiScrollLayoutPassKindV1,
     pub probe_unbounded: bool,
@@ -71,6 +86,8 @@ pub struct UiScrollLayoutProfileV1 {
     pub direct_children_layout_invalidated: bool,
     pub descendant_subtree_layout_dirty: bool,
     pub force_barrier_child_root_relayout: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub phase_profiles: Vec<UiScrollLayoutPhaseProfileV1>,
     pub measure_children_us: u64,
     pub solve_barrier_us: u64,
     pub layout_children_us: u64,
@@ -143,6 +160,11 @@ impl UiScrollLayoutProfileV1 {
             direct_children_layout_invalidated: profile.direct_children_layout_invalidated,
             descendant_subtree_layout_dirty: profile.descendant_subtree_layout_dirty,
             force_barrier_child_root_relayout: profile.force_barrier_child_root_relayout,
+            phase_profiles: profile
+                .phase_profiles
+                .iter()
+                .map(UiScrollLayoutPhaseProfileV1::from_profile)
+                .collect(),
             measure_children_us: profile.measure_children_us,
             solve_barrier_us: profile.solve_barrier_us,
             layout_children_us: profile.layout_children_us,
