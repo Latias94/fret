@@ -17,7 +17,7 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 
 - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
-- `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json` (typical perf, `frame_p95_*`)
 
@@ -44,7 +44,7 @@ P0 commands:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 - `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
 
 ## Stress/jitter runs (tail hunting, not P0)
 
@@ -58,6 +58,19 @@ occasional gate failures in legacy v1 suites even when P0 is green; use this mod
 Recommended stress command:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+Current boundary (2026-05-10):
+
+- The broad `ui-gallery-steady` suite is a maintenance/evidence surface on Windows, not the default promotable gate.
+- Use the smaller daily smoke trio (`ui-gallery-dialog-escape-focus-restore-steady`,
+  `ui-gallery-context-menu-right-click-steady`, `ui-gallery-material3-tabs-switch-perf-steady`) for routine
+  verification.
+- Keep `ui-gallery-complex-steady` and the broad `ui-gallery-steady` repeat=7 run as tail evidence while the suite
+  membership is narrowed or split into narrower steady-contract groups.
+- The experimental combined `ui-gallery-core-steady` baseline was not promoted; the overlay scripts belong in
+  `ui-gallery-overlay-steady`, but that suite still needs to be split into narrower follow-ons before promotion.
+  `ui-gallery-material3-tabs-switch-perf-steady` should stay with the existing `perf-ui-gallery` path unless a later
+  narrower follow-on proves it needs its own contract.
 
 Workflow when it fails:
 
@@ -459,6 +472,51 @@ Next action:
 
 - Decide whether this is primarily **real CPU work** (optimize `build_viewport_flow_subtree`) or **schedule noise**
   (needs ETW/WPR or an in-app CPU-time signal).
+
+## Finding (2026-05-10): action-availability snapshots must not key on pointer arbitration
+
+Observed:
+
+- The `ui-gallery-overlay-interaction-steady` validation failure was not layout or hit-test dominated.
+- Worst failed bundles pointed at pointer-move dispatch time with full command action-availability
+  evaluation in the post-dispatch window snapshot path:
+  `dispatch_snapshot.command_availability(widget_count/collect_us/eval_us)=11/8/580`.
+- The failed validation reached `pointer_move_max_dispatch_time_us=313us` and `384us` against a
+  `280us` threshold while `layout_engine_solve_time_us=0`.
+
+Root cause:
+
+- `WindowCommandActionAvailabilitySnapshotSignature` used the whole `InputContext` as a cache key.
+- `InputContext.window_arbitration` carries modal/capture/pointer-occlusion state for policy-heavy
+  event handling, but it is high-frequency pointer-move state and not part of command gating
+  (`when` expressions use modal/text/edit/router/platform/cap/keyctx state).
+
+Change:
+
+- `crates/fret-ui/src/tree/mod.rs` now uses a reduced
+  `WindowCommandActionAvailabilityInputSignature` for the command action-availability cache key.
+- The signature keeps stable command-gating fields and intentionally excludes pointer-arbitration
+  state and dispatch-phase noise.
+- Regression test:
+  `cargo nextest run -p fret-ui window_command_action_availability_snapshot`.
+
+Evidence after the change:
+
+- Script:
+  `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json --dir target/fret-diag/overlay-pointer-move-check --session-auto --timeout-ms 240000 --launch target/release/fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/overlay-pointer-move-check/sessions/1778355256713-143320/1778355261118-ui-gallery-overlay-pointer-move-steady/bundle.schema2.json`
+- `diag stats --sort cpu_cycles --top 30`:
+  - `derived(pointer_move) frames_considered=98 max.us(dispatch/hit_test)=186/23`
+  - `time p50/p95 (us): dispatch=100/127 hit_test=6/13`
+- Follow-up `diag perf` against `ui-gallery-steady.windows-rtx4090.v1` still failed one unrelated
+  renderer threshold:
+  - Command:
+    `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Failure: `renderer_record_passes_us=173` vs threshold `153`.
+  - Targeted pointer-move counters stayed under the baseline row:
+    `pointer_move_max_dispatch_time_us=208` vs threshold `388`,
+    `pointer_move_max_hit_test_time_us=24` vs threshold `31`.
 
 ## Next steps
 

@@ -1,9 +1,10 @@
 use super::*;
 
 use fret_runtime::{
-    CommandMeta, CommandScope, InputDispatchPhase, WhenExpr,
-    WindowCommandActionAvailabilityService, WindowKeyContextStackService,
-    WindowMenuBarFocusService, command_is_enabled_for_window_with_input_ctx_fallback,
+    CommandMeta, CommandScope, InputContext, InputDispatchPhase, WhenExpr,
+    WindowCommandActionAvailabilityService, WindowInputArbitrationSnapshot,
+    WindowKeyContextStackService, WindowMenuBarFocusService, WindowPointerOcclusion,
+    command_is_enabled_for_window_with_input_ctx_fallback,
 };
 use std::sync::Arc;
 
@@ -104,6 +105,21 @@ fn publish_snapshot(
         dispatch_phase: InputDispatchPhase::Bubble,
     };
 
+    ui.publish_window_command_action_availability_snapshot(app, &input_ctx);
+
+    assert!(
+        app.global::<WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_some()
+    );
+}
+
+fn publish_snapshot_with_input_ctx(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    window: AppWindowId,
+    input_ctx: InputContext,
+) {
     ui.publish_window_command_action_availability_snapshot(app, &input_ctx);
 
     assert!(
@@ -280,6 +296,71 @@ fn action_availability_snapshot_skips_recompute_when_inputs_are_unchanged() {
         .map(|counter| counter.count)
         .unwrap_or(0);
     assert_eq!(fourth_count, 2);
+}
+
+#[test]
+fn action_availability_snapshot_ignores_pointer_arbitration_only_changes() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAvailabilityNode);
+    let leaf = ui.create_node(FocusableLeaf);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut input_ctx = InputContext {
+        platform: Platform::current(),
+        caps: app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default(),
+        ui_has_modal: false,
+        window_arbitration: None,
+        focus_is_text_input: ui.focus_is_text_input(&mut app),
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+        edit_can_undo: true,
+        edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
+        dispatch_phase: InputDispatchPhase::Bubble,
+    };
+
+    publish_snapshot_with_input_ctx(&mut ui, &mut app, window, input_ctx.clone());
+    let first_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(first_count, 1);
+
+    input_ctx.window_arbitration = Some(WindowInputArbitrationSnapshot {
+        modal_barrier_root: Some(root),
+        focus_barrier_root: Some(root),
+        pointer_occlusion: WindowPointerOcclusion::BlockMouse,
+        pointer_occlusion_root: Some(root),
+        pointer_capture_active: true,
+        pointer_capture_root: Some(root),
+        pointer_capture_multiple_roots: false,
+    });
+    publish_snapshot_with_input_ctx(&mut ui, &mut app, window, input_ctx);
+    let second_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(second_count, 1);
 }
 
 #[test]
