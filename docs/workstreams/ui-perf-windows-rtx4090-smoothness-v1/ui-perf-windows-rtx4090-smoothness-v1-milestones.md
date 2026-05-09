@@ -12,7 +12,8 @@ Exit criteria:
 Exit criteria:
 
 - `ui-gallery-steady` passes `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json` with `--repeat 3` reliably.
-- `ui-resize-probes` passes `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json` with `--repeat 3` reliably.
+- `ui-resize-probes` passes `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json` with
+  `attempts=3`, `repeat=7`, and default suite hooks reliably.
 - `ui-code-editor-resize-probes` does not regress.
 
 ## M2 — Tail attribution is one-command

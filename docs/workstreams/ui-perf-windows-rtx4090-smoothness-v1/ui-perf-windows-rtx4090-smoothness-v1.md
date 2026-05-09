@@ -16,7 +16,7 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 ## Baselines (source of truth)
 
 - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json`
-- `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json` (typical perf, `frame_p95_*`)
@@ -43,15 +43,17 @@ Recommended env (avoid extra I/O + keep cached rendering on):
 P0 commands:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
 - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
 ## Stress/jitter runs (tail hunting, not P0)
 
-The canonical `windows-rtx4090.v1` baselines were tuned for **P0** usage (`repeat=3`, aggregate = `max`).
+Most canonical `windows-rtx4090.v1` baselines were tuned for **P0** usage (`repeat=3`, aggregate = `max`). The
+resize suite is the exception: `ui-resize-probes.windows-rtx4090.v2.json` is the active contract and is validated with
+`attempts=3`, `repeat=7`, `threshold_surface=ui`, and 30% headroom.
 
 When you increase `repeat` (e.g. `repeat=7`), you are intentionally stress-testing stability. Expect
-occasional gate failures even when P0 is green; use this mode to find and explain tail spikes.
+occasional gate failures in legacy v1 suites even when P0 is green; use this mode to find and explain tail spikes.
 
 Recommended stress command:
 

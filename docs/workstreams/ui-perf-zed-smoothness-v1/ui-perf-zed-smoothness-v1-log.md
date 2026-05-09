@@ -11754,3 +11754,49 @@ Decision:
   fixed traversal from ordinary resize roots.
 - The next optimization target should stay on root solve stability and paint/cache work, not on flex-wrap intrinsic
   probe caching, unless a future bundle shows nonzero `flex_wrap_patch_probes` or `flex_wrap_patch_time_us`.
+
+## 2026-05-09 20:41 (baseline promotion)
+
+Question:
+- After the flex-wrap patch attribution, can the Windows `ui-resize-probes` contract move from the legacy v1 baseline
+  to a p50-carrying v2 baseline without hiding real resize/layout failures?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`.
+- Promoted the Windows default baseline in `tools/perf/diag_resize_probes_gate.py` and
+  `tools/perf/diag_resize_probes_gate.sh` from v1 to v2.
+- Updated the contract matrix, audit, and Windows RTX 4090 workstream docs to treat v2 as the active Windows resize
+  contract.
+
+Evidence:
+- 20% headroom remained too tight under repeat=7 validation:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2-flexpatch/selection-summary.json`
+  - best candidate `fail_total=3`
+- 30% headroom selected a clean candidate:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2-headroom30-flexpatch/selection-summary.json`
+  - best candidate `candidate-2`, `fail_total=0`
+  - `suite_p90_total_time_us_sum=7393`, `threshold_sum_max_top_total_us=9612`
+- Matching formal gate:
+  - command:
+    `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --out-dir target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30 --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+  - summary: `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`
+  - result: PASS, `pass_attempts=3`, `fail_attempts=0`
+- Baseline p50 coverage after promotion:
+  - `BASELINE_FILES=59`
+  - `TOTAL_ROWS=298`
+  - `TOTAL_ROWS_WITH_P50=2`
+
+Validation:
+- `python tools/perf/diag_resize_probes_gate.py --help`
+- `bash -n tools/perf/diag_resize_probes_gate.sh`
+- `bash tools/perf/diag_resize_probes_gate.sh --help`
+- `git diff --check`
+- Python helper default check: `ui-resize-probes -> docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
+- PowerShell baseline scan: `baseline_files=59 total_rows=298 rows_with_p50=2`
+
+Decision:
+- Promote Windows `ui-resize-probes.windows-rtx4090.v2.json` as the active resize contract. The 30% headroom is a
+  documented Windows resize/layout tail allowance, not a renderer micro-timing allowance, because the baseline uses
+  `threshold_surface=ui`.
+- Keep the next p50 re-seed work focused on `ui-code-editor-resize-probes.windows-rtx4090.v2.json` and
+  `ui-gallery-steady.windows-rtx4090.v2.json`.

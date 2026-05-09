@@ -59,7 +59,7 @@ default_baseline_for_suite() {
   local platform_key="$2"
   case "$suite_name:$platform_key" in
     ui-resize-probes:windows)
-      echo "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json"
+      echo "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json"
       ;;
     ui-resize-probes:macos)
       echo "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"

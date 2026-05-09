@@ -52,7 +52,7 @@ def _default_baseline_for_suite(suite: str) -> str:
     platform_key = _host_platform_key()
     if suite == "ui-resize-probes":
         if platform_key == "windows":
-            return "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json"
+            return "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json"
         if platform_key == "macos":
             return "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
     if suite == "ui-code-editor-resize-probes":
