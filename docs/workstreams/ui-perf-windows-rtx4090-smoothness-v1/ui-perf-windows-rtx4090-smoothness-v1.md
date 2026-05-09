@@ -94,7 +94,8 @@ First places to look on Windows:
 - `top_total_time_us` / `frame_p95_total_time_us`: the contract miss itself. Start with `diag stats --sort time --top 30`.
 - `top_layout_time_us` / `top_layout_engine_solve_time_us`: layout-root churn or solver pressure. Inspect layout hotspots
   and, if needed, re-run with `FRET_LAYOUT_NODE_PROFILE=1`.
-- `top_paint_time_us` / `frame_max_paint_time_us`: paint-tail or renderer churn. Inspect renderer stage timings and trace.
+- `top_paint_time_us` / `frame_max_paint_time_us`: paint-tail or renderer churn. Start with triage hints
+  (`paint.widget_heavy`, `paint.text_prepare_churn`), then inspect renderer stage timings and trace.
 - `pointer_move_max_dispatch_time_us` / `pointer_move_max_hit_test_time_us`: overlay/pointer interaction suites.
 
 If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use

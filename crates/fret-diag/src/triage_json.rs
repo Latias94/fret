@@ -436,6 +436,43 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // paint.widget_heavy
+        if worst.paint_widget_time_us > 0 {
+            let pct = ratio_pct(worst.paint_widget_time_us, worst.paint_time_us);
+            if worst.paint_widget_time_us >= 2_000 || (worst.paint_time_us > 0 && pct >= 50.0) {
+                let examples: Vec<serde_json::Value> = worst
+                    .paint_widget_hotspots
+                    .iter()
+                    .take(4)
+                    .map(|h| {
+                        json!({
+                            "node": h.node,
+                            "element": h.element,
+                            "element_kind": h.element_kind,
+                            "widget_type": h.widget_type,
+                            "paint_time_us": h.paint_time_us,
+                            "inclusive_time_us": h.inclusive_time_us,
+                            "inclusive_scene_ops_delta": h.inclusive_scene_ops_delta,
+                            "exclusive_scene_ops_delta": h.exclusive_scene_ops_delta,
+                            "role": h.role,
+                            "test_id": h.test_id,
+                        })
+                    })
+                    .collect();
+                out.push(json!({
+                    "code": "paint.widget_heavy",
+                    "severity": "warn",
+                    "message": "Widget paint work is a significant slice of paint time in the worst frame; inspect paint_widget_hotspots before changing renderer or layout thresholds.",
+                    "evidence": {
+                        "paint_widget_time_us": worst.paint_widget_time_us,
+                        "paint_time_us": worst.paint_time_us,
+                        "paint_widget_pct_of_paint": pct,
+                        "examples": examples,
+                    }
+                }));
+            }
+        }
+
         // paint.text_prepare_churn
         if worst.paint_text_prepare_time_us > 0 || worst.paint_text_prepare_calls > 0 {
             let per_call = if worst.paint_text_prepare_calls == 0 {

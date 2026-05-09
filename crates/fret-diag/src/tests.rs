@@ -1599,7 +1599,8 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                 "stats": {
                 "layout_time_us": 10_000,
                 "prepaint_time_us": 0,
-                "paint_time_us": 0,
+                "paint_time_us": 5_000,
+                "paint_widget_time_us": 4_500,
                 "layout_engine_solves": 1,
                 "layout_engine_solve_time_us": 7_000,
                 "layout_request_build_roots_time_us": 3_000,
@@ -1614,6 +1615,16 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                     "renderer_encoder_finish_us": 67,
                     "renderer_text_atlas_upload_bytes": 2_000_000,
                 },
+                "paint_widget_hotspots": [{
+                    "node": 60,
+                    "element": 300,
+                    "element_kind": "CodeEditor",
+                    "widget_type": "WindowedRowsSurface",
+                    "paint_time_us": 4_200,
+                    "inclusive_time_us": 4_500,
+                    "inclusive_scene_ops_delta": 640,
+                    "exclusive_scene_ops_delta": 620
+                }],
                 "layout_request_build_roots": [{
                     "root_node": 42,
                     "root_kind": "window",
@@ -1760,8 +1771,57 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
     assert!(codes.contains(&"layout.solve_heavy"));
     assert!(codes.contains(&"layout.build_roots_heavy"));
     assert!(codes.contains(&"layout.scroll_profile_present"));
+    assert!(codes.contains(&"paint.widget_heavy"));
     assert!(codes.contains(&"paint.text_prepare_churn"));
     assert!(codes.contains(&"renderer.upload_churn"));
+
+    let paint_widget_evidence = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("paint.widget_heavy"))
+        .and_then(|h| h.get("evidence"))
+        .expect("paint.widget_heavy evidence");
+    assert_eq!(
+        paint_widget_evidence
+            .get("paint_widget_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(4_500)
+    );
+    assert_eq!(
+        paint_widget_evidence
+            .get("paint_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(5_000)
+    );
+    assert!(
+        (paint_widget_evidence
+            .get("paint_widget_pct_of_paint")
+            .and_then(|v| v.as_f64())
+            .unwrap_or_default()
+            - 90.0)
+            .abs()
+            < f64::EPSILON
+    );
+    let paint_widget_examples = paint_widget_evidence
+        .get("examples")
+        .and_then(|v| v.as_array())
+        .expect("paint.widget_heavy examples");
+    assert_eq!(
+        paint_widget_examples
+            .first()
+            .and_then(|v| v.get("widget_type"))
+            .and_then(|v| v.as_str()),
+        Some("WindowedRowsSurface")
+    );
+    assert_eq!(
+        paint_widget_examples
+            .first()
+            .and_then(|v| v.get("inclusive_scene_ops_delta"))
+            .and_then(|v| v.as_u64()),
+        Some(640)
+    );
 
     assert_eq!(
         triage
