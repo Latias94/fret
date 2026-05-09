@@ -53,6 +53,27 @@ The first recipe consumer is
 `mechanism_harness_recipe_layout_cases_match_oracles`. It locks the ButtonGroupText center-y
 alignment case that originally exposed the layout/chrome mechanism risk in UI Gallery.
 
+## Phase 2.1 Hit-Test Routing Coverage
+
+The second `fret-ui` fixture suite is
+`crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json` and is run by
+`mechanism_harness_hit_test_routing_matches_oracles`.
+
+It covers:
+
+- visual transforms: visual bounds may move while layout and hit-test bounds stay put,
+- render transforms: visual and hit-test bounds move together while layout bounds stay put,
+- overflow clipping: escaped child layout cannot receive pointer hits outside the clipping parent,
+- transparent wrappers: non-hit-testable mechanism wrappers preserve child hit routing,
+- non-hit-testable gates: disabled hit-test subtrees keep layout but stop child hit routing,
+- overlay roots: topmost overlay roots win over overlapping underlay roots,
+- modal barrier roots: hit-test-inert modal roots still scope input and suppress underlay hits.
+
+`ObservedHitTestSample` records the hit node, active layer roots, and barrier root for each sample.
+The mechanism-only predicates `hit_test_sample_barrier_root` and
+`hit_test_sample_active_layer_root_at` keep overlay/modal routing assertions in the same fixture
+oracle instead of scattering them across bespoke tests.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -62,6 +83,21 @@ harness crate. `UiPredicateV1::BoundsMetricDelta` expresses scalar bounds relati
 The promoted seed script
 `tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json` now uses this
 predicate for ButtonGroupText prefix/suffix alignment against the input control.
+
+For hit-test routing, the equivalent UI Gallery diagnostics path is:
+
+- Use stable `test_id` selectors for the intended target, wrapper, overlay panel, and underlay.
+- Use pointer steps such as `move_pointer`, `click`, or `click_stable`; these already record
+  `UiHitTestTraceEntryV1` entries with hit semantics ids/test ids, hit paths, active layer roots,
+  and barrier roots.
+- Use `barrier_roots` assertions when the script needs modal/focus barrier state without stable
+  node ids.
+- Use `capture_layout_sidecar` near layout-vs-hit symptoms and `capture_bundle` for the trace.
+
+This intentionally leaves the Rust harness as the in-process oracle owner while diagnostics remains
+the UI Gallery recorder/triage path. If a future UI Gallery page exposes dedicated mechanism samples,
+the script-side predicates should map one-to-one to the selectors above rather than importing
+`fret-mechanism-harness`.
 
 ## Harness vs Diagnostics
 
@@ -82,6 +118,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-mechanism-harness`
 - `cargo nextest run -p fret-diag-protocol`
 - `cargo nextest run -p fret-ui mechanism_harness_layout_primitives_match_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_hit_test_routing_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
@@ -94,7 +131,7 @@ in this order:
 
 1. hit-test routing matrices: transformed, clipped, transparent, and overlay roots;
 2. semantics tree invariants: roles, labels, relationships, active descendant, and hidden nodes;
-3. overlay placement/focus containment: anchor spaces, modal roots, focus trap/restore;
+3. overlay placement/focus containment: anchor spaces, focus trap/restore, and nested modal roots;
 4. Material 3 recipe parity: consume the same mechanism fixture/oracle format with Material-specific
    scenarios in the ecosystem layer.
 

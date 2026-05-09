@@ -26,6 +26,7 @@ impl<H: UiHost> Widget<H> for TwoViewportRects {
 mod basics;
 mod container;
 mod flex_wrap_intrinsic_min_size;
+mod hit_test_mechanism_harness;
 mod interactivity;
 mod layout_engine;
 mod mechanism_harness;

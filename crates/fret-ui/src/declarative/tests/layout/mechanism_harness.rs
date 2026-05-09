@@ -306,8 +306,9 @@ fn hit_sample(
     id: &str,
     point: Point,
 ) -> ObservedHitTestSample {
-    let hit = ui.debug_hit_test(point).hit;
-    let hit_test_id = hit.and_then(|hit| {
+    let hit = ui.debug_hit_test(point);
+    let hit_node = hit.hit;
+    let hit_test_id = hit_node.and_then(|hit| {
         snapshot
             .nodes
             .iter()
@@ -318,7 +319,13 @@ fn hit_sample(
     ObservedHitTestSample {
         id: id.to_string(),
         point,
-        hit_node_id: hit.map(|node| node.data().as_ffi()),
+        hit_node_id: hit_node.map(|node| node.data().as_ffi()),
         hit_test_id,
+        barrier_root_node_id: hit.barrier_root.map(|node| node.data().as_ffi()),
+        active_layer_root_node_ids: hit
+            .active_layer_roots
+            .iter()
+            .map(|node| node.data().as_ffi())
+            .collect(),
     }
 }

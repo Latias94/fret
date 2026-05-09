@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.hit-test-routing.mechanism-harness-v2.1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["hit_test", "layout", "semantics", "overlay"],
+  "cases": [
+    {
+      "id": "visual-transform-keeps-layout-hit-bounds",
+      "scenario": { "kind": "visual_transform_keeps_layout_hit_bounds" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "visual-transform-target" },
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "visual-transform-target" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "visual-transform-target" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "layout-center",
+            "target": { "kind": "test_id", "id": "visual-transform-target" }
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "visual-center",
+            "target": { "kind": "test_id", "id": "visual-transform-target" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "render-transform-moves-hit-bounds",
+      "scenario": { "kind": "render_transform_moves_hit_bounds" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "render-transform-target" },
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "render-transform-target" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "render-transform-target" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "layout-center",
+            "target": { "kind": "test_id", "id": "render-transform-target" }
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "visual-center",
+            "target": { "kind": "test_id", "id": "render-transform-target" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "overflow-clip-suppresses-escaped-child-hit",
+      "scenario": { "kind": "overflow_clip_suppresses_escaped_child_hit" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "clip-wrapper" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 20.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "clipped-child" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "visible-child-area",
+            "target": { "kind": "test_id", "id": "clipped-child" }
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "escaped-child-area",
+            "target": { "kind": "test_id", "id": "clipped-child" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "transparent-wrapper-preserves-child-hit",
+      "scenario": { "kind": "transparent_wrapper_preserves_child_hit" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "wrapper-center",
+            "target": { "kind": "test_id", "id": "transparent-child" }
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "wrapper-center",
+            "target": { "kind": "test_id", "id": "transparent-wrapper" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-hit-testable-gate-suppresses-child-hit",
+      "scenario": { "kind": "non_hit_testable_gate_suppresses_child_hit" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "gated-child" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "gate-center",
+            "target": { "kind": "test_id", "id": "gated-child" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "overlay-root-z-order-wins",
+      "scenario": { "kind": "overlay_root_z_order_wins" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "overlap-center",
+            "target": { "kind": "test_id", "id": "overlay-target" }
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "overlap-center",
+            "target": { "kind": "test_id", "id": "underlay-target" }
+          },
+          {
+            "kind": "hit_test_sample_barrier_root",
+            "sample_id": "overlap-center"
+          },
+          {
+            "kind": "hit_test_sample_active_layer_root_at",
+            "sample_id": "overlap-center",
+            "index": 0,
+            "target": { "kind": "test_id", "id": "overlay-root" }
+          },
+          {
+            "kind": "hit_test_sample_active_layer_root_at",
+            "sample_id": "overlap-center",
+            "index": 1,
+            "target": { "kind": "test_id", "id": "base-root" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "modal-barrier-root-suppresses-underlay",
+      "scenario": { "kind": "modal_barrier_root_suppresses_underlay" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "underlay-center"
+          },
+          {
+            "kind": "hit_test_sample_barrier_root",
+            "sample_id": "underlay-center",
+            "target": { "kind": "test_id", "id": "modal-barrier-root" }
+          },
+          {
+            "kind": "hit_test_sample_active_layer_root_at",
+            "sample_id": "underlay-center",
+            "index": 0,
+            "target": { "kind": "test_id", "id": "modal-barrier-root" }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -171,4 +171,71 @@ mod tests {
         )
         .unwrap();
     }
+
+    #[test]
+    fn hit_test_sample_layer_routing_oracles_match_roots() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        ));
+        let mut base = ObservedNode::new(
+            "base-root",
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(200.0), Px(120.0)),
+            ),
+        );
+        base.node_id = Some(1);
+        let mut modal = ObservedNode::new(
+            "modal-root",
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(200.0), Px(120.0)),
+            ),
+        );
+        modal.node_id = Some(2);
+        tree.barrier_root_node_id = Some(2);
+        tree.push_node(base);
+        tree.push_node(modal);
+        tree.push_hit_test_sample(ObservedHitTestSample {
+            id: "modal-center".to_string(),
+            point: Point::new(Px(10.0), Px(10.0)),
+            hit_node_id: None,
+            hit_test_id: None,
+            barrier_root_node_id: Some(2),
+            active_layer_root_node_ids: vec![2],
+        });
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::HitTestSample {
+                sample_id: "modal-center".to_string(),
+                target: None,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::HitTestSampleBarrierRoot {
+                sample_id: "modal-center".to_string(),
+                target: Some(UiSelectorV1::TestId {
+                    id: "modal-root".to_string(),
+                    root_z_index: None,
+                }),
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::HitTestSampleActiveLayerRootAt {
+                sample_id: "modal-center".to_string(),
+                index: 0,
+                target: UiSelectorV1::TestId {
+                    id: "modal-root".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+    }
 }

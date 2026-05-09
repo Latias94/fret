@@ -139,6 +139,18 @@ impl ObservedTree {
         true
     }
 
+    pub fn set_test_id_for_node_id(&mut self, node_id: u64, test_id: impl Into<String>) -> bool {
+        let Some(node) = self
+            .nodes
+            .iter_mut()
+            .find(|node| node.node_id == Some(node_id))
+        else {
+            return false;
+        };
+        node.test_id = Some(test_id.into());
+        true
+    }
+
     pub fn set_visual_bounds_for_test_id(&mut self, test_id: &str, bounds: Rect) -> bool {
         self.set_space_bounds_for_test_id(test_id, BoundsSpace::Visual, bounds)
     }
@@ -437,6 +449,10 @@ pub struct ObservedHitTestSample {
     pub hit_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub barrier_root_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub active_layer_root_node_ids: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

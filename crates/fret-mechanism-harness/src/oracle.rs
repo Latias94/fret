@@ -60,6 +60,16 @@ pub enum MechanismPredicate {
         sample_id: String,
         target: UiSelectorV1,
     },
+    HitTestSampleBarrierRoot {
+        sample_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<UiSelectorV1>,
+    },
+    HitTestSampleActiveLayerRootAt {
+        sample_id: String,
+        index: usize,
+        target: UiSelectorV1,
+    },
     OverlayExists {
         overlay_id: String,
     },
@@ -208,6 +218,55 @@ pub fn evaluate_predicate(
                 )))
             } else {
                 Ok(PredicatePass)
+            }
+        }
+        MechanismPredicate::HitTestSampleBarrierRoot { sample_id, target } => {
+            let Some(sample) = tree.hit_sample(sample_id) else {
+                return Err(failure(format!("missing hit-test sample {sample_id:?}")));
+            };
+            match target {
+                None if sample.barrier_root_node_id.is_none() => Ok(PredicatePass),
+                None => Err(failure(format!(
+                    "expected hit-test sample {sample_id:?} to have no barrier root, got {:?}",
+                    sample.barrier_root_node_id
+                ))),
+                Some(target) => {
+                    let Some(root) = sample.barrier_root_node_id else {
+                        return Err(failure(format!(
+                            "expected hit-test sample {sample_id:?} barrier root to match {target:?}, got none"
+                        )));
+                    };
+                    if selector_matches_node_id(tree, target, root) {
+                        Ok(PredicatePass)
+                    } else {
+                        Err(failure(format!(
+                            "hit-test sample {sample_id:?} barrier root mismatch expected={target:?} got={root:?}"
+                        )))
+                    }
+                }
+            }
+        }
+        MechanismPredicate::HitTestSampleActiveLayerRootAt {
+            sample_id,
+            index,
+            target,
+        } => {
+            let Some(sample) = tree.hit_sample(sample_id) else {
+                return Err(failure(format!("missing hit-test sample {sample_id:?}")));
+            };
+            let Some(root) = sample.active_layer_root_node_ids.get(*index).copied() else {
+                return Err(failure(format!(
+                    "hit-test sample {sample_id:?} missing active layer root at index={index} roots={:?}",
+                    sample.active_layer_root_node_ids
+                )));
+            };
+            if selector_matches_node_id(tree, target, root) {
+                Ok(PredicatePass)
+            } else {
+                Err(failure(format!(
+                    "hit-test sample {sample_id:?} active layer root mismatch index={index} expected={target:?} got={root:?} roots={:?}",
+                    sample.active_layer_root_node_ids
+                )))
             }
         }
         MechanismPredicate::OverlayExists { overlay_id } => {
@@ -521,6 +580,12 @@ fn hit_matches(node: &ObservedNode, hit_node_id: Option<u64>, hit_test_id: Optio
             .test_id
             .as_deref()
             .is_some_and(|id| Some(id) == hit_test_id)
+}
+
+fn selector_matches_node_id(tree: &ObservedTree, selector: &UiSelectorV1, node_id: u64) -> bool {
+    tree.select(selector)
+        .into_iter()
+        .any(|node| node.node_id == Some(node_id))
 }
 
 pub fn bounds_metric_value(bounds: Rect, metric: UiBoundsMetricV1) -> f32 {
