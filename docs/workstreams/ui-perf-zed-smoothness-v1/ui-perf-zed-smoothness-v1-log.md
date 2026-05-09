@@ -11800,3 +11800,100 @@ Decision:
   `threshold_surface=ui`.
 - Keep the next p50 re-seed work focused on `ui-code-editor-resize-probes.windows-rtx4090.v2.json` and
   `ui-gallery-steady.windows-rtx4090.v2.json`.
+
+## 2026-05-09 21:32 (code-editor resize gate stabilization)
+
+Question:
+- Can `ui-code-editor-resize-probes` still pass the formal repeat=7 gate after switching the gallery nav selection
+  path in `ui-gallery-code-editor-window-resize-drag-jitter-steady.json` back to the repo-standard click-and-type
+  flow?
+
+Change:
+- Replaced the code-editor resize script's nav search `type_text_into` target with the stable pattern used by other
+  gallery scripts: `click_stable` on `ui-gallery-nav-search`, `Ctrl+A`, `Backspace`, then `type_text`.
+
+Evidence:
+- Helper smoke:
+  - command: `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 1 --repeat 1`
+  - summary: `target/fret-diag-resize-probes-gate-1778333162/summary.json`
+  - result: PASS
+- Formal gate:
+  - command: `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
+  - summary: `target/fret-diag-resize-probes-gate-1778333202/summary.json`
+  - result: PASS, `pass_attempts=3`, `fail_attempts=0`
+
+Validation:
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 1 --repeat 1`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
+
+Decision:
+- Keep the code-editor resize contract on baseline v1 for now. The remaining work is still p50 re-seeding and a
+  stricter editor paint stressor, not navigation stability.
+
+## 2026-05-09 21:56 (code-editor resize baseline promotion)
+
+Question:
+- Can the Windows `ui-code-editor-resize-probes` contract move from the legacy v1 baseline to a p50-carrying v2
+  baseline without hiding real layout/resize failures?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`.
+- Promoted the Windows default baseline in `tools/perf/diag_resize_probes_gate.py` and
+  `tools/perf/diag_resize_probes_gate.sh` from v1 to v2.
+- Kept the baseline threshold surface at `ui`, so renderer micro timings remain attribution evidence instead of hard
+  renderer thresholds.
+
+Evidence:
+- Baseline selector:
+  - command:
+    `python tools/perf/diag_perf_baseline_select.py --suite ui-code-editor-resize-probes --baseline-out docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --preset docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui --work-dir target/fret-diag-baseline-select-ui-code-editor-resize-probes-windows-rtx4090-v2 --launch-bin target/release/fret-ui-gallery.exe --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+  - summary:
+    `target/fret-diag-baseline-select-ui-code-editor-resize-probes-windows-rtx4090-v2/selection-summary.json`
+  - selected candidate: `candidate-1`, `fail_total=0`, `suite_p90_total_time_us_sum=9401`,
+    `threshold_sum_max_top_total_us=11282`
+  - rejected candidate: `candidate-2`, `fail_total=3`
+- Matching formal gate:
+  - command:
+    `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7 --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+  - summary:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`
+  - result: PASS, `pass_attempts=2`, `fail_attempts=1`
+- Default-baseline smoke:
+  - command:
+    `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-default-smoke --attempts 1 --repeat 1 --launch-bin target/release/fret-ui-gallery.exe`
+  - summary:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-default-smoke/summary.json`
+  - result: PASS; helper selected `ui-code-editor-resize-probes.windows-rtx4090.v2.json`
+- Failure attribution:
+  - failed attempt:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/attempt-2/check.perf_thresholds.json`
+  - threshold failure: `top_total_time_us=13800` vs `11282`
+  - layout stayed within the v2 contract: observed `top_layout_time_us=3124`, `top_layout_engine_solve_time_us=1151`
+  - worst bundle:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/attempt-2/1778334772910/bundle.schema2.json`
+  - `diag stats --sort cpu_cycles`: `paint.widget p95=10922us`, renderer text p95/max `1879us`, cache replay small
+    (`cache.replay_us` around `53..120us` in the top frames).
+- Baseline p50 coverage after promotion:
+  - `BASELINE_FILES=60`
+  - `TOTAL_ROWS=299`
+  - `TOTAL_ROWS_WITH_P50=3`
+
+Validation:
+- `python -m json.tool docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`
+- `python tools/perf/diag_resize_probes_gate.py --help`
+- `bash -n tools/perf/diag_resize_probes_gate.sh`
+- `bash tools/perf/diag_resize_probes_gate.sh --help`
+- `git diff --check`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7 --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-default-smoke --attempts 1 --repeat 1 --launch-bin target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag stats target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/attempt-2/1778334772910/bundle.schema2.json --sort cpu_cycles --top 30`
+
+Decision:
+- Promote Windows `ui-code-editor-resize-probes.windows-rtx4090.v2.json` as the active code-editor resize contract.
+  The new baseline is much tighter than v1 and carries p50 evidence; the majority gate is the intended flake guard for
+  occasional tails.
+- Do not widen layout thresholds from the failed attempt. The remaining evidence points at a paint-dominant editor
+  tail, so the next editor work should add a stricter paint stressor before any `WindowedRowsSurface` display-list
+  rewrite.
+- Keep `ui-gallery-steady.windows-rtx4090.v2.json` as the next p50 re-seed candidate; its selector is substantially
+  heavier than this single-script code-editor suite and should be landed as a separate evidence chunk.

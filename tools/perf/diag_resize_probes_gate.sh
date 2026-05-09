@@ -65,7 +65,7 @@ default_baseline_for_suite() {
       echo "docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
       ;;
     ui-code-editor-resize-probes:windows)
-      echo "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json"
+      echo "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json"
       ;;
     ui-code-editor-resize-probes:macos)
       echo "docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json"
