@@ -85,6 +85,13 @@ pub struct UiDebugLayoutEngineSolveProfile {
     pub previous_frame_delta: Option<u64>,
     pub batch_roots: u32,
     pub subtree_nodes: u32,
+    pub flex_wrap_patch_time: Duration,
+    pub flex_wrap_patch_visited_nodes: u32,
+    pub flex_wrap_patch_wrap_nodes: u32,
+    pub flex_wrap_patch_candidate_children: u32,
+    pub flex_wrap_patch_probes: u32,
+    pub flex_wrap_patch_mutations: u32,
+    pub flex_wrap_patch_skipped_no_wrap_descendant: bool,
 }
 
 impl From<crate::layout_engine::LayoutEngineSolveProfile> for UiDebugLayoutEngineSolveProfile {
@@ -107,6 +114,15 @@ impl From<crate::layout_engine::LayoutEngineSolveProfile> for UiDebugLayoutEngin
             previous_frame_delta: profile.previous_frame_delta,
             batch_roots: profile.batch_roots,
             subtree_nodes: profile.subtree_nodes,
+            flex_wrap_patch_time: profile.flex_wrap_patch.elapsed,
+            flex_wrap_patch_visited_nodes: profile.flex_wrap_patch.visited_nodes,
+            flex_wrap_patch_wrap_nodes: profile.flex_wrap_patch.wrap_nodes,
+            flex_wrap_patch_candidate_children: profile.flex_wrap_patch.candidate_children,
+            flex_wrap_patch_probes: profile.flex_wrap_patch.probes,
+            flex_wrap_patch_mutations: profile.flex_wrap_patch.mutations,
+            flex_wrap_patch_skipped_no_wrap_descendant: profile
+                .flex_wrap_patch
+                .skipped_no_wrap_descendant,
         }
     }
 }

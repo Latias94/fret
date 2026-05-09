@@ -11702,3 +11702,55 @@ Decision:
 - Next work should attribute the remaining `top_layout_time_us` / `top_layout_engine_solve_time_us` variability in
   `ui-gallery-window-resize-drag-jitter-steady.json` and `ui-gallery-window-resize-stress-steady.json`, or decide on a
   deliberately broader Windows resize contract with matching selector and formal gate evidence.
+
+## 2026-05-09 20:10 (pre-commit evidence)
+
+Question:
+- Is the remaining `ui-resize-probes` tail caused by the flex-wrap intrinsic auto-min patch that runs before the main
+  Taffy solve, or by the main solve / paint path?
+
+Change:
+- Added `flex_wrap_patch_*` fields to layout-engine solve profiles and diagnostic bundle stats:
+  - `flex_wrap_patch_time_us`
+  - `flex_wrap_patch_visited_nodes`
+  - `flex_wrap_patch_wrap_nodes`
+  - `flex_wrap_patch_candidate_children`
+  - `flex_wrap_patch_probes`
+  - `flex_wrap_patch_mutations`
+  - `flex_wrap_patch_skipped_no_wrap_descendant`
+- Added a conservative layout-engine fast path: if the solved root has no seen flex-wrap descendant, skip the
+  flex-wrap intrinsic patch traversal entirely.
+- Added focused `fret-ui` layout-engine tests for the no-wrap skip and the positive intrinsic auto-min patch profile.
+
+Evidence:
+- Repeat=1 attribution:
+  - command output: `target/fret-diag/codex-resize-flex-patch-profile-r1`
+  - `drag-jitter`: `top_total/layout/solve=2769/1904/1184us`
+  - `resize-stress`: `top_total/layout/solve=4526/2531/1242us`
+  - worst bundle: `target/fret-diag/codex-resize-flex-patch-profile-r1/1778328337452/bundle.schema2.json`
+  - `diag stats --json` showed both top solves had `flex_wrap_patch_skipped_no_wrap_descendant=true`,
+    `flex_wrap_patch_probes=0`, and `flex_wrap_patch_visited_nodes=0`.
+- Repeat=7 smoke:
+  - command output: `target/fret-diag/codex-resize-flex-patch-profile-r7-smoke`
+  - worst overall: `top_total_time_us=4358`
+  - `resize-stress` stats: `max layout_engine_solve_time_us=1407`, `max layout_time_us=2482`,
+    `max paint_time_us=1917`
+- Formal Windows RTX4090 gate:
+  - `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --out-dir target/fret-diag/codex-resize-flex-patch-gate-r7 --attempts 1 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+  - Result: PASS, `failures=0`
+  - Summary: `target/fret-diag/codex-resize-flex-patch-gate-r7/summary.json`
+  - Threshold check: `target/fret-diag/codex-resize-flex-patch-gate-r7/check.perf_thresholds.json`
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-ui layout::engine::tests::flex_wrap_patch_profile --no-fail-fast`
+- `cargo nextest run -p fret-ui layout::engine --no-fail-fast`
+- `cargo build -p fretboard -p fret-ui-gallery --release`
+
+Decision:
+- The current resize top solves are not spending time in flex-wrap intrinsic patch probes. Keep the new patch profile
+  fields as a regression/attribution surface, and keep the no-wrap-descendant skip because it removes an unnecessary
+  fixed traversal from ordinary resize roots.
+- The next optimization target should stay on root solve stability and paint/cache work, not on flex-wrap intrinsic
+  probe caching, unless a future bundle shows nonzero `flex_wrap_patch_probes` or `flex_wrap_patch_time_us`.

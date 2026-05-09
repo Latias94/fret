@@ -853,6 +853,34 @@ pub(super) fn snapshot_layout_engine_solves(
                     previous_frame_delta: p.get("previous_frame_delta").and_then(|v| v.as_u64()),
                     batch_roots: p.get("batch_roots").and_then(|v| v.as_u64()).unwrap_or(0),
                     subtree_nodes: p.get("subtree_nodes").and_then(|v| v.as_u64()).unwrap_or(0),
+                    flex_wrap_patch_time_us: p
+                        .get("flex_wrap_patch_time_us")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_visited_nodes: p
+                        .get("flex_wrap_patch_visited_nodes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_wrap_nodes: p
+                        .get("flex_wrap_patch_wrap_nodes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_candidate_children: p
+                        .get("flex_wrap_patch_candidate_children")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_probes: p
+                        .get("flex_wrap_patch_probes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_mutations: p
+                        .get("flex_wrap_patch_mutations")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_skipped_no_wrap_descendant: p
+                        .get("flex_wrap_patch_skipped_no_wrap_descendant")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false),
                 }
             });
 

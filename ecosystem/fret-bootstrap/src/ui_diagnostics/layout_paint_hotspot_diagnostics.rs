@@ -147,6 +147,20 @@ pub struct UiLayoutEngineSolveProfileV1 {
     pub previous_frame_delta: Option<u64>,
     pub batch_roots: u32,
     pub subtree_nodes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_time_us: u64,
+    #[serde(default)]
+    pub flex_wrap_patch_visited_nodes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_wrap_nodes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_candidate_children: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_probes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_mutations: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_skipped_no_wrap_descendant: bool,
 }
 
 impl UiLayoutEngineSolveV1 {
@@ -177,6 +191,17 @@ impl UiLayoutEngineSolveV1 {
                     previous_frame_delta: p.previous_frame_delta,
                     batch_roots: p.batch_roots,
                     subtree_nodes: p.subtree_nodes,
+                    flex_wrap_patch_time_us: p
+                        .flex_wrap_patch_time
+                        .as_micros()
+                        .min(u64::MAX as u128) as u64,
+                    flex_wrap_patch_visited_nodes: p.flex_wrap_patch_visited_nodes,
+                    flex_wrap_patch_wrap_nodes: p.flex_wrap_patch_wrap_nodes,
+                    flex_wrap_patch_candidate_children: p.flex_wrap_patch_candidate_children,
+                    flex_wrap_patch_probes: p.flex_wrap_patch_probes,
+                    flex_wrap_patch_mutations: p.flex_wrap_patch_mutations,
+                    flex_wrap_patch_skipped_no_wrap_descendant: p
+                        .flex_wrap_patch_skipped_no_wrap_descendant,
                 }),
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,

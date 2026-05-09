@@ -701,6 +701,13 @@ pub(super) struct BundleStatsLayoutEngineSolveProfile {
     pub(super) previous_frame_delta: Option<u64>,
     pub(super) batch_roots: u64,
     pub(super) subtree_nodes: u64,
+    pub(super) flex_wrap_patch_time_us: u64,
+    pub(super) flex_wrap_patch_visited_nodes: u64,
+    pub(super) flex_wrap_patch_wrap_nodes: u64,
+    pub(super) flex_wrap_patch_candidate_children: u64,
+    pub(super) flex_wrap_patch_probes: u64,
+    pub(super) flex_wrap_patch_mutations: u64,
+    pub(super) flex_wrap_patch_skipped_no_wrap_descendant: bool,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1911,6 +1918,20 @@ impl BundleStatsReport {
                             out.push_str(&format!(" subtree_nodes={}", profile.subtree_nodes));
                             if profile.batch_roots > 1 {
                                 out.push_str(&format!(" batch_roots={}", profile.batch_roots));
+                            }
+                            if profile.flex_wrap_patch_time_us > 0
+                                || profile.flex_wrap_patch_probes > 0
+                                || profile.flex_wrap_patch_mutations > 0
+                            {
+                                out.push_str(&format!(
+                                    " flex_patch.us={} flex_patch.nodes={} flex_patch.wrap={} flex_patch.candidates={} flex_patch.probes={} flex_patch.mutations={}",
+                                    profile.flex_wrap_patch_time_us,
+                                    profile.flex_wrap_patch_visited_nodes,
+                                    profile.flex_wrap_patch_wrap_nodes,
+                                    profile.flex_wrap_patch_candidate_children,
+                                    profile.flex_wrap_patch_probes,
+                                    profile.flex_wrap_patch_mutations
+                                ));
                             }
                             if let Some(w) = profile.available_w {
                                 out.push_str(&format!(" avail.w={w:.1}"));
@@ -4279,6 +4300,36 @@ impl BundleStatsReport {
                                     p_obj.insert(
                                         "subtree_nodes".to_string(),
                                         Value::from(p.subtree_nodes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_time_us".to_string(),
+                                        Value::from(p.flex_wrap_patch_time_us),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_visited_nodes".to_string(),
+                                        Value::from(p.flex_wrap_patch_visited_nodes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_wrap_nodes".to_string(),
+                                        Value::from(p.flex_wrap_patch_wrap_nodes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_candidate_children".to_string(),
+                                        Value::from(p.flex_wrap_patch_candidate_children),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_probes".to_string(),
+                                        Value::from(p.flex_wrap_patch_probes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_mutations".to_string(),
+                                        Value::from(p.flex_wrap_patch_mutations),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_skipped_no_wrap_descendant".to_string(),
+                                        Value::from(
+                                            p.flex_wrap_patch_skipped_no_wrap_descendant,
+                                        ),
                                     );
                                     Value::Object(p_obj)
                                 })
