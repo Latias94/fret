@@ -11512,3 +11512,37 @@ Decision:
   retained/virtualized surfaces for editor-grade long lists instead of relying on broad root solve skips.
 - Do not treat this as a full core-layout closure. Remaining performance work should continue on real application
   roots that are legitimately wide or width-sensitive after the demo no longer injects an artificial 240-row subtree.
+
+## 2026-05-09 18:05 (no-code-change evidence)
+
+Question:
+- After the view-cache resize harness correction, is `ui-code-editor-resize-probes` still the next obvious
+  editor-grade performance bottleneck on the current Windows RTX 4090 machine?
+
+Run:
+- Script:
+  `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json --dir target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-r3 --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 12 --json --launch -- target\release\fret-ui-gallery.exe`
+- Summary:
+  `target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-r3/regression.summary.json`
+- Worst bundle:
+  `target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-r3/1778319815524/bundle.schema2.json`
+
+Result:
+- Repeat=3 p95: `total/layout/paint/solve=3995/2137/1747/574us`.
+- The script reached the real code-editor torture surface: `text_len_bytes=1477870`, `buffer_line_count=20004`,
+  `syntax_rust=true`, `rows_painted=289`.
+- Code-editor internal paint work is not the current large hotspot in this environment:
+  `app_snapshot.code_editor.torture.paint_perf.us_total=365us` in the sampled single-run bundle
+  `target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-smoke/1778319738246/bundle.schema2.json`.
+- The larger remaining visible costs are renderer-facing work (`top_renderer_encode_scene_us≈961..1109us`,
+  `top_renderer_prepare_text_us≈700..762us`) plus layout wrapper work, not the older 15ms-class row scene churn
+  assumption.
+
+Decision:
+- Do not start a `WindowedRowsSurface` per-row display-list rewrite from this evidence alone. On this machine the
+  existing code-editor resize probe is already under 4ms p95 and needs a stricter or more representative editor
+  workload before a large paint architecture change is justified.
+- Next perf investigations should either create a more targeted editor paint stressor, or move to a currently failing
+  or near-threshold gate rather than optimizing an already-green probe.

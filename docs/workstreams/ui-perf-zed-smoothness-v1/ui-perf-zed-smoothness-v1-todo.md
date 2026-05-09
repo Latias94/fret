@@ -220,6 +220,11 @@ Conventions:
   - [x] Make `CodeEditorHandle::set_language(...)` idempotent (no per-frame cache reset).
     - Implementation: `perf(fret-code-editor): make set_language idempotent` (commit `1778ba563`).
     - Evidence: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`).
+  - Latest no-code evidence on Windows RTX 4090: perf log entry `2026-05-09 18:05` shows
+    `ui-gallery-code-editor-window-resize-drag-jitter-steady` repeat=3 at
+    `total/layout/paint/solve p95=3995/2137/1747/574us`, with the real 20k-line torture surface active and
+    `paint_perf.us_total=365us` in the sampled bundle. Do not start the row display-list rewrite from this sample
+    alone; either create a stricter editor paint stressor or move to a currently near-threshold gate.
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
       - record per-row display lists (ops) and replay with a transform/translation,
