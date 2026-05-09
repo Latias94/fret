@@ -1083,6 +1083,101 @@ Perf acceptance:
     from `8234/4505/3494us` to `8659/4692/3629us`.
   - Decision: do not promote the broad fast path; keep the next implementation pass focused on the narrower
     dirty-frontier / scroll post-layout branch.
+- [x] Add Scroll child-root bounds delta profiling before attempting the narrower dirty-frontier path.
+  - Fields: `layout_child_max_bounds_changed`, `layout_child_max_bounds_size_changed`,
+    `layout_child_max_input_matches_before`, `layout_child_max_input_size_matches_before`,
+    `layout_child_max_bounds_before`, `layout_child_max_bounds_after`, and `layout_child_max_input_bounds`.
+  - Evidence: perf log entry `2026-05-08 23:16`; rebuilt release smoke bundle
+    `target/fret-diag/codex-scroll-bounds-delta-profile-r2/1778253370943/bundle.schema2.json`.
+  - Result: the first heavy Scroll profile samples are initial/fresh mount frames where the child root changes from
+    zero bounds to content bounds. The same profiling payload is now exported into diagnostics bundles as
+    `debug.scroll_nodes[].layout_profile`, surfaced in `fretboard diag stats` as `scroll_layout_profiles`, and
+    mirrored into triage JSON as `layout.scroll_profile_present`; next attribution should capture stable resize
+    frames and separate real geometry deltas from clean subtree state sync.
+- [x] Capture stable cached-flow resize-frame scroll profiles and classify whether clean-child-root apply skipping is
+  justified.
+  - Target: use `layout_child_max_bounds_changed=false` / `layout_child_max_input_matches_before=true` frames from the
+    new stats surface to separate genuine geometry changes from pure state sync.
+  - Gate: `target\release\fretboard.exe diag stats <bundle.json> --sort time --top 5 --json`
+  - Evidence anchor: `target/fret-diag/codex-scroll-layout-profile-stable-fullsnap/1778292518840/bundle.schema2.json`.
+  - Result: the full-snapshot low-threshold probe captured 83 scroll profiles across 85 retained snapshots. 78 profiles
+    are interactive-resize real bounds deltas (`bounds_changed=true`, `input_matches_before=false`); only 3 profiles
+    are clean state-sync candidates, and those are not the live cached-flow resize frames.
+  - Decision: do not implement a clean-child-root apply skip from this sample. Keep optimizing the existing resize
+    layout path, especially real bounds-delta scroll child relayout and layout-root scheduling.
+- [x] Attribute the real bounds-delta scroll resize path before changing layout semantics.
+  - Target: split the `layout_child_max_us` cost between unavoidable child bounds application, layout-engine solve
+    input churn, and any redundant repeated root scheduling.
+  - Start from: `target/fret-diag/codex-scroll-layout-profile-stable-fullsnap/1778292518840/bundle.schema2.json`,
+    especially the interactive-resize profiles where `direct_children_layout_invalidated=false`,
+    `descendant_subtree_layout_dirty=false`, but `layout_child_max_bounds_changed=true`.
+  - Evidence update: perf log entry `2026-05-09 10:55`; new bundle
+    `target/fret-diag/codex-scroll-layout-pass-split-smoke/1778294912347/bundle.schema2.json`.
+  - Result: live resize cost is first-pass real bounds application / barrier solve, not corrected-content relayout and
+    not repeated root scheduling. In the smoke bundle, `ui-gallery-content-viewport` reports `sum_child=83113us`,
+    `sum_first=83113us`, `sum_corrected=0us`; `ui-gallery-view-cache-root` reports `sum_barrier=43615us`.
+- [x] Add kind-level attribution for scroll child layout before choosing a component-specific optimization.
+  - Target: separate text measurement cost from structural layout propagation inside the real bounds-delta child
+    layout path.
+  - Fields: `layout_child_first_pass_kind_profiles`, `layout_child_corrected_content_kind_profiles`, and
+    `layout_child_kind_profiles`.
+  - Evidence update: perf log entry `2026-05-09 12:24`; smoke bundle
+    `target/fret-diag/codex-scroll-kind-profile-smoke/1778300270796/bundle.schema2.json`.
+  - Result: in filtered live-resize real-bounds-delta frames, `ui-gallery-content-viewport` has 27 profiles with max
+    `total_us=4377`, max first-pass child layout `3699us`, max traversal `1042` nodes, and no child invalidation or
+    subtree dirty flag. The largest filtered content profile records kind self costs of `Scroll=1805us`,
+    `Text=645us`, `Flex=458us`, `Container=201us`, and `Pressable=73us`; inclusive totals still stack through
+    container/flex wrappers. Do not spend the next pass on a text-specific fast path without fresh evidence.
+- [x] Add internal phase attribution for Scroll layout before changing the layout data model.
+  - Target: split `Scroll` self/total time into mechanism phases so the next optimization can choose between
+    measure/probe policy, handle telemetry, overflow observation, child-layout application, and barrier solve.
+  - Fields: `phase_profiles[]` under `debug.scroll_nodes[].layout_profile`, surfaced through diagnostics bundle
+    serialization, `fretboard diag stats` text/JSON output, and triage JSON.
+  - Evidence update: perf log entry `2026-05-09 13:31`; smoke bundle
+    `target/fret-diag/codex-scroll-phase-profile-smoke/1778304701572/bundle.schema2.json`.
+  - Result: filtered live-resize real-bounds-delta frames show `measure max=0us`. Content viewport phase cost is
+    dominated by `layout_children_first_pass` (`p95=3640us`) with secondary `solve_barrier` (`p95=672us`).
+    View-cache root phase cost is dominated by `solve_barrier` (`p95=1674us`) with secondary
+    `layout_children_first_pass` (`p95=1296us`). Probe/cache/overflow/handle phases are near-zero.
+- [ ] Investigate content scroll real bounds application cost.
+  - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
+    `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
+    `layout_child_max_subtree_dirty=false`.
+  - Question: can a clean subtree whose size changed receive final bounds through a narrower geometry-propagation path
+    without rerunning layout-time widget side effects?
+  - Latest evidence: kind-level attribution points at structural layout application and inclusive propagation
+    (`Scroll` / `Flex` / `Container` / `Pressable`) rather than a component-local `Text` hotspot; phase attribution
+    shows `layout_children_first_pass` dominates (`p95=3640us`) and measure/probe/overflow phases are negligible.
+  - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
+    text input layout state, virtual-list visible ranges, and layout query semantics.
+  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled
+    `ui-gallery-window-resize-stress-steady.json` smoke.
+- [ ] Investigate clean view-cache scroll barrier solve cost.
+  - Target: `ui-gallery-view-cache-root` live resize profiles where `solve_barrier_us` dominates while child subtree
+    dirty flags are false.
+  - Question: can viewport-root override / barrier solve input churn be coalesced or made cheaper for clean real bounds
+    deltas without stale layout engine rects?
+  - Latest evidence: phase attribution shows `solve_barrier` dominates (`p95=1674us`, max `1712us`) while
+    `measure max=0us` and probe/cache/overflow phases are negligible.
+  - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
+    model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
+- [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
+  - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
+    `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.
+  - Fix: keep hidden children mounted and dirty, but exclude them from `subtree_layout_dirty_count` while the gate is
+    `present=false`; restore the aggregate when `present=true`.
+  - Gate: `cargo nextest run -p fret-ui interactivity_gate interactive_resize_flow_rebuild view_cache`.
+  - Evidence: perf log entry `2026-05-08 22:05`; cached-flow resize frames now report `subtree_dirty=false`,
+    `dirty_count=0`, while remaining heavy frames are classified as `interactive_resize_full_rebuild`.
+- [x] Keep post-resize authoritative rebuild out of live resize frames by widening the quiet-window default.
+  - Discovery: after hidden dirty suppression, remaining resize-stress tail came from `interactive_resize_full_rebuild`
+    frames being inserted between scripted resize steps, not from a new dirty source.
+  - Fix: default `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES` is now `4` instead of `2`; the deferred rebuild still runs
+    after the configured quiet window.
+  - Gate: `cargo nextest run -p fret-ui interactive_resize_flow_rebuild view_cache`.
+  - Evidence: perf log entry `2026-05-08 22:48`; stress default smoke reports top
+    total/layout/solve/paint `8756/4329/2238/4156us`, and drag-jitter default smoke reports
+    `9049/6447/4283/2336us`.
 - [ ] Consider a narrower dirty-frontier scroll relayout path if side-effect audit makes the broad fast path too risky.
   - Target: avoid amplifying a few descendant dirty nodes into a full direct child-root relayout when post-layout extents
     can remain authoritative.

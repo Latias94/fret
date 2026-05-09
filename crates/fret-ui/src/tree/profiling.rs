@@ -1,5 +1,7 @@
 use super::*;
 
+const SCROLL_LAYOUT_KIND_PROFILE_MAX: usize = 12;
+
 #[derive(Debug, Clone, Copy)]
 pub(super) struct LayoutNodeProfileEntry {
     pub(super) node: NodeId,
@@ -235,4 +237,97 @@ struct MeasureNodeProfileStackEntry {
     constraints: crate::layout_constraints::LayoutConstraints,
     started: fret_core::time::Instant,
     child_time: Duration,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct ScrollLayoutKindProfileScope {
+    entries: Vec<ScrollLayoutKindProfileEntry>,
+}
+
+impl ScrollLayoutKindProfileScope {
+    pub(super) fn record(
+        &mut self,
+        kind: &'static str,
+        elapsed_self: Duration,
+        elapsed_total: Duration,
+    ) {
+        let self_us = elapsed_self.as_micros().min(u64::MAX as u128) as u64;
+        let total_us = elapsed_total.as_micros().min(u64::MAX as u128) as u64;
+        if self_us == 0 && total_us == 0 {
+            return;
+        }
+        if let Some(entry) = self.entries.iter_mut().find(|entry| entry.kind == kind) {
+            entry.nodes = entry.nodes.saturating_add(1);
+            entry.self_us = entry.self_us.saturating_add(self_us);
+            entry.total_us = entry.total_us.saturating_add(total_us);
+            entry.max_self_us = entry.max_self_us.max(self_us);
+            entry.max_total_us = entry.max_total_us.max(total_us);
+        } else {
+            self.entries.push(ScrollLayoutKindProfileEntry {
+                kind,
+                nodes: 1,
+                self_us,
+                total_us,
+                max_self_us: self_us,
+                max_total_us: total_us,
+            });
+        }
+    }
+
+    pub(super) fn into_debug_profiles(
+        mut self,
+    ) -> Vec<crate::tree::UiDebugScrollLayoutKindProfile> {
+        self.entries
+            .sort_by(|a, b| b.self_us.cmp(&a.self_us).then_with(|| a.kind.cmp(b.kind)));
+        self.entries.truncate(SCROLL_LAYOUT_KIND_PROFILE_MAX);
+        self.entries
+            .into_iter()
+            .map(|entry| crate::tree::UiDebugScrollLayoutKindProfile {
+                kind: entry.kind,
+                nodes: entry.nodes,
+                self_us: entry.self_us,
+                total_us: entry.total_us,
+                max_self_us: entry.max_self_us,
+                max_total_us: entry.max_total_us,
+            })
+            .collect()
+    }
+
+    pub(super) fn absorb_debug_profiles(
+        &mut self,
+        profiles: &[crate::tree::UiDebugScrollLayoutKindProfile],
+    ) {
+        for profile in profiles {
+            if let Some(entry) = self
+                .entries
+                .iter_mut()
+                .find(|entry| entry.kind == profile.kind)
+            {
+                entry.nodes = entry.nodes.saturating_add(profile.nodes);
+                entry.self_us = entry.self_us.saturating_add(profile.self_us);
+                entry.total_us = entry.total_us.saturating_add(profile.total_us);
+                entry.max_self_us = entry.max_self_us.max(profile.max_self_us);
+                entry.max_total_us = entry.max_total_us.max(profile.max_total_us);
+            } else {
+                self.entries.push(ScrollLayoutKindProfileEntry {
+                    kind: profile.kind,
+                    nodes: profile.nodes,
+                    self_us: profile.self_us,
+                    total_us: profile.total_us,
+                    max_self_us: profile.max_self_us,
+                    max_total_us: profile.max_total_us,
+                });
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ScrollLayoutKindProfileEntry {
+    kind: &'static str,
+    nodes: u32,
+    self_us: u64,
+    total_us: u64,
+    max_self_us: u64,
+    max_total_us: u64,
 }

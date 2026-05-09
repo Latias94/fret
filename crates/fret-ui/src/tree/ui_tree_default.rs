@@ -134,6 +134,7 @@ impl<H: UiHost> Default for UiTree<H> {
             semantics_requested: false,
             layout_node_profile: None,
             measure_node_profile: None,
+            scroll_layout_kind_profile_stack: Vec::new(),
             deferred_cleanup: Vec::new(),
         }
     }

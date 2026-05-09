@@ -6,7 +6,9 @@ use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{
     UiDebugInvalidationDetail, UiDebugInvalidationSource, UiDebugScrollAxis,
-    UiDebugScrollNodeTelemetry, UiDebugScrollOverflowObservationTelemetry,
+    UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind, UiDebugScrollLayoutPhaseProfile,
+    UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
+    UiDebugScrollOverflowObservationTelemetry,
 };
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
@@ -37,7 +39,7 @@ fn scroll_layout_profile_config() -> Option<&'static ScrollLayoutProfileConfig> 
         .as_ref()
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct ScrollChildLayoutProfile {
     nodes_visited: u32,
     nodes_performed: u32,
@@ -48,9 +50,44 @@ struct ScrollChildLayoutProfile {
     max_subtree_dirty_count: u32,
     max_nodes_visited: u32,
     max_nodes_performed: u32,
+    max_bounds_before: Option<Rect>,
+    max_bounds_after: Option<Rect>,
+    max_input_bounds: Rect,
+    kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ScrollLayoutPhaseProfiles {
+    profiles: Vec<UiDebugScrollLayoutPhaseProfile>,
+}
+
+impl ScrollLayoutPhaseProfiles {
+    fn record(&mut self, phase: &'static str, elapsed: Duration) {
+        const MAX_PHASE_PROFILES: usize = 16;
+        let us = elapsed.as_micros() as u64;
+        if us == 0 {
+            return;
+        }
+        if let Some(existing) = self.profiles.iter_mut().find(|entry| entry.phase == phase) {
+            existing.us = existing.us.saturating_add(us);
+        } else if self.profiles.len() < MAX_PHASE_PROFILES {
+            self.profiles
+                .push(UiDebugScrollLayoutPhaseProfile { phase, us });
+        }
+    }
+
+    fn into_sorted(mut self) -> Vec<UiDebugScrollLayoutPhaseProfile> {
+        self.profiles
+            .sort_by(|a, b| b.us.cmp(&a.us).then_with(|| a.phase.cmp(b.phase)));
+        self.profiles
+    }
 }
 
 impl ScrollChildLayoutProfile {
+    fn saturating_elapsed_us(elapsed: Duration) -> u64 {
+        elapsed.as_micros() as u64
+    }
+
     fn record_child(
         &mut self,
         child: NodeId,
@@ -60,10 +97,15 @@ impl ScrollChildLayoutProfile {
         subtree_dirty_count: u32,
         nodes_visited: u32,
         nodes_performed: u32,
+        bounds_before: Option<Rect>,
+        bounds_after: Option<Rect>,
+        input_bounds: Rect,
+        kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
     ) {
-        let elapsed_us = elapsed.as_micros() as u64;
+        let elapsed_us = Self::saturating_elapsed_us(elapsed);
         self.nodes_visited = self.nodes_visited.saturating_add(nodes_visited);
         self.nodes_performed = self.nodes_performed.saturating_add(nodes_performed);
+        self.merge_kind_profiles(&kind_profiles);
         if elapsed_us > self.max_us {
             self.max_us = elapsed_us;
             self.max_node = Some(child);
@@ -72,6 +114,146 @@ impl ScrollChildLayoutProfile {
             self.max_subtree_dirty_count = subtree_dirty_count;
             self.max_nodes_visited = nodes_visited;
             self.max_nodes_performed = nodes_performed;
+            self.max_bounds_before = bounds_before;
+            self.max_bounds_after = bounds_after;
+            self.max_input_bounds = input_bounds;
+        }
+    }
+
+    fn merge_from(&mut self, other: &Self) {
+        self.nodes_visited = self.nodes_visited.saturating_add(other.nodes_visited);
+        self.nodes_performed = self.nodes_performed.saturating_add(other.nodes_performed);
+        self.merge_kind_profiles(&other.kind_profiles);
+        if other.max_us > self.max_us {
+            self.max_us = other.max_us;
+            self.max_node = other.max_node;
+            self.max_invalidated = other.max_invalidated;
+            self.max_subtree_dirty = other.max_subtree_dirty;
+            self.max_subtree_dirty_count = other.max_subtree_dirty_count;
+            self.max_nodes_visited = other.max_nodes_visited;
+            self.max_nodes_performed = other.max_nodes_performed;
+            self.max_bounds_before = other.max_bounds_before;
+            self.max_bounds_after = other.max_bounds_after;
+            self.max_input_bounds = other.max_input_bounds;
+        }
+    }
+
+    fn merge_kind_profiles(&mut self, profiles: &[UiDebugScrollLayoutKindProfile]) {
+        const MAX_KIND_PROFILES: usize = 12;
+        for profile in profiles {
+            if let Some(existing) = self
+                .kind_profiles
+                .iter_mut()
+                .find(|entry| entry.kind == profile.kind)
+            {
+                existing.nodes = existing.nodes.saturating_add(profile.nodes);
+                existing.self_us = existing.self_us.saturating_add(profile.self_us);
+                existing.total_us = existing.total_us.saturating_add(profile.total_us);
+                existing.max_self_us = existing.max_self_us.max(profile.max_self_us);
+                existing.max_total_us = existing.max_total_us.max(profile.max_total_us);
+            } else {
+                self.kind_profiles.push(profile.clone());
+            }
+        }
+        self.kind_profiles
+            .sort_by(|a, b| b.self_us.cmp(&a.self_us).then_with(|| a.kind.cmp(b.kind)));
+        self.kind_profiles.truncate(MAX_KIND_PROFILES);
+    }
+
+    fn max_bounds_changed(&self) -> Option<bool> {
+        Some(self.max_bounds_before? != self.max_bounds_after?)
+    }
+
+    fn max_bounds_size_changed(&self) -> Option<bool> {
+        Some(self.max_bounds_before?.size != self.max_bounds_after?.size)
+    }
+
+    fn max_input_matches_before(&self) -> Option<bool> {
+        Some(self.max_bounds_before? == self.max_input_bounds)
+    }
+
+    fn max_input_size_matches_before(&self) -> Option<bool> {
+        Some(self.max_bounds_before?.size == self.max_input_bounds.size)
+    }
+
+    fn into_debug_profile(
+        self,
+        pass: crate::layout_pass::LayoutPassKind,
+        probe_unbounded: bool,
+        children: usize,
+        available: Size,
+        desired: Size,
+        content: Size,
+        post_layout_extents_mode: bool,
+        interactive_resize: bool,
+        direct_children_layout_invalidated: bool,
+        descendant_subtree_layout_dirty: bool,
+        force_barrier_child_root_relayout: bool,
+        phase_profiles: Vec<UiDebugScrollLayoutPhaseProfile>,
+        measure_children_us: u64,
+        solve_barrier_us: u64,
+        layout_children_us: u64,
+        first_pass: Self,
+        first_pass_us: u64,
+        corrected_content: Self,
+        corrected_content_us: u64,
+        corrected_content_relayout: bool,
+        total_us: u64,
+        element_path: Option<String>,
+    ) -> UiDebugScrollLayoutProfile {
+        let max_bounds_changed = self.max_bounds_changed();
+        let max_bounds_size_changed = self.max_bounds_size_changed();
+        let max_input_matches_before = self.max_input_matches_before();
+        let max_input_size_matches_before = self.max_input_size_matches_before();
+        UiDebugScrollLayoutProfile {
+            pass: match pass {
+                crate::layout_pass::LayoutPassKind::Probe => UiDebugScrollLayoutPassKind::Probe,
+                crate::layout_pass::LayoutPassKind::Final => UiDebugScrollLayoutPassKind::Final,
+            },
+            probe_unbounded,
+            children: children.min(u32::MAX as usize) as u32,
+            available,
+            desired,
+            content,
+            post_layout_extents_mode,
+            interactive_resize,
+            direct_children_layout_invalidated,
+            descendant_subtree_layout_dirty,
+            force_barrier_child_root_relayout,
+            phase_profiles,
+            measure_children_us,
+            solve_barrier_us,
+            layout_children_us,
+            layout_children_first_pass_us: first_pass_us,
+            layout_child_first_pass_nodes_visited: first_pass.nodes_visited,
+            layout_child_first_pass_nodes_performed: first_pass.nodes_performed,
+            layout_child_first_pass_max_us: first_pass.max_us,
+            layout_child_first_pass_kind_profiles: first_pass.kind_profiles,
+            corrected_content_relayout,
+            layout_children_corrected_content_us: corrected_content_us,
+            layout_child_corrected_content_nodes_visited: corrected_content.nodes_visited,
+            layout_child_corrected_content_nodes_performed: corrected_content.nodes_performed,
+            layout_child_corrected_content_max_us: corrected_content.max_us,
+            layout_child_corrected_content_kind_profiles: corrected_content.kind_profiles,
+            layout_child_nodes_visited: self.nodes_visited,
+            layout_child_nodes_performed: self.nodes_performed,
+            layout_child_kind_profiles: self.kind_profiles,
+            layout_child_max_us: self.max_us,
+            layout_child_max_node: self.max_node,
+            layout_child_max_invalidated: self.max_invalidated,
+            layout_child_max_subtree_dirty: self.max_subtree_dirty,
+            layout_child_max_subtree_dirty_count: self.max_subtree_dirty_count,
+            layout_child_max_nodes_visited: self.max_nodes_visited,
+            layout_child_max_nodes_performed: self.max_nodes_performed,
+            layout_child_max_bounds_changed: max_bounds_changed,
+            layout_child_max_bounds_size_changed: max_bounds_size_changed,
+            layout_child_max_input_matches_before: max_input_matches_before,
+            layout_child_max_input_size_matches_before: max_input_size_matches_before,
+            layout_child_max_bounds_before: self.max_bounds_before,
+            layout_child_max_bounds_after: self.max_bounds_after,
+            layout_child_max_input_bounds: self.max_input_bounds,
+            total_us,
+            element_path,
         }
     }
 }
@@ -1520,7 +1702,14 @@ impl ElementHostWidget {
         let mut t_solve_barrier: Duration = Duration::default();
         let mut t_layout_children: Duration = Duration::default();
         let mut child_layout_profile = ScrollChildLayoutProfile::default();
+        let mut t_layout_children_first_pass: Duration = Duration::default();
+        let mut child_layout_first_pass_profile = ScrollChildLayoutProfile::default();
+        let mut t_layout_children_corrected_content: Duration = Duration::default();
+        let mut child_layout_corrected_content_profile = ScrollChildLayoutProfile::default();
+        let mut corrected_content_relayout = false;
+        let mut phase_profiles = ScrollLayoutPhaseProfiles::default();
 
+        let state_setup_started = profile_cfg.is_some().then(Instant::now);
         let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
         // The post-layout extents path is the authoritative scroll-range update strategy.
@@ -1621,7 +1810,11 @@ impl ElementHostWidget {
         };
         let force_barrier_child_root_relayout = !forced_barrier_child_roots.is_empty();
         let at_end_with_invalidated_child = at_scroll_extent_edge && children_layout_invalidated;
+        if let Some(started) = state_setup_started {
+            phase_profiles.record("state_handle_setup", started.elapsed());
+        }
 
+        let probe_decision_started = profile_cfg.is_some().then(Instant::now);
         let frame_id = cx.app.frame_id();
         let retained_measured_max_child = resolve_retained_measured_max_child(cx);
         let last_max_child = crate::elements::with_element_state(
@@ -1726,7 +1919,11 @@ impl ElementHostWidget {
                 cx.request_redraw();
             }
         }
+        if let Some(started) = probe_decision_started {
+            phase_profiles.record("probe_defer_decision", started.elapsed());
+        }
 
+        let probe_cache_started = profile_cfg.is_some().then(Instant::now);
         let must_probe_for_growing_extent = pending_extent_probe
             || (at_scroll_extent_edge
                 && (children_layout_invalidated || defer_state.pending_invalidation_probe));
@@ -1790,6 +1987,9 @@ impl ElementHostWidget {
                 cached
             },
         );
+        if let Some(started) = probe_cache_started {
+            phase_profiles.record("probe_cache_lookup", started.elapsed());
+        }
 
         // Some fast paths intentionally reuse cached extents to avoid deep unbounded probe walks
         // during transient invalidation. Those cached extents can temporarily overestimate the true
@@ -1907,6 +2107,7 @@ impl ElementHostWidget {
 
             max_child
         };
+        phase_profiles.record("measure_children", t_measure_children);
 
         // In unbounded probe flows, scroll surfaces frequently sit under auto-sized containers
         // (e.g. `max-height` shells). During intrinsic sizing, parents may pass
@@ -1916,6 +2117,7 @@ impl ElementHostWidget {
         // must avoid feeding a zero "unknown" available size into it. Use the measured content
         // size as an upper bound in that case so the scroll node can participate in intrinsic
         // sizing (similar to how percentage heights behave under `auto` in CSS).
+        let content_compute_started = profile_cfg.is_some().then(Instant::now);
         let mut clamp_available = available;
         if probe_unbounded_for_measure {
             if clamp_available.width.0 <= 0.0 {
@@ -2001,6 +2203,9 @@ impl ElementHostWidget {
         // `AvailableSpace::MaxContent` on the scroll axis.
         let mut content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
         let mut content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
+        if let Some(started) = content_compute_started {
+            phase_profiles.record("content_extent_compute", started.elapsed());
+        }
 
         if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
             && !is_probe_layout
@@ -2060,6 +2265,7 @@ impl ElementHostWidget {
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
         // prematurely.
         if !is_probe_layout {
+            let handle_update_started = profile_cfg.is_some().then(Instant::now);
             handle.set_viewport_size_internal(desired);
             handle.set_content_size_internal(Size::new(content_w, content_h));
             let prev = handle.offset();
@@ -2080,6 +2286,7 @@ impl ElementHostWidget {
                     content: handle.content_size(),
                     observed_extent: None,
                     overflow_observation: None,
+                    layout_profile: None,
                 });
 
             if needs_authoritative_cache_commit_from_same_frame_probe {
@@ -2096,6 +2303,9 @@ impl ElementHostWidget {
                     },
                 );
             }
+            if let Some(started) = handle_update_started {
+                phase_profiles.record("handle_telemetry_update", started.elapsed());
+            }
         }
 
         self.scroll_child_transform = Some(super::super::ScrollChildTransform {
@@ -2103,6 +2313,7 @@ impl ElementHostWidget {
             axis: props.axis,
         });
 
+        let overflow_context_started = profile_cfg.is_some().then(Instant::now);
         let mut content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
         // Install an overflow context so wrapper
@@ -2123,6 +2334,9 @@ impl ElementHostWidget {
         } else {
             cx.overflow_ctx
         };
+        if let Some(started) = overflow_context_started {
+            phase_profiles.record("overflow_context_setup", started.elapsed());
+        }
 
         cx.with_overflow_context(overflow_ctx, |cx| {
             if !is_probe_layout {
@@ -2143,7 +2357,9 @@ impl ElementHostWidget {
                     }
                 }
                 if let Some(started) = solve_started {
-                    t_solve_barrier = started.elapsed();
+                    let elapsed = started.elapsed();
+                    t_solve_barrier = elapsed;
+                    phase_profiles.record("solve_barrier", elapsed);
                 }
             }
 
@@ -2153,12 +2369,16 @@ impl ElementHostWidget {
                     let child_invalidated = cx.tree.node_layout_invalidated(child);
                     let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(child);
                     let child_subtree_dirty_count = cx.tree.node_subtree_layout_dirty_count(child);
+                    let child_bounds_before = cx.tree.node_bounds(child);
                     let before = cx.tree.debug_stats();
+                    cx.tree.begin_scroll_layout_kind_profile();
                     let child_started = Instant::now();
                     let _ = cx.layout_in(child, content_bounds);
                     let child_elapsed = child_started.elapsed();
+                    let kind_profiles = cx.tree.end_scroll_layout_kind_profile();
                     let after = cx.tree.debug_stats();
-                    child_layout_profile.record_child(
+                    let child_bounds_after = cx.tree.node_bounds(child);
+                    child_layout_first_pass_profile.record_child(
                         child,
                         child_elapsed,
                         child_invalidated,
@@ -2170,14 +2390,21 @@ impl ElementHostWidget {
                         after
                             .layout_nodes_performed
                             .saturating_sub(before.layout_nodes_performed),
+                        child_bounds_before,
+                        child_bounds_after,
+                        content_bounds,
+                        kind_profiles,
                     );
                 } else {
                     let _ = cx.layout_in(child, content_bounds);
                 }
             }
             if let Some(started) = layout_started {
-                t_layout_children = started.elapsed();
+                t_layout_children_first_pass = started.elapsed();
+                t_layout_children = t_layout_children.saturating_add(t_layout_children_first_pass);
+                phase_profiles.record("layout_children_first_pass", t_layout_children_first_pass);
             }
+            child_layout_profile.merge_from(&child_layout_first_pass_profile);
         });
 
         if !is_probe_layout {
@@ -2219,6 +2446,7 @@ impl ElementHostWidget {
                 (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
                     || shrink_validation_enabled
                     || post_layout_authoritative_scan;
+            let overflow_observation_started = profile_cfg.is_some().then(Instant::now);
             let (observed, observation) = observe_scroll_overflow_extents(
                 &mut tree,
                 cx.children,
@@ -2228,7 +2456,11 @@ impl ElementHostWidget {
                 extent_may_be_stale,
                 deep_scan_allowed,
             );
+            if let Some(started) = overflow_observation_started {
+                phase_profiles.record("overflow_observation", started.elapsed());
+            }
 
+            let overflow_update_started = profile_cfg.is_some().then(Instant::now);
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
                 && scroll_overflow_observation_needs_follow_up_probe(observation)
             {
@@ -2337,6 +2569,7 @@ impl ElementHostWidget {
                             content: handle.content_size(),
                             observed_extent: None,
                             overflow_observation: None,
+                            layout_profile: None,
                         });
 
                     commit_scroll_authoritative_extent(
@@ -2423,6 +2656,7 @@ impl ElementHostWidget {
                             content: handle.content_size(),
                             observed_extent: None,
                             overflow_observation: None,
+                            layout_profile: None,
                         });
 
                     commit_scroll_authoritative_extent(
@@ -2546,6 +2780,7 @@ impl ElementHostWidget {
                                 content: handle.content_size(),
                                 observed_extent: None,
                                 overflow_observation: None,
+                                layout_profile: None,
                             });
 
                         commit_scroll_authoritative_extent(
@@ -2587,8 +2822,12 @@ impl ElementHostWidget {
                     },
                 );
             }
+            if let Some(started) = overflow_update_started {
+                phase_profiles.record("overflow_extent_update", started.elapsed());
+            }
 
             if relayout_with_updated_content_bounds {
+                corrected_content_relayout = true;
                 // Keep wrapper/layout-barrier geometry in sync with the corrected scroll content
                 // extent in the same frame. Without this pass, the scroll handle can expose the
                 // new range while outer shells (cards, panels, etc.) still retain stale bounds.
@@ -2612,7 +2851,9 @@ impl ElementHostWidget {
                             }
                         }
                         if let Some(started) = solve_started {
-                            t_solve_barrier += started.elapsed();
+                            let elapsed = started.elapsed();
+                            t_solve_barrier += elapsed;
+                            phase_profiles.record("solve_barrier", elapsed);
                         }
                     }
 
@@ -2623,12 +2864,16 @@ impl ElementHostWidget {
                             let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(child);
                             let child_subtree_dirty_count =
                                 cx.tree.node_subtree_layout_dirty_count(child);
+                            let child_bounds_before = cx.tree.node_bounds(child);
                             let before = cx.tree.debug_stats();
+                            cx.tree.begin_scroll_layout_kind_profile();
                             let child_started = Instant::now();
                             let _ = cx.layout_in(child, content_bounds);
                             let child_elapsed = child_started.elapsed();
+                            let kind_profiles = cx.tree.end_scroll_layout_kind_profile();
                             let after = cx.tree.debug_stats();
-                            child_layout_profile.record_child(
+                            let child_bounds_after = cx.tree.node_bounds(child);
+                            child_layout_corrected_content_profile.record_child(
                                 child,
                                 child_elapsed,
                                 child_invalidated,
@@ -2640,14 +2885,25 @@ impl ElementHostWidget {
                                 after
                                     .layout_nodes_performed
                                     .saturating_sub(before.layout_nodes_performed),
+                                child_bounds_before,
+                                child_bounds_after,
+                                content_bounds,
+                                kind_profiles,
                             );
                         } else {
                             let _ = cx.layout_in(child, content_bounds);
                         }
                     }
                     if let Some(started) = layout_started {
-                        t_layout_children += started.elapsed();
+                        t_layout_children_corrected_content = started.elapsed();
+                        t_layout_children =
+                            t_layout_children.saturating_add(t_layout_children_corrected_content);
+                        phase_profiles.record(
+                            "layout_children_corrected_content",
+                            t_layout_children_corrected_content,
+                        );
                     }
+                    child_layout_profile.merge_from(&child_layout_corrected_content_profile);
                 });
             }
 
@@ -2667,6 +2923,7 @@ impl ElementHostWidget {
                         content: handle.content_size(),
                         observed_extent: Some(observed.trusted),
                         overflow_observation: Some(observation),
+                        layout_profile: None,
                     });
             }
         }
@@ -2713,9 +2970,30 @@ impl ElementHostWidget {
                     direct_children_layout_invalidated,
                     descendant_subtree_layout_dirty,
                     force_barrier_child_root_relayout,
+                    phase_profiles = ?phase_profiles
+                        .clone()
+                        .into_sorted()
+                        .iter()
+                        .map(|p| format!("{}:{}us", p.phase, p.us))
+                        .collect::<Vec<_>>(),
                     measure_children_us = t_measure_children.as_micros() as u64,
                     solve_barrier_us = t_solve_barrier.as_micros() as u64,
                     layout_children_us = t_layout_children.as_micros() as u64,
+                    layout_children_first_pass_us = t_layout_children_first_pass.as_micros() as u64,
+                    layout_child_first_pass_nodes_visited =
+                        child_layout_first_pass_profile.nodes_visited,
+                    layout_child_first_pass_nodes_performed =
+                        child_layout_first_pass_profile.nodes_performed,
+                    layout_child_first_pass_max_us = child_layout_first_pass_profile.max_us,
+                    corrected_content_relayout,
+                    layout_children_corrected_content_us =
+                        t_layout_children_corrected_content.as_micros() as u64,
+                    layout_child_corrected_content_nodes_visited =
+                        child_layout_corrected_content_profile.nodes_visited,
+                    layout_child_corrected_content_nodes_performed =
+                        child_layout_corrected_content_profile.nodes_performed,
+                    layout_child_corrected_content_max_us =
+                        child_layout_corrected_content_profile.max_us,
                     layout_child_nodes_visited = child_layout_profile.nodes_visited,
                     layout_child_nodes_performed = child_layout_profile.nodes_performed,
                     layout_child_max_us = child_layout_profile.max_us,
@@ -2726,10 +3004,62 @@ impl ElementHostWidget {
                         child_layout_profile.max_subtree_dirty_count,
                     layout_child_max_nodes_visited = child_layout_profile.max_nodes_visited,
                     layout_child_max_nodes_performed = child_layout_profile.max_nodes_performed,
+                    layout_child_max_bounds_changed =
+                        child_layout_profile.max_bounds_changed(),
+                    layout_child_max_bounds_size_changed =
+                        child_layout_profile.max_bounds_size_changed(),
+                    layout_child_max_input_matches_before =
+                        child_layout_profile.max_input_matches_before(),
+                    layout_child_max_input_size_matches_before =
+                        child_layout_profile.max_input_size_matches_before(),
+                    layout_child_max_bounds_before = ?child_layout_profile.max_bounds_before,
+                    layout_child_max_bounds_after = ?child_layout_profile.max_bounds_after,
+                    layout_child_max_input_bounds = ?child_layout_profile.max_input_bounds,
                     total_us = total.as_micros() as u64,
                     element_path = element_path.as_deref().unwrap_or("<unknown>"),
                     "scroll layout profile"
                 );
+
+                cx.tree
+                    .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                        node: cx.node,
+                        element: Some(self.element),
+                        test_id: debug_test_id,
+                        axis: match props.axis {
+                            crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                            crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                            crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                        },
+                        offset: handle.offset(),
+                        viewport: handle.viewport_size(),
+                        content: handle.content_size(),
+                        observed_extent: None,
+                        overflow_observation: None,
+                        layout_profile: Some(child_layout_profile.into_debug_profile(
+                            cx.pass_kind,
+                            props.probe_unbounded,
+                            cx.children.len(),
+                            Size::new(Px(cx.available.width.0), Px(cx.available.height.0)),
+                            desired,
+                            Size::new(content_w, content_h),
+                            post_layout_extents_mode,
+                            cx.tree.interactive_resize_active(),
+                            direct_children_layout_invalidated,
+                            descendant_subtree_layout_dirty,
+                            force_barrier_child_root_relayout,
+                            phase_profiles.into_sorted(),
+                            t_measure_children.as_micros() as u64,
+                            t_solve_barrier.as_micros() as u64,
+                            t_layout_children.as_micros() as u64,
+                            child_layout_first_pass_profile,
+                            t_layout_children_first_pass.as_micros() as u64,
+                            child_layout_corrected_content_profile,
+                            t_layout_children_corrected_content.as_micros() as u64,
+                            corrected_content_relayout,
+                            total.as_micros() as u64,
+                            element_path,
+                        )),
+                    });
             }
         }
 

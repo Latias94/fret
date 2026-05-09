@@ -1366,6 +1366,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_contained_relayout_cache_roots,
             ) = snapshot_cache_root_stats(&semantics, s, 3);
             let layout_request_build_roots = snapshot_layout_request_build_roots(&semantics, s, 3);
+            let scroll_layout_profiles = snapshot_scroll_layout_profiles(&semantics, s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(&semantics, s, 3);
             let layout_hotspots = snapshot_layout_hotspots(&semantics, s, 3);
             let widget_measure_hotspots = snapshot_widget_measure_hotspots(&semantics, s, 3);
@@ -1817,6 +1818,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_cache_roots,
                 top_contained_relayout_cache_roots,
                 layout_request_build_roots,
+                scroll_layout_profiles,
                 top_layout_engine_solves,
                 layout_hotspots,
                 widget_measure_hotspots,

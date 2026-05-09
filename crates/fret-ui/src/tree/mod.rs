@@ -77,7 +77,8 @@ pub use debug::{
     UiDebugNotifyRequest, UiDebugPaintTextPrepareHotspot, UiDebugPaintWidgetHotspot,
     UiDebugPrepaintAction, UiDebugPrepaintActionKind, UiDebugRetainedVirtualListReconcile,
     UiDebugRetainedVirtualListReconcileKind, UiDebugScrollAxis, UiDebugScrollHandleChange,
-    UiDebugScrollHandleChangeKind, UiDebugScrollNodeTelemetry,
+    UiDebugScrollHandleChangeKind, UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind,
+    UiDebugScrollLayoutPhaseProfile, UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
     UiDebugScrollOverflowObservationTelemetry, UiDebugScrollbarTelemetry,
     UiDebugTextConstraintsSnapshot, UiDebugVirtualListWindow,
     UiDebugVirtualListWindowShiftApplyMode, UiDebugVirtualListWindowShiftKind,
@@ -90,7 +91,7 @@ use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStac
 use observation::{GlobalObservationIndex, ObservationIndex, ObservationMask};
 use profiling::{
     LayoutNodeProfileConfig, LayoutNodeProfileState, MeasureNodeProfileConfig,
-    MeasureNodeProfileState,
+    MeasureNodeProfileState, ScrollLayoutKindProfileScope,
 };
 use propagation_depth::PropagationDepthCacheEntry;
 #[cfg(test)]
@@ -344,6 +345,7 @@ pub struct UiTree<H: UiHost> {
     semantics_requested: bool,
     layout_node_profile: Option<LayoutNodeProfileState>,
     measure_node_profile: Option<MeasureNodeProfileState>,
+    scroll_layout_kind_profile_stack: Vec<ScrollLayoutKindProfileScope>,
     deferred_cleanup: Vec<Box<dyn Widget<H>>>,
 }
 

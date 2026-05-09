@@ -328,6 +328,95 @@ pub(crate) fn triage_json_from_stats(
             }
         }
 
+        // layout.scroll_profile_present
+        if !worst.scroll_layout_profiles.is_empty() {
+            let examples: Vec<serde_json::Value> = worst
+                .scroll_layout_profiles
+                .iter()
+                .take(4)
+                .map(|p| {
+                    json!({
+                        "node": p.node,
+                        "element": p.element,
+                        "test_id": p.test_id.as_ref().or(p.semantics_test_id.as_ref()),
+                        "axis": p.axis,
+                        "pass": p.pass,
+                        "total_us": p.total_us,
+                        "measure_children_us": p.measure_children_us,
+                        "solve_barrier_us": p.solve_barrier_us,
+                        "layout_children_us": p.layout_children_us,
+                        "layout_children_first_pass_us": p.layout_children_first_pass_us,
+                        "layout_child_first_pass_nodes_visited": p.layout_child_first_pass_nodes_visited,
+                        "layout_child_first_pass_nodes_performed": p.layout_child_first_pass_nodes_performed,
+                        "layout_child_first_pass_max_us": p.layout_child_first_pass_max_us,
+                        "layout_child_first_pass_kind_profiles": p.layout_child_first_pass_kind_profiles.iter().take(6).map(|k| {
+                            json!({
+                                "kind": k.kind,
+                                "nodes": k.nodes,
+                                "self_us": k.self_us,
+                                "total_us": k.total_us,
+                                "max_self_us": k.max_self_us,
+                                "max_total_us": k.max_total_us,
+                            })
+                        }).collect::<Vec<_>>(),
+                        "corrected_content_relayout": p.corrected_content_relayout,
+                        "layout_children_corrected_content_us": p.layout_children_corrected_content_us,
+                        "layout_child_corrected_content_nodes_visited": p.layout_child_corrected_content_nodes_visited,
+                        "layout_child_corrected_content_nodes_performed": p.layout_child_corrected_content_nodes_performed,
+                        "layout_child_corrected_content_max_us": p.layout_child_corrected_content_max_us,
+                        "layout_child_corrected_content_kind_profiles": p.layout_child_corrected_content_kind_profiles.iter().take(6).map(|k| {
+                            json!({
+                                "kind": k.kind,
+                                "nodes": k.nodes,
+                                "self_us": k.self_us,
+                                "total_us": k.total_us,
+                                "max_self_us": k.max_self_us,
+                                "max_total_us": k.max_total_us,
+                            })
+                        }).collect::<Vec<_>>(),
+                        "layout_child_kind_profiles": p.layout_child_kind_profiles.iter().take(6).map(|k| {
+                            json!({
+                                "kind": k.kind,
+                                "nodes": k.nodes,
+                                "self_us": k.self_us,
+                                "total_us": k.total_us,
+                                "max_self_us": k.max_self_us,
+                                "max_total_us": k.max_total_us,
+                            })
+                        }).collect::<Vec<_>>(),
+                        "layout_child_max_us": p.layout_child_max_us,
+                        "layout_child_max_node": p.layout_child_max_node,
+                        "layout_child_max_invalidated": p.layout_child_max_invalidated,
+                        "layout_child_max_subtree_dirty": p.layout_child_max_subtree_dirty,
+                        "layout_child_max_subtree_dirty_count": p.layout_child_max_subtree_dirty_count,
+                        "layout_child_max_bounds_changed": p.layout_child_max_bounds_changed,
+                        "layout_child_max_bounds_size_changed": p.layout_child_max_bounds_size_changed,
+                        "layout_child_max_input_matches_before": p.layout_child_max_input_matches_before,
+                        "layout_child_max_input_size_matches_before": p.layout_child_max_input_size_matches_before,
+                        "interactive_resize": p.interactive_resize,
+                        "direct_children_layout_invalidated": p.direct_children_layout_invalidated,
+                        "descendant_subtree_layout_dirty": p.descendant_subtree_layout_dirty,
+                        "post_layout_extents_mode": p.post_layout_extents_mode,
+                        "phase_profiles": p.phase_profiles.iter().map(|phase| {
+                            json!({
+                                "phase": phase.phase,
+                                "us": phase.us,
+                            })
+                        }).collect::<Vec<_>>(),
+                        "element_path": p.element_path,
+                    })
+                })
+                .collect();
+            out.push(json!({
+                "code": "layout.scroll_profile_present",
+                "severity": "info",
+                "message": "Scroll layout profiling was captured in the worst frame; inspect child bounds deltas before changing resize/scroll layout behavior.",
+                "evidence": {
+                    "examples": examples,
+                }
+            }));
+        }
+
         // view_cache.layout_invalidated
         if worst.view_cache_roots_layout_invalidated > 0 {
             out.push(json!({
@@ -909,6 +998,91 @@ pub(crate) fn triage_json_from_stats(
                             "test_id": d.test_id,
                         })
                     }).collect::<Vec<_>>(),
+                })
+            }).collect::<Vec<_>>(),
+            "scroll_layout_profiles": row.scroll_layout_profiles.iter().take(10).map(|p| {
+                json!({
+                    "node": p.node,
+                    "element": p.element,
+                    "test_id": p.test_id.as_ref().or(p.semantics_test_id.as_ref()),
+                    "axis": p.axis,
+                    "pass": p.pass,
+                    "probe_unbounded": p.probe_unbounded,
+                    "children": p.children,
+                    "available_w": p.available_w,
+                    "available_h": p.available_h,
+                    "desired_w": p.desired_w,
+                    "desired_h": p.desired_h,
+                    "content_w": p.content_w,
+                    "content_h": p.content_h,
+                    "post_layout_extents_mode": p.post_layout_extents_mode,
+                    "interactive_resize": p.interactive_resize,
+                    "direct_children_layout_invalidated": p.direct_children_layout_invalidated,
+                    "descendant_subtree_layout_dirty": p.descendant_subtree_layout_dirty,
+                    "force_barrier_child_root_relayout": p.force_barrier_child_root_relayout,
+                    "phase_profiles": p.phase_profiles.iter().map(|phase| {
+                        json!({
+                            "phase": phase.phase,
+                            "us": phase.us,
+                        })
+                    }).collect::<Vec<_>>(),
+                    "measure_children_us": p.measure_children_us,
+                    "solve_barrier_us": p.solve_barrier_us,
+                    "layout_children_us": p.layout_children_us,
+                    "layout_children_first_pass_us": p.layout_children_first_pass_us,
+                    "layout_child_first_pass_nodes_visited": p.layout_child_first_pass_nodes_visited,
+                    "layout_child_first_pass_nodes_performed": p.layout_child_first_pass_nodes_performed,
+                    "layout_child_first_pass_max_us": p.layout_child_first_pass_max_us,
+                    "layout_child_first_pass_kind_profiles": p.layout_child_first_pass_kind_profiles.iter().take(6).map(|k| {
+                        json!({
+                            "kind": k.kind,
+                            "nodes": k.nodes,
+                            "self_us": k.self_us,
+                            "total_us": k.total_us,
+                            "max_self_us": k.max_self_us,
+                            "max_total_us": k.max_total_us,
+                        })
+                    }).collect::<Vec<_>>(),
+                    "corrected_content_relayout": p.corrected_content_relayout,
+                    "layout_children_corrected_content_us": p.layout_children_corrected_content_us,
+                    "layout_child_corrected_content_nodes_visited": p.layout_child_corrected_content_nodes_visited,
+                    "layout_child_corrected_content_nodes_performed": p.layout_child_corrected_content_nodes_performed,
+                    "layout_child_corrected_content_max_us": p.layout_child_corrected_content_max_us,
+                    "layout_child_corrected_content_kind_profiles": p.layout_child_corrected_content_kind_profiles.iter().take(6).map(|k| {
+                        json!({
+                            "kind": k.kind,
+                            "nodes": k.nodes,
+                            "self_us": k.self_us,
+                            "total_us": k.total_us,
+                            "max_self_us": k.max_self_us,
+                            "max_total_us": k.max_total_us,
+                        })
+                    }).collect::<Vec<_>>(),
+                    "layout_child_nodes_visited": p.layout_child_nodes_visited,
+                    "layout_child_nodes_performed": p.layout_child_nodes_performed,
+                    "layout_child_kind_profiles": p.layout_child_kind_profiles.iter().take(6).map(|k| {
+                        json!({
+                            "kind": k.kind,
+                            "nodes": k.nodes,
+                            "self_us": k.self_us,
+                            "total_us": k.total_us,
+                            "max_self_us": k.max_self_us,
+                            "max_total_us": k.max_total_us,
+                        })
+                    }).collect::<Vec<_>>(),
+                    "layout_child_max_us": p.layout_child_max_us,
+                    "layout_child_max_node": p.layout_child_max_node,
+                    "layout_child_max_invalidated": p.layout_child_max_invalidated,
+                    "layout_child_max_subtree_dirty": p.layout_child_max_subtree_dirty,
+                    "layout_child_max_subtree_dirty_count": p.layout_child_max_subtree_dirty_count,
+                    "layout_child_max_nodes_visited": p.layout_child_max_nodes_visited,
+                    "layout_child_max_nodes_performed": p.layout_child_max_nodes_performed,
+                    "layout_child_max_bounds_changed": p.layout_child_max_bounds_changed,
+                    "layout_child_max_bounds_size_changed": p.layout_child_max_bounds_size_changed,
+                    "layout_child_max_input_matches_before": p.layout_child_max_input_matches_before,
+                    "layout_child_max_input_size_matches_before": p.layout_child_max_input_size_matches_before,
+                    "total_us": p.total_us,
+                    "element_path": p.element_path,
                 })
             }).collect::<Vec<_>>(),
             "top_layout_engine_solves": row.top_layout_engine_solves.iter().take(4).map(|s| {

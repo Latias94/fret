@@ -4,7 +4,9 @@ use super::{
     BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot,
     BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
-    BundleStatsPaintWidgetHotspot, BundleStatsWidgetMeasureHotspot,
+    BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
+    BundleStatsScrollLayoutPhaseProfile, BundleStatsScrollLayoutProfile,
+    BundleStatsWidgetMeasureHotspot,
 };
 
 pub(super) fn snapshot_paint_widget_hotspots(
@@ -258,6 +260,292 @@ pub(super) fn snapshot_layout_request_build_roots(
             dirty.role = role;
             dirty.test_id = test_id;
         }
+    }
+
+    out
+}
+
+pub(super) fn snapshot_scroll_layout_profiles(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsScrollLayoutProfile> {
+    let scroll_nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("scroll_nodes"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if scroll_nodes.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
+
+    let parse_kind_profiles = |p: &serde_json::Map<String, serde_json::Value>,
+                               key: &str|
+     -> Vec<BundleStatsScrollLayoutKindProfile> {
+        p.get(key)
+            .and_then(|v| v.as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_object())
+                    .map(|item| BundleStatsScrollLayoutKindProfile {
+                        kind: item
+                            .get("kind")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string()),
+                        nodes: item
+                            .get("nodes")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                            .min(u32::MAX as u64) as u32,
+                        self_us: item.get("self_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                        total_us: item.get("total_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                        max_self_us: item
+                            .get("max_self_us")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0),
+                        max_total_us: item
+                            .get("max_total_us")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
+    let parse_phase_profiles = |p: &serde_json::Map<String, serde_json::Value>,
+                                key: &str|
+     -> Vec<BundleStatsScrollLayoutPhaseProfile> {
+        p.get(key)
+            .and_then(|v| v.as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_object())
+                    .map(|item| BundleStatsScrollLayoutPhaseProfile {
+                        phase: item
+                            .get("phase")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string()),
+                        us: item.get("us").and_then(|v| v.as_u64()).unwrap_or(0),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
+    let mut out: Vec<BundleStatsScrollLayoutProfile> = scroll_nodes
+        .iter()
+        .filter_map(|n| {
+            let p = n.get("layout_profile").and_then(|v| v.as_object())?;
+            Some(BundleStatsScrollLayoutProfile {
+                node: n.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+                element: n.get("element").and_then(|v| v.as_u64()),
+                test_id: n
+                    .get("test_id")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                axis: n
+                    .get("axis")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                pass: p
+                    .get("pass")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                probe_unbounded: p
+                    .get("probe_unbounded")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                children: p
+                    .get("children")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                available_w: p
+                    .get("available_w")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32),
+                available_h: p
+                    .get("available_h")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32),
+                desired_w: p
+                    .get("desired_w")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32),
+                desired_h: p
+                    .get("desired_h")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32),
+                content_w: p
+                    .get("content_w")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32),
+                content_h: p
+                    .get("content_h")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32),
+                post_layout_extents_mode: p
+                    .get("post_layout_extents_mode")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                interactive_resize: p
+                    .get("interactive_resize")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                direct_children_layout_invalidated: p
+                    .get("direct_children_layout_invalidated")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                descendant_subtree_layout_dirty: p
+                    .get("descendant_subtree_layout_dirty")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                force_barrier_child_root_relayout: p
+                    .get("force_barrier_child_root_relayout")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                phase_profiles: parse_phase_profiles(p, "phase_profiles"),
+                measure_children_us: p
+                    .get("measure_children_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                solve_barrier_us: p
+                    .get("solve_barrier_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_children_us: p
+                    .get("layout_children_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_children_first_pass_us: p
+                    .get("layout_children_first_pass_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_first_pass_nodes_visited: p
+                    .get("layout_child_first_pass_nodes_visited")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_nodes_performed: p
+                    .get("layout_child_first_pass_nodes_performed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_max_us: p
+                    .get("layout_child_first_pass_max_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_first_pass_kind_profiles: parse_kind_profiles(
+                    p,
+                    "layout_child_first_pass_kind_profiles",
+                ),
+                corrected_content_relayout: p
+                    .get("corrected_content_relayout")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                layout_children_corrected_content_us: p
+                    .get("layout_children_corrected_content_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_corrected_content_nodes_visited: p
+                    .get("layout_child_corrected_content_nodes_visited")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_corrected_content_nodes_performed: p
+                    .get("layout_child_corrected_content_nodes_performed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_corrected_content_max_us: p
+                    .get("layout_child_corrected_content_max_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_corrected_content_kind_profiles: parse_kind_profiles(
+                    p,
+                    "layout_child_corrected_content_kind_profiles",
+                ),
+                layout_child_nodes_visited: p
+                    .get("layout_child_nodes_visited")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_nodes_performed: p
+                    .get("layout_child_nodes_performed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_kind_profiles: parse_kind_profiles(p, "layout_child_kind_profiles"),
+                layout_child_max_us: p
+                    .get("layout_child_max_us")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                layout_child_max_node: p.get("layout_child_max_node").and_then(|v| v.as_u64()),
+                layout_child_max_invalidated: p
+                    .get("layout_child_max_invalidated")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                layout_child_max_subtree_dirty: p
+                    .get("layout_child_max_subtree_dirty")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                layout_child_max_subtree_dirty_count: p
+                    .get("layout_child_max_subtree_dirty_count")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_max_nodes_visited: p
+                    .get("layout_child_max_nodes_visited")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_max_nodes_performed: p
+                    .get("layout_child_max_nodes_performed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_max_bounds_changed: p
+                    .get("layout_child_max_bounds_changed")
+                    .and_then(|v| v.as_bool()),
+                layout_child_max_bounds_size_changed: p
+                    .get("layout_child_max_bounds_size_changed")
+                    .and_then(|v| v.as_bool()),
+                layout_child_max_input_matches_before: p
+                    .get("layout_child_max_input_matches_before")
+                    .and_then(|v| v.as_bool()),
+                layout_child_max_input_size_matches_before: p
+                    .get("layout_child_max_input_size_matches_before")
+                    .and_then(|v| v.as_bool()),
+                total_us: p.get("total_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                element_path: p
+                    .get("element_path")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                role: None,
+                semantics_test_id: None,
+            })
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.total_us.cmp(&a.total_us));
+    out.truncate(max.max(1));
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
+        item.role = role;
+        item.semantics_test_id = test_id;
     }
 
     out

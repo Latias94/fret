@@ -104,6 +104,10 @@ Recent evidence:
 - Commit `d834481b3` drops no-op `WindowResized` deliveries (quantized logical size unchanged), mirroring GPUI’s
   `set_frame_size` early-return.
   - This is a “reduce churn/noise” change, not a primary budget win.
+- The default interactive-resize quiet window is now `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES=4` (2026-05-08 resize
+  cadence slice). Cached-flow resize frames may arm a post-resize authoritative rebuild, but that
+  rebuild should wait until the window has been quiet long enough; otherwise we inject full-tree rebuilds into the
+  middle of a live resize sequence.
 
 To feel “Zed smooth”, we need:
 

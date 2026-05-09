@@ -442,6 +442,9 @@ impl<H: UiHost> UiTree<H> {
             if entry.invalidation.layout {
                 return true;
             }
+            if entry.layout_dirty_children_suppressed {
+                continue;
+            }
             stack.extend(entry.children.iter().copied());
         }
         false

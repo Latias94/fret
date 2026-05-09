@@ -1639,6 +1639,97 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                         "source": "other",
                         "detail": "scroll_handle_layout"
                     }]
+                }],
+                "scroll_nodes": [{
+                    "node": 50,
+                    "element": 200,
+                    "test_id": "gallery.scroll",
+                    "axis": "y",
+                    "offset_x": 0.0,
+                    "offset_y": 0.0,
+                    "viewport_w": 600.0,
+                    "viewport_h": 400.0,
+                    "content_w": 600.0,
+                    "content_h": 1200.0,
+                    "layout_profile": {
+                        "pass": "final",
+                        "probe_unbounded": false,
+                        "children": 1,
+                        "available_w": 600.0,
+                        "available_h": 400.0,
+                        "desired_w": 600.0,
+                        "desired_h": 400.0,
+                        "content_w": 600.0,
+                        "content_h": 1200.0,
+                    "post_layout_extents_mode": true,
+                    "interactive_resize": true,
+                    "direct_children_layout_invalidated": true,
+                    "descendant_subtree_layout_dirty": true,
+                    "force_barrier_child_root_relayout": false,
+                    "phase_profiles": [{
+                        "phase": "measure_children",
+                        "us": 500
+                    }],
+                    "measure_children_us": 500,
+                        "solve_barrier_us": 100,
+                        "layout_children_us": 2_200,
+                        "layout_children_first_pass_us": 1_700,
+                        "layout_child_first_pass_nodes_visited": 15,
+                        "layout_child_first_pass_nodes_performed": 6,
+                        "layout_child_first_pass_max_us": 1_500,
+                        "layout_child_first_pass_kind_profiles": [{
+                            "kind": "Text",
+                            "nodes": 4,
+                            "self_us": 900,
+                            "total_us": 1_100,
+                            "max_self_us": 400,
+                            "max_total_us": 500
+                        }],
+                        "corrected_content_relayout": true,
+                        "layout_children_corrected_content_us": 500,
+                        "layout_child_corrected_content_nodes_visited": 5,
+                        "layout_child_corrected_content_nodes_performed": 2,
+                        "layout_child_corrected_content_max_us": 500,
+                        "layout_child_corrected_content_kind_profiles": [{
+                            "kind": "Flex",
+                            "nodes": 2,
+                            "self_us": 300,
+                            "total_us": 450,
+                            "max_self_us": 300,
+                            "max_total_us": 450
+                        }],
+                        "layout_child_nodes_visited": 20,
+                        "layout_child_nodes_performed": 8,
+                        "layout_child_kind_profiles": [{
+                            "kind": "Text",
+                            "nodes": 4,
+                            "self_us": 900,
+                            "total_us": 1_100,
+                            "max_self_us": 400,
+                            "max_total_us": 500
+                        }, {
+                            "kind": "Flex",
+                            "nodes": 2,
+                            "self_us": 300,
+                            "total_us": 450,
+                            "max_self_us": 300,
+                            "max_total_us": 450
+                        }],
+                        "layout_child_max_us": 2_000,
+                        "layout_child_max_node": 51,
+                        "layout_child_max_invalidated": true,
+                        "layout_child_max_subtree_dirty": true,
+                        "layout_child_max_subtree_dirty_count": 4,
+                        "layout_child_max_nodes_visited": 18,
+                        "layout_child_max_nodes_performed": 7,
+                        "layout_child_max_bounds_changed": true,
+                        "layout_child_max_bounds_size_changed": true,
+                        "layout_child_max_input_matches_before": false,
+                        "layout_child_max_input_size_matches_before": false,
+                        "layout_child_max_input_bounds": { "x": 0.0, "y": 0.0, "w": 600.0, "h": 1200.0 },
+                        "total_us": 3_000,
+                        "element_path": "root/gallery.scroll"
+                    }
                 }]
             }
             }]
@@ -1668,6 +1759,7 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
     assert!(codes.contains(&"layout.observation_heavy"));
     assert!(codes.contains(&"layout.solve_heavy"));
     assert!(codes.contains(&"layout.build_roots_heavy"));
+    assert!(codes.contains(&"layout.scroll_profile_present"));
     assert!(codes.contains(&"paint.text_prepare_churn"));
     assert!(codes.contains(&"renderer.upload_churn"));
 
@@ -1736,6 +1828,142 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("detail"))
             .and_then(|v| v.as_str()),
         Some("scroll_handle_layout")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_max_bounds_changed"))
+            .and_then(|v| v.as_bool()),
+        Some(true)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_max_node"))
+            .and_then(|v| v.as_u64()),
+        Some(51)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_children_first_pass_us"))
+            .and_then(|v| v.as_u64()),
+        Some(1_700)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("Text")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("phase_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("phase"))
+            .and_then(|v| v.as_str()),
+        Some("measure_children")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_first_pass_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("nodes"))
+            .and_then(|v| v.as_u64()),
+        Some(4)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("corrected_content_relayout"))
+            .and_then(|v| v.as_bool()),
+        Some(true)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_corrected_content_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("Flex")
+    );
+    let scroll_profile_examples = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("layout.scroll_profile_present"))
+        .and_then(|h| h.get("evidence"))
+        .and_then(|v| v.get("examples"))
+        .and_then(|v| v.as_array())
+        .expect("layout.scroll_profile_present examples");
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("layout_child_max_input_matches_before"))
+            .and_then(|v| v.as_bool()),
+        Some(false)
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("layout_children_corrected_content_us"))
+            .and_then(|v| v.as_u64()),
+        Some(500)
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("layout_child_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("Text")
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("phase_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("phase"))
+            .and_then(|v| v.as_str()),
+        Some("measure_children")
     );
     let build_roots_examples = triage
         .get("hints")

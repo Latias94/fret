@@ -316,7 +316,7 @@ impl UiRuntimeEnvConfig {
             std::env::var("FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES")
                 .ok()
                 .and_then(|v| v.parse::<u8>().ok())
-                .unwrap_or(2)
+                .unwrap_or(4)
                 .min(60);
 
         let text_wrap_width_bucket_px = std::env::var("FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX")
