@@ -1,7 +1,8 @@
 use super::{
     BundleStatsGlobalChangeHotspot, BundleStatsGlobalChangeUnobserved,
     BundleStatsLayoutDirtyDescendant, BundleStatsLayoutEngineMeasureChildHotspot,
-    BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot,
+    BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve,
+    BundleStatsLayoutEngineSolveProfile, BundleStatsLayoutHotspot,
     BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
     BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
@@ -812,6 +813,34 @@ pub(super) fn snapshot_layout_engine_solves(
                 item.test_id = test_id;
             }
 
+            let solve_profile = s.get("solve_profile").and_then(|v| v.as_object()).map(|p| {
+                BundleStatsLayoutEngineSolveProfile {
+                    reason: p
+                        .get("reason")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    available_w_kind: p
+                        .get("available_w_kind")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    available_h_kind: p
+                        .get("available_h_kind")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    available_w: p.get("available_w").and_then(|v| v.as_f64()),
+                    available_h: p.get("available_h").and_then(|v| v.as_f64()),
+                    scale_factor: p
+                        .get("scale_factor")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0),
+                    batch_roots: p.get("batch_roots").and_then(|v| v.as_u64()).unwrap_or(0),
+                    subtree_nodes: p.get("subtree_nodes").and_then(|v| v.as_u64()).unwrap_or(0),
+                }
+            });
+
             BundleStatsLayoutEngineSolve {
                 root_node: s.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
                 root_element: s.get("root_element").and_then(|v| v.as_u64()),
@@ -824,6 +853,7 @@ pub(super) fn snapshot_layout_engine_solves(
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
                 solve_time_us: s.get("solve_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                solve_profile,
                 measure_calls: s.get("measure_calls").and_then(|v| v.as_u64()).unwrap_or(0),
                 measure_cache_hits: s
                     .get("measure_cache_hits")

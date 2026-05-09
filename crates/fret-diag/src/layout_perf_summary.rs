@@ -117,11 +117,14 @@ pub(crate) fn human_layout_perf_summary_v1(summary: &Value) -> String {
 
     let stats = summary.get("stats").unwrap_or(&Value::Null);
     out.push_str(&format!(
-        "  stats: total_us={} layout_us={} solve_us={} solves={}\n",
+        "  stats: total_us={} layout_us={} solve_us={} solves={} child_rect_us={} child_rect_queries={} fallback_solves={}\n",
         u64_field(stats, "total_time_us"),
         u64_field(stats, "layout_time_us"),
         u64_field(stats, "layout_engine_solve_time_us"),
         u64_field(stats, "layout_engine_solves"),
+        u64_field(stats, "layout_engine_child_rect_time_us"),
+        u64_field(stats, "layout_engine_child_rect_queries"),
+        u64_field(stats, "layout_engine_widget_fallback_solves"),
     ));
 
     fn print_list_header(out: &mut String, name: &str, items: usize, clipped: bool) {
@@ -254,6 +257,9 @@ pub(crate) fn layout_perf_summary_v1_from_stats_json(
         "layout_time_us": row.get("layout_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
         "layout_engine_solve_time_us": row.get("layout_engine_solve_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
         "layout_engine_solves": row.get("layout_engine_solves").and_then(|v| v.as_u64()).unwrap_or(0),
+        "layout_engine_child_rect_queries": row.get("layout_engine_child_rect_queries").and_then(|v| v.as_u64()).unwrap_or(0),
+        "layout_engine_child_rect_time_us": row.get("layout_engine_child_rect_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
+        "layout_engine_widget_fallback_solves": row.get("layout_engine_widget_fallback_solves").and_then(|v| v.as_u64()).unwrap_or(0),
     });
 
     Ok(json!({
@@ -330,6 +336,9 @@ mod tests {
                             "layout_time_us": 4_000,
                             "layout_engine_solves": 2,
                             "layout_engine_solve_time_us": 2_500,
+                            "layout_engine_child_rect_queries": 44,
+                            "layout_engine_child_rect_time_us": 330,
+                            "layout_engine_widget_fallback_solves": 1,
                             "prepaint_time_us": 0,
                             "paint_time_us": 0,
                             "dispatch_time_us": 0,
@@ -418,6 +427,20 @@ mod tests {
                 .and_then(|v| v.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64()),
             Some(2_500)
+        );
+        assert_eq!(
+            summary
+                .get("stats")
+                .and_then(|v| v.get("layout_engine_child_rect_queries"))
+                .and_then(|v| v.as_u64()),
+            Some(44)
+        );
+        assert_eq!(
+            summary
+                .get("stats")
+                .and_then(|v| v.get("layout_engine_widget_fallback_solves"))
+                .and_then(|v| v.as_u64()),
+            Some(1)
         );
 
         let solves = summary

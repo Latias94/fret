@@ -67,6 +67,8 @@ pub struct TaffyLayoutEngine {
     measure_profiling_enabled: bool,
     last_solve_measure_time: Duration,
     last_solve_measure_hotspots: Vec<LayoutEngineMeasureHotspot>,
+    last_solve_profile: Option<LayoutEngineSolveProfile>,
+    debug_last_root_solve_key: SecondaryMap<NodeId, RootSolveDebugStamp>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -100,6 +102,35 @@ struct RootSolveKey {
     width_bits: u64,
     height_bits: u64,
     scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RootSolveDebugStamp {
+    frame_id: Option<FrameId>,
+    key: RootSolveKey,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct LayoutEngineSolveProfile {
+    pub(crate) reason: &'static str,
+    pub(crate) available_w_kind: &'static str,
+    pub(crate) available_h_kind: &'static str,
+    pub(crate) available_w: Option<f32>,
+    pub(crate) available_h: Option<f32>,
+    pub(crate) scale_factor: f32,
+    pub(crate) batch_roots: u32,
+    pub(crate) subtree_nodes: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutEngineSolveProfileBase {
+    reason: &'static str,
+    available_w_kind: &'static str,
+    available_h_kind: &'static str,
+    available_w: Option<f32>,
+    available_h: Option<f32>,
+    scale_factor: f32,
+    batch_roots: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -160,6 +191,8 @@ impl Default for TaffyLayoutEngine {
             measure_profiling_enabled: false,
             last_solve_measure_time: Duration::default(),
             last_solve_measure_hotspots: Vec::new(),
+            last_solve_profile: None,
+            debug_last_root_solve_key: SecondaryMap::new(),
         }
     }
 }
@@ -247,6 +280,7 @@ impl TaffyLayoutEngine {
             self.last_solve_measure_cache_hits = 0;
             self.last_solve_measure_time = Duration::default();
             self.last_solve_measure_hotspots.clear();
+            self.last_solve_profile = None;
         }
     }
 
@@ -292,6 +326,7 @@ impl TaffyLayoutEngine {
             self.parent.remove(node);
             self.node_solved_stamp.remove(node);
             self.root_solve_stamp.remove(node);
+            self.debug_last_root_solve_key.remove(node);
             let _ = self.tree.remove(layout_id.0);
         }
     }
@@ -342,8 +377,76 @@ impl TaffyLayoutEngine {
         self.last_solve_measure_hotspots.as_slice()
     }
 
+    pub(crate) fn last_solve_profile(&self) -> Option<LayoutEngineSolveProfile> {
+        self.last_solve_profile
+    }
+
     pub fn set_measure_profiling_enabled(&mut self, enabled: bool) {
         self.measure_profiling_enabled = enabled;
+    }
+
+    fn sanitized_scale_factor(scale_factor: f32) -> f32 {
+        if scale_factor.is_finite() && scale_factor > 0.0 {
+            scale_factor
+        } else {
+            1.0
+        }
+    }
+
+    fn root_solve_key(available: LayoutSize<AvailableSpace>, scale_factor: f32) -> RootSolveKey {
+        fn key_bits(axis: AvailableSpace) -> u64 {
+            match axis {
+                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
+                AvailableSpace::MinContent => 1u64 << 32,
+                AvailableSpace::MaxContent => 2u64 << 32,
+            }
+        }
+
+        RootSolveKey {
+            width_bits: key_bits(available.width),
+            height_bits: key_bits(available.height),
+            scale_bits: Self::sanitized_scale_factor(scale_factor).to_bits(),
+        }
+    }
+
+    fn solve_profile_base(
+        &self,
+        root: NodeId,
+        available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
+        batch_roots: u32,
+    ) -> LayoutEngineSolveProfileBase {
+        fn axis_profile(axis: AvailableSpace) -> (&'static str, Option<f32>) {
+            match axis {
+                AvailableSpace::Definite(px) => ("definite", Some(px.0)),
+                AvailableSpace::MinContent => ("min_content", None),
+                AvailableSpace::MaxContent => ("max_content", None),
+            }
+        }
+
+        let sf = Self::sanitized_scale_factor(scale_factor);
+        let key = Self::root_solve_key(available, sf);
+        let reason = match self.debug_last_root_solve_key.get(root).copied() {
+            None => "first_solve",
+            Some(prev) if prev.frame_id == self.frame_id && prev.key == key => {
+                "same_frame_same_key_forced"
+            }
+            Some(prev) if prev.frame_id == self.frame_id => "same_frame_key_changed",
+            Some(prev) if prev.key == key => "new_frame_same_key",
+            Some(_) => "new_frame_key_changed",
+        };
+        let (available_w_kind, available_w) = axis_profile(available.width);
+        let (available_h_kind, available_h) = axis_profile(available.height);
+
+        LayoutEngineSolveProfileBase {
+            reason,
+            available_w_kind,
+            available_h_kind,
+            available_w,
+            available_h,
+            scale_factor: sf,
+            batch_roots,
+        }
     }
 
     pub fn child_layout_rect_if_solved(&self, parent: NodeId, child: NodeId) -> Option<Rect> {
@@ -417,24 +520,7 @@ impl TaffyLayoutEngine {
             return false;
         }
 
-        fn key_bits(axis: AvailableSpace) -> u64 {
-            match axis {
-                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
-                AvailableSpace::MinContent => 1u64 << 32,
-                AvailableSpace::MaxContent => 2u64 << 32,
-            }
-        }
-
-        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
-            scale_factor
-        } else {
-            1.0
-        };
-        let key = RootSolveKey {
-            width_bits: key_bits(available.width),
-            height_bits: key_bits(available.height),
-            scale_bits: sf.to_bits(),
-        };
+        let key = Self::root_solve_key(available, scale_factor);
         self.root_solve_stamp
             .get(root)
             .copied()
@@ -473,11 +559,7 @@ impl TaffyLayoutEngine {
         scale_factor: f32,
         mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
     ) {
-        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
-            scale_factor
-        } else {
-            1.0
-        };
+        let sf = Self::sanitized_scale_factor(scale_factor);
 
         fn compute_individual<F: FnMut(NodeId, LayoutConstraints) -> Size>(
             engine: &mut TaffyLayoutEngine,
@@ -649,6 +731,16 @@ impl TaffyLayoutEngine {
 
         // Run a single solve on the synthetic root. We intentionally do NOT couple the solve stamp
         // to the synthetic node; instead we stamp each real root independently below.
+        let profile_base = batchable.first().map(|(root, _id, available)| {
+            self.solve_profile_base(
+                *root,
+                *available,
+                sf,
+                batchable.len().min(u32::MAX as usize) as u32,
+            )
+        });
+        self.last_solve_profile = None;
+
         let started = Instant::now();
         self.solve_scale_factor = sf;
 
@@ -851,28 +943,37 @@ impl TaffyLayoutEngine {
         span.record("root", tracing::field::debug(stamp_root));
         self.last_solve_root = Some(stamp_root);
 
-        fn key_bits(axis: AvailableSpace) -> u64 {
-            match axis {
-                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
-                AvailableSpace::MinContent => 1u64 << 32,
-                AvailableSpace::MaxContent => 2u64 << 32,
-            }
-        }
+        let mut subtree_nodes: u32 = 0;
         if let Some(frame_id) = self.frame_id {
             for &(root, _id, available) in &batchable {
-                self.mark_solved_subtree(root);
+                subtree_nodes = subtree_nodes.saturating_add(self.mark_solved_subtree(root));
                 self.root_solve_stamp.insert(
                     root,
                     RootSolveStamp {
                         frame_id,
-                        key: RootSolveKey {
-                            width_bits: key_bits(available.width),
-                            height_bits: key_bits(available.height),
-                            scale_bits: self.solve_scale_factor.to_bits(),
-                        },
+                        key: Self::root_solve_key(available, self.solve_scale_factor),
+                    },
+                );
+                self.debug_last_root_solve_key.insert(
+                    root,
+                    RootSolveDebugStamp {
+                        frame_id: self.frame_id,
+                        key: Self::root_solve_key(available, self.solve_scale_factor),
                     },
                 );
             }
+        }
+        if let Some(profile) = profile_base {
+            self.last_solve_profile = Some(LayoutEngineSolveProfile {
+                reason: profile.reason,
+                available_w_kind: profile.available_w_kind,
+                available_h_kind: profile.available_h_kind,
+                available_w: profile.available_w,
+                available_h: profile.available_h,
+                scale_factor: profile.scale_factor,
+                batch_roots: profile.batch_roots,
+                subtree_nodes,
+            });
         }
 
         self.last_solve_elapsed = started.elapsed();
@@ -898,11 +999,7 @@ impl TaffyLayoutEngine {
             return;
         };
 
-        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
-            scale_factor
-        } else {
-            1.0
-        };
+        let sf = Self::sanitized_scale_factor(scale_factor);
 
         let w = viewport_size.width.0.max(0.0) * sf;
         let h = viewport_size.height.0.max(0.0) * sf;
@@ -1377,11 +1474,7 @@ impl TaffyLayoutEngine {
         }
 
         let started = Instant::now();
-        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
-            scale_factor
-        } else {
-            1.0
-        };
+        let sf = Self::sanitized_scale_factor(scale_factor);
         self.solve_scale_factor = sf;
 
         let span = if tracing::enabled!(tracing::Level::TRACE) {
@@ -1401,6 +1494,9 @@ impl TaffyLayoutEngine {
         let _span_guard = span.enter();
 
         let root_node = self.node_for_layout_id(root);
+        let profile_base =
+            root_node.map(|root_node| self.solve_profile_base(root_node, available, sf, 1));
+        self.last_solve_profile = None;
         if let Some(root_node) = root_node {
             self.apply_flex_wrap_intrinsic_main_min_size_patches(root_node, sf, &mut measure);
         }
@@ -1576,26 +1672,30 @@ impl TaffyLayoutEngine {
         if let Some(root_node) = root_node {
             span.record("root", tracing::field::debug(root_node));
             self.last_solve_root = Some(root_node);
-            self.mark_solved_subtree(root_node);
-            fn key_bits(axis: AvailableSpace) -> u64 {
-                match axis {
-                    AvailableSpace::Definite(px) => px.0.to_bits() as u64,
-                    AvailableSpace::MinContent => 1u64 << 32,
-                    AvailableSpace::MaxContent => 2u64 << 32,
-                }
-            }
+            let subtree_nodes = self.mark_solved_subtree(root_node);
             if let Some(frame_id) = self.frame_id {
-                self.root_solve_stamp.insert(
+                let key = Self::root_solve_key(available, self.solve_scale_factor);
+                self.root_solve_stamp
+                    .insert(root_node, RootSolveStamp { frame_id, key });
+                self.debug_last_root_solve_key.insert(
                     root_node,
-                    RootSolveStamp {
-                        frame_id,
-                        key: RootSolveKey {
-                            width_bits: key_bits(available.width),
-                            height_bits: key_bits(available.height),
-                            scale_bits: self.solve_scale_factor.to_bits(),
-                        },
+                    RootSolveDebugStamp {
+                        frame_id: self.frame_id,
+                        key,
                     },
                 );
+            }
+            if let Some(profile) = profile_base {
+                self.last_solve_profile = Some(LayoutEngineSolveProfile {
+                    reason: profile.reason,
+                    available_w_kind: profile.available_w_kind,
+                    available_h_kind: profile.available_h_kind,
+                    available_w: profile.available_w,
+                    available_h: profile.available_h,
+                    scale_factor: profile.scale_factor,
+                    batch_roots: profile.batch_roots,
+                    subtree_nodes,
+                });
             }
         } else {
             self.last_solve_root = None;
@@ -1827,9 +1927,9 @@ impl TaffyLayoutEngine {
         Ok(path)
     }
 
-    fn mark_solved_subtree(&mut self, root: NodeId) {
+    fn mark_solved_subtree(&mut self, root: NodeId) -> u32 {
         let Some(frame_id) = self.frame_id else {
-            return;
+            return 0;
         };
         // Only stamp nodes that are part of the engine's current "seen" set for this frame.
         //
@@ -1841,14 +1941,16 @@ impl TaffyLayoutEngine {
         // Using the "seen" set keeps stamping proportional to the subtree that was actually
         // requested/built for the current frame.
         if !self.is_seen(root) {
-            return;
+            return 0;
         }
+        let mut count: u32 = 0;
         self.mark_solved_stack_scratch.clear();
         self.mark_solved_stack_scratch.push(root);
         while let Some(node) = self.mark_solved_stack_scratch.pop() {
             if !self.is_seen(node) {
                 continue;
             }
+            count = count.saturating_add(1);
             self.node_solved_stamp.insert(
                 node,
                 SolvedStamp {
@@ -1864,6 +1966,7 @@ impl TaffyLayoutEngine {
                 }
             }
         }
+        count
     }
 
     fn clear_solved_subtree(&mut self, root: NodeId) {

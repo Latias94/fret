@@ -11274,3 +11274,93 @@ Decision:
     geometry-propagation path without skipping required layout-time side effects.
   - View-cache root: investigate whether clean viewport-root barrier solve input churn can be reduced or coalesced
     without stale layout-engine rects.
+
+## 2026-05-09 14:26 (pre-commit evidence)
+
+Question:
+- After adding `solve_profile` to layout-engine solve snapshots, can we tell whether the view-cache root barrier solve is
+  a repeated no-op or a fresh solve triggered by a changed root key?
+
+Change:
+- Added `solve_profile` to `UiDebugLayoutEngineSolve` and propagated it through the bootstrap bundle schema,
+  `fretboard diag stats`, and triage JSON.
+- The profile records the solve reason, available size kind/value, scale factor, batch root count, and stamped subtree
+  size so the next barrier-solve pass can distinguish repeated scheduling from a real root-size change.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo check -p fret-bootstrap`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui scroll view_cache`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-layout-solve-profile-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-layout-solve-profile-smoke/1778307664192/bundle.schema2.json`
+- Stats JSON:
+  `target/fret-diag/codex-layout-solve-profile-smoke/stats.json`
+- Result:
+  - `diag stats` now emits `top_layout_engine_solves[].solve_profile`.
+  - The view-cache root solve in the smoke reports `reason=new_frame_same_key`, `available_w=852`,
+    `available_h=8636`, `subtree_nodes=962`.
+  - Another view-cache-root sample in the same smoke reports `reason=new_frame_key_changed` at
+    `available_w=512/592`, which confirms the reason is tied to the root key and not just repeated scheduling.
+
+## 2026-05-09 15:18 (pre-commit evidence)
+
+Question:
+- Is the remaining scroll/view-cache cost hiding in layout-engine child-rect lookup/replay, or is it still in root
+  solve + clean bounds application?
+
+Change:
+- Exported per-frame layout-engine child rect query counters through bootstrap frame stats, `fretboard diag stats`,
+  `layout.perf.summary.v1.json`, and triage unit costs:
+  - `layout_engine_child_rect_queries`
+  - `layout_engine_child_rect_time_us`
+  - `layout_engine_widget_fallback_solves`
+
+Validation:
+- `cargo fmt -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-bootstrap -p fret-diag`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag summary_extracts_layout_lists_from_stats_json`
+- `cargo nextest run -p fret-diag summary_clips_arrays_by_top`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this diagnostics change did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-layout-child-rect-profile-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-layout-child-rect-profile-smoke/1778310124486/bundle.schema2.json`
+- Layout summary:
+  `target/fret-diag/codex-layout-child-rect-profile-smoke/layout.perf.summary.v1.json`
+- Stats JSON:
+  `target/fret-diag/codex-layout-child-rect-profile-smoke/stats.json`
+
+Result:
+- Worst top frame `196`: total/layout/paint `15882/12229/3518us`, with `layout_engine_solves=4` and
+  `layout_engine_solve_time_us=636`.
+- New child-rect evidence rules out the lookup/replay query path as the current hotspot:
+  `layout_engine_child_rect_queries=1196`, `layout_engine_child_rect_time_us=70`, and
+  `layout_engine_widget_fallback_solves=0`.
+- In top live-resize frames where the subtree is clean but bounds size changes:
+  - `ui-gallery-view-cache-root`: `solve_barrier_us=1616..1795us`,
+    `layout_children_first_pass_us=1164..1282us`, `nodes_visited=962`, and view-cache root solve profile reports
+    `reason=new_frame_key_changed`, `subtree_nodes=962`, `batch_roots=1`.
+  - `ui-gallery-content-viewport`: `layout_children_first_pass_us=3359..3782us`,
+    `solve_barrier_us=499..1027us`, `nodes_visited=1042`, with clean subtree flags.
+
+Decision:
+- Do not spend the next slice optimizing layout-engine child rect queries or widget-local fallback solves.
+- The next candidate remains a correctly-scoped clean bounds-size delta path:
+  - view-cache root: reduce or coalesce key-changed 962-node Taffy solves without stale engine rects;
+  - content viewport: narrow clean real-bounds application across the 1k-node subtree without skipping required
+    layout-time side effects.
