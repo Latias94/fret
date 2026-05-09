@@ -517,6 +517,16 @@ Evidence after the change:
   - Targeted pointer-move counters stayed under the baseline row:
     `pointer_move_max_dispatch_time_us=208` vs threshold `388`,
     `pointer_move_max_hit_test_time_us=24` vs threshold `31`.
+- Rerunning the actual selection flow for `ui-gallery-overlay-interaction-steady` still leaves the
+  suite unpromotable:
+  - Selection summary:
+    `target/fret-diag-baseline-select-ui-gallery-overlay-interaction-steady-windows-rtx4090-v1-after-action-cache/selection-summary.json`
+  - `selected_fail_total=3`, with misses spread across
+    `ui-gallery-context-menu-right-click-steady`,
+    `ui-gallery-dialog-escape-focus-restore-steady`, and
+    `ui-gallery-overlay-pointer-move-steady`.
+  - That means the suite is still too broad for one Windows baseline and should stay
+    evidence-only until it is split into narrower follow-ons.
 
 ## Next steps
 
