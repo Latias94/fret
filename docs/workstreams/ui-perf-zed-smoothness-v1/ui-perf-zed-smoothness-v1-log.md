@@ -11641,3 +11641,18 @@ Validation:
 Decision:
 - Treat `docs/workstreams/perf-baselines/README.md` as the baseline maintenance runbook. Re-seeding remains an
   explicit workstream action with command/evidence in the perf log; old baselines are not mass-edited just to add p50.
+
+## 2026-05-09 18:48 (audit)
+
+Question:
+- Is the active goal complete after the matrix, p50 writer, helper normalization, and baseline runbook work?
+
+Audit:
+- Added `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`.
+- Baseline p50 scan found 58 checked-in perf baseline files, 296 rows, and 0 rows with `measured_p50`.
+- Recent helper smoke proves the short `ui-resize-probes` path works with Windows baseline and default hooks, but no
+  full attempts=3 repeat=7 gate has been run after the helper normalization changes.
+
+Decision:
+- Do not mark the goal complete. The next concrete work is to intentionally re-seed primary Windows baselines with
+  `measured_p50` and run full formal gates, or explicitly defer that re-seed with owner/date in the workstream.

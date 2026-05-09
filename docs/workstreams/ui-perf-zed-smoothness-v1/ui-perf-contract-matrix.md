@@ -13,6 +13,7 @@ Related:
 - GPUI/egui gap map: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
 - Baselines: `docs/workstreams/perf-baselines/`
 - Baseline maintenance: `docs/workstreams/perf-baselines/README.md`
+- Contract audit: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`
 
 ## Contract Rules
 

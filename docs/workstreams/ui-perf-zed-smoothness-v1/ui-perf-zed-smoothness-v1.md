@@ -39,6 +39,8 @@ Tracking:
 - Perf log (commit-addressable results): `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
 - Contract matrix (scripts, baselines, gates, latest evidence):
   `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+- Contract audit (objective coverage + open gaps):
+  `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`
 
 ---
 
