@@ -30,6 +30,13 @@ Conventions:
 
 ## Current priorities (updated 2026-02-08)
 
+- [x] Keep an explicit perf contract matrix for editor-grade probes.
+  - Matrix: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+  - Scope: representative scripts, checked-in baselines, gate commands, recent evidence, and Zed/GPUI plus egui
+    reference pressure.
+  - Note: new `diag perf --perf-baseline-out` rows record `measured_p50`; old baselines remain valid and should only
+    gain p50 when intentionally re-seeded.
+
 - [ ] Pause checkpoint (2026-02-10): consolidate and avoid new experiments unless a gate regresses.
   - Summary + rollback switches: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md` (“Checkpoint (2026-02-10)”).
   - Evidence anchors:

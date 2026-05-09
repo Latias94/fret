@@ -1214,6 +1214,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         &mut perf_baseline_rows,
                         script_key.as_str(),
                         baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
+                        baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
                         baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
                         baseline_rows::TopTimesUs::new(p95_total, p95_layout, p95_solve),
                         baseline_rows::PointerMoveMetrics::new(
@@ -1745,16 +1746,19 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_total = runs_total.clone();
             sorted_total.sort_unstable();
+            let p50_total = percentile_nearest_rank_sorted(&sorted_total, 0.50);
             let p90_total = percentile_nearest_rank_sorted(&sorted_total, 0.90);
             let p95_total = percentile_nearest_rank_sorted(&sorted_total, 0.95);
 
             let mut sorted_layout = runs_layout.clone();
             sorted_layout.sort_unstable();
+            let p50_layout = percentile_nearest_rank_sorted(&sorted_layout, 0.50);
             let p90_layout = percentile_nearest_rank_sorted(&sorted_layout, 0.90);
             let p95_layout = percentile_nearest_rank_sorted(&sorted_layout, 0.95);
 
             let mut sorted_solve = runs_solve.clone();
             sorted_solve.sort_unstable();
+            let p50_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.50);
             let p90_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.90);
             let p95_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.95);
 
@@ -1764,11 +1768,14 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_frame_p95_total = runs_frame_p95_total.clone();
             sorted_frame_p95_total.sort_unstable();
+            let p50_frame_p95_total = percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.50);
             let p90_frame_p95_total = percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.90);
             let p95_frame_p95_total = percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.95);
 
             let mut sorted_frame_p95_layout = runs_frame_p95_layout.clone();
             sorted_frame_p95_layout.sort_unstable();
+            let p50_frame_p95_layout =
+                percentile_nearest_rank_sorted(&sorted_frame_p95_layout, 0.50);
             let p90_frame_p95_layout =
                 percentile_nearest_rank_sorted(&sorted_frame_p95_layout, 0.90);
             let p95_frame_p95_layout =
@@ -1776,6 +1783,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_frame_p95_solve = runs_frame_p95_solve.clone();
             sorted_frame_p95_solve.sort_unstable();
+            let p50_frame_p95_solve = percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.50);
             let p90_frame_p95_solve = percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.90);
             let p95_frame_p95_solve = percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.95);
             let max_pointer_move_dispatch = *runs_pointer_move_dispatch.iter().max().unwrap_or(&0);
@@ -1806,6 +1814,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_renderer_encode_scene_us = runs_renderer_encode_scene_us.clone();
             sorted_renderer_encode_scene_us.sort_unstable();
+            let p50_renderer_encode_scene_us =
+                percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_us, 0.50);
             let p90_renderer_encode_scene_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_us, 0.90);
             let p95_renderer_encode_scene_us =
@@ -1813,6 +1823,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_renderer_upload_us = runs_renderer_upload_us.clone();
             sorted_renderer_upload_us.sort_unstable();
+            let p50_renderer_upload_us =
+                percentile_nearest_rank_sorted(&sorted_renderer_upload_us, 0.50);
             let p90_renderer_upload_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_upload_us, 0.90);
             let p95_renderer_upload_us =
@@ -1820,6 +1832,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_renderer_record_passes_us = runs_renderer_record_passes_us.clone();
             sorted_renderer_record_passes_us.sort_unstable();
+            let p50_renderer_record_passes_us =
+                percentile_nearest_rank_sorted(&sorted_renderer_record_passes_us, 0.50);
             let p90_renderer_record_passes_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_record_passes_us, 0.90);
             let p95_renderer_record_passes_us =
@@ -1827,6 +1841,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_renderer_encoder_finish_us = runs_renderer_encoder_finish_us.clone();
             sorted_renderer_encoder_finish_us.sort_unstable();
+            let p50_renderer_encoder_finish_us =
+                percentile_nearest_rank_sorted(&sorted_renderer_encoder_finish_us, 0.50);
             let p90_renderer_encoder_finish_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_encoder_finish_us, 0.90);
             let p95_renderer_encoder_finish_us =
@@ -1834,6 +1850,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_renderer_prepare_text_us = runs_renderer_prepare_text_us.clone();
             sorted_renderer_prepare_text_us.sort_unstable();
+            let p50_renderer_prepare_text_us =
+                percentile_nearest_rank_sorted(&sorted_renderer_prepare_text_us, 0.50);
             let p90_renderer_prepare_text_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_prepare_text_us, 0.90);
             let p95_renderer_prepare_text_us =
@@ -1841,6 +1859,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
 
             let mut sorted_renderer_prepare_svg_us = runs_renderer_prepare_svg_us.clone();
             sorted_renderer_prepare_svg_us.sort_unstable();
+            let p50_renderer_prepare_svg_us =
+                percentile_nearest_rank_sorted(&sorted_renderer_prepare_svg_us, 0.50);
             let p90_renderer_prepare_svg_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_prepare_svg_us, 0.90);
             let p95_renderer_prepare_svg_us =
@@ -1998,6 +2018,20 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         max_renderer_encoder_finish_us,
                         max_renderer_prepare_text_us,
                         max_renderer_prepare_svg_us,
+                    ),
+                    baseline_rows::TopTimesUs::new(p50_total, p50_layout, p50_solve),
+                    baseline_rows::TopTimesUs::new(
+                        p50_frame_p95_total,
+                        p50_frame_p95_layout,
+                        p50_frame_p95_solve,
+                    ),
+                    baseline_rows::RendererTimesUs::new(
+                        p50_renderer_encode_scene_us,
+                        p50_renderer_upload_us,
+                        p50_renderer_record_passes_us,
+                        p50_renderer_encoder_finish_us,
+                        p50_renderer_prepare_text_us,
+                        p50_renderer_prepare_svg_us,
                     ),
                     baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
                     baseline_rows::TopTimesUs::new(

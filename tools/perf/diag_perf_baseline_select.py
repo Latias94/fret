@@ -5,6 +5,8 @@ Select a stable `diag perf` baseline from multiple candidates (cross-platform, n
 This mirrors the intent of `tools/perf/diag_perf_baseline_select.sh`:
   - Generate N candidate baselines (via `--perf-baseline-out`)
   - Validate each candidate M times (via `--perf-baseline`)
+  - Generated baselines record p50/p90/p95/max; selection still ranks by p90 to favor
+    stable typical performance before threshold size.
   - Pick a winner with priority:
       1) fewer validation failures
       2) lower suite p90 sum (rows[].measured_p90.top_total_time_us)

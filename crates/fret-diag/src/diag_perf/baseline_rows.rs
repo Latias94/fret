@@ -91,6 +91,7 @@ pub(crate) fn push_perf_baseline_row_single(
     rows: &mut Vec<serde_json::Value>,
     script_key: &str,
     measured_max_top: TopTimesUs,
+    measured_p50_top: TopTimesUs,
     measured_p90_top: TopTimesUs,
     measured_p95_top: TopTimesUs,
     measured_max_pointer_move: PointerMoveMetrics,
@@ -127,6 +128,11 @@ pub(crate) fn push_perf_baseline_row_single(
             "renderer_encoder_finish_us": measured_max_renderer.encoder_finish_us,
             "renderer_prepare_text_us": measured_max_renderer.prepare_text_us,
             "renderer_prepare_svg_us": measured_max_renderer.prepare_svg_us,
+        },
+        "measured_p50": {
+            "top_total_time_us": measured_p50_top.total,
+            "top_layout_time_us": measured_p50_top.layout,
+            "top_layout_engine_solve_time_us": measured_p50_top.solve,
         },
         "measured_p90": {
             "top_total_time_us": measured_p90_top.total,
@@ -176,6 +182,9 @@ pub(crate) fn push_perf_baseline_row_repeat(
     measured_max_pointer_move: PointerMoveMetrics,
     measured_max_paint_cache: PaintCacheReplayMetrics,
     measured_max_renderer: RendererTimesUs,
+    measured_p50_top: TopTimesUs,
+    measured_p50_frame_p95: TopTimesUs,
+    measured_p50_renderer: RendererTimesUs,
     measured_p90_top: TopTimesUs,
     measured_p90_frame_p95: TopTimesUs,
     measured_p90_renderer: RendererTimesUs,
@@ -226,6 +235,20 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "renderer_encoder_finish_us": measured_max_renderer.encoder_finish_us,
             "renderer_prepare_text_us": measured_max_renderer.prepare_text_us,
             "renderer_prepare_svg_us": measured_max_renderer.prepare_svg_us,
+        },
+        "measured_p50": {
+            "top_total_time_us": measured_p50_top.total,
+            "top_layout_time_us": measured_p50_top.layout,
+            "top_layout_engine_solve_time_us": measured_p50_top.solve,
+            "frame_p95_total_time_us": measured_p50_frame_p95.total,
+            "frame_p95_layout_time_us": measured_p50_frame_p95.layout,
+            "frame_p95_layout_engine_solve_time_us": measured_p50_frame_p95.solve,
+            "renderer_encode_scene_us": measured_p50_renderer.encode_scene_us,
+            "renderer_upload_us": measured_p50_renderer.upload_us,
+            "renderer_record_passes_us": measured_p50_renderer.record_passes_us,
+            "renderer_encoder_finish_us": measured_p50_renderer.encoder_finish_us,
+            "renderer_prepare_text_us": measured_p50_renderer.prepare_text_us,
+            "renderer_prepare_svg_us": measured_p50_renderer.prepare_svg_us,
         },
         "measured_p90": {
             "top_total_time_us": measured_p90_top.total,
@@ -291,4 +314,125 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "max_renderer_prepare_svg_us": thr_renderer.prepare_svg_us,
         },
     }));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pointer(dispatch: u64, hit_test: u64, global_changes: u64) -> PointerMoveMetrics {
+        PointerMoveMetrics::new(dispatch, hit_test, global_changes)
+    }
+
+    fn paint_cache(allowed: u64, rejected: u64) -> PaintCacheReplayMetrics {
+        PaintCacheReplayMetrics::new(allowed, rejected)
+    }
+
+    fn renderer(base: u64) -> RendererTimesUs {
+        RendererTimesUs::new(base, base + 1, base + 2, base + 3, base + 4, base + 5)
+    }
+
+    #[test]
+    fn single_baseline_row_records_measured_p50() {
+        let mut rows = Vec::new();
+
+        push_perf_baseline_row_single(
+            &mut rows,
+            "tools/diag-scripts/example.json",
+            TopTimesUs::new(30, 20, 10),
+            TopTimesUs::new(30, 20, 10),
+            TopTimesUs::new(30, 20, 10),
+            TopTimesUs::new(30, 20, 10),
+            pointer(1, 2, 0),
+            paint_cache(3, 4),
+            renderer(5),
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            30,
+            20,
+            10,
+            36,
+            24,
+            12,
+            pointer(2, 3, 0),
+            2,
+            5,
+            renderer(7),
+        );
+
+        assert_eq!(
+            rows[0]["measured_p50"],
+            serde_json::json!({
+                "top_total_time_us": 30,
+                "top_layout_time_us": 20,
+                "top_layout_engine_solve_time_us": 10,
+            })
+        );
+    }
+
+    #[test]
+    fn repeat_baseline_row_records_measured_p50() {
+        let mut rows = Vec::new();
+
+        push_perf_baseline_row_repeat(
+            &mut rows,
+            "tools/diag-scripts/repeat.json",
+            TopTimesUs::new(100, 80, 60),
+            TopTimesUs::new(40, 30, 20),
+            pointer(10, 11, 0),
+            paint_cache(12, 13),
+            renderer(1000),
+            TopTimesUs::new(70, 50, 30),
+            TopTimesUs::new(25, 20, 15),
+            renderer(2000),
+            TopTimesUs::new(90, 70, 50),
+            TopTimesUs::new(35, 30, 25),
+            renderer(3000),
+            TopTimesUs::new(95, 75, 55),
+            TopTimesUs::new(38, 33, 28),
+            renderer(4000),
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::P95,
+            PerfBaselineSeed::P95,
+            PerfBaselineSeed::P95,
+            100,
+            80,
+            60,
+            38,
+            33,
+            28,
+            true,
+            120,
+            96,
+            72,
+            Some(46),
+            Some(40),
+            Some(34),
+            pointer(12, 13, 0),
+            10,
+            16,
+            renderer(5000),
+        );
+
+        assert_eq!(
+            rows[0]["measured_p50"],
+            serde_json::json!({
+                "top_total_time_us": 70,
+                "top_layout_time_us": 50,
+                "top_layout_engine_solve_time_us": 30,
+                "frame_p95_total_time_us": 25,
+                "frame_p95_layout_time_us": 20,
+                "frame_p95_layout_engine_solve_time_us": 15,
+                "renderer_encode_scene_us": 2000,
+                "renderer_upload_us": 2001,
+                "renderer_record_passes_us": 2002,
+                "renderer_encoder_finish_us": 2003,
+                "renderer_prepare_text_us": 2004,
+                "renderer_prepare_svg_us": 2005,
+            })
+        );
+    }
 }

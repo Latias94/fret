@@ -11546,3 +11546,32 @@ Decision:
   workload before a large paint architecture change is justified.
 - Next perf investigations should either create a more targeted editor paint stressor, or move to a currently failing
   or near-threshold gate rather than optimizing an already-green probe.
+
+## 2026-05-09 18:12 (pre-commit evidence)
+
+Question:
+- Does the perf baseline contract record the typical case (`p50`) alongside the existing `p90`, `p95`, and `max`
+  samples, so the Zed smoothness workstream can track both typical and tail behavior without rewriting old baselines?
+
+Change:
+- Added row-level `measured_p50` output to new `diag perf --perf-baseline-out` JSON files.
+- Kept schema version `1` as an additive-compatible change; old baselines remain valid because gate reads consume the
+  existing `thresholds` object.
+- Added `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` to tie representative scripts,
+  checked-in baselines, gate commands, recent evidence, and Zed/GPUI plus egui reference pressure together.
+
+Validation:
+- `cargo fmt -p fret-diag --check`
+- `cargo check -p fret-diag`
+- `cargo nextest run -p fret-diag single_baseline_row_records_measured_p50 repeat_baseline_row_records_measured_p50`
+
+Smoke evidence:
+- Command:
+  `cargo run -p fretboard --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json --dir target/fret-diag/codex-p50-baseline-smoke --repeat 1 --warmup-frames 1 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 3 --json --perf-baseline-out target/fret-diag/codex-p50-baseline-smoke/baseline.json --launch -- target\release\fret-ui-gallery.exe`
+- Output check:
+  `target/fret-diag/codex-p50-baseline-smoke/baseline.json` row `measured_p50` contains
+  `top_total_time_us=626`, `top_layout_time_us=258`, and `top_layout_engine_solve_time_us=0`.
+
+Decision:
+- Keep old checked-in baseline JSON files untouched. They should gain `measured_p50` only through intentional
+  re-seeding on the relevant machine profile.
