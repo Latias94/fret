@@ -438,6 +438,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) top_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) layout_request_build_roots: Vec<BundleStatsLayoutRequestBuildRoot>,
+    pub(super) scroll_layout_profiles: Vec<BundleStatsScrollLayoutProfile>,
     pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     pub(super) layout_hotspots: Vec<BundleStatsLayoutHotspot>,
     pub(super) widget_measure_hotspots: Vec<BundleStatsWidgetMeasureHotspot>,
@@ -447,6 +448,48 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsScrollLayoutProfile {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) test_id: Option<String>,
+    pub(super) axis: Option<String>,
+    pub(super) pass: Option<String>,
+    pub(super) probe_unbounded: bool,
+    pub(super) children: u32,
+    pub(super) available_w: Option<f32>,
+    pub(super) available_h: Option<f32>,
+    pub(super) desired_w: Option<f32>,
+    pub(super) desired_h: Option<f32>,
+    pub(super) content_w: Option<f32>,
+    pub(super) content_h: Option<f32>,
+    pub(super) post_layout_extents_mode: bool,
+    pub(super) interactive_resize: bool,
+    pub(super) direct_children_layout_invalidated: bool,
+    pub(super) descendant_subtree_layout_dirty: bool,
+    pub(super) force_barrier_child_root_relayout: bool,
+    pub(super) measure_children_us: u64,
+    pub(super) solve_barrier_us: u64,
+    pub(super) layout_children_us: u64,
+    pub(super) layout_child_nodes_visited: u32,
+    pub(super) layout_child_nodes_performed: u32,
+    pub(super) layout_child_max_us: u64,
+    pub(super) layout_child_max_node: Option<u64>,
+    pub(super) layout_child_max_invalidated: bool,
+    pub(super) layout_child_max_subtree_dirty: bool,
+    pub(super) layout_child_max_subtree_dirty_count: u32,
+    pub(super) layout_child_max_nodes_visited: u32,
+    pub(super) layout_child_max_nodes_performed: u32,
+    pub(super) layout_child_max_bounds_changed: Option<bool>,
+    pub(super) layout_child_max_bounds_size_changed: Option<bool>,
+    pub(super) layout_child_max_input_matches_before: Option<bool>,
+    pub(super) layout_child_max_input_size_matches_before: Option<bool>,
+    pub(super) total_us: u64,
+    pub(super) element_path: Option<String>,
+    pub(super) role: Option<String>,
+    pub(super) semantics_test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1683,6 +1726,56 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    layout_request_build_roots: {}", items.join(" | "));
+            }
+            if !row.scroll_layout_profiles.is_empty() {
+                let items: Vec<String> = row
+                    .scroll_layout_profiles
+                    .iter()
+                    .take(3)
+                    .map(|p| {
+                        let mut out = format!(
+                            "total_us={} layout_children_us={} child_max_us={} node={}",
+                            p.total_us, p.layout_children_us, p.layout_child_max_us, p.node
+                        );
+                        if let Some(pass) = p.pass.as_deref()
+                            && !pass.is_empty()
+                        {
+                            out.push_str(&format!(" pass={pass}"));
+                        }
+                        if let Some(axis) = p.axis.as_deref()
+                            && !axis.is_empty()
+                        {
+                            out.push_str(&format!(" axis={axis}"));
+                        }
+                        out.push_str(&format!(
+                            " resize={} direct_invalidated={} descendant_dirty={} child_dirty={} bounds_changed={:?} size_changed={:?} input_matches_before={:?}",
+                            p.interactive_resize,
+                            p.direct_children_layout_invalidated,
+                            p.descendant_subtree_layout_dirty,
+                            p.layout_child_max_subtree_dirty,
+                            p.layout_child_max_bounds_changed,
+                            p.layout_child_max_bounds_size_changed,
+                            p.layout_child_max_input_matches_before,
+                        ));
+                        if let Some(test_id) = p.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        } else if let Some(test_id) = p.semantics_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(path) = p.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            let path = compact_debug_path(path);
+                            out.push_str(&format!(" path={path}"));
+                        }
+                        out
+                    })
+                    .collect();
+                println!("    scroll_layout_profiles: {}", items.join(" | "));
             }
             if !row.top_layout_engine_solves.is_empty() {
                 let items: Vec<String> = row
@@ -3654,6 +3747,172 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_request_build_roots".to_string(),
                     Value::Array(layout_request_build_roots),
+                );
+
+                let scroll_layout_profiles = row
+                    .scroll_layout_profiles
+                    .iter()
+                    .map(|p| {
+                        let mut p_obj = Map::new();
+                        p_obj.insert("node".to_string(), Value::from(p.node));
+                        p_obj.insert(
+                            "element".to_string(),
+                            p.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "test_id".to_string(),
+                            p.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "semantics_test_id".to_string(),
+                            p.semantics_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "role".to_string(),
+                            p.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "axis".to_string(),
+                            p.axis.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "pass".to_string(),
+                            p.pass.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert("probe_unbounded".to_string(), Value::from(p.probe_unbounded));
+                        p_obj.insert("children".to_string(), Value::from(p.children));
+                        p_obj.insert(
+                            "available_w".to_string(),
+                            p.available_w.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "available_h".to_string(),
+                            p.available_h.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "desired_w".to_string(),
+                            p.desired_w.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "desired_h".to_string(),
+                            p.desired_h.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "content_w".to_string(),
+                            p.content_w.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "content_h".to_string(),
+                            p.content_h.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "post_layout_extents_mode".to_string(),
+                            Value::from(p.post_layout_extents_mode),
+                        );
+                        p_obj.insert(
+                            "interactive_resize".to_string(),
+                            Value::from(p.interactive_resize),
+                        );
+                        p_obj.insert(
+                            "direct_children_layout_invalidated".to_string(),
+                            Value::from(p.direct_children_layout_invalidated),
+                        );
+                        p_obj.insert(
+                            "descendant_subtree_layout_dirty".to_string(),
+                            Value::from(p.descendant_subtree_layout_dirty),
+                        );
+                        p_obj.insert(
+                            "force_barrier_child_root_relayout".to_string(),
+                            Value::from(p.force_barrier_child_root_relayout),
+                        );
+                        p_obj.insert(
+                            "measure_children_us".to_string(),
+                            Value::from(p.measure_children_us),
+                        );
+                        p_obj.insert("solve_barrier_us".to_string(), Value::from(p.solve_barrier_us));
+                        p_obj.insert(
+                            "layout_children_us".to_string(),
+                            Value::from(p.layout_children_us),
+                        );
+                        p_obj.insert(
+                            "layout_child_nodes_visited".to_string(),
+                            Value::from(p.layout_child_nodes_visited),
+                        );
+                        p_obj.insert(
+                            "layout_child_nodes_performed".to_string(),
+                            Value::from(p.layout_child_nodes_performed),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_us".to_string(),
+                            Value::from(p.layout_child_max_us),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_node".to_string(),
+                            p.layout_child_max_node
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_invalidated".to_string(),
+                            Value::from(p.layout_child_max_invalidated),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_subtree_dirty".to_string(),
+                            Value::from(p.layout_child_max_subtree_dirty),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_subtree_dirty_count".to_string(),
+                            Value::from(p.layout_child_max_subtree_dirty_count),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_nodes_visited".to_string(),
+                            Value::from(p.layout_child_max_nodes_visited),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_nodes_performed".to_string(),
+                            Value::from(p.layout_child_max_nodes_performed),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_bounds_changed".to_string(),
+                            p.layout_child_max_bounds_changed
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_bounds_size_changed".to_string(),
+                            p.layout_child_max_bounds_size_changed
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_input_matches_before".to_string(),
+                            p.layout_child_max_input_matches_before
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        p_obj.insert(
+                            "layout_child_max_input_size_matches_before".to_string(),
+                            p.layout_child_max_input_size_matches_before
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        p_obj.insert("total_us".to_string(), Value::from(p.total_us));
+                        p_obj.insert(
+                            "element_path".to_string(),
+                            p.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(p_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "scroll_layout_profiles".to_string(),
+                    Value::Array(scroll_layout_profiles),
                 );
 
                 let top_layout_engine_solves = row

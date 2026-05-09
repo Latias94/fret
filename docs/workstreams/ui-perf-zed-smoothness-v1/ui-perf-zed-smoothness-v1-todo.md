@@ -1090,8 +1090,18 @@ Perf acceptance:
   - Evidence: perf log entry `2026-05-08 23:16`; rebuilt release smoke bundle
     `target/fret-diag/codex-scroll-bounds-delta-profile-r2/1778253370943/bundle.schema2.json`.
   - Result: the first heavy Scroll profile samples are initial/fresh mount frames where the child root changes from
-    zero bounds to content bounds; next attribution should capture stable resize frames and separate real geometry
-    deltas from clean subtree state sync.
+    zero bounds to content bounds. The same profiling payload is now exported into diagnostics bundles as
+    `debug.scroll_nodes[].layout_profile`, surfaced in `fretboard diag stats` as `scroll_layout_profiles`, and
+    mirrored into triage JSON as `layout.scroll_profile_present`; next attribution should capture stable resize
+    frames and separate real geometry deltas from clean subtree state sync.
+- [ ] Capture stable cached-flow resize-frame scroll profiles and classify whether clean-child-root apply skipping is
+  justified.
+  - Target: use `layout_child_max_bounds_changed=false` / `layout_child_max_input_matches_before=true` frames from the
+    new stats surface to separate genuine geometry changes from pure state sync.
+  - Gate: `target\release\fretboard.exe diag stats <bundle.json> --sort time --top 5 --json`
+  - Evidence anchor: `target/fret-diag/codex-scroll-layout-profile-bundle/1778291374724/bundle.schema2.json`.
+  - Outcome to decide: if stable cached-flow frames are clean, consider a narrower scroll post-layout apply skip; if
+    they still carry real bounds deltas, keep optimizing the existing layout path instead.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.

@@ -10997,3 +10997,38 @@ Decision:
 - Next step: capture stable resize-frame scroll profiles or promote these fields into the diagnostics bundle so
   bundle triage can sort by `layout_child_max_bounds_changed=false` / `input_matches_before=true`. Only then decide
   whether a clean-child-root apply skip or a more specific scroll post-layout dirty frontier is justified.
+
+## 2026-05-09 09:53 (diagnostics bundle surface)
+
+Question:
+- Can the scroll child-root layout profile leave the temporary trace-only path and become queryable from the standard
+  diagnostics bundle / stats / triage surfaces?
+
+Change:
+- Promoted `FRET_SCROLL_LAYOUT_PROFILE=1` payloads into the bundle schema under `debug.scroll_nodes[].layout_profile`.
+- Added `fretboard diag stats` support via `scroll_layout_profiles`, including human-readable and JSON output.
+- Added triage JSON coverage so the worst-frame hints can report `layout.scroll_profile_present` and expose the top
+  captured profiles as evidence examples.
+- Kept the profiling path behavior-only unchanged; this is still evidence plumbing, not a layout policy change.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui scroll`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+- `cargo nextest run -p fret-ui view_cache`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+- `cargo build -p fretboard --release`
+
+Smoke evidence:
+- Stress smoke bundle:
+  `target/fret-diag/codex-scroll-layout-profile-bundle/1778291374724/bundle.schema2.json`
+- `fretboard diag stats` now shows `scroll_layout_profiles` rows, including captured bounds-delta fields such as
+  `layout_child_max_bounds_changed`, `layout_child_max_bounds_size_changed`, and
+  `layout_child_max_input_matches_before`.
+
+Decision:
+- The scroll profile evidence is now durable and queryable.
+- Next optimization step should classify stable cached-flow frames from fresh mount frames before deciding whether a
+  clean-child-root apply skip or a narrower dirty-frontier scroll relayout is actually justified.

@@ -14,6 +14,48 @@ pub enum UiDebugScrollAxis {
     Both,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugScrollLayoutPassKind {
+    Probe,
+    Final,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugScrollLayoutProfile {
+    pub pass: UiDebugScrollLayoutPassKind,
+    pub probe_unbounded: bool,
+    pub children: u32,
+    pub available: fret_core::Size,
+    pub desired: fret_core::Size,
+    pub content: fret_core::Size,
+    pub post_layout_extents_mode: bool,
+    pub interactive_resize: bool,
+    pub direct_children_layout_invalidated: bool,
+    pub descendant_subtree_layout_dirty: bool,
+    pub force_barrier_child_root_relayout: bool,
+    pub measure_children_us: u64,
+    pub solve_barrier_us: u64,
+    pub layout_children_us: u64,
+    pub layout_child_nodes_visited: u32,
+    pub layout_child_nodes_performed: u32,
+    pub layout_child_max_us: u64,
+    pub layout_child_max_node: Option<NodeId>,
+    pub layout_child_max_invalidated: bool,
+    pub layout_child_max_subtree_dirty: bool,
+    pub layout_child_max_subtree_dirty_count: u32,
+    pub layout_child_max_nodes_visited: u32,
+    pub layout_child_max_nodes_performed: u32,
+    pub layout_child_max_bounds_changed: Option<bool>,
+    pub layout_child_max_bounds_size_changed: Option<bool>,
+    pub layout_child_max_input_matches_before: Option<bool>,
+    pub layout_child_max_input_size_matches_before: Option<bool>,
+    pub layout_child_max_bounds_before: Option<Rect>,
+    pub layout_child_max_bounds_after: Option<Rect>,
+    pub layout_child_max_input_bounds: Rect,
+    pub total_us: u64,
+    pub element_path: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct UiDebugScrollNodeTelemetry {
     pub node: NodeId,
@@ -25,6 +67,7 @@ pub struct UiDebugScrollNodeTelemetry {
     pub content: fret_core::Size,
     pub observed_extent: Option<fret_core::Size>,
     pub overflow_observation: Option<UiDebugScrollOverflowObservationTelemetry>,
+    pub layout_profile: Option<UiDebugScrollLayoutProfile>,
 }
 
 #[derive(Debug, Clone, Copy)]

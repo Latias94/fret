@@ -6,7 +6,8 @@ use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{
     UiDebugInvalidationDetail, UiDebugInvalidationSource, UiDebugScrollAxis,
-    UiDebugScrollNodeTelemetry, UiDebugScrollOverflowObservationTelemetry,
+    UiDebugScrollLayoutPassKind, UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
+    UiDebugScrollOverflowObservationTelemetry,
 };
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
@@ -98,6 +99,64 @@ impl ScrollChildLayoutProfile {
 
     fn max_input_size_matches_before(&self) -> Option<bool> {
         Some(self.max_bounds_before?.size == self.max_input_bounds.size)
+    }
+
+    fn into_debug_profile(
+        self,
+        pass: crate::layout_pass::LayoutPassKind,
+        probe_unbounded: bool,
+        children: usize,
+        available: Size,
+        desired: Size,
+        content: Size,
+        post_layout_extents_mode: bool,
+        interactive_resize: bool,
+        direct_children_layout_invalidated: bool,
+        descendant_subtree_layout_dirty: bool,
+        force_barrier_child_root_relayout: bool,
+        measure_children_us: u64,
+        solve_barrier_us: u64,
+        layout_children_us: u64,
+        total_us: u64,
+        element_path: Option<String>,
+    ) -> UiDebugScrollLayoutProfile {
+        UiDebugScrollLayoutProfile {
+            pass: match pass {
+                crate::layout_pass::LayoutPassKind::Probe => UiDebugScrollLayoutPassKind::Probe,
+                crate::layout_pass::LayoutPassKind::Final => UiDebugScrollLayoutPassKind::Final,
+            },
+            probe_unbounded,
+            children: children.min(u32::MAX as usize) as u32,
+            available,
+            desired,
+            content,
+            post_layout_extents_mode,
+            interactive_resize,
+            direct_children_layout_invalidated,
+            descendant_subtree_layout_dirty,
+            force_barrier_child_root_relayout,
+            measure_children_us,
+            solve_barrier_us,
+            layout_children_us,
+            layout_child_nodes_visited: self.nodes_visited,
+            layout_child_nodes_performed: self.nodes_performed,
+            layout_child_max_us: self.max_us,
+            layout_child_max_node: self.max_node,
+            layout_child_max_invalidated: self.max_invalidated,
+            layout_child_max_subtree_dirty: self.max_subtree_dirty,
+            layout_child_max_subtree_dirty_count: self.max_subtree_dirty_count,
+            layout_child_max_nodes_visited: self.max_nodes_visited,
+            layout_child_max_nodes_performed: self.max_nodes_performed,
+            layout_child_max_bounds_changed: self.max_bounds_changed(),
+            layout_child_max_bounds_size_changed: self.max_bounds_size_changed(),
+            layout_child_max_input_matches_before: self.max_input_matches_before(),
+            layout_child_max_input_size_matches_before: self.max_input_size_matches_before(),
+            layout_child_max_bounds_before: self.max_bounds_before,
+            layout_child_max_bounds_after: self.max_bounds_after,
+            layout_child_max_input_bounds: self.max_input_bounds,
+            total_us,
+            element_path,
+        }
     }
 }
 
@@ -2105,6 +2164,7 @@ impl ElementHostWidget {
                     content: handle.content_size(),
                     observed_extent: None,
                     overflow_observation: None,
+                    layout_profile: None,
                 });
 
             if needs_authoritative_cache_commit_from_same_frame_probe {
@@ -2367,6 +2427,7 @@ impl ElementHostWidget {
                             content: handle.content_size(),
                             observed_extent: None,
                             overflow_observation: None,
+                            layout_profile: None,
                         });
 
                     commit_scroll_authoritative_extent(
@@ -2453,6 +2514,7 @@ impl ElementHostWidget {
                             content: handle.content_size(),
                             observed_extent: None,
                             overflow_observation: None,
+                            layout_profile: None,
                         });
 
                     commit_scroll_authoritative_extent(
@@ -2576,6 +2638,7 @@ impl ElementHostWidget {
                                 content: handle.content_size(),
                                 observed_extent: None,
                                 overflow_observation: None,
+                                layout_profile: None,
                             });
 
                         commit_scroll_authoritative_extent(
@@ -2702,6 +2765,7 @@ impl ElementHostWidget {
                         content: handle.content_size(),
                         observed_extent: Some(observed.trusted),
                         overflow_observation: Some(observation),
+                        layout_profile: None,
                     });
             }
         }
@@ -2776,6 +2840,41 @@ impl ElementHostWidget {
                     element_path = element_path.as_deref().unwrap_or("<unknown>"),
                     "scroll layout profile"
                 );
+
+                cx.tree
+                    .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                        node: cx.node,
+                        element: Some(self.element),
+                        test_id: debug_test_id,
+                        axis: match props.axis {
+                            crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                            crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                            crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                        },
+                        offset: handle.offset(),
+                        viewport: handle.viewport_size(),
+                        content: handle.content_size(),
+                        observed_extent: None,
+                        overflow_observation: None,
+                        layout_profile: Some(child_layout_profile.into_debug_profile(
+                            cx.pass_kind,
+                            props.probe_unbounded,
+                            cx.children.len(),
+                            Size::new(Px(cx.available.width.0), Px(cx.available.height.0)),
+                            desired,
+                            Size::new(content_w, content_h),
+                            post_layout_extents_mode,
+                            cx.tree.interactive_resize_active(),
+                            direct_children_layout_invalidated,
+                            descendant_subtree_layout_dirty,
+                            force_barrier_child_root_relayout,
+                            t_measure_children.as_micros() as u64,
+                            t_solve_barrier.as_micros() as u64,
+                            t_layout_children.as_micros() as u64,
+                            total.as_micros() as u64,
+                            element_path,
+                        )),
+                    });
             }
         }
 
