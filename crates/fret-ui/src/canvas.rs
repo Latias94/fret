@@ -11,6 +11,7 @@ use fret_core::{
 };
 use fret_core::{PathCommand, PathConstraints, PathMetrics, PathStyle};
 use fret_runtime::ModelId;
+use smallvec::SmallVec;
 
 use crate::Theme;
 use crate::element::CanvasCachePolicy;
@@ -24,6 +25,45 @@ pub struct CanvasHostedResourceTouchCounts {
     pub text_blobs: u32,
     pub paths: u32,
     pub svgs: u32,
+}
+
+/// Precomputed hosted resource references extracted from retained `SceneOp`s.
+///
+/// Replay caches can store this alongside the op buffer so cache-hit paths only need to touch the
+/// owned resource IDs instead of scanning the entire op slice again.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct CanvasHostedResources {
+    text_blobs: SmallVec<[fret_core::TextBlobId; 1]>,
+    paths: SmallVec<[fret_core::PathId; 1]>,
+    svgs: SmallVec<[fret_core::SvgId; 1]>,
+}
+
+impl CanvasHostedResources {
+    /// Record the hosted resources referenced by a single `SceneOp`.
+    pub fn push_scene_op(&mut self, op: SceneOp) {
+        match op {
+            SceneOp::Text { text, .. } => self.text_blobs.push(text),
+            SceneOp::Path { path, .. } | SceneOp::PushClipPath { path, .. } => {
+                self.paths.push(path)
+            }
+            SceneOp::SvgMaskIcon { svg, .. } | SceneOp::SvgImage { svg, .. } => self.svgs.push(svg),
+            _ => {}
+        }
+    }
+
+    /// Record the hosted resources referenced by a retained scene-op slice.
+    pub fn extend_scene_ops(&mut self, ops: &[SceneOp]) {
+        for &op in ops {
+            self.push_scene_op(op);
+        }
+    }
+
+    /// Build a precomputed hosted-resource list from retained scene ops.
+    pub fn from_scene_ops(ops: &[SceneOp]) -> Self {
+        let mut resources = Self::default();
+        resources.extend_scene_ops(ops);
+        resources
+    }
 }
 
 /// A stable, user-provided cache key for hosted canvas resources.
@@ -269,6 +309,14 @@ impl<'a> CanvasPainter<'a> {
         ops: &[SceneOp],
     ) -> CanvasHostedResourceTouchCounts {
         self.cache.touch_hosted_resources_in_scene_ops(ops)
+    }
+
+    /// Touch hosted resources that were precomputed from retained scene ops.
+    pub fn touch_hosted_resources(
+        &mut self,
+        resources: &CanvasHostedResources,
+    ) -> CanvasHostedResourceTouchCounts {
+        self.cache.touch_hosted_resources(resources)
     }
 
     /// Access the underlying UI services and scene for advanced canvas paint handlers.
@@ -796,6 +844,31 @@ impl CanvasCache {
                     }
                 }
                 _ => {}
+            }
+        }
+
+        counts
+    }
+
+    fn touch_hosted_resources(
+        &mut self,
+        resources: &CanvasHostedResources,
+    ) -> CanvasHostedResourceTouchCounts {
+        let mut counts = CanvasHostedResourceTouchCounts::default();
+
+        for &text_blob in resources.text_blobs.iter() {
+            if self.touch_text_blob(text_blob) {
+                counts.text_blobs = counts.text_blobs.saturating_add(1);
+            }
+        }
+        for &path in resources.paths.iter() {
+            if self.touch_path(path) {
+                counts.paths = counts.paths.saturating_add(1);
+            }
+        }
+        for &svg in resources.svgs.iter() {
+            if self.touch_svg(svg) {
+                counts.svgs = counts.svgs.saturating_add(1);
             }
         }
 
@@ -1659,5 +1732,83 @@ impl Hasher for Fnv1a64 {
             hash = hash.wrapping_mul(0x100000001b3);
         }
         self.0 = hash;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn text_blob_id(raw: u64) -> fret_core::TextBlobId {
+        fret_core::TextBlobId::from(KeyData::from_ffi(raw))
+    }
+
+    fn path_id(raw: u64) -> fret_core::PathId {
+        fret_core::PathId::from(KeyData::from_ffi(raw))
+    }
+
+    fn svg_id(raw: u64) -> fret_core::SvgId {
+        fret_core::SvgId::from(KeyData::from_ffi(raw))
+    }
+
+    #[test]
+    fn hosted_resources_from_scene_ops_collects_resource_ids() {
+        let text = text_blob_id(1);
+        let clip_path = path_id(2);
+        let path = path_id(3);
+        let mask_svg = svg_id(4);
+        let image_svg = svg_id(5);
+
+        let resources = CanvasHostedResources::from_scene_ops(&[
+            SceneOp::PushClipPath {
+                bounds: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    fret_core::Size::new(Px(1.0), Px(1.0)),
+                ),
+                origin: Point::new(Px(0.0), Px(0.0)),
+                path: clip_path,
+            },
+            SceneOp::Path {
+                order: DrawOrder(0),
+                origin: Point::new(Px(0.0), Px(0.0)),
+                path,
+                paint: Paint::Solid(Color::TRANSPARENT).into(),
+            },
+            SceneOp::SvgMaskIcon {
+                order: DrawOrder(0),
+                rect: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    fret_core::Size::new(Px(1.0), Px(1.0)),
+                ),
+                svg: mask_svg,
+                fit: SvgFit::Contain,
+                color: Color::TRANSPARENT,
+                opacity: 1.0,
+            },
+            SceneOp::SvgImage {
+                order: DrawOrder(0),
+                rect: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    fret_core::Size::new(Px(1.0), Px(1.0)),
+                ),
+                svg: image_svg,
+                fit: SvgFit::Contain,
+                opacity: 1.0,
+            },
+            SceneOp::Text {
+                order: DrawOrder(0),
+                origin: Point::new(Px(0.0), Px(0.0)),
+                text,
+                paint: Paint::Solid(Color::TRANSPARENT).into(),
+                outline: None,
+                shadow: None,
+            },
+            SceneOp::PopClip,
+        ]);
+
+        assert_eq!(resources.text_blobs.as_slice(), &[text]);
+        assert_eq!(resources.paths.as_slice(), &[clip_path, path]);
+        assert_eq!(resources.svgs.as_slice(), &[mask_svg, image_svg]);
     }
 }

@@ -21,6 +21,9 @@ Exit criteria:
   as their own Windows baselines and pass with the reset-diagnostics prelude on each run.
 - `ui-gallery-overlay-steady` is not promoted yet; keep it as evidence because the broad suite still mixes overlay,
   modal, inspector, and legacy members.
+- 2026-05-11 note: the latest row-scoped content-resolve probe and hosted-resource precompute slice show that key
+  construction is negligible and hosted-resource touch can be precomputed; any later row-scoped refactor should stay
+  on replay/touch mechanics or new-row text draw, not more `RowGeomKey` / `RowSceneKey` splitting.
 
 ## M2 — Tail attribution is one-command
 

@@ -2092,7 +2092,7 @@ fn try_replay_row_scene_cache_fast_syntax(
                         Px(origin.y.0 - cached.origin.y.0),
                     );
                     let touch_started = st.paint_perf_enabled.then(Instant::now);
-                    painter.touch_hosted_resources_in_scene_ops(cached.ops.as_slice());
+                    painter.touch_hosted_resources(&cached.hosted_resources);
                     if let Some(started) = touch_started {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_replay_touch,
@@ -2207,7 +2207,7 @@ fn try_replay_row_scene_cache(
                         Px(origin.y.0 - cached.origin.y.0),
                     );
                     let touch_started = st.paint_perf_enabled.then(Instant::now);
-                    painter.touch_hosted_resources_in_scene_ops(cached.ops.as_slice());
+                    painter.touch_hosted_resources(&cached.hosted_resources);
                     if let Some(started) = touch_started {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_replay_touch,
@@ -2299,6 +2299,7 @@ fn store_row_scene_cache(
     st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
     let tick = st.row_scene_cache_tick;
     let ops_len = ops.len() as u64;
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(&ops);
 
     if let Some((old, _)) = st.row_scene_cache.insert(
         row,
@@ -2309,6 +2310,7 @@ fn store_row_scene_cache(
                 geom,
                 is_rich,
                 ops,
+                hosted_resources,
                 syntax_replay_key,
             },
             tick,
@@ -2379,6 +2381,7 @@ fn store_row_scene_cache(
     st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
     let tick = st.row_scene_cache_tick;
     let ops_len = ops.len() as u64;
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(&ops);
 
     if let Some((old, _)) = st.row_scene_cache.insert(
         row,
@@ -2389,6 +2392,7 @@ fn store_row_scene_cache(
                 geom,
                 is_rich,
                 ops,
+                hosted_resources,
             },
             tick,
         ),

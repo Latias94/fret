@@ -1394,6 +1394,7 @@ struct RowSceneCacheEntry {
     geom: geom::RowGeom,
     is_rich: bool,
     ops: Vec<SceneOp>,
+    hosted_resources: fret_ui::canvas::CanvasHostedResources,
     #[cfg(feature = "syntax")]
     syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
 }

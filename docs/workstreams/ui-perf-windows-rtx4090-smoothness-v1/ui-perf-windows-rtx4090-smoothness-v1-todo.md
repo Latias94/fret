@@ -55,11 +55,14 @@
   gate passed at p50/p95/max total `2019/2486/2486us`, with worst-bundle renderer encode p95/max `361/361us` and
   `renderer.encode.text(us/transform/emit/flush)=0/0/17-22us`.
 - [ ] Re-evaluate row/fragment replay only from a fresh low-overhead profile. If steady editor rows still rebuild too
-  much text or geometry after default family profiling, prototype the smallest row-scoped replay cache and keep the
-  code-editor v2 steady baseline as the guardrail.
+  much text or geometry after hosted-resource touch precompute and default family profiling, prototype the smallest
+  row-scoped replay cache and keep the code-editor v2 steady baseline as the guardrail.
   - 2026-05-11 content-resolve probe note: key comparison and key construction are already tiny relative to the
     row-scene fast replay path. If this lane revisits row-scoped replay work, target replay/touch mechanics or text
     draw before spending time on more RowGeomKey / RowSceneKey splitting.
+  - 2026-05-11 hosted-resource precompute note: `CanvasHostedResources` moved the hosted-resource touch scan off the
+    replay hit path. The next probe should keep measuring replay/touch mechanics or new-row text draw, not more key
+    splitting.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in

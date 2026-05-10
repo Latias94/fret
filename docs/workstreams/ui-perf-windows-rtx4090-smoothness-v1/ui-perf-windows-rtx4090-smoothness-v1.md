@@ -1088,7 +1088,9 @@ Renderer encode attribution (2026-05-10):
 - Gate noise note:
   - The repeat=7 max gate on this machine is still sensitive to renderer tail thresholds. Recent reruns failed on
     `renderer_encoder_finish_us=185/336` vs threshold `176`, or on `renderer_record_passes_us=90` vs threshold `64`,
-    while total and paint times remained in the same healthy band. Treat those as tail noise for this lane, not as a
+    while total and paint times remained in the same healthy band. The latest official hosted-resources gate failed
+    only on `renderer_upload_us=416 > 374` and `renderer_encoder_finish_us=179 > 176`, with total/paint still healthy
+    (`1584/1926/1926us` and `1498/1821/1821us`). Treat those as renderer-tail noise for this lane, not as a
     code-editor regression, and prefer the low-overhead probe bundles above for the real decision loop.
 - Content-resolve split follow-up (2026-05-11):
   - Probe:
@@ -1107,6 +1109,28 @@ Renderer encode attribution (2026-05-10):
     hosted-resource touch, and translated op replay) plus occasional new-row text draw. If this lane continues with
     row-scoped work, target row-scene replay/touch mechanics from fresh low-overhead evidence rather than key
     construction.
+
+- Hosted-resource touch precompute (2026-05-11):
+  - Change: `CanvasHostedResources` now precomputes `TextBlobId` / `PathId` / `SvgId` references from retained scene
+    ops at cache-store time, and row-scene replay touches those precomputed lists instead of rescanning `cached.ops`.
+  - Implementation anchors:
+    - `crates/fret-ui/src/canvas.rs`
+    - `ecosystem/fret-code-editor/src/editor/mod.rs`
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
+  - Verification:
+    - `cargo check -p fret-ui`
+    - `cargo check -p fret-code-editor --features syntax-rust`
+    - `cargo nextest run -p fret-ui --lib hosted_resources_from_scene_ops_collects_resource_ids --no-fail-fast`
+  - Probe:
+    `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --dir target/fret-diag/perf-code-editor-hosted-resources-v1 --launch -- target/release/fret-ui-gallery.exe`
+  - Result: p50/p95/max total `1762/2070/2070us`, paint `1669/1988/1988us`.
+  - Low-overhead bundle:
+    `target/fret-diag/perf-code-editor-hosted-resources-v1/1778441726056/bundle.schema2.json`
+    shows `ns_row_scene_replay_touch=39900ns` for `rows_scene_replayed=288`, roughly half the earlier content-resolve
+    touch bucket.
+  - Interpretation: the row-scene replay hot path is still the right place to look, but the cheap win is already in
+    place. Do not spend time splitting `RowGeomKey` or `RowSceneKey` further; if this lane continues, target
+    replay/touch mechanics or new-row text draw from fresh low-overhead evidence.
 
 ## Failure exemplar map
 
