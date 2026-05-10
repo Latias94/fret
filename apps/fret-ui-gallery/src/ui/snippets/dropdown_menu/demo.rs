@@ -21,7 +21,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .align(shadcn::DropdownMenuAlign::Start)
                         .side_offset(Px(4.0))
                         // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
-                        .min_width(Px(224.0)),
+                        .min_width(Px(224.0))
+                        .test_id("ui-gallery-dropdown-menu-demo-overlay-content"),
                 )
                 .entries([
                     shadcn::DropdownMenuLabel::new("My Account").into(),

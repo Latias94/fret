@@ -12,9 +12,10 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
         "Radix Primitives does not ship a standalone `Combobox` primitive",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
         "`Combobox::device_shell_responsive(true)` remains the explicit viewport/device-shell follow-up for the responsive example instead of widening the default docs path, and it stays recipe-owned even though the shell classification now delegates to `fret_ui_kit::adaptive::device_shell_mode(...)`.",
+        "`ComboboxContent::width_px(...)` is separate from `ComboboxTrigger::width_px(...)`",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here",
-        "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
+        "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
         ".test_id_prefix(\"ui-gallery-combobox-usage\")",
         ".test_id_prefix(\"ui-gallery-combobox-api-reference\")",
         ".test_id_prefix(\"ui-gallery-combobox-label\")",
@@ -43,6 +44,7 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
             input_group,
             rtl,
             api_reference,
+            responsive,
             conformance_demo,
             groups_with_separator,
             label,
@@ -150,6 +152,29 @@ fn combobox_docs_path_snippets_stay_copyable_and_docs_aligned() {
 }
 
 #[test]
+fn combobox_responsive_snippet_exposes_separate_width_lanes() {
+    let responsive = include_str!("../src/ui/snippets/combobox/responsive.rs");
+
+    for needle in [
+        ".device_shell_responsive(true)",
+        ".variant(shadcn::ComboboxTriggerVariant::Button)",
+        ".width_px(Px(150.0))",
+        ".width_px(Px(200.0))",
+        "placeholder(\"+ Set status\")",
+        "placeholder(\"Filter status...\")",
+        "shadcn::ComboboxEmpty::new(",
+        "No results found.",
+        ".test_id_prefix(\"ui-gallery-combobox-responsive\")",
+        ".test_id(\"ui-gallery-combobox-responsive-content\")",
+    ] {
+        assert!(
+            responsive.contains(needle),
+            "combobox responsive snippet should keep the upstream width lanes and status list explicit; missing `{needle}`"
+        );
+    }
+}
+
+#[test]
 fn combobox_follow_up_long_list_keeps_width_on_the_caller_lane() {
     let long_list = include_str!("../src/ui/snippets/combobox/long_list.rs");
     let normalized_long_list = normalize_ws(long_list);
@@ -205,6 +230,7 @@ fn combobox_docs_diag_scripts_cover_docs_smoke_and_existing_follow_ups() {
         "\"docsec-input-group-content\"",
         "\"docsec-rtl-content\"",
         "\"ui-gallery-combobox-api-reference-content\"",
+        "\"docsec-responsive-content\"",
         "\"docsec-conformance-demo-content\"",
         "\"docsec-groups-separator-content\"",
         "\"ui-gallery-combobox-label-content\"",

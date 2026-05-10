@@ -1,0 +1,467 @@
+{
+  "schema_version": 1,
+  "component": "input",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-09",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/input_parts_v1.json",
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 2,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 1,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "measured_test_id_count": 313,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_control_size",
+      "label": "Input demo control size",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "medium",
+      "test_ids": [
+        "ui-gallery-input-demo-control"
+      ],
+      "upstream_facts": [
+        "Input source uses h-9 w-full min-w-0 rounded-md border px-3 py-1.",
+        "The docs-path demo renders a single Input inside the Fret Field example max-width."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes a stable Input control test id.",
+        "M3 captures a direct Input page sidecar from a direct Input page start."
+      ],
+      "checks": [
+        {
+          "id": "demo_control_visible_fill_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Input demo control keeps visible fill width within the 320px max-width field lane and h-9 resolves to 36 logical px.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
+            "apps/fret-ui-gallery/src/ui/snippets/input/demo.rs",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant is shadcn Input recipe sizing within the docs-path field composition."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324780501-ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-input-demo-control",
+                  "metric": "width",
+                  "comparison": "gte",
+                  "expected": ">= 200",
+                  "eps_px": 1.0,
+                  "observed_px": 320.0,
+                  "bounds": {
+                    "x": 136.667,
+                    "y": 292.0,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 136.667,
+                    "y": 292.0,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(456v1)",
+                  "kind_hint": "TextInput",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                  "duplicate_count": 2
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-input-demo-control",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 136.667,
+                    "y": 292.0,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 136.667,
+                    "y": 292.0,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(456v1)",
+                  "kind_hint": "TextInput",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                  "duplicate_count": 2
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.input.demo.control",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 1440.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
+                  "snapshot_name": "input-demo",
+                  "theme": "light",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "input",
+                  "attrs": {},
+                  "class_name": "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "file_control_fill",
+      "label": "Input file example control fill",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-input-file-control"
+      ],
+      "upstream_facts": [
+        "The upstream file example uses grid w-full max-w-sm and an Input type=file.",
+        "The control should keep visible width rather than collapse to adornment or button width."
+      ],
+      "fret_facts": [
+        "Existing input diagnostics already assert the file control keeps visible width.",
+        "M3 sidecar evidence captures the same selector for discovery reporting."
+      ],
+      "checks": [
+        {
+          "id": "file_control_visible_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "File input control keeps a visible width in the composed ButtonGroup lane.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "This is best guarded through a running gallery because it depends on the docs page scroll state and composed controls."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+              "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324780501-ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-input-file-control",
+                "metric": "width",
+                "comparison": "gte",
+                "expected": ">= 120",
+                "eps_px": 1.0,
+                "observed_px": 242.0,
+                "bounds": {
+                  "x": 136.667,
+                  "y": 2104.667,
+                  "w": 242.0,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 136.667,
+                  "y": 2104.667,
+                  "w": 242.0,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(666v1)",
+                "kind_hint": "TextInput",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-input-file-control",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 24",
+                "eps_px": 1.0,
+                "observed_px": 36.0,
+                "bounds": {
+                  "x": 136.667,
+                  "y": 2104.667,
+                  "w": 242.0,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 136.667,
+                  "y": 2104.667,
+                  "w": 242.0,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(666v1)",
+                "kind_hint": "TextInput",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "button_group_control_fill",
+      "label": "Input with Button example control fill",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-input-button-group-control",
+        "ui-gallery-input-button-group-search-button"
+      ],
+      "upstream_facts": [
+        "The upstream input-with-button example uses flex w-full max-w-sm items-center gap-2.",
+        "The Input should keep fill width while the trailing outline Button keeps its intrinsic width."
+      ],
+      "fret_facts": [
+        "The UI Gallery Input page exposes stable control and trailing button test ids.",
+        "M3 captures their geometry in the same sidecar for width negotiation review."
+      ],
+      "checks": [
+        {
+          "id": "button_group_control_visible_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Input with Button control keeps visible fill width and remains wider than the trailing button.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/input/button_group.rs",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "This check belongs to docs-path composition and should stay runnable in the gallery."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+              "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324780501-ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-input-button-group-control",
+                "metric": "width",
+                "comparison": "gte",
+                "expected": ">= 120",
+                "eps_px": 1.0,
+                "observed_px": 345.333,
+                "bounds": {
+                  "x": 136.667,
+                  "y": 3471.333,
+                  "w": 345.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 136.667,
+                  "y": 3471.333,
+                  "w": 345.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(868v1)",
+                "kind_hint": "TextInput",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-input-button-group-control",
+                "b": "ui-gallery-input-button-group-search-button",
+                "metric": "width",
+                "comparison": "gte",
+                "expected": ">= 60",
+                "eps_px": 1.0,
+                "observed_px": 270.667,
+                "a_bounds": {
+                  "x": 136.667,
+                  "y": 3471.333,
+                  "w": 345.333,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 482.667,
+                  "y": 3471.333,
+                  "w": 74.667,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 136.667,
+                  "y": 3471.333,
+                  "w": 345.333,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 482.667,
+                  "y": 3471.333,
+                  "w": 74.667,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(868v1)",
+                "b_node": "NodeId(869v1)",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984/1778324773989-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 2,
+                "b_duplicate_count": 2
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "M3b uses Fret layout sidecars from the UI Gallery Input docs-path examples.",
+    "M3b reads upstream shadcn web DOM snapshot evidence for the direct Input demo control.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px; scale_factor is retained only as diagnostics metadata."
+  ]
+}

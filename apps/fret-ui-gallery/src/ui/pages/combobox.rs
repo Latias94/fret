@@ -20,6 +20,7 @@ pub(super) fn preview_combobox(
     let groups = snippets::groups::render(cx);
     let groups_with_separator = snippets::groups_with_separator::render(cx);
     let popup = snippets::trigger_button::render(cx);
+    let responsive = snippets::responsive::render(cx);
     let multiple = snippets::multiple_selection::render(cx);
     let custom_items = snippets::custom_items::render(cx);
     let long_list = snippets::long_list::render(cx);
@@ -85,9 +86,10 @@ pub(super) fn preview_combobox(
         "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
         "`Combobox::device_shell_responsive(true)` remains the explicit viewport/device-shell follow-up for the responsive example instead of widening the default docs path, and it stays recipe-owned even though the shell classification now delegates to `fret_ui_kit::adaptive::device_shell_mode(...)`.",
+        "`ComboboxContent::width_px(...)` is separate from `ComboboxTrigger::width_px(...)`, so the upstream responsive demo can keep a 150px trigger with a 200px desktop popover while the mobile drawer fills the viewport.",
         "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
         "`Combobox::aria_invalid(true)` is the root invalid lane; callers should not restate invalid state on `ComboboxInput` just to get trigger/search chrome.",
-        "Combobox is intentionally a Popover + Command recipe surface; the remaining work here is docs/public-surface drift rather than a `fret-ui` mechanism bug.",
+        "Combobox is intentionally a Popover + Command recipe surface; the remaining work here is docs/public-surface drift rather than a `fret-ui` mechanism bug, including width ownership between trigger and content lanes.",
         "Upstream nested children composition maps to typed parts in Fret: `ComboboxContent::new([ComboboxContentPart::...])`, `ComboboxList::{items,groups}`, and `ComboboxInput::children([InputGroupAddon...])` cover the documented lanes without widening the root to arbitrary generic children.",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here: the documented upstream lanes are already represented by `ComboboxContent::new([...])`, `ComboboxList::{items,groups}`, `ComboboxInput::children([InputGroupAddon...])`, and `ComboboxItem::content(...)`.",
         "`Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children.",
@@ -105,6 +107,13 @@ pub(super) fn preview_combobox(
         )
         .no_shell()
         .code_rust_from_file_region(snippets::conformance_demo::SOURCE, "example");
+    let responsive = DocSection::build(cx, "Responsive", responsive)
+        .description(
+            "Upstream responsive combobox proof: 150px trigger, 200px desktop popover, and drawer-backed mobile content.",
+        )
+        .test_id_prefix("ui-gallery-combobox-responsive-docsec")
+        .no_shell()
+        .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
     let groups_with_separator = DocSection::build(cx, "Groups + Separator", groups_with_separator)
         .description("Fret follow-up for explicit separator coverage between grouped sections.")
         .code_rust_from_file_region(snippets::groups_with_separator::SOURCE, "example")
@@ -121,7 +130,7 @@ pub(super) fn preview_combobox(
     let notes = doc_layout::notes_block([
         "Base UI lifecycle parity already covers `onValueChange`, `onOpenChange`, reason-aware open changes, and transition-complete callbacks.",
         "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
-        "`Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay after `API Reference` as explicit Fret follow-ups so the docs path remains readable without losing diagnostics coverage.",
+        "`Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay after `API Reference` as explicit Fret follow-ups so the docs path remains readable without losing diagnostics coverage.",
         "For invalid visuals, use root `Combobox::aria_invalid(true)` and pair it with caller-owned field-level error copy.",
         "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
     ]);
@@ -132,7 +141,7 @@ pub(super) fn preview_combobox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
+            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
         ),
         vec![
             basic,
@@ -148,6 +157,7 @@ pub(super) fn preview_combobox(
             input_group,
             rtl,
             api_reference,
+            responsive,
             conformance_demo,
             groups_with_separator,
             label,

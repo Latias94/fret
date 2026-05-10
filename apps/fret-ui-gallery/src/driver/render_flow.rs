@@ -3522,6 +3522,7 @@ mod tests {
             "ui-gallery-button-group-select-content",
             "ui-gallery-button-group-select-currency-trigger",
             "ui-gallery-button-group-select-amount",
+            "ui-gallery-button-group-select-send-button",
             "ui-gallery-button-group-popover-content",
             "ui-gallery-button-group-rtl-content",
             "ui-gallery-button-group-api-reference-content",
@@ -3570,6 +3571,43 @@ mod tests {
         assert!(
             trigger.size.height.0 >= 32.0,
             "expected dropdown trigger to keep the default control height: trigger={trigger:?}"
+        );
+
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-button-group-select-content",
+        );
+        let select_trigger = visual_bounds_by_test_id(
+            &rendered,
+            "ui-gallery-button-group-select-currency-trigger",
+        );
+        let select_amount =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-button-group-select-amount");
+        let select_send =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-button-group-select-send-button");
+        assert!(
+            select_trigger.size.width.0 >= 48.0 && select_trigger.size.width.0 <= 80.0,
+            "expected ButtonGroupSelect trigger to keep monospace trigger chrome without collapsing: trigger={select_trigger:?}"
+        );
+        assert!(
+            select_trigger.size.height.0 >= 32.0,
+            "expected ButtonGroupSelect trigger to keep the default control height: trigger={select_trigger:?}"
+        );
+        assert!(
+            select_amount.size.width.0 >= 120.0,
+            "expected ButtonGroupSelect amount input to keep visible fill width beside the trigger: amount={select_amount:?}"
+        );
+        assert!(
+            select_amount.size.height.0 >= 32.0,
+            "expected ButtonGroupSelect amount input to keep the default control height: amount={select_amount:?}"
+        );
+        assert!(
+            select_send.size.width.0 >= 32.0 && select_send.size.width.0 <= 56.0,
+            "expected ButtonGroupSelect send button to keep compact icon-button width: send={select_send:?}"
+        );
+        assert!(
+            select_send.size.height.0 >= 32.0,
+            "expected ButtonGroupSelect send button to keep the default control height: send={select_send:?}"
         );
 
         scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-button-group-text-content");

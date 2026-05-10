@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-combobox-responsive-vp375x240-open",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "combobox", "responsive", "vp375x240"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-combobox-responsive-docsec"
+    },
+    "target_hints": [
+      "Starts directly on the Combobox page with only the Responsive section mounted in an effective 375x240 viewport.",
+      "On the current Windows native runner, requesting 375x220 produces an effective 375x240 layout root; the parity report gates the effective sidecar root before comparing drawer geometry.",
+      "Opens the responsive demo combobox trigger.",
+      "Captures a layout sidecar, screenshot, and bundle to validate constrained-viewport drawer content."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 375.0, "height_px": 220.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+      "delta_y": -720.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-command" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-combobox-responsive-vp375x240-open.preassert.layout" },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" },
+      "stable_frames": 4,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-combobox-responsive-vp375x240-open.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-combobox-responsive-vp375x240-open" },
+    { "type": "capture_bundle", "label": "ui-gallery-combobox-responsive-vp375x240-open" }
+  ]
+}

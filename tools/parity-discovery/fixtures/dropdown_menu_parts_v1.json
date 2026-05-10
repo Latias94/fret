@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "component": "dropdown-menu",
+  "style": "new-york-v4",
+  "report": {
+    "id": "dropdown_menu_mismatch_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-09",
+    "limitations": [
+      "M3b uses Fret layout sidecars from the UI Gallery Dropdown Menu docs-path demo.",
+      "M3b reads upstream shadcn web DOM snapshot evidence for the open Dropdown Menu demo content panel.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px; scale_factor is retained only as diagnostics metadata."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.dropdown_menu.web_open_snapshot",
+        "path": "repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json"
+      },
+      {
+        "id": "upstream.dropdown_menu.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx"
+      },
+      {
+        "id": "upstream.dropdown_menu.demo",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/dropdown-menu-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.dropdown_menu.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs"
+      },
+      {
+        "id": "fret.gallery.dropdown_menu_demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs"
+      },
+      {
+        "id": "fret.diag.m3_dropdown_menu",
+        "path": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-dropdown-menu-layout.json"
+      }
+    ]
+  },
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.dropdown_menu.demo.content",
+      "snapshot": "dropdown-menu-demo",
+      "theme": "light",
+      "path": "portalWrapper.0.0",
+      "source_ref_id": "upstream.dropdown_menu.web_open_snapshot"
+    }
+  ],
+  "parts": [
+    {
+      "id": "demo_content_width",
+      "label": "Dropdown Menu demo content width",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.dropdown_menu.source",
+          "upstream.dropdown_menu.demo"
+        ],
+        "facts": [
+          "DropdownMenuContent has a default min-w-[8rem].",
+          "The docs-path demo passes className=\"w-56\" on DropdownMenuContent.",
+          "The content panel should expose a stable content-sized menu surface for overlay diagnostics."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.dropdown_menu.recipe",
+          "fret.gallery.dropdown_menu_demo",
+          "fret.diag.m3_dropdown_menu"
+        ],
+        "test_ids": [
+          "ui-gallery-dropdown-menu-demo-overlay-content"
+        ],
+        "facts": [
+          "The UI Gallery demo sets DropdownMenuContent min_width(Px(224.0)) and a stable overlay content test id.",
+          "M3 captures the open dropdown menu layout sidecar from a direct Dropdown Menu page start."
+        ]
+      },
+      "checks": [
+        {
+          "id": "demo_content_matches_w_56_logical_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Docs-path DropdownMenuContent should measure at least 224 logical px wide for shadcn w-56.",
+          "observed": "unknown",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json",
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/dropdown-menu-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.dropdown_menu.demo.content",
+              "metric": "width",
+              "comparison": "gte",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-dropdown-menu-demo-overlay-content",
+              "metric": "width",
+              "comparison": "gte",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The open overlay content width is a runnable UI invariant; Fret logical sidecar bounds should compare directly with upstream DOM CSS px."
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_item_chrome_fill",
+      "label": "Dropdown Menu demo item chrome fill",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.dropdown_menu.source",
+          "upstream.dropdown_menu.demo"
+        ],
+        "facts": [
+          "DropdownMenuItem uses relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm.",
+          "The item visual chrome should fill the interactive row bounds."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.dropdown_menu.recipe",
+          "fret.diag.m3_dropdown_menu"
+        ],
+        "test_ids": [
+          "ui-gallery-dropdown-menu-demo-profile",
+          "ui-gallery-dropdown-menu-demo-profile.chrome"
+        ],
+        "facts": [
+          "Existing Dropdown Menu diag scripts already assert item/chrome bounds equality for demo and basic menus.",
+          "M3 sidecar evidence allows the discovery report to reuse the same geometry predicate."
+        ]
+      },
+      "checks": [
+        {
+          "id": "profile_item_chrome_width_delta",
+          "kind": "fret_layout_sidecar",
+          "expected": "Profile item chrome width should match the interactive row width.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dropdown-menu-demo-profile",
+              "b": "ui-gallery-dropdown-menu-demo-profile.chrome",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dropdown-menu-demo-profile",
+              "b": "ui-gallery-dropdown-menu-demo-profile.chrome",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "This stays a running-overlay diagnostic because the row only exists after opening the menu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "content_selector_surface",
+      "label": "Dropdown Menu content selector surface",
+      "axis": "diagnostics",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.dropdown_menu.source"
+        ],
+        "facts": [
+          "Radix exposes a distinct DropdownMenuContent part that can be targeted separately from the docs page section."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.dropdown_menu.recipe",
+          "fret.gallery.dropdown_menu_demo"
+        ],
+        "test_ids": [
+          "ui-gallery-dropdown-menu-demo-overlay-content"
+        ],
+        "facts": [
+          "M3 adds DropdownMenuContent::test_id so diagnostics can address the overlay panel instead of the DocSection content wrapper."
+        ]
+      },
+      "checks": [
+        {
+          "id": "overlay_content_test_id_exists",
+          "kind": "fret_layout_sidecar",
+          "expected": "The open overlay content panel exposes a stable, non-DocSection test id.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "diagnostics_surface",
+          "evidence_refs": [
+            "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-dropdown-menu-demo-overlay-content",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 1.0,
+              "eps_px": 0.0
+            }
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Stable overlay selectors are a reusable diagnostics surface prerequisite for future Dropdown Menu parity checks."
+          }
+        }
+      ]
+    }
+  ]
+}

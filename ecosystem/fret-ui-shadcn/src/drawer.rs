@@ -47,7 +47,6 @@ use crate::bool_model::IntoBoolModel;
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnSnapPointChange = Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>;
 
-const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
 const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
@@ -551,9 +550,7 @@ impl DrawerContent {
                 .unwrap_or(viewport_bounds)
                 .size
                 .height;
-        let cap = (window_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0);
-        let by_gap = (window_height.0 - DRAWER_EDGE_GAP_PX.0).max(0.0);
-        let max_height = Px(cap.min(by_gap));
+        let max_height = Px((window_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0));
 
         let base_layout = match side {
             DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default()
@@ -1365,7 +1362,6 @@ impl Drawer {
             side: DrawerSide::Bottom,
             inner: Sheet::new(open)
                 .side(DrawerSide::Bottom)
-                .vertical_edge_gap_px(DRAWER_EDGE_GAP_PX)
                 .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION),
             drag_to_dismiss: true,
             snap_points: None,
@@ -1668,7 +1664,6 @@ impl Drawer {
 
         let mut inner = self
             .inner
-            .vertical_edge_gap_px(DRAWER_EDGE_GAP_PX)
             .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
         match side {
             DrawerSide::Left | DrawerSide::Right => {
@@ -3508,9 +3503,7 @@ mod tests {
         )
         .expect("drawer content bounds");
         let viewport_h = bounds.size.height.0;
-        let cap = viewport_h * DRAWER_MAX_HEIGHT_FRACTION;
-        let by_gap = (viewport_h - DRAWER_EDGE_GAP_PX.0).max(0.0);
-        let expected = cap.min(by_gap);
+        let expected = viewport_h * DRAWER_MAX_HEIGHT_FRACTION;
         assert!(
             (content_bounds.size.height.0 - expected).abs() < 2.0,
             "expected content max-height fraction clamp near {expected}px, got {content_bounds:?}"

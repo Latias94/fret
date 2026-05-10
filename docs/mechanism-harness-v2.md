@@ -74,6 +74,38 @@ The mechanism-only predicates `hit_test_sample_barrier_root` and
 `hit_test_sample_active_layer_root_at` keep overlay/modal routing assertions in the same fixture
 oracle instead of scattering them across bespoke tests.
 
+## Phase 2.2 Shell Sizing Coverage
+
+The shadcn recipe fixture suite now includes two shell sizing cases, both run by
+`mechanism_harness_recipe_layout_cases_match_oracles`:
+
+- `responsive-drawer-bottom-sheet-uses-eighty-vh`
+- `popover-command-shell-wraps-hover-region-max-height`
+
+These cases came from the shadcn parity discovery harness:
+
+- The responsive combobox mobile report showed the command/listbox subtree passing while the outer
+  `DrawerContent` shell was too short. The mechanism harness case locks the source-backed rule that
+  top/bottom drawer content uses `max-h-[80vh]` without an additional viewport edge-gap clamp.
+- The responsive combobox desktop report showed the command/listbox subtree passing while the outer
+  `PopoverContent` shell stayed at the placement fallback height. The promoted case opens the
+  popover across two frames so the anchor bounds exist, then asserts the shell wraps the command
+  height instead of staying at `160px`.
+
+The popover root cause is mechanism-shaped: overlay placement must read size hints from wrapper
+elements that are common in self-drawn UI trees, not just from plain containers. In this slice,
+`size_hint_px(...)` had to include `HoverRegion` and `Stack` layout constraints, and the content
+child had to be built before the Radix dialog wrapper so the opening frame can read the hint.
+
+Use this pattern for future shell-sizing cases:
+
+- keep the parity discovery report as the source-to-evidence triage surface;
+- gate effective viewport/root bounds in the diagnostics report before interpreting responsive
+  overlay geometry;
+- promote source-backed shell invariants into a lightweight recipe mechanism fixture when they can
+  be reproduced without launching UI Gallery;
+- keep full diagnostics scripts for viewport, portal, screenshot, or multi-frame overlay evidence.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust

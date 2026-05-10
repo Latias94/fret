@@ -56,6 +56,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .a11y_label("Send")
         .size(shadcn::ButtonSize::Icon)
         .variant(shadcn::ButtonVariant::Outline)
+        .test_id("ui-gallery-button-group-select-send-button")
         .icon(IconId::new_static("lucide.arrow-right"));
 
     shadcn::ButtonGroup::new([

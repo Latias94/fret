@@ -199,9 +199,20 @@ Export shape (bundle directory):
 - with at least:
   - `bundle.json` (the exported diagnostics bundle; includes bounded per-window snapshot history),
   - `latest.txt` pointer file in the parent output directory (best-effort),
+  - optional bounded sidecars such as `layout.taffy.v1.json` when a script explicitly captures
+    layout evidence,
   - optional screenshot artifacts when enabled (tooling-driven; see `docs/ui-diagnostics-and-scripted-tests.md`).
 
 This “bundle” is the unit of sharing with other humans and with AI tools.
+
+Coordinate unit contract:
+
+- Diagnostics snapshots, semantics bounds, test-id selector bounds, and layout sidecar
+  `local_rect` / `abs_rect` fields use Fret window-local logical pixels.
+- Layout sidecars MAY carry the window `scale_factor`, but consumers MUST treat it as metadata
+  unless they explicitly convert logical pixels to physical pixels.
+- Screenshot bitmap artifacts are physical/device-pixel evidence and must not be compared to
+  logical layout predicates without an explicit conversion.
 
 Implementation note (non-normative):
 

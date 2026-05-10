@@ -1811,8 +1811,7 @@ fn select_impl<H: UiHost>(
     trigger_label_policy: SelectTriggerLabelPolicy,
 ) -> AnyElement {
     let chrome = ChromeRefinement::default()
-        .pl(Space::N2p5)
-        .pr(Space::N2)
+        .px(Space::N3)
         .py(Space::N2)
         .merge(chrome);
 
@@ -4830,7 +4829,10 @@ mod tests {
         );
 
         let theme = Theme::global(&app).snapshot();
+        let expected_px = MetricRef::space(Space::N3).resolve(&theme);
         let expected_py = MetricRef::space(Space::N2).resolve(&theme);
+        assert_eq!(chrome.padding.left, SpacingLength::Px(expected_px));
+        assert_eq!(chrome.padding.right, SpacingLength::Px(expected_px));
         assert_eq!(chrome.padding.top, SpacingLength::Px(expected_py));
         assert_eq!(chrome.padding.bottom, SpacingLength::Px(expected_py));
 

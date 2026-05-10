@@ -1,0 +1,454 @@
+{
+  "schema_version": 1,
+  "component": "combobox-responsive",
+  "style": "new-york-v4",
+  "report": {
+    "id": "combobox_responsive_open_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-10",
+    "limitations": [
+      "This slice measures the desktop open state of the shadcn responsive combobox demo.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+      "This slice separates popover shell sizing from inner command/listbox sizing so shell drift does not hide command parity."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.combobox_responsive.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/combobox.tsx"
+      },
+      {
+        "id": "upstream.combobox_responsive.demo",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx"
+      },
+      {
+        "id": "upstream.combobox_responsive.command",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx"
+      },
+      {
+        "id": "upstream.combobox_responsive.popover",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx"
+      },
+      {
+        "id": "upstream.combobox_responsive.docs",
+        "path": "repo-ref/ui/apps/v4/content/docs/components/combobox.mdx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.combobox.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/combobox.rs"
+      },
+      {
+        "id": "fret.command.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/command.rs"
+      },
+      {
+        "id": "fret.popover.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/popover.rs"
+      },
+      {
+        "id": "fret.gallery.combobox_responsive_demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/combobox/responsive.rs"
+      },
+      {
+        "id": "fret.gallery.combobox_page",
+        "path": "apps/fret-ui-gallery/src/ui/pages/combobox.rs"
+      },
+      {
+        "id": "fret.diag.combobox_responsive_open",
+        "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json"
+      },
+      {
+        "id": "fret.test.combobox_responsive_breakpoint",
+        "path": "ecosystem/fret-ui-shadcn/tests/combobox_responsive_breakpoint.rs"
+      }
+    ]
+  },
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.combobox_responsive.desktop.trigger",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "path": "0",
+      "source_ref_id": "upstream.combobox_responsive.demo"
+    },
+    {
+      "id": "upstream.combobox_responsive.desktop.popover_shell",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0",
+      "source_ref_id": "upstream.combobox_responsive.demo"
+    },
+    {
+      "id": "upstream.combobox_responsive.desktop.command",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.0",
+      "source_ref_id": "upstream.combobox_responsive.command"
+    },
+    {
+      "id": "upstream.combobox_responsive.desktop.listbox",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.0.2",
+      "source_ref_id": "upstream.combobox_responsive.command"
+    }
+  ],
+  "parts": [
+    {
+      "id": "desktop_trigger_size",
+      "label": "Responsive combobox desktop trigger size",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.combobox_responsive.source",
+          "upstream.combobox_responsive.demo"
+        ],
+        "facts": [
+          "The responsive demo trigger stays a 150px outline button.",
+          "Desktop open state keeps the trigger at h-9."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.combobox.recipe",
+          "fret.gallery.combobox_responsive_demo",
+          "fret.gallery.combobox_page",
+          "fret.diag.combobox_responsive_open"
+        ],
+        "test_ids": [
+          "ui-gallery-combobox-responsive-trigger"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes a stable responsive combobox trigger selector.",
+          "The responsive shell is recipe-owned and stays on the explicit `device_shell_responsive(true)` lane."
+        ]
+      },
+      "checks": [
+        {
+          "id": "desktop_trigger_matches_150x36",
+          "kind": "fret_layout_sidecar",
+          "expected": "The desktop responsive trigger should remain 150px wide and 36px tall.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/combobox/responsive.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.combobox_responsive.desktop.trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 150.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.combobox_responsive.desktop.trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-combobox-responsive-trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 150.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-combobox-responsive-trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "This is a recipe-owned sizing invariant for the responsive demo trigger."
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop_popover_shell_surface",
+      "label": "Responsive combobox desktop popover shell surface",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.combobox_responsive.demo",
+          "upstream.combobox_responsive.popover"
+        ],
+        "facts": [
+          "Desktop open state uses a PopoverContent shell with w-[200px] p-0.",
+          "The popover shell should wrap the command content instead of being shorter than the command/listbox subtree."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.combobox.recipe",
+          "fret.popover.recipe",
+          "fret.diag.combobox_responsive_open"
+        ],
+        "test_ids": [
+          "ui-gallery-combobox-responsive-content",
+          "ui-gallery-combobox-responsive-command",
+          "ui-gallery-combobox-responsive-listbox"
+        ],
+        "facts": [
+          "The responsive demo exposes a stable popover content-shell selector for the open panel.",
+          "A shorter shell with a correctly sized command/listbox points at overlay shell sizing rather than command item sizing."
+        ]
+      },
+      "checks": [
+        {
+          "id": "desktop_popover_shell_wraps_command_height",
+          "kind": "fret_layout_sidecar",
+          "expected": "Desktop popover shell should remain around 200px wide and 205px tall, matching upstream PopoverContent plus border.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
+            "ecosystem/fret-ui-shadcn/src/popover.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.combobox_responsive.desktop.popover_shell",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 200.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.combobox_responsive.desktop.popover_shell",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 205.333,
+              "eps_px": 2.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-combobox-responsive-content",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 200.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-combobox-responsive-content",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 205.333,
+              "eps_px": 2.0
+            }
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "Shell-height drift crosses PopoverContent, overlay placement, and Command child sizing, so it should be promoted as a mechanism-harness case."
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop_command_root_surface",
+      "label": "Responsive combobox desktop command root surface",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.combobox_responsive.command",
+          "upstream.combobox_responsive.demo"
+        ],
+        "facts": [
+          "The command root fills the PopoverContent content box.",
+          "Command root height is the 36px input wrapper plus the 168px listbox."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.command.recipe",
+          "fret.combobox.recipe",
+          "fret.diag.combobox_responsive_open"
+        ],
+        "test_ids": [
+          "ui-gallery-combobox-responsive-command",
+          "ui-gallery-combobox-responsive-content"
+        ],
+        "facts": [
+          "The Fret Command root has its own stable selector so command sizing can be evaluated separately from the popover shell.",
+          "A passing command root with a failing shell isolates the drift to shell sizing."
+        ]
+      },
+      "checks": [
+        {
+          "id": "desktop_command_root_keeps_cmdk_height",
+          "kind": "fret_layout_sidecar",
+          "expected": "Desktop command root should stay around 204px tall and start at the shell top.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
+            "ecosystem/fret-ui-shadcn/src/command.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.combobox_responsive.desktop.command",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 204.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.combobox_responsive.desktop.command",
+              "b": "upstream.combobox_responsive.desktop.popover_shell",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 0.667,
+              "eps_px": 2.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-combobox-responsive-command",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 204.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-combobox-responsive-command",
+              "b": "ui-gallery-combobox-responsive-content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 2.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Command root sizing is recipe-owned once shell sizing is separated."
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop_listbox_surface",
+      "label": "Responsive combobox desktop listbox surface",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.combobox_responsive.command"
+        ],
+        "facts": [
+          "The command listbox is 168px tall for five 32px items plus group padding.",
+          "The listbox starts below the 36px input wrapper."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.command.recipe",
+          "fret.combobox.recipe",
+          "fret.diag.combobox_responsive_open"
+        ],
+        "test_ids": [
+          "ui-gallery-combobox-responsive-listbox",
+          "ui-gallery-combobox-responsive-command"
+        ],
+        "facts": [
+          "The responsive demo exposes a stable listbox selector.",
+          "Listbox height can pass even when the outer popover shell is too short."
+        ]
+      },
+      "checks": [
+        {
+          "id": "desktop_listbox_keeps_cmdk_height",
+          "kind": "fret_layout_sidecar",
+          "expected": "Desktop listbox should stay 168px tall and roughly 36px below the command root.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
+            "ecosystem/fret-ui-shadcn/src/command.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.combobox_responsive.desktop.listbox",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 168.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.combobox_responsive.desktop.listbox",
+              "b": "upstream.combobox_responsive.desktop.command",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 2.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-combobox-responsive-listbox",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 168.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-combobox-responsive-listbox",
+              "b": "ui-gallery-combobox-responsive-command",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 2.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Listbox sizing is a Command recipe invariant."
+          }
+        }
+      ]
+    }
+  ]
+}

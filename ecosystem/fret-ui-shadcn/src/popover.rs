@@ -10,7 +10,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, HoverRegionProps, InteractivityGateProps, LayoutStyle,
-    Length, OpacityProps, Overflow, SemanticsDecoration, VisualTransformProps,
+    Length, OpacityProps, Overflow, SemanticsDecoration, StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -45,6 +45,8 @@ fn size_hint_px(element: &AnyElement) -> SizeHintPx {
     fn visit(node: &AnyElement, hint: &mut SizeHintPx) {
         let layout = match &node.kind {
             ElementKind::Container(ContainerProps { layout, .. }) => Some(layout),
+            ElementKind::HoverRegion(HoverRegionProps { layout }) => Some(layout),
+            ElementKind::Stack(StackProps { layout }) => Some(layout),
             ElementKind::Scroll(fret_ui::element::ScrollProps { layout, .. }) => Some(layout),
             _ => None,
         };
@@ -870,33 +872,20 @@ impl Popover {
                             return std::iter::empty().collect::<fret_ui::element::Elements>();
                         }
 
-                        let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-                            Rc::new(Cell::new(None));
-                        let inner_id_for_scope = inner_id.clone();
-                        let inner_size_hint: Rc<Cell<Option<SizeHintPx>>> =
-                            Rc::new(Cell::new(None));
-                        let inner_size_hint_for_scope = inner_size_hint.clone();
-                        let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                            let inner = with_surface_slot_provider(
-                                cx,
-                                ShadcnSurfaceSlot::PopoverContent,
-                                |cx| content(cx, anchor_fallback.unwrap_or_default()),
-                            );
-                            inner_id_for_scope.set(Some(inner.id));
-                            inner_size_hint_for_scope.set(Some(size_hint_px(&inner)));
-                            vec![inner]
-                        });
+                        let inner = with_surface_slot_provider(
+                            cx,
+                            ShadcnSurfaceSlot::PopoverContent,
+                            |cx| content(cx, anchor_fallback.unwrap_or_default()),
+                        );
+                        let measure_id = inner.id;
+                        let hint = size_hint_px(&inner);
+                        let content =
+                            radix_popover::popover_dialog_wrapper(cx, None, move |_cx| vec![inner]);
                         dialog_id_for_trigger.set(Some(content.id));
 
-                        let measure_id = inner_id.get().unwrap_or(content.id);
                         let last_content_size =
                             cx.last_bounds_for_element(measure_id).map(|r| r.size);
                         let estimated = Size::new(Px(288.0), Px(160.0));
-                        let hint = inner_size_hint.get().unwrap_or(SizeHintPx {
-                            fixed_width: None,
-                            fixed_height: None,
-                            max_height: None,
-                        });
                         let hint_width = hint.fixed_width;
                         let hint_height = match (hint.fixed_height, hint.max_height) {
                             // If both a fixed height and a max height exist in the subtree, treat the
@@ -1621,6 +1610,7 @@ mod tests {
     use crate::avatar::{Avatar, AvatarFallback};
     use crate::button::{Button, ButtonSize, ButtonVariant};
     use crate::card::Card;
+    use crate::facade::{Command, CommandInput, CommandItem, CommandList};
     use std::cell::Cell;
     use std::rc::Rc;
     use std::sync::Mutex;
@@ -1641,7 +1631,8 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::{
-        ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, PressableProps,
+        ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle, Length,
+        PressableProps, SizeStyle,
     };
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
@@ -1996,6 +1987,97 @@ mod tests {
                 Length::Fill,
                 "expected PopoverContent inner flow root to request fill width so wrapped text resolves against the popover panel width"
             );
+        });
+    }
+
+    #[test]
+    fn popover_size_hint_reads_hover_region_max_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let element = cx.container(ContainerProps::default(), |cx| {
+                vec![cx.hover_region(
+                    HoverRegionProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                max_height: Some(Length::Px(Px(168.0))),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                    |cx, _hovered| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Px(Px(36.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
+                )]
+            });
+
+            let hint = size_hint_px(&element);
+            assert_eq!(hint.fixed_height, Some(Px(36.0)));
+            assert_eq!(hint.max_height, Some(Px(168.0)));
+        });
+    }
+
+    #[test]
+    fn popover_size_hint_reads_command_list_scroll_max_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::facade::themes::apply_shadcn_new_york(
+            &mut app,
+            crate::facade::themes::ShadcnBaseColor::Neutral,
+            crate::facade::themes::ShadcnColorScheme::Light,
+        );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let query = cx.app.models_mut().insert(String::new());
+            let input = CommandInput::new(query).into_element(cx);
+            let list = CommandList::new([
+                CommandItem::new("Backlog"),
+                CommandItem::new("Todo"),
+                CommandItem::new("In Progress"),
+                CommandItem::new("Done"),
+                CommandItem::new("Canceled"),
+            ])
+            .refine_scroll_layout(LayoutRefinement::default().max_h(Px(168.0)))
+            .into_element(cx);
+            let command = Command::new([input, list]).into_element(cx);
+            let content = PopoverContent::new([command])
+                .refine_style(
+                    ChromeRefinement::default()
+                        .p(Space::N0)
+                        .border_width(Px(0.0)),
+                )
+                .refine_layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0())
+                .into_element(cx);
+
+            let hint = size_hint_px(&content);
+            assert_eq!(hint.fixed_width, Some(Px(200.0)));
+            assert_eq!(hint.fixed_height, Some(Px(36.0)));
+            assert_eq!(hint.max_height, Some(Px(168.0)));
         });
     }
 

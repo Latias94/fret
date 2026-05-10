@@ -252,6 +252,7 @@ pub struct DropdownMenuContent {
     window_margin: Option<Px>,
     min_width: Option<Px>,
     submenu_min_width: Option<Px>,
+    test_id: Option<Arc<str>>,
     arrow: Option<bool>,
     arrow_size: Option<Px>,
     arrow_padding: Option<Px>,
@@ -298,6 +299,15 @@ impl DropdownMenuContent {
         self
     }
 
+    /// Sets a stable test id on the rendered menu content panel.
+    ///
+    /// This keeps diagnostics anchored to the same element that owns the Radix-style menu role and
+    /// popper-sized content bounds.
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn align_leading_icons(mut self, align: bool) -> Self {
         self.align_leading_icons = Some(align);
         self
@@ -339,6 +349,9 @@ impl DropdownMenuContent {
         }
         if let Some(v) = self.submenu_min_width {
             menu.submenu_min_width = v;
+        }
+        if let Some(v) = self.test_id {
+            menu.content_test_id = Some(v);
         }
         if let Some(v) = self.align_leading_icons {
             menu.align_leading_icons = v;
@@ -3157,6 +3170,7 @@ pub struct DropdownMenu {
     open: Model<bool>,
     disabled: bool,
     test_id_prefix: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     modal: bool,
     align: DropdownMenuAlign,
     align_offset: Px,
@@ -3202,6 +3216,7 @@ impl DropdownMenu {
             open: open.into_bool_model(),
             disabled: false,
             test_id_prefix: None,
+            content_test_id: None,
             modal: true,
             align: DropdownMenuAlign::default(),
             align_offset: Px(0.0),
@@ -3415,6 +3430,7 @@ impl DropdownMenu {
             let overlay_id = dropdown_menu_overlay_id(cx.window, &self.open);
             let theme = Theme::global(&*cx.app).snapshot();
             let test_id_prefix = self.test_id_prefix.clone();
+            let explicit_content_test_id = self.content_test_id.clone();
             // `open` gates overlay request creation, so treat it as a structural/layout invalidation
             // (not paint-only). This avoids view-cache reuse keeping the closed subtree when `open`
             // flips between frames (notably in test harnesses that toggle `open` and snapshot
@@ -3812,9 +3828,11 @@ impl DropdownMenu {
                     let test_id_prefix_for_rows = test_id_prefix.clone();
                     let test_id_prefix_for_submenu = test_id_prefix.clone();
 
-                    let content_test_id = test_id_prefix
-                        .as_deref()
-                        .map(|prefix| Arc::<str>::from(format!("{prefix}-content")));
+                    let content_test_id = explicit_content_test_id.clone().or_else(|| {
+                        test_id_prefix
+                            .as_deref()
+                            .map(|prefix| Arc::<str>::from(format!("{prefix}-content")))
+                    });
                     let (content_id, content) =
                         menu::content_panel::menu_content_semantics_with_id_props(
                             cx,

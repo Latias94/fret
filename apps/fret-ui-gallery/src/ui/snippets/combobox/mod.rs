@@ -11,6 +11,7 @@ pub mod invalid;
 pub mod label;
 pub mod long_list;
 pub mod multiple_selection;
+pub mod responsive;
 pub mod rtl;
 pub mod trigger_button;
 pub mod usage;

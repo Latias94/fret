@@ -315,6 +315,7 @@ impl<H: UiHost> UiTree<H> {
                     "w": root_bounds.size.width.0,
                     "h": root_bounds.size.height.0,
                 },
+                "coordinate_units": "logical_px",
                 "scale_factor": scale_factor,
             },
             "taffy": dump,
@@ -449,6 +450,10 @@ impl<H: UiHost> UiTree<H> {
     /// This is a diagnostics-only escape hatch and should remain best-effort. Tooling should treat
     /// missing sidecars as warnings rather than failures.
     ///
+    /// Rects in `meta.root_bounds` and Taffy node `local_rect` / `abs_rect` are window-local
+    /// logical pixels. `scale_factor` is captured as metadata for consumers that explicitly need
+    /// logical-to-physical conversion; sidecar readers must not divide these coordinates by it.
+    ///
     /// The file name is stable: `layout.taffy.v1.json`.
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::too_many_arguments)]
@@ -526,6 +531,7 @@ impl<H: UiHost> UiTree<H> {
                     "w": root_bounds.size.width.0,
                     "h": root_bounds.size.height.0,
                 },
+                "coordinate_units": "logical_px",
                 "scale_factor": scale_factor,
                 "root_label_filter": root_label_filter,
                 "captured_root_count": sidecar_roots.len(),

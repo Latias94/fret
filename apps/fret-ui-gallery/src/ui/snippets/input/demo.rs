@@ -17,6 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .control_id(api_key_id)
             .password()
             .placeholder("sk-...")
+            .test_id("ui-gallery-input-demo-control")
             .into_element(cx),
         shadcn::FieldDescription::new("Your API key is encrypted and stored securely.")
             .for_control(api_key_id)

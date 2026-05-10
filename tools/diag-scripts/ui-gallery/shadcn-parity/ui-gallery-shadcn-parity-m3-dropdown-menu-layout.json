@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: shadcn parity M3 Dropdown Menu layout",
+    "tags": ["ui-gallery", "shadcn", "dropdown-menu", "layout", "parity-discovery"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "dropdown_menu"
+    },
+    "target_hints": [
+      "Starts directly on the Dropdown Menu page to avoid cross-page navigation flake.",
+      "Opens the docs-path demo menu and captures overlay/content layout evidence."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-dropdown-menu" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-profile" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-profile.chrome" } },
+      "timeout_frames": 600
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-shadcn-parity-m3.dropdown-menu-open" },
+    { "type": "capture_bundle", "label": "ui-gallery-shadcn-parity-m3-dropdown-menu-layout" }
+  ]
+}

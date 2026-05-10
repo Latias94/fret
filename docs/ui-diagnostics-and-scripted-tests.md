@@ -153,8 +153,28 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to the
 - `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source, and a bounded `test_id` bloom).
 - `test_ids.index.json`: a per-window `test_id` index (items + duplicate hints) derived from the last snapshot with resolved semantics.
 - `script.result.json` (script dumps only): the most recent script result snapshot (stage/reason + bounded evidence traces).
+- `layout.taffy.v1.json` (when a script uses `capture_layout_sidecar`): a Taffy layout dump for
+  the selected root plus visible layer roots.
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
+
+## Coordinate units
+
+Diagnostics artifacts intentionally keep logical layout evidence separate from physical screenshot
+evidence:
+
+- `layout.taffy.v1.json` uses window-local logical pixels for `meta.root_bounds`, node
+  `local_rect`, and node `abs_rect`. `meta.coordinate_units` is `logical_px`; `meta.scale_factor`
+  is metadata for consumers that explicitly need logical-to-physical conversion.
+- Semantics snapshot bounds and test-id selector bounds are Fret logical pixels. Platform a11y
+  adapters convert those bounds to physical/accessibility coordinates at their boundary.
+- Upstream web DOM snapshots used by parity discovery are CSS pixels; these compare directly with
+  Fret logical pixels for layout parity.
+- On-demand screenshots (`capture_screenshot`) and bundle `frame.bmp` files are bitmap artifacts in
+  physical/device pixels. Use them for visual evidence, not as the canonical source for layout px
+  predicates unless the comparison explicitly converts coordinate spaces.
+- Cursor override steps name their units: `set_cursor_screen_pos` and `set_cursor_in_window` use
+  physical pixels, while `set_cursor_in_window_logical` uses window-client logical pixels.
 
 ## Termination semantics (tool-launched runs)
 

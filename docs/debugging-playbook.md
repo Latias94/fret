@@ -368,7 +368,9 @@ Notes:
 
 - Dumps include **window roots** and **viewport roots** (e.g. scroll content) as separate files.
 - Each node entry includes `node/parent/children`, `local_rect/abs_rect`, the computed Taffy `style`,
-  and a debug `label` derived from the element instance.
+  and a debug `label` derived from the element instance. `local_rect` and `abs_rect` are
+  window-local logical pixels; the dump's `scale_factor` is metadata, not a divisor for these
+  coordinates.
 - Prefer filtering by a stable semantics label when possible:
   - Wrap the root you care about with `SemanticsProps { label: Some("Golden:..."), .. }`.
   - Set `FRET_TAFFY_DUMP_ROOT_LABEL="Golden:..."` to dump the first matching node’s subtree,

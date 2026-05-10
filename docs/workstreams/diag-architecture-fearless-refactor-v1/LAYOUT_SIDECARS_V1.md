@@ -85,12 +85,15 @@ Meta fields (v1):
 
 - `meta.window`: debug window id string
 - `meta.root_bounds`: `{x,y,w,h}` in logical px
+- `meta.coordinate_units`: `"logical_px"` for v1 layout rect fields
 - `meta.scale_factor`: number
 - `meta.root_label_filter`: string or null
 
 Taffy dump payload:
 
 - `taffy` is currently the internal Taffy debug subtree dump (node list + rects + style debug).
+  Node `local_rect` and `abs_rect` fields are window-local logical pixels. `meta.scale_factor` is
+  metadata for explicit logical-to-physical conversion, not a divisor for these rects.
 - `taffy.roots` may additionally expose each visible layer root as a separate dump entry, including
   layer metadata (`blocks_underlay_input`, `blocks_underlay_focus`, `hit_testable`) and per-root
   bounds. This allows overlay/modal subtrees to remain inspectable even when the primary `taffy`

@@ -19,7 +19,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .a11y_label("Search")
             .variant(shadcn::ButtonVariant::Outline)
             .test_id("ui-gallery-button-group-input-search-button")
-            .children([icon::icon(cx, icon_id("lucide.search"))])
+            .icon(icon_id("lucide.search"))
             .into(),
     ])
     .refine_layout(

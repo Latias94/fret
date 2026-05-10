@@ -527,7 +527,9 @@ impl Command {
                     base,
                     LayoutRefinement::default()
                         .w_full()
+                        .h_full()
                         .min_w_0()
+                        .min_h_0()
                         .overflow_hidden()
                         .merge(self.layout),
                 ),
@@ -536,7 +538,13 @@ impl Command {
         };
         let content = ui::v_flex(move |_cx| self.children)
             .gap(Space::N0)
-            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_full()
+                    .min_w_0()
+                    .min_h_0(),
+            )
             .into_element(cx);
         let children = vec![current_color::scope_element(
             cx,
@@ -1324,7 +1332,8 @@ impl CommandList {
             scroll: LayoutRefinement::default()
                 .max_h(Px(300.0))
                 .w_full()
-                .min_w_0(),
+                .min_w_0()
+                .min_h_0(),
         }
     }
 
@@ -1500,7 +1509,7 @@ impl CommandList {
                 )
             };
 
-            let scroll = self.scroll.w_full().min_w_0();
+            let scroll = self.scroll.w_full().min_w_0().min_h_0();
 
             let theme = Theme::global(&*cx.app).snapshot();
             let border = border(&theme);
@@ -2238,7 +2247,8 @@ impl CommandPalette {
             scroll: LayoutRefinement::default()
                 .max_h(Px(300.0))
                 .w_full()
-                .min_w_0(),
+                .min_w_0()
+                .min_h_0(),
             test_id_input: None,
             test_id_item_prefix: None,
             test_id_heading_prefix: None,
@@ -3483,7 +3493,7 @@ impl CommandPalette {
                 });
             }
 
-            let scroll_layout = self.scroll.w_full().min_w_0();
+            let scroll_layout = self.scroll.w_full().min_w_0().min_h_0();
             let list = if rows.is_empty() {
                 let empty = self.empty_text;
                 CommandEmpty::new(empty).into_element(cx)

@@ -1,0 +1,951 @@
+{
+  "schema_version": 1,
+  "component": "combobox-responsive",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-10",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json",
+  "summary": {
+    "part_count": 4,
+    "status_counts": {
+      "pass_known": 4,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 0,
+      "mechanism_core": 1,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 3,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "measured_test_id_count": 183,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 4
+  },
+  "parts": [
+    {
+      "id": "desktop_trigger_size",
+      "label": "Responsive combobox desktop trigger size",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-combobox-responsive-trigger"
+      ],
+      "upstream_facts": [
+        "The responsive demo trigger stays a 150px outline button.",
+        "Desktop open state keeps the trigger at h-9."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes a stable responsive combobox trigger selector.",
+        "The responsive shell is recipe-owned and stays on the explicit `device_shell_responsive(true)` lane."
+      ],
+      "checks": [
+        {
+          "id": "desktop_trigger_matches_150x36",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The desktop responsive trigger should remain 150px wide and 36px tall.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/combobox/responsive.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "This is a recipe-owned sizing invariant for the responsive demo trigger."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-combobox-responsive-trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 150",
+                  "eps_px": 1.0,
+                  "observed_px": 150.0,
+                  "bounds": {
+                    "x": 197.333,
+                    "y": 259.333,
+                    "w": 150.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 197.333,
+                    "y": 259.333,
+                    "w": 150.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(447v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-combobox-responsive-trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 197.333,
+                    "y": 259.333,
+                    "w": 150.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 197.333,
+                    "y": 259.333,
+                    "w": 150.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(447v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.combobox_responsive.desktop.trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 150",
+                  "eps_px": 1.0,
+                  "observed_px": 150.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 150.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-expanded": "true",
+                    "aria-controls": "radix-_r_1_",
+                    "data-state": "open",
+                    "data-slot": "popover-trigger",
+                    "data-variant": "outline",
+                    "data-size": "default"
+                  },
+                  "class_name": "inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3 w-[150px] justify-start"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.combobox_responsive.desktop.trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 150.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-expanded": "true",
+                    "aria-controls": "radix-_r_1_",
+                    "data-state": "open",
+                    "data-slot": "popover-trigger",
+                    "data-variant": "outline",
+                    "data-size": "default"
+                  },
+                  "class_name": "inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3 w-[150px] justify-start"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 150.0,
+                "fret_logical_observed_px": 150.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 150.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop_popover_shell_surface",
+      "label": "Responsive combobox desktop popover shell surface",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-combobox-responsive-content",
+        "ui-gallery-combobox-responsive-command",
+        "ui-gallery-combobox-responsive-listbox"
+      ],
+      "upstream_facts": [
+        "Desktop open state uses a PopoverContent shell with w-[200px] p-0.",
+        "The popover shell should wrap the command content instead of being shorter than the command/listbox subtree."
+      ],
+      "fret_facts": [
+        "The responsive demo exposes a stable popover content-shell selector for the open panel.",
+        "A shorter shell with a correctly sized command/listbox points at overlay shell sizing rather than command item sizing."
+      ],
+      "checks": [
+        {
+          "id": "desktop_popover_shell_wraps_command_height",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Desktop popover shell should remain around 200px wide and 205px tall, matching upstream PopoverContent plus border.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
+            "ecosystem/fret-ui-shadcn/src/popover.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "Shell-height drift crosses PopoverContent, overlay placement, and Command child sizing, so it should be promoted as a mechanism-harness case."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-combobox-responsive-content",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 200",
+                  "eps_px": 1.0,
+                  "observed_px": 200.0,
+                  "bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "raw_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(468v1)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-combobox-responsive-content",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 205.333",
+                  "eps_px": 2.0,
+                  "observed_px": 206.0,
+                  "bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "raw_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(468v1)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.combobox_responsive.desktop.popover_shell",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 200",
+                  "eps_px": 1.0,
+                  "observed_px": 200.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 200.0,
+                    "h": 205.333
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "dialog",
+                    "data-state": "open",
+                    "data-side": "bottom",
+                    "data-align": "start",
+                    "data-slot": "popover-content"
+                  },
+                  "class_name": "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 origin-(--radix-popover-content-transform-origin) rounded-md border shadow-md outline-hidden w-[200px] p-0"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.combobox_responsive.desktop.popover_shell",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 205.333",
+                  "eps_px": 2.0,
+                  "observed_px": 205.333,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 200.0,
+                    "h": 205.333
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "dialog",
+                    "data-state": "open",
+                    "data-side": "bottom",
+                    "data-align": "start",
+                    "data-slot": "popover-content"
+                  },
+                  "class_name": "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 origin-(--radix-popover-content-transform-origin) rounded-md border shadow-md outline-hidden w-[200px] p-0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 200.0,
+                "fret_logical_observed_px": 200.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 200.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 205.333,
+                "fret_logical_observed_px": 206.0,
+                "logical_delta_px": 0.667,
+                "fret_raw_observed_px": 206.0,
+                "raw_delta_px": 0.667
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop_command_root_surface",
+      "label": "Responsive combobox desktop command root surface",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-combobox-responsive-command",
+        "ui-gallery-combobox-responsive-content"
+      ],
+      "upstream_facts": [
+        "The command root fills the PopoverContent content box.",
+        "Command root height is the 36px input wrapper plus the 168px listbox."
+      ],
+      "fret_facts": [
+        "The Fret Command root has its own stable selector so command sizing can be evaluated separately from the popover shell.",
+        "A passing command root with a failing shell isolates the drift to shell sizing."
+      ],
+      "checks": [
+        {
+          "id": "desktop_command_root_keeps_cmdk_height",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Desktop command root should stay around 204px tall and start at the shell top.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
+            "ecosystem/fret-ui-shadcn/src/command.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Command root sizing is recipe-owned once shell sizing is separated."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-combobox-responsive-command",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 204",
+                  "eps_px": 2.0,
+                  "observed_px": 206.0,
+                  "bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "raw_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(471v1)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-combobox-responsive-command",
+                  "b": "ui-gallery-combobox-responsive-content",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 2.0,
+                  "observed_px": 0.0,
+                  "a_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "b_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(471v1)",
+                  "b_node": "NodeId(468v1)",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.combobox_responsive.desktop.command",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 204",
+                  "eps_px": 2.0,
+                  "observed_px": 204.0,
+                  "bounds": {
+                    "x": 0.667,
+                    "y": 40.667,
+                    "w": 198.667,
+                    "h": 204.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0",
+                  "tag": "div",
+                  "attrs": {
+                    "data-slot": "command"
+                  },
+                  "class_name": "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.combobox_responsive.desktop.command",
+                  "b": "upstream.combobox_responsive.desktop.popover_shell",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 0.667",
+                  "eps_px": 2.0,
+                  "observed_px": 0.667,
+                  "a_bounds": {
+                    "x": 0.667,
+                    "y": 40.667,
+                    "w": 198.667,
+                    "h": 204.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 200.0,
+                    "h": 205.333
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "a_path": "portal.0.0",
+                  "b_path": "portal.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 204.0,
+                "fret_logical_observed_px": 206.0,
+                "logical_delta_px": 2.0,
+                "fret_raw_observed_px": 206.0,
+                "raw_delta_px": 2.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 0.667,
+                "fret_logical_observed_px": 0.0,
+                "logical_delta_px": -0.667
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "desktop_listbox_surface",
+      "label": "Responsive combobox desktop listbox surface",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-combobox-responsive-listbox",
+        "ui-gallery-combobox-responsive-command"
+      ],
+      "upstream_facts": [
+        "The command listbox is 168px tall for five 32px items plus group padding.",
+        "The listbox starts below the 36px input wrapper."
+      ],
+      "fret_facts": [
+        "The responsive demo exposes a stable listbox selector.",
+        "Listbox height can pass even when the outer popover shell is too short."
+      ],
+      "checks": [
+        {
+          "id": "desktop_listbox_keeps_cmdk_height",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Desktop listbox should stay 168px tall and roughly 36px below the command root.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
+            "ecosystem/fret-ui-shadcn/src/command.rs",
+            "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+            "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Listbox sizing is a Command recipe invariant."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-combobox-responsive-listbox",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 168",
+                  "eps_px": 1.0,
+                  "observed_px": 168.0,
+                  "bounds": {
+                    "x": 461.333,
+                    "y": 514.667,
+                    "w": 198.0,
+                    "h": 168.0
+                  },
+                  "raw_bounds": {
+                    "x": 461.333,
+                    "y": 514.667,
+                    "w": 198.0,
+                    "h": 168.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(481v1)",
+                  "kind_hint": "HoverRegion",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-combobox-responsive-listbox",
+                  "b": "ui-gallery-combobox-responsive-command",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 2.0,
+                  "observed_px": 37.333,
+                  "a_bounds": {
+                    "x": 461.333,
+                    "y": 514.667,
+                    "w": 198.0,
+                    "h": 168.0
+                  },
+                  "b_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 461.333,
+                    "y": 514.667,
+                    "w": 198.0,
+                    "h": 168.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 460.0,
+                    "y": 477.333,
+                    "w": 200.0,
+                    "h": 206.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(481v1)",
+                  "b_node": "NodeId(471v1)",
+                  "sidecar_path": "target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final/sessions/1778411474694-89684/1778411480157-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.combobox_responsive.desktop.listbox",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 168",
+                  "eps_px": 1.0,
+                  "observed_px": 168.0,
+                  "bounds": {
+                    "x": 0.667,
+                    "y": 76.667,
+                    "w": 198.667,
+                    "h": 168.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0.2",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "listbox",
+                    "aria-label": "Suggestions",
+                    "data-slot": "command-list"
+                  },
+                  "class_name": "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.combobox_responsive.desktop.listbox",
+                  "b": "upstream.combobox_responsive.desktop.command",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 2.0,
+                  "observed_px": 36.0,
+                  "a_bounds": {
+                    "x": 0.667,
+                    "y": 76.667,
+                    "w": 198.667,
+                    "h": 168.0
+                  },
+                  "b_bounds": {
+                    "x": 0.667,
+                    "y": 40.667,
+                    "w": 198.667,
+                    "h": 204.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "snapshot_name": "combobox-responsive",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+                  "a_path": "portal.0.0.2",
+                  "b_path": "portal.0.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 168.0,
+                "fret_logical_observed_px": 168.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 168.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 37.333,
+                "logical_delta_px": 1.333
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the desktop open state of the shadcn responsive combobox demo.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+    "This slice separates popover shell sizing from inner command/listbox sizing so shell drift does not hide command parity."
+  ]
+}

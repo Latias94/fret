@@ -88,6 +88,113 @@ fn layout_sidecar_exposes_attached_test_id_in_node_debug_and_filtering() {
 }
 
 #[test]
+fn layout_sidecar_bounds_are_logical_px_and_not_scaled_by_scale_factor() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-sidecar-logical-px-contract",
+        |cx| {
+            let mut props = crate::element::ContainerProps::default();
+            props.layout.size.width = Length::Px(Px(224.0));
+            props.layout.size.height = Length::Px(Px(36.0));
+            vec![
+                cx.container(props, |_cx| Vec::new())
+                    .test_id("layout-sidecar-logical-target"),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.5);
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let out_dir = std::env::temp_dir().join(format!(
+        "fret-ui-layout-sidecar-logical-px-test-{}-{nonce}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&out_dir);
+
+    let path = ui
+        .debug_write_layout_sidecar_taffy_v1_json(
+            &mut app,
+            window,
+            root,
+            bounds,
+            1.5,
+            Some("layout-sidecar-logical-target"),
+            &out_dir,
+            2468,
+        )
+        .expect("layout sidecar should be written");
+
+    let sidecar: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("sidecar should be readable"))
+            .expect("sidecar json should parse");
+
+    assert_eq!(
+        sidecar["meta"]["coordinate_units"].as_str(),
+        Some("logical_px"),
+        "layout sidecars must declare logical pixel units"
+    );
+    assert_eq!(
+        sidecar["meta"]["scale_factor"].as_f64(),
+        Some(1.5),
+        "scale_factor should remain metadata rather than pre-scaling sidecar rects"
+    );
+    assert_eq!(
+        sidecar["meta"]["root_bounds"]["w"].as_f64(),
+        Some(300.0),
+        "root_bounds should remain logical px even when scale_factor is fractional"
+    );
+
+    let matched = sidecar["taffy"]["nodes"]
+        .as_array()
+        .expect("taffy nodes should be an array")
+        .iter()
+        .find(|node| node["debug"]["test_id"].as_str() == Some("layout-sidecar-logical-target"))
+        .expect("expected filtered sidecar dump to expose the target node");
+
+    assert_eq!(
+        matched["abs_rect"]["w"].as_f64(),
+        Some(224.0),
+        "abs_rect width should match logical layout width, not 224 * 1.5 or 224 / 1.5"
+    );
+    assert_eq!(
+        matched["abs_rect"]["h"].as_f64(),
+        Some(36.0),
+        "abs_rect height should match logical layout height, not 36 * 1.5 or 36 / 1.5"
+    );
+    assert_eq!(
+        matched["local_rect"]["w"].as_f64(),
+        Some(224.0),
+        "local_rect should use the same logical px contract as abs_rect"
+    );
+    assert_eq!(
+        matched["local_rect"]["h"].as_f64(),
+        Some(36.0),
+        "local_rect should use the same logical px contract as abs_rect"
+    );
+
+    let _ = std::fs::remove_dir_all(&out_dir);
+}
+
+#[test]
 fn layout_sidecar_includes_visible_overlay_roots_and_filtering_can_target_overlay_nodes() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

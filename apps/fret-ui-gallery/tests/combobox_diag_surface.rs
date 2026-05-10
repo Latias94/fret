@@ -19,3 +19,204 @@ fn combobox_demo_narrow_diag_script_waits_for_stable_listbox_bounds() {
         );
     }
 }
+
+#[test]
+fn combobox_responsive_diag_scripts_pin_exact_viewport_variants() {
+    let desktop = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json"
+    );
+    let mobile = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-combobox-responsive-trigger\"",
+        "\"ui-gallery-combobox-responsive-input\"",
+        "\"ui-gallery-combobox-responsive-content\"",
+        "\"ui-gallery-combobox-responsive-command\"",
+        "\"ui-gallery-combobox-responsive-listbox\"",
+        "\"type\": \"capture_layout_sidecar\"",
+        "\"FRET_UI_GALLERY_START_PAGE\": \"combobox\"",
+        "\"FRET_UI_GALLERY_START_SECTION\": \"ui-gallery-combobox-responsive-docsec\"",
+    ] {
+        assert!(
+            desktop.contains(needle) && mobile.contains(needle),
+            "combobox responsive diag scripts should keep the open-chain and placement evidence stable; missing `{needle}`",
+        );
+    }
+
+    assert!(
+        desktop.contains("\"type\": \"wait_overlay_placement_trace\""),
+        "desktop responsive diag script should wait for anchored-panel overlay trace on the content shell",
+    );
+    assert!(
+        !mobile.contains("\"type\": \"wait_overlay_placement_trace\""),
+        "mobile responsive diag script should stay on the drawer/layout-surface lane instead of waiting for anchored-panel overlay trace",
+    );
+    assert!(
+        mobile.contains("\"ui-gallery-combobox-responsive-vp375x240-open.preassert.layout\""),
+        "mobile responsive diag script should capture a preassert layout sidecar before the first strict bounds check",
+    );
+    assert!(
+        mobile.contains("effective 375x240 viewport"),
+        "mobile responsive diag script should document the effective viewport contract",
+    );
+
+    for needle in [
+        "\"width_px\": 1440.0",
+        "\"width_px\": 375.0",
+        "\"height_px\": 220.0",
+    ] {
+        assert!(
+            desktop.contains(needle) || mobile.contains(needle),
+            "combobox responsive diag scripts should pin exact viewport dimensions; missing `{needle}`",
+        );
+    }
+
+    assert!(
+        desktop.contains("\"ui-gallery-combobox-responsive-open\""),
+        "desktop responsive diag script should keep its exact capture label",
+    );
+    assert!(
+        mobile.contains("\"ui-gallery-combobox-responsive-vp375x240-open\""),
+        "mobile responsive diag script should keep its exact capture label",
+    );
+}
+
+#[test]
+fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command_parts() {
+    use serde_json::Value;
+    use std::fs;
+
+    fn report_at(path: &str) -> Value {
+        let report_text = fs::read_to_string(path).expect("combobox responsive report text");
+        serde_json::from_str(&report_text).expect("valid combobox responsive report")
+    }
+
+    fn summary_u64<'a>(summary: &'a serde_json::Map<String, Value>, key: &str, name: &str) -> u64 {
+        summary
+            .get(key)
+            .and_then(Value::as_object)
+            .and_then(|counts| counts.get(name))
+            .and_then(Value::as_u64)
+            .unwrap_or_else(|| panic!("missing summary count `{key}.{name}`"))
+    }
+
+    fn part_status(report: &Value, part_id: &str) -> String {
+        report
+            .get("parts")
+            .and_then(Value::as_array)
+            .and_then(|parts| {
+                parts.iter().find_map(|part| {
+                    (part.get("id").and_then(Value::as_str) == Some(part_id)).then(|| {
+                        part.get("status")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                    })
+                })
+            })
+            .unwrap_or_else(|| panic!("missing report part `{part_id}`"))
+            .to_owned()
+    }
+
+    let desktop = report_at(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json",
+    ));
+    let mobile = report_at(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json",
+    ));
+
+    for (report, expected_part_count, expected_recipe_passes, expected_diag_passes, shell_part) in [
+        (&desktop, 4, 3, 0, "desktop_popover_shell_surface"),
+        (&mobile, 6, 4, 1, "mobile_drawer_shell_surface"),
+    ] {
+        let summary = report
+            .get("summary")
+            .and_then(Value::as_object)
+            .expect("report summary object");
+
+        assert_eq!(
+            summary.get("part_count").and_then(Value::as_u64),
+            Some(expected_part_count),
+            "combobox responsive report should keep shell and inner command parts segmented",
+        );
+        assert_eq!(
+            summary_u64(summary, "status_counts", "blocked"),
+            0,
+            "combobox responsive report should evaluate from measured sidecars, not stay blocked",
+        );
+        assert_eq!(
+            summary_u64(summary, "status_counts", "mismatch"),
+            0,
+            "combobox responsive report should not carry post-fix shell mismatches",
+        );
+        assert_eq!(
+            summary_u64(summary, "status_counts", "pass_known"),
+            expected_part_count,
+            "combobox responsive report should keep every segmented part passing after the shell-sizing fix",
+        );
+        assert_eq!(
+            summary_u64(summary, "owner_counts", "mechanism_core"),
+            1,
+            "combobox responsive shell drift should promote to the mechanism harness lane",
+        );
+        assert_eq!(
+            summary_u64(summary, "owner_counts", "component_recipe"),
+            expected_recipe_passes,
+            "combobox responsive trigger/command/listbox checks should remain recipe-owned",
+        );
+        assert_eq!(
+            summary_u64(summary, "owner_counts", "gallery_composition"),
+            0,
+            "combobox responsive shell drift should not be misattributed to gallery composition",
+        );
+        assert_eq!(
+            summary_u64(summary, "owner_counts", "diagnostics_surface"),
+            expected_diag_passes,
+            "mobile responsive report should gate effective viewport size separately from component geometry",
+        );
+        assert_eq!(
+            summary_u64(summary, "promotion_target_counts", "mechanism_harness"),
+            1,
+            "combobox responsive shell drift should have a mechanism-harness promotion target",
+        );
+        assert_eq!(
+            part_status(report, shell_part),
+            "pass_known",
+            "combobox responsive shell part should pass after shell sizing fixes",
+        );
+    }
+
+    assert_eq!(
+        part_status(&desktop, "desktop_command_root_surface"),
+        "pass_known",
+        "desktop command root should pass after shell sizing is separated",
+    );
+    assert_eq!(
+        part_status(&desktop, "desktop_listbox_surface"),
+        "pass_known",
+        "desktop listbox should pass after shell sizing is separated",
+    );
+    assert_eq!(
+        part_status(&mobile, "mobile_effective_viewport"),
+        "pass_known",
+        "mobile effective viewport guard should pass before drawer geometry is compared",
+    );
+    assert_eq!(
+        part_status(&mobile, "mobile_command_wrapper_surface"),
+        "pass_known",
+        "mobile command wrapper should pass after drawer shell sizing is separated",
+    );
+    assert_eq!(
+        part_status(&mobile, "mobile_command_root_surface"),
+        "pass_known",
+        "mobile command root should pass after drawer shell sizing is separated",
+    );
+    assert_eq!(
+        part_status(&mobile, "mobile_listbox_surface"),
+        "pass_known",
+        "mobile listbox should pass after drawer shell sizing is separated",
+    );
+}

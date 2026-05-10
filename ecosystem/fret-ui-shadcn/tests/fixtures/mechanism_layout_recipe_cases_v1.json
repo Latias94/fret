@@ -49,6 +49,63 @@
           }
         ]
       }
+    },
+    {
+      "id": "responsive-drawer-bottom-sheet-uses-eighty-vh",
+      "scenario": { "kind": "responsive_drawer_bottom_sheet_uses_eighty_vh" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "mechanism-responsive-drawer-shell" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 375.0,
+            "eps_px": 2.0
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "mechanism-responsive-drawer-shell" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 192.0,
+            "eps_px": 2.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "popover-command-shell-wraps-hover-region-max-height",
+      "scenario": { "kind": "popover_command_shell_wraps_hover_region_max_height" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "mechanism-popover-shell" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 200.0,
+            "eps_px": 2.0
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "mechanism-popover-shell" },
+            "metric": "height",
+            "comparison": "ge",
+            "value_px": 204.0,
+            "eps_px": 2.0
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "mechanism-popover-shell" },
+            "b": { "kind": "test_id", "id": "mechanism-popover-command" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 2.0
+          }
+        ]
+      }
     }
   ]
 }

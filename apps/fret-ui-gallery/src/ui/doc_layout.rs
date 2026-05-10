@@ -1,4 +1,5 @@
 use super::*;
+use crate::spec::ENV_UI_GALLERY_START_SECTION;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::facade as shadcn;
@@ -179,6 +180,7 @@ fn render_doc_page_raw(
     // SAFETY: callers pass the current page-building `AppComponentCx`; this helper does not retain the
     // pointer beyond the call and only dereferences it after all other arguments are evaluated.
     let cx = unsafe { &mut *cx };
+    let sections = focus_doc_sections(sections);
     let max_section_w = sections
         .iter()
         .map(|s| s.max_w)
@@ -209,6 +211,66 @@ fn render_doc_page_raw(
             .mx_auto(),
     )
     .into_element(cx)
+}
+
+fn focus_doc_sections(sections: Vec<DocSection>) -> Vec<DocSection> {
+    let Some(focus_filters) = doc_section_focus_filters() else {
+        return sections;
+    };
+
+    sections
+        .into_iter()
+        .filter(|section| {
+            doc_section_matches_focus(
+                section.title,
+                section.title_test_id,
+                section.root_test_id.as_deref(),
+                section.test_id_prefix.as_deref(),
+                &focus_filters,
+            )
+        })
+        .collect()
+}
+
+fn doc_section_focus_filters() -> Option<Vec<String>> {
+    let raw = std::env::var(ENV_UI_GALLERY_START_SECTION).ok()?;
+    let filters = raw
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+    if filters.is_empty() {
+        None
+    } else {
+        Some(filters)
+    }
+}
+
+fn doc_section_matches_focus(
+    title: &'static str,
+    title_test_id: Option<&'static str>,
+    root_test_id: Option<&str>,
+    test_id_prefix: Option<&str>,
+    focus_filters: &[String],
+) -> bool {
+    focus_filters.iter().any(|filter| {
+        section_focus_candidate_matches(filter, title)
+            || title_test_id
+                .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
+            || root_test_id
+                .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
+            || test_id_prefix
+                .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
+    })
+}
+
+fn section_focus_candidate_matches(filter: &str, candidate: &str) -> bool {
+    if filter.eq_ignore_ascii_case(candidate) {
+        return true;
+    }
+
+    slugify_for_test_id(filter) == slugify_for_test_id(candidate)
 }
 
 #[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
@@ -687,6 +749,45 @@ fn slugify_for_test_id(input: &str) -> String {
         "section".to_string()
     } else {
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn doc_section_focus_matches_title_and_stable_ids() {
+        let filters = vec!["responsive".to_string()];
+
+        assert!(doc_section_matches_focus(
+            "Responsive",
+            None,
+            None,
+            Some("ui-gallery-combobox-responsive"),
+            &filters
+        ));
+        assert!(doc_section_matches_focus(
+            "Responsive",
+            Some("ui-gallery-combobox-responsive-title"),
+            None,
+            None,
+            &filters
+        ));
+        assert!(doc_section_matches_focus(
+            "Responsive",
+            None,
+            Some("ui-gallery-combobox-responsive"),
+            None,
+            &filters
+        ));
+        assert!(!doc_section_matches_focus(
+            "Usage",
+            Some("ui-gallery-combobox-usage-title"),
+            None,
+            Some("ui-gallery-combobox-usage"),
+            &filters
+        ));
     }
 }
 

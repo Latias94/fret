@@ -1400,6 +1400,7 @@ fn selected_combobox_snippets_prefer_direct_builder_chain_for_default_recipe_roo
         "src/ui/snippets/combobox/custom_items.rs",
         "src/ui/snippets/combobox/long_list.rs",
         "src/ui/snippets/combobox/input_group.rs",
+        "src/ui/snippets/combobox/responsive.rs",
         "src/ui/snippets/combobox/rtl.rs",
         "src/ui/snippets/combobox/conformance_demo.rs",
         "src/ui/snippets/combobox/multiple_selection.rs",
@@ -5126,6 +5127,7 @@ fn combobox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/combobox/label.rs",
             "src/ui/snippets/combobox/long_list.rs",
             "src/ui/snippets/combobox/multiple_selection.rs",
+            "src/ui/snippets/combobox/responsive.rs",
             "src/ui/snippets/combobox/rtl.rs",
             "src/ui/snippets/combobox/trigger_button.rs",
             "src/ui/snippets/combobox/usage.rs",
@@ -5159,6 +5161,7 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Input Group\", input_group)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Responsive\", responsive)",
             "DocSection::build(cx, \"Conformance Demo\", conformance_demo)",
             "DocSection::build(cx, \"Groups + Separator\", groups_with_separator)",
             "DocSection::build(cx, \"Label Association\", label)",
@@ -5178,6 +5181,7 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Input Group\", input_group)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Responsive\", responsive)",
             "DocSection::new(\"Conformance Demo\", conformance_demo)",
             "DocSection::new(\"Groups + Separator\", groups_with_separator)",
             "DocSection::new(\"Label Association\", label)",
@@ -5188,7 +5192,7 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
     let page = read("src/ui/pages/combobox.rs");
     assert!(
         page.contains(
-            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups."
+            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups."
         ),
         "src/ui/pages/combobox.rs should keep the docs-path-first combobox page structure explicit"
     );

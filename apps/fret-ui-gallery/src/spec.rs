@@ -7,6 +7,7 @@ use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
+pub(crate) const ENV_UI_GALLERY_START_SECTION: &str = "FRET_UI_GALLERY_START_SECTION";
 pub(crate) const ENV_UI_GALLERY_NAV_QUERY: &str = "FRET_UI_GALLERY_NAV_QUERY";
 pub(crate) const ENV_UI_GALLERY_DIAG_PROFILE: &str = "FRET_UI_GALLERY_DIAG_PROFILE";
 pub(crate) const UI_GALLERY_DIAG_PROFILE_WORKSPACE_SHELL: &str = "workspace_shell";

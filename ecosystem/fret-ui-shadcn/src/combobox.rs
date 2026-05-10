@@ -9,7 +9,7 @@ use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, Te
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, MarginEdge,
     PressableA11y, PressableProps,
 };
 use fret_ui::elements::GlobalElementId;
@@ -415,6 +415,8 @@ impl ComboboxInput {
 /// shadcn/ui `ComboboxContent` (v4) (Base UI `Popup` + `Positioner`).
 #[derive(Debug)]
 pub struct ComboboxContent {
+    pub(crate) width: Option<Px>,
+    pub(crate) test_id: Option<Arc<str>>,
     pub(crate) side: Option<popper::Side>,
     pub(crate) align: Option<popper::Align>,
     pub(crate) side_offset: Option<Px>,
@@ -426,6 +428,8 @@ pub struct ComboboxContent {
 impl ComboboxContent {
     pub fn new(children: impl IntoIterator<Item = ComboboxContentPart>) -> Self {
         Self {
+            width: None,
+            test_id: None,
             side: None,
             align: None,
             side_offset: None,
@@ -433,6 +437,21 @@ impl ComboboxContent {
             anchor_element_id: None,
             children: children.into_iter().collect(),
         }
+    }
+
+    /// Sets the open popover width lane.
+    ///
+    /// The responsive combobox keeps the trigger width and desktop content width independent.
+    /// The mobile drawer still fills the viewport.
+    pub fn width_px(mut self, width: Px) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    /// Sets a stable test id on the rendered popover content shell.
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
     }
 
     pub fn side(mut self, side: popper::Side) -> Self {
@@ -684,6 +703,8 @@ impl ComboboxGroup {
 struct ComboboxPartsPatch {
     trigger_variant: Option<ComboboxTriggerVariant>,
     width: Option<Px>,
+    content_width: Option<Px>,
+    content_test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     search_placeholder: Option<Arc<str>>,
     disabled: Option<bool>,
@@ -749,6 +770,12 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
     }
 
     if let Some(content) = content {
+        if let Some(width) = content.width {
+            patch.content_width = Some(width);
+        }
+        if let Some(test_id) = content.test_id {
+            patch.content_test_id = Some(test_id);
+        }
         if content.side.is_some() {
             patch.content_side = content.side;
         }
@@ -818,6 +845,8 @@ pub struct Combobox {
     trigger_test_id: Option<Arc<str>>,
     control_id: Option<ControlId>,
     width: Option<Px>,
+    content_width: Option<Px>,
+    content_test_id: Option<Arc<str>>,
     content_side: popper::Side,
     content_align: popper::Align,
     content_side_offset: Px,
@@ -856,6 +885,12 @@ impl Combobox {
         }
         if let Some(width) = patch.width {
             self.width = Some(width);
+        }
+        if let Some(content_width) = patch.content_width {
+            self.content_width = Some(content_width);
+        }
+        if let Some(content_test_id) = patch.content_test_id {
+            self.content_test_id = Some(content_test_id);
         }
         if let Some(placeholder) = patch.placeholder {
             self.placeholder = placeholder;
@@ -925,6 +960,8 @@ impl Combobox {
             trigger_test_id: None,
             control_id: None,
             width: None,
+            content_width: None,
+            content_test_id: None,
             content_side: popper::Side::Bottom,
             content_align: popper::Align::Start,
             // Upstream shadcn/ui v4 ComboboxContent defaults to `sideOffset=6`.
@@ -1200,6 +1237,8 @@ impl Combobox {
             self.test_id_prefix,
             self.trigger_test_id,
             self.width,
+            self.content_width,
+            self.content_test_id,
             self.content_side,
             self.content_align,
             self.content_side_offset,
@@ -1247,6 +1286,8 @@ fn combobox_with_patch<H: UiHost>(
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
+    content_width: Option<Px>,
+    content_test_id: Option<Arc<str>>,
     content_side: popper::Side,
     content_align: popper::Align,
     content_side_offset: Px,
@@ -1552,6 +1593,7 @@ fn combobox_with_patch<H: UiHost>(
             let open_change_reason_model_for_content = open_change_reason_model.clone();
             let test_id_prefix_for_content = test_id_prefix.clone();
             let test_id_prefix_for_trigger = test_id_prefix.clone();
+            let content_test_id_for_content = content_test_id.clone();
             let trigger_test_id_for_trigger = trigger_test_id_for_trigger.clone();
             let focus_restore_target_for_trigger = focus_restore_target.clone();
             let model_for_trigger = model.clone();
@@ -2313,10 +2355,48 @@ fn combobox_with_patch<H: UiHost>(
                                 .into_element(cx)
                         };
 
-                        DrawerContent::new(vec![list])
+                        let command = if let Some(prefix) = test_id_prefix.as_deref() {
+                            list.test_id(format!("{prefix}-command"))
+                        } else {
+                            list
+                        };
+
+                        let command_wrapper = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    layout.size.min_height = Some(Length::Px(Px(0.0)));
+                                    layout.margin.top = MarginEdge::Px(
+                                        MetricRef::space(Space::N4).resolve(&theme),
+                                    );
+                                    layout
+                                },
+                                border: Edges {
+                                    top: Px(1.0),
+                                    ..Edges::all(Px(0.0))
+                                },
+                                border_color: Some(theme.color_token("border")),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![command],
+                        );
+                        let command_wrapper = if let Some(prefix) = test_id_prefix.as_deref() {
+                            command_wrapper.test_id(format!("{prefix}-command-wrapper"))
+                        } else {
+                            command_wrapper
+                        };
+
+                        let content = DrawerContent::new(vec![command_wrapper])
                             .refine_style(ChromeRefinement::default().p(Space::N0))
-                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                            .into_element(cx)
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0());
+                        let content = content.into_element(cx);
+                        if let Some(test_id) = content_test_id_for_content.clone() {
+                            content.test_id(test_id)
+                        } else {
+                            content
+                        }
                     },
                 );
         }
@@ -2325,6 +2405,7 @@ fn combobox_with_patch<H: UiHost>(
         let open_change_reason_model_for_content = open_change_reason_model.clone();
         let test_id_prefix_for_content = test_id_prefix.clone();
         let test_id_prefix_for_trigger = test_id_prefix.clone();
+        let content_test_id_for_content = content_test_id.clone();
         let focus_restore_target_for_trigger = focus_restore_target.clone();
         let model_for_trigger = model.clone();
         let query_model_for_trigger = query_model.clone();
@@ -2334,6 +2415,7 @@ fn combobox_with_patch<H: UiHost>(
         let search_input_id_for_content = search_input_id.clone();
         let listbox_id_for_diag = Rc::new(Cell::new(None));
         let listbox_id_for_diag_for_content = listbox_id_for_diag.clone();
+        let use_content_shell_for_diag = content_test_id.is_some();
         let addon_slots_for_trigger = combobox_input_addon_slots(input_addons);
 
         let mut popover = Popover::from_open(open.clone())
@@ -2356,13 +2438,15 @@ fn combobox_with_patch<H: UiHost>(
             })
             .side_offset(content_side_offset)
             .align_offset(content_align_offset)
-            .diagnostics_content_element_from_cell(listbox_id_for_diag)
             .on_dismiss_request(Some(
                 kit_combobox::set_open_change_reason_on_dismiss_request(
                     open_change_reason_model.clone(),
                 ),
             ))
             .on_close_auto_focus(Some(close_auto_focus.clone()));
+        if !use_content_shell_for_diag {
+            popover = popover.diagnostics_content_element_from_cell(listbox_id_for_diag);
+        }
 
         if let Some(cell) = search_input_id.clone() {
             popover = popover.initial_focus_from_cell(cell);
@@ -2719,7 +2803,8 @@ fn combobox_with_patch<H: UiHost>(
 	                    .metric_by_key("component.combobox.max_list_height")
 	                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
 	                    .unwrap_or(Px(280.0));
-	                let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
+	                let desired_w =
+	                    combobox_desired_content_width(width, content_width, anchor.size.width);
 	                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 	                let mut items = Some(items);
 	                let mut groups = Some(groups);
@@ -3101,10 +3186,19 @@ fn combobox_with_patch<H: UiHost>(
                     ChromeRefinement::default().p(Space::N0)
                 };
 
-                PopoverContent::new(vec![list])
+                let command = if let Some(prefix) = test_id_prefix.as_deref() {
+                    list.test_id(format!("{prefix}-command"))
+                } else {
+                    list
+                };
+
+                let mut content = PopoverContent::new(vec![command])
                     .refine_style(content_chrome)
-                    .refine_layout(LayoutRefinement::default().w_px(desired_w).min_w_0())
-                    .into_element(cx)
+                    .refine_layout(LayoutRefinement::default().w_px(desired_w).min_w_0());
+                if let Some(test_id) = content_test_id_for_content.clone() {
+                    content = content.test_id(test_id);
+                }
+                content.into_element(cx)
             },
         )
     })
@@ -3121,6 +3215,16 @@ fn combobox_content_placement(
         .with_align_offset(align_offset)
         .with_shift_cross_axis(true)
         .with_sticky(popper::StickyMode::Partial)
+}
+
+fn combobox_desired_content_width(
+    trigger_width: Option<Px>,
+    content_width: Option<Px>,
+    anchor_width: Px,
+) -> Px {
+    content_width
+        .or(trigger_width)
+        .unwrap_or_else(|| Px(anchor_width.0.max(180.0)))
 }
 
 #[cfg(test)]
@@ -3501,6 +3605,8 @@ mod tests {
                                 .separator(true)]),
                     ),
                 ])
+                .width_px(Px(200.0))
+                .test_id("cb-content")
                 .side(popper::Side::Top)
                 .align(popper::Align::Start)
                 .side_offset_px(Px(6.0))
@@ -3512,6 +3618,8 @@ mod tests {
         let patch = combobox_parts_patch(parts);
         assert_eq!(patch.trigger_variant, Some(ComboboxTriggerVariant::Button));
         assert_eq!(patch.width, Some(Px(256.0)));
+        assert_eq!(patch.content_width, Some(Px(200.0)));
+        assert_eq!(patch.content_test_id.as_deref(), Some("cb-content"));
         assert_eq!(patch.placeholder.as_deref(), Some("Pick one"));
         assert_eq!(
             patch.search_placeholder.as_deref(),
@@ -3559,6 +3667,22 @@ mod tests {
     }
 
     #[test]
+    fn combobox_desired_content_width_prefers_explicit_content_lane() {
+        assert_eq!(
+            combobox_desired_content_width(Some(Px(150.0)), Some(Px(200.0)), Px(260.0)),
+            Px(200.0)
+        );
+        assert_eq!(
+            combobox_desired_content_width(Some(Px(150.0)), None, Px(260.0)),
+            Px(150.0)
+        );
+        assert_eq!(
+            combobox_desired_content_width(None, None, Px(160.0)),
+            Px(180.0)
+        );
+    }
+
+    #[test]
     fn combobox_builder_steps_apply_the_same_patch_surface() {
         let mut app = App::new();
         let model = app.models_mut().insert(None::<Arc<str>>);
@@ -3600,6 +3724,8 @@ mod tests {
                                 .separator(true)]),
                     ),
                 ])
+                .width_px(Px(200.0))
+                .test_id("cb-content")
                 .side(popper::Side::Top)
                 .align(popper::Align::Start)
                 .side_offset_px(Px(6.0))
@@ -3609,6 +3735,8 @@ mod tests {
 
         assert_eq!(combobox.trigger_variant, ComboboxTriggerVariant::Button);
         assert_eq!(combobox.width, Some(Px(256.0)));
+        assert_eq!(combobox.content_width, Some(Px(200.0)));
+        assert_eq!(combobox.content_test_id.as_deref(), Some("cb-content"));
         assert_eq!(combobox.placeholder.as_ref(), "Pick one");
         assert_eq!(combobox.search_placeholder.as_ref(), "Search frameworks...");
         assert!(combobox.disabled);

@@ -1,0 +1,434 @@
+{
+  "schema_version": 1,
+  "component": "dropdown-menu",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-09",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json",
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 0,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "measured_test_id_count": 314,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_content_width",
+      "label": "Dropdown Menu demo content width",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "medium",
+      "test_ids": [
+        "ui-gallery-dropdown-menu-demo-overlay-content"
+      ],
+      "upstream_facts": [
+        "DropdownMenuContent has a default min-w-[8rem].",
+        "The docs-path demo passes className=\"w-56\" on DropdownMenuContent.",
+        "The content panel should expose a stable content-sized menu surface for overlay diagnostics."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo sets DropdownMenuContent min_width(Px(224.0)) and a stable overlay content test id.",
+        "M3 captures the open dropdown menu layout sidecar from a direct Dropdown Menu page start."
+      ],
+      "checks": [
+        {
+          "id": "demo_content_matches_w_56_logical_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Docs-path DropdownMenuContent should measure at least 224 logical px wide for shadcn w-56.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json",
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/dropdown-menu-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The open overlay content width is a runnable UI invariant; Fret logical sidecar bounds should compare directly with upstream DOM CSS px."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-dropdown-menu-demo-overlay-content",
+                  "metric": "width",
+                  "comparison": "gte",
+                  "expected": ">= 224",
+                  "eps_px": 1.0,
+                  "observed_px": 224.0,
+                  "bounds": {
+                    "x": 724.0,
+                    "y": 861.333,
+                    "w": 224.0,
+                    "h": 420.667
+                  },
+                  "raw_bounds": {
+                    "x": 724.0,
+                    "y": 861.333,
+                    "w": 224.0,
+                    "h": 420.667
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(905v1)",
+                  "kind_hint": "Semantics",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.dropdown_menu.demo.content",
+                  "metric": "width",
+                  "comparison": "gte",
+                  "expected": ">= 224",
+                  "eps_px": 1.0,
+                  "observed_px": 224.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 224.0,
+                    "h": 200.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json",
+                  "snapshot_name": "dropdown-menu-demo",
+                  "theme": "light",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portalWrapper.0.0",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "menu",
+                    "aria-labelledby": "radix-_R_lubsnpfiuplb_",
+                    "data-state": "open",
+                    "data-orientation": "vertical",
+                    "data-side": "bottom",
+                    "data-align": "start",
+                    "data-slot": "dropdown-menu-content"
+                  },
+                  "class_name": "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md w-56"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 224.0,
+                "fret_logical_observed_px": 224.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 224.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_item_chrome_fill",
+      "label": "Dropdown Menu demo item chrome fill",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-dropdown-menu-demo-profile",
+        "ui-gallery-dropdown-menu-demo-profile.chrome"
+      ],
+      "upstream_facts": [
+        "DropdownMenuItem uses relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm.",
+        "The item visual chrome should fill the interactive row bounds."
+      ],
+      "fret_facts": [
+        "Existing Dropdown Menu diag scripts already assert item/chrome bounds equality for demo and basic menus.",
+        "M3 sidecar evidence allows the discovery report to reuse the same geometry predicate."
+      ],
+      "checks": [
+        {
+          "id": "profile_item_chrome_width_delta",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Profile item chrome width should match the interactive row width.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "This stays a running-overlay diagnostic because the row only exists after opening the menu."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-dropdown-menu-demo-profile",
+                "b": "ui-gallery-dropdown-menu-demo-profile.chrome",
+                "metric": "width",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "b_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "a_raw_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "b_raw_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(913v1)",
+                "b_node": "NodeId(914v1)",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 1,
+                "b_duplicate_count": 1
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-dropdown-menu-demo-profile",
+                "b": "ui-gallery-dropdown-menu-demo-profile.chrome",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "b_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "a_raw_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "b_raw_bounds": {
+                  "x": 0.0,
+                  "y": 32.0,
+                  "w": 214.0,
+                  "h": 32.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(913v1)",
+                "b_node": "NodeId(914v1)",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 1,
+                "b_duplicate_count": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "content_selector_surface",
+      "label": "Dropdown Menu content selector surface",
+      "axis": "diagnostics",
+      "status": "pass_known",
+      "confidence": "high",
+      "test_ids": [
+        "ui-gallery-dropdown-menu-demo-overlay-content"
+      ],
+      "upstream_facts": [
+        "Radix exposes a distinct DropdownMenuContent part that can be targeted separately from the docs page section."
+      ],
+      "fret_facts": [
+        "M3 adds DropdownMenuContent::test_id so diagnostics can address the overlay panel instead of the DocSection content wrapper."
+      ],
+      "checks": [
+        {
+          "id": "overlay_content_test_id_exists",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The open overlay content panel exposes a stable, non-DocSection test id.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar",
+          "confidence": "high",
+          "owner": "diagnostics_surface",
+          "evidence_refs": [
+            "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Stable overlay selectors are a reusable diagnostics surface prerequisite for future Dropdown Menu parity checks."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json"
+            ],
+            "predicate_count": 1,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-dropdown-menu-demo-overlay-content",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 1",
+                "eps_px": 0.0,
+                "observed_px": 420.667,
+                "bounds": {
+                  "x": 724.0,
+                  "y": 861.333,
+                  "w": 224.0,
+                  "h": 420.667
+                },
+                "raw_bounds": {
+                  "x": 724.0,
+                  "y": 861.333,
+                  "w": 224.0,
+                  "h": 420.667
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(905v1)",
+                "kind_hint": "Semantics",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448/1778325155594-ui-gallery-shadcn-parity-m3.dropdown-menu-open.layout/layout.taffy.v1.json",
+                "duplicate_count": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "M3b uses Fret layout sidecars from the UI Gallery Dropdown Menu docs-path demo.",
+    "M3b reads upstream shadcn web DOM snapshot evidence for the open Dropdown Menu demo content panel.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px; scale_factor is retained only as diagnostics metadata."
+  ]
+}

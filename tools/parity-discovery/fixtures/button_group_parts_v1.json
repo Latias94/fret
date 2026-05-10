@@ -1,0 +1,744 @@
+{
+  "schema_version": 1,
+  "component": "button-group",
+  "style": "new-york-v4",
+  "report": {
+    "id": "button_group_mismatch_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-09",
+    "limitations": [
+      "M2 can read Fret layout sidecars and evaluate structured geometry predicates by test_id.",
+      "M2 does not run a live browser extractor; upstream facts are still curated from the upstream registry files.",
+      "M2 does not parse Tailwind selectors mechanically; source facts are curated from the upstream registry files."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.button_group.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx"
+      },
+      {
+        "id": "upstream.button_group.input_example",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-input.tsx"
+      },
+      {
+        "id": "upstream.button_group.dropdown_example",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-dropdown.tsx"
+      },
+      {
+        "id": "upstream.button_group.select_example",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-select.tsx"
+      },
+      {
+        "id": "upstream.button_group.text_example",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-group-button-group.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.button_group.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/button_group.rs"
+      },
+      {
+        "id": "fret.gallery.input_snippet",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/input.rs"
+      },
+      {
+        "id": "fret.gallery.dropdown_snippet",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/dropdown_menu.rs"
+      },
+      {
+        "id": "fret.gallery.select_snippet",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs"
+      },
+      {
+        "id": "fret.gallery.text_snippet",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/text.rs"
+      },
+      {
+        "id": "fret.gallery.render_flow",
+        "path": "apps/fret-ui-gallery/src/driver/render_flow.rs"
+      },
+      {
+        "id": "fret.diag.seed_layout",
+        "path": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+      },
+      {
+        "id": "fret.seed_lane",
+        "path": "docs/workstreams/shadcn-parity-harness-v1/README.md"
+      }
+    ]
+  },
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.button_group.input_demo.search_button",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "path": "0.1",
+      "source_ref_id": "upstream.button_group.input_example"
+    },
+    {
+      "id": "upstream.button_group.select_demo.currency_trigger",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "path": "0.0.0",
+      "source_ref_id": "upstream.button_group.select_example"
+    },
+    {
+      "id": "upstream.button_group.select_demo.amount",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "path": "0.0.1",
+      "source_ref_id": "upstream.button_group.select_example"
+    },
+    {
+      "id": "upstream.button_group.select_demo.send_button",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "path": "0.1.0",
+      "source_ref_id": "upstream.button_group.select_example"
+    }
+  ],
+  "parts": [
+    {
+      "id": "button_group_root",
+      "label": "ButtonGroup root layout contract",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source"
+        ],
+        "facts": [
+          "ButtonGroup root uses flex layout.",
+          "ButtonGroup root is w-fit by default.",
+          "ButtonGroup root uses items-stretch.",
+          "Direct input children become flex-1.",
+          "Nested button groups add gap-2."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.button_group.recipe",
+          "fret.gallery.render_flow"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-input",
+          "ui-gallery-button-group-dropdown",
+          "ui-gallery-button-group-text"
+        ],
+        "facts": [
+          "Fret has stable Button Group root selectors in the UI Gallery seed snippets.",
+          "The existing seed gates assert selected child bounds but do not yet mechanically compare every root source fact."
+        ]
+      },
+      "checks": [
+        {
+          "id": "root_source_facts_need_live_layout_extractor",
+          "kind": "fret_layout_sidecar",
+          "expected": "Automatically compare root fit/stretch/direct-input flex behavior against Fret layout sidecars.",
+          "observed": "unknown",
+          "confidence": "medium",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-input",
+              "b": "ui-gallery-button-group-input-search-button",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-dropdown",
+              "b": "ui-gallery-button-group-dropdown-trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-text",
+              "b": "ui-gallery-button-group-text-prefix",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-text",
+              "b": "ui-gallery-button-group-text-control",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-text",
+              "b": "ui-gallery-button-group-text-suffix",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "If direct child flex/stretch semantics drift across components, the owner is layout vocabulary or layout-tree interpretation rather than a Button Group-only recipe."
+          }
+        }
+      ]
+    },
+    {
+      "id": "input_search_button",
+      "label": "Button Group input example search button",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source",
+          "upstream.button_group.input_example"
+        ],
+        "facts": [
+          "The example renders Input followed by an outline Button containing SearchIcon.",
+          "ButtonGroup direct input participates in flex-1 sizing.",
+          "The icon-only default-size Button keeps compact inline padding rather than becoming size=icon."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.input_snippet",
+          "fret.gallery.render_flow",
+          "fret.diag.seed_layout"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-input-search-button"
+        ],
+        "facts": [
+          "The UI Gallery snippet exposes a stable search button test id.",
+          "The render-flow seed gate asserts search button width between 36px and 56px and height at least 32px.",
+          "The diagnostics seed script repeats min and max bounds assertions and captures layout and screenshot evidence."
+        ]
+      },
+      "checks": [
+        {
+          "id": "search_button_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "Search icon button keeps compact default Button inline padding inside ButtonGroup.",
+          "observed": "pass",
+          "confidence": "high",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-input-search-button",
+              "metric": "width",
+              "comparison": "between",
+              "min_px": 36.0,
+              "max_px": 56.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-input-search-button",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant is shadcn Button recipe sizing inside a ButtonGroup docs-path composition."
+          }
+        }
+      ]
+    },
+    {
+      "id": "select_composition",
+      "label": "Button Group select example composition",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source",
+          "upstream.button_group.select_example"
+        ],
+        "facts": [
+          "The example renders a monospace currency Select trigger, an amount Input, and an icon-only send Button.",
+          "The Select trigger keeps compact control chrome instead of collapsing to text width.",
+          "The amount input stretches in the shared lane while the send button stays compact."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.select_snippet",
+          "fret.gallery.render_flow",
+          "fret.diag.seed_layout"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-select",
+          "ui-gallery-button-group-select-currency-trigger",
+          "ui-gallery-button-group-select-amount",
+          "ui-gallery-button-group-select-send-button"
+        ],
+        "facts": [
+          "The UI Gallery snippet exposes stable test ids for the select trigger, amount input, and send button.",
+          "The render-flow gate can assert each sub-control after scrolling the Button Group select section into view.",
+          "The diagnostics seed script captures a select-specific layout sidecar and screenshot."
+        ]
+      },
+      "checks": [
+        {
+          "id": "select_currency_trigger_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "Currency trigger keeps compact monospace select trigger sizing inside ButtonGroup.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+            "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.button_group.select_demo.currency_trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 58.219,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.button_group.select_demo.currency_trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-select-currency-trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 58.219,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-select-currency-trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The currency trigger sizing is recipe-level select chrome inside the ButtonGroup select docs-path example."
+          }
+        },
+        {
+          "id": "select_amount_fill_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Amount input keeps fill width and default input height in the shared ButtonGroup lane.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+            "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.button_group.select_demo.amount",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 180.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.button_group.select_demo.amount",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-select-amount",
+              "metric": "width",
+              "comparison": "gte",
+              "value_px": 120.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-select-amount",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The amount input fill behavior is a docs-path composition invariant for the ButtonGroup select example."
+          }
+        },
+        {
+          "id": "select_send_button_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "Send icon button keeps compact default Button inline padding in the ButtonGroup lane.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+            "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.button_group.select_demo.send_button",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.button_group.select_demo.send_button",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-select-send-button",
+              "metric": "width",
+              "comparison": "between",
+              "min_px": 32.0,
+              "max_px": 56.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-select-send-button",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The send button sizing is shadcn Button recipe chrome inside the ButtonGroup select docs-path example."
+          }
+        }
+      ]
+    },
+    {
+      "id": "dropdown_trigger",
+      "label": "Button Group dropdown trigger chevron button",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source",
+          "upstream.button_group.dropdown_example"
+        ],
+        "facts": [
+          "The example uses DropdownMenuTrigger asChild over an outline Button.",
+          "The trigger Button has className !pl-2.",
+          "The chevron trigger keeps compact default Button sizing and does not collapse around the icon."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.dropdown_snippet",
+          "fret.gallery.render_flow",
+          "fret.diag.seed_layout"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-dropdown-trigger"
+        ],
+        "facts": [
+          "The UI Gallery snippet exposes a stable dropdown trigger test id.",
+          "The render-flow seed gate asserts trigger width between 32px and 56px and height at least 32px.",
+          "The diagnostics seed script repeats min and max bounds assertions and captures layout and screenshot evidence."
+        ]
+      },
+      "checks": [
+        {
+          "id": "dropdown_trigger_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "Dropdown chevron trigger keeps compact default Button sizing after the !pl-2 override.",
+          "observed": "pass",
+          "confidence": "high",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-dropdown-trigger",
+              "metric": "width",
+              "comparison": "between",
+              "min_px": 32.0,
+              "max_px": 56.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-dropdown-trigger",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "This part is best guarded in a running gallery because it combines recipe sizing, dropdown trigger substitution, and layout sidecar evidence."
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_prefix",
+      "label": "ButtonGroupText prefix addon",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source",
+          "upstream.button_group.text_example"
+        ],
+        "facts": [
+          "ButtonGroupText uses bg-muted flex items-center gap-2 rounded-md border px-4 text-sm font-medium shadow-xs.",
+          "The example wraps Label text https:// through ButtonGroupText asChild.",
+          "The prefix addon participates in the stretched ButtonGroup row and centers vertically with the adjacent input."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.text_snippet",
+          "fret.gallery.render_flow",
+          "fret.diag.seed_layout"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-text-prefix",
+          "ui-gallery-button-group-text-control"
+        ],
+        "facts": [
+          "The UI Gallery snippet exposes stable prefix and control test ids.",
+          "The render-flow seed gate asserts prefix height at least 32px and center-y delta within 2px of the control.",
+          "The diagnostics seed script repeats min-size and center-y assertions."
+        ]
+      },
+      "checks": [
+        {
+          "id": "text_prefix_vertical_center",
+          "kind": "fret_layout_sidecar",
+          "expected": "ButtonGroupText prefix stays vertically centered with the adjacent input control.",
+          "observed": "pass",
+          "confidence": "high",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-text-prefix",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-text-prefix",
+              "b": "ui-gallery-button-group-text-control",
+              "metric": "center_y",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 2.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant belongs to ButtonGroupText recipe chrome and child alignment unless it repeats across unrelated flex wrappers."
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_control",
+      "label": "Button Group text example input control",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source",
+          "upstream.button_group.text_example"
+        ],
+        "facts": [
+          "The text example places the input-like control between prefix and suffix addons.",
+          "The surrounding ButtonGroup uses items-stretch and direct input flex behavior."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.text_snippet",
+          "fret.gallery.render_flow",
+          "fret.diag.seed_layout"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-text-control"
+        ],
+        "facts": [
+          "The UI Gallery snippet exposes a stable control test id.",
+          "The diagnostics seed script asserts control min width 180px and min height 32px.",
+          "The render-flow gate uses the control as the center-y anchor for prefix and suffix."
+        ]
+      },
+      "checks": [
+        {
+          "id": "text_control_seed_anchor",
+          "kind": "fret_layout_sidecar",
+          "expected": "The text example control remains a measurable anchor for addon centering and keeps control height.",
+          "observed": "pass",
+          "confidence": "high",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-text-control",
+              "metric": "width",
+              "comparison": "gte",
+              "value_px": 180.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-text-control",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The control is most useful as a selector and layout-sidecar anchor for gallery-level checks."
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_suffix",
+      "label": "ButtonGroupText suffix addon",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.button_group.source",
+          "upstream.button_group.text_example"
+        ],
+        "facts": [
+          "ButtonGroupText suffix renders .com with the same flex items-center chrome.",
+          "The suffix addon participates in the stretched ButtonGroup row and centers vertically with the adjacent input."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.text_snippet",
+          "fret.gallery.render_flow",
+          "fret.diag.seed_layout"
+        ],
+        "test_ids": [
+          "ui-gallery-button-group-text-suffix",
+          "ui-gallery-button-group-text-control"
+        ],
+        "facts": [
+          "The UI Gallery snippet exposes stable suffix and control test ids.",
+          "The render-flow seed gate asserts suffix height at least 32px and center-y delta within 2px of the control.",
+          "The diagnostics seed script repeats min-size and center-y assertions."
+        ]
+      },
+      "checks": [
+        {
+          "id": "text_suffix_vertical_center",
+          "kind": "fret_layout_sidecar",
+          "expected": "ButtonGroupText suffix stays vertically centered with the adjacent input control.",
+          "observed": "pass",
+          "confidence": "high",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-button-group-text-suffix",
+              "metric": "height",
+              "comparison": "gte",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-button-group-text-suffix",
+              "b": "ui-gallery-button-group-text-control",
+              "metric": "center_y",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 2.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant belongs to ButtonGroupText recipe chrome and child alignment unless it repeats across unrelated flex wrappers."
+          }
+        }
+      ]
+    }
+  ]
+}
