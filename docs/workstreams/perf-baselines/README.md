@@ -136,4 +136,7 @@ Before committing a new or replaced baseline:
 - Record the exact commands, selected candidate, validation result, and worst bundles in the perf log.
 - Update `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` if the suite, baseline path, or gate
   command changes.
+- Run `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  before promoting a new or replaced baseline. The audit reports legacy evidence baselines separately so old broad
+  suites can remain in the repo without pretending to be the representative p50/p95/max contract.
 - Use a docs or perf commit message that identifies the suite and machine profile.
