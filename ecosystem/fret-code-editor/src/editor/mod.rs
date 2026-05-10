@@ -771,19 +771,24 @@ pub struct CodeEditorCacheSizeSnapshotV1 {
     pub schema_version: u32,
 
     pub row_text_cache_entries: u64,
+    pub row_text_cache_queue_len: u64,
     pub row_text_cache_text_bytes_estimate_total: u64,
     pub row_text_cache_row_spans_len_total: u64,
 
     pub row_geom_cache_entries: u64,
+    pub row_geom_cache_queue_len: u64,
     pub row_geom_cache_caret_stops_len_total: u64,
 
     pub row_scene_cache_entries: u64,
+    pub row_scene_cache_queue_len: u64,
     pub row_scene_cache_scene_ops_len_total: u64,
 
     pub syntax_row_cache_entries: u64,
+    pub syntax_row_cache_queue_len: u64,
     pub syntax_row_cache_spans_len_total: u64,
 
     pub row_rich_cache_entries: u64,
+    pub row_rich_cache_queue_len: u64,
     pub row_rich_cache_line_bytes_estimate_total: u64,
     pub row_rich_cache_row_spans_len_total: u64,
     pub row_rich_cache_syntax_spans_len_total: u64,
@@ -1795,13 +1800,16 @@ impl CodeEditorHandle {
     pub fn cache_size_snapshot(&self) -> CodeEditorCacheSizeSnapshotV1 {
         let st = self.state.borrow();
         let mut out = CodeEditorCacheSizeSnapshotV1 {
-            schema_version: 1,
+            schema_version: 2,
             row_text_cache_entries: st.row_text_cache.len() as u64,
+            row_text_cache_queue_len: st.row_text_cache_queue.len() as u64,
             row_text_cache_text_bytes_estimate_total: st.row_text_cache_text_bytes_estimate_total,
             row_text_cache_row_spans_len_total: st.row_text_cache_row_spans_len_total,
             row_geom_cache_entries: st.row_geom_cache.len() as u64,
+            row_geom_cache_queue_len: st.row_geom_cache_queue.len() as u64,
             row_geom_cache_caret_stops_len_total: st.row_geom_cache_caret_stops_len_total,
             row_scene_cache_entries: st.row_scene_cache.len() as u64,
+            row_scene_cache_queue_len: st.row_scene_cache_queue.len() as u64,
             row_scene_cache_scene_ops_len_total: st.row_scene_cache_scene_ops_len_total,
             selection_rect_scratch_capacity: st.selection_rect_scratch.capacity() as u64,
             ..Default::default()
@@ -1810,8 +1818,10 @@ impl CodeEditorHandle {
         #[cfg(feature = "syntax")]
         {
             out.syntax_row_cache_entries = st.syntax_row_cache.len() as u64;
+            out.syntax_row_cache_queue_len = st.syntax_row_cache_queue.len() as u64;
             out.syntax_row_cache_spans_len_total = st.syntax_row_cache_spans_len_total;
             out.row_rich_cache_entries = st.row_rich_cache.len() as u64;
+            out.row_rich_cache_queue_len = st.row_rich_cache_queue.len() as u64;
             out.row_rich_cache_line_bytes_estimate_total =
                 st.row_rich_cache_line_bytes_estimate_total;
             out.row_rich_cache_row_spans_len_total = st.row_rich_cache_row_spans_len_total;

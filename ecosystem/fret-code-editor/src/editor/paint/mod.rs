@@ -1,10 +1,37 @@
 //! Painting, caching, and text shaping helpers for the code editor surface.
 
 use fret_core::time::Instant;
+use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 
 use super::*;
 use fret_core::TextMetrics;
+
+const ROW_CACHE_QUEUE_COMPACT_FACTOR: usize = 4;
+const ROW_CACHE_QUEUE_COMPACT_MIN_LEN: usize = 1024;
+
+fn compact_row_lru_queue_if_needed<T>(
+    cache: &HashMap<usize, (T, u64)>,
+    queue: &mut VecDeque<(usize, u64)>,
+    max_entries: usize,
+) -> bool {
+    let budget_base = cache.len().max(max_entries).max(1);
+    let compact_threshold = budget_base
+        .saturating_mul(ROW_CACHE_QUEUE_COMPACT_FACTOR)
+        .max(ROW_CACHE_QUEUE_COMPACT_MIN_LEN);
+    if queue.len() <= compact_threshold {
+        return false;
+    }
+
+    let mut entries = cache
+        .iter()
+        .map(|(row, (_, tick))| (*row, *tick))
+        .collect::<Vec<_>>();
+    entries.sort_by_key(|(_, tick)| *tick);
+    queue.clear();
+    queue.extend(entries);
+    true
+}
 
 #[cfg(feature = "syntax")]
 fn normalize_syntax_spans_for_text(text: &str, spans: &mut Vec<SyntaxSpan>) {
@@ -226,8 +253,14 @@ pub(super) fn paint_row(
                     .map(|key| RowSceneKey::preedit(key, fg, selection_bg));
                 row_scene_is_rich = true;
                 if let Some(scene_key) = row_scene_key.clone()
-                    && let Some((geom, is_rich)) =
-                        try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                    && let Some((geom, is_rich)) = try_replay_row_scene_cache(
+                        painter,
+                        st,
+                        row,
+                        &scene_key,
+                        origin,
+                        text_cache_max_entries,
+                    )
                 {
                     fresh_geom = Some(geom);
                     row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
@@ -291,8 +324,14 @@ pub(super) fn paint_row(
                     .map(|key| RowSceneKey::preedit(key, fg, selection_bg));
                 row_scene_is_rich = true;
                 if let Some(scene_key) = row_scene_key.clone()
-                    && let Some((geom, is_rich)) =
-                        try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                    && let Some((geom, is_rich)) = try_replay_row_scene_cache(
+                        painter,
+                        st,
+                        row,
+                        &scene_key,
+                        origin,
+                        text_cache_max_entries,
+                    )
                 {
                     fresh_geom = Some(geom);
                     row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
@@ -350,7 +389,7 @@ pub(super) fn paint_row(
     #[cfg(feature = "syntax")]
     {
         let lookup_started = perf_enabled.then(Instant::now);
-        match lookup_row_syntax_spans(st, line_idx) {
+        match lookup_row_syntax_spans(st, line_idx, text_cache_max_entries) {
             SyntaxRowCacheLookup::Hit(spans) => {
                 syntax_spans = Some(Arc::clone(&spans));
                 if let Some(started) = lookup_started {
@@ -378,6 +417,7 @@ pub(super) fn paint_row(
                         st.code_font_feature_policy_rev,
                         fg,
                         origin,
+                        text_cache_max_entries,
                     )
                 {
                     fresh_geom = Some(geom);
@@ -445,12 +485,17 @@ pub(super) fn paint_row(
                         && Arc::ptr_eq(&cached.row_spans, &row_spans);
                     if hit {
                         *last_used = tick;
-                        st.row_rich_cache_queue.push_back((row, tick));
-                        st.cache_stats.row_rich_hits =
-                            st.cache_stats.row_rich_hits.saturating_add(1);
-
                         cached_rich_hit = Some(cached.rich.clone());
                     }
+                }
+                if cached_rich_hit.is_some() {
+                    st.row_rich_cache_queue.push_back((row, tick));
+                    compact_row_lru_queue_if_needed(
+                        &st.row_rich_cache,
+                        &mut st.row_rich_cache_queue,
+                        rich_cache_max_entries,
+                    );
+                    st.cache_stats.row_rich_hits = st.cache_stats.row_rich_hits.saturating_add(1);
                 }
 
                 if let Some(rich) = cached_rich_hit {
@@ -487,8 +532,14 @@ pub(super) fn paint_row(
                     }
                     row_scene_is_rich = true;
                     if let Some(scene_key) = row_scene_key.clone()
-                        && let Some((geom, is_rich)) =
-                            try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                        && let Some((geom, is_rich)) = try_replay_row_scene_cache(
+                            painter,
+                            st,
+                            row,
+                            &scene_key,
+                            origin,
+                            text_cache_max_entries,
+                        )
                     {
                         fresh_geom = Some(geom);
                         row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
@@ -676,6 +727,11 @@ pub(super) fn paint_row(
                             .row_rich_cache_rich_spans_len_total
                             .saturating_add(entry_rich_spans_len);
                         st.row_rich_cache_queue.push_back((row, tick));
+                        compact_row_lru_queue_if_needed(
+                            &st.row_rich_cache,
+                            &mut st.row_rich_cache_queue,
+                            rich_cache_max_entries,
+                        );
 
                         while st.row_rich_cache.len() > rich_cache_max_entries {
                             let Some((victim, victim_tick)) = st.row_rich_cache_queue.pop_front()
@@ -707,8 +763,14 @@ pub(super) fn paint_row(
                         }
 
                         if let Some(scene_key) = row_scene_key.clone()
-                            && let Some((geom, is_rich)) =
-                                try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                            && let Some((geom, is_rich)) = try_replay_row_scene_cache(
+                                painter,
+                                st,
+                                row,
+                                &scene_key,
+                                origin,
+                                text_cache_max_entries,
+                            )
                         {
                             fresh_geom = Some(geom);
                             row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
@@ -769,8 +831,14 @@ pub(super) fn paint_row(
             row_scene_key = row_geom_key.clone().map(|key| RowSceneKey::plain(key, fg));
             row_scene_is_rich = true;
             if let Some(scene_key) = row_scene_key.clone()
-                && let Some((geom, is_rich)) =
-                    try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                && let Some((geom, is_rich)) = try_replay_row_scene_cache(
+                    painter,
+                    st,
+                    row,
+                    &scene_key,
+                    origin,
+                    text_cache_max_entries,
+                )
             {
                 fresh_geom = Some(geom);
                 row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
@@ -814,8 +882,14 @@ pub(super) fn paint_row(
             ));
             row_scene_key = row_geom_key.clone().map(|key| RowSceneKey::plain(key, fg));
             if let Some(scene_key) = row_scene_key.clone()
-                && let Some((geom, is_rich)) =
-                    try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                && let Some((geom, is_rich)) = try_replay_row_scene_cache(
+                    painter,
+                    st,
+                    row,
+                    &scene_key,
+                    origin,
+                    text_cache_max_entries,
+                )
             {
                 fresh_geom = Some(geom);
                 row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
@@ -1346,6 +1420,11 @@ pub(super) fn paint_row(
         }
 
         st.row_geom_cache_queue.push_back((row, tick));
+        compact_row_lru_queue_if_needed(
+            &st.row_geom_cache,
+            &mut st.row_geom_cache_queue,
+            text_cache_max_entries,
+        );
         while st.row_geom_cache.len() > text_cache_max_entries {
             let Some((victim, victim_tick)) = st.row_geom_cache_queue.pop_front() else {
                 break;
@@ -1452,6 +1531,11 @@ where
             .syntax_row_cache_spans_len_total
             .saturating_add(spans_len);
         st.syntax_row_cache_queue.push_back((row, tick));
+        compact_row_lru_queue_if_needed(
+            &st.syntax_row_cache,
+            &mut st.syntax_row_cache_queue,
+            max_entries,
+        );
         stored_rows = stored_rows.saturating_add(1);
 
         while st.syntax_row_cache.len() > max_entries {
@@ -1575,7 +1659,11 @@ fn ensure_syntax_row_cache_fresh(st: &mut CodeEditorState) {
 }
 
 #[cfg(feature = "syntax")]
-fn lookup_row_syntax_spans(st: &mut CodeEditorState, row: usize) -> SyntaxRowCacheLookup {
+fn lookup_row_syntax_spans(
+    st: &mut CodeEditorState,
+    row: usize,
+    max_entries: usize,
+) -> SyntaxRowCacheLookup {
     st.cache_stats.syntax_get_calls = st.cache_stats.syntax_get_calls.saturating_add(1);
     ensure_syntax_row_cache_fresh(st);
 
@@ -1584,9 +1672,15 @@ fn lookup_row_syntax_spans(st: &mut CodeEditorState, row: usize) -> SyntaxRowCac
 
     if let Some((spans, last_used)) = st.syntax_row_cache.get_mut(&row) {
         *last_used = tick;
+        let spans = Arc::clone(spans);
         st.syntax_row_cache_queue.push_back((row, tick));
+        compact_row_lru_queue_if_needed(
+            &st.syntax_row_cache,
+            &mut st.syntax_row_cache_queue,
+            max_entries,
+        );
         st.cache_stats.syntax_hits = st.cache_stats.syntax_hits.saturating_add(1);
-        return SyntaxRowCacheLookup::Hit(Arc::clone(spans));
+        return SyntaxRowCacheLookup::Hit(spans);
     }
 
     st.cache_stats.syntax_misses = st.cache_stats.syntax_misses.saturating_add(1);
@@ -1646,6 +1740,7 @@ fn try_replay_row_scene_cache_fast_syntax(
     code_font_feature_policy_rev: u64,
     fg: Color,
     origin: fret_core::Point,
+    max_entries: usize,
 ) -> Option<(RowGeom, bool)> {
     ensure_row_scene_cache_fresh(st);
     st.cache_stats.row_scene_fast_get_calls =
@@ -1722,6 +1817,11 @@ fn try_replay_row_scene_cache_fast_syntax(
 
     if let Some(out) = replayed {
         st.row_scene_cache_queue.push_back((row, tick));
+        compact_row_lru_queue_if_needed(
+            &st.row_scene_cache,
+            &mut st.row_scene_cache_queue,
+            max_entries,
+        );
         st.cache_stats.row_scene_fast_hits = st.cache_stats.row_scene_fast_hits.saturating_add(1);
         st.cache_stats.row_scene_get_calls = st.cache_stats.row_scene_get_calls.saturating_add(1);
         st.cache_stats.row_scene_hits = st.cache_stats.row_scene_hits.saturating_add(1);
@@ -1739,6 +1839,7 @@ fn try_replay_row_scene_cache(
     row: usize,
     key: &RowSceneKey,
     origin: fret_core::Point,
+    max_entries: usize,
 ) -> Option<(RowGeom, bool)> {
     ensure_row_scene_cache_fresh(st);
     st.cache_stats.row_scene_get_calls = st.cache_stats.row_scene_get_calls.saturating_add(1);
@@ -1798,6 +1899,11 @@ fn try_replay_row_scene_cache(
 
     if let Some(out) = replayed {
         st.row_scene_cache_queue.push_back((row, tick));
+        compact_row_lru_queue_if_needed(
+            &st.row_scene_cache,
+            &mut st.row_scene_cache_queue,
+            max_entries,
+        );
         st.cache_stats.row_scene_hits = st.cache_stats.row_scene_hits.saturating_add(1);
         Some(out)
     } else {
@@ -1850,6 +1956,11 @@ fn store_row_scene_cache(
         .row_scene_cache_scene_ops_len_total
         .saturating_add(ops_len);
     st.row_scene_cache_queue.push_back((row, tick));
+    compact_row_lru_queue_if_needed(
+        &st.row_scene_cache,
+        &mut st.row_scene_cache_queue,
+        max_entries,
+    );
 
     while st.row_scene_cache.len() > max_entries {
         let Some((victim, victim_tick)) = st.row_scene_cache_queue.pop_front() else {
@@ -1923,6 +2034,11 @@ fn store_row_scene_cache(
         .row_scene_cache_scene_ops_len_total
         .saturating_add(ops_len);
     st.row_scene_cache_queue.push_back((row, tick));
+    compact_row_lru_queue_if_needed(
+        &st.row_scene_cache,
+        &mut st.row_scene_cache_queue,
+        max_entries,
+    );
 
     while st.row_scene_cache.len() > max_entries {
         let Some((victim, victim_tick)) = st.row_scene_cache_queue.pop_front() else {
@@ -2015,15 +2131,21 @@ pub(super) fn cached_row_text_with_range(
 
     if let Some((text, last_used)) = st.row_text_cache.get_mut(&row) {
         *last_used = tick;
-        st.row_text_cache_queue.push_back((row, tick));
-        st.cache_stats.row_text_hits = st.cache_stats.row_text_hits.saturating_add(1);
-        return (
+        let out = (
             text.range.clone(),
             Arc::clone(&text.text),
             text.fold_map.clone(),
             text.preedit_range.clone(),
             Arc::clone(&text.row_spans),
         );
+        st.row_text_cache_queue.push_back((row, tick));
+        compact_row_lru_queue_if_needed(
+            &st.row_text_cache,
+            &mut st.row_text_cache_queue,
+            max_entries,
+        );
+        st.cache_stats.row_text_hits = st.cache_stats.row_text_hits.saturating_add(1);
+        return out;
     }
     st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
 
@@ -2073,6 +2195,11 @@ pub(super) fn cached_row_text_with_range(
         .row_text_cache_row_spans_len_total
         .saturating_add(entry_row_spans_len);
     st.row_text_cache_queue.push_back((row, tick));
+    compact_row_lru_queue_if_needed(
+        &st.row_text_cache,
+        &mut st.row_text_cache_queue,
+        max_entries,
+    );
 
     while st.row_text_cache.len() > max_entries {
         let Some((victim, victim_tick)) = st.row_text_cache_queue.pop_front() else {
@@ -2392,7 +2519,7 @@ pub(super) fn cached_row_syntax_spans(
     row: usize,
     max_entries: usize,
 ) -> Arc<[SyntaxSpan]> {
-    match lookup_row_syntax_spans(st, row) {
+    match lookup_row_syntax_spans(st, row, max_entries) {
         SyntaxRowCacheLookup::Hit(spans) => spans,
         SyntaxRowCacheLookup::Miss { tick } => {
             populate_row_syntax_spans_after_miss(st, row, max_entries, tick)
@@ -3048,5 +3175,22 @@ mod tests {
                 highlight: "keyword",
             }]
         );
+    }
+
+    #[test]
+    fn row_lru_queue_compaction_drops_stale_touch_records() {
+        let mut cache = HashMap::<usize, ((), u64)>::new();
+        cache.insert(1, ((), 5));
+        cache.insert(2, ((), 9));
+
+        let mut queue = VecDeque::new();
+        for tick in 0..1100 {
+            queue.push_back((1, tick));
+        }
+        queue.push_back((2, 9));
+
+        assert!(compact_row_lru_queue_if_needed(&cache, &mut queue, 2));
+
+        assert_eq!(queue.into_iter().collect::<Vec<_>>(), vec![(1, 5), (2, 9)]);
     }
 }

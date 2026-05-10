@@ -192,6 +192,43 @@ Syntax prefetch off paint path (2026-05-10):
   code-editor paint work should look at the remaining steady paint body / renderer encode cost, not syntax-cache miss
   highlighting. Rollback is a straight revert of the syntax prefetch change.
 
+Bounded row-cache touch queues (2026-05-10):
+
+- Finding: after syntax prefetch, `ui-gallery-code-editor-torture-autoscroll-steady` still alternates between frames
+  where all rows replay and frames where one new row is stored (`rows_scene_stored=1`). The remaining tail no longer
+  points at syntax highlight; it points at editor paint bookkeeping and renderer encode. A GPUI comparison is useful
+  here: GPUI's line-layout cache keeps per-frame "used" lists bounded and swaps current/previous frame caches, so stale
+  touch records do not accumulate indefinitely across steady redraws.
+- Change: row-level editor caches now compact their `(row, tick)` touch queues when they grow beyond a bounded multiple
+  of the live cache size. The compacted queue is rebuilt from live cache entries sorted by latest tick, preserving LRU
+  eviction order while avoiding unbounded stale touch records. This covers row text, geometry, row scene, syntax rows,
+  and syntax-rich rows. Diagnostic cache-size snapshots were bumped to schema `2` and now include queue lengths.
+- Implementation anchors:
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`compact_row_lru_queue_if_needed` and row-cache call sites)
+  - `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorCacheSizeSnapshotV1` queue-length fields)
+  - `apps/fret-ui-gallery/src/driver/diag_snapshot.rs` (queue lengths in `app_snapshot.code_editor.torture.cache_sizes`)
+- Verification:
+  - `cargo fmt -p fret-code-editor -p fret-ui-gallery --check`
+  - `cargo check -p fret-code-editor`
+  - `cargo check -p fret-code-editor --features syntax-rust`
+  - `cargo check -p fret-ui-gallery --features gallery-dev`
+  - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast`
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev`
+- Perf evidence:
+  - `repeat=3` command: same `ui-gallery-code-editor-torture-autoscroll-steady` command as the syntax-prefetch run,
+    with output directory `target/fret-diag/perf-code-editor-lru-compaction-final`.
+  - Worst bundle: `target/fret-diag/perf-code-editor-lru-compaction-final/1778394523256/bundle.schema2.json`
+  - `repeat=3` p50/p95/max total: `2323/2656/2656us`; paint: `2117/2445/2445us`.
+  - `repeat=7` gate bundle:
+    `target/fret-diag/perf-code-editor-lru-compaction-gate/1778394610070/bundle.schema2.json`
+  - Gate passed with p50/p95/max total `2452/2869/2869us` and paint `2254/2628/2628us`.
+  - Queue maxes in the gate bundle: row text `1707`, row geom `1619`, row scene `1619`, syntax rows `880`,
+    row rich `1656`.
+- Interpretation: this makes the row-cache bookkeeping bounded and observable, which is the right structural direction
+  before deeper row/fragment work. It does not remove the remaining steady renderer encode cost (`renderer encode`
+  remains about ~1.0-1.1ms p95 in this script) or the new-row materialization cost. The next code-editor slice should
+  split those two costs explicitly instead of treating all paint time as one bucket.
+
 Finding (2026-05-10): redundant row background quads are pure scene-op churn
 
 - Change: `ecosystem/fret-code-editor/src/editor/paint/mod.rs` no longer emits a transparent background `Quad` for
