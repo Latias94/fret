@@ -5,6 +5,34 @@
   "generated_date": "2026-05-09",
   "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
   "source_mapping": "tools/parity-discovery/fixtures/input_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.input.demo.light.vp1440x900",
+      "snapshot": "input-demo",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "input-demo",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+      }
+    ]
+  },
   "summary": {
     "part_count": 3,
     "status_counts": {
@@ -59,6 +87,59 @@
         "blocked": 0
       }
     },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 2,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
     "promotion_target_counts": {
       "diag_script": 2,
       "component_fixture": 1,
@@ -68,7 +149,9 @@
     "layout_sidecar_count": 2,
     "measured_test_id_count": 313,
     "upstream_dom_snapshot_count": 1,
-    "upstream_dom_target_count": 1
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
   },
   "parts": [
     {
@@ -98,6 +181,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "medium",
           "owner": "component_recipe",
+          "layer": "recipe",
           "evidence_refs": [
             "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
             "apps/fret-ui-gallery/src/ui/snippets/input/demo.rs",
@@ -204,6 +288,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
                   "snapshot_name": "input-demo",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -256,6 +342,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "gallery_composition",
+          "layer": "app_demo",
           "evidence_refs": [
             "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
             "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
@@ -362,6 +449,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "gallery_composition",
+          "layer": "app_demo",
           "evidence_refs": [
             "apps/fret-ui-gallery/src/ui/snippets/input/button_group.rs",
             "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"

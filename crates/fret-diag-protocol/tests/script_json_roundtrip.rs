@@ -612,6 +612,27 @@ fn script_v2_roundtrip_set_window_inner_size_first_seen() {
 }
 
 #[test]
+fn script_v2_roundtrip_window_inner_size_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 375.0,
+        "height_px": 240.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 60
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_style_hit_test_regions() {
     assert_script_v2_roundtrip(
         r#"{

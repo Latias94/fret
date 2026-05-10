@@ -42,11 +42,27 @@
       }
     ]
   },
+  "upstream_contexts": [
+    {
+      "id": "upstream.dropdown_menu.demo.light.open.submenu.vp375x240",
+      "snapshot": "dropdown-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "submenu",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
   "upstream_dom_targets": [
     {
       "id": "upstream.dropdown_menu.demo.content",
       "snapshot": "dropdown-menu-demo",
       "theme": "light",
+      "mode": "open",
+      "variant": "submenu",
       "path": "portalWrapper.0.0",
       "source_ref_id": "upstream.dropdown_menu.web_open_snapshot"
     }

@@ -24,7 +24,7 @@ date: 2026-05-09
 - [x] Add structured geometry predicates to the Button Group fixture.
 - [x] Regenerate the Button Group report from measured Fret sidecar evidence.
 - [x] Add a Fret-side effective viewport predicate for layout sidecar root bounds.
-- [ ] Add upstream viewport and theme dimensions to the mapping schema.
+- [x] Add upstream viewport and theme dimensions to the mapping schema.
 
 ## M3-M3b: Upstream Web Measurement
 
@@ -39,7 +39,7 @@ date: 2026-05-09
 - [x] Promote the Dropdown Menu `w-56` finding into either a recipe fix or a mechanism-sidecar unit
   contract follow-up.
 - [x] Freeze the layout sidecar raw/logical unit contract in a mechanism-level follow-up.
-- [ ] Make remaining source-only rows runnable instead of prose-only.
+- [x] Make remaining source-only rows runnable instead of prose-only.
 
 ## M4: Component Sweep
 
@@ -57,9 +57,9 @@ date: 2026-05-09
   are gone.
 - [x] Record the second proactive sweep audit with at least two non-user-reported findings, root
   cause ownership, and promotion targets.
-- [ ] Turn the native `set_window_inner_size` requested/effective height offset into a focused
+- [x] Turn the native `set_window_inner_size` requested/effective height offset into a focused
   diagnostics-runner follow-up instead of keeping it only as a combobox-script workaround.
-- [ ] Revisit whether the tool should become a crate after three components and stable report
+- [x] Revisit whether the tool should become a crate after three components and stable report
   semantics.
 
 ## Backlog

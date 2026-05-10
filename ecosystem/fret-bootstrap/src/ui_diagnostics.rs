@@ -1995,6 +1995,62 @@ mod tests {
     }
 
     #[test]
+    fn window_inner_size_predicate_reads_effective_window_bounds() {
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: Vec::new(),
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: Vec::new(),
+        };
+
+        let pred = UiPredicateV1::WindowInnerSizeApproxEqual {
+            width_px: 375.0,
+            height_px: 240.0,
+            eps_px: 1.0,
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                rect(0.0, 0.0, 375.333, 240.0),
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected the diagnostics predicate to gate effective viewport size, not child geometry"
+        );
+
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                rect(0.0, 0.0, 375.333, 220.0),
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected requested/effective height drift to fail the runner-level viewport gate"
+        );
+    }
+
+    #[test]
     fn predicates_support_exists_under_and_value_equals() {
         let window_bounds = rect(0.0, 0.0, 500.0, 500.0);
         let snapshot = SemanticsSnapshot {

@@ -61,11 +61,16 @@ fn combobox_responsive_diag_scripts_pin_exact_viewport_variants() {
         mobile.contains("effective 375x240 viewport"),
         "mobile responsive diag script should document the effective viewport contract",
     );
+    assert!(
+        mobile.contains("\"kind\": \"window_inner_size_approx_equal\""),
+        "mobile responsive diag script should gate the runner-level effective viewport before component geometry",
+    );
 
     for needle in [
         "\"width_px\": 1440.0",
         "\"width_px\": 375.0",
         "\"height_px\": 220.0",
+        "\"height_px\": 240.0",
     ] {
         assert!(
             desktop.contains(needle) || mobile.contains(needle),
@@ -100,6 +105,13 @@ fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command
             .and_then(|counts| counts.get(name))
             .and_then(Value::as_u64)
             .unwrap_or_else(|| panic!("missing summary count `{key}.{name}`"))
+    }
+
+    fn summary_scalar_u64(summary: &serde_json::Map<String, Value>, key: &str) -> u64 {
+        summary
+            .get(key)
+            .and_then(Value::as_u64)
+            .unwrap_or_else(|| panic!("missing summary scalar `{key}`"))
     }
 
     fn part_status(report: &Value, part_id: &str) -> String {
@@ -178,9 +190,34 @@ fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command
             "mobile responsive report should gate effective viewport size separately from component geometry",
         );
         assert_eq!(
+            summary_u64(summary, "layer_counts", "mechanism"),
+            1,
+            "combobox responsive shell drift should remain mechanism-layer classified",
+        );
+        assert_eq!(
+            summary_u64(summary, "layer_counts", "recipe"),
+            expected_recipe_passes,
+            "combobox responsive trigger/command/listbox checks should remain recipe-layer classified",
+        );
+        assert_eq!(
+            summary_u64(summary, "layer_counts", "runner"),
+            expected_diag_passes,
+            "mobile responsive effective viewport should be runner-layer classified",
+        );
+        assert_eq!(
             summary_u64(summary, "promotion_target_counts", "mechanism_harness"),
             1,
             "combobox responsive shell drift should have a mechanism-harness promotion target",
+        );
+        assert_eq!(
+            summary_scalar_u64(summary, "upstream_context_count"),
+            1,
+            "combobox responsive reports should expose the declared upstream viewport/theme context",
+        );
+        assert_eq!(
+            summary_scalar_u64(summary, "upstream_dom_context_count"),
+            1,
+            "combobox responsive reports should expose the measured upstream DOM context",
         );
         assert_eq!(
             part_status(report, shell_part),
@@ -219,4 +256,28 @@ fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command
         "pass_known",
         "mobile listbox should pass after drawer shell sizing is separated",
     );
+}
+
+#[test]
+fn window_inner_size_contract_diag_script_is_runner_owned() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json"
+    );
+
+    for needle in [
+        "\"runner\"",
+        "\"viewport_contract\"",
+        "\"type\": \"set_window_inner_size\"",
+        "\"width_px\": 375.0",
+        "\"height_px\": 220.0",
+        "\"kind\": \"window_inner_size_approx_equal\"",
+        "\"height_px\": 240.0",
+        "\"type\": \"capture_layout_sidecar\"",
+        "\"ui-gallery-window-inner-size-effective-vp375x240\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "runner viewport contract script should make requested/effective size evidence explicit; missing `{needle}`",
+        );
+    }
 }

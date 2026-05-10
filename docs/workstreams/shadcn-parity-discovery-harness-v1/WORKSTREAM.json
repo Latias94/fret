@@ -29,7 +29,7 @@
     }
   ],
   "repro": {
-    "summary": "Generate deterministic Button Group, Dropdown Menu, Input, and Combobox Responsive parity discovery reports from mapping fixtures, Fret layout sidecars, and upstream shadcn DOM snapshots where available.",
+    "summary": "Generate deterministic Button Group, Dropdown Menu, Input, and Combobox Responsive parity discovery reports from mapping fixtures, Fret layout sidecars, upstream shadcn DOM snapshots, and runner viewport-contract evidence where available.",
     "commands": [
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-harness-v1 --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json",
@@ -58,6 +58,14 @@
     {
       "name": "combobox-responsive-mobile-report-generation",
       "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json"
+    },
+    {
+      "name": "runner-effective-viewport-contract-script",
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json > $null; $env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo test -p fret-bootstrap --lib --features ui-app-driver,diagnostics window_inner_size_predicate_reads_effective_window_bounds -- --nocapture"
+    },
+    {
+      "name": "parity-discovery-tool-compile",
+      "command": "python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py"
     },
     {
       "name": "fret-ui-shadcn-lib-check",
@@ -97,6 +105,7 @@
     "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-input-layout.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
+    "tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json",
     "apps/fret-ui-gallery/src/driver/render_flow.rs",
     "ecosystem/fret-ui-shadcn/src/popover.rs",
     "ecosystem/fret-ui-shadcn/src/drawer.rs",
@@ -110,6 +119,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane until the discovery report format has at least four components, two viewport classes, and a stable promotion rule for diag scripts, component fixtures, and mechanism harness cases. The M4a shell-sizing fix has passing targeted root-cause unit gates, passing lightweight Drawer/Popover mechanism harness cases, and fresh post-fix UI Gallery responsive combobox reports with zero mismatches."
+    "notes": "Continue this lane until the discovery report format has at least four components, two viewport classes, and a stable promotion rule for diag scripts, component fixtures, and mechanism harness cases. The M4a shell-sizing fix has passing targeted root-cause unit gates, passing lightweight Drawer/Popover mechanism harness cases, and fresh post-fix UI Gallery responsive combobox reports with zero mismatches. M4b adds a runner-level effective viewport predicate/script and report-level upstream_contexts metadata so responsive parity can separate runner drift from component or mechanism geometry."
   }
 }

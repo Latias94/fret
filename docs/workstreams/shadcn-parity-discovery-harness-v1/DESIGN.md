@@ -300,6 +300,21 @@ snapshot would have blurred:
   requested resize height can differ from the effective layout root. The mobile report now includes
   `mobile_effective_viewport` using a `root_metric` predicate, so viewport drift is reported before
   Drawer shell geometry is compared.
+- M4b promotes that issue out of the combobox workaround: diagnostics scripts can now use
+  `window_inner_size_approx_equal` to assert the effective window-local layout viewport directly,
+  and `set_window_inner_size` records the requested size as script evidence. The focused runner
+  contract script lives at
+  `tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json`.
+- The parity mapping schema now has `upstream_contexts[]` for viewport/theme/DPR metadata, and
+  generated reports preserve both declared mapping contexts and actual upstream DOM snapshot
+  contexts.
+- Reports now separate local `owner` from broader `layer` classification. This keeps existing
+  owner buckets stable while making the goal-level buckets explicit: `runner`, `mechanism`,
+  `policy`, `recipe`, `app_demo`, `upstream`, and `unknown`.
+- Crate decision: keep `tools/parity-discovery/` as a tool for this lane. The schema now spans
+  five fixtures and two viewport classes, but the next hard boundary is suite/CI promotion and
+  material-style adapters, not Rust API reuse. Revisit a crate only when another design-system
+  adapter needs the same parser/generator from Rust code.
 
 The landed code changes are intentionally layer-local:
 

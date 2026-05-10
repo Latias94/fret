@@ -32,6 +32,16 @@ OWNER_ORDER = [
     "unknown",
 ]
 SUPPORTED_OWNER_KINDS = set(OWNER_ORDER)
+LAYER_ORDER = [
+    "runner",
+    "mechanism",
+    "policy",
+    "recipe",
+    "app_demo",
+    "upstream",
+    "unknown",
+]
+SUPPORTED_LAYER_KINDS = set(LAYER_ORDER)
 SUPPORTED_PROMOTION_TARGETS = {
     "diag_script",
     "component_fixture",
@@ -68,6 +78,14 @@ OWNER_BY_PROMOTION_TARGET = {
     "component_fixture": "gallery_composition",
     "mechanism_harness": "mechanism_core",
     "none": "unknown",
+}
+LAYER_BY_OWNER = {
+    "component_recipe": "recipe",
+    "gallery_composition": "app_demo",
+    "mechanism_core": "mechanism",
+    "diagnostics_surface": "runner",
+    "upstream_reference": "upstream",
+    "unknown": "unknown",
 }
 
 
@@ -190,10 +208,11 @@ class LayoutEvidence:
 class DomEvidence:
     nodes_by_target_id: dict[str, DomNode]
     snapshot_paths: list[str]
+    contexts: list[dict[str, Any]]
 
     @classmethod
     def empty(cls) -> "DomEvidence":
-        return cls(nodes_by_target_id={}, snapshot_paths=[])
+        return cls(nodes_by_target_id={}, snapshot_paths=[], contexts=[])
 
     def find(self, target_id: str) -> DomNode | None:
         return self.nodes_by_target_id.get(target_id)
@@ -297,6 +316,43 @@ def _resolve_owner(check: dict[str, Any]) -> str:
     return OWNER_BY_PROMOTION_TARGET.get(target, "unknown")
 
 
+def _resolve_layer(check: dict[str, Any], owner: str) -> str:
+    layer = check.get("layer")
+    if layer is not None:
+        layer = _require_str(layer, "$.parts[].checks[].layer")
+        if layer not in SUPPORTED_LAYER_KINDS:
+            raise FixtureError(f"$.parts[].checks[].layer has unsupported value {layer!r}")
+        return layer
+    return LAYER_BY_OWNER.get(owner, "unknown")
+
+
+def _validate_upstream_contexts(mapping: dict[str, Any]) -> None:
+    raw_contexts = mapping.get("upstream_contexts", [])
+    contexts = [
+        _require_object(item, f"$.upstream_contexts[{index}]")
+        for index, item in enumerate(
+            _require_list(raw_contexts, "$.upstream_contexts")
+        )
+    ]
+    _require_unique_ids(contexts, "$.upstream_contexts")
+    for index, context in enumerate(contexts):
+        context_path = f"$.upstream_contexts[{index}]"
+        _require_str(context.get("snapshot"), f"{context_path}.snapshot")
+        _require_str(context.get("theme"), f"{context_path}.theme")
+        mode = context.get("mode")
+        if mode is not None:
+            _require_str(mode, f"{context_path}.mode")
+        variant = context.get("variant")
+        if variant is not None:
+            _require_str(variant, f"{context_path}.variant")
+        viewport = _require_object(context.get("viewport"), f"{context_path}.viewport")
+        _require_float(viewport.get("width_px"), f"{context_path}.viewport.width_px")
+        _require_float(viewport.get("height_px"), f"{context_path}.viewport.height_px")
+        device_pixel_ratio = context.get("device_pixel_ratio")
+        if device_pixel_ratio is not None:
+            _require_float(device_pixel_ratio, f"{context_path}.device_pixel_ratio")
+
+
 def load_mapping(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -311,6 +367,7 @@ def load_mapping(path: Path) -> dict[str, Any]:
 
     _require_str(mapping.get("component"), "$.component")
     _require_str(mapping.get("style"), "$.style")
+    _validate_upstream_contexts(mapping)
 
     report = _require_object(mapping.get("report"), "$.report")
     if report.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
@@ -406,6 +463,10 @@ def load_mapping(path: Path) -> dict[str, Any]:
                 owner = _require_str(check.get("owner"), f"{check_path}.owner")
                 if owner not in SUPPORTED_OWNER_KINDS:
                     raise FixtureError(f"{check_path}.owner has unsupported value {owner!r}")
+            if "layer" in check:
+                layer = _require_str(check.get("layer"), f"{check_path}.layer")
+                if layer not in SUPPORTED_LAYER_KINDS:
+                    raise FixtureError(f"{check_path}.layer has unsupported value {layer!r}")
             _validate_predicates(check, check_path)
             _validate_upstream_predicates(check, check_path)
 
@@ -532,6 +593,35 @@ def _snapshot_dom_nodes(theme_data: dict[str, Any]) -> dict[str, dict[str, Any]]
     return nodes
 
 
+def _dom_context_from_snapshot(
+    snapshot_path: str,
+    snapshot_name: str,
+    theme: str,
+    snapshot_mode: str,
+    snapshot_variant: str,
+    theme_data: dict[str, Any],
+) -> dict[str, Any]:
+    raw_viewport = theme_data.get("viewport")
+    viewport: dict[str, Any] = {}
+    if isinstance(raw_viewport, dict):
+        width = raw_viewport.get("w")
+        height = raw_viewport.get("h")
+        if isinstance(width, int | float):
+            viewport["width_px"] = width
+        if isinstance(height, int | float):
+            viewport["height_px"] = height
+
+    return {
+        "snapshot": snapshot_name,
+        "theme": theme,
+        "mode": snapshot_mode,
+        "variant": snapshot_variant,
+        "viewport": viewport,
+        "device_pixel_ratio": float(theme_data.get("devicePixelRatio") or 1.0),
+        "snapshot_path": snapshot_path,
+    }
+
+
 def load_dom_evidence(
     paths: list[Path], targets: list[dict[str, Any]]
 ) -> DomEvidence:
@@ -575,6 +665,16 @@ def load_dom_evidence(
             )
             if not wanted_targets:
                 continue
+            evidence.contexts.append(
+                _dom_context_from_snapshot(
+                    snapshot_path,
+                    snapshot_name,
+                    theme,
+                    snapshot_mode,
+                    snapshot_variant,
+                    raw_theme_data,
+                )
+            )
             nodes_by_path = _snapshot_dom_nodes(raw_theme_data)
             device_pixel_ratio = float(raw_theme_data.get("devicePixelRatio") or 1.0)
             for target in wanted_targets:
@@ -1015,6 +1115,10 @@ def generate_report(
     owner_status_counts: dict[str, dict[str, int]] = {
         owner: {status: 0 for status in STATUS_ORDER} for owner in OWNER_ORDER
     }
+    layer_counts: dict[str, int] = {layer: 0 for layer in LAYER_ORDER}
+    layer_status_counts: dict[str, dict[str, int]] = {
+        layer: {status: 0 for status in STATUS_ORDER} for layer in LAYER_ORDER
+    }
     promotion_counts: dict[str, int] = {
         "diag_script": 0,
         "component_fixture": 0,
@@ -1033,12 +1137,17 @@ def generate_report(
             )
             status = check_status(check, measurement)
             owner = _resolve_owner(check)
+            layer = _resolve_layer(check, owner)
             check_statuses.append(status)
             target = check["promotion"]["target"]
             promotion_counts[target] += 1
             owner_counts[owner] = owner_counts.get(owner, 0) + 1
             owner_status_counts.setdefault(
                 owner, {status_name: 0 for status_name in STATUS_ORDER}
+            )[status] += 1
+            layer_counts[layer] = layer_counts.get(layer, 0) + 1
+            layer_status_counts.setdefault(
+                layer, {status_name: 0 for status_name in STATUS_ORDER}
             )[status] += 1
             report_check = {
                 "id": check["id"],
@@ -1049,6 +1158,7 @@ def generate_report(
                 "observed_source": measurement["source"] if measurement else "fixture",
                 "confidence": check["confidence"],
                 "owner": owner,
+                "layer": layer,
                 "evidence_refs": check["evidence_refs"],
                 "promotion": check["promotion"],
             }
@@ -1079,17 +1189,25 @@ def generate_report(
         "generated_date": mapping["report"]["generated_date"],
         "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
         "source_mapping": str(mapping_path).replace("\\", "/"),
-            "summary": {
-                "part_count": len(report_parts),
-                "status_counts": status_counts,
-                "owner_counts": owner_counts,
-                "owner_status_counts": owner_status_counts,
-                "promotion_target_counts": promotion_counts,
-                "layout_sidecar_count": len(layout_evidence.sidecar_paths),
-                "measured_test_id_count": len(layout_evidence.nodes_by_test_id),
-                "upstream_dom_snapshot_count": len(dom_evidence.snapshot_paths),
-                "upstream_dom_target_count": len(dom_evidence.nodes_by_target_id),
-            },
+        "upstream_contexts": mapping.get("upstream_contexts", []),
+        "evidence_contexts": {
+            "upstream_dom": dom_evidence.contexts,
+        },
+        "summary": {
+            "part_count": len(report_parts),
+            "status_counts": status_counts,
+            "owner_counts": owner_counts,
+            "owner_status_counts": owner_status_counts,
+            "layer_counts": layer_counts,
+            "layer_status_counts": layer_status_counts,
+            "promotion_target_counts": promotion_counts,
+            "layout_sidecar_count": len(layout_evidence.sidecar_paths),
+            "measured_test_id_count": len(layout_evidence.nodes_by_test_id),
+            "upstream_dom_snapshot_count": len(dom_evidence.snapshot_paths),
+            "upstream_dom_target_count": len(dom_evidence.nodes_by_target_id),
+            "upstream_context_count": len(mapping.get("upstream_contexts", [])),
+            "upstream_dom_context_count": len(dom_evidence.contexts),
+        },
         "parts": report_parts,
         "limitations": mapping["report"]["limitations"],
     }

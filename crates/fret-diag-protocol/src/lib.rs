@@ -2184,6 +2184,17 @@ pub enum UiPredicateV1 {
     /// This is intended to gate “AccessKit ↔ OS AX is actually live” rather than only asserting
     /// that the app has an internal semantics tree.
     RunnerAccessibilityActivated,
+    /// True when the effective window-local layout viewport matches the requested size.
+    ///
+    /// This reads the diagnostics runtime's current window bounds rather than a child semantics
+    /// node. Use it after `set_window_inner_size` in responsive scripts so runner/window-manager
+    /// resize drift is reported before component geometry is compared.
+    WindowInnerSizeApproxEqual {
+        width_px: f32,
+        height_px: f32,
+        #[serde(default)]
+        eps_px: f32,
+    },
     VisibleInWindow {
         target: UiSelectorV1,
     },

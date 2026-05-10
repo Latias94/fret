@@ -74,6 +74,8 @@ Required top-level fields:
 - `style`: upstream style id.
 - `report`: deterministic report metadata.
 - `source_refs`: upstream and Fret anchors.
+- `upstream_contexts`: optional explicit upstream measurement contexts. Each context records the
+  snapshot id, theme, optional mode/variant, viewport dimensions, and optional device-pixel ratio.
 - `upstream_dom_targets`: optional DOM snapshot target ids used by `upstream_predicates`.
 - `parts`: stable part mappings.
 
@@ -96,6 +98,8 @@ Required check fields:
 - `evidence_refs`
 - `promotion`
 - `owner` (optional, but recommended for new parity-discovery rows)
+- `layer` (optional; inferred from owner when omitted). Supported values are `runner`,
+  `mechanism`, `policy`, `recipe`, `app_demo`, `upstream`, and `unknown`.
 - `predicates` when the check is measured from Fret sidecars.
 - `upstream_predicates` when the check is measured from upstream shadcn DOM snapshots.
 
@@ -126,12 +130,15 @@ The generated report contains:
 - `generated_date`
 - `generated_by`
 - `source_mapping`
+- `upstream_contexts`
+- `evidence_contexts`
 - `summary`
 - `parts`
 - `limitations`
 
-Report summaries also include `owner_counts` and `owner_status_counts` so mismatches can be
-grouped by the layer most likely to own the fix.
+Report summaries also include `owner_counts`, `owner_status_counts`, `layer_counts`, and
+`layer_status_counts` so mismatches can be grouped by both local owner taxonomy and the broader
+runner/mechanism/policy/recipe/app-demo layers.
 
 Report statuses:
 

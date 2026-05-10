@@ -119,6 +119,16 @@ pub(super) fn handle_assert_step(
             let ok = match cache_eval.ok {
                 Some(ok) => ok,
                 None => match &predicate {
+                    UiPredicateV1::WindowInnerSizeApproxEqual {
+                        width_px,
+                        height_px,
+                        eps_px,
+                    } => window_inner_size_approx_equal(
+                        window_bounds,
+                        *width_px,
+                        *height_px,
+                        *eps_px,
+                    ),
                     UiPredicateV1::EventKindSeen { event_kind } => svc
                         .per_window
                         .get(&predicate_window)

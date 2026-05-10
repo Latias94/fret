@@ -92,6 +92,20 @@ fn compare_px_delta(have: f32, comparison: UiComparisonV1, want: f32, eps: f32) 
     }
 }
 
+fn window_inner_size_approx_equal(
+    window_bounds: Rect,
+    width_px: f32,
+    height_px: f32,
+    eps_px: f32,
+) -> bool {
+    let eps = eps_px.max(0.0);
+    width_px.is_finite()
+        && height_px.is_finite()
+        && eps.is_finite()
+        && (window_bounds.size.width.0 - width_px).abs() <= eps
+        && (window_bounds.size.height.0 - height_px).abs() <= eps
+}
+
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
@@ -179,12 +193,12 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::DockDragActiveIs { active } => {
             Some(dock_drag_runtime.is_some_and(|drag| drag.dragging) == *active)
         }
-        UiPredicateV1::DockDragPayloadGhostVisibleIs { visible } => Some(
-            match docking.and_then(|d| d.dock_drag) {
+        UiPredicateV1::DockDragPayloadGhostVisibleIs { visible } => {
+            Some(match docking.and_then(|d| d.dock_drag) {
                 Some(drag) => (drag.dragging && drag.payload_ghost_visible) == *visible,
                 None => !*visible,
-            },
-        ),
+            })
+        }
         UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => Some(
             dock_drag_runtime
                 .is_some_and(|drag| drag.dragging && drag.transparent_payload_applied == *applied)
@@ -1005,6 +1019,11 @@ fn eval_predicate(
         | UiPredicateV1::AssetReloadActiveBackendIs { .. }
         | UiPredicateV1::AssetReloadFallbackReasonIs { .. } => false,
         UiPredicateV1::RunnerAccessibilityActivated => false,
+        UiPredicateV1::WindowInnerSizeApproxEqual {
+            width_px,
+            height_px,
+            eps_px,
+        } => window_inner_size_approx_equal(window_bounds, *width_px, *height_px, *eps_px),
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_node(target) else {
                 return false;

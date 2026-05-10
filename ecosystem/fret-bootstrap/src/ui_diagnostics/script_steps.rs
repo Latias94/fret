@@ -104,6 +104,26 @@ pub(super) fn handle_window_effect_steps(
                         window: target_window,
                         size,
                     }));
+                push_script_event_log(
+                    active,
+                    &svc.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "window_inner_size.requested".to_string(),
+                        step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                        note: Some(format!(
+                            "target_window={} requested={}x{}",
+                            target_window.data().as_ffi(),
+                            width_px,
+                            height_px
+                        )),
+                        bundle_dir: None,
+                        window: Some(target_window.data().as_ffi()),
+                        tick_id: None,
+                        frame_id: None,
+                        window_snapshot_seq: None,
+                    },
+                );
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);

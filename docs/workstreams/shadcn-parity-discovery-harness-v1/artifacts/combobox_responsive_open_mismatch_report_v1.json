@@ -5,6 +5,35 @@
   "generated_date": "2026-05-10",
   "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
   "source_mapping": "tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.combobox_responsive.light.open.vp1440x900",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "combobox-responsive",
+        "theme": "light",
+        "mode": "open",
+        "variant": "",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+      }
+    ]
+  },
   "summary": {
     "part_count": 4,
     "status_counts": {
@@ -59,6 +88,59 @@
         "blocked": 0
       }
     },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
     "promotion_target_counts": {
       "diag_script": 0,
       "component_fixture": 3,
@@ -68,7 +150,9 @@
     "layout_sidecar_count": 1,
     "measured_test_id_count": 183,
     "upstream_dom_snapshot_count": 1,
-    "upstream_dom_target_count": 4
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
   },
   "parts": [
     {
@@ -98,6 +182,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "component_recipe",
+          "layer": "recipe",
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
             "apps/fret-ui-gallery/src/ui/snippets/combobox/responsive.rs",
@@ -312,6 +397,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "mechanism_core",
+          "layer": "mechanism",
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
@@ -524,6 +610,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "component_recipe",
+          "layer": "recipe",
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
             "ecosystem/fret-ui-shadcn/src/command.rs",
@@ -746,6 +833,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "component_recipe",
+          "layer": "recipe",
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
             "ecosystem/fret-ui-shadcn/src/command.rs",

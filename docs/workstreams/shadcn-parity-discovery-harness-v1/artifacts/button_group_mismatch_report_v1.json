@@ -5,6 +5,56 @@
   "generated_date": "2026-05-09",
   "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
   "source_mapping": "tools/parity-discovery/fixtures/button_group_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.button_group.input_demo.light.vp1440x900",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.button_group.select_demo.light.vp1440x900",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "button-group-input",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json"
+      },
+      {
+        "snapshot": "button-group-select",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+      }
+    ]
+  },
   "summary": {
     "part_count": 7,
     "status_counts": {
@@ -59,6 +109,59 @@
         "blocked": 0
       }
     },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 4,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
     "promotion_target_counts": {
       "diag_script": 2,
       "component_fixture": 6,
@@ -67,8 +170,10 @@
     },
     "layout_sidecar_count": 4,
     "measured_test_id_count": 321,
-    "upstream_dom_snapshot_count": 3,
-    "upstream_dom_target_count": 4
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2
   },
   "parts": [
     {
@@ -103,6 +208,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "medium",
           "owner": "mechanism_core",
+          "layer": "mechanism",
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
             "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
@@ -387,6 +493,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "gallery_composition",
+          "layer": "app_demo",
           "evidence_refs": [
             "apps/fret-ui-gallery/src/driver/render_flow.rs",
             "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
@@ -501,6 +608,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "component_recipe",
+          "layer": "recipe",
           "evidence_refs": [
             "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
             "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
@@ -588,8 +696,7 @@
               "status": "pass",
               "snapshot_paths": [
                 "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
-                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
-                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
               ],
               "predicate_count": 2,
               "predicates": [
@@ -612,6 +719,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
                   "snapshot_name": "button-group-select",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -645,6 +754,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
                   "snapshot_name": "button-group-select",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -690,6 +801,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "gallery_composition",
+          "layer": "app_demo",
           "evidence_refs": [
             "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
             "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
@@ -777,8 +889,7 @@
               "status": "pass",
               "snapshot_paths": [
                 "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
-                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
-                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
               ],
               "predicate_count": 2,
               "predicates": [
@@ -801,6 +912,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
                   "snapshot_name": "button-group-select",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -829,6 +942,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
                   "snapshot_name": "button-group-select",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -869,6 +984,7 @@
           "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
           "confidence": "high",
           "owner": "component_recipe",
+          "layer": "recipe",
           "evidence_refs": [
             "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
             "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
@@ -956,8 +1072,7 @@
               "status": "pass",
               "snapshot_paths": [
                 "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
-                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
-                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
               ],
               "predicate_count": 2,
               "predicates": [
@@ -980,6 +1095,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
                   "snapshot_name": "button-group-select",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -1010,6 +1127,8 @@
                   "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
                   "snapshot_name": "button-group-select",
                   "theme": "light",
+                  "mode": "",
+                  "variant": "",
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -1074,6 +1193,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "diagnostics_surface",
+          "layer": "runner",
           "evidence_refs": [
             "apps/fret-ui-gallery/src/driver/render_flow.rs",
             "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
@@ -1186,6 +1306,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "gallery_composition",
+          "layer": "app_demo",
           "evidence_refs": [
             "apps/fret-ui-gallery/src/driver/render_flow.rs",
             "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
@@ -1314,6 +1435,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "diagnostics_surface",
+          "layer": "runner",
           "evidence_refs": [
             "apps/fret-ui-gallery/src/driver/render_flow.rs",
             "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
@@ -1424,6 +1546,7 @@
           "observed_source": "fret_layout_sidecar",
           "confidence": "high",
           "owner": "gallery_composition",
+          "layer": "app_demo",
           "evidence_refs": [
             "apps/fret-ui-gallery/src/driver/render_flow.rs",
             "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",

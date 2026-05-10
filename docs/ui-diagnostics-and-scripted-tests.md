@@ -1001,7 +1001,9 @@ Supported selectors (v1 MVP):
 - `assert_clipboard_write_result` (schema v2 only; asserts the cached or next clipboard write completion matches `outcome`, optional `error_kind`, and optional `message_contains`)
 - `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
 - `inspect_help_lock_best_match_and_copy_selector` (schema v2 only; in-app inspector helper: open help, search for `query`, lock the best match, and copy the best selector JSON to the clipboard; intended to avoid relying on shortcut injection in `--launch` runs)
-- `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_inner_size` (schema v2 only; optional `window` target; pair responsive gates with
+  `window_inner_size_approx_equal` so requested/effective viewport drift is caught before component
+  geometry assertions)
 - `set_window_style` (schema v2 only; optional `window` target; best-effort OS window style patch; capability-gated behind `diag.window_style_patch_v1`; desktop-only as of 2026-03-04; supported patch fields: `z_level`, `background_material`, `hit_test`, `opacity_alpha_u8`)
 - `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
@@ -1117,7 +1119,9 @@ Supported intent steps (v2):
 - `inspect_help_lock_best_match_and_copy_selector` (open inspector help, search for `query`, lock the best match, and copy the best selector JSON; optional `window` target)
 - `drag_to` (drag between two semantics targets; optional `window` target)
 - `set_slider_value` (drag a slider to a desired value; optional `window` target; requires a parseable semantics `value`)
-- `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
+- `set_window_inner_size` (emit `WindowRequest::SetInnerSize`; records a
+  `window_inner_size.requested` script event and should be followed by
+  `window_inner_size_approx_equal` when a responsive script depends on the effective viewport)
 - `set_window_style` (emit `WindowRequest::SetStyle`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
@@ -1262,6 +1266,7 @@ Predicates (v1 MVP):
 - `{"kind":"set_size_is","target":<selector>,"set_size":10}`
 - `{"kind":"checked_is","target":<selector>,"checked":true}`
 - `{"kind":"selected_is","target":<selector>,"selected":true}`
+- `{"kind":"window_inner_size_approx_equal","width_px":375,"height_px":240,"eps_px":1}` (effective window-local layout viewport must match; use after `set_window_inner_size` before responsive component assertions)
 - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 - `{"kind":"text_input_ime_cursor_area_within_window","padding_px":0,"eps_px":0}` (focused text input's IME cursor area must be fully contained within the window, optionally padded inward; intended for keyboard-avoidance / caret-visibility gates; requires `diag.text_input_snapshot`)

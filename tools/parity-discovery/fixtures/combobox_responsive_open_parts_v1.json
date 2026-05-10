@@ -66,6 +66,19 @@
       }
     ]
   },
+  "upstream_contexts": [
+    {
+      "id": "upstream.combobox_responsive.light.open.vp1440x900",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
   "upstream_dom_targets": [
     {
       "id": "upstream.combobox_responsive.desktop.trigger",

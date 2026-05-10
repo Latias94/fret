@@ -70,6 +70,28 @@
       }
     ]
   },
+  "upstream_contexts": [
+    {
+      "id": "upstream.button_group.input_demo.light.vp1440x900",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.button_group.select_demo.light.vp1440x900",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
   "upstream_dom_targets": [
     {
       "id": "upstream.button_group.input_demo.search_button",

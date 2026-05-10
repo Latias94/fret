@@ -58,6 +58,18 @@
       }
     ]
   },
+  "upstream_contexts": [
+    {
+      "id": "upstream.input.demo.light.vp1440x900",
+      "snapshot": "input-demo",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
   "upstream_dom_targets": [
     {
       "id": "upstream.input.demo.control",

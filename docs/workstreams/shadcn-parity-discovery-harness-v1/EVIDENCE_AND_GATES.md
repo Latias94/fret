@@ -181,6 +181,42 @@ geometry. The native Windows runner currently needs a `375x220` resize request t
 effective `375x240` layout root used by the upstream mobile DOM golden; the mobile fixture gates
 that root first with `mobile_effective_viewport`.
 
+M4b runner viewport-contract follow-up:
+
+- Protocol/mechanism:
+  `UiPredicateV1::WindowInnerSizeApproxEqual` gates the diagnostics runtime's effective
+  window-local layout viewport directly, before any component `test_id` geometry is evaluated.
+- Discovery schema:
+  mapping fixtures now support `upstream_contexts[]` so report artifacts carry the upstream
+  snapshot theme, mode/variant, viewport dimensions, and device-pixel ratio at the report top level
+  instead of burying them inside individual predicate measurements.
+- Discovery finding:
+  regenerating reports with explicit contexts exposed a Dropdown Menu target-context drift: the
+  target matched `dropdown-menu-demo` but omitted `mode=open` / `variant=submenu`, which made the
+  upstream DOM evidence addressable only by accident in stale artifacts. The fixture now pins the
+  same context on both `upstream_contexts[]` and `upstream_dom_targets[]`.
+- Source-only cleanup:
+  the current fixture corpus no longer has prose-only discovery rows. All five `*_parts_v1.json`
+  fixtures express their checks as `fret_layout_sidecar`, with upstream DOM predicates attached
+  where upstream snapshots are available.
+- Layer taxonomy:
+  generated reports now expose both local `owner` and broader `layer` fields. The layer axis maps
+  findings to `runner`, `mechanism`, `policy`, `recipe`, `app_demo`, `upstream`, or `unknown`, with
+  `layer_counts` / `layer_status_counts` in the report summary.
+- Crate decision:
+  keep `tools/parity-discovery/` as a tool for now. The harness has stable enough report semantics
+  for this workstream, but no current Rust caller needs the parser/generator as a crate API.
+- Script evidence:
+  `tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json`
+  isolates the current Windows native requested/effective contract (`375x220` request =>
+  effective `375x240` viewport).
+- Responsive reuse:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json`
+  now waits on `window_inner_size_approx_equal` before opening the Drawer-backed combobox.
+- Runner attribution:
+  `set_window_inner_size` writes a bounded `window_inner_size.requested` script event so packed
+  diagnostics evidence records the request even when the effective size differs.
+
 Post-fix gates:
 
 ```powershell
@@ -189,6 +225,17 @@ target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/u
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json --dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --session-auto --timeout-ms 900000 --pack --ai-packet --include-screenshots --exit-after-run --launch -- target/debug/fret-ui-gallery.exe
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json
+```
+
+Runner viewport-contract validation:
+
+```powershell
+python -m json.tool tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json > $null
+python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json > $null
+python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py
+$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo test -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_window_inner_size_predicate -- --exact
+$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo test -p fret-bootstrap --lib --features ui-app-driver,diagnostics window_inner_size_predicate_reads_effective_window_bounds -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo test -p fret-ui-gallery --test combobox_diag_surface window_inner_size_contract_diag_script_is_runner_owned -- --exact
 ```
 
 Post-fix report outcomes:

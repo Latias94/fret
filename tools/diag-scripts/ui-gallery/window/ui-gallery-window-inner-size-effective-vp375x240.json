@@ -1,0 +1,42 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-window-inner-size-effective-vp375x240",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "runner", "window", "viewport_contract", "responsive"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-combobox-responsive-docsec"
+    },
+    "target_hints": [
+      "Focuses the native runner requested/effective viewport contract used by constrained shadcn responsive parity runs.",
+      "On the current Windows native runner, requesting 375x220 is expected to produce an effective 375x240 layout viewport.",
+      "The window_inner_size_approx_equal predicate must pass before any component geometry is treated as responsive evidence."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 375.0, "height_px": 220.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 375.0,
+        "height_px": 240.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-window-inner-size-effective-vp375x240.layout" },
+    { "type": "capture_bundle", "label": "ui-gallery-window-inner-size-effective-vp375x240" }
+  ]
+}
