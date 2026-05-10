@@ -102,6 +102,8 @@
     "target/fret-diag/perf-code-editor-autoscroll-baseline-seed/1778370056907/bundle.schema2.json",
     "target/fret-diag/perf-code-editor-paint-telemetry/1778386820783/bundle.schema2.json",
     "target/fret-diag/perf-code-editor-paint-telemetry-syntax-breakdown3/1778389032255/bundle.schema2.json",
+    "target/fret-diag/perf-code-editor-syntax-prefetch/1778392044589/bundle.schema2.json",
+    "target/fret-diag/perf-code-editor-syntax-prefetch-gate/1778392286801/bundle.schema2.json",
     "target/fret-diag/1778370148858/bundle.schema2.json",
     "target/fret-diag-baseline-select-ui-gallery-overlay-pointer-move-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json",
     "target/fret-diag-baseline-select-ui-gallery-overlay-torture-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json",

@@ -1401,6 +1401,154 @@ enum SyntaxRowCacheLookup {
 }
 
 #[cfg(feature = "syntax")]
+const SYNTAX_PREFETCH_CHUNK_ROWS: usize =
+    SYNTAX_CACHE_LOOKBACK_ROWS + SYNTAX_CACHE_LOOKAHEAD_ROWS + 1;
+
+#[cfg(feature = "syntax")]
+const SYNTAX_PREFETCH_AHEAD_ROWS: usize = SYNTAX_PREFETCH_CHUNK_ROWS / 2;
+
+#[cfg(feature = "syntax")]
+fn syntax_prefetch_chunk_for_row(row: usize, line_count: usize) -> Option<(usize, usize)> {
+    if line_count == 0 {
+        return None;
+    }
+
+    let row = row.min(line_count.saturating_sub(1));
+    let chunk_start = (row / SYNTAX_PREFETCH_CHUNK_ROWS) * SYNTAX_PREFETCH_CHUNK_ROWS;
+    let chunk_end = chunk_start
+        .saturating_add(SYNTAX_PREFETCH_CHUNK_ROWS.saturating_sub(1))
+        .min(line_count.saturating_sub(1));
+    Some((chunk_start, chunk_end))
+}
+
+#[cfg(feature = "syntax")]
+fn syntax_row_cache_chunk_is_ready(
+    st: &CodeEditorState,
+    chunk_start: usize,
+    chunk_end: usize,
+) -> bool {
+    (chunk_start..=chunk_end).all(|row| st.syntax_row_cache.contains_key(&row))
+}
+
+#[cfg(feature = "syntax")]
+fn syntax_row_cache_store_rows<I>(
+    st: &mut CodeEditorState,
+    rows: I,
+    max_entries: usize,
+    tick: u64,
+) -> usize
+where
+    I: IntoIterator<Item = (usize, Arc<[SyntaxSpan]>)>,
+{
+    let mut stored_rows = 0usize;
+    for (row, spans) in rows {
+        let spans_len = spans.len() as u64;
+        if let Some((old, _)) = st.syntax_row_cache.insert(row, (Arc::clone(&spans), tick)) {
+            st.syntax_row_cache_spans_len_total = st
+                .syntax_row_cache_spans_len_total
+                .saturating_sub(old.len() as u64);
+        }
+        st.syntax_row_cache_spans_len_total = st
+            .syntax_row_cache_spans_len_total
+            .saturating_add(spans_len);
+        st.syntax_row_cache_queue.push_back((row, tick));
+        stored_rows = stored_rows.saturating_add(1);
+
+        while st.syntax_row_cache.len() > max_entries {
+            let Some((victim, victim_tick)) = st.syntax_row_cache_queue.pop_front() else {
+                break;
+            };
+            let remove = st
+                .syntax_row_cache
+                .get(&victim)
+                .is_some_and(|(_, last_used)| *last_used == victim_tick);
+            if remove {
+                if let Some((old, _)) = st.syntax_row_cache.remove(&victim) {
+                    st.syntax_row_cache_spans_len_total = st
+                        .syntax_row_cache_spans_len_total
+                        .saturating_sub(old.len() as u64);
+                }
+                st.cache_stats.syntax_evictions = st.cache_stats.syntax_evictions.saturating_add(1);
+            }
+        }
+    }
+
+    stored_rows
+}
+
+#[cfg(feature = "syntax")]
+fn syntax_rows_from_highlight_spans(
+    start_byte: usize,
+    row_start: usize,
+    row_ranges: &[Range<usize>],
+    spans: Vec<fret_syntax::HighlightSpan>,
+) -> Arc<[(usize, Arc<[SyntaxSpan]>)]> {
+    let mut per_row = vec![Vec::<SyntaxSpan>::new(); row_ranges.len()];
+
+    for span in spans {
+        let Some(highlight) = span.highlight else {
+            continue;
+        };
+
+        let global_start = start_byte.saturating_add(span.range.start);
+        let global_end = start_byte.saturating_add(span.range.end);
+        if global_start >= global_end {
+            continue;
+        }
+
+        let mut row_idx = row_ranges
+            .iter()
+            .position(|row_range| row_range.end > global_start)
+            .unwrap_or(row_ranges.len());
+        while row_idx < row_ranges.len() {
+            let row_range = &row_ranges[row_idx];
+            if row_range.start >= global_end {
+                break;
+            }
+
+            let inter_start = global_start.max(row_range.start);
+            let inter_end = global_end.min(row_range.end);
+            if inter_start < inter_end {
+                per_row[row_idx].push(SyntaxSpan {
+                    range: (inter_start - row_range.start)..(inter_end - row_range.start),
+                    highlight,
+                });
+            }
+
+            row_idx = row_idx.saturating_add(1);
+        }
+    }
+
+    let mut rows = Vec::with_capacity(row_ranges.len());
+    for (idx, mut spans) in per_row.into_iter().enumerate() {
+        spans.sort_by(|a, b| {
+            a.range
+                .start
+                .cmp(&b.range.start)
+                .then(a.range.end.cmp(&b.range.end))
+                .then(a.highlight.cmp(&b.highlight))
+        });
+        spans.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+
+        let mut merged: Vec<SyntaxSpan> = Vec::new();
+        for span in spans {
+            if let Some(last) = merged.last_mut()
+                && last.highlight == span.highlight
+                && last.range.end == span.range.start
+            {
+                last.range.end = span.range.end;
+                continue;
+            }
+            merged.push(span);
+        }
+
+        rows.push((row_start + idx, Arc::from(merged)));
+    }
+
+    Arc::from(rows)
+}
+
+#[cfg(feature = "syntax")]
 fn ensure_syntax_row_cache_fresh(st: &mut CodeEditorState) {
     let rev = st.buffer.revision();
     if st.syntax_row_cache_rev != rev || st.syntax_row_cache_language != st.language {
@@ -1420,6 +1568,9 @@ fn ensure_syntax_row_cache_fresh(st: &mut CodeEditorState) {
         st.row_rich_cache_rich_spans_len_total = 0;
         st.invalidate_row_scene_cache();
         st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
+        if let Some(runtime) = st.syntax_prefetch_runtime.as_ref() {
+            runtime.clear();
+        }
     }
 }
 
@@ -1456,6 +1607,12 @@ fn populate_row_syntax_spans_after_miss(
 
     let line_count = st.buffer.line_count();
     if line_count == 0 {
+        return Arc::<[SyntaxSpan]>::from([]);
+    }
+
+    if st.syntax_prefetch_runtime.is_some() {
+        let _ = tick;
+        let _ = language;
         return Arc::<[SyntaxSpan]>::from([]);
     }
 
@@ -2287,9 +2444,7 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
     }
 
     let highlight_started = st.paint_perf_enabled.then(Instant::now);
-    let Ok(spans) = fret_syntax::highlight(slice.as_str(), language) else {
-        return;
-    };
+    let spans = fret_syntax::highlight(slice.as_str(), language).unwrap_or_default();
     if let Some(started) = highlight_started {
         st.paint_perf_frame.us_syntax_highlight = st
             .paint_perf_frame
@@ -2303,39 +2458,7 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
         row_ranges.push(st.buffer.line_byte_range(row).unwrap_or(0..0));
     }
 
-    let mut per_row = vec![Vec::<SyntaxSpan>::new(); row_ranges.len()];
-    for span in spans {
-        let Some(highlight) = span.highlight else {
-            continue;
-        };
-
-        let global_start = start_byte.saturating_add(span.range.start);
-        let global_end = start_byte.saturating_add(span.range.end);
-        if global_start >= global_end {
-            continue;
-        }
-
-        let global_end_for_row = global_end.saturating_sub(1);
-        let start_row = st.buffer.line_index_at_byte(global_start);
-        let end_row = st.buffer.line_index_at_byte(global_end_for_row);
-
-        for row in start_row..=end_row {
-            if row < chunk_start || row > chunk_end {
-                continue;
-            }
-            let row_idx = row - chunk_start;
-            let row_range = &row_ranges[row_idx];
-            let inter_start = global_start.max(row_range.start);
-            let inter_end = global_end.min(row_range.end);
-            if inter_start >= inter_end {
-                continue;
-            }
-            per_row[row_idx].push(SyntaxSpan {
-                range: (inter_start - row_range.start)..(inter_end - row_range.start),
-                highlight,
-            });
-        }
-    }
+    let rows = syntax_rows_from_highlight_spans(start_byte, chunk_start, &row_ranges, spans);
     if let Some(started) = distribute_started {
         st.paint_perf_frame.us_syntax_distribute = st
             .paint_perf_frame
@@ -2344,64 +2467,176 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
     }
 
     let store_started = st.paint_perf_enabled.then(Instant::now);
-    for (i, spans) in per_row.into_iter().enumerate() {
-        let row = chunk_start + i;
-
-        let mut spans = spans;
-        spans.sort_by_key(|s| s.range.start);
-        spans.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
-
-        let mut merged: Vec<SyntaxSpan> = Vec::new();
-        for span in spans {
-            if let Some(last) = merged.last_mut()
-                && last.highlight == span.highlight
-                && last.range.end == span.range.start
-            {
-                last.range.end = span.range.end;
-                continue;
-            }
-            merged.push(span);
-        }
-
-        let spans: Arc<[SyntaxSpan]> = Arc::from(merged);
-        let spans_len = spans.len() as u64;
-        if let Some((old, _)) = st.syntax_row_cache.insert(row, (Arc::clone(&spans), tick)) {
-            st.syntax_row_cache_spans_len_total = st
-                .syntax_row_cache_spans_len_total
-                .saturating_sub(old.len() as u64);
-        }
-        st.syntax_row_cache_spans_len_total = st
-            .syntax_row_cache_spans_len_total
-            .saturating_add(spans_len);
-        st.syntax_row_cache_queue.push_back((row, tick));
-
-        while st.syntax_row_cache.len() > max_entries {
-            let Some((victim, victim_tick)) = st.syntax_row_cache_queue.pop_front() else {
-                break;
-            };
-            let remove = st
-                .syntax_row_cache
-                .get(&victim)
-                .is_some_and(|(_, last_used)| *last_used == victim_tick);
-            if remove {
-                if let Some((old, _)) = st.syntax_row_cache.remove(&victim) {
-                    st.syntax_row_cache_spans_len_total = st
-                        .syntax_row_cache_spans_len_total
-                        .saturating_sub(old.len() as u64);
-                }
-                st.cache_stats.syntax_evictions = st.cache_stats.syntax_evictions.saturating_add(1);
-            }
-        }
-    }
+    let stored_rows = syntax_row_cache_store_rows(st, rows.iter().cloned(), max_entries, tick);
     st.paint_perf_frame.syntax_rows_stored = st
         .paint_perf_frame
         .syntax_rows_stored
-        .saturating_add(row_ranges.len() as u64);
+        .saturating_add(stored_rows as u64);
     if let Some(started) = store_started {
         st.paint_perf_frame.us_syntax_store = st
             .paint_perf_frame
             .us_syntax_store
             .saturating_add(started.elapsed().as_micros() as u64);
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn drain_syntax_prefetch_ready(st: &mut CodeEditorState, max_entries: usize) {
+    let Some(runtime) = st.syntax_prefetch_runtime.as_ref().cloned() else {
+        return;
+    };
+
+    let mut drained = runtime.drain_ready();
+    if drained.is_empty() {
+        return;
+    }
+
+    ensure_syntax_row_cache_fresh(st);
+    let Some(language) = st.language.as_ref().cloned() else {
+        return;
+    };
+    let doc = st.buffer.doc();
+    let rev = st.buffer.revision();
+    let line_count = st.buffer.line_count();
+
+    for chunk in drained.drain(..) {
+        if chunk.key.doc != doc
+            || chunk.key.rev != rev
+            || chunk.key.language.as_ref() != language.as_ref()
+            || chunk.key.chunk_start >= line_count
+            || chunk.key.chunk_end >= line_count
+        {
+            continue;
+        }
+
+        st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);
+        let tick = st.syntax_row_cache_tick;
+        let store_started = st.paint_perf_enabled.then(Instant::now);
+        let stored_rows =
+            syntax_row_cache_store_rows(st, chunk.rows.iter().cloned(), max_entries, tick);
+        if let Some(started) = store_started {
+            st.paint_perf_frame.us_syntax_store = st
+                .paint_perf_frame
+                .us_syntax_store
+                .saturating_add(started.elapsed().as_micros() as u64);
+        }
+        st.paint_perf_frame.syntax_rows_stored = st
+            .paint_perf_frame
+            .syntax_rows_stored
+            .saturating_add(stored_rows as u64);
+    }
+}
+
+#[cfg(feature = "syntax")]
+pub(super) fn schedule_syntax_prefetch_for_frame(
+    st: &mut CodeEditorState,
+    frame: WindowedRowsPaintFrame,
+    max_entries: usize,
+    window: fret_core::AppWindowId,
+) {
+    drain_syntax_prefetch_ready(st, max_entries);
+
+    let Some(runtime) = st.syntax_prefetch_runtime.as_ref().cloned() else {
+        return;
+    };
+    let Some(language) = st.language.as_ref().cloned() else {
+        return;
+    };
+
+    ensure_syntax_row_cache_fresh(st);
+
+    let line_count = st.buffer.line_count();
+    if line_count == 0 {
+        return;
+    }
+
+    let visible_start = frame.visible_start.min(line_count.saturating_sub(1));
+    let visible_end = frame.visible_end.min(line_count.saturating_sub(1));
+    let direction = runtime.note_visible_start(visible_start);
+    let mut candidate_rows = vec![visible_start, visible_end];
+    let lookahead_row = if direction < 0 {
+        visible_start.saturating_sub(SYNTAX_PREFETCH_AHEAD_ROWS)
+    } else {
+        visible_end
+            .saturating_add(SYNTAX_PREFETCH_AHEAD_ROWS)
+            .min(line_count.saturating_sub(1))
+    };
+    candidate_rows.push(lookahead_row);
+
+    let doc = st.buffer.doc();
+    let rev = st.buffer.revision();
+    let mut seen = std::collections::HashSet::<(usize, usize)>::new();
+
+    for row in candidate_rows {
+        let Some((chunk_start, chunk_end)) = syntax_prefetch_chunk_for_row(row, line_count) else {
+            continue;
+        };
+        if !seen.insert((chunk_start, chunk_end)) {
+            continue;
+        }
+        if syntax_row_cache_chunk_is_ready(st, chunk_start, chunk_end) {
+            continue;
+        }
+
+        let key = SyntaxPrefetchKey {
+            doc,
+            rev,
+            language: language.clone(),
+            chunk_start,
+            chunk_end,
+        };
+        if !runtime.try_mark_pending(key.clone()) {
+            continue;
+        }
+
+        let start_byte = st
+            .buffer
+            .line_start(chunk_start)
+            .unwrap_or(0)
+            .min(st.buffer.len_bytes());
+        let end_byte = if chunk_end.saturating_add(1) < line_count {
+            st.buffer
+                .line_start(chunk_end.saturating_add(1))
+                .unwrap_or(st.buffer.len_bytes())
+                .min(st.buffer.len_bytes())
+        } else {
+            st.buffer.len_bytes()
+        };
+        let row_ranges = (chunk_start..=chunk_end)
+            .map(|row| st.buffer.line_byte_range(row).unwrap_or(0..0))
+            .collect::<Vec<_>>();
+
+        let shared = runtime.shared.clone();
+        let dispatcher = runtime.dispatcher.clone();
+        let wake_dispatcher = dispatcher.clone();
+        let job_language = language.clone();
+        let slice = if start_byte < end_byte {
+            st.buffer
+                .slice_to_string(start_byte..end_byte)
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+
+        dispatcher.dispatch_background(
+            Box::new(move || {
+                let spans = fret_syntax::highlight(slice.as_str(), job_language.as_ref())
+                    .unwrap_or_default();
+                let rows =
+                    syntax_rows_from_highlight_spans(start_byte, chunk_start, &row_ranges, spans);
+                let mut state = shared
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                let _ = state.pending.remove(&key);
+                state.ready.push_back(SyntaxPrefetchChunk { key, rows });
+                while state.ready.len() > 8 {
+                    let _ = state.ready.pop_front();
+                }
+                drop(state);
+                wake_dispatcher.wake(Some(window));
+            }),
+            fret_runtime::DispatchPriority::Low,
+        );
     }
 }
 
@@ -2752,5 +2987,66 @@ mod tests {
         assert_eq!(spans.len(), 2);
         assert_eq!(spans[0].range, zwj_start..zwj_end);
         assert_eq!(spans[1].range, vs16_start..vs16_end);
+    }
+
+    #[test]
+    fn syntax_prefetch_key_distinguishes_documents_with_same_revision() {
+        let language: Arc<str> = Arc::<str>::from("rust");
+        let key_a = SyntaxPrefetchKey {
+            doc: DocId::new(),
+            rev: fret_code_editor_buffer::Revision(0),
+            language: Arc::clone(&language),
+            chunk_start: 0,
+            chunk_end: 127,
+        };
+        let key_b = SyntaxPrefetchKey {
+            doc: DocId::new(),
+            rev: fret_code_editor_buffer::Revision(0),
+            language,
+            chunk_start: 0,
+            chunk_end: 127,
+        };
+
+        assert_ne!(key_a, key_b);
+    }
+
+    #[test]
+    fn syntax_rows_from_highlight_spans_maps_across_rows() {
+        let row_ranges = vec![0..4, 4..8, 8..12];
+        let rows = syntax_rows_from_highlight_spans(
+            0,
+            10,
+            &row_ranges,
+            vec![fret_syntax::HighlightSpan {
+                range: 1..10,
+                highlight: Some("keyword"),
+            }],
+        );
+
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0].0, 10);
+        assert_eq!(rows[1].0, 11);
+        assert_eq!(rows[2].0, 12);
+        assert_eq!(
+            rows[0].1.as_ref(),
+            &[SyntaxSpan {
+                range: 1..4,
+                highlight: "keyword",
+            }]
+        );
+        assert_eq!(
+            rows[1].1.as_ref(),
+            &[SyntaxSpan {
+                range: 0..4,
+                highlight: "keyword",
+            }]
+        );
+        assert_eq!(
+            rows[2].1.as_ref(),
+            &[SyntaxSpan {
+                range: 0..2,
+                highlight: "keyword",
+            }]
+        );
     }
 }

@@ -154,6 +154,44 @@ Syntax miss breakdown (2026-05-10):
   cache store, text draw, or row-scene replay. The next optimization should move syntax filling off the paint critical
   path or prefetch it ahead of the viewport; shrinking cache store/distribution is not the first-order fix.
 
+Syntax prefetch off paint path (2026-05-10):
+
+- Change: `fret-code-editor` now keeps syntax highlight chunks keyed by document id, buffer revision, language, and
+  aligned row chunk, then fills those chunks on the dispatcher background lane when platform capabilities advertise both
+  background work and wake support. The UI thread drains completed chunks at the windowed-row paint boundary and only
+  stores row spans in the editor cache. Stale background results are dropped by doc/revision/language key, and
+  buffer/language invalidation clears pending/ready prefetch state. Platforms without the required execution capability
+  keep the synchronous fallback path.
+- Implementation anchors:
+  - `ecosystem/fret-code-editor/src/editor/mod.rs` (`SyntaxPrefetchRuntime`, doc-aware key, runtime cleanup)
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`schedule_syntax_prefetch_for_frame`,
+    `syntax_rows_from_highlight_spans`, shared row-cache store path)
+- Verification:
+  - `cargo check -p fret-code-editor --features syntax`
+  - `cargo check -p fret-code-editor --features syntax-rust`
+  - `cargo check -p fret-code-editor`
+  - `cargo check -p fret-ui-gallery --features gallery-dev`
+  - `cargo fmt -p fret-code-editor --check`
+  - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor --lib --features syntax syntax_prefetch_key_distinguishes_documents_with_same_revision syntax_rows_from_highlight_spans_maps_across_rows --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor --lib --features syntax syntax_replay_key_matches_current_inputs_by_pointer_identity --no-fail-fast`
+- Perf evidence command:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --dir target/fret-diag/perf-code-editor-syntax-prefetch --launch -- target/release/fret-ui-gallery.exe`
+- Worst bundle: `target/fret-diag/perf-code-editor-syntax-prefetch/1778392044589/bundle.schema2.json`
+- Result:
+  - `repeat=3` p50/p95/max total: `2305/2663/2663us`
+  - `repeat=3` p50/p95/max paint: `1975/2426/2426us`
+  - Worst paint frames report `us_syntax_highlight=0`; the remaining syntax apply cost is cache store only
+    (`us_syntax_store` about `27-35us`, with `syntax_rows_stored=129/258`).
+- Gate evidence:
+  - Command: same script with `--repeat 7` and
+    `--perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v1.json`
+  - Worst bundle: `target/fret-diag/perf-code-editor-syntax-prefetch-gate/1778392286801/bundle.schema2.json`
+  - Gate passed with p50/p95/max total `2514/2953/2953us` and paint `2263/2738/2738us`.
+- Interpretation: the measured Tree-sitter highlight spike has been removed from the paint critical path. The next
+  code-editor paint work should look at the remaining steady paint body / renderer encode cost, not syntax-cache miss
+  highlighting. Rollback is a straight revert of the syntax prefetch change.
+
 Finding (2026-05-10): redundant row background quads are pure scene-op churn
 
 - Change: `ecosystem/fret-code-editor/src/editor/paint/mod.rs` no longer emits a transparent background `Quad` for

@@ -1,9 +1,13 @@
 //! Implementation details for the Fret code editor surface.
 
 use std::cell::{Cell, RefCell};
+#[cfg(feature = "syntax")]
+use std::collections::HashSet;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
+#[cfg(feature = "syntax")]
+use std::sync::Mutex;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -20,6 +24,8 @@ use fret_core::{
     TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode, TimerToken};
+#[cfg(feature = "syntax")]
+use fret_runtime::{DispatcherHandle, ExecBackgroundWork, ExecWake};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
@@ -488,6 +494,99 @@ struct SyntaxSpan {
     /// Range within the row text (UTF-8 byte indices).
     range: Range<usize>,
     highlight: &'static str,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct SyntaxPrefetchKey {
+    doc: DocId,
+    rev: fret_code_editor_buffer::Revision,
+    language: Arc<str>,
+    chunk_start: usize,
+    chunk_end: usize,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct SyntaxPrefetchChunk {
+    key: SyntaxPrefetchKey,
+    rows: Arc<[(usize, Arc<[SyntaxSpan]>)]>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Default)]
+struct SyntaxPrefetchRuntimeState {
+    pending: HashSet<SyntaxPrefetchKey>,
+    ready: VecDeque<SyntaxPrefetchChunk>,
+    last_visible_start: Option<usize>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Clone)]
+struct SyntaxPrefetchRuntime {
+    shared: Arc<Mutex<SyntaxPrefetchRuntimeState>>,
+    dispatcher: DispatcherHandle,
+}
+
+#[cfg(feature = "syntax")]
+impl std::fmt::Debug for SyntaxPrefetchRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SyntaxPrefetchRuntime")
+            .field("shared", &self.shared)
+            .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "syntax")]
+impl SyntaxPrefetchRuntime {
+    fn new(dispatcher: DispatcherHandle) -> Self {
+        Self {
+            shared: Arc::new(Mutex::new(SyntaxPrefetchRuntimeState::default())),
+            dispatcher,
+        }
+    }
+
+    fn clear(&self) {
+        let mut state = self.lock_state();
+        state.pending.clear();
+        state.ready.clear();
+        state.last_visible_start = None;
+    }
+
+    fn lock_state(&self) -> std::sync::MutexGuard<'_, SyntaxPrefetchRuntimeState> {
+        self.shared
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn note_visible_start(&self, visible_start: usize) -> i8 {
+        let mut state = self.lock_state();
+        let direction = match state.last_visible_start {
+            Some(prev) if visible_start < prev => -1,
+            Some(prev) if visible_start > prev => 1,
+            _ => 1,
+        };
+        state.last_visible_start = Some(visible_start);
+        direction
+    }
+
+    fn drain_ready(&self) -> Vec<SyntaxPrefetchChunk> {
+        let mut state = self.lock_state();
+        state.ready.drain(..).collect()
+    }
+
+    fn try_mark_pending(&self, key: SyntaxPrefetchKey) -> bool {
+        const MAX_PENDING: usize = 3;
+
+        let mut state = self.lock_state();
+        if state.pending.contains(&key) || state.ready.iter().any(|chunk| chunk.key == key) {
+            return false;
+        }
+        if state.pending.len() >= MAX_PENDING {
+            return false;
+        }
+        state.pending.insert(key)
+    }
 }
 
 #[cfg(feature = "syntax")]
@@ -975,6 +1074,8 @@ struct CodeEditorState {
     #[cfg(feature = "syntax")]
     syntax_row_cache_spans_len_total: u64,
     #[cfg(feature = "syntax")]
+    syntax_prefetch_runtime: Option<SyntaxPrefetchRuntime>,
+    #[cfg(feature = "syntax")]
     row_rich_cache_tick: u64,
     #[cfg(feature = "syntax")]
     row_rich_cache: HashMap<usize, (RowRichCacheEntry, u64)>,
@@ -1449,6 +1550,8 @@ impl CodeEditorHandle {
                 syntax_row_cache_queue: VecDeque::new(),
                 #[cfg(feature = "syntax")]
                 syntax_row_cache_spans_len_total: 0,
+                #[cfg(feature = "syntax")]
+                syntax_prefetch_runtime: None,
                 #[cfg(feature = "syntax")]
                 row_rich_cache_tick: 0,
                 #[cfg(feature = "syntax")]
@@ -1925,6 +2028,10 @@ impl CodeEditorHandle {
     pub fn replace_buffer(&self, buffer: TextBuffer) {
         let mut st = self.state.borrow_mut();
         st.buffer = buffer;
+        #[cfg(feature = "syntax")]
+        if let Some(runtime) = st.syntax_prefetch_runtime.as_ref() {
+            runtime.clear();
+        }
         st.selection = Selection::default();
         st.preedit = None;
         st.caret_preferred_x = None;
@@ -2240,6 +2347,26 @@ impl CodeEditor {
                 .saturating_add(overscan.saturating_mul(2))
                 .saturating_add(128)
                 .clamp(256, 8_192);
+            #[cfg(feature = "syntax")]
+            let window = cx.window;
+
+            #[cfg(feature = "syntax")]
+            {
+                if let Some(dispatcher) = cx.app.global::<DispatcherHandle>().cloned() {
+                    let exec = dispatcher.exec_capabilities();
+                    let supports_prefetch = exec.background_work != ExecBackgroundWork::None
+                        && exec.wake != ExecWake::None;
+                    let mut st = editor_state.borrow_mut();
+                    if supports_prefetch {
+                        if st.syntax_prefetch_runtime.is_none() {
+                            st.syntax_prefetch_runtime =
+                                Some(SyntaxPrefetchRuntime::new(dispatcher));
+                        }
+                    } else if let Some(runtime) = st.syntax_prefetch_runtime.take() {
+                        runtime.clear();
+                    }
+                }
+            }
 
             cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
             let font_stack_key = cx
@@ -2340,6 +2467,21 @@ impl CodeEditor {
                 path: CanvasCacheTuning::transient(),
                 svg: CanvasCacheTuning::transient(),
             };
+            #[cfg(feature = "syntax")]
+            let syntax_prefetch_hook = {
+                let editor_state = editor_state.clone();
+                let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
+                    paint::schedule_syntax_prefetch_for_frame(
+                        &mut editor_state.borrow_mut(),
+                        frame,
+                        text_cache_max_entries,
+                        window,
+                    );
+                });
+                Some(hook)
+            };
+            #[cfg(not(feature = "syntax"))]
+            let syntax_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
             let paint_perf_hook = paint_perf_enabled_from_env().then(|| {
                 let editor_state = editor_state.clone();
                 let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
@@ -2558,16 +2700,26 @@ impl CodeEditor {
                 hook
             });
 
-            surface_props.on_paint_frame = match (paint_perf_hook, torture_hook) {
-                (Some(a), Some(b)) => {
-                    let hook: OnWindowedRowsPaintFrame = Arc::new(move |painter, frame| {
-                        a(painter, frame);
-                        b(painter, frame);
-                    });
-                    Some(hook)
+            surface_props.on_paint_frame = {
+                let mut hooks: Vec<OnWindowedRowsPaintFrame> = Vec::new();
+                if let Some(hook) = paint_perf_hook {
+                    hooks.push(hook);
                 }
-                (Some(h), None) | (None, Some(h)) => Some(h),
-                (None, None) => None,
+                if let Some(hook) = syntax_prefetch_hook {
+                    hooks.push(hook);
+                }
+                if let Some(hook) = torture_hook {
+                    hooks.push(hook);
+                }
+                match hooks.len() {
+                    0 => None,
+                    1 => hooks.pop(),
+                    _ => Some(Arc::new(move |painter, frame| {
+                        for hook in &hooks {
+                            hook(painter, frame);
+                        }
+                    })),
+                }
             };
 
             cx.text_input_region(region_props, |cx| {
