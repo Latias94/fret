@@ -886,11 +886,69 @@ Evidence:
     - `p95.us(total/layout/solve)=4156/3423/946`
     - `pointer_move.max(dispatch/hit_test)=1211/27`
 
+## Finding (2026-05-10): code editor row-rich materialization is off the paint hot path
+
+Observed:
+
+- After the text prepare / row-scene-cache work, the code editor torture script still showed
+  paint-time rich text materialization on newly exposed rows.
+- The earlier attribution probe had `ns_rich_materialize` around `443300ns`; a first point-based
+  prefetch attempt reduced some steady frames but still missed the actual next rows entering the
+  viewport.
+
+Change:
+
+- Added a row-rich prefetch runtime next to the syntax prefetch runtime in
+  `ecosystem/fret-code-editor/src/editor/mod.rs`.
+- Extracted row syntax-span mapping and row-rich cache insertion in
+  `ecosystem/fret-code-editor/src/editor/paint/mod.rs`, so paint and prefetch share one cache
+  write path.
+- Prefetch now targets the immediate scroll-direction edge window (`8` rows) plus a far lookahead
+  row, with bounded pending/ready queues (`12` / `32`).
+- Ready results are still validated by document, revision, language, theme revision, font-feature
+  policy revision, row range, line text, syntax spans, and display-row spans. Pointer identity is the
+  fast path, but equal content is accepted when syntax caches are repopulated with equivalent spans;
+  accepted results are stored with the current cache Arcs so the next paint can hit.
+- This follows the same broad performance direction as Zed/GPUI-style editor rendering: prepare
+  line presentation work outside the paint loop and keep paint focused on cache replay / scene
+  encoding.
+
+Verification:
+
+- `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast`
+  - `107` tests passed.
+- `cargo check -p fret-code-editor --features syntax-rust`
+  - passed.
+- `cargo build -p fret-ui-gallery --release --features gallery-dev`
+  - passed; existing unrelated warnings remain in `fret-runtime` / `fret-ui`.
+- Perf command:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --dir target/fret-diag/perf-code-editor-row-rich-prefetch-equivalence --launch -- target/release/fret-ui-gallery.exe`
+- Result:
+  - `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1996/112/0/82/1800/0/0`
+  - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2100/114/0/92/1897/0/0`
+  - `max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2100/114/0/92/1897/0/0`
+- Worst bundle:
+  `target/fret-diag/perf-code-editor-row-rich-prefetch-equivalence/1778406023238/bundle.schema2.json`
+- `diag stats --sort cpu_cycles --top 30` summary for the worst bundle:
+  - `hot p50/p95 (us): paint.widget=1378/1419 paint.text_prepare=0/0`
+  - `renderer p95/max (us): encode=1155/1155 text=113/113 upload=196/196 record=34/34 finish=126/126`
+- Paint-probe extraction from the three repeat bundles:
+  - `ns_rich_materialize.max=0/0/5300`
+  - `row_rich_misses_delta=0/0/2`
+  - `row_rich_hits_delta=482/2588/2564`
+
+Residual:
+
+- The remaining code-editor torture cost is no longer row-rich materialization. The next useful
+  attribution target is renderer scene encoding / row-scene replay cost, not further syntax-rich
+  text materialization.
+
 ## Failure exemplar map
 
 - Layout-root build spikes: `Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)`.
 - Layout-engine solve spikes: `Finding (2026-02-15): Batch-solve barrier roots to eliminate per-root solve spikes`.
 - Paint spikes: `Finding (2026-05-10): ui-gallery-complex-steady now yields a paint-dominant Windows exemplar when run with --prelude-each-run; use target/fret-diag/1778364986668/bundle.schema2.json for paint-tail attribution.`
+- Code-editor paint spikes: `Finding (2026-05-10): code editor row-rich materialization is off the paint hot path; use target/fret-diag/perf-code-editor-row-rich-prefetch-equivalence/1778406023238/bundle.schema2.json for the post-fix renderer-encode exemplar.`
 
 ## Next steps
 

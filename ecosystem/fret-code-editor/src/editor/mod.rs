@@ -576,7 +576,7 @@ impl SyntaxPrefetchRuntime {
     }
 
     fn try_mark_pending(&self, key: SyntaxPrefetchKey) -> bool {
-        const MAX_PENDING: usize = 3;
+        const MAX_PENDING: usize = 12;
 
         let mut state = self.lock_state();
         if state.pending.contains(&key) || state.ready.iter().any(|chunk| chunk.key == key) {
@@ -586,6 +586,149 @@ impl SyntaxPrefetchRuntime {
             return false;
         }
         state.pending.insert(key)
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowRichPrefetchKey {
+    doc: DocId,
+    rev: fret_code_editor_buffer::Revision,
+    language: Arc<str>,
+    row: usize,
+    row_range: Range<usize>,
+    theme_revision: u64,
+    code_font_feature_policy_rev: u64,
+    line: Arc<str>,
+    syntax_spans: Arc<[SyntaxSpan]>,
+    row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+}
+
+#[cfg(feature = "syntax")]
+impl RowRichPrefetchKey {
+    fn new(
+        doc: DocId,
+        rev: fret_code_editor_buffer::Revision,
+        language: Arc<str>,
+        row: usize,
+        row_range: Range<usize>,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        line: Arc<str>,
+        syntax_spans: Arc<[SyntaxSpan]>,
+        row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    ) -> Self {
+        Self {
+            doc,
+            rev,
+            language,
+            row,
+            row_range,
+            theme_revision,
+            code_font_feature_policy_rev,
+            line,
+            syntax_spans,
+            row_spans,
+        }
+    }
+
+    fn matches(&self, other: &Self) -> bool {
+        self.doc == other.doc
+            && self.rev == other.rev
+            && self.language.as_ref() == other.language.as_ref()
+            && self.row == other.row
+            && self.row_range == other.row_range
+            && self.theme_revision == other.theme_revision
+            && self.code_font_feature_policy_rev == other.code_font_feature_policy_rev
+            && Arc::ptr_eq(&self.line, &other.line)
+            && Arc::ptr_eq(&self.syntax_spans, &other.syntax_spans)
+            && Arc::ptr_eq(&self.row_spans, &other.row_spans)
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowRichPrefetchChunk {
+    key: RowRichPrefetchKey,
+    rich: AttributedText,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Default)]
+struct RowRichPrefetchRuntimeState {
+    pending: Vec<RowRichPrefetchKey>,
+    ready: VecDeque<RowRichPrefetchChunk>,
+    last_visible_start: Option<usize>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Clone)]
+struct RowRichPrefetchRuntime {
+    shared: Arc<Mutex<RowRichPrefetchRuntimeState>>,
+    dispatcher: DispatcherHandle,
+}
+
+#[cfg(feature = "syntax")]
+impl std::fmt::Debug for RowRichPrefetchRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RowRichPrefetchRuntime")
+            .field("shared", &self.shared)
+            .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "syntax")]
+impl RowRichPrefetchRuntime {
+    fn new(dispatcher: DispatcherHandle) -> Self {
+        Self {
+            shared: Arc::new(Mutex::new(RowRichPrefetchRuntimeState::default())),
+            dispatcher,
+        }
+    }
+
+    fn clear(&self) {
+        let mut state = self.lock_state();
+        state.pending.clear();
+        state.ready.clear();
+        state.last_visible_start = None;
+    }
+
+    fn lock_state(&self) -> std::sync::MutexGuard<'_, RowRichPrefetchRuntimeState> {
+        self.shared
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn note_visible_start(&self, visible_start: usize) -> i8 {
+        let mut state = self.lock_state();
+        let direction = match state.last_visible_start {
+            Some(prev) if visible_start < prev => -1,
+            Some(prev) if visible_start > prev => 1,
+            _ => 1,
+        };
+        state.last_visible_start = Some(visible_start);
+        direction
+    }
+
+    fn drain_ready(&self) -> Vec<RowRichPrefetchChunk> {
+        let mut state = self.lock_state();
+        state.ready.drain(..).collect()
+    }
+
+    fn try_mark_pending(&self, key: RowRichPrefetchKey) -> bool {
+        const MAX_PENDING: usize = 3;
+
+        let mut state = self.lock_state();
+        if state.pending.iter().any(|pending| pending.matches(&key))
+            || state.ready.iter().any(|chunk| chunk.key.matches(&key))
+        {
+            return false;
+        }
+        if state.pending.len() >= MAX_PENDING {
+            return false;
+        }
+        state.pending.push(key);
+        true
     }
 }
 
@@ -1104,6 +1247,8 @@ struct CodeEditorState {
     #[cfg(feature = "syntax")]
     syntax_prefetch_runtime: Option<SyntaxPrefetchRuntime>,
     #[cfg(feature = "syntax")]
+    row_rich_prefetch_runtime: Option<RowRichPrefetchRuntime>,
+    #[cfg(feature = "syntax")]
     row_rich_cache_tick: u64,
     #[cfg(feature = "syntax")]
     row_rich_cache: HashMap<usize, (RowRichCacheEntry, u64)>,
@@ -1280,6 +1425,13 @@ impl CodeEditorState {
         self.cache_stats.row_scene_resets = self.cache_stats.row_scene_resets.saturating_add(1);
     }
 
+    #[cfg(feature = "syntax")]
+    fn clear_row_rich_prefetch_runtime(&mut self) {
+        if let Some(runtime) = self.row_rich_prefetch_runtime.as_ref() {
+            runtime.clear();
+        }
+    }
+
     fn sync_row_scene_cache_epoch(&mut self) {
         self.row_scene_cache_rev = self.buffer.revision();
         self.row_scene_cache_wrap_cols = self.display_wrap_cols;
@@ -1311,6 +1463,7 @@ impl CodeEditorState {
 
         #[cfg(feature = "syntax")]
         {
+            self.clear_row_rich_prefetch_runtime();
             self.row_rich_cache_tick = 0;
             self.row_rich_cache.clear();
             self.row_rich_cache_queue.clear();
@@ -1385,6 +1538,8 @@ impl CodeEditorState {
             )
         };
         self.display_map_epoch = self.display_map_epoch.saturating_add(1);
+        #[cfg(feature = "syntax")]
+        self.clear_row_rich_prefetch_runtime();
     }
 
     fn paint_perf_begin_frame(&mut self, frame: WindowedRowsPaintFrame) {
@@ -1581,6 +1736,8 @@ impl CodeEditorHandle {
                 #[cfg(feature = "syntax")]
                 syntax_prefetch_runtime: None,
                 #[cfg(feature = "syntax")]
+                row_rich_prefetch_runtime: None,
+                #[cfg(feature = "syntax")]
                 row_rich_cache_tick: 0,
                 #[cfg(feature = "syntax")]
                 row_rich_cache: HashMap::new(),
@@ -1631,6 +1788,7 @@ impl CodeEditorHandle {
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
             st.syntax_row_cache_spans_len_total = 0;
+            st.clear_row_rich_prefetch_runtime();
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
@@ -2114,6 +2272,7 @@ impl CodeEditorHandle {
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
             st.syntax_row_cache_spans_len_total = 0;
+            st.clear_row_rich_prefetch_runtime();
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
@@ -2233,6 +2392,7 @@ impl CodeEditorHandle {
             st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
             #[cfg(feature = "syntax")]
             {
+                st.clear_row_rich_prefetch_runtime();
                 st.row_rich_cache_tick = 0;
                 st.row_rich_cache.clear();
                 st.row_rich_cache_queue.clear();
@@ -2393,10 +2553,19 @@ impl CodeEditor {
                     if supports_prefetch {
                         if st.syntax_prefetch_runtime.is_none() {
                             st.syntax_prefetch_runtime =
-                                Some(SyntaxPrefetchRuntime::new(dispatcher));
+                                Some(SyntaxPrefetchRuntime::new(dispatcher.clone()));
                         }
-                    } else if let Some(runtime) = st.syntax_prefetch_runtime.take() {
-                        runtime.clear();
+                        if st.row_rich_prefetch_runtime.is_none() {
+                            st.row_rich_prefetch_runtime =
+                                Some(RowRichPrefetchRuntime::new(dispatcher));
+                        }
+                    } else {
+                        if let Some(runtime) = st.syntax_prefetch_runtime.take() {
+                            runtime.clear();
+                        }
+                        if let Some(runtime) = st.row_rich_prefetch_runtime.take() {
+                            runtime.clear();
+                        }
                     }
                 }
             }
@@ -2515,6 +2684,23 @@ impl CodeEditor {
             };
             #[cfg(not(feature = "syntax"))]
             let syntax_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
+            #[cfg(feature = "syntax")]
+            let row_rich_prefetch_hook = {
+                let editor_state = editor_state.clone();
+                let hook: OnWindowedRowsPaintFrame = Arc::new(move |painter, frame| {
+                    let theme = painter.theme().clone();
+                    paint::schedule_row_rich_prefetch_for_frame(
+                        &mut editor_state.borrow_mut(),
+                        frame,
+                        text_cache_max_entries,
+                        window,
+                        theme,
+                    );
+                });
+                Some(hook)
+            };
+            #[cfg(not(feature = "syntax"))]
+            let row_rich_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
             let paint_perf_hook = paint_perf_enabled_from_env().then(|| {
                 let editor_state = editor_state.clone();
                 let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
@@ -2739,6 +2925,9 @@ impl CodeEditor {
                     hooks.push(hook);
                 }
                 if let Some(hook) = syntax_prefetch_hook {
+                    hooks.push(hook);
+                }
+                if let Some(hook) = row_rich_prefetch_hook {
                     hooks.push(hook);
                 }
                 if let Some(hook) = torture_hook {
