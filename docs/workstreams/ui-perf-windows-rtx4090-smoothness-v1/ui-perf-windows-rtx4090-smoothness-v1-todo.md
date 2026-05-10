@@ -68,6 +68,16 @@
   - 2026-05-11 hosted-resource precompute note: `CanvasHostedResources` moved the hosted-resource touch scan off the
     replay hit path. The next probe should keep measuring replay/touch mechanics or new-row text draw, not more key
     splitting.
+  - 2026-05-10 low-overhead probe note: `target/fret-diag/perf-code-editor-hotspot-probe-v1/1778454652187/bundle.schema2.json`
+    is paint-widget heavy, not layout-heavy. The worst frame reports `paint_time_us=1513`, `renderer_upload=347`,
+    `renderer_encode_scene=233`, and `phase.timeline_hotspots` points at `ElementHostWidget::Canvas` plus
+    `renderer.upload_churn`.
+  - 2026-05-10 detailed paint probe note:
+    `target/fret-diag/perf-code-editor-paint-detail-probe-v1/1778455020350/bundle.schema2.json` still replays
+    `rows_scene_replayed=288/289` visible rows, stores 1 row, and reports
+    `ns_row_scene_fast_path=243900`, `ns_row_content_resolve=396500`, `ns_text_draw=64700`, and
+    `scratch_element_children_vec_pool_grow_events=57`. That keeps `RowGeomKey` / `RowSceneKey` splitting off the
+    table unless a fresh low-overhead probe changes the shape of the bottleneck.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in

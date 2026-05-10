@@ -1161,7 +1161,12 @@ Renderer encode attribution (2026-05-10):
     kept p50/p95/max total at `1723/1730/1730us`; the hotspots sit in `Scroll` nodes from `scroll_area.rs` /
     `content.rs`, which reads like profiling overhead rather than a layout regression.
   - The same worst-frame evidence now also appears in `diag triage` as `phase.timeline_hotspots`, which
-    ties the phase timeline to layout, scroll, paint, and renderer hotspot examples in one place.
+    ties the phase timeline to layout, scroll, paint, and renderer hotspot examples in one place. The fresh
+    low-overhead probe `target/fret-diag/perf-code-editor-hotspot-probe-v1/1778454652187/bundle.schema2.json`
+    is paint-widget heavy on `ElementHostWidget::Canvas` and shows `renderer.upload_churn`; the detailed paint
+    probe `target/fret-diag/perf-code-editor-paint-detail-probe-v1/1778455020350/bundle.schema2.json` still
+    replays `288/289` visible rows and stores only 1 new row, so do not spend time splitting `RowGeomKey` or
+    `RowSceneKey` further.
   - Interpretation: the row-scene replay hot path is still the right place to look, but the cheap win is already in
     place. Do not spend time splitting `RowGeomKey` or `RowSceneKey` further; if this lane continues, target
     replay/touch mechanics or new-row text draw from fresh low-overhead evidence.
