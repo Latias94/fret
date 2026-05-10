@@ -84,6 +84,7 @@ fn encode_text_blob(
 
     let setup_start = (profile_text_phases && perf_enabled).then(Instant::now);
     let t_px = state.current_transform_px();
+    let t_fast = t_px.as_translation_uniform_scale();
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
@@ -364,6 +365,7 @@ fn encode_text_blob(
             || active_paint_index != draw_paint_index
             || active_palette != use_palette_override
         {
+            let flush_group_start = (profile_text_phases && perf_enabled).then(Instant::now);
             flush_group(
                 state,
                 active_kind,
@@ -372,6 +374,12 @@ fn encode_text_blob(
                 &mut group_first_vertex,
                 &mut group_bounds_px,
             );
+            if let Some(flush_group_start) = flush_group_start {
+                frame_perf.record_encode_scene_text_phase(
+                    EncodeSceneTextPhase::GroupFlush,
+                    Some(flush_group_start.elapsed()),
+                );
+            }
             active_kind = Some(kind);
             active_page = atlas_page;
             active_paint_index = draw_paint_index;
@@ -399,19 +407,40 @@ fn encode_text_blob(
             }
         };
 
+        let glyph_transform_start = (profile_text_phases && perf_enabled).then(Instant::now);
         let rect = g.rect();
         let lx0 = base_x + rect[0] * state.scale_factor;
         let ly0 = base_y + rect[1] * state.scale_factor;
         let lx1 = lx0 + rect[2] * state.scale_factor;
         let ly1 = ly0 + rect[3] * state.scale_factor;
-        let quad = [
-            apply_transform_px(t_px, lx0, ly0),
-            apply_transform_px(t_px, lx1, ly0),
-            apply_transform_px(t_px, lx1, ly1),
-            apply_transform_px(t_px, lx0, ly1),
-        ];
-
-        let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+        let (quad, min_x, min_y, max_x, max_y) = if let Some((scale, translate)) = t_fast {
+            frame_perf.encode_scene_text_transform_fast_path_glyphs = frame_perf
+                .encode_scene_text_transform_fast_path_glyphs
+                .saturating_add(1);
+            let x0 = scale * lx0 + translate.x.0;
+            let y0 = scale * ly0 + translate.y.0;
+            let x1 = scale * lx1 + translate.x.0;
+            let y1 = scale * ly1 + translate.y.0;
+            (
+                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)],
+                x0.min(x1),
+                y0.min(y1),
+                x0.max(x1),
+                y0.max(y1),
+            )
+        } else {
+            frame_perf.encode_scene_text_transform_generic_glyphs = frame_perf
+                .encode_scene_text_transform_generic_glyphs
+                .saturating_add(1);
+            let quad = [
+                apply_transform_px(t_px, lx0, ly0),
+                apply_transform_px(t_px, lx1, ly0),
+                apply_transform_px(t_px, lx1, ly1),
+                apply_transform_px(t_px, lx0, ly1),
+            ];
+            let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+            (quad, min_x, min_y, max_x, max_y)
+        };
         group_bounds_px = Some(match group_bounds_px {
             Some((gx0, gy0, gx1, gy1)) => (
                 gx0.min(min_x),
@@ -422,8 +451,27 @@ fn encode_text_blob(
             None => (min_x, min_y, max_x, max_y),
         });
 
+        if let Some(glyph_transform_start) = glyph_transform_start {
+            frame_perf.record_encode_scene_text_phase(
+                EncodeSceneTextPhase::GlyphTransform,
+                Some(glyph_transform_start.elapsed()),
+            );
+        }
+
         let (u0, v0, u1, v1) = (uv[0], uv[1], uv[2], uv[3]);
 
+        if state
+            .text_vertices
+            .capacity()
+            .saturating_sub(state.text_vertices.len())
+            < 6
+        {
+            frame_perf.encode_scene_text_vertex_grow_events = frame_perf
+                .encode_scene_text_vertex_grow_events
+                .saturating_add(1);
+        }
+
+        let glyph_emit_start = (profile_text_phases && perf_enabled).then(Instant::now);
         state.text_vertices.extend_from_slice(&[
             TextVertex {
                 pos_px: [quad[0].0, quad[0].1],
@@ -510,8 +558,15 @@ fn encode_text_blob(
                 },
             },
         ]);
+        if let Some(glyph_emit_start) = glyph_emit_start {
+            frame_perf.record_encode_scene_text_phase(
+                EncodeSceneTextPhase::GlyphEmit,
+                Some(glyph_emit_start.elapsed()),
+            );
+        }
     }
 
+    let flush_group_start = (profile_text_phases && perf_enabled).then(Instant::now);
     flush_group(
         state,
         active_kind,
@@ -520,6 +575,12 @@ fn encode_text_blob(
         &mut group_first_vertex,
         &mut group_bounds_px,
     );
+    if let Some(flush_group_start) = flush_group_start {
+        frame_perf.record_encode_scene_text_phase(
+            EncodeSceneTextPhase::GroupFlush,
+            Some(flush_group_start.elapsed()),
+        );
+    }
 
     if !blob.decorations().is_empty() {
         for d in blob

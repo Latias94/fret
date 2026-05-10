@@ -412,6 +412,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_encode_scene_text_glyphs_us: u64,
     #[serde(default)]
+    pub renderer_encode_scene_text_glyph_transform_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_glyph_emit_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_group_flush_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_vertex_grow_events: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_transform_fast_path_glyphs: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_transform_generic_glyphs: u64,
+    #[serde(default)]
     pub renderer_encode_scene_stack_ops: u64,
     #[serde(default)]
     pub renderer_encode_scene_clip_ops: u64,
@@ -1032,6 +1044,12 @@ impl UiFrameStatsV1 {
             renderer_encode_scene_text_shadow_us: 0,
             renderer_encode_scene_text_setup_us: 0,
             renderer_encode_scene_text_glyphs_us: 0,
+            renderer_encode_scene_text_glyph_transform_us: 0,
+            renderer_encode_scene_text_glyph_emit_us: 0,
+            renderer_encode_scene_text_group_flush_us: 0,
+            renderer_encode_scene_text_vertex_grow_events: 0,
+            renderer_encode_scene_text_transform_fast_path_glyphs: 0,
+            renderer_encode_scene_text_transform_generic_glyphs: 0,
             renderer_encode_scene_stack_ops: 0,
             renderer_encode_scene_clip_ops: 0,
             renderer_encode_scene_mask_ops: 0,
@@ -1211,6 +1229,17 @@ impl UiFrameStatsV1 {
             out.renderer_encode_scene_text_shadow_us = sample.perf.encode_scene_text_shadow_us;
             out.renderer_encode_scene_text_setup_us = sample.perf.encode_scene_text_setup_us;
             out.renderer_encode_scene_text_glyphs_us = sample.perf.encode_scene_text_glyphs_us;
+            out.renderer_encode_scene_text_glyph_transform_us =
+                sample.perf.encode_scene_text_glyph_transform_us;
+            out.renderer_encode_scene_text_glyph_emit_us = sample.perf.encode_scene_text_glyph_emit_us;
+            out.renderer_encode_scene_text_group_flush_us =
+                sample.perf.encode_scene_text_group_flush_us;
+            out.renderer_encode_scene_text_vertex_grow_events =
+                sample.perf.encode_scene_text_vertex_grow_events;
+            out.renderer_encode_scene_text_transform_fast_path_glyphs =
+                sample.perf.encode_scene_text_transform_fast_path_glyphs;
+            out.renderer_encode_scene_text_transform_generic_glyphs =
+                sample.perf.encode_scene_text_transform_generic_glyphs;
             out.renderer_encode_scene_stack_ops = sample.perf.encode_scene_stack_ops;
             out.renderer_encode_scene_clip_ops = sample.perf.encode_scene_clip_ops;
             out.renderer_encode_scene_mask_ops = sample.perf.encode_scene_mask_ops;

@@ -981,6 +981,17 @@ pub(crate) fn triage_json_from_stats(
             "renderer_encode_scene_text_shadow_us": row.renderer_encode_scene_text_shadow_us,
             "renderer_encode_scene_text_setup_us": row.renderer_encode_scene_text_setup_us,
             "renderer_encode_scene_text_glyphs_us": row.renderer_encode_scene_text_glyphs_us,
+            "renderer_encode_scene_text_glyph_transform_us": row
+                .renderer_encode_scene_text_glyph_transform_us,
+            "renderer_encode_scene_text_glyph_emit_us": row.renderer_encode_scene_text_glyph_emit_us,
+            "renderer_encode_scene_text_group_flush_us": row
+                .renderer_encode_scene_text_group_flush_us,
+            "renderer_encode_scene_text_vertex_grow_events": row
+                .renderer_encode_scene_text_vertex_grow_events,
+            "renderer_encode_scene_text_transform_fast_path_glyphs": row
+                .renderer_encode_scene_text_transform_fast_path_glyphs,
+            "renderer_encode_scene_text_transform_generic_glyphs": row
+                .renderer_encode_scene_text_transform_generic_glyphs,
             "renderer_encode_scene_stack_ops": row.renderer_encode_scene_stack_ops,
             "renderer_encode_scene_clip_ops": row.renderer_encode_scene_clip_ops,
             "renderer_encode_scene_mask_ops": row.renderer_encode_scene_mask_ops,

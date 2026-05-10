@@ -427,6 +427,12 @@ pub struct RenderPerfSnapshot {
     pub encode_scene_text_shadow_us: u64,
     pub encode_scene_text_setup_us: u64,
     pub encode_scene_text_glyphs_us: u64,
+    pub encode_scene_text_glyph_transform_us: u64,
+    pub encode_scene_text_glyph_emit_us: u64,
+    pub encode_scene_text_group_flush_us: u64,
+    pub encode_scene_text_vertex_grow_events: u64,
+    pub encode_scene_text_transform_fast_path_glyphs: u64,
+    pub encode_scene_text_transform_generic_glyphs: u64,
     pub encode_scene_stack_ops: u64,
     pub encode_scene_clip_ops: u64,
     pub encode_scene_mask_ops: u64,
@@ -738,6 +744,9 @@ pub(super) enum EncodeSceneTextPhase {
     Shadow,
     Setup,
     Glyphs,
+    GlyphTransform,
+    GlyphEmit,
+    GroupFlush,
 }
 
 #[derive(Debug, Default)]
@@ -765,6 +774,12 @@ pub(super) struct RenderPerfStats {
     pub(super) encode_scene_text_shadow: Duration,
     pub(super) encode_scene_text_setup: Duration,
     pub(super) encode_scene_text_glyphs: Duration,
+    pub(super) encode_scene_text_glyph_transform: Duration,
+    pub(super) encode_scene_text_glyph_emit: Duration,
+    pub(super) encode_scene_text_group_flush: Duration,
+    pub(super) encode_scene_text_vertex_grow_events: u64,
+    pub(super) encode_scene_text_transform_fast_path_glyphs: u64,
+    pub(super) encode_scene_text_transform_generic_glyphs: u64,
     pub(super) encode_scene_stack_ops: u64,
     pub(super) encode_scene_clip_ops: u64,
     pub(super) encode_scene_mask_ops: u64,
@@ -1012,6 +1027,21 @@ impl RenderPerfStats {
             EncodeSceneTextPhase::Glyphs => {
                 if let Some(elapsed) = elapsed {
                     self.encode_scene_text_glyphs += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::GlyphTransform => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_glyph_transform += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::GlyphEmit => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_glyph_emit += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::GroupFlush => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_group_flush += elapsed;
                 }
             }
         }

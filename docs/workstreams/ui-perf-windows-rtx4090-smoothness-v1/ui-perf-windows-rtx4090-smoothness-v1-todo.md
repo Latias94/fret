@@ -39,7 +39,12 @@
 - [x] Follow up on the text-heavy renderer encode path and decide whether the next slice is text vertex construction,
   text batching, or scene text indexing. The first slice added text-phase attribution and moved atlas page/UV lookup out
   of the encode loop with a `TextShape` render-glyph cache.
-- [ ] Attribute/reduce the remaining text vertex construction, transform, and group-bounds work in the renderer encode
+- [x] Add a translation+uniform-scale fast path for text glyph transforms in the renderer encode loop. The
+  `ui-gallery-code-editor-torture-autoscroll-steady` probe now reports
+  `encode_scene_text_transform_fast_path_glyphs=20420`, `encode_scene_text_transform_generic_glyphs=0`, and
+  `encode_scene_text_vertex_grow_events=0`, with repeat=3 p50/p95/max total `2091/2165/2165us` and paint
+  `1893/1937/1937us` in `target/fret-diag/perf-code-editor-render-cache-v4/1778420924991/bundle.schema2.json`.
+- [ ] Attribute/reduce the remaining text vertex emission, group-bounds, and group-flush work in the renderer encode
   path, or promote a row/fragment replay slice if the evidence shows stable editor rows still rebuild too much text
   vertex data every frame.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using

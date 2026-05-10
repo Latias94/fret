@@ -38,6 +38,18 @@ impl Renderer {
         perf.encode_scene_text_shadow += frame_perf.encode_scene_text_shadow;
         perf.encode_scene_text_setup += frame_perf.encode_scene_text_setup;
         perf.encode_scene_text_glyphs += frame_perf.encode_scene_text_glyphs;
+        perf.encode_scene_text_glyph_transform += frame_perf.encode_scene_text_glyph_transform;
+        perf.encode_scene_text_glyph_emit += frame_perf.encode_scene_text_glyph_emit;
+        perf.encode_scene_text_group_flush += frame_perf.encode_scene_text_group_flush;
+        perf.encode_scene_text_vertex_grow_events = perf
+            .encode_scene_text_vertex_grow_events
+            .saturating_add(frame_perf.encode_scene_text_vertex_grow_events);
+        perf.encode_scene_text_transform_fast_path_glyphs = perf
+            .encode_scene_text_transform_fast_path_glyphs
+            .saturating_add(frame_perf.encode_scene_text_transform_fast_path_glyphs);
+        perf.encode_scene_text_transform_generic_glyphs = perf
+            .encode_scene_text_transform_generic_glyphs
+            .saturating_add(frame_perf.encode_scene_text_transform_generic_glyphs);
         perf.encode_scene_stack_ops = perf
             .encode_scene_stack_ops
             .saturating_add(frame_perf.encode_scene_stack_ops);
@@ -464,6 +476,18 @@ impl Renderer {
             encode_scene_text_shadow_us: frame_perf.encode_scene_text_shadow.as_micros() as u64,
             encode_scene_text_setup_us: frame_perf.encode_scene_text_setup.as_micros() as u64,
             encode_scene_text_glyphs_us: frame_perf.encode_scene_text_glyphs.as_micros() as u64,
+            encode_scene_text_glyph_transform_us: frame_perf
+                .encode_scene_text_glyph_transform
+                .as_micros() as u64,
+            encode_scene_text_glyph_emit_us: frame_perf.encode_scene_text_glyph_emit.as_micros()
+                as u64,
+            encode_scene_text_group_flush_us: frame_perf.encode_scene_text_group_flush.as_micros()
+                as u64,
+            encode_scene_text_vertex_grow_events: frame_perf.encode_scene_text_vertex_grow_events,
+            encode_scene_text_transform_fast_path_glyphs: frame_perf
+                .encode_scene_text_transform_fast_path_glyphs,
+            encode_scene_text_transform_generic_glyphs: frame_perf
+                .encode_scene_text_transform_generic_glyphs,
             encode_scene_stack_ops: frame_perf.encode_scene_stack_ops,
             encode_scene_clip_ops: frame_perf.encode_scene_clip_ops,
             encode_scene_mask_ops: frame_perf.encode_scene_mask_ops,

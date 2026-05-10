@@ -639,6 +639,30 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_encode_scene_text_glyphs_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_encode_scene_text_vertex_grow_events = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_vertex_grow_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_glyph_transform_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_glyph_transform_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_glyph_emit_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_glyph_emit_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_group_flush_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_group_flush_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_transform_fast_path_glyphs = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_transform_fast_path_glyphs"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_transform_generic_glyphs = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_transform_generic_glyphs"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_encode_scene_stack_ops = stats
                 .and_then(|m| m.get("renderer_encode_scene_stack_ops"))
                 .and_then(|v| v.as_u64())
@@ -1785,6 +1809,12 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encode_scene_text_shadow_us,
                 renderer_encode_scene_text_setup_us,
                 renderer_encode_scene_text_glyphs_us,
+                renderer_encode_scene_text_glyph_transform_us,
+                renderer_encode_scene_text_glyph_emit_us,
+                renderer_encode_scene_text_group_flush_us,
+                renderer_encode_scene_text_vertex_grow_events,
+                renderer_encode_scene_text_transform_fast_path_glyphs,
+                renderer_encode_scene_text_transform_generic_glyphs,
                 renderer_encode_scene_stack_ops,
                 renderer_encode_scene_clip_ops,
                 renderer_encode_scene_mask_ops,

@@ -981,8 +981,13 @@ Renderer encode attribution (2026-05-10):
   frames around `278-582us` in the glyph bucket. The bundle-level renderer encode p95/max is now `978/978us`, down from
   the previous text-phase probe's `1843/1843us` p95/max.
 - Interpretation: the atlas lookup component has been moved out of the encode hotspot. The next renderer-side slice
-  should attribute and reduce the remaining text vertex construction / transform / group-bounds work, or move further
+  should attribute and reduce the remaining text vertex emission / group-bounds / group-flush work, or move further
   toward row/fragment replay so stable editor rows do not rebuild all text vertices every frame.
+- Follow-up probe: `target/fret-diag/perf-code-editor-render-cache-v4/1778420924991/bundle.schema2.json`.
+  The translation+uniform-scale glyph fast path now covers the whole autoscroll run
+  (`encode_scene_text_transform_fast_path_glyphs=20420`, `encode_scene_text_transform_generic_glyphs=0`,
+  `encode_scene_text_vertex_grow_events=0`), and the repeat=3 probe landed at p50/p95/max total `2091/2165/2165us`
+  with paint `1893/1937/1937us`.
 
 ## Failure exemplar map
 

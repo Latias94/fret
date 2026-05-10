@@ -107,6 +107,7 @@
     "target/fret-diag/perf-code-editor-renderer-family-profile-v2/1778412984109/bundle.schema2.json",
     "target/fret-diag/perf-code-editor-renderer-family-profile-v3/1778414559583/bundle.schema2.json",
     "target/fret-diag/perf-code-editor-render-cache-v1/1778416476030/bundle.schema2.json",
+    "target/fret-diag/perf-code-editor-render-cache-v4/1778420924991/bundle.schema2.json",
     "target/fret-diag/1778370148858/bundle.schema2.json",
     "target/fret-diag-baseline-select-ui-gallery-overlay-pointer-move-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json",
     "target/fret-diag-baseline-select-ui-gallery-overlay-torture-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json",
@@ -119,6 +120,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep the lane active for Windows smoothness maintenance. Do not re-promote broad ui-gallery-steady from the evidence-only maintenance boundary until the membership is narrowed into smaller steady-contract groups. ui-gallery-context-menu-right-click-steady, ui-gallery-dialog-escape-focus-restore-steady, ui-gallery-dropdown-open-select-steady, ui-gallery-code-editor-torture-autoscroll-steady, ui-gallery-overlay-pointer-move-steady, and ui-gallery-overlay-torture-steady now each have checked-in baselines; keep ui-gallery-overlay-steady evidence-only because the broad suite still mixes overlay, modal, and inspector members. The normalized ui-gallery-complex-steady run with --prelude-each-run now serves as the current paint exemplar, while the no-prelude underflow remains normalization-noise evidence only. The current code-editor renderer follow-on has moved stable glyph atlas lookup out of scene encode with a TextShape render-glyph cache; next renderer work should attribute the remaining text vertex construction, transform, and grouping cost before attempting larger replay refactors."
+    "notes": "Keep the lane active for Windows smoothness maintenance. Do not re-promote broad ui-gallery-steady from the evidence-only maintenance boundary until the membership is narrowed into smaller steady-contract groups. ui-gallery-context-menu-right-click-steady, ui-gallery-dialog-escape-focus-restore-steady, ui-gallery-dropdown-open-select-steady, ui-gallery-code-editor-torture-autoscroll-steady, ui-gallery-overlay-pointer-move-steady, and ui-gallery-overlay-torture-steady now each have checked-in baselines; keep ui-gallery-overlay-steady evidence-only because the broad suite still mixes overlay, modal, and inspector members. The normalized ui-gallery-complex-steady run with --prelude-each-run now serves as the current paint exemplar, while the no-prelude underflow remains normalization-noise evidence only. The current code-editor renderer follow-on has moved stable glyph atlas lookup out of scene encode with a TextShape render-glyph cache; the translation+uniform-scale glyph transform fast path is now in place for the autoscroll probe, so next renderer work should attribute the remaining text vertex emission and group-bounds cost before attempting larger replay refactors."
   }
 }

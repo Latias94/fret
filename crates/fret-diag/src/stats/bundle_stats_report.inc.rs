@@ -298,6 +298,12 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encode_scene_text_shadow_us: u64,
     pub(super) renderer_encode_scene_text_setup_us: u64,
     pub(super) renderer_encode_scene_text_glyphs_us: u64,
+    pub(super) renderer_encode_scene_text_glyph_transform_us: u64,
+    pub(super) renderer_encode_scene_text_glyph_emit_us: u64,
+    pub(super) renderer_encode_scene_text_group_flush_us: u64,
+    pub(super) renderer_encode_scene_text_vertex_grow_events: u64,
+    pub(super) renderer_encode_scene_text_transform_fast_path_glyphs: u64,
+    pub(super) renderer_encode_scene_text_transform_generic_glyphs: u64,
     pub(super) renderer_encode_scene_stack_ops: u64,
     pub(super) renderer_encode_scene_clip_ops: u64,
     pub(super) renderer_encode_scene_mask_ops: u64,
@@ -1006,6 +1012,12 @@ impl BundleStatsReport {
                 || row.renderer_encode_scene_text_shadow_us > 0
                 || row.renderer_encode_scene_text_setup_us > 0
                 || row.renderer_encode_scene_text_glyphs_us > 0
+                || row.renderer_encode_scene_text_glyph_transform_us > 0
+                || row.renderer_encode_scene_text_glyph_emit_us > 0
+                || row.renderer_encode_scene_text_group_flush_us > 0
+                || row.renderer_encode_scene_text_vertex_grow_events > 0
+                || row.renderer_encode_scene_text_transform_fast_path_glyphs > 0
+                || row.renderer_encode_scene_text_transform_generic_glyphs > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -1036,6 +1048,21 @@ impl BundleStatsReport {
                     row.renderer_encode_scene_text_shadow_us,
                     row.renderer_encode_scene_text_setup_us,
                     row.renderer_encode_scene_text_glyphs_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/transform/emit/flush)={}/{}/{}",
+                    row.renderer_encode_scene_text_glyph_transform_us,
+                    row.renderer_encode_scene_text_glyph_emit_us,
+                    row.renderer_encode_scene_text_group_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(vertex_grow_events)={}",
+                    row.renderer_encode_scene_text_vertex_grow_events,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(transform_fast/generic)={}/{}",
+                    row.renderer_encode_scene_text_transform_fast_path_glyphs,
+                    row.renderer_encode_scene_text_transform_generic_glyphs,
                 ));
                 if row.renderer_encode_scene_stack_ops > 0
                     || row.renderer_encode_scene_clip_ops > 0
@@ -1421,6 +1448,12 @@ impl BundleStatsReport {
                 || row.renderer_encode_scene_text_shadow_us > 0
                 || row.renderer_encode_scene_text_setup_us > 0
                 || row.renderer_encode_scene_text_glyphs_us > 0
+                || row.renderer_encode_scene_text_glyph_transform_us > 0
+                || row.renderer_encode_scene_text_glyph_emit_us > 0
+                || row.renderer_encode_scene_text_group_flush_us > 0
+                || row.renderer_encode_scene_text_vertex_grow_events > 0
+                || row.renderer_encode_scene_text_transform_fast_path_glyphs > 0
+                || row.renderer_encode_scene_text_transform_generic_glyphs > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -1451,6 +1484,21 @@ impl BundleStatsReport {
                     row.renderer_encode_scene_text_shadow_us,
                     row.renderer_encode_scene_text_setup_us,
                     row.renderer_encode_scene_text_glyphs_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/transform/emit/flush)={}/{}/{}",
+                    row.renderer_encode_scene_text_glyph_transform_us,
+                    row.renderer_encode_scene_text_glyph_emit_us,
+                    row.renderer_encode_scene_text_group_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(vertex_grow_events)={}",
+                    row.renderer_encode_scene_text_vertex_grow_events,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(transform_fast/generic)={}/{}",
+                    row.renderer_encode_scene_text_transform_fast_path_glyphs,
+                    row.renderer_encode_scene_text_transform_generic_glyphs,
                 ));
                 if row.renderer_encode_scene_stack_ops > 0
                     || row.renderer_encode_scene_clip_ops > 0
@@ -3225,6 +3273,30 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_encode_scene_text_glyphs_us".to_string(),
                     Value::from(row.renderer_encode_scene_text_glyphs_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_glyph_transform_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_glyph_transform_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_glyph_emit_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_glyph_emit_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_group_flush_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_group_flush_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_vertex_grow_events".to_string(),
+                    Value::from(row.renderer_encode_scene_text_vertex_grow_events),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_transform_fast_path_glyphs".to_string(),
+                    Value::from(row.renderer_encode_scene_text_transform_fast_path_glyphs),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_transform_generic_glyphs".to_string(),
+                    Value::from(row.renderer_encode_scene_text_transform_generic_glyphs),
                 );
                 obj.insert(
                     "renderer_encode_scene_stack_ops".to_string(),
