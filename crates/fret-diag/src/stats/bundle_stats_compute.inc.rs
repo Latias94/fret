@@ -627,6 +627,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_encode_scene_flush_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_encode_scene_text_shadow_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_shadow_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_setup_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_setup_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_glyphs_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_glyphs_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_encode_scene_stack_ops = stats
                 .and_then(|m| m.get("renderer_encode_scene_stack_ops"))
                 .and_then(|v| v.as_u64())
@@ -1770,6 +1782,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encode_scene_path_us,
                 renderer_encode_scene_viewport_us,
                 renderer_encode_scene_flush_us,
+                renderer_encode_scene_text_shadow_us,
+                renderer_encode_scene_text_setup_us,
+                renderer_encode_scene_text_glyphs_us,
                 renderer_encode_scene_stack_ops,
                 renderer_encode_scene_clip_ops,
                 renderer_encode_scene_mask_ops,

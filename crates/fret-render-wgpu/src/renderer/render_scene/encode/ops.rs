@@ -66,7 +66,13 @@ fn clip_path_mask_cache_key(
     key
 }
 
-pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &SceneOp) {
+pub(super) fn handle_op(
+    renderer: &Renderer,
+    state: &mut EncodeState<'_>,
+    op: &SceneOp,
+    perf_enabled: bool,
+    frame_perf: &mut RenderPerfStats,
+) {
     match *op {
         SceneOp::PushTransform { transform } => {
             let current = state.current_transform();
@@ -463,7 +469,17 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             shadow,
             ..
         } => {
-            draw::encode_text(renderer, state, origin, text, paint, outline, shadow);
+            draw::encode_text(
+                renderer,
+                state,
+                origin,
+                text,
+                paint,
+                outline,
+                shadow,
+                perf_enabled,
+                frame_perf,
+            );
         }
         SceneOp::Path {
             origin,

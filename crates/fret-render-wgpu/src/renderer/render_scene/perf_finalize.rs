@@ -35,6 +35,9 @@ impl Renderer {
         perf.encode_scene_path += frame_perf.encode_scene_path;
         perf.encode_scene_viewport += frame_perf.encode_scene_viewport;
         perf.encode_scene_flush += frame_perf.encode_scene_flush;
+        perf.encode_scene_text_shadow += frame_perf.encode_scene_text_shadow;
+        perf.encode_scene_text_setup += frame_perf.encode_scene_text_setup;
+        perf.encode_scene_text_glyphs += frame_perf.encode_scene_text_glyphs;
         perf.encode_scene_stack_ops = perf
             .encode_scene_stack_ops
             .saturating_add(frame_perf.encode_scene_stack_ops);
@@ -458,6 +461,9 @@ impl Renderer {
             encode_scene_path_us: frame_perf.encode_scene_path.as_micros() as u64,
             encode_scene_viewport_us: frame_perf.encode_scene_viewport.as_micros() as u64,
             encode_scene_flush_us: frame_perf.encode_scene_flush.as_micros() as u64,
+            encode_scene_text_shadow_us: frame_perf.encode_scene_text_shadow.as_micros() as u64,
+            encode_scene_text_setup_us: frame_perf.encode_scene_text_setup.as_micros() as u64,
+            encode_scene_text_glyphs_us: frame_perf.encode_scene_text_glyphs.as_micros() as u64,
             encode_scene_stack_ops: frame_perf.encode_scene_stack_ops,
             encode_scene_clip_ops: frame_perf.encode_scene_clip_ops,
             encode_scene_mask_ops: frame_perf.encode_scene_mask_ops,

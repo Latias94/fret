@@ -406,6 +406,12 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_encode_scene_flush_us: u64,
     #[serde(default)]
+    pub renderer_encode_scene_text_shadow_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_setup_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_glyphs_us: u64,
+    #[serde(default)]
     pub renderer_encode_scene_stack_ops: u64,
     #[serde(default)]
     pub renderer_encode_scene_clip_ops: u64,
@@ -1023,6 +1029,9 @@ impl UiFrameStatsV1 {
             renderer_encode_scene_path_us: 0,
             renderer_encode_scene_viewport_us: 0,
             renderer_encode_scene_flush_us: 0,
+            renderer_encode_scene_text_shadow_us: 0,
+            renderer_encode_scene_text_setup_us: 0,
+            renderer_encode_scene_text_glyphs_us: 0,
             renderer_encode_scene_stack_ops: 0,
             renderer_encode_scene_clip_ops: 0,
             renderer_encode_scene_mask_ops: 0,
@@ -1199,6 +1208,9 @@ impl UiFrameStatsV1 {
             out.renderer_encode_scene_path_us = sample.perf.encode_scene_path_us;
             out.renderer_encode_scene_viewport_us = sample.perf.encode_scene_viewport_us;
             out.renderer_encode_scene_flush_us = sample.perf.encode_scene_flush_us;
+            out.renderer_encode_scene_text_shadow_us = sample.perf.encode_scene_text_shadow_us;
+            out.renderer_encode_scene_text_setup_us = sample.perf.encode_scene_text_setup_us;
+            out.renderer_encode_scene_text_glyphs_us = sample.perf.encode_scene_text_glyphs_us;
             out.renderer_encode_scene_stack_ops = sample.perf.encode_scene_stack_ops;
             out.renderer_encode_scene_clip_ops = sample.perf.encode_scene_clip_ops;
             out.renderer_encode_scene_mask_ops = sample.perf.encode_scene_mask_ops;

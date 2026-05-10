@@ -36,8 +36,12 @@
   `diag stats` and triage JSON.
 - [x] Capture one fresh bundle with the renderer encode family profile enabled and use it to decide the next
   renderer-side follow-on. The current probe shows `text` dominates the remaining encode tail.
-- [ ] Follow up on the text-heavy renderer encode path and decide whether the next slice is text vertex construction,
-  text batching, or scene text indexing.
+- [x] Follow up on the text-heavy renderer encode path and decide whether the next slice is text vertex construction,
+  text batching, or scene text indexing. The first slice added text-phase attribution and moved atlas page/UV lookup out
+  of the encode loop with a `TextShape` render-glyph cache.
+- [ ] Attribute/reduce the remaining text vertex construction, transform, and group-bounds work in the renderer encode
+  path, or promote a row/fragment replay slice if the evidence shows stable editor rows still rebuild too much text
+  vertex data every frame.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in

@@ -3,6 +3,7 @@ use super::super::*;
 
 use super::paint::{PaintMaterialPolicy, paint_to_gpu};
 use crate::text::{TextDecorationKind, TextRenderGlyphKind};
+use fret_core::time::Instant;
 use fret_core::{Corners, Edges};
 
 pub(in super::super) fn encode_text(
@@ -13,6 +14,8 @@ pub(in super::super) fn encode_text(
     paint: fret_core::scene::PaintBindingV1,
     outline: Option<fret_core::scene::TextOutlineV1>,
     shadow: Option<fret_core::scene::TextShadowV1>,
+    perf_enabled: bool,
+    frame_perf: &mut RenderPerfStats,
 ) {
     state.flush_quad_batch();
 
@@ -25,6 +28,7 @@ pub(in super::super) fn encode_text(
         && (shadow.offset.x.0 != 0.0 || shadow.offset.y.0 != 0.0)
     {
         let shadow_origin = Point::new(origin.x + shadow.offset.x, origin.y + shadow.offset.y);
+        let shadow_start = perf_enabled.then(Instant::now);
         encode_text_blob(
             renderer,
             state,
@@ -33,10 +37,30 @@ pub(in super::super) fn encode_text(
             fret_core::scene::Paint::Solid(shadow.color).into(),
             None,
             false,
+            false,
+            perf_enabled,
+            frame_perf,
         );
+        if let Some(shadow_start) = shadow_start {
+            frame_perf.record_encode_scene_text_phase(
+                EncodeSceneTextPhase::Shadow,
+                Some(shadow_start.elapsed()),
+            );
+        }
     }
 
-    encode_text_blob(renderer, state, origin, &blob, paint, outline, true);
+    encode_text_blob(
+        renderer,
+        state,
+        origin,
+        &blob,
+        paint,
+        outline,
+        true,
+        true,
+        perf_enabled,
+        frame_perf,
+    );
 }
 
 fn encode_text_blob(
@@ -47,6 +71,9 @@ fn encode_text_blob(
     paint: fret_core::scene::PaintBindingV1,
     outline: Option<fret_core::scene::TextOutlineV1>,
     draw_decorations: bool,
+    profile_text_phases: bool,
+    perf_enabled: bool,
+    frame_perf: &mut RenderPerfStats,
 ) {
     state.flush_quad_batch();
 
@@ -55,6 +82,7 @@ fn encode_text_blob(
         return;
     }
 
+    let setup_start = (profile_text_phases && perf_enabled).then(Instant::now);
     let t_px = state.current_transform_px();
 
     let base_x = origin.x.0 * state.scale_factor;
@@ -223,12 +251,20 @@ fn encode_text_blob(
         idx
     });
 
+    if let Some(setup_start) = setup_start {
+        frame_perf.record_encode_scene_text_phase(
+            EncodeSceneTextPhase::Setup,
+            Some(setup_start.elapsed()),
+        );
+    }
+
     let mut active_kind: Option<TextDrawKind> = None;
     let mut active_page: u16 = 0;
     let mut active_paint_index: u32 = 0;
     let mut active_palette: bool = false;
     let mut group_first_vertex = state.text_vertices.len() as u32;
     let mut group_bounds_px: Option<(f32, f32, f32, f32)> = None;
+    let glyphs_start = (profile_text_phases && perf_enabled).then(Instant::now);
 
     let flush_group = |state: &mut EncodeState<'_>,
                        kind: Option<TextDrawKind>,
@@ -512,5 +548,12 @@ fn encode_text_blob(
             );
         }
         state.flush_quad_batch();
+    }
+
+    if let Some(glyphs_start) = glyphs_start {
+        frame_perf.record_encode_scene_text_phase(
+            EncodeSceneTextPhase::Glyphs,
+            Some(glyphs_start.elapsed()),
+        );
     }
 }

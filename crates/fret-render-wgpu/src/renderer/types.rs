@@ -424,6 +424,9 @@ pub struct RenderPerfSnapshot {
     pub encode_scene_path_us: u64,
     pub encode_scene_viewport_us: u64,
     pub encode_scene_flush_us: u64,
+    pub encode_scene_text_shadow_us: u64,
+    pub encode_scene_text_setup_us: u64,
+    pub encode_scene_text_glyphs_us: u64,
     pub encode_scene_stack_ops: u64,
     pub encode_scene_clip_ops: u64,
     pub encode_scene_mask_ops: u64,
@@ -730,6 +733,13 @@ pub(super) enum EncodeSceneFamily {
     Flush,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum EncodeSceneTextPhase {
+    Shadow,
+    Setup,
+    Glyphs,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct RenderPerfStats {
     pub(super) frames: u64,
@@ -752,6 +762,9 @@ pub(super) struct RenderPerfStats {
     pub(super) encode_scene_path: Duration,
     pub(super) encode_scene_viewport: Duration,
     pub(super) encode_scene_flush: Duration,
+    pub(super) encode_scene_text_shadow: Duration,
+    pub(super) encode_scene_text_setup: Duration,
+    pub(super) encode_scene_text_glyphs: Duration,
     pub(super) encode_scene_stack_ops: u64,
     pub(super) encode_scene_clip_ops: u64,
     pub(super) encode_scene_mask_ops: u64,
@@ -975,6 +988,30 @@ impl RenderPerfStats {
                 self.encode_scene_flushes = self.encode_scene_flushes.saturating_add(1);
                 if let Some(elapsed) = elapsed {
                     self.encode_scene_flush += elapsed;
+                }
+            }
+        }
+    }
+
+    pub(super) fn record_encode_scene_text_phase(
+        &mut self,
+        phase: EncodeSceneTextPhase,
+        elapsed: Option<Duration>,
+    ) {
+        match phase {
+            EncodeSceneTextPhase::Shadow => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_shadow += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::Setup => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_setup += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::Glyphs => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_glyphs += elapsed;
                 }
             }
         }

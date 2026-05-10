@@ -295,6 +295,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encode_scene_path_us: u64,
     pub(super) renderer_encode_scene_viewport_us: u64,
     pub(super) renderer_encode_scene_flush_us: u64,
+    pub(super) renderer_encode_scene_text_shadow_us: u64,
+    pub(super) renderer_encode_scene_text_setup_us: u64,
+    pub(super) renderer_encode_scene_text_glyphs_us: u64,
     pub(super) renderer_encode_scene_stack_ops: u64,
     pub(super) renderer_encode_scene_clip_ops: u64,
     pub(super) renderer_encode_scene_mask_ops: u64,
@@ -1000,6 +1003,9 @@ impl BundleStatsReport {
                 || row.renderer_encode_scene_path_us > 0
                 || row.renderer_encode_scene_viewport_us > 0
                 || row.renderer_encode_scene_flush_us > 0
+                || row.renderer_encode_scene_text_shadow_us > 0
+                || row.renderer_encode_scene_text_setup_us > 0
+                || row.renderer_encode_scene_text_glyphs_us > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -1024,6 +1030,12 @@ impl BundleStatsReport {
                     row.renderer_encode_scene_path_us,
                     row.renderer_encode_scene_viewport_us,
                     row.renderer_encode_scene_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/shadow/setup/glyphs)={}/{}/{}",
+                    row.renderer_encode_scene_text_shadow_us,
+                    row.renderer_encode_scene_text_setup_us,
+                    row.renderer_encode_scene_text_glyphs_us,
                 ));
                 if row.renderer_encode_scene_stack_ops > 0
                     || row.renderer_encode_scene_clip_ops > 0
@@ -1406,6 +1418,9 @@ impl BundleStatsReport {
                 || row.renderer_encode_scene_path_us > 0
                 || row.renderer_encode_scene_viewport_us > 0
                 || row.renderer_encode_scene_flush_us > 0
+                || row.renderer_encode_scene_text_shadow_us > 0
+                || row.renderer_encode_scene_text_setup_us > 0
+                || row.renderer_encode_scene_text_glyphs_us > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -1430,6 +1445,12 @@ impl BundleStatsReport {
                     row.renderer_encode_scene_path_us,
                     row.renderer_encode_scene_viewport_us,
                     row.renderer_encode_scene_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/shadow/setup/glyphs)={}/{}/{}",
+                    row.renderer_encode_scene_text_shadow_us,
+                    row.renderer_encode_scene_text_setup_us,
+                    row.renderer_encode_scene_text_glyphs_us,
                 ));
                 if row.renderer_encode_scene_stack_ops > 0
                     || row.renderer_encode_scene_clip_ops > 0
@@ -3192,6 +3213,18 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_encode_scene_flush_us".to_string(),
                     Value::from(row.renderer_encode_scene_flush_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_shadow_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_shadow_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_setup_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_setup_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_glyphs_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_glyphs_us),
                 );
                 obj.insert(
                     "renderer_encode_scene_stack_ops".to_string(),

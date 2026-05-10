@@ -42,10 +42,10 @@ impl Renderer {
             if perf_enabled {
                 let family = encode_scene_family(op);
                 let start = encode_family_profile_enabled.then(Instant::now);
-                ops::handle_op(self, &mut state, op);
+                ops::handle_op(self, &mut state, op, perf_enabled, frame_perf);
                 frame_perf.record_encode_scene_family(family, start.map(|start| start.elapsed()));
             } else {
-                ops::handle_op(self, &mut state, op);
+                ops::handle_op(self, &mut state, op, perf_enabled, frame_perf);
             }
         }
 

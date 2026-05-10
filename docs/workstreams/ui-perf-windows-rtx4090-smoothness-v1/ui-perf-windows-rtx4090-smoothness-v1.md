@@ -966,6 +966,23 @@ Renderer encode attribution (2026-05-10):
 - Current probe result (`target/fret-diag/perf-code-editor-renderer-family-profile-v2/1778412984109/bundle.schema2.json`):
   `renderer.encode.us(text)=932-1030us`, `clip=16-21us`, `quad=6-12us`, `mask/effect/path/viewport/flush=0`.
   That means the remaining encode tail on this probe is text-heavy, not clip/quad-heavy.
+- Added text-phase attribution for the text encode bucket:
+  `renderer.encode.text(us/shadow/setup/glyphs)`. The follow-up probe
+  (`target/fret-diag/perf-code-editor-renderer-family-profile-v3/1778414559583/bundle.schema2.json`) showed the
+  hotspot inside the glyph loop, not text shadow or setup:
+  `shadow/setup/glyphs=0/17/996us` on the worst frame, with other top encode frames in the `883-1150us` glyph range.
+- Change: `TextShape` now keeps an atlas-revision keyed render-glyph cache, so stable shaped text resolves atlas page/UV
+  data before renderer encode instead of doing per-glyph atlas lookup during each scene encode. This matches the
+  Zed/GPUI-aligned direction for editor rendering: prepare render-ready text data before the paint/encode replay path,
+  and keep encode focused on transform, bounds, batching, and vertex emission.
+- Render-cache probe:
+  `target/fret-diag/perf-code-editor-render-cache-v1/1778416476030/bundle.schema2.json`.
+  `renderer.encode.text(us/shadow/setup/glyphs)` dropped to `0/27/627us` on the worst frame, with other top encode
+  frames around `278-582us` in the glyph bucket. The bundle-level renderer encode p95/max is now `978/978us`, down from
+  the previous text-phase probe's `1843/1843us` p95/max.
+- Interpretation: the atlas lookup component has been moved out of the encode hotspot. The next renderer-side slice
+  should attribute and reduce the remaining text vertex construction / transform / group-bounds work, or move further
+  toward row/fragment replay so stable editor rows do not rebuild all text vertices every frame.
 
 ## Failure exemplar map
 
