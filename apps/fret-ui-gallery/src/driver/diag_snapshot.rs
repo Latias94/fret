@@ -65,14 +65,14 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(56);
+    let mut out = serde_json::Map::with_capacity(84);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
         };
     }
 
-    insert_u64!("schema_version", 3);
+    insert_u64!("schema_version", 6);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -89,17 +89,27 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_syntax_spans", frame.us_syntax_spans);
     insert_u64!("us_rich_materialize", frame.us_rich_materialize);
     insert_u64!("us_text_draw", frame.us_text_draw);
+    insert_u64!("us_row_rich_cache_compare", frame.us_row_rich_cache_compare);
+    insert_u64!("us_row_geom_key", frame.us_row_geom_key);
+    insert_u64!("us_row_scene_key", frame.us_row_scene_key);
     insert_u64!("us_row_scene_fast_probe", frame.us_row_scene_fast_probe);
     insert_u64!("us_row_scene_full_probe", frame.us_row_scene_full_probe);
+    insert_u64!("us_row_scene_fast_key_compare", frame.us_row_scene_fast_key_compare);
+    insert_u64!("us_row_scene_full_key_compare", frame.us_row_scene_full_key_compare);
     insert_u64!("us_row_scene_replay_touch", frame.us_row_scene_replay_touch);
     insert_u64!("us_row_scene_replay_ops", frame.us_row_scene_replay_ops);
     insert_u64!("us_row_scene_capture_ops", frame.us_row_scene_capture_ops);
     insert_u64!("us_row_scene_store", frame.us_row_scene_store);
+    insert_u64!("us_row_scene_fast_path", frame.us_row_scene_fast_path);
+    insert_u64!("us_row_scene_full_path", frame.us_row_scene_full_path);
     insert_u64!("us_selection_rects", frame.us_selection_rects);
     insert_u64!("us_caret_x", frame.us_caret_x);
     insert_u64!("us_caret_stops", frame.us_caret_stops);
     insert_u64!("us_caret_rect", frame.us_caret_rect);
     insert_u64!("us_row_geom_cache", frame.us_row_geom_cache);
+    insert_u64!("us_row_content_resolve", frame.us_row_content_resolve);
+    insert_u64!("us_row_geom_resolve", frame.us_row_geom_resolve);
+    insert_u64!("us_row_overlay", frame.us_row_overlay);
     insert_u64!("syntax_rows_stored", frame.syntax_rows_stored);
     insert_u64!("us_syntax_slice", frame.us_syntax_slice);
     insert_u64!("us_syntax_highlight", frame.us_syntax_highlight);
@@ -111,17 +121,27 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_syntax_spans", frame.ns_syntax_spans);
     insert_u64!("ns_rich_materialize", frame.ns_rich_materialize);
     insert_u64!("ns_text_draw", frame.ns_text_draw);
+    insert_u64!("ns_row_rich_cache_compare", frame.ns_row_rich_cache_compare);
+    insert_u64!("ns_row_geom_key", frame.ns_row_geom_key);
+    insert_u64!("ns_row_scene_key", frame.ns_row_scene_key);
     insert_u64!("ns_row_scene_fast_probe", frame.ns_row_scene_fast_probe);
     insert_u64!("ns_row_scene_full_probe", frame.ns_row_scene_full_probe);
+    insert_u64!("ns_row_scene_fast_key_compare", frame.ns_row_scene_fast_key_compare);
+    insert_u64!("ns_row_scene_full_key_compare", frame.ns_row_scene_full_key_compare);
     insert_u64!("ns_row_scene_replay_touch", frame.ns_row_scene_replay_touch);
     insert_u64!("ns_row_scene_replay_ops", frame.ns_row_scene_replay_ops);
     insert_u64!("ns_row_scene_capture_ops", frame.ns_row_scene_capture_ops);
     insert_u64!("ns_row_scene_store", frame.ns_row_scene_store);
+    insert_u64!("ns_row_scene_fast_path", frame.ns_row_scene_fast_path);
+    insert_u64!("ns_row_scene_full_path", frame.ns_row_scene_full_path);
     insert_u64!("ns_selection_rects", frame.ns_selection_rects);
     insert_u64!("ns_caret_x", frame.ns_caret_x);
     insert_u64!("ns_caret_stops", frame.ns_caret_stops);
     insert_u64!("ns_caret_rect", frame.ns_caret_rect);
     insert_u64!("ns_row_geom_cache", frame.ns_row_geom_cache);
+    insert_u64!("ns_row_content_resolve", frame.ns_row_content_resolve);
+    insert_u64!("ns_row_geom_resolve", frame.ns_row_geom_resolve);
+    insert_u64!("ns_row_overlay", frame.ns_row_overlay);
     insert_u64!("ns_syntax_slice", frame.ns_syntax_slice);
     insert_u64!("ns_syntax_highlight", frame.ns_syntax_highlight);
     insert_u64!("ns_syntax_distribute", frame.ns_syntax_distribute);

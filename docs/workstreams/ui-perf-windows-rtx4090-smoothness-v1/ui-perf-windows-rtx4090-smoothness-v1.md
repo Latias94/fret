@@ -1075,6 +1075,38 @@ Renderer encode attribution (2026-05-10):
     the low-overhead family profile as the default gate surface, then use the opt-in glyph emit profile only when a
     narrow text-encode probe needs it. A deeper row/fragment replay design remains valid as a future editor-grade
     direction, but it should be justified by fresh low-overhead evidence rather than by the old high-overhead profile.
+- Row-scene key refresh follow-up:
+  - Probe:
+    `target/fret-diag/perf-code-editor-paint-breakdown-v4-key-refresh-probe/1778437355651/bundle.schema2.json`.
+    After the cached syntax replay key is refreshed on a successful full replay, later steady frames recover the
+    pointer-identity fast path again. In the worst later frames the code-editor paint telemetry reports
+    `ns_row_scene_full_path=0`, `ns_row_scene_fast_path=211-274us`, `ns_row_content_resolve=312-451us`, and
+    `ns_total=544-799us`, which is the behavior we want from a GPUI-style cached replay loop.
+  - Interpretation: this is a tighter win than jumping straight to row/fragment replay. Keep the syntax replay key
+    refresh in place, then only revisit deeper replay if a fresh low-overhead probe still shows stable rows rebuilding
+    too much text or geometry.
+- Gate noise note:
+  - The repeat=7 max gate on this machine is still sensitive to renderer tail thresholds. Recent reruns failed on
+    `renderer_encoder_finish_us=185/336` vs threshold `176`, or on `renderer_record_passes_us=90` vs threshold `64`,
+    while total and paint times remained in the same healthy band. Treat those as tail noise for this lane, not as a
+    code-editor regression, and prefer the low-overhead probe bundles above for the real decision loop.
+- Content-resolve split follow-up (2026-05-11):
+  - Probe:
+    `target/fret-diag/perf-code-editor-content-resolve-breakdown-v1/1778439554384/bundle.schema2.json`.
+    This run uses `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1` and is an attribution probe, not a promoted gate.
+  - Change: code-editor paint telemetry schema `6` now exposes `us/ns_row_rich_cache_compare`,
+    `us/ns_row_geom_key`, `us/ns_row_scene_key`, `us/ns_row_scene_fast_key_compare`, and
+    `us/ns_row_scene_full_key_compare`.
+  - Result: repeat=3 reported p50/p95/max total `1939/1949/1949us` and paint `1845/1854/1854us`. The top
+    paint-perf snapshots showed `ns_row_content_resolve=342-506us`, `ns_row_scene_fast_path=273-341us`,
+    `ns_row_text=69-87us`, `ns_syntax_spans=38-52us`, `ns_row_scene_fast_key_compare=26-38us`,
+    `ns_row_rich_cache_compare<=0.8us`, `ns_row_geom_key<=2.4us`, and `ns_row_scene_key` was usually
+    `<=0.3us` with one `9.6us` outlier. `ns_row_scene_full_path` stayed near zero.
+  - Interpretation: RowGeomKey/RowSceneKey construction and row-rich cache comparison are not the remaining
+    bottleneck. The remaining content-resolve cost is mostly the row-scene fast replay path itself (probe/key compare,
+    hosted-resource touch, and translated op replay) plus occasional new-row text draw. If this lane continues with
+    row-scoped work, target row-scene replay/touch mechanics from fresh low-overhead evidence rather than key
+    construction.
 
 ## Failure exemplar map
 

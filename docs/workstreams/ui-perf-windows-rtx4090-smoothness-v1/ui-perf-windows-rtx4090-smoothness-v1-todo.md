@@ -57,6 +57,9 @@
 - [ ] Re-evaluate row/fragment replay only from a fresh low-overhead profile. If steady editor rows still rebuild too
   much text or geometry after default family profiling, prototype the smallest row-scoped replay cache and keep the
   code-editor v2 steady baseline as the guardrail.
+  - 2026-05-11 content-resolve probe note: key comparison and key construction are already tiny relative to the
+    row-scene fast replay path. If this lane revisits row-scoped replay work, target replay/touch mechanics or text
+    draw before spending time on more RowGeomKey / RowSceneKey splitting.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in
