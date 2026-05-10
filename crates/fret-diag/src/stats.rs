@@ -833,4 +833,41 @@ mod tests {
         assert!(json.get("avg").is_some());
         assert!(json.get("budget_pct").is_some());
     }
+
+    #[test]
+    fn bundle_stats_reads_element_children_vec_pool_grow_events() {
+        let bundle = serde_json::json!({
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "tick_id": 11,
+                    "timestamp_unix_ms": 12,
+                    "debug": {
+                        "stats": {
+                            "total_time_us": 100,
+                            "layout_time_us": 20,
+                            "paint_time_us": 30,
+                            "element_children_vec_pool_reuses": 4,
+                            "element_children_vec_pool_misses": 5,
+                            "element_children_vec_pool_grow_events": 6
+                        }
+                    }
+                }]
+            }]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats");
+
+        let top = report.top.first().expect("top row");
+        assert_eq!(top.element_children_vec_pool_reuses, 4);
+        assert_eq!(top.element_children_vec_pool_misses, 5);
+        assert_eq!(top.element_children_vec_pool_grow_events, 6);
+    }
 }

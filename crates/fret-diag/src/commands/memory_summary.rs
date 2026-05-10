@@ -56,6 +56,7 @@ struct MemorySampleRow {
     ui_element_runtime_scratch_element_children_vec_pool_len: Option<u64>,
     ui_element_runtime_scratch_element_children_vec_pool_capacity_total: Option<u64>,
     ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total: Option<u64>,
+    ui_element_runtime_scratch_element_children_vec_pool_grow_events: Option<u64>,
     ui_layout_nodes_visited: Option<u64>,
     ui_prepaint_nodes_visited: Option<u64>,
     ui_interaction_records: Option<u64>,
@@ -774,6 +775,10 @@ fn read_sample_row(
             bundle,
             "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total",
         ),
+        ui_element_runtime_scratch_element_children_vec_pool_grow_events: get_u64(
+            bundle,
+            "ui_element_runtime_scratch_element_children_vec_pool_grow_events",
+        ),
         ui_layout_nodes_visited: get_u64(bundle, "ui_layout_nodes_visited"),
         ui_prepaint_nodes_visited: get_u64(bundle, "ui_prepaint_nodes_visited"),
         ui_interaction_records: get_u64(bundle, "ui_interaction_records"),
@@ -1032,6 +1037,7 @@ fn build_report(
         "ui_element_runtime_scratch_element_children_vec_pool_len": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_len).collect()),
         "ui_element_runtime_scratch_element_children_vec_pool_capacity_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_capacity_total).collect()),
         "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total).collect()),
+        "ui_element_runtime_scratch_element_children_vec_pool_grow_events": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_grow_events).collect()),
         "ui_layout_nodes_visited": stats_u64(rows.iter().filter_map(|r| r.ui_layout_nodes_visited).collect()),
         "ui_prepaint_nodes_visited": stats_u64(rows.iter().filter_map(|r| r.ui_prepaint_nodes_visited).collect()),
         "ui_interaction_records": stats_u64(rows.iter().filter_map(|r| r.ui_interaction_records).collect()),
@@ -1524,6 +1530,7 @@ fn row_to_json(r: &MemorySampleRow) -> serde_json::Value {
         "ui_element_runtime_scratch_element_children_vec_pool_len": r.ui_element_runtime_scratch_element_children_vec_pool_len,
         "ui_element_runtime_scratch_element_children_vec_pool_capacity_total": r.ui_element_runtime_scratch_element_children_vec_pool_capacity_total,
         "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total": r.ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total,
+        "ui_element_runtime_scratch_element_children_vec_pool_grow_events": r.ui_element_runtime_scratch_element_children_vec_pool_grow_events,
         "ui_layout_nodes_visited": r.ui_layout_nodes_visited,
         "ui_prepaint_nodes_visited": r.ui_prepaint_nodes_visited,
         "ui_interaction_records": r.ui_interaction_records,
@@ -1708,6 +1715,9 @@ fn opt_u64_for_key(row: &MemorySampleRow, key: &str) -> Option<u64> {
         "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total" => {
             row.ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total
         }
+        "ui_element_runtime_scratch_element_children_vec_pool_grow_events" => {
+            row.ui_element_runtime_scratch_element_children_vec_pool_grow_events
+        }
         "ui_layout_nodes_visited" => row.ui_layout_nodes_visited,
         "ui_prepaint_nodes_visited" => row.ui_prepaint_nodes_visited,
         "ui_interaction_records" => row.ui_interaction_records,
@@ -1878,6 +1888,7 @@ fn valid_u64_keys() -> &'static [&'static str] {
         "ui_element_runtime_scratch_element_children_vec_pool_len",
         "ui_element_runtime_scratch_element_children_vec_pool_capacity_total",
         "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total",
+        "ui_element_runtime_scratch_element_children_vec_pool_grow_events",
         "ui_layout_nodes_visited",
         "ui_prepaint_nodes_visited",
         "ui_interaction_records",

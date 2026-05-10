@@ -1777,6 +1777,7 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
     assert!(codes.contains(&"paint.widget_heavy"));
     assert!(codes.contains(&"paint.text_prepare_churn"));
     assert!(codes.contains(&"renderer.upload_churn"));
+    assert!(codes.contains(&"phase.timeline_hotspots"));
 
     let paint_widget_evidence = triage
         .get("hints")
@@ -1906,6 +1907,54 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .get("renderer_vertex_bytes")
             .and_then(|v| v.as_u64()),
         Some(192)
+    );
+
+    let phase_timeline_evidence = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("phase.timeline_hotspots"))
+        .and_then(|h| h.get("evidence"))
+        .expect("phase.timeline_hotspots evidence");
+    assert_eq!(
+        phase_timeline_evidence
+            .get("phase_times_us")
+            .and_then(|v| v.get("layout"))
+            .and_then(|v| v.as_u64()),
+        Some(10_000)
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("phase_times_us")
+            .and_then(|v| v.get("paint"))
+            .and_then(|v| v.as_u64()),
+        Some(5_000)
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("layout_request_build_roots")
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("root_kind"))
+            .and_then(|v| v.as_str()),
+        Some("window")
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("paint_widget_hotspots")
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("widget_type"))
+            .and_then(|v| v.as_str()),
+        Some("WindowedRowsSurface")
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("renderer_hotspots")
+            .and_then(|v| v.as_array())
+            .map(|v| v.len()),
+        Some(4)
     );
 
     assert_eq!(

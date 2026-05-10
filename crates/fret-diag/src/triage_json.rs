@@ -932,6 +932,148 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // phase.timeline_hotspots
+        if worst.layout_time_us > 0
+            || worst.paint_time_us > 0
+            || worst.renderer_encode_scene_us > 0
+            || worst.renderer_upload_us > 0
+            || worst.renderer_record_passes_us > 0
+            || worst.renderer_encoder_finish_us > 0
+        {
+            let layout_examples: Vec<serde_json::Value> = worst
+                .layout_hotspots
+                .iter()
+                .take(3)
+                .map(|h| {
+                    json!({
+                        "node": h.node,
+                        "element": h.element,
+                        "element_kind": h.element_kind,
+                        "widget_type": h.widget_type,
+                        "layout_time_us": h.layout_time_us,
+                        "inclusive_time_us": h.inclusive_time_us,
+                        "role": h.role,
+                        "test_id": h.test_id,
+                        "element_path": h.element_path,
+                    })
+                })
+                .collect();
+            let layout_request_build_roots_examples: Vec<serde_json::Value> = worst
+                .layout_request_build_roots
+                .iter()
+                .take(3)
+                .map(|r| {
+                    json!({
+                        "root_node": r.root_node,
+                        "root_kind": r.root_kind,
+                        "elapsed_us": r.elapsed_us,
+                        "mode": r.mode,
+                        "layout_invalidated": r.layout_invalidated,
+                        "subtree_layout_dirty": r.subtree_layout_dirty,
+                        "subtree_layout_dirty_count": r.subtree_layout_dirty_count,
+                        "descendant_layout_dirty_count": r.descendant_layout_dirty_count,
+                        "needs_layout": r.needs_layout,
+                        "is_translation_only": r.is_translation_only,
+                        "root_role": r.root_role,
+                        "root_test_id": r.root_test_id,
+                    })
+                })
+                .collect();
+            let scroll_phase_examples: Vec<serde_json::Value> = worst
+                .scroll_layout_profiles
+                .iter()
+                .take(3)
+                .map(|p| {
+                    json!({
+                        "node": p.node,
+                        "element": p.element,
+                        "axis": p.axis,
+                        "pass": p.pass,
+                        "total_us": p.total_us,
+                        "measure_children_us": p.measure_children_us,
+                        "solve_barrier_us": p.solve_barrier_us,
+                        "layout_children_us": p.layout_children_us,
+                        "layout_children_first_pass_us": p.layout_children_first_pass_us,
+                        "phase_profiles": p.phase_profiles.iter().take(4).map(|phase| {
+                            json!({
+                                "phase": phase.phase,
+                                "us": phase.us,
+                            })
+                        }).collect::<Vec<_>>(),
+                        "element_path": p.element_path,
+                    })
+                })
+                .collect();
+            let paint_widget_examples: Vec<serde_json::Value> = worst
+                .paint_widget_hotspots
+                .iter()
+                .take(3)
+                .map(|h| {
+                    json!({
+                        "node": h.node,
+                        "element": h.element,
+                        "element_kind": h.element_kind,
+                        "widget_type": h.widget_type,
+                        "paint_time_us": h.paint_time_us,
+                        "inclusive_time_us": h.inclusive_time_us,
+                        "inclusive_scene_ops_delta": h.inclusive_scene_ops_delta,
+                        "exclusive_scene_ops_delta": h.exclusive_scene_ops_delta,
+                        "role": h.role,
+                        "test_id": h.test_id,
+                    })
+                })
+                .collect();
+            let upload_bytes = worst
+                .renderer_text_atlas_upload_bytes
+                .saturating_add(worst.renderer_svg_upload_bytes)
+                .saturating_add(worst.renderer_image_upload_bytes)
+                .saturating_add(worst.renderer_uniform_bytes)
+                .saturating_add(worst.renderer_instance_bytes)
+                .saturating_add(worst.renderer_vertex_bytes);
+
+            out.push(json!({
+                "code": "phase.timeline_hotspots",
+                "severity": "info",
+                "message": "Phase timing and hotspot evidence are linked in the same summary for the worst frame.",
+                "evidence": {
+                    "phase_times_us": {
+                        "layout": worst.layout_time_us,
+                        "prepaint": worst.prepaint_time_us,
+                        "paint": worst.paint_time_us,
+                        "renderer_encode_scene": worst.renderer_encode_scene_us,
+                        "renderer_upload": worst.renderer_upload_us,
+                        "renderer_record_passes": worst.renderer_record_passes_us,
+                        "renderer_encoder_finish": worst.renderer_encoder_finish_us,
+                    },
+                    "layout_hotspots": layout_examples,
+                    "layout_request_build_roots": layout_request_build_roots_examples,
+                    "scroll_phase_profiles": scroll_phase_examples,
+                    "paint_widget_hotspots": paint_widget_examples,
+                    "renderer_hotspots": [
+                        {
+                            "kind": "renderer.upload_churn",
+                            "upload_bytes_total": upload_bytes,
+                            "renderer_uniform_bytes": worst.renderer_uniform_bytes,
+                            "renderer_instance_bytes": worst.renderer_instance_bytes,
+                            "renderer_vertex_bytes": worst.renderer_vertex_bytes,
+                        },
+                        {
+                            "kind": "renderer.record_passes",
+                            "time_us": worst.renderer_record_passes_us,
+                        },
+                        {
+                            "kind": "renderer.encoder_finish",
+                            "time_us": worst.renderer_encoder_finish_us,
+                        },
+                        {
+                            "kind": "renderer.encode_scene_text",
+                            "time_us": worst.renderer_encode_scene_text_us,
+                        },
+                    ],
+                }
+            }));
+        }
+
         out
     }
 

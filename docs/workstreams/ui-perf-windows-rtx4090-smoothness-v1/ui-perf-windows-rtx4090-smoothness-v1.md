@@ -1152,6 +1152,16 @@ Renderer encode attribution (2026-05-10):
     `target/fret-diag/perf-code-editor-hosted-resources-v1/1778441726056/bundle.schema2.json`
     shows `ns_row_scene_replay_touch=39900ns` for `rows_scene_replayed=288`, roughly half the earlier content-resolve
     touch bucket.
+  - Trace follow-up:
+    `target/fret-diag/perf-code-editor-hosted-resources-trace-v1/1778449929019/bundle.schema2.json` kept
+    p50/p95/max total at `1603/1722/1722us`; the exported `trace.chrome.json` is useful for coarse phase alignment,
+    but it still does not expose a dedicated `fret.renderer.record_passes` span name.
+  - Layout-node profile follow-up:
+    `target/fret-diag/perf-code-editor-hosted-resources-layout-node-profile-v1/1778450026275/bundle.schema2.json`
+    kept p50/p95/max total at `1723/1730/1730us`; the hotspots sit in `Scroll` nodes from `scroll_area.rs` /
+    `content.rs`, which reads like profiling overhead rather than a layout regression.
+  - The same worst-frame evidence now also appears in `diag triage` as `phase.timeline_hotspots`, which
+    ties the phase timeline to layout, scroll, paint, and renderer hotspot examples in one place.
   - Interpretation: the row-scene replay hot path is still the right place to look, but the cheap win is already in
     place. Do not spend time splitting `RowGeomKey` or `RowSceneKey` further; if this lane continues, target
     replay/touch mechanics or new-row text draw from fresh low-overhead evidence.
@@ -1176,6 +1186,10 @@ Hypotheses to validate:
 Candidate actions (small → large):
 
 - tighten capacity reuse for known hot scratch structures (avoid occasional rehash/grow)
+- `scratch_element_children_vec_pool` now exports `grow_events` through `UiDebugFrameStats`,
+  `ElementDiagnosticsSnapshotV1`, `diag stats`, and `memory_summary`; the runtime growth path is covered by the
+  `fret-ui` unit test `scratch_element_children_vec_pool_grow_events_increment_when_reused_vec_expands`, and the
+  `fret-diag` bundle parser has a regression test for `element_children_vec_pool_grow_events`.
 - make “layout request → build roots → solve → apply” phase boundaries visible by default in traces
 - add a small set of churn counters (“bytes allocated”, “vec grow events”) for the worst offenders
 

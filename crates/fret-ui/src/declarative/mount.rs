@@ -475,6 +475,7 @@ where
             ui.debug_set_element_children_vec_pool_stats(
                 window_state.element_children_vec_pool_reuses(),
                 window_state.element_children_vec_pool_misses(),
+                window_state.element_children_vec_pool_grow_events(),
             );
             let root_id = crate::elements::global_root(window, root_name);
             let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =
@@ -1017,6 +1018,7 @@ where
             ui.debug_set_element_children_vec_pool_stats(
                 window_state.element_children_vec_pool_reuses(),
                 window_state.element_children_vec_pool_misses(),
+                window_state.element_children_vec_pool_grow_events(),
             );
             let root_id = crate::elements::global_root(window, root_name);
             let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =

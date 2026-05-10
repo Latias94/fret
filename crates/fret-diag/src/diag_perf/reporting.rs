@@ -117,6 +117,7 @@ pub(super) fn push_perf_json_repeat_summary_row(
     let mut top_frame_arena_grow_events: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_element_children_vec_pool_reuses: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_element_children_vec_pool_misses: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_element_children_vec_pool_grow_events: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_view_cache_contained_relayouts: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_view_cache_roots_total: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_view_cache_roots_reused: Vec<u64> = Vec::with_capacity(repeat);
@@ -171,6 +172,8 @@ pub(super) fn push_perf_json_repeat_summary_row(
             .push(json_u64(run, "top_element_children_vec_pool_reuses"));
         top_element_children_vec_pool_misses
             .push(json_u64(run, "top_element_children_vec_pool_misses"));
+        top_element_children_vec_pool_grow_events
+            .push(json_u64(run, "top_element_children_vec_pool_grow_events"));
         top_view_cache_contained_relayouts
             .push(json_u64(run, "top_view_cache_contained_relayouts"));
         top_view_cache_roots_total.push(json_u64(run, "top_view_cache_roots_total"));
@@ -268,6 +271,7 @@ pub(super) fn push_perf_json_repeat_summary_row(
             "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
             "top_element_children_vec_pool_reuses": summarize_times_us(&top_element_children_vec_pool_reuses),
             "top_element_children_vec_pool_misses": summarize_times_us(&top_element_children_vec_pool_misses),
+            "top_element_children_vec_pool_grow_events": summarize_times_us(&top_element_children_vec_pool_grow_events),
             "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
             "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
             "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),

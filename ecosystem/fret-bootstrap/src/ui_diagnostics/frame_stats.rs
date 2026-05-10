@@ -9,6 +9,8 @@ pub struct UiFrameStatsV1 {
     pub element_children_vec_pool_reuses: u32,
     #[serde(default)]
     pub element_children_vec_pool_misses: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_grow_events: u32,
     /// UI thread CPU time spent since the previous snapshot (approx frame CPU time).
     ///
     /// This is intended to distinguish "real work" from schedule noise: if wall time spikes but
@@ -770,6 +772,7 @@ impl UiFrameStatsV1 {
             frame_arena_grow_events: stats.frame_arena_grow_events,
             element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
             element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
+            element_children_vec_pool_grow_events: stats.element_children_vec_pool_grow_events,
             ui_thread_cpu_time_us: cpu.delta_time_us,
             ui_thread_cpu_total_time_us: cpu.total_time_us,
             ui_thread_cpu_cycle_time_delta_cycles: cpu.delta_cycles,

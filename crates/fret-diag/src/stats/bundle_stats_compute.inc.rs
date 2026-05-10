@@ -140,6 +140,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let element_children_vec_pool_grow_events = stats
+                .and_then(|m| m.get("element_children_vec_pool_grow_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
 
             let layout_time_us = stats
                 .and_then(|m| m.get("layout_time_us"))
@@ -1688,6 +1693,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 frame_arena_grow_events,
                 element_children_vec_pool_reuses,
                 element_children_vec_pool_misses,
+                element_children_vec_pool_grow_events,
                 ui_thread_cpu_time_us,
                 ui_thread_cpu_total_time_us,
                 ui_thread_cpu_cycle_time_delta_cycles,

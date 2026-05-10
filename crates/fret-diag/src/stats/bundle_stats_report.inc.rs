@@ -165,6 +165,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) frame_arena_grow_events: u32,
     pub(super) element_children_vec_pool_reuses: u32,
     pub(super) element_children_vec_pool_misses: u32,
+    pub(super) element_children_vec_pool_grow_events: u32,
     pub(super) ui_thread_cpu_time_us: u64,
     pub(super) ui_thread_cpu_total_time_us: u64,
     pub(super) ui_thread_cpu_cycle_time_delta_cycles: u64,

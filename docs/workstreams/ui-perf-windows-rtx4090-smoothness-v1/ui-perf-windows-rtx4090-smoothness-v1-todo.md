@@ -20,7 +20,11 @@
 - [x] Promote a dedicated code-editor autoscroll typical gate:
   `ui-gallery-code-editor-torture-autoscroll-typical` + `--perf-threshold-agg p90`, with UI-only `frame_p95_*`
   thresholds. Keep the steady v2 gate responsible for renderer all-surface tail checks.
-- [ ] For any remaining outliers: capture one bundle with `--trace` and one with `FRET_LAYOUT_NODE_PROFILE=1`.
+- [x] For any remaining outliers: capture one bundle with `--trace` and one with `FRET_LAYOUT_NODE_PROFILE=1`.
+  - Trace bundle: `target/fret-diag/perf-code-editor-hosted-resources-trace-v1/1778449929019/bundle.schema2.json`
+    (the run directory also includes `trace.chrome.json`; p50/p95/max total `1603/1722/1722us`).
+  - Layout-node profile bundle: `target/fret-diag/perf-code-editor-hosted-resources-layout-node-profile-v1/1778450026275/bundle.schema2.json`
+    (p50/p95/max total `1723/1730/1730us`; hotspots centered on `Scroll` nodes in `scroll_area.rs` / `content.rs`).
 
 ## Attribution loop (make spikes explainable)
 
@@ -34,6 +38,7 @@
 ## Instrumentation gaps (candidate fearless refactor items)
 
 - [ ] Inventory “hot scratch structures” that can reallocate in spikes; add cheap grow counters (opt-in or always-on).
+  - [x] `scratch_element_children_vec_pool` now reports `grow_events` through `UiDebugFrameStats`, `ElementDiagnosticsSnapshotV1`, `diag stats`, and `memory_summary`; the new `fret-diag` stats parser test passes.
 - [x] Add renderer encode family attribution behind `FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1` so
   `renderer_encode_scene_us` can be split into stack/clip/mask/effect/quad/image/text/path/viewport/flush buckets in
   `diag stats` and triage JSON.
@@ -80,7 +85,9 @@
 - [x] Export phase sub-events in `trace.chrome.json` derived from `debug.stats.*_time_us`.
 - [x] Export per-run frame percentiles into `check.perf_thresholds.json` for quick scanning.
 - [x] Add miss-only renderer spans for pipeline creation and intermediate target allocation/eviction.
-- [ ] Make “phase timeline” → “top hotspots” linkage explicit in one place (docs + tool output).
+- [x] Make “phase timeline” → “top hotspots” linkage explicit in one place (docs + tool output).
+  - `diag triage` now emits `phase.timeline_hotspots`, which ties the worst-frame phase times to the
+    layout, scroll, paint, and renderer hotspot examples in the same summary.
 
 ## Windows-specific
 
