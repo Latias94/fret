@@ -86,6 +86,36 @@ impl RendererTimesUs {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct RendererSeedSelection {
+    pub encode_scene_us: PerfBaselineSeed,
+    pub upload_us: PerfBaselineSeed,
+    pub record_passes_us: PerfBaselineSeed,
+    pub encoder_finish_us: PerfBaselineSeed,
+    pub prepare_text_us: PerfBaselineSeed,
+    pub prepare_svg_us: PerfBaselineSeed,
+}
+
+impl RendererSeedSelection {
+    pub(crate) fn new(
+        encode_scene_us: PerfBaselineSeed,
+        upload_us: PerfBaselineSeed,
+        record_passes_us: PerfBaselineSeed,
+        encoder_finish_us: PerfBaselineSeed,
+        prepare_text_us: PerfBaselineSeed,
+        prepare_svg_us: PerfBaselineSeed,
+    ) -> Self {
+        Self {
+            encode_scene_us,
+            upload_us,
+            record_passes_us,
+            encoder_finish_us,
+            prepare_text_us,
+            prepare_svg_us,
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn push_perf_baseline_row_single(
     rows: &mut Vec<serde_json::Value>,
@@ -104,6 +134,8 @@ pub(crate) fn push_perf_baseline_row_single(
     seed_total_value: u64,
     seed_layout_value: u64,
     seed_solve_value: u64,
+    seed_renderer: RendererSeedSelection,
+    seed_renderer_value: RendererTimesUs,
     thr_total: u64,
     thr_layout: u64,
     thr_solve: u64,
@@ -151,11 +183,23 @@ pub(crate) fn push_perf_baseline_row_single(
             "top_total_time_us": wants_ui_thresholds.then_some(seed_total_value),
             "top_layout_time_us": wants_ui_thresholds.then_some(seed_layout_value),
             "top_layout_engine_solve_time_us": wants_ui_thresholds.then_some(seed_solve_value),
+            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer_value.encode_scene_us),
+            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer_value.upload_us),
+            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer_value.record_passes_us),
+            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer_value.encoder_finish_us),
+            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_text_us),
+            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_svg_us),
         },
         "threshold_seed_source": {
             "top_total_time_us": wants_ui_thresholds.then_some(seed_total.as_str()),
             "top_layout_time_us": wants_ui_thresholds.then_some(seed_layout.as_str()),
             "top_layout_engine_solve_time_us": wants_ui_thresholds.then_some(seed_solve.as_str()),
+            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer.encode_scene_us.as_str()),
+            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer.upload_us.as_str()),
+            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer.record_passes_us.as_str()),
+            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer.encoder_finish_us.as_str()),
+            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_text_us.as_str()),
+            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_svg_us.as_str()),
         },
         "thresholds": {
             "max_top_total_us": wants_ui_thresholds.then_some(thr_total),
@@ -207,6 +251,8 @@ pub(crate) fn push_perf_baseline_row_repeat(
     seed_frame_p95_total_value: u64,
     seed_frame_p95_layout_value: u64,
     seed_frame_p95_solve_value: u64,
+    seed_renderer: RendererSeedSelection,
+    seed_renderer_value: RendererTimesUs,
     wants_frame_p95_thresholds: bool,
     thr_total: u64,
     thr_layout: u64,
@@ -291,6 +337,12 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "frame_p95_total_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_total_value),
             "frame_p95_layout_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_layout_value),
             "frame_p95_layout_engine_solve_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_solve_value),
+            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer_value.encode_scene_us),
+            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer_value.upload_us),
+            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer_value.record_passes_us),
+            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer_value.encoder_finish_us),
+            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_text_us),
+            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_svg_us),
         },
         "threshold_seed_source": {
             "top_total_time_us": wants_ui_thresholds.then_some(seed_total.as_str()),
@@ -299,6 +351,12 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "frame_p95_total_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_total.as_str()),
             "frame_p95_layout_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_layout.as_str()),
             "frame_p95_layout_engine_solve_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_solve.as_str()),
+            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer.encode_scene_us.as_str()),
+            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer.upload_us.as_str()),
+            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer.record_passes_us.as_str()),
+            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer.encoder_finish_us.as_str()),
+            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_text_us.as_str()),
+            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_svg_us.as_str()),
         },
         "thresholds": {
             "max_top_total_us": (wants_ui_thresholds && !wants_frame_p95_thresholds).then_some(thr_total),
@@ -338,6 +396,10 @@ mod tests {
         RendererTimesUs::new(base, base + 1, base + 2, base + 3, base + 4, base + 5)
     }
 
+    fn renderer_seed(seed: PerfBaselineSeed) -> RendererSeedSelection {
+        RendererSeedSelection::new(seed, seed, seed, seed, seed, seed)
+    }
+
     #[test]
     fn single_baseline_row_records_measured_p50() {
         let mut rows = Vec::new();
@@ -359,6 +421,8 @@ mod tests {
             30,
             20,
             10,
+            renderer_seed(PerfBaselineSeed::Max),
+            renderer(5),
             36,
             24,
             12,
@@ -412,6 +476,8 @@ mod tests {
             38,
             33,
             28,
+            renderer_seed(PerfBaselineSeed::Max),
+            renderer(1000),
             true,
             120,
             96,
@@ -478,6 +544,8 @@ mod tests {
             38,
             33,
             28,
+            renderer_seed(PerfBaselineSeed::Max),
+            renderer(1000),
             false,
             120,
             96,
@@ -519,6 +587,8 @@ mod tests {
             30,
             20,
             10,
+            renderer_seed(PerfBaselineSeed::Max),
+            renderer(5),
             36,
             24,
             12,

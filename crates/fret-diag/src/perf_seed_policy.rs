@@ -75,6 +75,12 @@ pub(crate) enum PerfSeedMetric {
     FrameP95LayoutEngineSolveTimeUs,
     PointerMoveDispatchTimeUs,
     PointerMoveHitTestTimeUs,
+    RendererEncodeSceneUs,
+    RendererUploadUs,
+    RendererRecordPassesUs,
+    RendererEncoderFinishUs,
+    RendererPrepareTextUs,
+    RendererPrepareSvgUs,
 }
 
 impl PerfSeedMetric {
@@ -90,6 +96,12 @@ impl PerfSeedMetric {
             }
             PerfSeedMetric::PointerMoveDispatchTimeUs => "pointer_move_max_dispatch_time_us",
             PerfSeedMetric::PointerMoveHitTestTimeUs => "pointer_move_max_hit_test_time_us",
+            PerfSeedMetric::RendererEncodeSceneUs => "renderer_encode_scene_us",
+            PerfSeedMetric::RendererUploadUs => "renderer_upload_us",
+            PerfSeedMetric::RendererRecordPassesUs => "renderer_record_passes_us",
+            PerfSeedMetric::RendererEncoderFinishUs => "renderer_encoder_finish_us",
+            PerfSeedMetric::RendererPrepareTextUs => "renderer_prepare_text_us",
+            PerfSeedMetric::RendererPrepareSvgUs => "renderer_prepare_svg_us",
         }
     }
 }
@@ -109,8 +121,14 @@ impl std::str::FromStr for PerfSeedMetric {
             }
             "pointer_move_max_dispatch_time_us" => Ok(PerfSeedMetric::PointerMoveDispatchTimeUs),
             "pointer_move_max_hit_test_time_us" => Ok(PerfSeedMetric::PointerMoveHitTestTimeUs),
+            "renderer_encode_scene_us" => Ok(PerfSeedMetric::RendererEncodeSceneUs),
+            "renderer_upload_us" => Ok(PerfSeedMetric::RendererUploadUs),
+            "renderer_record_passes_us" => Ok(PerfSeedMetric::RendererRecordPassesUs),
+            "renderer_encoder_finish_us" => Ok(PerfSeedMetric::RendererEncoderFinishUs),
+            "renderer_prepare_text_us" => Ok(PerfSeedMetric::RendererPrepareTextUs),
+            "renderer_prepare_svg_us" => Ok(PerfSeedMetric::RendererPrepareSvgUs),
             _ => Err(format!(
-                "invalid metric (expected top_total_time_us|top_layout_time_us|top_layout_engine_solve_time_us|frame_p95_total_time_us|frame_p95_layout_time_us|frame_p95_layout_engine_solve_time_us|pointer_move_max_dispatch_time_us|pointer_move_max_hit_test_time_us): {s:?}"
+                "invalid metric (expected top_total_time_us|top_layout_time_us|top_layout_engine_solve_time_us|frame_p95_total_time_us|frame_p95_layout_time_us|frame_p95_layout_engine_solve_time_us|pointer_move_max_dispatch_time_us|pointer_move_max_hit_test_time_us|renderer_encode_scene_us|renderer_upload_us|renderer_record_passes_us|renderer_encoder_finish_us|renderer_prepare_text_us|renderer_prepare_svg_us): {s:?}"
             )),
         }
     }
@@ -779,6 +797,58 @@ mod tests {
         assert_eq!(
             policy.seed_for(script_key, PerfSeedMetric::PointerMoveHitTestTimeUs),
             PerfBaselineSeed::Max
+        );
+    }
+
+    #[test]
+    fn seed_policy_preset_can_tune_renderer_thresholds() {
+        let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test-renderer");
+        let script_path = workspace_root.join(
+            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
+        );
+        let scripts = vec![script_path];
+
+        let preset_path = workspace_root.join("preset.json");
+        std::fs::create_dir_all(&workspace_root).unwrap();
+        std::fs::write(
+            &preset_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "perf_baseline_seed_policy",
+  "default_seed": "max",
+  "rules": [
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
+      "metric": "renderer_prepare_svg_us",
+      "seed": "max",
+      "min_slack_us": 32,
+      "quantum_us": 8
+    }
+  ]
+}"#,
+        )
+        .unwrap();
+
+        let policy = resolve_perf_baseline_seed_policy(
+            &workspace_root,
+            None,
+            &scripts,
+            std::slice::from_ref(&preset_path),
+            &[],
+        )
+        .unwrap();
+
+        let script_key = "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json";
+        assert_eq!(
+            policy.seed_for(script_key, PerfSeedMetric::RendererPrepareSvgUs),
+            PerfBaselineSeed::Max
+        );
+        assert_eq!(
+            policy.tuning_for(script_key, PerfSeedMetric::RendererPrepareSvgUs),
+            PerfThresholdTuning {
+                min_slack_us: 32,
+                quantum_us: 8,
+            }
         );
     }
 

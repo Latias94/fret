@@ -55,6 +55,10 @@ Notes:
 - Built-in defaults still apply unless overridden by preset/CLI rules.
 - New baseline rows should include `measured_p50`, `measured_p90`, `measured_p95`, and `measured_max`. Do not backfill
   `measured_p50` into old baselines without an intentional re-seed.
+- Renderer metrics such as `renderer_encode_scene_us`, `renderer_upload_us`,
+  `renderer_record_passes_us`, `renderer_encoder_finish_us`, `renderer_prepare_text_us`, and
+  `renderer_prepare_svg_us` can use the same `seed` and tuning fields when a suite needs an
+  auditable micro-threshold buffer.
 
 ## JSON preset schema (`--perf-baseline-seed-preset`)
 

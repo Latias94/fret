@@ -1141,6 +1141,30 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     let seed_layout = policy.seed_for(&script_key, PerfSeedMetric::TopLayoutTimeUs);
                     let seed_solve =
                         policy.seed_for(&script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs);
+                    let seed_renderer_encode_scene =
+                        policy.seed_for(&script_key, PerfSeedMetric::RendererEncodeSceneUs);
+                    let seed_renderer_upload =
+                        policy.seed_for(&script_key, PerfSeedMetric::RendererUploadUs);
+                    let seed_renderer_record_passes =
+                        policy.seed_for(&script_key, PerfSeedMetric::RendererRecordPassesUs);
+                    let seed_renderer_encoder_finish =
+                        policy.seed_for(&script_key, PerfSeedMetric::RendererEncoderFinishUs);
+                    let seed_renderer_prepare_text =
+                        policy.seed_for(&script_key, PerfSeedMetric::RendererPrepareTextUs);
+                    let seed_renderer_prepare_svg =
+                        policy.seed_for(&script_key, PerfSeedMetric::RendererPrepareSvgUs);
+                    let tuning_renderer_encode_scene =
+                        policy.tuning_for(&script_key, PerfSeedMetric::RendererEncodeSceneUs);
+                    let tuning_renderer_upload =
+                        policy.tuning_for(&script_key, PerfSeedMetric::RendererUploadUs);
+                    let tuning_renderer_record_passes =
+                        policy.tuning_for(&script_key, PerfSeedMetric::RendererRecordPassesUs);
+                    let tuning_renderer_encoder_finish =
+                        policy.tuning_for(&script_key, PerfSeedMetric::RendererEncoderFinishUs);
+                    let tuning_renderer_prepare_text =
+                        policy.tuning_for(&script_key, PerfSeedMetric::RendererPrepareTextUs);
+                    let tuning_renderer_prepare_svg =
+                        policy.tuning_for(&script_key, PerfSeedMetric::RendererPrepareSvgUs);
 
                     let seed_total_value = match seed_total {
                         PerfBaselineSeed::Max => top_total,
@@ -1156,6 +1180,36 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         PerfBaselineSeed::Max => top_solve,
                         PerfBaselineSeed::P90 => p90_solve,
                         PerfBaselineSeed::P95 => p95_solve,
+                    };
+                    let seed_renderer_encode_scene_value = match seed_renderer_encode_scene {
+                        PerfBaselineSeed::Max | PerfBaselineSeed::P90 | PerfBaselineSeed::P95 => {
+                            report.max_renderer_encode_scene_us
+                        }
+                    };
+                    let seed_renderer_upload_value = match seed_renderer_upload {
+                        PerfBaselineSeed::Max | PerfBaselineSeed::P90 | PerfBaselineSeed::P95 => {
+                            report.max_renderer_upload_us
+                        }
+                    };
+                    let seed_renderer_record_passes_value = match seed_renderer_record_passes {
+                        PerfBaselineSeed::Max | PerfBaselineSeed::P90 | PerfBaselineSeed::P95 => {
+                            report.max_renderer_record_passes_us
+                        }
+                    };
+                    let seed_renderer_encoder_finish_value = match seed_renderer_encoder_finish {
+                        PerfBaselineSeed::Max | PerfBaselineSeed::P90 | PerfBaselineSeed::P95 => {
+                            report.max_renderer_encoder_finish_us
+                        }
+                    };
+                    let seed_renderer_prepare_text_value = match seed_renderer_prepare_text {
+                        PerfBaselineSeed::Max | PerfBaselineSeed::P90 | PerfBaselineSeed::P95 => {
+                            report.max_renderer_prepare_text_us
+                        }
+                    };
+                    let seed_renderer_prepare_svg_value = match seed_renderer_prepare_svg {
+                        PerfBaselineSeed::Max | PerfBaselineSeed::P90 | PerfBaselineSeed::P95 => {
+                            report.max_renderer_prepare_svg_us
+                        }
                     };
 
                     let thr_total =
@@ -1187,30 +1241,48 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             perf_baseline_headroom_pct,
                         );
-                    let thr_renderer_encode_scene_us = apply_perf_baseline_headroom(
-                        report.max_renderer_encode_scene_us,
-                        perf_baseline_headroom_pct,
-                    );
-                    let thr_renderer_upload_us = apply_perf_baseline_headroom(
-                        report.max_renderer_upload_us,
-                        perf_baseline_headroom_pct,
-                    );
-                    let thr_renderer_record_passes_us = apply_perf_baseline_headroom(
-                        report.max_renderer_record_passes_us,
-                        perf_baseline_headroom_pct,
-                    );
-                    let thr_renderer_encoder_finish_us = apply_perf_baseline_headroom(
-                        report.max_renderer_encoder_finish_us,
-                        perf_baseline_headroom_pct,
-                    );
-                    let thr_renderer_prepare_text_us = apply_perf_baseline_headroom(
-                        report.max_renderer_prepare_text_us,
-                        perf_baseline_headroom_pct,
-                    );
-                    let thr_renderer_prepare_svg_us = apply_perf_baseline_headroom(
-                        report.max_renderer_prepare_svg_us,
-                        perf_baseline_headroom_pct,
-                    );
+                    let thr_renderer_encode_scene_us =
+                        apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_renderer_encode_scene_value,
+                            perf_baseline_headroom_pct,
+                            tuning_renderer_encode_scene.min_slack_us,
+                            tuning_renderer_encode_scene.quantum_us,
+                        );
+                    let thr_renderer_upload_us =
+                        apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_renderer_upload_value,
+                            perf_baseline_headroom_pct,
+                            tuning_renderer_upload.min_slack_us,
+                            tuning_renderer_upload.quantum_us,
+                        );
+                    let thr_renderer_record_passes_us =
+                        apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_renderer_record_passes_value,
+                            perf_baseline_headroom_pct,
+                            tuning_renderer_record_passes.min_slack_us,
+                            tuning_renderer_record_passes.quantum_us,
+                        );
+                    let thr_renderer_encoder_finish_us =
+                        apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_renderer_encoder_finish_value,
+                            perf_baseline_headroom_pct,
+                            tuning_renderer_encoder_finish.min_slack_us,
+                            tuning_renderer_encoder_finish.quantum_us,
+                        );
+                    let thr_renderer_prepare_text_us =
+                        apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_renderer_prepare_text_value,
+                            perf_baseline_headroom_pct,
+                            tuning_renderer_prepare_text.min_slack_us,
+                            tuning_renderer_prepare_text.quantum_us,
+                        );
+                    let thr_renderer_prepare_svg_us =
+                        apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_renderer_prepare_svg_value,
+                            perf_baseline_headroom_pct,
+                            tuning_renderer_prepare_svg.min_slack_us,
+                            tuning_renderer_prepare_svg.quantum_us,
+                        );
 
                     baseline_rows::push_perf_baseline_row_single(
                         &mut perf_baseline_rows,
@@ -1243,6 +1315,22 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         seed_total_value,
                         seed_layout_value,
                         seed_solve_value,
+                        baseline_rows::RendererSeedSelection::new(
+                            seed_renderer_encode_scene,
+                            seed_renderer_upload,
+                            seed_renderer_record_passes,
+                            seed_renderer_encoder_finish,
+                            seed_renderer_prepare_text,
+                            seed_renderer_prepare_svg,
+                        ),
+                        baseline_rows::RendererTimesUs::new(
+                            seed_renderer_encode_scene_value,
+                            seed_renderer_upload_value,
+                            seed_renderer_record_passes_value,
+                            seed_renderer_encoder_finish_value,
+                            seed_renderer_prepare_text_value,
+                            seed_renderer_prepare_svg_value,
+                        ),
                         thr_total,
                         thr_layout,
                         thr_solve,
@@ -1904,6 +1992,30 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     policy.tuning_for(&script_key, PerfSeedMetric::PointerMoveDispatchTimeUs);
                 let tuning_pointer_move_hit_test =
                     policy.tuning_for(&script_key, PerfSeedMetric::PointerMoveHitTestTimeUs);
+                let seed_renderer_encode_scene =
+                    policy.seed_for(&script_key, PerfSeedMetric::RendererEncodeSceneUs);
+                let seed_renderer_upload =
+                    policy.seed_for(&script_key, PerfSeedMetric::RendererUploadUs);
+                let seed_renderer_record_passes =
+                    policy.seed_for(&script_key, PerfSeedMetric::RendererRecordPassesUs);
+                let seed_renderer_encoder_finish =
+                    policy.seed_for(&script_key, PerfSeedMetric::RendererEncoderFinishUs);
+                let seed_renderer_prepare_text =
+                    policy.seed_for(&script_key, PerfSeedMetric::RendererPrepareTextUs);
+                let seed_renderer_prepare_svg =
+                    policy.seed_for(&script_key, PerfSeedMetric::RendererPrepareSvgUs);
+                let tuning_renderer_encode_scene =
+                    policy.tuning_for(&script_key, PerfSeedMetric::RendererEncodeSceneUs);
+                let tuning_renderer_upload =
+                    policy.tuning_for(&script_key, PerfSeedMetric::RendererUploadUs);
+                let tuning_renderer_record_passes =
+                    policy.tuning_for(&script_key, PerfSeedMetric::RendererRecordPassesUs);
+                let tuning_renderer_encoder_finish =
+                    policy.tuning_for(&script_key, PerfSeedMetric::RendererEncoderFinishUs);
+                let tuning_renderer_prepare_text =
+                    policy.tuning_for(&script_key, PerfSeedMetric::RendererPrepareTextUs);
+                let tuning_renderer_prepare_svg =
+                    policy.tuning_for(&script_key, PerfSeedMetric::RendererPrepareSvgUs);
 
                 let seed_total_value = match seed_total {
                     PerfBaselineSeed::Max => max_total,
@@ -1934,6 +2046,36 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     PerfBaselineSeed::Max => max_frame_p95_solve,
                     PerfBaselineSeed::P90 => p90_frame_p95_solve,
                     PerfBaselineSeed::P95 => p95_frame_p95_solve,
+                };
+                let seed_renderer_encode_scene_value = match seed_renderer_encode_scene {
+                    PerfBaselineSeed::Max => max_renderer_encode_scene_us,
+                    PerfBaselineSeed::P90 => p90_renderer_encode_scene_us,
+                    PerfBaselineSeed::P95 => p95_renderer_encode_scene_us,
+                };
+                let seed_renderer_upload_value = match seed_renderer_upload {
+                    PerfBaselineSeed::Max => max_renderer_upload_us,
+                    PerfBaselineSeed::P90 => p90_renderer_upload_us,
+                    PerfBaselineSeed::P95 => p95_renderer_upload_us,
+                };
+                let seed_renderer_record_passes_value = match seed_renderer_record_passes {
+                    PerfBaselineSeed::Max => max_renderer_record_passes_us,
+                    PerfBaselineSeed::P90 => p90_renderer_record_passes_us,
+                    PerfBaselineSeed::P95 => p95_renderer_record_passes_us,
+                };
+                let seed_renderer_encoder_finish_value = match seed_renderer_encoder_finish {
+                    PerfBaselineSeed::Max => max_renderer_encoder_finish_us,
+                    PerfBaselineSeed::P90 => p90_renderer_encoder_finish_us,
+                    PerfBaselineSeed::P95 => p95_renderer_encoder_finish_us,
+                };
+                let seed_renderer_prepare_text_value = match seed_renderer_prepare_text {
+                    PerfBaselineSeed::Max => max_renderer_prepare_text_us,
+                    PerfBaselineSeed::P90 => p90_renderer_prepare_text_us,
+                    PerfBaselineSeed::P95 => p95_renderer_prepare_text_us,
+                };
+                let seed_renderer_prepare_svg_value = match seed_renderer_prepare_svg {
+                    PerfBaselineSeed::Max => max_renderer_prepare_svg_us,
+                    PerfBaselineSeed::P90 => p90_renderer_prepare_svg_us,
+                    PerfBaselineSeed::P95 => p95_renderer_prepare_svg_us,
                 };
 
                 let thr_total = apply_perf_baseline_headroom_with_slack_and_quantum(
@@ -2007,30 +2149,47 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         perf_baseline_headroom_pct,
                     );
-                let thr_renderer_encode_scene_us = apply_perf_baseline_headroom(
-                    max_renderer_encode_scene_us,
+                let thr_renderer_encode_scene_us =
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
+                        seed_renderer_encode_scene_value,
+                        perf_baseline_headroom_pct,
+                        tuning_renderer_encode_scene.min_slack_us,
+                        tuning_renderer_encode_scene.quantum_us,
+                    );
+                let thr_renderer_upload_us = apply_perf_baseline_headroom_with_slack_and_quantum(
+                    seed_renderer_upload_value,
                     perf_baseline_headroom_pct,
+                    tuning_renderer_upload.min_slack_us,
+                    tuning_renderer_upload.quantum_us,
                 );
-                let thr_renderer_upload_us = apply_perf_baseline_headroom(
-                    max_renderer_upload_us,
-                    perf_baseline_headroom_pct,
-                );
-                let thr_renderer_record_passes_us = apply_perf_baseline_headroom(
-                    max_renderer_record_passes_us,
-                    perf_baseline_headroom_pct,
-                );
-                let thr_renderer_encoder_finish_us = apply_perf_baseline_headroom(
-                    max_renderer_encoder_finish_us,
-                    perf_baseline_headroom_pct,
-                );
-                let thr_renderer_prepare_text_us = apply_perf_baseline_headroom(
-                    max_renderer_prepare_text_us,
-                    perf_baseline_headroom_pct,
-                );
-                let thr_renderer_prepare_svg_us = apply_perf_baseline_headroom(
-                    max_renderer_prepare_svg_us,
-                    perf_baseline_headroom_pct,
-                );
+                let thr_renderer_record_passes_us =
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
+                        seed_renderer_record_passes_value,
+                        perf_baseline_headroom_pct,
+                        tuning_renderer_record_passes.min_slack_us,
+                        tuning_renderer_record_passes.quantum_us,
+                    );
+                let thr_renderer_encoder_finish_us =
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
+                        seed_renderer_encoder_finish_value,
+                        perf_baseline_headroom_pct,
+                        tuning_renderer_encoder_finish.min_slack_us,
+                        tuning_renderer_encoder_finish.quantum_us,
+                    );
+                let thr_renderer_prepare_text_us =
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
+                        seed_renderer_prepare_text_value,
+                        perf_baseline_headroom_pct,
+                        tuning_renderer_prepare_text.min_slack_us,
+                        tuning_renderer_prepare_text.quantum_us,
+                    );
+                let thr_renderer_prepare_svg_us =
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
+                        seed_renderer_prepare_svg_value,
+                        perf_baseline_headroom_pct,
+                        tuning_renderer_prepare_svg.min_slack_us,
+                        tuning_renderer_prepare_svg.quantum_us,
+                    );
 
                 baseline_rows::push_perf_baseline_row_repeat(
                     &mut perf_baseline_rows,
@@ -2113,6 +2272,22 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     seed_frame_p95_total_value,
                     seed_frame_p95_layout_value,
                     seed_frame_p95_solve_value,
+                    baseline_rows::RendererSeedSelection::new(
+                        seed_renderer_encode_scene,
+                        seed_renderer_upload,
+                        seed_renderer_record_passes,
+                        seed_renderer_encoder_finish,
+                        seed_renderer_prepare_text,
+                        seed_renderer_prepare_svg,
+                    ),
+                    baseline_rows::RendererTimesUs::new(
+                        seed_renderer_encode_scene_value,
+                        seed_renderer_upload_value,
+                        seed_renderer_record_passes_value,
+                        seed_renderer_encoder_finish_value,
+                        seed_renderer_prepare_text_value,
+                        seed_renderer_prepare_svg_value,
+                    ),
                     wants_frame_p95_thresholds,
                     thr_total,
                     thr_layout,

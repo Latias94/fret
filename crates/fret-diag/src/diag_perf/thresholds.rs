@@ -118,6 +118,31 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
     } = input;
 
+    let (thr_renderer_encode_scene, src_renderer_encode_scene) = resolve_threshold(
+        cli_thresholds.max_renderer_encode_scene_us,
+        baseline_thresholds.max_renderer_encode_scene_us,
+    );
+    let (thr_renderer_upload, src_renderer_upload) = resolve_threshold(
+        cli_thresholds.max_renderer_upload_us,
+        baseline_thresholds.max_renderer_upload_us,
+    );
+    let (thr_renderer_record_passes, src_renderer_record_passes) = resolve_threshold(
+        cli_thresholds.max_renderer_record_passes_us,
+        baseline_thresholds.max_renderer_record_passes_us,
+    );
+    let (thr_renderer_encoder_finish, src_renderer_encoder_finish) = resolve_threshold(
+        cli_thresholds.max_renderer_encoder_finish_us,
+        baseline_thresholds.max_renderer_encoder_finish_us,
+    );
+    let (thr_renderer_prepare_text, src_renderer_prepare_text) = resolve_threshold(
+        cli_thresholds.max_renderer_prepare_text_us,
+        baseline_thresholds.max_renderer_prepare_text_us,
+    );
+    let (thr_renderer_prepare_svg, src_renderer_prepare_svg) = resolve_threshold(
+        cli_thresholds.max_renderer_prepare_svg_us,
+        baseline_thresholds.max_renderer_prepare_svg_us,
+    );
+
     let run = serde_json::json!({
         "run_index": 0,
         "top_total_time_us": top_total,
@@ -145,6 +170,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "top_total_time_us": top_total,
             "top_layout_time_us": top_layout,
             "top_layout_engine_solve_time_us": top_solve,
+            "renderer_encode_scene_us": max_renderer_encode_scene_us,
+            "renderer_upload_us": max_renderer_upload_us,
+            "renderer_record_passes_us": max_renderer_record_passes_us,
+            "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": max_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
         },
         "worst_run": {
             "top_total_time_us": top_total,
@@ -167,6 +198,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
             "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
             "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            "renderer_encode_scene_us": max_renderer_encode_scene_us,
+            "renderer_upload_us": max_renderer_upload_us,
+            "renderer_record_passes_us": max_renderer_record_passes_us,
+            "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": max_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
         },
         "p50": {
             "top_total_time_us": top_total,
@@ -175,6 +212,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "frame_p95_total_time_us": frame_p95_total_time_us,
             "frame_p95_layout_time_us": frame_p95_layout_time_us,
             "frame_p95_layout_engine_solve_time_us": frame_p95_layout_engine_solve_time_us,
+            "renderer_encode_scene_us": max_renderer_encode_scene_us,
+            "renderer_upload_us": max_renderer_upload_us,
+            "renderer_record_passes_us": max_renderer_record_passes_us,
+            "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": max_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
         },
         "p95": {
             "top_total_time_us": top_total,
@@ -183,6 +226,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "frame_p95_total_time_us": frame_p95_total_time_us,
             "frame_p95_layout_time_us": frame_p95_layout_time_us,
             "frame_p95_layout_engine_solve_time_us": frame_p95_layout_engine_solve_time_us,
+            "renderer_encode_scene_us": max_renderer_encode_scene_us,
+            "renderer_upload_us": max_renderer_upload_us,
+            "renderer_record_passes_us": max_renderer_record_passes_us,
+            "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": max_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
         },
         "thresholds": {
             "max_top_total_us": thr_total,
@@ -196,6 +245,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "max_pointer_move_global_changes": thr_pointer_move_global_changes,
             "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_paint_cache_hit_test_only_replay_allowed_max,
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            "max_renderer_encode_scene_us": thr_renderer_encode_scene,
+            "max_renderer_upload_us": thr_renderer_upload,
+            "max_renderer_record_passes_us": thr_renderer_record_passes,
+            "max_renderer_encoder_finish_us": thr_renderer_encoder_finish,
+            "max_renderer_prepare_text_us": thr_renderer_prepare_text,
+            "max_renderer_prepare_svg_us": thr_renderer_prepare_svg,
         },
         "threshold_sources": {
             "max_top_total_us": src_total,
@@ -209,6 +264,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "max_pointer_move_global_changes": src_pointer_move_global_changes,
             "min_run_paint_cache_hit_test_only_replay_allowed_max": src_paint_cache_hit_test_only_replay_allowed_max,
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            "max_renderer_encode_scene_us": src_renderer_encode_scene,
+            "max_renderer_upload_us": src_renderer_upload,
+            "max_renderer_record_passes_us": src_renderer_record_passes,
+            "max_renderer_encoder_finish_us": src_renderer_encoder_finish,
+            "max_renderer_prepare_text_us": src_renderer_prepare_text,
+            "max_renderer_prepare_svg_us": src_renderer_prepare_svg,
         },
     });
 
@@ -469,6 +530,31 @@ pub(super) fn push_repeat_threshold_row_and_failures(
         src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
     } = input;
 
+    let (thr_renderer_encode_scene, src_renderer_encode_scene) = resolve_threshold(
+        cli_thresholds.max_renderer_encode_scene_us,
+        baseline_thresholds.max_renderer_encode_scene_us,
+    );
+    let (thr_renderer_upload, src_renderer_upload) = resolve_threshold(
+        cli_thresholds.max_renderer_upload_us,
+        baseline_thresholds.max_renderer_upload_us,
+    );
+    let (thr_renderer_record_passes, src_renderer_record_passes) = resolve_threshold(
+        cli_thresholds.max_renderer_record_passes_us,
+        baseline_thresholds.max_renderer_record_passes_us,
+    );
+    let (thr_renderer_encoder_finish, src_renderer_encoder_finish) = resolve_threshold(
+        cli_thresholds.max_renderer_encoder_finish_us,
+        baseline_thresholds.max_renderer_encoder_finish_us,
+    );
+    let (thr_renderer_prepare_text, src_renderer_prepare_text) = resolve_threshold(
+        cli_thresholds.max_renderer_prepare_text_us,
+        baseline_thresholds.max_renderer_prepare_text_us,
+    );
+    let (thr_renderer_prepare_svg, src_renderer_prepare_svg) = resolve_threshold(
+        cli_thresholds.max_renderer_prepare_svg_us,
+        baseline_thresholds.max_renderer_prepare_svg_us,
+    );
+
     let row = serde_json::json!({
         "script": script_key,
         "sort": sort.as_str(),
@@ -482,6 +568,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "frame_p95_total_time_us": observed_frame_p95_total,
             "frame_p95_layout_time_us": observed_frame_p95_layout,
             "frame_p95_layout_engine_solve_time_us": observed_frame_p95_solve,
+            "renderer_encode_scene_us": observed_renderer_encode_scene_us,
+            "renderer_upload_us": observed_renderer_upload_us,
+            "renderer_record_passes_us": observed_renderer_record_passes_us,
+            "renderer_encoder_finish_us": observed_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": observed_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": observed_renderer_prepare_svg_us,
         },
         "worst_run": script_worst.as_ref().map(|(us, bundle, run_index)| serde_json::json!({
             "top_total_time_us": us,
@@ -505,6 +597,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
             "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
             "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            "renderer_encode_scene_us": max_renderer_encode_scene_us,
+            "renderer_upload_us": max_renderer_upload_us,
+            "renderer_record_passes_us": max_renderer_record_passes_us,
+            "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": max_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
         },
         "p50": {
             "top_total_time_us": percentile_nearest_rank_sorted(sorted_total, 0.50),
@@ -529,6 +627,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "frame_p95_total_time_us": p95_frame_p95_total,
             "frame_p95_layout_time_us": p95_frame_p95_layout,
             "frame_p95_layout_engine_solve_time_us": p95_frame_p95_solve,
+            "renderer_encode_scene_us": p95_renderer_encode_scene_us,
+            "renderer_upload_us": p95_renderer_upload_us,
+            "renderer_record_passes_us": p95_renderer_record_passes_us,
+            "renderer_encoder_finish_us": p95_renderer_encoder_finish_us,
+            "renderer_prepare_text_us": p95_renderer_prepare_text_us,
+            "renderer_prepare_svg_us": p95_renderer_prepare_svg_us,
         },
         "thresholds": {
             "max_top_total_us": thr_total,
@@ -542,6 +646,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "max_pointer_move_global_changes": thr_pointer_move_global_changes,
             "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_paint_cache_hit_test_only_replay_allowed_max,
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            "max_renderer_encode_scene_us": thr_renderer_encode_scene,
+            "max_renderer_upload_us": thr_renderer_upload,
+            "max_renderer_record_passes_us": thr_renderer_record_passes,
+            "max_renderer_encoder_finish_us": thr_renderer_encoder_finish,
+            "max_renderer_prepare_text_us": thr_renderer_prepare_text,
+            "max_renderer_prepare_svg_us": thr_renderer_prepare_svg,
         },
         "threshold_sources": {
             "max_top_total_us": src_total,
@@ -555,6 +665,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "max_pointer_move_global_changes": src_pointer_move_global_changes,
             "min_run_paint_cache_hit_test_only_replay_allowed_max": src_paint_cache_hit_test_only_replay_allowed_max,
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            "max_renderer_encode_scene_us": src_renderer_encode_scene,
+            "max_renderer_upload_us": src_renderer_upload,
+            "max_renderer_record_passes_us": src_renderer_record_passes,
+            "max_renderer_encoder_finish_us": src_renderer_encoder_finish,
+            "max_renderer_prepare_text_us": src_renderer_prepare_text,
+            "max_renderer_prepare_svg_us": src_renderer_prepare_svg,
         },
     });
 
