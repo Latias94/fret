@@ -1,11 +1,173 @@
 use super::*;
 
+#[derive(Clone, Copy)]
+pub(super) struct RendererMetricEvidence<'a> {
+    pub encode_scene: Option<&'a (u64, PathBuf, u64)>,
+    pub upload: Option<&'a (u64, PathBuf, u64)>,
+    pub record_passes: Option<&'a (u64, PathBuf, u64)>,
+    pub encoder_finish: Option<&'a (u64, PathBuf, u64)>,
+    pub prepare_text: Option<&'a (u64, PathBuf, u64)>,
+    pub prepare_svg: Option<&'a (u64, PathBuf, u64)>,
+}
+
+#[derive(Clone, Copy)]
+struct MetricEvidence<'a> {
+    bundle: &'a Path,
+    run_index: u64,
+    peak_sort: Option<BundleStatsSort>,
+}
+
+impl<'a> RendererMetricEvidence<'a> {
+    fn evidence_for_metric(&self, metric: &str) -> Option<MetricEvidence<'a>> {
+        let (entry, peak_sort) = match metric {
+            "renderer_encode_scene_us" => (
+                self.encode_scene,
+                Some(BundleStatsSort::RendererEncodeScene),
+            ),
+            "renderer_upload_us" => (self.upload, Some(BundleStatsSort::RendererUpload)),
+            "renderer_record_passes_us" => (
+                self.record_passes,
+                Some(BundleStatsSort::RendererRecordPasses),
+            ),
+            "renderer_encoder_finish_us" => (
+                self.encoder_finish,
+                Some(BundleStatsSort::RendererEncoderFinish),
+            ),
+            "renderer_prepare_text_us" => (
+                self.prepare_text,
+                Some(BundleStatsSort::RendererPrepareText),
+            ),
+            "renderer_prepare_svg_us" => (self.prepare_svg, None),
+            _ => return None,
+        };
+        entry.map(|(_us, bundle, run_index)| MetricEvidence {
+            bundle: bundle.as_path(),
+            run_index: *run_index,
+            peak_sort,
+        })
+    }
+}
+
+fn renderer_peak_sort(metric: &str) -> Option<BundleStatsSort> {
+    match metric {
+        "renderer_encode_scene_us" => Some(BundleStatsSort::RendererEncodeScene),
+        "renderer_upload_us" => Some(BundleStatsSort::RendererUpload),
+        "renderer_record_passes_us" => Some(BundleStatsSort::RendererRecordPasses),
+        "renderer_encoder_finish_us" => Some(BundleStatsSort::RendererEncoderFinish),
+        "renderer_prepare_text_us" => Some(BundleStatsSort::RendererPrepareText),
+        _ => None,
+    }
+}
+
+fn attach_failure_run_context(
+    failure: &mut serde_json::Value,
+    run_row: serde_json::Value,
+    evidence_bundle: &Path,
+    evidence_run_index: u64,
+    warmup_frames: u64,
+    peak_sort: Option<BundleStatsSort>,
+) {
+    if let Some(obj) = failure.as_object_mut() {
+        obj.insert(
+            "evidence_bundle".to_string(),
+            serde_json::Value::String(evidence_bundle.display().to_string()),
+        );
+        obj.insert(
+            "evidence_run_index".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(evidence_run_index)),
+        );
+        obj.insert("evidence_run".to_string(), run_row);
+
+        if let Some(sort) = peak_sort
+            && let Ok(report) = bundle_stats_from_path(
+                evidence_bundle,
+                1,
+                sort,
+                BundleStatsOptions { warmup_frames },
+            )
+        {
+            let peak = triage_json_from_stats(evidence_bundle, &report, sort, warmup_frames)
+                .get("worst")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            obj.insert(
+                "evidence_peak".to_string(),
+                serde_json::json!({
+                    "metric_sort": sort.as_str(),
+                    "worst": peak,
+                }),
+            );
+        }
+    }
+}
+
+fn attach_single_run_failure_context(
+    failures: &mut [serde_json::Value],
+    run_row: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) {
+    let run_row = run_row.clone();
+    for failure in failures.iter_mut() {
+        let metric = failure
+            .get("metric")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        attach_failure_run_context(
+            failure,
+            run_row.clone(),
+            bundle_path,
+            0,
+            warmup_frames,
+            renderer_peak_sort(metric),
+        );
+    }
+}
+
+fn attach_repeat_run_failure_context<'a>(
+    failures: &mut [serde_json::Value],
+    runs_json: &[serde_json::Value],
+    warmup_frames: u64,
+    renderer_evidence: &RendererMetricEvidence<'a>,
+) {
+    for failure in failures.iter_mut() {
+        let metric = failure
+            .get("metric")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let renderer_metric_evidence = renderer_evidence.evidence_for_metric(metric);
+        let run_index = renderer_metric_evidence
+            .map(|e| e.run_index)
+            .or_else(|| failure.get("evidence_run_index").and_then(|v| v.as_u64()));
+        let Some(run_index) = run_index else {
+            continue;
+        };
+        let Some(run_row) = runs_json.get(run_index as usize).cloned() else {
+            continue;
+        };
+
+        if let Some(metric_evidence) = renderer_metric_evidence {
+            attach_failure_run_context(
+                failure,
+                run_row,
+                metric_evidence.bundle,
+                metric_evidence.run_index,
+                warmup_frames,
+                metric_evidence.peak_sort,
+            );
+        } else if let Some(obj) = failure.as_object_mut() {
+            obj.insert("evidence_run".to_string(), run_row);
+        }
+    }
+}
+
 pub(super) struct SingleRunThresholdInputs<'a> {
     pub script_key: &'a str,
     pub sort: BundleStatsSort,
     pub perf_threshold_agg: PerfThresholdAggregate,
     pub cli_thresholds: PerfThresholds,
     pub baseline_thresholds: PerfThresholds,
+    pub warmup_frames: u64,
 
     pub top_total: u64,
     pub top_layout: u64,
@@ -71,6 +233,7 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         perf_threshold_agg,
         cli_thresholds,
         baseline_thresholds,
+        warmup_frames,
         top_total,
         top_layout,
         top_solve,
@@ -274,7 +437,7 @@ pub(super) fn push_single_run_threshold_row_and_failures(
     });
 
     perf_threshold_rows.push(row);
-    perf_threshold_failures.extend(scan_perf_threshold_failures(
+    let mut failures = scan_perf_threshold_failures(
         script_key,
         sort,
         perf_threshold_agg,
@@ -328,7 +491,9 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         None,
         None,
         None,
-    ));
+    );
+    attach_single_run_failure_context(&mut failures, &run, bundle_path, warmup_frames);
+    perf_threshold_failures.extend(failures);
 }
 
 pub(super) struct RepeatThresholdInputs<'a> {
@@ -339,6 +504,8 @@ pub(super) struct RepeatThresholdInputs<'a> {
     pub perf_threshold_agg: PerfThresholdAggregate,
     pub cli_thresholds: PerfThresholds,
     pub baseline_thresholds: PerfThresholds,
+    pub warmup_frames: u64,
+    pub renderer_evidence: RendererMetricEvidence<'a>,
 
     pub observed_total: u64,
     pub max_total: u64,
@@ -449,6 +616,8 @@ pub(super) fn push_repeat_threshold_row_and_failures(
         perf_threshold_agg,
         cli_thresholds,
         baseline_thresholds,
+        warmup_frames,
+        renderer_evidence,
         observed_total,
         max_total,
         p95_total,
@@ -675,7 +844,7 @@ pub(super) fn push_repeat_threshold_row_and_failures(
     });
 
     perf_threshold_rows.push(row);
-    perf_threshold_failures.extend(scan_perf_threshold_failures(
+    let mut failures = scan_perf_threshold_failures(
         script_key,
         sort,
         perf_threshold_agg,
@@ -735,5 +904,115 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             .as_ref()
             .map(|(_us, bundle, _run)| bundle.as_path()),
         script_worst_solve.as_ref().map(|(_us, _bundle, run)| *run),
-    ));
+    );
+    attach_repeat_run_failure_context(&mut failures, runs_json, warmup_frames, &renderer_evidence);
+    perf_threshold_failures.extend(failures);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repeat_failure_context_uses_metric_specific_renderer_run() {
+        let upload_worst = (1032, PathBuf::from("bundle-upload.json"), 2);
+        let renderer_evidence = RendererMetricEvidence {
+            encode_scene: None,
+            upload: Some(&upload_worst),
+            record_passes: None,
+            encoder_finish: None,
+            prepare_text: None,
+            prepare_svg: None,
+        };
+        let runs_json = vec![
+            serde_json::json!({
+                "run_index": 0,
+                "bundle": "bundle-total.json",
+                "top_frame_id": 10
+            }),
+            serde_json::json!({
+                "run_index": 1,
+                "bundle": "bundle-other.json",
+                "top_frame_id": 20
+            }),
+            serde_json::json!({
+                "run_index": 2,
+                "bundle": "bundle-upload.json",
+                "top_frame_id": 30
+            }),
+        ];
+        let mut failures = vec![serde_json::json!({
+            "metric": "renderer_upload_us",
+            "evidence_bundle": "bundle-total.json",
+            "evidence_run_index": 0,
+        })];
+
+        attach_repeat_run_failure_context(&mut failures, &runs_json, 0, &renderer_evidence);
+
+        assert_eq!(
+            failures[0].get("evidence_bundle").and_then(|v| v.as_str()),
+            Some("bundle-upload.json")
+        );
+        assert_eq!(
+            failures[0]
+                .get("evidence_run_index")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            failures[0]
+                .pointer("/evidence_run/top_frame_id")
+                .and_then(|v| v.as_u64()),
+            Some(30)
+        );
+    }
+
+    #[test]
+    fn repeat_failure_context_keeps_existing_non_renderer_evidence() {
+        let upload_worst = (1032, PathBuf::from("bundle-upload.json"), 2);
+        let renderer_evidence = RendererMetricEvidence {
+            encode_scene: None,
+            upload: Some(&upload_worst),
+            record_passes: None,
+            encoder_finish: None,
+            prepare_text: None,
+            prepare_svg: None,
+        };
+        let runs_json = vec![
+            serde_json::json!({
+                "run_index": 0,
+                "bundle": "bundle-total.json",
+                "top_frame_id": 10
+            }),
+            serde_json::json!({
+                "run_index": 1,
+                "bundle": "bundle-layout.json",
+                "top_frame_id": 20
+            }),
+        ];
+        let mut failures = vec![serde_json::json!({
+            "metric": "top_layout_time_us",
+            "evidence_bundle": "bundle-layout.json",
+            "evidence_run_index": 1,
+        })];
+
+        attach_repeat_run_failure_context(&mut failures, &runs_json, 0, &renderer_evidence);
+
+        assert_eq!(
+            failures[0].get("evidence_bundle").and_then(|v| v.as_str()),
+            Some("bundle-layout.json")
+        );
+        assert_eq!(
+            failures[0]
+                .get("evidence_run_index")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            failures[0]
+                .pointer("/evidence_run/top_frame_id")
+                .and_then(|v| v.as_u64()),
+            Some(20)
+        );
+    }
 }

@@ -1423,6 +1423,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             perf_threshold_agg,
                             cli_thresholds,
                             baseline_thresholds,
+                            warmup_frames: report_warmup_frames,
                             top_total,
                             top_layout,
                             top_solve,
@@ -1522,6 +1523,12 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         let mut script_worst: Option<(u64, PathBuf, u64)> = None;
         let mut script_worst_layout: Option<(u64, PathBuf, u64)> = None;
         let mut script_worst_solve: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_encode_scene: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_upload: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_record_passes: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_encoder_finish: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_prepare_text: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_prepare_svg: Option<(u64, PathBuf, u64)> = None;
 
         for run_index in 0..repeat {
             if !reuse_process {
@@ -1752,6 +1759,66 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             runs_renderer_encoder_finish_us.push(report.max_renderer_encoder_finish_us);
             runs_renderer_prepare_text_us.push(report.max_renderer_prepare_text_us);
             runs_renderer_prepare_svg_us.push(report.max_renderer_prepare_svg_us);
+            match &script_worst_renderer_encode_scene {
+                Some((prev_us, _, _)) if *prev_us >= report.max_renderer_encode_scene_us => {}
+                _ => {
+                    script_worst_renderer_encode_scene = Some((
+                        report.max_renderer_encode_scene_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            match &script_worst_renderer_upload {
+                Some((prev_us, _, _)) if *prev_us >= report.max_renderer_upload_us => {}
+                _ => {
+                    script_worst_renderer_upload = Some((
+                        report.max_renderer_upload_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            match &script_worst_renderer_record_passes {
+                Some((prev_us, _, _)) if *prev_us >= report.max_renderer_record_passes_us => {}
+                _ => {
+                    script_worst_renderer_record_passes = Some((
+                        report.max_renderer_record_passes_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            match &script_worst_renderer_encoder_finish {
+                Some((prev_us, _, _)) if *prev_us >= report.max_renderer_encoder_finish_us => {}
+                _ => {
+                    script_worst_renderer_encoder_finish = Some((
+                        report.max_renderer_encoder_finish_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            match &script_worst_renderer_prepare_text {
+                Some((prev_us, _, _)) if *prev_us >= report.max_renderer_prepare_text_us => {}
+                _ => {
+                    script_worst_renderer_prepare_text = Some((
+                        report.max_renderer_prepare_text_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            match &script_worst_renderer_prepare_svg {
+                Some((prev_us, _, _)) if *prev_us >= report.max_renderer_prepare_svg_us => {}
+                _ => {
+                    script_worst_renderer_prepare_svg = Some((
+                        report.max_renderer_prepare_svg_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
             runs_rows::push_perf_repeat_run_json_row(
                 &mut runs_json,
                 run_index,
@@ -2448,6 +2515,15 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         perf_threshold_agg,
                         cli_thresholds,
                         baseline_thresholds,
+                        warmup_frames,
+                        renderer_evidence: thresholds::RendererMetricEvidence {
+                            encode_scene: script_worst_renderer_encode_scene.as_ref(),
+                            upload: script_worst_renderer_upload.as_ref(),
+                            record_passes: script_worst_renderer_record_passes.as_ref(),
+                            encoder_finish: script_worst_renderer_encoder_finish.as_ref(),
+                            prepare_text: script_worst_renderer_prepare_text.as_ref(),
+                            prepare_svg: script_worst_renderer_prepare_svg.as_ref(),
+                        },
                         observed_total,
                         max_total,
                         p95_total,

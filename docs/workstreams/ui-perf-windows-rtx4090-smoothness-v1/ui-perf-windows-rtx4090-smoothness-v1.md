@@ -563,7 +563,12 @@ Recommended snapshot retention for typical-perf runs:
 
 - `<out_dir>/check.perf_thresholds.json`
   - Includes `max` and percentiles (`p50`/`p95`) per script.
-  - When a threshold fails, `failures[]` includes `actual_p95_us`, `outlier_suspected`, and `evidence_bundle` (a bundle.json path you can feed to `diag stats`) for quick triage.
+  - When a threshold fails, `failures[]` includes `actual_p95_us`, `outlier_suspected`,
+    `evidence_bundle`, `evidence_run_index`, and `evidence_run` for quick triage.
+  - Renderer threshold failures use the renderer metric's own worst run instead of the script's
+    top-total run. For renderer metrics that have a stats sort (`encode_scene`, `upload`,
+    `record_passes`, `encoder_finish`, `prepare_text`), `failures[].evidence_peak` also includes the
+    metric-sorted worst frame and renderer top fields.
 
 2) Open the worst evidence bundle:
 
@@ -1092,6 +1097,13 @@ Renderer encode attribution (2026-05-10):
     only on `renderer_upload_us=416 > 374` and `renderer_encoder_finish_us=179 > 176`, with total/paint still healthy
     (`1584/1926/1926us` and `1498/1821/1821us`). Treat those as renderer-tail noise for this lane, not as a
     code-editor regression, and prefer the low-overhead probe bundles above for the real decision loop.
+  - Current rerun (`target/fret-diag/perf-code-editor-hosted-resources-official-gate-v1-rerun3/check.perf_thresholds.json`):
+    gate still fails only on `renderer_upload_us=444 > 374` and `renderer_encoder_finish_us=188 > 176`
+    (`p50/p95/max total 1664/1934/1934us`, paint `1571/1834/1834us`).
+    The new failure payload now carries `evidence_run` and `evidence_peak`, which map the upload failure to
+    run_index `1` / frame `717` and the encoder-finish failure to run_index `4` / frame `1834`. That is the
+    granularity we wanted: keep treating this as a narrow renderer tail until a fresh low-overhead probe proves
+    a structural regression.
 - Content-resolve split follow-up (2026-05-11):
   - Probe:
     `target/fret-diag/perf-code-editor-content-resolve-breakdown-v1/1778439554384/bundle.schema2.json`.
