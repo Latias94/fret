@@ -140,6 +140,14 @@
         "blocked": 0
       }
     },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [],
     "promotion_target_counts": {
       "diag_script": 2,
       "component_fixture": 1,
@@ -160,6 +168,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "medium",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "demo_control_visible_fill_width",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-input-demo-control"
       ],
@@ -182,6 +198,13 @@
           "confidence": "medium",
           "owner": "component_recipe",
           "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
             "apps/fret-ui-gallery/src/ui/snippets/input/demo.rs",
@@ -321,6 +344,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "file_control_visible_width",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-input-file-control"
       ],
@@ -343,6 +374,13 @@
           "confidence": "high",
           "owner": "gallery_composition",
           "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
             "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"
@@ -427,6 +465,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "button_group_control_visible_width",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-input-button-group-control",
         "ui-gallery-input-button-group-search-button"
@@ -450,6 +496,13 @@
           "confidence": "high",
           "owner": "gallery_composition",
           "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "apps/fret-ui-gallery/src/ui/snippets/input/button_group.rs",
             "target/fret-diag/shadcn-parity-discovery-harness-v1-m3/**/ui-gallery-shadcn-parity-m3.input-composed-controls.layout/layout.taffy.v1.json"

@@ -61,9 +61,11 @@ date: 2026-05-09
   diagnostics-runner follow-up instead of keeping it only as a combobox-script workaround.
 - [x] Revisit whether the tool should become a crate after three components and stable report
   semantics.
+- [x] Add a suite manifest and cross-component summary so the current discovery sweep can be
+  regenerated with one command.
 
 ## Backlog
 
-- [ ] Add severity scoring once mismatches can be measured live.
+- [x] Add severity scoring once mismatches can be measured live.
 - [ ] Add report-to-issue helpers only after the mismatch taxonomy stabilizes.
 - [ ] Add material-style source adapters after shadcn parity proves the generic schema.

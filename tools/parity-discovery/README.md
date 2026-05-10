@@ -23,6 +23,10 @@ effective layout viewport.
 - Button Group:
   - Fixture: `tools/parity-discovery/fixtures/button_group_parts_v1.json`
   - Report: `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json`
+  - Upstream DOM evidence:
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json`
 - Dropdown Menu:
   - Fixture: `tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json`
   - Report: `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json`
@@ -57,8 +61,16 @@ effective layout viewport.
 
 ## Commands
 
+Generate the full current suite and cross-component summary:
+
 ```powershell
-python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-harness-v1 --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v1.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json
+```
+
+Generate individual reports when debugging one surface:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-sweep-v1/button-group-select-after-select-padding/sessions/1778337694097-135816 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/input_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json
@@ -78,6 +90,11 @@ Required top-level fields:
   snapshot id, theme, optional mode/variant, viewport dimensions, and optional device-pixel ratio.
 - `upstream_dom_targets`: optional DOM snapshot target ids used by `upstream_predicates`.
 - `parts`: stable part mappings.
+
+Suite manifests live under `tools/parity-discovery/suites/`. A suite contains stable report ids,
+mapping paths, output paths, and the sidecar/DOM evidence inputs needed to regenerate all report
+artifacts with one command. The generated suite report aggregates status, layer, triage, and
+cross-component `top_findings`.
 
 Required part fields:
 
@@ -140,6 +157,13 @@ Report summaries also include `owner_counts`, `owner_status_counts`, `layer_coun
 `layer_status_counts` so mismatches can be grouped by both local owner taxonomy and the broader
 runner/mechanism/policy/recipe/app-demo layers.
 
+Reports also include derived triage metadata. Every check and part receives `triage.score`,
+`triage.level`, and `triage.reasons`; the summary includes `triage_level_counts` and
+`top_findings`. Scores are intentionally conservative and are derived from the evaluated status,
+layer, promotion target, axis, confidence, and measured pixel gap when available. Passing evidence
+always scores as `none`, while mismatches and blocked high-confidence mechanism or runner findings
+rise to the top of `top_findings`.
+
 Report statuses:
 
 - `pass_known`
@@ -155,7 +179,7 @@ claim mismatches without failing evidence.
 Pass sidecars directly or by directory:
 
 ```powershell
-python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-harness-v1 --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-sweep-v1/button-group-select-after-select-padding/sessions/1778337694097-135816 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
 ```
 
 Supported predicate kinds:

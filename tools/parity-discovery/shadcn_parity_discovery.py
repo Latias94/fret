@@ -72,6 +72,7 @@ SUPPORTED_COMPARISONS = {
     "eq",
 }
 STATUS_ORDER = ["pass_known", "needs_live_measurement", "mismatch", "blocked"]
+TRIAGE_LEVEL_ORDER = ["critical", "high", "medium", "low", "none"]
 TEST_ID_LABEL_RE = re.compile(r"\[test_id=([^\]]+)\]")
 OWNER_BY_PROMOTION_TARGET = {
     "diag_script": "diagnostics_surface",
@@ -86,6 +87,39 @@ LAYER_BY_OWNER = {
     "diagnostics_surface": "runner",
     "upstream_reference": "upstream",
     "unknown": "unknown",
+}
+STATUS_TRIAGE_SCORE = {
+    "mismatch": 60,
+    "blocked": 40,
+    "needs_live_measurement": 20,
+    "pass_known": 0,
+}
+LAYER_TRIAGE_SCORE = {
+    "mechanism": 20,
+    "runner": 18,
+    "policy": 15,
+    "recipe": 10,
+    "app_demo": 6,
+    "upstream": 4,
+    "unknown": 5,
+}
+PROMOTION_TRIAGE_SCORE = {
+    "mechanism_harness": 12,
+    "diag_script": 10,
+    "component_fixture": 6,
+    "none": 0,
+}
+AXIS_TRIAGE_SCORE = {
+    "semantics": 12,
+    "interaction": 12,
+    "layout": 8,
+    "chrome": 5,
+    "teaching": 2,
+}
+CONFIDENCE_TRIAGE_SCORE = {
+    "high": 8,
+    "medium": 4,
+    "low": 0,
 }
 
 
@@ -1104,6 +1138,171 @@ def merge_confidence(checks: list[dict[str, Any]]) -> str:
     return "high"
 
 
+def _triage_level(score: int) -> str:
+    if score >= 90:
+        return "critical"
+    if score >= 70:
+        return "high"
+    if score >= 40:
+        return "medium"
+    if score > 0:
+        return "low"
+    return "none"
+
+
+def _expected_gap_px(result: dict[str, Any]) -> float:
+    observed = result.get("observed_px")
+    expected = result.get("expected")
+    comparison = result.get("comparison")
+    if not isinstance(observed, int | float) or not isinstance(expected, str):
+        return 0.0
+    numbers = [float(item) for item in re.findall(r"-?\d+(?:\.\d+)?", expected)]
+    if not numbers:
+        return 0.0
+    observed = float(observed)
+    if comparison == "eq":
+        return abs(observed - numbers[0])
+    if comparison == "gte":
+        return max(0.0, numbers[0] - observed)
+    if comparison == "lte":
+        return max(0.0, observed - numbers[0])
+    if comparison == "between" and len(numbers) >= 2:
+        return max(numbers[0] - observed, observed - numbers[1], 0.0)
+    return 0.0
+
+
+def _measurement_gap_px(value: Any) -> float:
+    if isinstance(value, dict):
+        gaps: list[float] = []
+        logical_delta = value.get("logical_delta_px")
+        if isinstance(logical_delta, int | float):
+            gaps.append(abs(float(logical_delta)))
+        gaps.append(_expected_gap_px(value))
+        for child in value.values():
+            gaps.append(_measurement_gap_px(child))
+        return max(gaps, default=0.0)
+    if isinstance(value, list):
+        return max((_measurement_gap_px(item) for item in value), default=0.0)
+    return 0.0
+
+
+def _gap_score(gap_px: float) -> int:
+    if gap_px >= 64.0:
+        return 10
+    if gap_px >= 16.0:
+        return 6
+    if gap_px >= 4.0:
+        return 3
+    return 0
+
+
+def triage_check(
+    check: dict[str, Any],
+    part: dict[str, Any],
+    status: str,
+    owner: str,
+    layer: str,
+    measurement: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if status == "pass_known":
+        return {
+            "score": 0,
+            "level": "none",
+            "reasons": ["passing evidence"],
+        }
+
+    axis = part["axis"]
+    promotion_target = check["promotion"]["target"]
+    score = STATUS_TRIAGE_SCORE[status]
+    reasons = [f"status:{status}"]
+
+    layer_score = LAYER_TRIAGE_SCORE.get(layer, 0)
+    if layer_score:
+        score += layer_score
+        reasons.append(f"layer:{layer}")
+
+    promotion_score = PROMOTION_TRIAGE_SCORE.get(promotion_target, 0)
+    if promotion_score:
+        score += promotion_score
+        reasons.append(f"promotion:{promotion_target}")
+
+    axis_score = AXIS_TRIAGE_SCORE.get(axis, 0)
+    if axis_score:
+        score += axis_score
+        reasons.append(f"axis:{axis}")
+
+    confidence_score = CONFIDENCE_TRIAGE_SCORE[check["confidence"]]
+    if confidence_score:
+        score += confidence_score
+        reasons.append(f"confidence:{check['confidence']}")
+
+    gap_px = _measurement_gap_px(measurement) if measurement is not None else 0.0
+    gap_score = _gap_score(gap_px)
+    if gap_score:
+        score += gap_score
+        reasons.append(f"measurement_gap_px:{gap_px:.3g}")
+
+    if status == "blocked":
+        reasons.append("required evidence is missing")
+    elif status == "needs_live_measurement":
+        reasons.append("source fact is not yet live-measured")
+
+    score = min(score, 100)
+    return {
+        "score": score,
+        "level": _triage_level(score),
+        "reasons": reasons,
+    }
+
+
+def merge_triage(checks: list[dict[str, Any]]) -> dict[str, Any]:
+    if not checks:
+        return {"score": 0, "level": "none", "reasons": ["no checks"]}
+    highest = max(checks, key=lambda check: check["triage"]["score"])
+    return {
+        "score": highest["triage"]["score"],
+        "level": highest["triage"]["level"],
+        "highest_check_id": highest["id"],
+        "reasons": highest["triage"]["reasons"],
+    }
+
+
+def _top_findings(report_parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for part in report_parts:
+        for check in part["checks"]:
+            if check["status"] == "pass_known":
+                continue
+            findings.append(
+                {
+                    "part_id": part["id"],
+                    "check_id": check["id"],
+                    "status": check["status"],
+                    "axis": part["axis"],
+                    "owner": check["owner"],
+                    "layer": check["layer"],
+                    "promotion_target": check["promotion"]["target"],
+                    "triage": check["triage"],
+                }
+            )
+    findings.sort(
+        key=lambda item: (
+            -int(item["triage"]["score"]),
+            item["part_id"],
+            item["check_id"],
+        )
+    )
+    return findings[:10]
+
+
+def _triage_level_counts(report_parts: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {level: 0 for level in TRIAGE_LEVEL_ORDER}
+    for part in report_parts:
+        level = part["triage"]["level"]
+        counts[level] = counts.get(level, 0) + 1
+    return counts
+
+
 def generate_report(
     mapping: dict[str, Any],
     mapping_path: Path,
@@ -1138,6 +1337,7 @@ def generate_report(
             status = check_status(check, measurement)
             owner = _resolve_owner(check)
             layer = _resolve_layer(check, owner)
+            triage = triage_check(check, part, status, owner, layer, measurement)
             check_statuses.append(status)
             target = check["promotion"]["target"]
             promotion_counts[target] += 1
@@ -1159,6 +1359,7 @@ def generate_report(
                 "confidence": check["confidence"],
                 "owner": owner,
                 "layer": layer,
+                "triage": triage,
                 "evidence_refs": check["evidence_refs"],
                 "promotion": check["promotion"],
             }
@@ -1168,19 +1369,21 @@ def generate_report(
 
         part_status = merge_part_status(check_statuses)
         status_counts[part_status] += 1
-        report_parts.append(
-            {
-                "id": part["id"],
-                "label": part["label"],
-                "axis": part["axis"],
-                "status": part_status,
-                "confidence": merge_confidence(part["checks"]),
-                "test_ids": part["fret"]["test_ids"],
-                "upstream_facts": part["upstream"]["facts"],
-                "fret_facts": part["fret"]["facts"],
-                "checks": checks,
-            }
-        )
+        report_part = {
+            "id": part["id"],
+            "label": part["label"],
+            "axis": part["axis"],
+            "status": part_status,
+            "confidence": merge_confidence(part["checks"]),
+            "triage": merge_triage(checks),
+            "test_ids": part["fret"]["test_ids"],
+            "upstream_facts": part["upstream"]["facts"],
+            "fret_facts": part["fret"]["facts"],
+            "checks": checks,
+        }
+        report_parts.append(report_part)
+
+    top_findings = _top_findings(report_parts)
 
     return {
         "schema_version": SUPPORTED_SCHEMA_VERSION,
@@ -1200,6 +1403,8 @@ def generate_report(
             "owner_status_counts": owner_status_counts,
             "layer_counts": layer_counts,
             "layer_status_counts": layer_status_counts,
+            "triage_level_counts": _triage_level_counts(report_parts),
+            "top_findings": top_findings,
             "promotion_target_counts": promotion_counts,
             "layout_sidecar_count": len(layout_evidence.sidecar_paths),
             "measured_test_id_count": len(layout_evidence.nodes_by_test_id),
@@ -1210,6 +1415,180 @@ def generate_report(
         },
         "parts": report_parts,
         "limitations": mapping["report"]["limitations"],
+    }
+
+
+def _require_path_list(value: Any, path: str) -> list[Path]:
+    if value is None:
+        return []
+    return [Path(item) for item in _require_str_list(value, path)]
+
+
+def load_suite(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise FixtureError(f"{path}: invalid suite JSON: {exc}") from exc
+
+    suite = _require_object(data, "$")
+    if suite.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
+        raise FixtureError(
+            f"$.schema_version must be {SUPPORTED_SCHEMA_VERSION}, got {suite.get('schema_version')!r}"
+        )
+    _require_str(suite.get("id"), "$.id")
+    reports = [
+        _require_object(item, f"$.reports[{index}]")
+        for index, item in enumerate(_require_list(suite.get("reports"), "$.reports"))
+    ]
+    _require_unique_ids(reports, "$.reports")
+    for index, report in enumerate(reports):
+        report_path = f"$.reports[{index}]"
+        _require_str(report.get("mapping"), f"{report_path}.mapping")
+        _require_str(report.get("output"), f"{report_path}.output")
+        _require_path_list(
+            report.get("fret_layout_sidecars"), f"{report_path}.fret_layout_sidecars"
+        )
+        _require_path_list(
+            report.get("fret_layout_sidecar_dirs"),
+            f"{report_path}.fret_layout_sidecar_dirs",
+        )
+        _require_path_list(
+            report.get("upstream_dom_snapshots"),
+            f"{report_path}.upstream_dom_snapshots",
+        )
+        _require_path_list(
+            report.get("upstream_dom_snapshot_dirs"),
+            f"{report_path}.upstream_dom_snapshot_dirs",
+        )
+    return suite
+
+
+def _resolve_existing_paths(paths: list[Path], kind: str) -> list[Path]:
+    unique: dict[str, Path] = {}
+    for path in paths:
+        if not path.exists():
+            raise FixtureError(f"{kind} does not exist: {path}")
+        unique[str(path.resolve())] = path
+    return [unique[key] for key in sorted(unique)]
+
+
+def collect_sidecar_paths(paths: list[Path], dirs: list[Path]) -> list[Path]:
+    all_paths = list(paths)
+    for directory in dirs:
+        if not directory.exists():
+            raise FixtureError(f"layout sidecar directory does not exist: {directory}")
+        all_paths.extend(directory.rglob("layout.taffy.v1.json"))
+    return _resolve_existing_paths(all_paths, "layout sidecar")
+
+
+def collect_dom_snapshot_paths(paths: list[Path], dirs: list[Path]) -> list[Path]:
+    all_paths = list(paths)
+    for directory in dirs:
+        if not directory.exists():
+            raise FixtureError(f"upstream DOM snapshot directory does not exist: {directory}")
+        all_paths.extend(directory.rglob("*.json"))
+    return _resolve_existing_paths(all_paths, "upstream DOM snapshot")
+
+
+def generate_report_from_spec(report_spec: dict[str, Any]) -> dict[str, Any]:
+    mapping_path = Path(report_spec["mapping"])
+    output_path = Path(report_spec["output"])
+    mapping = load_mapping(mapping_path)
+    layout_evidence = load_layout_evidence(
+        collect_sidecar_paths(
+            _require_path_list(
+                report_spec.get("fret_layout_sidecars"),
+                "$.reports[].fret_layout_sidecars",
+            ),
+            _require_path_list(
+                report_spec.get("fret_layout_sidecar_dirs"),
+                "$.reports[].fret_layout_sidecar_dirs",
+            ),
+        )
+    )
+    dom_evidence = load_dom_evidence(
+        collect_dom_snapshot_paths(
+            _require_path_list(
+                report_spec.get("upstream_dom_snapshots"),
+                "$.reports[].upstream_dom_snapshots",
+            ),
+            _require_path_list(
+                report_spec.get("upstream_dom_snapshot_dirs"),
+                "$.reports[].upstream_dom_snapshot_dirs",
+            ),
+        ),
+        mapping.get("upstream_dom_targets", []),
+    )
+    report = generate_report(mapping, mapping_path, layout_evidence, dom_evidence)
+    write_report(report, output_path)
+    return report
+
+
+def _merge_counts(
+    reports: list[dict[str, Any]], summary_key: str, ordered_keys: list[str]
+) -> dict[str, int]:
+    counts = {key: 0 for key in ordered_keys}
+    for report in reports:
+        for key, value in report["summary"][summary_key].items():
+            counts[key] = counts.get(key, 0) + int(value)
+    return counts
+
+
+def generate_suite_report(
+    suite: dict[str, Any],
+    suite_path: Path,
+    reports: list[dict[str, Any]],
+) -> dict[str, Any]:
+    report_rows = []
+    top_findings = []
+    for report_spec, report in zip(suite["reports"], reports, strict=True):
+        report_id = report_spec["id"]
+        output = str(Path(report_spec["output"])).replace("\\", "/")
+        report_rows.append(
+            {
+                "id": report_id,
+                "component": report["component"],
+                "style": report["style"],
+                "output": output,
+                "status_counts": report["summary"]["status_counts"],
+                "layer_status_counts": report["summary"]["layer_status_counts"],
+                "triage_level_counts": report["summary"]["triage_level_counts"],
+                "top_findings": report["summary"]["top_findings"],
+            }
+        )
+        for finding in report["summary"]["top_findings"]:
+            enriched = dict(finding)
+            enriched["report_id"] = report_id
+            enriched["component"] = report["component"]
+            enriched["report_output"] = output
+            top_findings.append(enriched)
+
+    top_findings.sort(
+        key=lambda item: (
+            -int(item["triage"]["score"]),
+            item["report_id"],
+            item["part_id"],
+            item["check_id"],
+        )
+    )
+
+    return {
+        "schema_version": SUPPORTED_SCHEMA_VERSION,
+        "suite_id": suite["id"],
+        "generated_date": suite.get("generated_date"),
+        "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+        "source_suite": str(suite_path).replace("\\", "/"),
+        "summary": {
+            "report_count": len(reports),
+            "part_count": sum(report["summary"]["part_count"] for report in reports),
+            "status_counts": _merge_counts(reports, "status_counts", STATUS_ORDER),
+            "layer_counts": _merge_counts(reports, "layer_counts", LAYER_ORDER),
+            "triage_level_counts": _merge_counts(
+                reports, "triage_level_counts", TRIAGE_LEVEL_ORDER
+            ),
+            "top_findings": top_findings[:20],
+        },
+        "reports": report_rows,
     }
 
 
@@ -1226,10 +1605,20 @@ def parse_args() -> argparse.Namespace:
         description="Generate a deterministic shadcn parity discovery report."
     )
     parser.add_argument(
-        "--mapping", required=True, type=Path, help="Path to a mapping fixture JSON file."
+        "--mapping", type=Path, help="Path to a mapping fixture JSON file."
     )
     parser.add_argument(
-        "--output", required=True, type=Path, help="Path to write the report JSON artifact."
+        "--output", type=Path, help="Path to write the report JSON artifact."
+    )
+    parser.add_argument(
+        "--suite",
+        type=Path,
+        help="Path to a suite manifest that generates multiple report artifacts.",
+    )
+    parser.add_argument(
+        "--suite-output",
+        type=Path,
+        help="Path to write the generated suite summary JSON artifact.",
     )
     parser.add_argument(
         "--fret-layout-sidecar",
@@ -1263,36 +1652,43 @@ def parse_args() -> argparse.Namespace:
 
 
 def resolve_sidecar_paths(args: argparse.Namespace) -> list[Path]:
-    paths = list(args.fret_layout_sidecar)
-    for directory in args.fret_layout_sidecar_dir:
-        if not directory.exists():
-            raise FixtureError(f"layout sidecar directory does not exist: {directory}")
-        paths.extend(directory.rglob("layout.taffy.v1.json"))
-    unique: dict[str, Path] = {}
-    for path in paths:
-        if not path.exists():
-            raise FixtureError(f"layout sidecar does not exist: {path}")
-        unique[str(path.resolve())] = path
-    return [unique[key] for key in sorted(unique)]
+    return collect_sidecar_paths(
+        list(args.fret_layout_sidecar),
+        list(args.fret_layout_sidecar_dir),
+    )
 
 
 def resolve_dom_snapshot_paths(args: argparse.Namespace) -> list[Path]:
-    paths = list(args.upstream_dom_snapshot)
-    for directory in args.upstream_dom_snapshot_dir:
-        if not directory.exists():
-            raise FixtureError(f"upstream DOM snapshot directory does not exist: {directory}")
-        paths.extend(directory.rglob("*.json"))
-    unique: dict[str, Path] = {}
-    for path in paths:
-        if not path.exists():
-            raise FixtureError(f"upstream DOM snapshot does not exist: {path}")
-        unique[str(path.resolve())] = path
-    return [unique[key] for key in sorted(unique)]
+    return collect_dom_snapshot_paths(
+        list(args.upstream_dom_snapshot),
+        list(args.upstream_dom_snapshot_dir),
+    )
 
 
 def main() -> int:
     args = parse_args()
     try:
+        if args.suite is not None:
+            if args.mapping is not None or args.output is not None:
+                raise FixtureError("--suite cannot be combined with --mapping or --output")
+            if args.suite_output is None:
+                raise FixtureError("--suite requires --suite-output")
+            suite = load_suite(args.suite)
+            reports = [generate_report_from_spec(item) for item in suite["reports"]]
+            suite_report = generate_suite_report(suite, args.suite, reports)
+            write_report(suite_report, args.suite_output)
+            print(
+                "generated "
+                f"{args.suite_output} "
+                f"({suite_report['summary']['report_count']} reports, "
+                f"{suite_report['summary']['part_count']} parts, "
+                f"{len(suite_report['summary']['top_findings'])} top findings)"
+            )
+            return 0
+
+        if args.mapping is None or args.output is None:
+            raise FixtureError("--mapping and --output are required unless --suite is used")
+
         mapping = load_mapping(args.mapping)
         layout_evidence = load_layout_evidence(resolve_sidecar_paths(args))
         dom_targets = mapping.get("upstream_dom_targets", [])

@@ -78,6 +78,10 @@ This is deliberately broader than a test harness. A report can say:
 - `mismatch`: Fret evidence contradicts the upstream fact.
 - `blocked`: the mapping cannot be evaluated because required selectors or evidence are missing.
 
+M4c adds a suite manifest lane on top of individual reports. The manifest records the mapping,
+output, Fret sidecar, and upstream DOM inputs for each component report so the whole current sweep
+can be regenerated with one command and summarized through a cross-component `top_findings` queue.
+
 ## Part Mapping Schema v1
 
 The mapping fixture is JSON and must stay human-reviewable. Required top-level fields:
@@ -135,6 +139,9 @@ fields:
 - `source_mapping`: fixture path.
 - `summary`: counts by status, owner, owner/status, and promotion target.
 - `parts`: report rows with `id`, `axis`, `status`, `confidence`, `checks`, and `promotion`.
+- `triage`: derived priority metadata on each check and part. It contains `score`, `level`, and
+  `reasons`, with passing rows scoring as `none`.
+- `summary.top_findings`: the highest-priority non-passing checks sorted by derived triage score.
 - `limitations`: explicit statements about what the prototype does not measure yet.
 
 The report must not fabricate mismatches. If the prototype cannot measure a fact, it must say

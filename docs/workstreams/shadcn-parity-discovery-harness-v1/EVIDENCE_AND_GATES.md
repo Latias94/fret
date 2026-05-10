@@ -11,21 +11,30 @@ date: 2026-05-09
 Generate deterministic per-component reports from measured Fret layout sidecars:
 
 ```powershell
-python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-harness-v1 --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v1.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json
+```
+
+Individual report commands are kept for targeted debugging:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-sweep-v1/button-group-select-after-select-padding/sessions/1778337694097-135816 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/input_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json
-python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-fresh-desktop-2/sessions/1778389967499-159176 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json
-python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-fresh-mobile-4/sessions/1778389948227-128664 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json
 ```
 
 ## Validation Gates
 
 ```powershell
 python -m json.tool tools/parity-discovery/fixtures/button_group_parts_v1.json > $null
+python -m json.tool tools/parity-discovery/suites/shadcn_parity_discovery_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/input_parts_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/WORKSTREAM.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json > $null
@@ -33,6 +42,7 @@ python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifact
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json > $null
 python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py
 cargo nextest run -p fret-ui --lib layout_sidecar_bounds_are_logical_px_and_not_scaled_by_scale_factor --no-fail-fast
 python tools/check_workstream_catalog.py
@@ -244,6 +254,19 @@ Post-fix report outcomes:
 - Mobile: 6 parts, 6 pass, 0 mismatch. The added diagnostics-surface part proves the effective
   sidecar root is `375.333 x 240` before the Drawer shell is compared to the upstream
   `max-h-[80vh]` result (`192px`).
+
+M4c report triage scoring:
+
+- Generated reports now include derived `triage` metadata on every check and part.
+- Report summaries include `triage_level_counts` and `top_findings`, so future sweeps can sort
+  non-passing rows by status, layer, promotion target, axis, confidence, and measured pixel gap.
+- `tools/parity-discovery/suites/shadcn_parity_discovery_v1.json` regenerates the current five
+  report artifacts and writes
+  `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json`.
+- Re-running the current five reports with post-fix evidence keeps all current component reports
+  at zero mismatches. `button_group_mismatch_report_v1.json` now uses the post-fix
+  ButtonGroup Select evidence directory and the checked-in ButtonGroup upstream DOM snapshots, so
+  stale seed sidecars no longer create false top findings.
 
 ## Second Sweep Audit Validation
 

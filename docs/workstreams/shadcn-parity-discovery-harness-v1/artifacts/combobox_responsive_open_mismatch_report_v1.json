@@ -141,6 +141,14 @@
         "blocked": 0
       }
     },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 4
+    },
+    "top_findings": [],
     "promotion_target_counts": {
       "diag_script": 0,
       "component_fixture": 3,
@@ -161,6 +169,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "desktop_trigger_matches_150x36",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-combobox-responsive-trigger"
       ],
@@ -183,6 +199,13 @@
           "confidence": "high",
           "owner": "component_recipe",
           "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
             "apps/fret-ui-gallery/src/ui/snippets/combobox/responsive.rs",
@@ -374,6 +397,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "desktop_popover_shell_wraps_command_height",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-combobox-responsive-content",
         "ui-gallery-combobox-responsive-command",
@@ -398,6 +429,13 @@
           "confidence": "high",
           "owner": "mechanism_core",
           "layer": "mechanism",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
@@ -588,6 +626,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "desktop_command_root_keeps_cmdk_height",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-combobox-responsive-command",
         "ui-gallery-combobox-responsive-content"
@@ -611,6 +657,13 @@
           "confidence": "high",
           "owner": "component_recipe",
           "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
             "ecosystem/fret-ui-shadcn/src/command.rs",
@@ -811,6 +864,14 @@
       "axis": "layout",
       "status": "pass_known",
       "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "desktop_listbox_keeps_cmdk_height",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
       "test_ids": [
         "ui-gallery-combobox-responsive-listbox",
         "ui-gallery-combobox-responsive-command"
@@ -834,6 +895,13 @@
           "confidence": "high",
           "owner": "component_recipe",
           "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
           "evidence_refs": [
             "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
             "ecosystem/fret-ui-shadcn/src/command.rs",
