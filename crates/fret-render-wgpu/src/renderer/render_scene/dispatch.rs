@@ -15,6 +15,7 @@ impl Renderer {
         encoding: &SceneEncoding,
         quad_vertex_bases: &[Option<u32>],
         viewport_vertex_buffer: &wgpu::Buffer,
+        text_glyph_instance_buffer: &wgpu::Buffer,
         text_vertex_buffer: &wgpu::Buffer,
         path_vertex_buffer: &wgpu::Buffer,
         quad_instance_bind_group: &wgpu::BindGroup,
@@ -27,6 +28,7 @@ impl Renderer {
         let mut dispatch_state = RenderSceneDispatchState::new(device);
         let resources = RecordPassResources {
             viewport_vertex_buffer,
+            text_glyph_instance_buffer,
             text_vertex_buffer,
             path_vertex_buffer,
             quad_instance_bind_group,

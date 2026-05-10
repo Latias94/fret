@@ -68,6 +68,9 @@ pub(super) struct ViewportUniform {
     /// Enhanced contrast factor for subpixel text (RGB coverage glyphs).
     pub(super) text_subpixel_enhanced_contrast: f32,
     pub(super) _pad_text_quality: [u32; 2],
+    /// Physical-pixel transform rows used by instanced text expansion.
+    pub(super) text_transform0: [f32; 4],
+    pub(super) text_transform1: [f32; 4],
 }
 
 #[repr(C)]
@@ -140,6 +143,16 @@ pub(super) struct TextVertex {
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
     pub(super) outline_params: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct TextGlyphInstance {
+    pub(super) local_rect: [f32; 4],
+    pub(super) uv: [f32; 4],
+    pub(super) color: [f32; 4],
+    pub(super) outline_params: u32,
+    pub(super) paint_index: u32,
 }
 
 #[repr(C)]
@@ -744,7 +757,6 @@ pub(super) enum EncodeSceneTextPhase {
     Shadow,
     Setup,
     Glyphs,
-    GlyphTransform,
     GlyphEmit,
     GroupFlush,
 }
@@ -1029,11 +1041,6 @@ impl RenderPerfStats {
                     self.encode_scene_text_glyphs += elapsed;
                 }
             }
-            EncodeSceneTextPhase::GlyphTransform => {
-                if let Some(elapsed) = elapsed {
-                    self.encode_scene_text_glyph_transform += elapsed;
-                }
-            }
             EncodeSceneTextPhase::GlyphEmit => {
                 if let Some(elapsed) = elapsed {
                     self.encode_scene_text_glyph_emit += elapsed;
@@ -1259,8 +1266,8 @@ pub(super) struct MaskDraw {
 pub(super) struct TextDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
-    pub(super) first_vertex: u32,
-    pub(super) vertex_count: u32,
+    pub(super) first_instance: u32,
+    pub(super) instance_count: u32,
     pub(super) kind: TextDrawKind,
     pub(super) atlas_page: u16,
     pub(super) paint_index: u32,
@@ -1359,6 +1366,7 @@ pub(super) struct SceneEncoding {
     pub(super) path_paints: Vec<PaintGpu>,
     pub(super) text_paints: Vec<PaintGpu>,
     pub(super) viewport_vertices: Vec<ViewportVertex>,
+    pub(super) text_glyph_instances: Vec<TextGlyphInstance>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
     pub(super) clip_path_masks: Vec<ClipPathMaskDraw>,
@@ -1393,6 +1401,7 @@ impl SceneEncoding {
         self.path_paints.clear();
         self.text_paints.clear();
         self.viewport_vertices.clear();
+        self.text_glyph_instances.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();
         self.clip_path_masks.clear();

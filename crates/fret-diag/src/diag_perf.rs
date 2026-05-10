@@ -694,6 +694,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 | "ui-gallery-steady"
                 | "ui-gallery-complex-steady"
                 | "ui-gallery-complex-typical"
+                | "ui-gallery-code-editor-torture-autoscroll-typical"
                 | "ui-resize-probes"
                 | "ui-code-editor-resize-probes"
         ) {
@@ -710,6 +711,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 | "ui-gallery-steady"
                 | "ui-gallery-complex-steady"
                 | "ui-gallery-complex-typical"
+                | "ui-gallery-code-editor-torture-autoscroll-typical"
                 | "ui-resize-probes"
                 | "ui-code-editor-resize-probes"
         ) {
@@ -719,7 +721,10 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 "1",
             );
         }
-        if matches!(name, "ui-gallery-complex-typical") {
+        if matches!(
+            name,
+            "ui-gallery-complex-typical" | "ui-gallery-code-editor-torture-autoscroll-typical"
+        ) {
             // Typical-perf triage needs enough snapshots per bundle to make frame
             // percentiles meaningful (otherwise `p95` collapses to `max`).
             let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_MAX_SNAPSHOTS", "180");

@@ -1,6 +1,42 @@
 use super::super::shaders::*;
 use super::super::*;
 
+const TEXT_GLYPH_INSTANCE_ATTRIBUTES: [wgpu::VertexAttribute; 5] = [
+    wgpu::VertexAttribute {
+        format: wgpu::VertexFormat::Float32x4,
+        offset: 0,
+        shader_location: 0,
+    },
+    wgpu::VertexAttribute {
+        format: wgpu::VertexFormat::Float32x4,
+        offset: 16,
+        shader_location: 1,
+    },
+    wgpu::VertexAttribute {
+        format: wgpu::VertexFormat::Float32x4,
+        offset: 32,
+        shader_location: 2,
+    },
+    wgpu::VertexAttribute {
+        format: wgpu::VertexFormat::Uint32,
+        offset: 48,
+        shader_location: 3,
+    },
+    wgpu::VertexAttribute {
+        format: wgpu::VertexFormat::Uint32,
+        offset: 52,
+        shader_location: 4,
+    },
+];
+
+fn text_glyph_instance_buffer_layout() -> wgpu::VertexBufferLayout<'static> {
+    wgpu::VertexBufferLayout {
+        array_stride: std::mem::size_of::<TextGlyphInstance>() as wgpu::BufferAddress,
+        step_mode: wgpu::VertexStepMode::Instance,
+        attributes: &TEXT_GLYPH_INSTANCE_ATTRIBUTES,
+    }
+}
+
 impl Renderer {
     pub(in crate::renderer) fn ensure_text_pipeline(
         &mut self,
@@ -49,45 +85,13 @@ impl Renderer {
             immediate_size: 0,
         });
 
-        let vertex_stride = std::mem::size_of::<TextVertex>() as wgpu::BufferAddress;
-
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret text pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_stride,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 8,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 24,
-                            shader_location: 3,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Uint32,
-                            offset: 40,
-                            shader_location: 4,
-                        },
-                    ],
-                }],
+                buffers: &[text_glyph_instance_buffer_layout()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
@@ -121,37 +125,7 @@ impl Renderer {
             vertex: wgpu::VertexState {
                 module: &outline_shader,
                 entry_point: Some("vs_main"),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_stride,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 8,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 24,
-                            shader_location: 3,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Uint32,
-                            offset: 40,
-                            shader_location: 4,
-                        },
-                    ],
-                }],
+                buffers: &[text_glyph_instance_buffer_layout()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
@@ -226,44 +200,13 @@ impl Renderer {
             immediate_size: 0,
         });
 
-        let vertex_stride = std::mem::size_of::<TextVertex>() as wgpu::BufferAddress;
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret color text pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_stride,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 8,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 24,
-                            shader_location: 3,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Uint32,
-                            offset: 40,
-                            shader_location: 4,
-                        },
-                    ],
-                }],
+                buffers: &[text_glyph_instance_buffer_layout()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
@@ -346,44 +289,13 @@ impl Renderer {
             immediate_size: 0,
         });
 
-        let vertex_stride = std::mem::size_of::<TextVertex>() as wgpu::BufferAddress;
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret subpixel text pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_stride,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 8,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 24,
-                            shader_location: 3,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Uint32,
-                            offset: 40,
-                            shader_location: 4,
-                        },
-                    ],
-                }],
+                buffers: &[text_glyph_instance_buffer_layout()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
@@ -417,37 +329,7 @@ impl Renderer {
             vertex: wgpu::VertexState {
                 module: &outline_shader,
                 entry_point: Some("vs_main"),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_stride,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 8,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 24,
-                            shader_location: 3,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Uint32,
-                            offset: 40,
-                            shader_location: 4,
-                        },
-                    ],
-                }],
+                buffers: &[text_glyph_instance_buffer_layout()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {

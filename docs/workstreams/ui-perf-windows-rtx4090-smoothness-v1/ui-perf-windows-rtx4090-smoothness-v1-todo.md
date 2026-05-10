@@ -17,6 +17,9 @@
 - [x] Run `ui-resize-probes` with `--repeat 7` (resize jitter stability check).
 - [x] Run `ui-code-editor-resize-probes` with `--repeat 7` (editor-class guardrail).
 - [x] Establish a “typical perf” gate: `ui-gallery-complex-typical` baseline + `--perf-threshold-agg p90`.
+- [x] Promote a dedicated code-editor autoscroll typical gate:
+  `ui-gallery-code-editor-torture-autoscroll-typical` + `--perf-threshold-agg p90`, with UI-only `frame_p95_*`
+  thresholds. Keep the steady v2 gate responsible for renderer all-surface tail checks.
 - [ ] For any remaining outliers: capture one bundle with `--trace` and one with `FRET_LAYOUT_NODE_PROFILE=1`.
 
 ## Attribution loop (make spikes explainable)
@@ -46,7 +49,10 @@
   `1893/1937/1937us` in `target/fret-diag/perf-code-editor-render-cache-v4/1778420924991/bundle.schema2.json`.
 - [ ] Attribute/reduce the remaining text vertex emission, group-bounds, and group-flush work in the renderer encode
   path, or promote a row/fragment replay slice if the evidence shows stable editor rows still rebuild too much text
-  vertex data every frame.
+  vertex data every frame. Current repeat=7 evidence now passes the checked-in code-editor v2 baseline after text
+  instancing (`top_total_time_us=2155` vs threshold `2769`; `renderer_encode_scene_us=1293` vs threshold `1450`), but
+  the worst family-profile frame remains text-heavy (`renderer.encode.us(text)=1043us`), so row/fragment replay is
+  still the next slice to prove or reject before larger replay refactors.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in

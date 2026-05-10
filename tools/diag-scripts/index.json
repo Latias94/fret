@@ -4725,12 +4725,31 @@
     {
       "id": "ui-gallery-code-editor-torture-autoscroll-steady",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady"
       ],
       "tags": [],
-      "target_hints": []
+      "target_hints": [
+        "This is a non-accessibility CPU/renderer steady-scroll baseline. Keep platform accessibility disabled here; use a dedicated a11y perf probe when measuring AccessKit activation cost."
+      ]
+    },
+    {
+      "id": "ui-gallery-code-editor-torture-autoscroll-typical",
+      "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-code-editor-torture-autoscroll-typical"
+      ],
+      "tags": [],
+      "target_hints": [
+        "This typical perf script waits for font stabilization; keep font bootstrap enabled when launching it standalone.",
+        "This is a non-accessibility CPU/renderer typical-scroll baseline. Keep platform accessibility disabled here; use a dedicated a11y perf probe when measuring AccessKit activation cost."
+      ]
     },
     {
       "id": "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline",

@@ -77,11 +77,27 @@ pub(super) fn handle_op(
         SceneOp::PushTransform { transform } => {
             let current = state.current_transform();
             state.transform_stack.push(current * transform);
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
         }
         SceneOp::PopTransform => {
             if state.transform_stack.len() > 1 {
                 state.transform_stack.pop();
             }
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
         }
 
         SceneOp::PushOpacity { opacity } => {

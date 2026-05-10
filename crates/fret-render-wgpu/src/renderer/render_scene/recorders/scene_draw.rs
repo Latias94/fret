@@ -14,6 +14,7 @@ pub(in super::super) struct SceneDrawRangePassArgs<'a> {
     pub(in super::super) plan: &'a RenderPlan,
     pub(in super::super) scene_pass: &'a SceneDrawRangePass,
     pub(in super::super) viewport_vertex_buffer: &'a wgpu::Buffer,
+    pub(in super::super) text_glyph_instance_buffer: &'a wgpu::Buffer,
     pub(in super::super) text_vertex_buffer: &'a wgpu::Buffer,
     pub(in super::super) path_vertex_buffer: &'a wgpu::Buffer,
     pub(in super::super) quad_instance_bind_group: &'a wgpu::BindGroup,
@@ -54,6 +55,7 @@ pub(in super::super) fn record_scene_draw_range_pass(
         plan: ctx.plan,
         scene_pass,
         viewport_vertex_buffer: resources.viewport_vertex_buffer,
+        text_glyph_instance_buffer: resources.text_glyph_instance_buffer,
         text_vertex_buffer: resources.text_vertex_buffer,
         path_vertex_buffer: resources.path_vertex_buffer,
         quad_instance_bind_group: resources.quad_instance_bind_group,
@@ -79,6 +81,7 @@ impl Renderer {
         let plan = args.plan;
         let scene_pass = args.scene_pass;
         let viewport_vertex_buffer = args.viewport_vertex_buffer;
+        let text_glyph_instance_buffer = args.text_glyph_instance_buffer;
         let text_vertex_buffer = args.text_vertex_buffer;
         let path_vertex_buffer = args.path_vertex_buffer;
         let quad_instance_bind_group = args.quad_instance_bind_group;
@@ -679,7 +682,7 @@ impl Renderer {
                                             .pipeline_switches_text_mask
                                             .saturating_add(1);
                                     }
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_vertex_buffer(0, text_glyph_instance_buffer.slice(..));
                                     pass.set_bind_group(
                                         1,
                                         self.text_system.mask_atlas_bind_group(draw.atlas_page),
@@ -722,7 +725,7 @@ impl Renderer {
                                             .pipeline_switches_text_color
                                             .saturating_add(1);
                                     }
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_vertex_buffer(0, text_glyph_instance_buffer.slice(..));
                                     pass.set_bind_group(
                                         1,
                                         self.text_system.color_atlas_bind_group(draw.atlas_page),
@@ -765,7 +768,7 @@ impl Renderer {
                                             .pipeline_switches_text_subpixel
                                             .saturating_add(1);
                                     }
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_vertex_buffer(0, text_glyph_instance_buffer.slice(..));
                                     pass.set_bind_group(
                                         1,
                                         self.text_system.subpixel_atlas_bind_group(draw.atlas_page),
@@ -808,7 +811,7 @@ impl Renderer {
                                             .pipeline_switches_text_subpixel
                                             .saturating_add(1);
                                     }
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_vertex_buffer(0, text_glyph_instance_buffer.slice(..));
                                     pass.set_bind_group(
                                         1,
                                         self.text_system.subpixel_atlas_bind_group(draw.atlas_page),
@@ -873,8 +876,8 @@ impl Renderer {
                             continue;
                         }
                         pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            draw.paint_index..(draw.paint_index + 1),
+                            0..6,
+                            draw.first_instance..(draw.first_instance + draw.instance_count),
                         );
                         if perf_enabled {
                             frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);

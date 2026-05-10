@@ -266,6 +266,10 @@ fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
         "ui-gallery-complex-typical" | "perf-ui-gallery-complex-typical" => {
             Some("perf-ui-gallery-complex-typical")
         }
+        "ui-gallery-code-editor-torture-autoscroll-typical"
+        | "perf-ui-gallery-code-editor-torture-autoscroll-typical" => {
+            Some("perf-ui-gallery-code-editor-torture-autoscroll-typical")
+        }
         "docking-arbitration-steady" | "perf-docking-arbitration-steady" => {
             Some("perf-docking-arbitration-steady")
         }
@@ -894,6 +898,14 @@ mod tests {
             (
                 "perf-ui-gallery-overlay-torture-steady",
                 "perf-ui-gallery-overlay-torture-steady",
+            ),
+            (
+                "ui-gallery-code-editor-torture-autoscroll-typical",
+                "perf-ui-gallery-code-editor-torture-autoscroll-typical",
+            ),
+            (
+                "perf-ui-gallery-code-editor-torture-autoscroll-typical",
+                "perf-ui-gallery-code-editor-torture-autoscroll-typical",
             ),
         ];
 

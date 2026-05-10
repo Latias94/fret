@@ -1,4 +1,4 @@
-use super::super::state::{EncodeState, apply_transform_px, bounds_of_quad_points};
+use super::super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::super::*;
 
 use super::paint::{PaintMaterialPolicy, paint_to_gpu};
@@ -263,59 +263,63 @@ fn encode_text_blob(
     let mut active_page: u16 = 0;
     let mut active_paint_index: u32 = 0;
     let mut active_palette: bool = false;
-    let mut group_first_vertex = state.text_vertices.len() as u32;
-    let mut group_bounds_px: Option<(f32, f32, f32, f32)> = None;
+    let mut group_first_instance = state.text_glyph_instances.len() as u32;
+    let mut group_bounds_local: Option<(f32, f32, f32, f32)> = None;
     let glyphs_start = (profile_text_phases && perf_enabled).then(Instant::now);
 
-    let flush_group = |state: &mut EncodeState<'_>,
-                       kind: Option<TextDrawKind>,
-                       page: u16,
-                       paint_index: u32,
-                       group_first_vertex: &mut u32,
-                       group_bounds_px: &mut Option<(f32, f32, f32, f32)>| {
-        let Some(kind) = kind else {
-            return;
+    let flush_group =
+        |state: &mut EncodeState<'_>,
+         kind: Option<TextDrawKind>,
+         page: u16,
+         paint_index: u32,
+         group_first_instance: &mut u32,
+         group_bounds_local: &mut Option<(f32, f32, f32, f32)>| {
+            let Some(kind) = kind else {
+                return;
+            };
+
+            let first = *group_first_instance;
+            let instance_count = (state.text_glyph_instances.len() as u32).saturating_sub(first);
+            if instance_count == 0 {
+                *group_bounds_local = None;
+                return;
+            }
+
+            let Some((min_x, min_y, max_x, max_y)) = *group_bounds_local else {
+                *group_bounds_local = None;
+                return;
+            };
+
+            let t_px = state.current_transform_px();
+            let quad = transform_quad_points_px(t_px, min_x, min_y, max_x - min_x, max_y - min_y);
+            let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+            let Some(bounds_scissor) =
+                scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
+            else {
+                state.text_glyph_instances.truncate(first as usize);
+                *group_bounds_local = None;
+                return;
+            };
+            let clipped_scissor = intersect_scissor(state.current_scissor, bounds_scissor);
+            if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
+                state.text_glyph_instances.truncate(first as usize);
+                *group_bounds_local = None;
+                return;
+            }
+
+            state.push_text_draw(TextDraw {
+                scissor: clipped_scissor,
+                uniform_index: state.current_uniform_index,
+                first_instance: first,
+                instance_count,
+                kind,
+                atlas_page: page,
+                paint_index,
+            });
+
+            *group_bounds_local = None;
+            *group_first_instance = state.text_glyph_instances.len() as u32;
         };
-
-        let first = *group_first_vertex;
-        let vertex_count = (state.text_vertices.len() as u32).saturating_sub(first);
-        if vertex_count == 0 {
-            *group_bounds_px = None;
-            return;
-        }
-
-        let Some((min_x, min_y, max_x, max_y)) = *group_bounds_px else {
-            *group_bounds_px = None;
-            return;
-        };
-
-        let Some(bounds_scissor) =
-            scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
-        else {
-            state.text_vertices.truncate(first as usize);
-            *group_bounds_px = None;
-            return;
-        };
-        let clipped_scissor = intersect_scissor(state.current_scissor, bounds_scissor);
-        if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
-            state.text_vertices.truncate(first as usize);
-            *group_bounds_px = None;
-            return;
-        }
-
-        state.push_text_draw(TextDraw {
-            scissor: clipped_scissor,
-            uniform_index: state.current_uniform_index,
-            first_vertex: first,
-            vertex_count,
-            kind,
-            atlas_page: page,
-            paint_index,
-        });
-
-        *group_bounds_px = None;
-        *group_first_vertex = state.text_vertices.len() as u32;
-    };
 
     for g in blob.glyphs() {
         let kind = match g.kind() {
@@ -371,8 +375,8 @@ fn encode_text_blob(
                 active_kind,
                 active_page,
                 active_paint_index,
-                &mut group_first_vertex,
-                &mut group_bounds_px,
+                &mut group_first_instance,
+                &mut group_bounds_local,
             );
             if let Some(flush_group_start) = flush_group_start {
                 frame_perf.record_encode_scene_text_phase(
@@ -384,7 +388,7 @@ fn encode_text_blob(
             active_page = atlas_page;
             active_paint_index = draw_paint_index;
             active_palette = use_palette_override;
-            group_first_vertex = state.text_vertices.len() as u32;
+            group_first_instance = state.text_glyph_instances.len() as u32;
         }
 
         let vertex_color = if use_palette_override {
@@ -407,64 +411,42 @@ fn encode_text_blob(
             }
         };
 
-        let glyph_transform_start = (profile_text_phases && perf_enabled).then(Instant::now);
         let rect = g.rect();
         let lx0 = base_x + rect[0] * state.scale_factor;
         let ly0 = base_y + rect[1] * state.scale_factor;
         let lx1 = lx0 + rect[2] * state.scale_factor;
         let ly1 = ly0 + rect[3] * state.scale_factor;
-        let (quad, min_x, min_y, max_x, max_y) = if let Some((scale, translate)) = t_fast {
+        if t_fast.is_some() {
             frame_perf.encode_scene_text_transform_fast_path_glyphs = frame_perf
                 .encode_scene_text_transform_fast_path_glyphs
                 .saturating_add(1);
-            let x0 = scale * lx0 + translate.x.0;
-            let y0 = scale * ly0 + translate.y.0;
-            let x1 = scale * lx1 + translate.x.0;
-            let y1 = scale * ly1 + translate.y.0;
-            (
-                [(x0, y0), (x1, y0), (x1, y1), (x0, y1)],
-                x0.min(x1),
-                y0.min(y1),
-                x0.max(x1),
-                y0.max(y1),
-            )
         } else {
             frame_perf.encode_scene_text_transform_generic_glyphs = frame_perf
                 .encode_scene_text_transform_generic_glyphs
                 .saturating_add(1);
-            let quad = [
-                apply_transform_px(t_px, lx0, ly0),
-                apply_transform_px(t_px, lx1, ly0),
-                apply_transform_px(t_px, lx1, ly1),
-                apply_transform_px(t_px, lx0, ly1),
-            ];
-            let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
-            (quad, min_x, min_y, max_x, max_y)
-        };
-        group_bounds_px = Some(match group_bounds_px {
-            Some((gx0, gy0, gx1, gy1)) => (
-                gx0.min(min_x),
-                gy0.min(min_y),
-                gx1.max(max_x),
-                gy1.max(max_y),
-            ),
-            None => (min_x, min_y, max_x, max_y),
-        });
-
-        if let Some(glyph_transform_start) = glyph_transform_start {
-            frame_perf.record_encode_scene_text_phase(
-                EncodeSceneTextPhase::GlyphTransform,
-                Some(glyph_transform_start.elapsed()),
-            );
         }
 
         let (u0, v0, u1, v1) = (uv[0], uv[1], uv[2], uv[3]);
 
+        let local_min_x = lx0.min(lx1);
+        let local_min_y = ly0.min(ly1);
+        let local_max_x = lx0.max(lx1);
+        let local_max_y = ly0.max(ly1);
+        group_bounds_local = Some(match group_bounds_local {
+            Some((gx0, gy0, gx1, gy1)) => (
+                gx0.min(local_min_x),
+                gy0.min(local_min_y),
+                gx1.max(local_max_x),
+                gy1.max(local_max_y),
+            ),
+            None => (local_min_x, local_min_y, local_max_x, local_max_y),
+        });
+
         if state
-            .text_vertices
+            .text_glyph_instances
             .capacity()
-            .saturating_sub(state.text_vertices.len())
-            < 6
+            .saturating_sub(state.text_glyph_instances.len())
+            < 1
         {
             frame_perf.encode_scene_text_vertex_grow_events = frame_perf
                 .encode_scene_text_vertex_grow_events
@@ -472,92 +454,20 @@ fn encode_text_blob(
         }
 
         let glyph_emit_start = (profile_text_phases && perf_enabled).then(Instant::now);
-        state.text_vertices.extend_from_slice(&[
-            TextVertex {
-                pos_px: [quad[0].0, quad[0].1],
-                local_pos_px: [lx0, ly0],
-                uv: [u0, v0],
-                color: vertex_color,
-                outline_params: if matches!(
-                    kind,
-                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
-                ) {
-                    outline_params_mask
-                } else {
-                    0
-                },
+        state.text_glyph_instances.push(TextGlyphInstance {
+            local_rect: [lx0, ly0, lx1, ly1],
+            uv: [u0, v0, u1, v1],
+            color: vertex_color,
+            outline_params: if matches!(
+                kind,
+                TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+            ) {
+                outline_params_mask
+            } else {
+                0
             },
-            TextVertex {
-                pos_px: [quad[1].0, quad[1].1],
-                local_pos_px: [lx1, ly0],
-                uv: [u1, v0],
-                color: vertex_color,
-                outline_params: if matches!(
-                    kind,
-                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
-                ) {
-                    outline_params_mask
-                } else {
-                    0
-                },
-            },
-            TextVertex {
-                pos_px: [quad[2].0, quad[2].1],
-                local_pos_px: [lx1, ly1],
-                uv: [u1, v1],
-                color: vertex_color,
-                outline_params: if matches!(
-                    kind,
-                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
-                ) {
-                    outline_params_mask
-                } else {
-                    0
-                },
-            },
-            TextVertex {
-                pos_px: [quad[0].0, quad[0].1],
-                local_pos_px: [lx0, ly0],
-                uv: [u0, v0],
-                color: vertex_color,
-                outline_params: if matches!(
-                    kind,
-                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
-                ) {
-                    outline_params_mask
-                } else {
-                    0
-                },
-            },
-            TextVertex {
-                pos_px: [quad[2].0, quad[2].1],
-                local_pos_px: [lx1, ly1],
-                uv: [u1, v1],
-                color: vertex_color,
-                outline_params: if matches!(
-                    kind,
-                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
-                ) {
-                    outline_params_mask
-                } else {
-                    0
-                },
-            },
-            TextVertex {
-                pos_px: [quad[3].0, quad[3].1],
-                local_pos_px: [lx0, ly1],
-                uv: [u0, v1],
-                color: vertex_color,
-                outline_params: if matches!(
-                    kind,
-                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
-                ) {
-                    outline_params_mask
-                } else {
-                    0
-                },
-            },
-        ]);
+            paint_index: draw_paint_index,
+        });
         if let Some(glyph_emit_start) = glyph_emit_start {
             frame_perf.record_encode_scene_text_phase(
                 EncodeSceneTextPhase::GlyphEmit,
@@ -572,8 +482,8 @@ fn encode_text_blob(
         active_kind,
         active_page,
         active_paint_index,
-        &mut group_first_vertex,
-        &mut group_bounds_px,
+        &mut group_first_instance,
+        &mut group_bounds_local,
     );
     if let Some(flush_group_start) = flush_group_start {
         frame_perf.record_encode_scene_text_phase(

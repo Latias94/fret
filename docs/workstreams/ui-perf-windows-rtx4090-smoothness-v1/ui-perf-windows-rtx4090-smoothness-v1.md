@@ -23,7 +23,9 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 - `docs/workstreams/perf-baselines/ui-gallery-overlay-torture-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`
-- `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json`
+- `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json`
+  (typical scroll perf, `frame_p95_*`, `--perf-threshold-agg p90`)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json` (typical perf, `frame_p95_*`)
 
@@ -31,6 +33,7 @@ Seed policy (how thresholds were derived):
 
 - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
 - `docs/workstreams/perf-baselines/policies/ui-gallery-complex-typical.v1.json`
+- `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json`
 
 ## P0 runbook (fast gate check)
 
@@ -55,6 +58,7 @@ P0 commands:
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 - `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
 - `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-code-editor-torture-autoscroll-typical --repeat 15 --warmup-frames 5 --reuse-launch --perf-threshold-agg p90 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --launch target/release/fret-ui-gallery.exe`
 
 ## Stress/jitter runs (tail hunting, not P0)
 
@@ -365,6 +369,9 @@ Suggested defaults for UI-gallery perf work:
 
 - `--prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json`
 - `--prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json`
+- Scripts that wait on `font_catalog_populated` should either run with `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` or carry
+  that value in `meta.env_defaults`; otherwise bundled-only release runs can leave `font_catalog_family_count=0` and
+  turn the font wait into setup noise.
 
 ## Finding (2026-05-06): context-menu steady probe should not include sidebar navigation
 
@@ -943,6 +950,32 @@ Residual:
   attribution target is renderer scene encoding / row-scene replay cost, not further syntax-rich
   text materialization.
 
+Code-editor script setup note (2026-05-10):
+
+- `ui-gallery-code-editor-torture-*` scripts require a gallery-dev build:
+  `cargo build -p fret-ui-gallery --release --features gallery-dev`. A plain release gallery omits the dev-only
+  `code_editor_torture` page; in that shape the nav query is typed successfully, but the filtered nav has zero visible
+  items and `ui-gallery-nav-code-editor-torture` never appears.
+- `ui-gallery-code-editor-torture-autoscroll-typical.json` waits for font stabilization, so it now carries
+  `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` in `meta.env_defaults`. The steady script intentionally avoids the font wait.
+
+Code-editor autoscroll typical baseline (2026-05-11):
+
+- Use the suite name `ui-gallery-code-editor-torture-autoscroll-typical`, not the raw script path, when generating this
+  baseline. The perf tooling only writes `frame_p95_*` thresholds for typical suites; a raw script path falls back to
+  `top_*` thresholds and turns the typical contract into a tail-spike contract.
+- Seed policy:
+  `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json`.
+- Baseline:
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json`.
+- Generation command:
+  `target/release/fretboard.exe diag perf ui-gallery-code-editor-torture-autoscroll-typical --repeat 15 --warmup-frames 5 --reuse-launch --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json --perf-baseline-headroom-pct 20 --perf-baseline-threshold-surface ui --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --dir target/fret-diag/perf-code-editor-autoscroll-typical-suite-baseline-seed --launch target/release/fret-ui-gallery.exe`
+- Gate command:
+  `target/release/fretboard.exe diag perf ui-gallery-code-editor-torture-autoscroll-typical --repeat 15 --warmup-frames 5 --reuse-launch --perf-threshold-agg p90 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --dir target/fret-diag/perf-code-editor-autoscroll-typical-suite-gate-current --launch target/release/fret-ui-gallery.exe`
+- Result: gate passed with `failures=[]`; `observed_aggregate=p90`, `frame_p95_total_time_us=2291` vs threshold
+  `2768`, `frame_p95_layout_time_us=77` vs threshold `352`. The raw CLI line still reports p95/max totals
+  `3794/3794us` because that is run-level tail information, not the checked typical threshold.
+
 Renderer-aware baseline (2026-05-10):
 
 - Seed policy: `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-steady.v1.json`
@@ -988,6 +1021,33 @@ Renderer encode attribution (2026-05-10):
   (`encode_scene_text_transform_fast_path_glyphs=20420`, `encode_scene_text_transform_generic_glyphs=0`,
   `encode_scene_text_vertex_grow_events=0`), and the repeat=3 probe landed at p50/p95/max total `2091/2165/2165us`
   with paint `1893/1937/1937us`.
+- Gate follow-up: `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --dir target/fret-diag/perf-code-editor-render-cache-gate-current --launch -- target/release/fret-ui-gallery.exe`
+  failed with `top_total_time_us=4129` vs threshold `2769`, `renderer_encode_scene_us=3945` vs threshold `1450`,
+  `renderer_record_passes_us=84` vs threshold `64`, and `renderer_encoder_finish_us=195` vs threshold `176`.
+- Pre-instancing family-profile summary:
+  `target/fret-diag/perf-code-editor-renderer-family-profile-current/1778423419022/bundle.json`.
+  The worst bundle still spends `renderer_encode_scene_text_us=3621` with
+  `renderer_encode_scene_text_glyphs_us=3384`, `renderer_encode_scene_text_glyph_transform_us=758`,
+  `renderer_encode_scene_text_glyph_emit_us=815`, `renderer_encode_scene_text_group_flush_us=39`,
+  `renderer_encode_scene_text_transform_fast_path_glyphs=20420`, `renderer_encode_scene_text_transform_generic_glyphs=0`,
+  and `renderer_encode_scene_text_vertex_grow_events=0`.
+  Interpretation: the transform fast path is working, but it is not sufficient for the repeat=7 contract. The next
+  evidence-backed slice should move toward row/fragment replay or another row-scoped cache seam that avoids rebuilding
+  stable text vertices on every steady frame.
+- Text instancing follow-up:
+  - Gate command:
+    `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1 --dir target/fret-diag/perf-code-editor-text-instance-gate-current --launch target/release/fret-ui-gallery.exe`
+  - Result: gate passed, `failures=[]`, p50/p95/max total `1947/2155/2155us`, paint `1847/2033/2033us`.
+  - Worst bundle:
+    `target/fret-diag/perf-code-editor-text-instance-gate-current/1778429879460/bundle.schema2.json`.
+  - `diag stats --sort cpu_cycles --top 30` reports renderer p95/max `encode=1226/1226us`,
+    `upload=90/90us`, `record=41/41us`, `finish=148/148us`. The worst listed frame still has text-heavy scene
+    encode (`renderer.encode.us(text)=1043us`, `renderer.encode.text(us/shadow/setup/glyphs)=0/10/941us`), but it is
+    now under the current v2 baseline (`renderer_encode_scene_us=1293` vs threshold `1450`, `top_total_time_us=2155`
+    vs threshold `2769`).
+  - Interpretation: text instancing resolves the repeat=7 gate failure on this local Windows RTX 4090 run. Remaining
+    row/fragment replay work should be treated as the next evidence-driven optimization, not as an immediate gate
+    unblocker.
 
 ## Failure exemplar map
 
