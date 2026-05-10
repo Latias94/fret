@@ -1,11 +1,30 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-code-editor-torture-autoscroll-steady",
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This is a non-accessibility CPU/renderer steady-scroll baseline. Keep platform accessibility disabled here; use a dedicated a11y perf probe when measuring AccessKit activation cost."
+    ],
+    "env_defaults": {
+      "FRET_A11Y_DISABLE": "1"
+    }
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-torture" }
+      },
+      "timeout_frames": 600
+    },
 
     {
       "type": "click",

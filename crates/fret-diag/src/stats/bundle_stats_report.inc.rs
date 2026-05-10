@@ -991,7 +991,7 @@ impl BundleStatsReport {
                 || row.window_runtime_snapshot_shortcut_overlay_time_us > 0
             {
                 println!(
-                    "    dispatch_snapshot.us(total/focus_repair/input_ctx/command_availability/shortcut_overlay)={}/{}/{}/{}/{}",
+                    "    window_runtime_snapshot.us(dispatch_total/focus_repair/input_ctx/command_availability/shortcut_overlay)={}/{}/{}/{}/{}",
                     row.dispatch_post_dispatch_snapshot_time_us,
                     row.window_runtime_snapshot_focus_repair_time_us,
                     row.window_runtime_snapshot_input_context_time_us,
@@ -1004,7 +1004,7 @@ impl BundleStatsReport {
                 || row.window_runtime_snapshot_command_availability_eval_time_us > 0
             {
                 println!(
-                    "    dispatch_snapshot.command_availability(widget_count/collect_us/eval_us)={}/{}/{}",
+                    "    window_runtime_snapshot.command_availability(widget_count/collect_us/eval_us)={}/{}/{}",
                     row.window_runtime_snapshot_widget_command_count,
                     row.window_runtime_snapshot_command_registry_collect_time_us,
                     row.window_runtime_snapshot_command_availability_eval_time_us

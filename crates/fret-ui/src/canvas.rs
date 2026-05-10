@@ -19,6 +19,13 @@ use crate::{SvgSource, UiHost, widget::PaintCx};
 
 pub type OnCanvasPaint = Arc<dyn for<'a> Fn(&mut CanvasPainter<'a>) + 'static>;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CanvasHostedResourceTouchCounts {
+    pub text_blobs: u32,
+    pub paths: u32,
+    pub svgs: u32,
+}
+
 /// A stable, user-provided cache key for hosted canvas resources.
 ///
 /// Callers should treat this as an identity key for a logical draw item that is stable across
@@ -250,6 +257,18 @@ impl<'a> CanvasPainter<'a> {
 
     pub fn scene(&mut self) -> &mut Scene {
         self.host.scene()
+    }
+
+    /// Touch hosted resources referenced by retained scene ops before replaying them.
+    ///
+    /// Replay caches store `SceneOp`s, not resource ownership. Calling this on cache-hit paths
+    /// keeps canvas-owned `TextBlobId`/`PathId`/`SvgId` entries alive so end-of-paint pruning does
+    /// not release resources still referenced by replayed ops.
+    pub fn touch_hosted_resources_in_scene_ops(
+        &mut self,
+        ops: &[SceneOp],
+    ) -> CanvasHostedResourceTouchCounts {
+        self.cache.touch_hosted_resources_in_scene_ops(ops)
     }
 
     /// Access the underlying UI services and scene for advanced canvas paint handlers.
@@ -704,9 +723,13 @@ pub(crate) struct CanvasCache {
     frame: u64,
     policy: CanvasCachePolicy,
     text_by_key: HashMap<CanvasTextCacheKey, HostedTextEntry>,
+    text_key_by_blob: HashMap<fret_core::TextBlobId, CanvasTextCacheKey>,
     shared_text_by_fingerprint: HashMap<SharedTextFingerprintKey, SharedTextEntry>,
+    shared_text_key_by_blob: HashMap<fret_core::TextBlobId, SharedTextFingerprintKey>,
     path_by_key: HashMap<CanvasPathCacheKey, HostedPathEntry>,
+    path_key_by_id: HashMap<fret_core::PathId, CanvasPathCacheKey>,
     svg_by_key: HashMap<CanvasSvgCacheKey, HostedSvgEntry>,
+    svg_key_by_id: HashMap<fret_core::SvgId, CanvasSvgCacheKey>,
 }
 
 impl CanvasCache {
@@ -729,20 +752,102 @@ impl CanvasCache {
                 services.text().release(blob);
             }
         }
+        self.text_key_by_blob.clear();
         for (_, entry) in self.shared_text_by_fingerprint.drain() {
             services.text().release(entry.blob);
         }
+        self.shared_text_key_by_blob.clear();
         for (_, mut entry) in self.path_by_key.drain() {
             if let Some(path) = entry.path.take() {
                 services.path().release(path);
             }
         }
+        self.path_key_by_id.clear();
         for (_, mut entry) in self.svg_by_key.drain() {
             if let Some(svg) = entry.svg.take() {
                 let _ = services.svg().unregister_svg(svg);
             }
         }
+        self.svg_key_by_id.clear();
         self.frame = 0;
+    }
+
+    fn touch_hosted_resources_in_scene_ops(
+        &mut self,
+        ops: &[SceneOp],
+    ) -> CanvasHostedResourceTouchCounts {
+        let mut counts = CanvasHostedResourceTouchCounts::default();
+
+        for op in ops {
+            match *op {
+                SceneOp::Text { text, .. } => {
+                    if self.touch_text_blob(text) {
+                        counts.text_blobs = counts.text_blobs.saturating_add(1);
+                    }
+                }
+                SceneOp::Path { path, .. } | SceneOp::PushClipPath { path, .. } => {
+                    if self.touch_path(path) {
+                        counts.paths = counts.paths.saturating_add(1);
+                    }
+                }
+                SceneOp::SvgMaskIcon { svg, .. } | SceneOp::SvgImage { svg, .. } => {
+                    if self.touch_svg(svg) {
+                        counts.svgs = counts.svgs.saturating_add(1);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        counts
+    }
+
+    fn touch_text_blob(&mut self, blob: fret_core::TextBlobId) -> bool {
+        let mut touched = false;
+
+        if let Some(key) = self.text_key_by_blob.get(&blob).copied() {
+            if let Some(entry) = self.text_by_key.get_mut(&key) {
+                entry.last_used_frame = self.frame;
+                touched = true;
+            } else {
+                self.text_key_by_blob.remove(&blob);
+            }
+        }
+
+        if let Some(key) = self.shared_text_key_by_blob.get(&blob).cloned() {
+            if let Some(entry) = self.shared_text_by_fingerprint.get_mut(&key) {
+                entry.last_used_frame = self.frame;
+                touched = true;
+            } else {
+                self.shared_text_key_by_blob.remove(&blob);
+            }
+        }
+
+        touched
+    }
+
+    fn touch_path(&mut self, path: fret_core::PathId) -> bool {
+        let Some(key) = self.path_key_by_id.get(&path).copied() else {
+            return false;
+        };
+        let Some(entry) = self.path_by_key.get_mut(&key) else {
+            self.path_key_by_id.remove(&path);
+            return false;
+        };
+        entry.last_used_frame = self.frame;
+        true
+    }
+
+    fn touch_svg(&mut self, svg: fret_core::SvgId) -> bool {
+        let Some(key) = self.svg_key_by_id.get(&svg).copied() else {
+            return false;
+        };
+        let Some(entry) = self.svg_by_key.get_mut(&key) else {
+            self.svg_key_by_id.remove(&svg);
+            return false;
+        };
+        entry.last_used_frame = self.frame;
+        true
     }
 
     fn evict_shared_text(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -758,6 +863,7 @@ impl CanvasCache {
             for (_, entry) in self.shared_text_by_fingerprint.drain() {
                 services.text().release(entry.blob);
             }
+            self.shared_text_key_by_blob.clear();
             return;
         }
 
@@ -773,6 +879,7 @@ impl CanvasCache {
 
         for key in to_remove {
             if let Some(entry) = self.shared_text_by_fingerprint.remove(&key) {
+                self.shared_text_key_by_blob.remove(&entry.blob);
                 services.text().release(entry.blob);
             }
         }
@@ -798,6 +905,7 @@ impl CanvasCache {
         while self.shared_text_by_fingerprint.len() > max_entries && idx < candidates.len() {
             let key = candidates[idx].1.clone();
             if let Some(entry) = self.shared_text_by_fingerprint.remove(&key) {
+                self.shared_text_key_by_blob.remove(&entry.blob);
                 services.text().release(entry.blob);
             }
             idx += 1;
@@ -809,13 +917,20 @@ impl CanvasCache {
         let keep_frames = self.policy.text.keep_frames;
         let max_entries = self.policy.text.max_entries;
 
-        self.text_by_key.retain(|_, entry| {
-            let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
-            if !keep && let Some(blob) = entry.blob.take() {
+        let mut expired: Vec<CanvasTextCacheKey> = Vec::new();
+        for (key, entry) in &self.text_by_key {
+            if now.saturating_sub(entry.last_used_frame) > keep_frames {
+                expired.push(*key);
+            }
+        }
+        for key in expired {
+            if let Some(mut entry) = self.text_by_key.remove(&key)
+                && let Some(blob) = entry.blob.take()
+            {
+                self.text_key_by_blob.remove(&blob);
                 services.text().release(blob);
             }
-            keep
-        });
+        }
 
         if max_entries == 0 {
             for (_, mut entry) in self.text_by_key.drain() {
@@ -823,6 +938,7 @@ impl CanvasCache {
                     services.text().release(blob);
                 }
             }
+            self.text_key_by_blob.clear();
             return;
         }
 
@@ -842,6 +958,7 @@ impl CanvasCache {
             if let Some(mut entry) = self.text_by_key.remove(&key)
                 && let Some(blob) = entry.blob.take()
             {
+                self.text_key_by_blob.remove(&blob);
                 services.text().release(blob);
             }
         }
@@ -852,13 +969,20 @@ impl CanvasCache {
         let keep_frames = self.policy.path.keep_frames;
         let max_entries = self.policy.path.max_entries;
 
-        self.path_by_key.retain(|_, entry| {
-            let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
-            if !keep && let Some(path) = entry.path.take() {
+        let mut expired: Vec<CanvasPathCacheKey> = Vec::new();
+        for (key, entry) in &self.path_by_key {
+            if now.saturating_sub(entry.last_used_frame) > keep_frames {
+                expired.push(*key);
+            }
+        }
+        for key in expired {
+            if let Some(mut entry) = self.path_by_key.remove(&key)
+                && let Some(path) = entry.path.take()
+            {
+                self.path_key_by_id.remove(&path);
                 services.path().release(path);
             }
-            keep
-        });
+        }
 
         if max_entries == 0 {
             for (_, mut entry) in self.path_by_key.drain() {
@@ -866,6 +990,7 @@ impl CanvasCache {
                     services.path().release(path);
                 }
             }
+            self.path_key_by_id.clear();
             return;
         }
 
@@ -885,6 +1010,7 @@ impl CanvasCache {
             if let Some(mut entry) = self.path_by_key.remove(&key)
                 && let Some(path) = entry.path.take()
             {
+                self.path_key_by_id.remove(&path);
                 services.path().release(path);
             }
         }
@@ -895,13 +1021,19 @@ impl CanvasCache {
         let keep_frames = self.policy.svg.keep_frames;
         let max_entries = self.policy.svg.max_entries;
 
-        self.svg_by_key.retain(|_, entry| {
-            let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
-            if !keep && let Some(svg) = entry.svg.take() {
+        let mut expired: Vec<CanvasSvgCacheKey> = Vec::new();
+        for (key, entry) in &self.svg_by_key {
+            if now.saturating_sub(entry.last_used_frame) > keep_frames {
+                expired.push(*key);
+            }
+        }
+        for key in expired {
+            if let Some(mut entry) = self.svg_by_key.remove(&key)
+                && let Some(svg) = entry.svg.take()
+            {
                 let _ = services.svg().unregister_svg(svg);
             }
-            keep
-        });
+        }
 
         if max_entries == 0 {
             for (_, mut entry) in self.svg_by_key.drain() {
@@ -909,6 +1041,7 @@ impl CanvasCache {
                     let _ = services.svg().unregister_svg(svg);
                 }
             }
+            self.svg_key_by_id.clear();
             return;
         }
 
@@ -928,6 +1061,7 @@ impl CanvasCache {
             if let Some(mut entry) = self.svg_by_key.remove(&key)
                 && let Some(svg) = entry.svg.take()
             {
+                self.svg_key_by_id.remove(&svg);
                 let _ = services.svg().unregister_svg(svg);
             }
         }
@@ -1040,14 +1174,17 @@ impl CanvasCache {
         let (blob, metrics) = services
             .text()
             .prepare_str(text.as_ref(), &style, text_constraints);
-        self.shared_text_by_fingerprint.insert(
-            shared_key,
+        if let Some(old) = self.shared_text_by_fingerprint.insert(
+            shared_key.clone(),
             SharedTextEntry {
                 blob,
                 metrics,
                 last_used_frame: self.frame,
             },
-        );
+        ) {
+            self.shared_text_key_by_blob.remove(&old.blob);
+        }
+        self.shared_text_key_by_blob.insert(blob, shared_key);
 
         scene.push(SceneOp::Text {
             order,
@@ -1104,6 +1241,7 @@ impl CanvasCache {
             entry.blob.is_none() || entry.fingerprint.as_ref() != Some(&fingerprint);
         if needs_prepare {
             if let Some(blob) = entry.blob.take() {
+                self.text_key_by_blob.remove(&blob);
                 services.text().release(blob);
             }
 
@@ -1129,6 +1267,7 @@ impl CanvasCache {
             entry.blob = Some(blob);
             entry.metrics = Some(metrics);
             entry.fingerprint = Some(fingerprint);
+            self.text_key_by_blob.insert(blob, cache_key);
         }
 
         let Some(blob) = entry.blob else {
@@ -1187,6 +1326,7 @@ impl CanvasCache {
             entry.path.is_none() || entry.fingerprint.as_ref() != Some(&fingerprint);
         if needs_prepare {
             if let Some(path) = entry.path.take() {
+                self.path_key_by_id.remove(&path);
                 services.path().release(path);
             }
             let constraints = PathConstraints {
@@ -1196,6 +1336,7 @@ impl CanvasCache {
             entry.path = Some(path);
             entry.metrics = Some(metrics);
             entry.fingerprint = Some(fingerprint);
+            self.path_key_by_id.insert(path, cache_key);
         }
 
         let Some(path) = entry.path else {
@@ -1248,8 +1389,10 @@ impl CanvasCache {
             };
             if let Some(old) = entry.svg.replace(svg_id) {
                 let _ = services.svg().unregister_svg(old);
+                self.svg_key_by_id.remove(&old);
             }
             entry.fingerprint = Some(fingerprint);
+            self.svg_key_by_id.insert(svg_id, cache_key);
         }
 
         entry.svg.unwrap_or_default()

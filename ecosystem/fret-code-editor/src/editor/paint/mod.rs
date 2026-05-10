@@ -185,20 +185,27 @@ pub(super) fn paint_row(
     let mut row_blob = None::<fret_core::TextBlobId>;
     let mut row_blob_metrics = None::<TextMetrics>;
     let mut row_geom_key = None::<geom::RowGeomKey>;
+    let mut row_scene_key = None::<RowSceneKey>;
+    let mut row_scene_is_rich = false;
+    let mut row_scene_replayed = false;
+    #[cfg(feature = "syntax")]
+    let mut row_scene_syntax_replay_key = None::<RowSceneSyntaxReplayKey>;
+    let mut fresh_geom = None::<RowGeom>;
+    let row_scene_ops_start = painter.scene().ops_len();
     let compose_inline_preedit = st.compose_inline_preedit
         || st
             .preedit_replace_range
             .as_ref()
             .is_some_and(|r| !r.is_empty());
 
-    if let Some(preedit) = &st.preedit {
+    if let Some(preedit) = st.preedit.clone() {
         if compose_inline_preedit {
             if let Some(range) = row_preedit_range.clone() {
                 let rich = materialize_preedit_rich_text_for_range(
                     Arc::clone(&line),
                     range,
                     &st.code_font_shaping_style,
-                    preedit,
+                    &preedit,
                     fg,
                     selection_bg,
                 );
@@ -214,20 +221,36 @@ pub(super) fn paint_row(
                     ),
                     st.font_stack_key,
                 ));
-                let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
-                let (blob, metrics) = painter.rich_text_with_blob(
-                    key,
-                    DrawOrder(2),
-                    origin,
-                    rich,
-                    text_style.clone(),
-                    fg,
-                    constraints,
-                    scale_factor,
-                );
-                row_blob = Some(blob);
-                row_blob_metrics = Some(metrics);
-                drew_rich = true;
+                row_scene_key = row_geom_key
+                    .clone()
+                    .map(|key| RowSceneKey::preedit(key, fg, selection_bg));
+                row_scene_is_rich = true;
+                if let Some(scene_key) = row_scene_key.clone()
+                    && let Some((geom, is_rich)) =
+                        try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                {
+                    fresh_geom = Some(geom);
+                    row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                    row_scene_replayed = true;
+                    row_scene_is_rich = is_rich;
+                    drew_rich = is_rich;
+                }
+                if !row_scene_replayed {
+                    let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+                    let (blob, metrics) = painter.rich_text_with_blob(
+                        key,
+                        DrawOrder(2),
+                        origin,
+                        rich,
+                        text_style.clone(),
+                        fg,
+                        constraints,
+                        scale_factor,
+                    );
+                    row_blob = Some(blob);
+                    row_blob_metrics = Some(metrics);
+                    drew_rich = true;
+                }
             }
         } else {
             let caret = st.selection.caret().min(st.buffer.len_bytes());
@@ -247,7 +270,7 @@ pub(super) fn paint_row(
                     Arc::clone(&line),
                     caret_in_line,
                     &st.code_font_shaping_style,
-                    preedit,
+                    &preedit,
                     fg,
                     selection_bg,
                 );
@@ -263,31 +286,46 @@ pub(super) fn paint_row(
                     ),
                     st.font_stack_key,
                 ));
-                let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
-                let started = perf_enabled.then(Instant::now);
-                let (blob, metrics) = painter.rich_text_with_blob(
-                    key,
-                    DrawOrder(2),
-                    origin,
-                    rich,
-                    text_style.clone(),
-                    fg,
-                    constraints,
-                    scale_factor,
-                );
-                if let Some(started) = started {
-                    st.paint_perf_frame.us_text_draw = st
-                        .paint_perf_frame
-                        .us_text_draw
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                row_scene_key = row_geom_key
+                    .clone()
+                    .map(|key| RowSceneKey::preedit(key, fg, selection_bg));
+                row_scene_is_rich = true;
+                if let Some(scene_key) = row_scene_key.clone()
+                    && let Some((geom, is_rich)) =
+                        try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                {
+                    fresh_geom = Some(geom);
+                    row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                    row_scene_replayed = true;
+                    drew_rich = is_rich;
                 }
-                row_preedit = Some(RowPreeditMapping {
-                    insert_at: caret_in_line,
-                    preedit_len: preedit.text.len(),
-                });
-                row_blob = Some(blob);
-                row_blob_metrics = Some(metrics);
-                drew_rich = true;
+                if !row_scene_replayed {
+                    let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+                    let started = perf_enabled.then(Instant::now);
+                    let (blob, metrics) = painter.rich_text_with_blob(
+                        key,
+                        DrawOrder(2),
+                        origin,
+                        rich,
+                        text_style.clone(),
+                        fg,
+                        constraints,
+                        scale_factor,
+                    );
+                    if let Some(started) = started {
+                        st.paint_perf_frame.us_text_draw = st
+                            .paint_perf_frame
+                            .us_text_draw
+                            .saturating_add(started.elapsed().as_micros() as u64);
+                    }
+                    row_preedit = Some(RowPreeditMapping {
+                        insert_at: caret_in_line,
+                        preedit_len: preedit.text.len(),
+                    });
+                    row_blob = Some(blob);
+                    row_blob_metrics = Some(metrics);
+                    drew_rich = true;
+                }
             }
         }
     }
@@ -298,19 +336,90 @@ pub(super) fn paint_row(
             row_preedit.is_some()
         };
     #[cfg(feature = "syntax")]
+    let line_idx = st.display_map.display_row_line(row);
+    #[cfg(feature = "syntax")]
+    let theme_revision = {
+        let theme = painter.theme();
+        theme.revision()
+    };
+    #[cfg(feature = "syntax")]
+    #[allow(unused_assignments)]
+    let mut syntax_spans = None::<Arc<[SyntaxSpan]>>;
+    #[cfg(feature = "syntax")]
+    let mut syntax_lookup_miss_tick = None::<u64>;
+    #[cfg(feature = "syntax")]
     {
-        if !drew_rich {
-            let line_idx = st.display_map.display_row_line(row);
-            let spans = if perf_enabled {
-                let started = Instant::now();
-                let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
-                st.paint_perf_frame.us_syntax_spans = st
-                    .paint_perf_frame
-                    .us_syntax_spans
-                    .saturating_add(started.elapsed().as_micros() as u64);
-                spans
+        let lookup_started = perf_enabled.then(Instant::now);
+        match lookup_row_syntax_spans(st, line_idx) {
+            SyntaxRowCacheLookup::Hit(spans) => {
+                syntax_spans = Some(Arc::clone(&spans));
+                if let Some(started) = lookup_started {
+                    st.paint_perf_frame.us_syntax_spans = st
+                        .paint_perf_frame
+                        .us_syntax_spans
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+
+                if !row_scene_replayed
+                    && !drew_rich
+                    && let Some((geom, is_rich)) = try_replay_row_scene_cache_fast_syntax(
+                        painter,
+                        st,
+                        row,
+                        &row_range,
+                        &line,
+                        &row_spans,
+                        &spans,
+                        text_style,
+                        constraints,
+                        st.font_stack_key,
+                        scale_factor,
+                        theme_revision,
+                        st.code_font_feature_policy_rev,
+                        fg,
+                        origin,
+                    )
+                {
+                    fresh_geom = Some(geom);
+                    row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                    row_scene_replayed = true;
+                    drew_rich = is_rich;
+                }
+            }
+            SyntaxRowCacheLookup::Miss { tick } => {
+                syntax_lookup_miss_tick = Some(tick);
+                if let Some(started) = lookup_started {
+                    st.paint_perf_frame.us_syntax_spans = st
+                        .paint_perf_frame
+                        .us_syntax_spans
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+            }
+        }
+    }
+    #[cfg(feature = "syntax")]
+    {
+        if !row_scene_replayed && !drew_rich {
+            let spans = if let Some(spans) = syntax_spans.as_ref() {
+                Arc::clone(spans)
             } else {
-                cached_row_syntax_spans(st, line_idx, text_cache_max_entries)
+                let started = perf_enabled.then(Instant::now);
+                let tick = syntax_lookup_miss_tick
+                    .take()
+                    .expect("syntax lookup miss tick must exist after a miss");
+                let spans = populate_row_syntax_spans_after_miss(
+                    st,
+                    line_idx,
+                    text_cache_max_entries,
+                    tick,
+                );
+                if let Some(started) = started {
+                    st.paint_perf_frame.us_syntax_spans = st
+                        .paint_perf_frame
+                        .us_syntax_spans
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                spans
             };
             if !spans.is_empty() {
                 let rich_cache_max_entries = text_cache_max_entries.min(2048);
@@ -323,14 +432,10 @@ pub(super) fn paint_row(
                 let base_len = row_range.end.saturating_sub(row_range.start);
                 let seg_end_in_line = seg_start_in_line.saturating_add(base_len);
 
-                let theme_revision = {
-                    let theme = painter.theme();
-                    theme.revision()
-                };
-
                 st.row_rich_cache_tick = st.row_rich_cache_tick.saturating_add(1);
                 let tick = st.row_rich_cache_tick;
 
+                let mut cached_rich_hit = None::<AttributedText>;
                 if let Some((cached, last_used)) = st.row_rich_cache.get_mut(&row) {
                     let hit = cached.theme_revision == theme_revision
                         && cached.row_range == row_range
@@ -344,12 +449,60 @@ pub(super) fn paint_row(
                         st.cache_stats.row_rich_hits =
                             st.cache_stats.row_rich_hits.saturating_add(1);
 
+                        cached_rich_hit = Some(cached.rich.clone());
+                    }
+                }
+
+                if let Some(rich) = cached_rich_hit {
+                    row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                        &rich,
+                        text_style,
+                        (
+                            constraints.max_width,
+                            constraints.wrap,
+                            constraints.overflow,
+                            fret_core::TextAlign::Start,
+                            scale_factor,
+                        ),
+                        st.font_stack_key,
+                    ));
+                    row_scene_key = row_geom_key
+                        .clone()
+                        .map(|key| RowSceneKey::syntax(key, fg, theme_revision));
+                    #[cfg(feature = "syntax")]
+                    {
+                        row_scene_syntax_replay_key = Some(RowSceneSyntaxReplayKey::new(
+                            row_range.clone(),
+                            Arc::clone(&line),
+                            Arc::clone(&row_spans),
+                            Arc::clone(&spans),
+                            text_style,
+                            constraints,
+                            st.font_stack_key,
+                            scale_factor,
+                            theme_revision,
+                            st.code_font_feature_policy_rev,
+                            fg,
+                        ));
+                    }
+                    row_scene_is_rich = true;
+                    if let Some(scene_key) = row_scene_key.clone()
+                        && let Some((geom, is_rich)) =
+                            try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                    {
+                        fresh_geom = Some(geom);
+                        row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                        row_scene_replayed = true;
+                        drew_rich = is_rich;
+                    }
+
+                    if !row_scene_replayed {
                         let started = perf_enabled.then(Instant::now);
                         let (blob, metrics) = painter.rich_text_with_blob(
                             key,
                             DrawOrder(2),
                             origin,
-                            cached.rich.clone(),
+                            rich,
                             text_style.clone(),
                             fg,
                             constraints,
@@ -364,18 +517,6 @@ pub(super) fn paint_row(
                         row_blob = Some(blob);
                         row_blob_metrics = Some(metrics);
                         drew_rich = true;
-                        row_geom_key = Some(geom::RowGeomKey::for_attributed(
-                            &cached.rich,
-                            text_style,
-                            (
-                                constraints.max_width,
-                                constraints.wrap,
-                                constraints.overflow,
-                                fret_core::TextAlign::Start,
-                                scale_factor,
-                            ),
-                            st.font_stack_key,
-                        ));
                     }
                 }
 
@@ -463,6 +604,26 @@ pub(super) fn paint_row(
                             ),
                             st.font_stack_key,
                         ));
+                        row_scene_key = row_geom_key
+                            .clone()
+                            .map(|key| RowSceneKey::syntax(key, fg, theme_revision));
+                        #[cfg(feature = "syntax")]
+                        {
+                            row_scene_syntax_replay_key = Some(RowSceneSyntaxReplayKey::new(
+                                row_range.clone(),
+                                Arc::clone(&line),
+                                Arc::clone(&row_spans),
+                                Arc::clone(&spans),
+                                text_style,
+                                constraints,
+                                st.font_stack_key,
+                                scale_factor,
+                                theme_revision,
+                                st.code_font_feature_policy_rev,
+                                fg,
+                            ));
+                        }
+                        row_scene_is_rich = true;
                         if let Some(started) = started {
                             st.paint_perf_frame.us_rich_materialize = st
                                 .paint_perf_frame
@@ -545,33 +706,45 @@ pub(super) fn paint_row(
                             }
                         }
 
-                        let started = perf_enabled.then(Instant::now);
-                        let (blob, metrics) = painter.rich_text_with_blob(
-                            key,
-                            DrawOrder(2),
-                            origin,
-                            rich,
-                            text_style.clone(),
-                            fg,
-                            constraints,
-                            scale_factor,
-                        );
-                        if let Some(started) = started {
-                            st.paint_perf_frame.us_text_draw = st
-                                .paint_perf_frame
-                                .us_text_draw
-                                .saturating_add(started.elapsed().as_micros() as u64);
+                        if let Some(scene_key) = row_scene_key.clone()
+                            && let Some((geom, is_rich)) =
+                                try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+                        {
+                            fresh_geom = Some(geom);
+                            row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                            row_scene_replayed = true;
+                            drew_rich = is_rich;
                         }
-                        row_blob = Some(blob);
-                        row_blob_metrics = Some(metrics);
-                        drew_rich = true;
+
+                        if !row_scene_replayed {
+                            let started = perf_enabled.then(Instant::now);
+                            let (blob, metrics) = painter.rich_text_with_blob(
+                                key,
+                                DrawOrder(2),
+                                origin,
+                                rich,
+                                text_style.clone(),
+                                fg,
+                                constraints,
+                                scale_factor,
+                            );
+                            if let Some(started) = started {
+                                st.paint_perf_frame.us_text_draw = st
+                                    .paint_perf_frame
+                                    .us_text_draw
+                                    .saturating_add(started.elapsed().as_micros() as u64);
+                            }
+                            row_blob = Some(blob);
+                            row_blob_metrics = Some(metrics);
+                            drew_rich = true;
+                        }
                     }
                 }
             }
         }
     }
 
-    if !drew_rich {
+    if !row_scene_replayed && !drew_rich {
         if !st.code_font_shaping_style.features.is_empty() {
             let rich = AttributedText::new(
                 Arc::clone(&line),
@@ -593,26 +766,39 @@ pub(super) fn paint_row(
                 ),
                 st.font_stack_key,
             ));
-            let started = perf_enabled.then(Instant::now);
-            let (blob, metrics) = painter.rich_text_with_blob(
-                key,
-                DrawOrder(2),
-                origin,
-                rich,
-                text_style.clone(),
-                fg,
-                constraints,
-                scale_factor,
-            );
-            if let Some(started) = started {
-                st.paint_perf_frame.us_text_draw = st
-                    .paint_perf_frame
-                    .us_text_draw
-                    .saturating_add(started.elapsed().as_micros() as u64);
+            row_scene_key = row_geom_key.clone().map(|key| RowSceneKey::plain(key, fg));
+            row_scene_is_rich = true;
+            if let Some(scene_key) = row_scene_key.clone()
+                && let Some((geom, is_rich)) =
+                    try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+            {
+                fresh_geom = Some(geom);
+                row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                row_scene_replayed = true;
+                drew_rich = is_rich;
             }
-            row_blob = Some(blob);
-            row_blob_metrics = Some(metrics);
-            drew_rich = true;
+            if !row_scene_replayed {
+                let started = perf_enabled.then(Instant::now);
+                let (blob, metrics) = painter.rich_text_with_blob(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    rich,
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    scale_factor,
+                );
+                if let Some(started) = started {
+                    st.paint_perf_frame.us_text_draw = st
+                        .paint_perf_frame
+                        .us_text_draw
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                row_blob = Some(blob);
+                row_blob_metrics = Some(metrics);
+                drew_rich = true;
+            }
         } else {
             row_geom_key = Some(geom::RowGeomKey::for_plain(
                 &line,
@@ -626,32 +812,48 @@ pub(super) fn paint_row(
                 ),
                 st.font_stack_key,
             ));
-            let started = perf_enabled.then(Instant::now);
-            let (blob, metrics) = painter.text_with_blob(
-                key,
-                DrawOrder(2),
-                origin,
-                Arc::clone(&line),
-                text_style.clone(),
-                fg,
-                constraints,
-                scale_factor,
-            );
-            if let Some(started) = started {
-                st.paint_perf_frame.us_text_draw = st
-                    .paint_perf_frame
-                    .us_text_draw
-                    .saturating_add(started.elapsed().as_micros() as u64);
+            row_scene_key = row_geom_key.clone().map(|key| RowSceneKey::plain(key, fg));
+            if let Some(scene_key) = row_scene_key.clone()
+                && let Some((geom, is_rich)) =
+                    try_replay_row_scene_cache(painter, st, row, &scene_key, origin)
+            {
+                fresh_geom = Some(geom);
+                row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                row_scene_replayed = true;
+                drew_rich = is_rich;
             }
-            row_blob = Some(blob);
-            row_blob_metrics = Some(metrics);
+            if !row_scene_replayed {
+                let started = perf_enabled.then(Instant::now);
+                let (blob, metrics) = painter.text_with_blob(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    Arc::clone(&line),
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    scale_factor,
+                );
+                if let Some(started) = started {
+                    st.paint_perf_frame.us_text_draw = st
+                        .paint_perf_frame
+                        .us_text_draw
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                row_blob = Some(blob);
+                row_blob_metrics = Some(metrics);
+            }
         }
     }
 
-    let mut fresh_geom = None::<RowGeom>;
     let mut caret_stops = &[][..];
     let mut caret_rect_top = None::<Px>;
     let mut caret_rect_height = None::<Px>;
+    if let Some(geom) = fresh_geom.as_ref() {
+        caret_stops = geom.caret_stops.as_slice();
+        caret_rect_top = geom.caret_rect_top;
+        caret_rect_height = geom.caret_rect_height;
+    }
     if let (Some(blob), Some(blob_metrics), Some(row_geom_key)) =
         (row_blob, row_blob_metrics.as_ref(), row_geom_key)
     {
@@ -723,6 +925,45 @@ pub(super) fn paint_row(
                 .as_slice();
         }
     }
+
+    let pending_row_scene_store = if !row_scene_replayed {
+        row_scene_key.clone().and_then(|row_scene_key| {
+            let row_scene_ops_end = painter.scene().ops_len();
+            if row_scene_ops_end <= row_scene_ops_start {
+                return None;
+            }
+            let geom = fresh_geom
+                .clone()
+                .or_else(|| st.row_geom_cache.get(&row).map(|(geom, _)| geom.clone()))?;
+            let capture_started = perf_enabled.then(Instant::now);
+            let ops = {
+                let scene = painter.scene();
+                scene.ops()[row_scene_ops_start..row_scene_ops_end].to_vec()
+            };
+            if let Some(started) = capture_started {
+                st.paint_perf_frame.us_row_scene_capture_ops = st
+                    .paint_perf_frame
+                    .us_row_scene_capture_ops
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
+            #[cfg(feature = "syntax")]
+            {
+                Some((
+                    row_scene_key,
+                    geom,
+                    row_scene_is_rich,
+                    ops,
+                    row_scene_syntax_replay_key.clone(),
+                ))
+            }
+            #[cfg(not(feature = "syntax"))]
+            {
+                Some((row_scene_key, geom, row_scene_is_rich, ops))
+            }
+        })
+    } else {
+        None
+    };
 
     let sel = st.selection.normalized();
     let mut drew_selection = false;
@@ -1035,6 +1276,34 @@ pub(super) fn paint_row(
         }
     }
 
+    #[cfg(feature = "syntax")]
+    if let Some((row_scene_key, geom, is_rich, ops, syntax_replay_key)) = pending_row_scene_store {
+        store_row_scene_cache(
+            st,
+            row,
+            row_scene_key,
+            origin,
+            geom,
+            is_rich,
+            ops,
+            syntax_replay_key,
+            text_cache_max_entries,
+        );
+    }
+    #[cfg(not(feature = "syntax"))]
+    if let Some((row_scene_key, geom, is_rich, ops)) = pending_row_scene_store {
+        store_row_scene_cache(
+            st,
+            row,
+            row_scene_key,
+            origin,
+            geom,
+            is_rich,
+            ops,
+            text_cache_max_entries,
+        );
+    }
+
     // Cache row geometry for pointer hit-testing / IME cursor-area anchoring in event handlers.
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
@@ -1106,6 +1375,425 @@ pub(super) fn paint_row(
                 .us_total
                 .saturating_add(row_started.elapsed().as_micros() as u64);
         }
+    }
+}
+
+fn ensure_row_scene_cache_fresh(st: &mut CodeEditorState) {
+    let rev = st.buffer.revision();
+    let wrap_cols = st.display_wrap_cols;
+    let folds_epoch = st.folds_epoch;
+    let inlays_epoch = st.inlays_epoch;
+    let display_map_epoch = st.display_map_epoch;
+    if st.row_scene_cache_rev != rev
+        || st.row_scene_cache_wrap_cols != wrap_cols
+        || st.row_scene_cache_folds_epoch != folds_epoch
+        || st.row_scene_cache_inlays_epoch != inlays_epoch
+        || st.row_scene_cache_display_map_epoch != display_map_epoch
+    {
+        st.invalidate_row_scene_cache();
+    }
+}
+
+#[cfg(feature = "syntax")]
+enum SyntaxRowCacheLookup {
+    Hit(Arc<[SyntaxSpan]>),
+    Miss { tick: u64 },
+}
+
+#[cfg(feature = "syntax")]
+fn ensure_syntax_row_cache_fresh(st: &mut CodeEditorState) {
+    let rev = st.buffer.revision();
+    if st.syntax_row_cache_rev != rev || st.syntax_row_cache_language != st.language {
+        st.syntax_row_cache_rev = rev;
+        st.syntax_row_cache_language = st.language.clone();
+        st.syntax_row_cache_tick = 0;
+        st.syntax_row_cache.clear();
+        st.syntax_row_cache_queue.clear();
+        st.syntax_row_cache_spans_len_total = 0;
+        st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
+        st.row_rich_cache_tick = 0;
+        st.row_rich_cache.clear();
+        st.row_rich_cache_queue.clear();
+        st.row_rich_cache_line_bytes_estimate_total = 0;
+        st.row_rich_cache_row_spans_len_total = 0;
+        st.row_rich_cache_syntax_spans_len_total = 0;
+        st.row_rich_cache_rich_spans_len_total = 0;
+        st.invalidate_row_scene_cache();
+        st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn lookup_row_syntax_spans(st: &mut CodeEditorState, row: usize) -> SyntaxRowCacheLookup {
+    st.cache_stats.syntax_get_calls = st.cache_stats.syntax_get_calls.saturating_add(1);
+    ensure_syntax_row_cache_fresh(st);
+
+    st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);
+    let tick = st.syntax_row_cache_tick;
+
+    if let Some((spans, last_used)) = st.syntax_row_cache.get_mut(&row) {
+        *last_used = tick;
+        st.syntax_row_cache_queue.push_back((row, tick));
+        st.cache_stats.syntax_hits = st.cache_stats.syntax_hits.saturating_add(1);
+        return SyntaxRowCacheLookup::Hit(Arc::clone(spans));
+    }
+
+    st.cache_stats.syntax_misses = st.cache_stats.syntax_misses.saturating_add(1);
+    SyntaxRowCacheLookup::Miss { tick }
+}
+
+#[cfg(feature = "syntax")]
+fn populate_row_syntax_spans_after_miss(
+    st: &mut CodeEditorState,
+    row: usize,
+    max_entries: usize,
+    tick: u64,
+) -> Arc<[SyntaxSpan]> {
+    let language = st.language.clone();
+    let Some(language) = language.as_deref() else {
+        return Arc::<[SyntaxSpan]>::from([]);
+    };
+
+    let line_count = st.buffer.line_count();
+    if line_count == 0 {
+        return Arc::<[SyntaxSpan]>::from([]);
+    }
+
+    let chunk_start = row.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
+    let chunk_end = row
+        .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
+        .min(line_count.saturating_sub(1));
+    populate_syntax_row_cache_for_chunk(st, chunk_start, chunk_end, language, max_entries, tick);
+
+    st.syntax_row_cache
+        .get(&row)
+        .map(|(spans, _)| Arc::clone(spans))
+        .unwrap_or_else(|| Arc::<[SyntaxSpan]>::from([]))
+}
+
+#[cfg(feature = "syntax")]
+#[allow(clippy::too_many_arguments)]
+fn try_replay_row_scene_cache_fast_syntax(
+    painter: &mut fret_ui::canvas::CanvasPainter<'_>,
+    st: &mut CodeEditorState,
+    row: usize,
+    row_range: &Range<usize>,
+    line: &Arc<str>,
+    row_spans: &Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    syntax_spans: &Arc<[SyntaxSpan]>,
+    text_style: &TextStyle,
+    constraints: CanvasTextConstraints,
+    font_stack_key: fret_runtime::TextFontStackKey,
+    scale_factor: f32,
+    theme_revision: u64,
+    code_font_feature_policy_rev: u64,
+    fg: Color,
+    origin: fret_core::Point,
+) -> Option<(RowGeom, bool)> {
+    ensure_row_scene_cache_fresh(st);
+    st.cache_stats.row_scene_fast_get_calls =
+        st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
+    st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
+    let tick = st.row_scene_cache_tick;
+    let mut probe_started = st.paint_perf_enabled.then(Instant::now);
+
+    let replayed = {
+        match st.row_scene_cache.get_mut(&row) {
+            Some((cached, last_used))
+                if cached.syntax_replay_key.as_ref().is_some_and(|key| {
+                    key.matches_current(
+                        row_range,
+                        line,
+                        row_spans,
+                        syntax_spans,
+                        text_style,
+                        constraints,
+                        font_stack_key,
+                        scale_factor,
+                        theme_revision,
+                        code_font_feature_policy_rev,
+                        fg,
+                    )
+                }) =>
+            {
+                *last_used = tick;
+                if let Some(started) = probe_started.take() {
+                    st.paint_perf_frame.us_row_scene_fast_probe = st
+                        .paint_perf_frame
+                        .us_row_scene_fast_probe
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                let replay_delta = fret_core::Point::new(
+                    Px(origin.x.0 - cached.origin.x.0),
+                    Px(origin.y.0 - cached.origin.y.0),
+                );
+                let touch_started = st.paint_perf_enabled.then(Instant::now);
+                painter.touch_hosted_resources_in_scene_ops(cached.ops.as_slice());
+                if let Some(started) = touch_started {
+                    st.paint_perf_frame.us_row_scene_replay_touch = st
+                        .paint_perf_frame
+                        .us_row_scene_replay_touch
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                let replay_started = st.paint_perf_enabled.then(Instant::now);
+                painter
+                    .scene()
+                    .replay_ops_translated(cached.ops.as_slice(), replay_delta);
+                if let Some(started) = replay_started {
+                    st.paint_perf_frame.us_row_scene_replay_ops = st
+                        .paint_perf_frame
+                        .us_row_scene_replay_ops
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_replayed =
+                        st.paint_perf_frame.rows_scene_replayed.saturating_add(1);
+                }
+                Some((cached.geom.clone(), cached.is_rich))
+            }
+            Some(_) | None => {
+                if let Some(started) = probe_started.take() {
+                    st.paint_perf_frame.us_row_scene_fast_probe = st
+                        .paint_perf_frame
+                        .us_row_scene_fast_probe
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                None
+            }
+        }
+    };
+
+    if let Some(out) = replayed {
+        st.row_scene_cache_queue.push_back((row, tick));
+        st.cache_stats.row_scene_fast_hits = st.cache_stats.row_scene_fast_hits.saturating_add(1);
+        st.cache_stats.row_scene_get_calls = st.cache_stats.row_scene_get_calls.saturating_add(1);
+        st.cache_stats.row_scene_hits = st.cache_stats.row_scene_hits.saturating_add(1);
+        Some(out)
+    } else {
+        st.cache_stats.row_scene_fast_misses =
+            st.cache_stats.row_scene_fast_misses.saturating_add(1);
+        None
+    }
+}
+
+fn try_replay_row_scene_cache(
+    painter: &mut fret_ui::canvas::CanvasPainter<'_>,
+    st: &mut CodeEditorState,
+    row: usize,
+    key: &RowSceneKey,
+    origin: fret_core::Point,
+) -> Option<(RowGeom, bool)> {
+    ensure_row_scene_cache_fresh(st);
+    st.cache_stats.row_scene_get_calls = st.cache_stats.row_scene_get_calls.saturating_add(1);
+    st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
+    let tick = st.row_scene_cache_tick;
+    let mut probe_started = st.paint_perf_enabled.then(Instant::now);
+
+    let replayed = {
+        match st.row_scene_cache.get_mut(&row) {
+            Some((cached, last_used)) if cached.key == *key => {
+                *last_used = tick;
+                if let Some(started) = probe_started.take() {
+                    st.paint_perf_frame.us_row_scene_full_probe = st
+                        .paint_perf_frame
+                        .us_row_scene_full_probe
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                let replay_delta = fret_core::Point::new(
+                    Px(origin.x.0 - cached.origin.x.0),
+                    Px(origin.y.0 - cached.origin.y.0),
+                );
+                let touch_started = st.paint_perf_enabled.then(Instant::now);
+                painter.touch_hosted_resources_in_scene_ops(cached.ops.as_slice());
+                if let Some(started) = touch_started {
+                    st.paint_perf_frame.us_row_scene_replay_touch = st
+                        .paint_perf_frame
+                        .us_row_scene_replay_touch
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                let replay_started = st.paint_perf_enabled.then(Instant::now);
+                painter
+                    .scene()
+                    .replay_ops_translated(cached.ops.as_slice(), replay_delta);
+                if let Some(started) = replay_started {
+                    st.paint_perf_frame.us_row_scene_replay_ops = st
+                        .paint_perf_frame
+                        .us_row_scene_replay_ops
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_replayed =
+                        st.paint_perf_frame.rows_scene_replayed.saturating_add(1);
+                }
+                Some((cached.geom.clone(), cached.is_rich))
+            }
+            Some(_) | None => {
+                if let Some(started) = probe_started.take() {
+                    st.paint_perf_frame.us_row_scene_full_probe = st
+                        .paint_perf_frame
+                        .us_row_scene_full_probe
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                None
+            }
+        }
+    };
+
+    if let Some(out) = replayed {
+        st.row_scene_cache_queue.push_back((row, tick));
+        st.cache_stats.row_scene_hits = st.cache_stats.row_scene_hits.saturating_add(1);
+        Some(out)
+    } else {
+        st.cache_stats.row_scene_misses = st.cache_stats.row_scene_misses.saturating_add(1);
+        None
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn store_row_scene_cache(
+    st: &mut CodeEditorState,
+    row: usize,
+    key: RowSceneKey,
+    origin: fret_core::Point,
+    geom: RowGeom,
+    is_rich: bool,
+    ops: Vec<SceneOp>,
+    syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
+    max_entries: usize,
+) {
+    if max_entries == 0 || ops.is_empty() {
+        return;
+    }
+
+    ensure_row_scene_cache_fresh(st);
+    let store_started = st.paint_perf_enabled.then(Instant::now);
+    st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
+    let tick = st.row_scene_cache_tick;
+    let ops_len = ops.len() as u64;
+
+    if let Some((old, _)) = st.row_scene_cache.insert(
+        row,
+        (
+            RowSceneCacheEntry {
+                key,
+                origin,
+                geom,
+                is_rich,
+                ops,
+                syntax_replay_key,
+            },
+            tick,
+        ),
+    ) {
+        st.row_scene_cache_scene_ops_len_total = st
+            .row_scene_cache_scene_ops_len_total
+            .saturating_sub(old.ops.len() as u64);
+    }
+    st.row_scene_cache_scene_ops_len_total = st
+        .row_scene_cache_scene_ops_len_total
+        .saturating_add(ops_len);
+    st.row_scene_cache_queue.push_back((row, tick));
+
+    while st.row_scene_cache.len() > max_entries {
+        let Some((victim, victim_tick)) = st.row_scene_cache_queue.pop_front() else {
+            break;
+        };
+        let remove = st
+            .row_scene_cache
+            .get(&victim)
+            .is_some_and(|(_, last_used)| *last_used == victim_tick);
+        if remove {
+            if let Some((old, _)) = st.row_scene_cache.remove(&victim) {
+                st.row_scene_cache_scene_ops_len_total = st
+                    .row_scene_cache_scene_ops_len_total
+                    .saturating_sub(old.ops.len() as u64);
+            }
+            st.cache_stats.row_scene_evictions =
+                st.cache_stats.row_scene_evictions.saturating_add(1);
+        }
+    }
+    if let Some(started) = store_started {
+        st.paint_perf_frame.us_row_scene_store = st
+            .paint_perf_frame
+            .us_row_scene_store
+            .saturating_add(started.elapsed().as_micros() as u64);
+    }
+    if st.paint_perf_enabled {
+        st.paint_perf_frame.rows_scene_stored =
+            st.paint_perf_frame.rows_scene_stored.saturating_add(1);
+    }
+}
+
+#[cfg(not(feature = "syntax"))]
+fn store_row_scene_cache(
+    st: &mut CodeEditorState,
+    row: usize,
+    key: RowSceneKey,
+    origin: fret_core::Point,
+    geom: RowGeom,
+    is_rich: bool,
+    ops: Vec<SceneOp>,
+    max_entries: usize,
+) {
+    if max_entries == 0 || ops.is_empty() {
+        return;
+    }
+
+    ensure_row_scene_cache_fresh(st);
+    let store_started = st.paint_perf_enabled.then(Instant::now);
+    st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
+    let tick = st.row_scene_cache_tick;
+    let ops_len = ops.len() as u64;
+
+    if let Some((old, _)) = st.row_scene_cache.insert(
+        row,
+        (
+            RowSceneCacheEntry {
+                key,
+                origin,
+                geom,
+                is_rich,
+                ops,
+            },
+            tick,
+        ),
+    ) {
+        st.row_scene_cache_scene_ops_len_total = st
+            .row_scene_cache_scene_ops_len_total
+            .saturating_sub(old.ops.len() as u64);
+    }
+    st.row_scene_cache_scene_ops_len_total = st
+        .row_scene_cache_scene_ops_len_total
+        .saturating_add(ops_len);
+    st.row_scene_cache_queue.push_back((row, tick));
+
+    while st.row_scene_cache.len() > max_entries {
+        let Some((victim, victim_tick)) = st.row_scene_cache_queue.pop_front() else {
+            break;
+        };
+        let remove = st
+            .row_scene_cache
+            .get(&victim)
+            .is_some_and(|(_, last_used)| *last_used == victim_tick);
+        if remove {
+            if let Some((old, _)) = st.row_scene_cache.remove(&victim) {
+                st.row_scene_cache_scene_ops_len_total = st
+                    .row_scene_cache_scene_ops_len_total
+                    .saturating_sub(old.ops.len() as u64);
+            }
+            st.cache_stats.row_scene_evictions =
+                st.cache_stats.row_scene_evictions.saturating_add(1);
+        }
+    }
+    if let Some(started) = store_started {
+        st.paint_perf_frame.us_row_scene_store = st
+            .paint_perf_frame
+            .us_row_scene_store
+            .saturating_add(started.elapsed().as_micros() as u64);
+    }
+    if st.paint_perf_enabled {
+        st.paint_perf_frame.rows_scene_stored =
+            st.paint_perf_frame.rows_scene_stored.saturating_add(1);
     }
 }
 
@@ -1541,62 +2229,18 @@ pub(super) fn rebuild_syntax_row_cache_queue(st: &mut CodeEditorState) {
 }
 
 #[cfg(feature = "syntax")]
+#[allow(dead_code)]
 pub(super) fn cached_row_syntax_spans(
     st: &mut CodeEditorState,
     row: usize,
     max_entries: usize,
 ) -> Arc<[SyntaxSpan]> {
-    st.cache_stats.syntax_get_calls = st.cache_stats.syntax_get_calls.saturating_add(1);
-    let rev = st.buffer.revision();
-    if st.syntax_row_cache_rev != rev || st.syntax_row_cache_language != st.language {
-        st.syntax_row_cache_rev = rev;
-        st.syntax_row_cache_language = st.language.clone();
-        st.syntax_row_cache_tick = 0;
-        st.syntax_row_cache.clear();
-        st.syntax_row_cache_queue.clear();
-        st.syntax_row_cache_spans_len_total = 0;
-        st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
-        st.row_rich_cache_tick = 0;
-        st.row_rich_cache.clear();
-        st.row_rich_cache_queue.clear();
-        st.row_rich_cache_line_bytes_estimate_total = 0;
-        st.row_rich_cache_row_spans_len_total = 0;
-        st.row_rich_cache_syntax_spans_len_total = 0;
-        st.row_rich_cache_rich_spans_len_total = 0;
-        st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
+    match lookup_row_syntax_spans(st, row) {
+        SyntaxRowCacheLookup::Hit(spans) => spans,
+        SyntaxRowCacheLookup::Miss { tick } => {
+            populate_row_syntax_spans_after_miss(st, row, max_entries, tick)
+        }
     }
-
-    st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);
-    let tick = st.syntax_row_cache_tick;
-
-    if let Some((spans, last_used)) = st.syntax_row_cache.get_mut(&row) {
-        *last_used = tick;
-        st.syntax_row_cache_queue.push_back((row, tick));
-        st.cache_stats.syntax_hits = st.cache_stats.syntax_hits.saturating_add(1);
-        return Arc::clone(spans);
-    }
-    st.cache_stats.syntax_misses = st.cache_stats.syntax_misses.saturating_add(1);
-
-    let language = st.language.clone();
-    let Some(language) = language.as_deref() else {
-        return Arc::<[SyntaxSpan]>::from([]);
-    };
-
-    let line_count = st.buffer.line_count();
-    if line_count == 0 {
-        return Arc::<[SyntaxSpan]>::from([]);
-    }
-
-    let chunk_start = row.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
-    let chunk_end = row
-        .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
-        .min(line_count.saturating_sub(1));
-    populate_syntax_row_cache_for_chunk(st, chunk_start, chunk_end, language, max_entries, tick);
-
-    st.syntax_row_cache
-        .get(&row)
-        .map(|(spans, _)| Arc::clone(spans))
-        .unwrap_or_else(|| Arc::<[SyntaxSpan]>::from([]))
 }
 
 #[cfg(feature = "syntax")]
@@ -1834,6 +2478,80 @@ mod tests {
                 .any(|f| f.tag == "calt" && f.value == 0)),
             "expected `calt=0` to be applied to every span"
         );
+    }
+
+    #[test]
+    fn syntax_replay_key_matches_current_inputs_by_pointer_identity() {
+        let line: Arc<str> = Arc::<str>::from("abc");
+        let row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]> = Arc::from(Vec::new());
+        let syntax_spans: Arc<[SyntaxSpan]> = Arc::from(vec![SyntaxSpan {
+            range: 0..3,
+            highlight: "keyword",
+        }]);
+        let style = TextStyle::default();
+        let constraints = CanvasTextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        };
+        let font_stack_key = fret_runtime::TextFontStackKey(7);
+        let key = RowSceneSyntaxReplayKey::new(
+            0..3,
+            Arc::clone(&line),
+            Arc::clone(&row_spans),
+            Arc::clone(&syntax_spans),
+            &style,
+            constraints,
+            font_stack_key,
+            1.0,
+            9,
+            4,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+
+        assert!(key.matches_current(
+            &(0..3),
+            &line,
+            &row_spans,
+            &syntax_spans,
+            &style,
+            constraints,
+            font_stack_key,
+            1.0,
+            9,
+            4,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        ));
+
+        let other_row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]> = Arc::from(Vec::new());
+        assert!(!key.matches_current(
+            &(0..3),
+            &line,
+            &other_row_spans,
+            &syntax_spans,
+            &style,
+            constraints,
+            font_stack_key,
+            1.0,
+            9,
+            4,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        ));
     }
 
     #[test]

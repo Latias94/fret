@@ -15,7 +15,7 @@ use fret_code_editor_view::{
 };
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
-    Edges, FontId, KeyCode, Modifiers, MouseButton, PointerType, Px, Rect, SceneOp, Size,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, Point, PointerType, Px, Rect, SceneOp, Size,
     TextFontFeatureSetting, TextOverflow, TextPaintStyle, TextShapingStyle, TextSpan, TextStyle,
     TextWrap, UnderlineStyle,
 };
@@ -490,6 +490,130 @@ struct SyntaxSpan {
     highlight: &'static str,
 }
 
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct RowSceneTextStyleKey {
+    font: FontId,
+    size_bits: u32,
+    weight: fret_core::FontWeight,
+    slant: fret_core::TextSlant,
+    line_height_bits: Option<u32>,
+    letter_spacing_em_bits: Option<u32>,
+}
+
+#[cfg(feature = "syntax")]
+impl RowSceneTextStyleKey {
+    fn from_style(style: &TextStyle) -> Self {
+        Self {
+            font: style.font.clone(),
+            size_bits: style.size.0.to_bits(),
+            weight: style.weight,
+            slant: style.slant,
+            line_height_bits: style.line_height.map(|h| h.0.to_bits()),
+            letter_spacing_em_bits: style.letter_spacing_em.map(f32::to_bits),
+        }
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct RowSceneTextConstraintsKey {
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+}
+
+#[cfg(feature = "syntax")]
+impl RowSceneTextConstraintsKey {
+    fn from_constraints(constraints: CanvasTextConstraints) -> Self {
+        let max_width_bits = match constraints.wrap {
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => None,
+            _ => constraints.max_width.map(|w| w.0.to_bits()),
+        };
+        Self {
+            max_width_bits,
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+        }
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowSceneSyntaxReplayKey {
+    row_range: Range<usize>,
+    line: Arc<str>,
+    row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    syntax_spans: Arc<[SyntaxSpan]>,
+    text_style: RowSceneTextStyleKey,
+    constraints: RowSceneTextConstraintsKey,
+    font_stack_key: u64,
+    scale_bits: u32,
+    theme_revision: u64,
+    code_font_feature_policy_rev: u64,
+    fg: ColorKey,
+}
+
+#[cfg(feature = "syntax")]
+impl RowSceneSyntaxReplayKey {
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        row_range: Range<usize>,
+        line: Arc<str>,
+        row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+        syntax_spans: Arc<[SyntaxSpan]>,
+        text_style: &TextStyle,
+        constraints: CanvasTextConstraints,
+        font_stack_key: fret_runtime::TextFontStackKey,
+        scale_factor: f32,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        fg: Color,
+    ) -> Self {
+        Self {
+            row_range,
+            line,
+            row_spans,
+            syntax_spans,
+            text_style: RowSceneTextStyleKey::from_style(text_style),
+            constraints: RowSceneTextConstraintsKey::from_constraints(constraints),
+            font_stack_key: font_stack_key.0,
+            scale_bits: scale_factor.max(1.0).to_bits(),
+            theme_revision,
+            code_font_feature_policy_rev,
+            fg: fg.into(),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn matches_current(
+        &self,
+        row_range: &Range<usize>,
+        line: &Arc<str>,
+        row_spans: &Arc<[fret_code_editor_view::DisplayRowSpan]>,
+        syntax_spans: &Arc<[SyntaxSpan]>,
+        text_style: &TextStyle,
+        constraints: CanvasTextConstraints,
+        font_stack_key: fret_runtime::TextFontStackKey,
+        scale_factor: f32,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        fg: Color,
+    ) -> bool {
+        self.row_range == *row_range
+            && Arc::ptr_eq(&self.line, line)
+            && Arc::ptr_eq(&self.row_spans, row_spans)
+            && Arc::ptr_eq(&self.syntax_spans, syntax_spans)
+            && self.text_style == RowSceneTextStyleKey::from_style(text_style)
+            && self.constraints == RowSceneTextConstraintsKey::from_constraints(constraints)
+            && self.font_stack_key == font_stack_key.0
+            && self.scale_bits == scale_factor.max(1.0).to_bits()
+            && self.theme_revision == theme_revision
+            && self.code_font_feature_policy_rev == code_font_feature_policy_rev
+            && self.fg == fg.into()
+    }
+}
+
 /// Lightweight counters for editor-local caches (bundle-friendly, no allocations).
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct CodeEditorCacheStats {
@@ -498,6 +622,18 @@ pub struct CodeEditorCacheStats {
     pub row_text_misses: u64,
     pub row_text_evictions: u64,
     pub row_text_resets: u64,
+
+    pub row_scene_get_calls: u64,
+    pub row_scene_hits: u64,
+    pub row_scene_misses: u64,
+    pub row_scene_evictions: u64,
+    pub row_scene_resets: u64,
+    #[cfg(feature = "syntax")]
+    pub row_scene_fast_get_calls: u64,
+    #[cfg(feature = "syntax")]
+    pub row_scene_fast_hits: u64,
+    #[cfg(feature = "syntax")]
+    pub row_scene_fast_misses: u64,
 
     #[cfg(feature = "syntax")]
     pub row_rich_get_calls: u64,
@@ -541,6 +677,9 @@ pub struct CodeEditorCacheSizeSnapshotV1 {
 
     pub row_geom_cache_entries: u64,
     pub row_geom_cache_caret_stops_len_total: u64,
+
+    pub row_scene_cache_entries: u64,
+    pub row_scene_cache_scene_ops_len_total: u64,
 
     pub syntax_row_cache_entries: u64,
     pub syntax_row_cache_spans_len_total: u64,
@@ -653,6 +792,56 @@ impl CodeEditorCacheStats {
             0
         }
     }
+
+    pub fn row_scene_get_calls(&self) -> u64 {
+        self.row_scene_get_calls
+    }
+
+    pub fn row_scene_hits(&self) -> u64 {
+        self.row_scene_hits
+    }
+
+    pub fn row_scene_misses(&self) -> u64 {
+        self.row_scene_misses
+    }
+
+    pub fn row_scene_evictions(&self) -> u64 {
+        self.row_scene_evictions
+    }
+
+    pub fn row_scene_resets(&self) -> u64 {
+        self.row_scene_resets
+    }
+
+    #[cfg(feature = "syntax")]
+    pub fn row_scene_fast_get_calls(&self) -> u64 {
+        self.row_scene_fast_get_calls
+    }
+
+    #[cfg(not(feature = "syntax"))]
+    pub fn row_scene_fast_get_calls(&self) -> u64 {
+        0
+    }
+
+    #[cfg(feature = "syntax")]
+    pub fn row_scene_fast_hits(&self) -> u64 {
+        self.row_scene_fast_hits
+    }
+
+    #[cfg(not(feature = "syntax"))]
+    pub fn row_scene_fast_hits(&self) -> u64 {
+        0
+    }
+
+    #[cfg(feature = "syntax")]
+    pub fn row_scene_fast_misses(&self) -> u64 {
+        self.row_scene_fast_misses
+    }
+
+    #[cfg(not(feature = "syntax"))]
+    pub fn row_scene_fast_misses(&self) -> u64 {
+        0
+    }
 }
 
 /// Frame-local timing counters for the code editor's Canvas paint path.
@@ -667,6 +856,8 @@ pub struct CodeEditorPaintPerfFrame {
 
     pub rows_painted: u64,
     pub rows_drew_rich: u64,
+    pub rows_scene_replayed: u64,
+    pub rows_scene_stored: u64,
     pub quads_selection: u64,
     pub quads_caret: u64,
 
@@ -676,6 +867,12 @@ pub struct CodeEditorPaintPerfFrame {
     pub us_syntax_spans: u64,
     pub us_rich_materialize: u64,
     pub us_text_draw: u64,
+    pub us_row_scene_fast_probe: u64,
+    pub us_row_scene_full_probe: u64,
+    pub us_row_scene_replay_touch: u64,
+    pub us_row_scene_replay_ops: u64,
+    pub us_row_scene_capture_ops: u64,
+    pub us_row_scene_store: u64,
     pub us_selection_rects: u64,
     pub us_caret_x: u64,
     pub us_caret_stops: u64,
@@ -743,6 +940,15 @@ struct CodeEditorState {
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
     row_geom_cache_caret_stops_len_total: u64,
+    row_scene_cache_rev: fret_code_editor_buffer::Revision,
+    row_scene_cache_wrap_cols: Option<usize>,
+    row_scene_cache_folds_epoch: u64,
+    row_scene_cache_inlays_epoch: u64,
+    row_scene_cache_display_map_epoch: u64,
+    row_scene_cache_tick: u64,
+    row_scene_cache: HashMap<usize, (RowSceneCacheEntry, u64)>,
+    row_scene_cache_queue: VecDeque<(usize, u64)>,
+    row_scene_cache_scene_ops_len_total: u64,
     ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
     selection_rect_scratch: Vec<Rect>,
     baseline_measure_cache: Option<BaselineMeasureCache>,
@@ -811,6 +1017,88 @@ struct RowTextCacheEntry {
     row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ColorKey {
+    r: u32,
+    g: u32,
+    b: u32,
+    a: u32,
+}
+
+impl From<Color> for ColorKey {
+    fn from(value: Color) -> Self {
+        Self {
+            r: value.r.to_bits(),
+            g: value.g.to_bits(),
+            b: value.b.to_bits(),
+            a: value.a.to_bits(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum RowScenePaintKey {
+    Plain {
+        fg: ColorKey,
+    },
+    #[cfg(feature = "syntax")]
+    Syntax {
+        fg: ColorKey,
+        theme_revision: u64,
+    },
+    Preedit {
+        fg: ColorKey,
+        selection_bg: ColorKey,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct RowSceneKey {
+    row_geom_key: geom::RowGeomKey,
+    paint_key: RowScenePaintKey,
+}
+
+impl RowSceneKey {
+    fn plain(row_geom_key: geom::RowGeomKey, fg: Color) -> Self {
+        Self {
+            row_geom_key,
+            paint_key: RowScenePaintKey::Plain { fg: fg.into() },
+        }
+    }
+
+    #[cfg(feature = "syntax")]
+    fn syntax(row_geom_key: geom::RowGeomKey, fg: Color, theme_revision: u64) -> Self {
+        Self {
+            row_geom_key,
+            paint_key: RowScenePaintKey::Syntax {
+                fg: fg.into(),
+                theme_revision,
+            },
+        }
+    }
+
+    fn preedit(row_geom_key: geom::RowGeomKey, fg: Color, selection_bg: Color) -> Self {
+        Self {
+            row_geom_key,
+            paint_key: RowScenePaintKey::Preedit {
+                fg: fg.into(),
+                selection_bg: selection_bg.into(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RowSceneCacheEntry {
+    key: RowSceneKey,
+    origin: Point,
+    geom: geom::RowGeom,
+    is_rich: bool,
+    ops: Vec<SceneOp>,
+    #[cfg(feature = "syntax")]
+    syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct BaselineMeasureCache {
     max_width: Px,
@@ -846,7 +1134,29 @@ impl CodeEditorState {
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
         self.row_geom_cache_caret_stops_len_total = 0;
+        self.invalidate_row_scene_cache();
         self.baseline_measure_cache = None;
+    }
+
+    fn clear_row_scene_cache(&mut self) {
+        self.row_scene_cache_tick = 0;
+        self.row_scene_cache.clear();
+        self.row_scene_cache_queue.clear();
+        self.row_scene_cache_scene_ops_len_total = 0;
+        self.cache_stats.row_scene_resets = self.cache_stats.row_scene_resets.saturating_add(1);
+    }
+
+    fn sync_row_scene_cache_epoch(&mut self) {
+        self.row_scene_cache_rev = self.buffer.revision();
+        self.row_scene_cache_wrap_cols = self.display_wrap_cols;
+        self.row_scene_cache_folds_epoch = self.folds_epoch;
+        self.row_scene_cache_inlays_epoch = self.inlays_epoch;
+        self.row_scene_cache_display_map_epoch = self.display_map_epoch;
+    }
+
+    fn invalidate_row_scene_cache(&mut self) {
+        self.sync_row_scene_cache_epoch();
+        self.clear_row_scene_cache();
     }
 
     fn invalidate_row_caches(&mut self) {
@@ -863,6 +1173,7 @@ impl CodeEditorState {
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
         self.row_geom_cache_caret_stops_len_total = 0;
+        self.invalidate_row_scene_cache();
 
         #[cfg(feature = "syntax")]
         {
@@ -1104,6 +1415,15 @@ impl CodeEditorHandle {
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
                 row_geom_cache_caret_stops_len_total: 0,
+                row_scene_cache_rev: fret_code_editor_buffer::Revision(0),
+                row_scene_cache_wrap_cols: None,
+                row_scene_cache_folds_epoch: 0,
+                row_scene_cache_inlays_epoch: 0,
+                row_scene_cache_display_map_epoch: 0,
+                row_scene_cache_tick: 0,
+                row_scene_cache: HashMap::new(),
+                row_scene_cache_queue: VecDeque::new(),
+                row_scene_cache_scene_ops_len_total: 0,
                 ime_surrounding_text_cache: None,
                 selection_rect_scratch: Vec::new(),
                 baseline_measure_cache: None,
@@ -1182,6 +1502,7 @@ impl CodeEditorHandle {
             st.row_rich_cache_row_spans_len_total = 0;
             st.row_rich_cache_syntax_spans_len_total = 0;
             st.row_rich_cache_rich_spans_len_total = 0;
+            st.invalidate_row_scene_cache();
             st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
         }
         #[cfg(not(feature = "syntax"))]
@@ -1372,6 +1693,8 @@ impl CodeEditorHandle {
             row_text_cache_row_spans_len_total: st.row_text_cache_row_spans_len_total,
             row_geom_cache_entries: st.row_geom_cache.len() as u64,
             row_geom_cache_caret_stops_len_total: st.row_geom_cache_caret_stops_len_total,
+            row_scene_cache_entries: st.row_scene_cache.len() as u64,
+            row_scene_cache_scene_ops_len_total: st.row_scene_cache_scene_ops_len_total,
             selection_rect_scratch_capacity: st.selection_rect_scratch.capacity() as u64,
             ..Default::default()
         };
@@ -1486,6 +1809,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn clear_all_folds(&self) {
@@ -1513,6 +1837,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn set_line_inlays(&self, line: usize, spans: Vec<InlaySpan>) {
@@ -1551,6 +1876,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn clear_all_inlays(&self) {
@@ -1578,6 +1904,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn debug_decorated_line_text(&self, line: usize) -> Option<String> {
@@ -1629,6 +1956,11 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.sync_row_scene_cache_epoch();
+        st.row_scene_cache_tick = 0;
+        st.row_scene_cache.clear();
+        st.row_scene_cache_queue.clear();
+        st.row_scene_cache_scene_ops_len_total = 0;
         #[cfg(feature = "syntax")]
         {
             st.syntax_row_cache_rev = st.buffer.revision();
@@ -1722,6 +2054,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     /// v1 code-wrap seam (ecosystem policy).
@@ -1764,6 +2097,7 @@ impl CodeEditorHandle {
                 st.row_rich_cache_rich_spans_len_total = 0;
                 st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
             }
+            st.invalidate_row_scene_cache();
         }
     }
 }
@@ -2070,6 +2404,33 @@ impl CodeEditor {
                                     row_text_resets: stats
                                         .row_text_resets
                                         .saturating_sub(prev.row_text_resets),
+                                    row_scene_get_calls: stats
+                                        .row_scene_get_calls
+                                        .saturating_sub(prev.row_scene_get_calls),
+                                    row_scene_hits: stats
+                                        .row_scene_hits
+                                        .saturating_sub(prev.row_scene_hits),
+                                    row_scene_misses: stats
+                                        .row_scene_misses
+                                        .saturating_sub(prev.row_scene_misses),
+                                    row_scene_evictions: stats
+                                        .row_scene_evictions
+                                        .saturating_sub(prev.row_scene_evictions),
+                                    row_scene_resets: stats
+                                        .row_scene_resets
+                                        .saturating_sub(prev.row_scene_resets),
+                                    #[cfg(feature = "syntax")]
+                                    row_scene_fast_get_calls: stats
+                                        .row_scene_fast_get_calls
+                                        .saturating_sub(prev.row_scene_fast_get_calls),
+                                    #[cfg(feature = "syntax")]
+                                    row_scene_fast_hits: stats
+                                        .row_scene_fast_hits
+                                        .saturating_sub(prev.row_scene_fast_hits),
+                                    #[cfg(feature = "syntax")]
+                                    row_scene_fast_misses: stats
+                                        .row_scene_fast_misses
+                                        .saturating_sub(prev.row_scene_fast_misses),
 
                                     #[cfg(feature = "syntax")]
                                     row_rich_get_calls: stats
@@ -2128,7 +2489,7 @@ impl CodeEditor {
                         );
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
-                            rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
+                            rect: Rect::new(origin, Size::new(Px(820.0), Px(24.0))),
                             background: fret_core::Paint::Solid(overlay_bg).into(),
 
                             border: Edges::all(Px(0.0)),
@@ -2138,7 +2499,7 @@ impl CodeEditor {
                         });
 
                         let label = format!(
-                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{}) geom row={} pref_x={:?} stops={:?} cache={}",
+                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) scene {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{}) geom row={} pref_x={:?} stops={:?} cache={}",
                             frame.visible_start,
                             frame.visible_end,
                             offset.y.0,
@@ -2150,6 +2511,12 @@ impl CodeEditor {
                             delta.row_text_get_calls,
                             delta.row_text_hits,
                             delta.row_text_misses,
+                            stats.row_scene_get_calls,
+                            stats.row_scene_hits,
+                            stats.row_scene_misses,
+                            delta.row_scene_get_calls,
+                            delta.row_scene_hits,
+                            delta.row_scene_misses,
                             stats.syntax_get_calls,
                             stats.syntax_hits,
                             stats.syntax_misses,
@@ -2175,7 +2542,7 @@ impl CodeEditor {
                                 a: 1.0,
                             },
                             CanvasTextConstraints {
-                                max_width: Some(Px(600.0)),
+                                max_width: Some(Px(800.0)),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                             },

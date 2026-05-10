@@ -31,6 +31,7 @@
 ## Instrumentation gaps (candidate fearless refactor items)
 
 - [ ] Inventory “hot scratch structures” that can reallocate in spikes; add cheap grow counters (opt-in or always-on).
+- [ ] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can add ~4.2ms to a frame (`tick=341` in `target/fret-diag/perf-code-editor-paint-telemetry/1778386820783/bundle.schema2.json`).
 - [ ] Prototype row/fragment replay for `ui-gallery-code-editor-torture-autoscroll-steady` so unchanged rows do not
   repaint the whole visible canvas every frame; keep the dedicated Windows baseline as the guardrail.
 - [x] Add percentiles (p50/p95) for `diag stats` bundle summaries (typical perf review).

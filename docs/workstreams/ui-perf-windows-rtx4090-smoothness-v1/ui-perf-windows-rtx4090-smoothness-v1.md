@@ -42,6 +42,7 @@ Recommended env (avoid extra I/O + keep cached rendering on):
 
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`
 - `FRET_DIAG_SEMANTICS=0`
+- `FRET_A11Y_DISABLE=1` for non-accessibility perf baselines
 - `FRET_UI_GALLERY_VIEW_CACHE=1`
 - `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
 - `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`
@@ -80,6 +81,16 @@ Current boundary (2026-05-10):
   `ui-gallery-material3-tabs-switch-perf-steady` should stay with the existing `perf-ui-gallery` path unless a later
   narrower follow-on proves it needs its own contract.
 
+Accessibility split note (2026-05-10):
+
+- `FRET_DIAG_SEMANTICS=0` only disables exporting `debug.semantics` into diagnostic bundles; it does not disable
+  platform accessibility integration.
+- If the OS/AccessKit adapter activates, runner accessibility can still request semantics snapshots and turn scroll-only
+  frames into semantics-refresh frames. That is a real a11y workload, but it must not be mixed into the ordinary
+  non-a11y scroll baseline.
+- The code-editor autoscroll steady script now defaults `FRET_A11Y_DISABLE=1`. Keep a separate a11y perf probe when the
+  goal is to measure AccessKit activation/update cost.
+
 Paint-tail note (2026-05-10):
 
 - Probe: `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json`
@@ -94,6 +105,28 @@ Paint-tail note (2026-05-10):
 - Interpretation: do not promote broader paint-cache gating as the primary fix for this workload. The auto-scroll editor
   changes visible canvas content every frame, so the next GPUI-aligned target is the code-editor/Canvas paint structure
   itself: retain or replay stable row/layer fragments by explicit keys, and only repaint the moving/changed slice.
+
+Code-editor paint telemetry (2026-05-10):
+
+- Telemetry run: `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --dir target/fret-diag/perf-code-editor-paint-telemetry --launch -- target/release/fret-ui-gallery.exe`
+- Worst bundle: `target/fret-diag/perf-code-editor-paint-telemetry/1778386820783/bundle.schema2.json`
+- Worst frame: `tick=341`, `paint_us=5734`, `paint_widget_us=5326`
+- Paint breakdown for that frame:
+  - `rows_painted=289`
+  - `rows_scene_replayed=288`
+  - `rows_scene_stored=1`
+  - `us_total=4813`
+  - `us_syntax_spans=4173`
+  - `us_text_draw=107`
+  - `us_row_scene_fast_probe=1`
+  - `us_row_scene_replay_touch=1`
+  - `us_row_scene_replay_ops=0`
+- Delta from `tick=340 -> 341`:
+  - `syntax_misses +1`
+  - `row_rich_misses +1`
+  - `row_scene_misses +1`
+  - `us_syntax_spans +4173us`
+- Interpretation: the remaining tail spike is not row-scene replay cost. It is a synchronous syntax-cache miss on the paint path. The next optimization slice should target syntax prefetch / miss smoothing, not further row-scene replay tightening.
 
 Finding (2026-05-10): redundant row background quads are pure scene-op churn
 
