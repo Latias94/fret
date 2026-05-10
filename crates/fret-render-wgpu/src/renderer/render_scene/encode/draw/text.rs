@@ -5,6 +5,15 @@ use super::paint::{PaintMaterialPolicy, paint_to_gpu};
 use crate::text::{TextDecorationKind, TextRenderGlyphKind};
 use fret_core::time::Instant;
 use fret_core::{Corners, Edges};
+use std::sync::OnceLock;
+
+fn text_glyph_emit_profile_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_DIAG_RENDERER_TEXT_GLYPH_EMIT_PROFILE")
+            .is_some_and(|value| !value.is_empty() && value != "0")
+    })
+}
 
 pub(in super::super) fn encode_text(
     renderer: &Renderer,
@@ -84,10 +93,11 @@ fn encode_text_blob(
 
     let setup_start = (profile_text_phases && perf_enabled).then(Instant::now);
     let t_px = state.current_transform_px();
-    let t_fast = t_px.as_translation_uniform_scale();
+    let transform_fast_path = t_px.as_translation_uniform_scale().is_some();
 
-    let base_x = origin.x.0 * state.scale_factor;
-    let base_y = origin.y.0 * state.scale_factor;
+    let scale_factor = state.scale_factor;
+    let base_x = origin.x.0 * scale_factor;
+    let base_y = origin.y.0 * scale_factor;
     let baseline = blob.baseline();
 
     fn paint_representative_color(p: fret_core::scene::Paint) -> Color {
@@ -204,10 +214,11 @@ fn encode_text_blob(
         state,
         paint,
         group_opacity,
-        state.scale_factor,
+        scale_factor,
         PaintMaterialPolicy::DegradeToSolidBase,
     );
     let text_paint_index = state.text_paints.len() as u32;
+    let text_paint_visible = paint_is_visible(&text_paint);
     state.text_paints.push(text_paint);
 
     let mut outline_params_mask: u32 = 0;
@@ -220,7 +231,7 @@ fn encode_text_blob(
                 state,
                 outline.paint,
                 group_opacity,
-                state.scale_factor,
+                scale_factor,
                 PaintMaterialPolicy::DegradeToSolidBase,
             );
             if paint_is_visible(&outline_paint) {
@@ -266,6 +277,9 @@ fn encode_text_blob(
     let mut group_first_instance = state.text_glyph_instances.len() as u32;
     let mut group_bounds_local: Option<(f32, f32, f32, f32)> = None;
     let glyphs_start = (profile_text_phases && perf_enabled).then(Instant::now);
+    let profile_glyph_emit =
+        profile_text_phases && perf_enabled && text_glyph_emit_profile_enabled();
+    let mut emitted_glyphs: u64 = 0;
 
     let flush_group =
         |state: &mut EncodeState<'_>,
@@ -359,8 +373,7 @@ fn encode_text_blob(
             text_paint_index
         };
 
-        if !use_palette_override && !paint_is_visible(&state.text_paints[text_paint_index as usize])
-        {
+        if !use_palette_override && !text_paint_visible {
             continue;
         }
 
@@ -412,19 +425,11 @@ fn encode_text_blob(
         };
 
         let rect = g.rect();
-        let lx0 = base_x + rect[0] * state.scale_factor;
-        let ly0 = base_y + rect[1] * state.scale_factor;
-        let lx1 = lx0 + rect[2] * state.scale_factor;
-        let ly1 = ly0 + rect[3] * state.scale_factor;
-        if t_fast.is_some() {
-            frame_perf.encode_scene_text_transform_fast_path_glyphs = frame_perf
-                .encode_scene_text_transform_fast_path_glyphs
-                .saturating_add(1);
-        } else {
-            frame_perf.encode_scene_text_transform_generic_glyphs = frame_perf
-                .encode_scene_text_transform_generic_glyphs
-                .saturating_add(1);
-        }
+        let lx0 = base_x + rect[0] * scale_factor;
+        let ly0 = base_y + rect[1] * scale_factor;
+        let lx1 = lx0 + rect[2] * scale_factor;
+        let ly1 = ly0 + rect[3] * scale_factor;
+        emitted_glyphs = emitted_glyphs.saturating_add(1);
 
         let (u0, v0, u1, v1) = (uv[0], uv[1], uv[2], uv[3]);
 
@@ -453,7 +458,7 @@ fn encode_text_blob(
                 .saturating_add(1);
         }
 
-        let glyph_emit_start = (profile_text_phases && perf_enabled).then(Instant::now);
+        let glyph_emit_start = profile_glyph_emit.then(Instant::now);
         state.text_glyph_instances.push(TextGlyphInstance {
             local_rect: [lx0, ly0, lx1, ly1],
             uv: [u0, v0, u1, v1],
@@ -526,5 +531,14 @@ fn encode_text_blob(
             EncodeSceneTextPhase::Glyphs,
             Some(glyphs_start.elapsed()),
         );
+    }
+    if transform_fast_path {
+        frame_perf.encode_scene_text_transform_fast_path_glyphs = frame_perf
+            .encode_scene_text_transform_fast_path_glyphs
+            .saturating_add(emitted_glyphs);
+    } else {
+        frame_perf.encode_scene_text_transform_generic_glyphs = frame_perf
+            .encode_scene_text_transform_generic_glyphs
+            .saturating_add(emitted_glyphs);
     }
 }

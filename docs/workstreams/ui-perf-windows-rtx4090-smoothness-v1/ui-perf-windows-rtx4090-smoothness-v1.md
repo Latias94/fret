@@ -1048,6 +1048,33 @@ Renderer encode attribution (2026-05-10):
   - Interpretation: text instancing resolves the repeat=7 gate failure on this local Windows RTX 4090 run. Remaining
     row/fragment replay work should be treated as the next evidence-driven optimization, not as an immediate gate
     unblocker.
+- Low-overhead text encode follow-up:
+  - Row-scene replay probe:
+    `target/fret-diag/perf-code-editor-row-scene-replay-probe/1778433712943/bundle.schema2.json`.
+    The code-editor paint telemetry showed `rows_painted=289` and `rows_scene_replayed=288/289`, so the row scene
+    cache is already doing the expected steady-frame reuse. The remaining family-profile text cost was not evidence
+    to immediately replace that cache with a deeper row/fragment replay model.
+  - Change: `FRET_DIAG_RENDERER_TEXT_GLYPH_EMIT_PROFILE=1` now gates per-glyph `GlyphEmit` timing. The renderer family
+    profile still reports text setup/glyph/group-flush buckets, but it no longer calls `Instant::now()` once per glyph
+    unless this detailed env gate is explicitly enabled. The same slice also aggregates text transform fast/generic
+    counters once per blob and reuses cached scale/visibility values in the glyph loop.
+  - Gate command:
+    `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1 --dir target/fret-diag/perf-code-editor-text-encode-low-overhead-gate-current --launch -- target/release/fret-ui-gallery.exe`
+  - Result: gate passed. p50/p95/max total `2019/2486/2486us`, paint `1925/2396/2396us`. Worst bundle:
+    `target/fret-diag/perf-code-editor-text-encode-low-overhead-gate-current/1778434849991/bundle.schema2.json`.
+  - `diag stats --sort cpu_cycles --top 30` on the worst bundle reports renderer p95/max
+    `encode=361/361us`, top-level renderer text prepare `text=114/114us`, and worst listed frames with
+    `renderer.encode.us(text)=255-334us`, `renderer.encode.text(us/shadow/setup/glyphs)=0/10-12/160-215us`,
+    `renderer.encode.text(us/transform/emit/flush)=0/0/17-22us`, `transform_fast/generic=18726/0`.
+  - Opt-in verification:
+    `target/fret-diag/perf-code-editor-text-glyph-emit-profile-optin-probe/1778434885391/bundle.schema2.json`.
+    With `FRET_DIAG_RENDERER_TEXT_GLYPH_EMIT_PROFILE=1`, `renderer.encode.text(us/transform/emit/flush)` reports
+    `0/364-393/21-23us`, confirming the detailed glyph emit timer still exists and that its cost is diagnostic-only.
+  - Interpretation: the previous `~900us` glyph bucket under family profiling mostly measured per-glyph diagnostic
+    instrumentation, not unavoidable text instance emission. The current evidence says the right next step is to keep
+    the low-overhead family profile as the default gate surface, then use the opt-in glyph emit profile only when a
+    narrow text-encode probe needs it. A deeper row/fragment replay design remains valid as a future editor-grade
+    direction, but it should be justified by fresh low-overhead evidence rather than by the old high-overhead profile.
 
 ## Failure exemplar map
 

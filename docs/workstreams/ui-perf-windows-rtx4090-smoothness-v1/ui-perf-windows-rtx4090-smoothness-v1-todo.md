@@ -47,12 +47,16 @@
   `encode_scene_text_transform_fast_path_glyphs=20420`, `encode_scene_text_transform_generic_glyphs=0`, and
   `encode_scene_text_vertex_grow_events=0`, with repeat=3 p50/p95/max total `2091/2165/2165us` and paint
   `1893/1937/1937us` in `target/fret-diag/perf-code-editor-render-cache-v4/1778420924991/bundle.schema2.json`.
-- [ ] Attribute/reduce the remaining text vertex emission, group-bounds, and group-flush work in the renderer encode
-  path, or promote a row/fragment replay slice if the evidence shows stable editor rows still rebuild too much text
-  vertex data every frame. Current repeat=7 evidence now passes the checked-in code-editor v2 baseline after text
-  instancing (`top_total_time_us=2155` vs threshold `2769`; `renderer_encode_scene_us=1293` vs threshold `1450`), but
-  the worst family-profile frame remains text-heavy (`renderer.encode.us(text)=1043us`), so row/fragment replay is
-  still the next slice to prove or reject before larger replay refactors.
+- [x] Attribute/reduce the remaining text vertex emission, group-bounds, and group-flush work in the renderer encode
+  path before promoting a deeper row/fragment replay refactor. Follow-up evidence showed row-scene replay already hits
+  `288/289` visible rows on the steady autoscroll probe. The apparent `~900us` glyph bucket under
+  `FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1` mostly came from per-glyph diagnostic timing, so
+  `FRET_DIAG_RENDERER_TEXT_GLYPH_EMIT_PROFILE=1` now gates that detailed timer. The repeat=7 low-overhead family-profile
+  gate passed at p50/p95/max total `2019/2486/2486us`, with worst-bundle renderer encode p95/max `361/361us` and
+  `renderer.encode.text(us/transform/emit/flush)=0/0/17-22us`.
+- [ ] Re-evaluate row/fragment replay only from a fresh low-overhead profile. If steady editor rows still rebuild too
+  much text or geometry after default family profiling, prototype the smallest row-scoped replay cache and keep the
+  code-editor v2 steady baseline as the guardrail.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in
