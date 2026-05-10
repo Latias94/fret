@@ -1103,7 +1103,19 @@ Renderer encode attribution (2026-05-10):
     The new failure payload now carries `evidence_run` and `evidence_peak`, which map the upload failure to
     run_index `1` / frame `717` and the encoder-finish failure to run_index `4` / frame `1834`. That is the
     granularity we wanted: keep treating this as a narrow renderer tail until a fresh low-overhead probe proves
-    a structural regression.
+    a structural regression. The latest triage/reporting pass also exposes `renderer_uniform_bytes`,
+    `renderer_instance_bytes`, and `renderer_vertex_bytes`, so upload-tail analysis can now separate generic
+    upload churn from CPU-generated render payload bytes.
+  - Rerun6 record-pass check
+    (`target/fret-diag/perf-code-editor-hosted-resources-official-gate-v1-rerun6/1778448662543/bundle.schema2.json`):
+    `diag stats --sort record_passes --top 20` showed a single-frame `renderer_record_passes_us=123` outlier at
+    tick/frame `719`; adjacent frames stayed at `27-37us`. The outlier did not come with draw/plan churn:
+    `renderer.bytes(uniform/instance/vertex)=19776/220248/528`,
+    `renderer.encode.ops(stack/clip/mask/effect/quad/image/text/path/viewport/flush)=6/76/2/0/75/0/338/0/0/1`,
+    no intermediate allocations/releases, and the same steady draw footprint (`133-134` draw calls, `114` pipeline
+    switches). Treat this as renderer-tail jitter until a fresh low-overhead pass-kind probe shows a repeatable
+    structural cost. The Zed/GPUI comparison still supports keeping the common draw path flat, but this bundle is not
+    evidence for a broad pass-organization rewrite.
 - Content-resolve split follow-up (2026-05-11):
   - Probe:
     `target/fret-diag/perf-code-editor-content-resolve-breakdown-v1/1778439554384/bundle.schema2.json`.

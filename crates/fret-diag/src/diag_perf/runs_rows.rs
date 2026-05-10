@@ -101,6 +101,9 @@ pub(crate) fn push_perf_repeat_run_json_row(
         .unwrap_or(0);
     let top_renderer_svg_upload_bytes = top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
     let top_renderer_image_upload_bytes = top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
+    let top_renderer_uniform_bytes = top.map(|r| r.renderer_uniform_bytes).unwrap_or(0);
+    let top_renderer_instance_bytes = top.map(|r| r.renderer_instance_bytes).unwrap_or(0);
+    let top_renderer_vertex_bytes = top.map(|r| r.renderer_vertex_bytes).unwrap_or(0);
     let top_renderer_svg_raster_cache_misses =
         top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
     let top_renderer_svg_raster_budget_evictions = top
@@ -257,6 +260,9 @@ pub(crate) fn push_perf_repeat_run_json_row(
         "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
         "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
         "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
+        "top_renderer_uniform_bytes": top_renderer_uniform_bytes,
+        "top_renderer_instance_bytes": top_renderer_instance_bytes,
+        "top_renderer_vertex_bytes": top_renderer_vertex_bytes,
         "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
         "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
         "top_renderer_svg_raster_budget_bytes": top_renderer_svg_raster_budget_bytes,

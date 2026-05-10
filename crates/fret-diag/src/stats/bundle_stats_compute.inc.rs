@@ -587,6 +587,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_uniform_bytes = stats
+                .and_then(|m| m.get("renderer_uniform_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_instance_bytes = stats
+                .and_then(|m| m.get("renderer_instance_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_vertex_bytes = stats
+                .and_then(|m| m.get("renderer_vertex_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_encode_scene_stack_us = stats
                 .and_then(|m| m.get("renderer_encode_scene_stack_us"))
                 .and_then(|v| v.as_u64())
@@ -1796,6 +1808,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encoder_finish_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
+                renderer_uniform_bytes,
+                renderer_instance_bytes,
+                renderer_vertex_bytes,
                 renderer_encode_scene_stack_us,
                 renderer_encode_scene_clip_us,
                 renderer_encode_scene_mask_us,

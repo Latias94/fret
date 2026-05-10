@@ -316,6 +316,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encode_scene_flushes: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
+    pub(super) renderer_uniform_bytes: u64,
+    pub(super) renderer_instance_bytes: u64,
+    pub(super) renderer_vertex_bytes: u64,
 
     pub(super) renderer_render_target_updates_ingest_unknown: u64,
     pub(super) renderer_render_target_updates_ingest_owned: u64,
@@ -999,6 +1002,9 @@ impl BundleStatsReport {
                 || row.renderer_prepare_svg_us > 0
                 || row.renderer_upload_us > 0
                 || row.renderer_record_passes_us > 0
+                || row.renderer_uniform_bytes > 0
+                || row.renderer_instance_bytes > 0
+                || row.renderer_vertex_bytes > 0
                 || row.renderer_encode_scene_stack_us > 0
                 || row.renderer_encode_scene_clip_us > 0
                 || row.renderer_encode_scene_mask_us > 0
@@ -1030,6 +1036,17 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_uniform_bytes > 0
+                    || row.renderer_instance_bytes > 0
+                    || row.renderer_vertex_bytes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.bytes(uniform/instance/vertex)={}/{}/{}",
+                        row.renderer_uniform_bytes,
+                        row.renderer_instance_bytes,
+                        row.renderer_vertex_bytes,
+                    ));
+                }
                 line.push_str(&format!(
                     " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
                     row.renderer_encode_scene_stack_us,
@@ -3221,6 +3238,18 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_uniform_bytes".to_string(),
+                    Value::from(row.renderer_uniform_bytes),
+                );
+                obj.insert(
+                    "renderer_instance_bytes".to_string(),
+                    Value::from(row.renderer_instance_bytes),
+                );
+                obj.insert(
+                    "renderer_vertex_bytes".to_string(),
+                    Value::from(row.renderer_vertex_bytes),
                 );
                 obj.insert(
                     "renderer_encode_scene_stack_us".to_string(),

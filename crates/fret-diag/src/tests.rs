@@ -1610,6 +1610,9 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                     "paint_text_prepare_time_us": 2_500,
                     "paint_text_prepare_calls": 10,
                     "paint_text_prepare_reason_text_changed": 10,
+                    "renderer_uniform_bytes": 48,
+                    "renderer_instance_bytes": 96,
+                    "renderer_vertex_bytes": 192,
                     "renderer_upload_us": 123,
                     "renderer_record_passes_us": 45,
                     "renderer_encoder_finish_us": 67,
@@ -1846,6 +1849,63 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.as_u64())
             .unwrap_or(0),
         67
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("renderer_uniform_bytes"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        48
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("renderer_instance_bytes"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        96
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("renderer_vertex_bytes"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        192
+    );
+
+    let renderer_upload_evidence = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("renderer.upload_churn"))
+        .and_then(|h| h.get("evidence"))
+        .expect("renderer.upload_churn evidence");
+    assert_eq!(
+        renderer_upload_evidence
+            .get("upload_bytes_total")
+            .and_then(|v| v.as_u64()),
+        Some(2_000_336)
+    );
+    assert_eq!(
+        renderer_upload_evidence
+            .get("renderer_uniform_bytes")
+            .and_then(|v| v.as_u64()),
+        Some(48)
+    );
+    assert_eq!(
+        renderer_upload_evidence
+            .get("renderer_instance_bytes")
+            .and_then(|v| v.as_u64()),
+        Some(96)
+    );
+    assert_eq!(
+        renderer_upload_evidence
+            .get("renderer_vertex_bytes")
+            .and_then(|v| v.as_u64()),
+        Some(192)
     );
 
     assert_eq!(

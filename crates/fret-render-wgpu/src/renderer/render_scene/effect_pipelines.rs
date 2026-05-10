@@ -8,59 +8,21 @@ impl Renderer {
         path_samples: u32,
         plan: &RenderPlan,
     ) {
-        let needs_scale = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::ScaleNearest(_)));
-        let needs_blur = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::Blur(_)));
-        let needs_clip_mask = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::ClipMask(_)));
-        let needs_blit = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::FullscreenBlit(_)));
-        let needs_blit_srgb_encode = plan.passes.iter().any(|p| match p {
-            RenderPlanPass::FullscreenBlit(pass) => pass.encode_output_srgb,
-            _ => false,
-        });
-        let needs_composite = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::CompositePremul(_)));
-        let needs_color_adjust = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::ColorAdjust(_)));
-        let needs_backdrop_warp = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::BackdropWarp(_)));
-        let needs_color_matrix = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::ColorMatrix(_)));
-        let needs_alpha_threshold = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::AlphaThreshold(_)));
-        let needs_dither = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::Dither(_)));
-        let needs_noise = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::Noise(_)));
-        let needs_drop_shadow = plan
-            .passes
-            .iter()
-            .any(|p| matches!(p, RenderPlanPass::DropShadow(_)));
-
+        let mut needs_scale = false;
+        let mut needs_blur = false;
+        let mut needs_clip_mask = false;
+        let mut needs_blit = false;
+        let mut needs_blit_srgb_encode = false;
+        let mut needs_composite = false;
+        let mut needs_color_adjust = false;
+        let mut needs_backdrop_warp = false;
+        let mut needs_color_matrix = false;
+        let mut needs_alpha_threshold = false;
+        let mut needs_dither = false;
+        let mut needs_noise = false;
+        let mut needs_drop_shadow = false;
+        let mut release_targets = 0usize;
+        let mut scale_pass_count = 0usize;
         let mut custom_effects: std::collections::HashSet<fret_core::EffectId> =
             std::collections::HashSet::new();
         let mut custom_effects_v2: std::collections::HashSet<fret_core::EffectId> =
@@ -69,6 +31,44 @@ impl Renderer {
             std::collections::HashSet::new();
         for pass in &plan.passes {
             match pass {
+                RenderPlanPass::ScaleNearest(_) => {
+                    needs_scale = true;
+                    scale_pass_count += 1;
+                }
+                RenderPlanPass::Blur(_) => {
+                    needs_blur = true;
+                }
+                RenderPlanPass::ClipMask(_) => {
+                    needs_clip_mask = true;
+                }
+                RenderPlanPass::FullscreenBlit(pass) => {
+                    needs_blit = true;
+                    needs_blit_srgb_encode |= pass.encode_output_srgb;
+                }
+                RenderPlanPass::CompositePremul(_) => {
+                    needs_composite = true;
+                }
+                RenderPlanPass::ColorAdjust(_) => {
+                    needs_color_adjust = true;
+                }
+                RenderPlanPass::BackdropWarp(_) => {
+                    needs_backdrop_warp = true;
+                }
+                RenderPlanPass::ColorMatrix(_) => {
+                    needs_color_matrix = true;
+                }
+                RenderPlanPass::AlphaThreshold(_) => {
+                    needs_alpha_threshold = true;
+                }
+                RenderPlanPass::Dither(_) => {
+                    needs_dither = true;
+                }
+                RenderPlanPass::Noise(_) => {
+                    needs_noise = true;
+                }
+                RenderPlanPass::DropShadow(_) => {
+                    needs_drop_shadow = true;
+                }
                 RenderPlanPass::CustomEffect(pass) => {
                     custom_effects.insert(pass.common.effect);
                 }
@@ -77,6 +77,9 @@ impl Renderer {
                 }
                 RenderPlanPass::CustomEffectV3(pass) => {
                     custom_effects_v3.insert(pass.common.effect);
+                }
+                RenderPlanPass::ReleaseTarget(_) => {
+                    release_targets += 1;
                 }
                 _ => {}
             }
@@ -140,18 +143,9 @@ impl Renderer {
             }
         }
 
-        self.intermediate_state.record_release_targets(
-            plan.passes
-                .iter()
-                .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
-                .count() as u64,
-        );
+        self.intermediate_state
+            .record_release_targets(release_targets as u64);
 
-        let scale_pass_count = plan
-            .passes
-            .iter()
-            .filter(|p| matches!(p, RenderPlanPass::ScaleNearest(_)))
-            .count();
         self.effect_params
             .ensure_scale_param_capacity(device, scale_pass_count);
         self.ensure_render_space_capacity(device, plan.passes.len());

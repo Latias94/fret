@@ -511,7 +511,10 @@ pub(crate) fn triage_json_from_stats(
         let upload_bytes = worst
             .renderer_text_atlas_upload_bytes
             .saturating_add(worst.renderer_svg_upload_bytes)
-            .saturating_add(worst.renderer_image_upload_bytes);
+            .saturating_add(worst.renderer_image_upload_bytes)
+            .saturating_add(worst.renderer_uniform_bytes)
+            .saturating_add(worst.renderer_instance_bytes)
+            .saturating_add(worst.renderer_vertex_bytes);
         if upload_bytes >= 1_000_000
             || worst.renderer_text_atlas_evicted_pages > 0
             || worst.renderer_svg_raster_budget_evictions > 0
@@ -523,6 +526,9 @@ pub(crate) fn triage_json_from_stats(
                 "message": "Renderer uploads/evictions are present in the worst frame (may indicate cache pressure or invalidation churn).",
                 "evidence": {
                     "upload_bytes_total": upload_bytes,
+                    "renderer_uniform_bytes": worst.renderer_uniform_bytes,
+                    "renderer_instance_bytes": worst.renderer_instance_bytes,
+                    "renderer_vertex_bytes": worst.renderer_vertex_bytes,
                     "renderer_text_atlas_upload_bytes": worst.renderer_text_atlas_upload_bytes,
                     "renderer_svg_upload_bytes": worst.renderer_svg_upload_bytes,
                     "renderer_image_upload_bytes": worst.renderer_image_upload_bytes,
@@ -968,6 +974,9 @@ pub(crate) fn triage_json_from_stats(
             "renderer_encoder_finish_us": row.renderer_encoder_finish_us,
             "renderer_prepare_text_us": row.renderer_prepare_text_us,
             "renderer_prepare_svg_us": row.renderer_prepare_svg_us,
+            "renderer_uniform_bytes": row.renderer_uniform_bytes,
+            "renderer_instance_bytes": row.renderer_instance_bytes,
+            "renderer_vertex_bytes": row.renderer_vertex_bytes,
             "renderer_encode_scene_stack_us": row.renderer_encode_scene_stack_us,
             "renderer_encode_scene_clip_us": row.renderer_encode_scene_clip_us,
             "renderer_encode_scene_mask_us": row.renderer_encode_scene_mask_us,
