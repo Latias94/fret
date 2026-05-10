@@ -2275,14 +2275,29 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
         return;
     }
 
+    let slice_started = st.paint_perf_enabled.then(Instant::now);
     let Some(slice) = st.buffer.slice_to_string(start_byte..end_byte) else {
         return;
     };
+    if let Some(started) = slice_started {
+        st.paint_perf_frame.us_syntax_slice = st
+            .paint_perf_frame
+            .us_syntax_slice
+            .saturating_add(started.elapsed().as_micros() as u64);
+    }
 
+    let highlight_started = st.paint_perf_enabled.then(Instant::now);
     let Ok(spans) = fret_syntax::highlight(slice.as_str(), language) else {
         return;
     };
+    if let Some(started) = highlight_started {
+        st.paint_perf_frame.us_syntax_highlight = st
+            .paint_perf_frame
+            .us_syntax_highlight
+            .saturating_add(started.elapsed().as_micros() as u64);
+    }
 
+    let distribute_started = st.paint_perf_enabled.then(Instant::now);
     let mut row_ranges = Vec::with_capacity(chunk_end - chunk_start + 1);
     for row in chunk_start..=chunk_end {
         row_ranges.push(st.buffer.line_byte_range(row).unwrap_or(0..0));
@@ -2321,7 +2336,14 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
             });
         }
     }
+    if let Some(started) = distribute_started {
+        st.paint_perf_frame.us_syntax_distribute = st
+            .paint_perf_frame
+            .us_syntax_distribute
+            .saturating_add(started.elapsed().as_micros() as u64);
+    }
 
+    let store_started = st.paint_perf_enabled.then(Instant::now);
     for (i, spans) in per_row.into_iter().enumerate() {
         let row = chunk_start + i;
 
@@ -2370,6 +2392,16 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
                 st.cache_stats.syntax_evictions = st.cache_stats.syntax_evictions.saturating_add(1);
             }
         }
+    }
+    st.paint_perf_frame.syntax_rows_stored = st
+        .paint_perf_frame
+        .syntax_rows_stored
+        .saturating_add(row_ranges.len() as u64);
+    if let Some(started) = store_started {
+        st.paint_perf_frame.us_syntax_store = st
+            .paint_perf_frame
+            .us_syntax_store
+            .saturating_add(started.elapsed().as_micros() as u64);
     }
 }
 

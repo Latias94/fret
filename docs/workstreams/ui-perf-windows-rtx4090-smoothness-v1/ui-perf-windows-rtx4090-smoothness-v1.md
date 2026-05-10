@@ -37,6 +37,9 @@ Seed policy (how thresholds were derived):
 Prebuild (once):
 
 - `cargo build -p fretboard-dev -p fret-ui-gallery --release`
+- For `gallery-dev` scripts such as `ui-gallery-code-editor-torture-autoscroll-steady`, build the gallery with
+  `cargo build -p fret-ui-gallery --release --features gallery-dev`; otherwise the script cannot find the dev-only
+  `code-editor-torture` navigation target.
 
 Recommended env (avoid extra I/O + keep cached rendering on):
 
@@ -127,6 +130,29 @@ Code-editor paint telemetry (2026-05-10):
   - `row_scene_misses +1`
   - `us_syntax_spans +4173us`
 - Interpretation: the remaining tail spike is not row-scene replay cost. It is a synchronous syntax-cache miss on the paint path. The next optimization slice should target syntax prefetch / miss smoothing, not further row-scene replay tightening.
+
+Syntax miss breakdown (2026-05-10):
+
+- Telemetry run after adding `us_syntax_slice`, `us_syntax_highlight`, `us_syntax_distribute`,
+  `us_syntax_store`, and `syntax_rows_stored`:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --dir target/fret-diag/perf-code-editor-paint-telemetry-syntax-breakdown3 --launch -- target/release/fret-ui-gallery.exe`
+- Worst bundle: `target/fret-diag/perf-code-editor-paint-telemetry-syntax-breakdown3/1778389032255/bundle.schema2.json`
+- Worst frame: `tick=341`, `paint_us=6163`, `paint_widget_us=5557`
+- Paint breakdown for that frame:
+  - `rows_painted=289`
+  - `rows_scene_replayed=288`
+  - `rows_scene_stored=1`
+  - `us_total=4996`
+  - `us_syntax_spans=4316`
+  - `syntax_rows_stored=129`
+  - `us_syntax_slice=7`
+  - `us_syntax_highlight=4069`
+  - `us_syntax_distribute=215`
+  - `us_syntax_store=22`
+  - `us_text_draw=91`
+- Interpretation: the miss cost is dominated by Tree-sitter highlighting for the chunk, not by row distribution,
+  cache store, text draw, or row-scene replay. The next optimization should move syntax filling off the paint critical
+  path or prefetch it ahead of the viewport; shrinking cache store/distribution is not the first-order fix.
 
 Finding (2026-05-10): redundant row background quads are pure scene-op churn
 

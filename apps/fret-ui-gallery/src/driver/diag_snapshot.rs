@@ -260,6 +260,11 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "us_caret_x": frame.us_caret_x,
                                         "us_caret_stops": frame.us_caret_stops,
                                         "us_caret_rect": frame.us_caret_rect,
+                                        "syntax_rows_stored": frame.syntax_rows_stored,
+                                        "us_syntax_slice": frame.us_syntax_slice,
+                                        "us_syntax_highlight": frame.us_syntax_highlight,
+                                        "us_syntax_distribute": frame.us_syntax_distribute,
+                                        "us_syntax_store": frame.us_syntax_store,
                                     })
                                 });
                                 let preedit_active = handle.preedit_active();
