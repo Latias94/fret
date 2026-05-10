@@ -9,5 +9,5 @@ mod editor;
 
 pub use editor::{
     CodeEditor, CodeEditorCacheStats, CodeEditorHandle, CodeEditorInteractionOptions,
-    CodeEditorTorture, PreeditState, Selection,
+    CodeEditorPaintPerfFrame, CodeEditorTorture, PreeditState, Selection,
 };

@@ -229,6 +229,44 @@ Bounded row-cache touch queues (2026-05-10):
   remains about ~1.0-1.1ms p95 in this script) or the new-row materialization cost. The next code-editor slice should
   split those two costs explicitly instead of treating all paint time as one bucket.
 
+Code-editor paint nanosecond attribution probe (2026-05-10):
+
+- Finding: the previous `us_*` paint-perf counters undercounted hot per-row paths because many sub-steps are measured
+  once per visible row and each `elapsed().as_micros()` call truncates sub-microsecond work to zero. That made
+  `us_total` useful but left the child buckets too sparse to explain the remaining steady p95.
+- Change: `CodeEditorPaintPerfFrame` now keeps the existing `us_*` fields and adds `ns_*` mirrors for the measured
+  child buckets, plus `us/ns_row_geom_cache`. The UI gallery diagnostic snapshot emits `paint_perf.schema_version=3`.
+  `CodeEditorPaintPerfFrame` is re-exported from `fret-code-editor` so the gallery snapshot helper can name the type
+  without relying on a very large `serde_json::json!` macro expansion.
+- Implementation anchors:
+  - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`add_paint_perf_elapsed`, nanosecond buckets, row geometry
+    cache timing)
+  - `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorPaintPerfFrame` schema fields)
+  - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorPaintPerfFrame` re-export)
+  - `apps/fret-ui-gallery/src/driver/diag_snapshot.rs` (`code_editor_paint_perf_json`)
+- Verification:
+  - `cargo fmt -p fret-code-editor -p fret-ui-gallery --check`
+  - `cargo check -p fret-code-editor`
+  - `cargo check -p fret-code-editor --features syntax`
+  - `cargo check -p fret-code-editor --features syntax-rust`
+  - `cargo check -p fret-ui-gallery --features gallery-dev`
+  - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast`
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev` (passed; existing `fret-runtime`/`fret-ui`
+    warnings only)
+- Perf probe:
+  - Command:
+    `target/release/fretboard.exe diag perf --dir target/fret-diag/perf-code-editor-ns-attribution-probe --repeat 3 --warmup-frames 5 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --launch -- target/release/fret-ui-gallery.exe`
+  - Worst bundle:
+    `target/fret-diag/perf-code-editor-ns-attribution-probe/1778396085536/bundle.schema2.json`
+  - Observed `repeat=3` p50/p95/max total: `3108/3414/3414us`; paint: `2885/3039/3039us`. These totals include
+    the high-overhead nanosecond probe and must not replace the steady perf baseline.
+  - Probe interpretation: low-overhead rows show row text, scene-cache probe/replay, and row-geom cache are each
+    tens of microseconds across ~289 rows. Frames that store one newly visible row still correlate with rich
+    materialization/text-draw tails (`ns_rich_materialize` reached ~443-495us in the probe's worst frames). Renderer
+    work is still large and separate (`renderer_prepare_text_us` and `renderer_encode_scene_us` remain prominent).
+- Next direction: keep the nanosecond fields as opt-in diagnostics only. The next optimization should target either
+  content-addressed/new-row rich materialization or renderer text/scene encode, not more syntax-cache work.
+
 Finding (2026-05-10): redundant row background quads are pure scene-op churn
 
 - Change: `ecosystem/fret-code-editor/src/editor/paint/mod.rs` no longer emits a transparent background `Quad` for

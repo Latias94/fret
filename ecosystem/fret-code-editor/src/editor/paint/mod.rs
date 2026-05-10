@@ -33,6 +33,13 @@ fn compact_row_lru_queue_if_needed<T>(
     true
 }
 
+fn add_paint_perf_elapsed(us: &mut u64, ns: &mut u64, started: Instant) {
+    let elapsed = started.elapsed();
+    *us = us.saturating_add(elapsed.as_micros() as u64);
+    let nanos = elapsed.as_nanos().min(u128::from(u64::MAX)) as u64;
+    *ns = ns.saturating_add(nanos);
+}
+
 #[cfg(feature = "syntax")]
 fn normalize_syntax_spans_for_text(text: &str, spans: &mut Vec<SyntaxSpan>) {
     let max = text.len();
@@ -114,10 +121,11 @@ pub(super) fn paint_row(
     let (row_range, line, row_folds, row_preedit_range, row_spans) = if perf_enabled {
         let started = Instant::now();
         let out = cached_row_text_with_range(st, row, text_cache_max_entries);
-        st.paint_perf_frame.us_row_text = st
-            .paint_perf_frame
-            .us_row_text
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_row_text,
+            &mut st.paint_perf_frame.ns_row_text,
+            started,
+        );
         out
     } else {
         cached_row_text_with_range(st, row, text_cache_max_entries)
@@ -173,10 +181,11 @@ pub(super) fn paint_row(
             .text()
             .measure_str(" ", text_style, measure_constraints);
         if let Some(started) = started {
-            st.paint_perf_frame.us_baseline_measure = st
-                .paint_perf_frame
-                .us_baseline_measure
-                .saturating_add(started.elapsed().as_micros() as u64);
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_baseline_measure,
+                &mut st.paint_perf_frame.ns_baseline_measure,
+                started,
+            );
         }
         let measured_h = if metrics.size.height.0 > 0.01 {
             metrics.size.height
@@ -352,10 +361,11 @@ pub(super) fn paint_row(
                         scale_factor,
                     );
                     if let Some(started) = started {
-                        st.paint_perf_frame.us_text_draw = st
-                            .paint_perf_frame
-                            .us_text_draw
-                            .saturating_add(started.elapsed().as_micros() as u64);
+                        add_paint_perf_elapsed(
+                            &mut st.paint_perf_frame.us_text_draw,
+                            &mut st.paint_perf_frame.ns_text_draw,
+                            started,
+                        );
                     }
                     row_preedit = Some(RowPreeditMapping {
                         insert_at: caret_in_line,
@@ -393,10 +403,11 @@ pub(super) fn paint_row(
             SyntaxRowCacheLookup::Hit(spans) => {
                 syntax_spans = Some(Arc::clone(&spans));
                 if let Some(started) = lookup_started {
-                    st.paint_perf_frame.us_syntax_spans = st
-                        .paint_perf_frame
-                        .us_syntax_spans
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_syntax_spans,
+                        &mut st.paint_perf_frame.ns_syntax_spans,
+                        started,
+                    );
                 }
 
                 if !row_scene_replayed
@@ -429,10 +440,11 @@ pub(super) fn paint_row(
             SyntaxRowCacheLookup::Miss { tick } => {
                 syntax_lookup_miss_tick = Some(tick);
                 if let Some(started) = lookup_started {
-                    st.paint_perf_frame.us_syntax_spans = st
-                        .paint_perf_frame
-                        .us_syntax_spans
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_syntax_spans,
+                        &mut st.paint_perf_frame.ns_syntax_spans,
+                        started,
+                    );
                 }
             }
         }
@@ -454,10 +466,11 @@ pub(super) fn paint_row(
                     tick,
                 );
                 if let Some(started) = started {
-                    st.paint_perf_frame.us_syntax_spans = st
-                        .paint_perf_frame
-                        .us_syntax_spans
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_syntax_spans,
+                        &mut st.paint_perf_frame.ns_syntax_spans,
+                        started,
+                    );
                 }
                 spans
             };
@@ -560,10 +573,11 @@ pub(super) fn paint_row(
                             scale_factor,
                         );
                         if let Some(started) = started {
-                            st.paint_perf_frame.us_text_draw = st
-                                .paint_perf_frame
-                                .us_text_draw
-                                .saturating_add(started.elapsed().as_micros() as u64);
+                            add_paint_perf_elapsed(
+                                &mut st.paint_perf_frame.us_text_draw,
+                                &mut st.paint_perf_frame.ns_text_draw,
+                                started,
+                            );
                         }
                         row_blob = Some(blob);
                         row_blob_metrics = Some(metrics);
@@ -676,10 +690,11 @@ pub(super) fn paint_row(
                         }
                         row_scene_is_rich = true;
                         if let Some(started) = started {
-                            st.paint_perf_frame.us_rich_materialize = st
-                                .paint_perf_frame
-                                .us_rich_materialize
-                                .saturating_add(started.elapsed().as_micros() as u64);
+                            add_paint_perf_elapsed(
+                                &mut st.paint_perf_frame.us_rich_materialize,
+                                &mut st.paint_perf_frame.ns_rich_materialize,
+                                started,
+                            );
                         }
                         let entry_line_bytes = line.len() as u64;
                         let entry_row_spans_len = row_spans.len() as u64;
@@ -791,10 +806,11 @@ pub(super) fn paint_row(
                                 scale_factor,
                             );
                             if let Some(started) = started {
-                                st.paint_perf_frame.us_text_draw = st
-                                    .paint_perf_frame
-                                    .us_text_draw
-                                    .saturating_add(started.elapsed().as_micros() as u64);
+                                add_paint_perf_elapsed(
+                                    &mut st.paint_perf_frame.us_text_draw,
+                                    &mut st.paint_perf_frame.ns_text_draw,
+                                    started,
+                                );
                             }
                             row_blob = Some(blob);
                             row_blob_metrics = Some(metrics);
@@ -858,10 +874,11 @@ pub(super) fn paint_row(
                     scale_factor,
                 );
                 if let Some(started) = started {
-                    st.paint_perf_frame.us_text_draw = st
-                        .paint_perf_frame
-                        .us_text_draw
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_text_draw,
+                        &mut st.paint_perf_frame.ns_text_draw,
+                        started,
+                    );
                 }
                 row_blob = Some(blob);
                 row_blob_metrics = Some(metrics);
@@ -909,10 +926,11 @@ pub(super) fn paint_row(
                     scale_factor,
                 );
                 if let Some(started) = started {
-                    st.paint_perf_frame.us_text_draw = st
-                        .paint_perf_frame
-                        .us_text_draw
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_text_draw,
+                        &mut st.paint_perf_frame.ns_text_draw,
+                        started,
+                    );
                 }
                 row_blob = Some(blob);
                 row_blob_metrics = Some(metrics);
@@ -952,20 +970,22 @@ pub(super) fn paint_row(
             let caret_stops_started = perf_enabled.then(Instant::now);
             services.text().caret_stops(blob, &mut stops);
             if let Some(started) = caret_stops_started {
-                st.paint_perf_frame.us_caret_stops = st
-                    .paint_perf_frame
-                    .us_caret_stops
-                    .saturating_add(started.elapsed().as_micros() as u64);
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_caret_stops,
+                    &mut st.paint_perf_frame.ns_caret_stops,
+                    started,
+                );
             }
             let caret_rect_started = perf_enabled.then(Instant::now);
             let caret_rect = services
                 .text()
                 .caret_rect(blob, 0, CaretAffinity::Downstream);
             if let Some(started) = caret_rect_started {
-                st.paint_perf_frame.us_caret_rect = st
-                    .paint_perf_frame
-                    .us_caret_rect
-                    .saturating_add(started.elapsed().as_micros() as u64);
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_caret_rect,
+                    &mut st.paint_perf_frame.ns_caret_rect,
+                    started,
+                );
             }
 
             // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
@@ -1015,10 +1035,11 @@ pub(super) fn paint_row(
                 scene.ops()[row_scene_ops_start..row_scene_ops_end].to_vec()
             };
             if let Some(started) = capture_started {
-                st.paint_perf_frame.us_row_scene_capture_ops = st
-                    .paint_perf_frame
-                    .us_row_scene_capture_ops
-                    .saturating_add(started.elapsed().as_micros() as u64);
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_scene_capture_ops,
+                    &mut st.paint_perf_frame.ns_row_scene_capture_ops,
+                    started,
+                );
             }
             #[cfg(feature = "syntax")]
             {
@@ -1065,10 +1086,11 @@ pub(super) fn paint_row(
                     &mut st.selection_rect_scratch,
                 );
                 if let Some(started) = started {
-                    st.paint_perf_frame.us_selection_rects = st
-                        .paint_perf_frame
-                        .us_selection_rects
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_selection_rects,
+                        &mut st.paint_perf_frame.ns_selection_rects,
+                        started,
+                    );
                 }
 
                 for local_rect in st.selection_rect_scratch.iter().copied() {
@@ -1300,10 +1322,11 @@ pub(super) fn paint_row(
                     let started = perf_enabled.then(Instant::now);
                     let x0 = services.text().caret_x(blob, local);
                     if let Some(started) = started {
-                        st.paint_perf_frame.us_caret_x = st
-                            .paint_perf_frame
-                            .us_caret_x
-                            .saturating_add(started.elapsed().as_micros() as u64);
+                        add_paint_perf_elapsed(
+                            &mut st.paint_perf_frame.us_caret_x,
+                            &mut st.paint_perf_frame.ns_caret_x,
+                            started,
+                        );
                     }
 
                     let (caret_top, caret_h) = if let (Some(top), Some(h)) =
@@ -1378,69 +1401,79 @@ pub(super) fn paint_row(
         );
     }
 
-    // Cache row geometry for pointer hit-testing / IME cursor-area anchoring in event handlers.
-    let rev = st.buffer.revision();
-    let wrap_cols = st.display_wrap_cols;
-    let folds_epoch = st.folds_epoch;
-    let inlays_epoch = st.inlays_epoch;
-    let display_map_epoch = st.display_map_epoch;
-    if st.row_geom_cache_rev != rev
-        || st.row_geom_cache_wrap_cols != wrap_cols
-        || st.row_geom_cache_folds_epoch != folds_epoch
-        || st.row_geom_cache_inlays_epoch != inlays_epoch
-        || st.row_geom_cache_display_map_epoch != display_map_epoch
+    let row_geom_cache_started = perf_enabled.then(Instant::now);
     {
-        st.row_geom_cache_rev = rev;
-        st.row_geom_cache_wrap_cols = wrap_cols;
-        st.row_geom_cache_folds_epoch = folds_epoch;
-        st.row_geom_cache_inlays_epoch = inlays_epoch;
-        st.row_geom_cache_display_map_epoch = display_map_epoch;
-        st.row_geom_cache_tick = 0;
-        st.row_geom_cache.clear();
-        st.row_geom_cache_queue.clear();
-        st.row_geom_cache_caret_stops_len_total = 0;
-    }
-
-    st.row_geom_cache_tick = st.row_geom_cache_tick.saturating_add(1);
-    let tick = st.row_geom_cache_tick;
-    let has_row_geom = fresh_geom.is_some() || st.row_geom_cache.contains_key(&row);
-    if has_row_geom {
-        if let Some(geom) = fresh_geom {
-            let caret_stops_len = geom.caret_stops.len() as u64;
-            if let Some((old, _)) = st.row_geom_cache.insert(row, (geom, tick)) {
-                st.row_geom_cache_caret_stops_len_total = st
-                    .row_geom_cache_caret_stops_len_total
-                    .saturating_sub(old.caret_stops.len() as u64);
-            }
-            st.row_geom_cache_caret_stops_len_total = st
-                .row_geom_cache_caret_stops_len_total
-                .saturating_add(caret_stops_len);
-        } else if let Some((_, last_used)) = st.row_geom_cache.get_mut(&row) {
-            *last_used = tick;
+        // Cache row geometry for pointer hit-testing / IME cursor-area anchoring in event handlers.
+        let rev = st.buffer.revision();
+        let wrap_cols = st.display_wrap_cols;
+        let folds_epoch = st.folds_epoch;
+        let inlays_epoch = st.inlays_epoch;
+        let display_map_epoch = st.display_map_epoch;
+        if st.row_geom_cache_rev != rev
+            || st.row_geom_cache_wrap_cols != wrap_cols
+            || st.row_geom_cache_folds_epoch != folds_epoch
+            || st.row_geom_cache_inlays_epoch != inlays_epoch
+            || st.row_geom_cache_display_map_epoch != display_map_epoch
+        {
+            st.row_geom_cache_rev = rev;
+            st.row_geom_cache_wrap_cols = wrap_cols;
+            st.row_geom_cache_folds_epoch = folds_epoch;
+            st.row_geom_cache_inlays_epoch = inlays_epoch;
+            st.row_geom_cache_display_map_epoch = display_map_epoch;
+            st.row_geom_cache_tick = 0;
+            st.row_geom_cache.clear();
+            st.row_geom_cache_queue.clear();
+            st.row_geom_cache_caret_stops_len_total = 0;
         }
 
-        st.row_geom_cache_queue.push_back((row, tick));
-        compact_row_lru_queue_if_needed(
-            &st.row_geom_cache,
-            &mut st.row_geom_cache_queue,
-            text_cache_max_entries,
-        );
-        while st.row_geom_cache.len() > text_cache_max_entries {
-            let Some((victim, victim_tick)) = st.row_geom_cache_queue.pop_front() else {
-                break;
-            };
-            let remove = st
-                .row_geom_cache
-                .get(&victim)
-                .is_some_and(|(_, last_used)| *last_used == victim_tick);
-            if remove {
-                if let Some((old, _)) = st.row_geom_cache.remove(&victim) {
+        st.row_geom_cache_tick = st.row_geom_cache_tick.saturating_add(1);
+        let tick = st.row_geom_cache_tick;
+        let has_row_geom = fresh_geom.is_some() || st.row_geom_cache.contains_key(&row);
+        if has_row_geom {
+            if let Some(geom) = fresh_geom {
+                let caret_stops_len = geom.caret_stops.len() as u64;
+                if let Some((old, _)) = st.row_geom_cache.insert(row, (geom, tick)) {
                     st.row_geom_cache_caret_stops_len_total = st
                         .row_geom_cache_caret_stops_len_total
                         .saturating_sub(old.caret_stops.len() as u64);
                 }
+                st.row_geom_cache_caret_stops_len_total = st
+                    .row_geom_cache_caret_stops_len_total
+                    .saturating_add(caret_stops_len);
+            } else if let Some((_, last_used)) = st.row_geom_cache.get_mut(&row) {
+                *last_used = tick;
+            }
+
+            st.row_geom_cache_queue.push_back((row, tick));
+            compact_row_lru_queue_if_needed(
+                &st.row_geom_cache,
+                &mut st.row_geom_cache_queue,
+                text_cache_max_entries,
+            );
+            while st.row_geom_cache.len() > text_cache_max_entries {
+                let Some((victim, victim_tick)) = st.row_geom_cache_queue.pop_front() else {
+                    break;
+                };
+                let remove = st
+                    .row_geom_cache
+                    .get(&victim)
+                    .is_some_and(|(_, last_used)| *last_used == victim_tick);
+                if remove {
+                    if let Some((old, _)) = st.row_geom_cache.remove(&victim) {
+                        st.row_geom_cache_caret_stops_len_total = st
+                            .row_geom_cache_caret_stops_len_total
+                            .saturating_sub(old.caret_stops.len() as u64);
+                    }
+                }
             }
         }
+    }
+    if let Some(started) = row_geom_cache_started {
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_row_geom_cache,
+            &mut st.paint_perf_frame.ns_row_geom_cache,
+            started,
+        );
     }
 
     if perf_enabled {
@@ -1449,10 +1482,11 @@ pub(super) fn paint_row(
             .rows_drew_rich
             .saturating_add(drew_rich as u64);
         if let Some(row_started) = row_started {
-            st.paint_perf_frame.us_total = st
-                .paint_perf_frame
-                .us_total
-                .saturating_add(row_started.elapsed().as_micros() as u64);
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_total,
+                &mut st.paint_perf_frame.ns_total,
+                row_started,
+            );
         }
     }
 }
@@ -1770,10 +1804,11 @@ fn try_replay_row_scene_cache_fast_syntax(
             {
                 *last_used = tick;
                 if let Some(started) = probe_started.take() {
-                    st.paint_perf_frame.us_row_scene_fast_probe = st
-                        .paint_perf_frame
-                        .us_row_scene_fast_probe
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_fast_probe,
+                        &mut st.paint_perf_frame.ns_row_scene_fast_probe,
+                        started,
+                    );
                 }
                 let replay_delta = fret_core::Point::new(
                     Px(origin.x.0 - cached.origin.x.0),
@@ -1782,20 +1817,22 @@ fn try_replay_row_scene_cache_fast_syntax(
                 let touch_started = st.paint_perf_enabled.then(Instant::now);
                 painter.touch_hosted_resources_in_scene_ops(cached.ops.as_slice());
                 if let Some(started) = touch_started {
-                    st.paint_perf_frame.us_row_scene_replay_touch = st
-                        .paint_perf_frame
-                        .us_row_scene_replay_touch
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_replay_touch,
+                        &mut st.paint_perf_frame.ns_row_scene_replay_touch,
+                        started,
+                    );
                 }
                 let replay_started = st.paint_perf_enabled.then(Instant::now);
                 painter
                     .scene()
                     .replay_ops_translated(cached.ops.as_slice(), replay_delta);
                 if let Some(started) = replay_started {
-                    st.paint_perf_frame.us_row_scene_replay_ops = st
-                        .paint_perf_frame
-                        .us_row_scene_replay_ops
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_replay_ops,
+                        &mut st.paint_perf_frame.ns_row_scene_replay_ops,
+                        started,
+                    );
                 }
                 if st.paint_perf_enabled {
                     st.paint_perf_frame.rows_scene_replayed =
@@ -1805,10 +1842,11 @@ fn try_replay_row_scene_cache_fast_syntax(
             }
             Some(_) | None => {
                 if let Some(started) = probe_started.take() {
-                    st.paint_perf_frame.us_row_scene_fast_probe = st
-                        .paint_perf_frame
-                        .us_row_scene_fast_probe
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_fast_probe,
+                        &mut st.paint_perf_frame.ns_row_scene_fast_probe,
+                        started,
+                    );
                 }
                 None
             }
@@ -1852,10 +1890,11 @@ fn try_replay_row_scene_cache(
             Some((cached, last_used)) if cached.key == *key => {
                 *last_used = tick;
                 if let Some(started) = probe_started.take() {
-                    st.paint_perf_frame.us_row_scene_full_probe = st
-                        .paint_perf_frame
-                        .us_row_scene_full_probe
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_full_probe,
+                        &mut st.paint_perf_frame.ns_row_scene_full_probe,
+                        started,
+                    );
                 }
                 let replay_delta = fret_core::Point::new(
                     Px(origin.x.0 - cached.origin.x.0),
@@ -1864,20 +1903,22 @@ fn try_replay_row_scene_cache(
                 let touch_started = st.paint_perf_enabled.then(Instant::now);
                 painter.touch_hosted_resources_in_scene_ops(cached.ops.as_slice());
                 if let Some(started) = touch_started {
-                    st.paint_perf_frame.us_row_scene_replay_touch = st
-                        .paint_perf_frame
-                        .us_row_scene_replay_touch
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_replay_touch,
+                        &mut st.paint_perf_frame.ns_row_scene_replay_touch,
+                        started,
+                    );
                 }
                 let replay_started = st.paint_perf_enabled.then(Instant::now);
                 painter
                     .scene()
                     .replay_ops_translated(cached.ops.as_slice(), replay_delta);
                 if let Some(started) = replay_started {
-                    st.paint_perf_frame.us_row_scene_replay_ops = st
-                        .paint_perf_frame
-                        .us_row_scene_replay_ops
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_replay_ops,
+                        &mut st.paint_perf_frame.ns_row_scene_replay_ops,
+                        started,
+                    );
                 }
                 if st.paint_perf_enabled {
                     st.paint_perf_frame.rows_scene_replayed =
@@ -1887,10 +1928,11 @@ fn try_replay_row_scene_cache(
             }
             Some(_) | None => {
                 if let Some(started) = probe_started.take() {
-                    st.paint_perf_frame.us_row_scene_full_probe = st
-                        .paint_perf_frame
-                        .us_row_scene_full_probe
-                        .saturating_add(started.elapsed().as_micros() as u64);
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_row_scene_full_probe,
+                        &mut st.paint_perf_frame.ns_row_scene_full_probe,
+                        started,
+                    );
                 }
                 None
             }
@@ -1981,10 +2023,11 @@ fn store_row_scene_cache(
         }
     }
     if let Some(started) = store_started {
-        st.paint_perf_frame.us_row_scene_store = st
-            .paint_perf_frame
-            .us_row_scene_store
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_row_scene_store,
+            &mut st.paint_perf_frame.ns_row_scene_store,
+            started,
+        );
     }
     if st.paint_perf_enabled {
         st.paint_perf_frame.rows_scene_stored =
@@ -2059,10 +2102,11 @@ fn store_row_scene_cache(
         }
     }
     if let Some(started) = store_started {
-        st.paint_perf_frame.us_row_scene_store = st
-            .paint_perf_frame
-            .us_row_scene_store
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_row_scene_store,
+            &mut st.paint_perf_frame.ns_row_scene_store,
+            started,
+        );
     }
     if st.paint_perf_enabled {
         st.paint_perf_frame.rows_scene_stored =
@@ -2564,19 +2608,21 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
         return;
     };
     if let Some(started) = slice_started {
-        st.paint_perf_frame.us_syntax_slice = st
-            .paint_perf_frame
-            .us_syntax_slice
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_syntax_slice,
+            &mut st.paint_perf_frame.ns_syntax_slice,
+            started,
+        );
     }
 
     let highlight_started = st.paint_perf_enabled.then(Instant::now);
     let spans = fret_syntax::highlight(slice.as_str(), language).unwrap_or_default();
     if let Some(started) = highlight_started {
-        st.paint_perf_frame.us_syntax_highlight = st
-            .paint_perf_frame
-            .us_syntax_highlight
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_syntax_highlight,
+            &mut st.paint_perf_frame.ns_syntax_highlight,
+            started,
+        );
     }
 
     let distribute_started = st.paint_perf_enabled.then(Instant::now);
@@ -2587,10 +2633,11 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
 
     let rows = syntax_rows_from_highlight_spans(start_byte, chunk_start, &row_ranges, spans);
     if let Some(started) = distribute_started {
-        st.paint_perf_frame.us_syntax_distribute = st
-            .paint_perf_frame
-            .us_syntax_distribute
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_syntax_distribute,
+            &mut st.paint_perf_frame.ns_syntax_distribute,
+            started,
+        );
     }
 
     let store_started = st.paint_perf_enabled.then(Instant::now);
@@ -2600,10 +2647,11 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
         .syntax_rows_stored
         .saturating_add(stored_rows as u64);
     if let Some(started) = store_started {
-        st.paint_perf_frame.us_syntax_store = st
-            .paint_perf_frame
-            .us_syntax_store
-            .saturating_add(started.elapsed().as_micros() as u64);
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_syntax_store,
+            &mut st.paint_perf_frame.ns_syntax_store,
+            started,
+        );
     }
 }
 
@@ -2642,10 +2690,11 @@ fn drain_syntax_prefetch_ready(st: &mut CodeEditorState, max_entries: usize) {
         let stored_rows =
             syntax_row_cache_store_rows(st, chunk.rows.iter().cloned(), max_entries, tick);
         if let Some(started) = store_started {
-            st.paint_perf_frame.us_syntax_store = st
-                .paint_perf_frame
-                .us_syntax_store
-                .saturating_add(started.elapsed().as_micros() as u64);
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_syntax_store,
+                &mut st.paint_perf_frame.ns_syntax_store,
+                started,
+            );
         }
         st.paint_perf_frame.syntax_rows_stored = st
             .paint_perf_frame
