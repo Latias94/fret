@@ -31,6 +31,13 @@
 ## Instrumentation gaps (candidate fearless refactor items)
 
 - [ ] Inventory “hot scratch structures” that can reallocate in spikes; add cheap grow counters (opt-in or always-on).
+- [x] Add renderer encode family attribution behind `FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1` so
+  `renderer_encode_scene_us` can be split into stack/clip/mask/effect/quad/image/text/path/viewport/flush buckets in
+  `diag stats` and triage JSON.
+- [x] Capture one fresh bundle with the renderer encode family profile enabled and use it to decide the next
+  renderer-side follow-on. The current probe shows `text` dominates the remaining encode tail.
+- [ ] Follow up on the text-heavy renderer encode path and decide whether the next slice is text vertex construction,
+  text batching, or scene text indexing.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in

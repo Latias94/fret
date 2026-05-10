@@ -414,6 +414,26 @@ pub struct RenderPerfSnapshot {
     pub encoder_finish_us: u64,
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
+    pub encode_scene_stack_us: u64,
+    pub encode_scene_clip_us: u64,
+    pub encode_scene_mask_us: u64,
+    pub encode_scene_effect_us: u64,
+    pub encode_scene_quad_us: u64,
+    pub encode_scene_image_us: u64,
+    pub encode_scene_text_us: u64,
+    pub encode_scene_path_us: u64,
+    pub encode_scene_viewport_us: u64,
+    pub encode_scene_flush_us: u64,
+    pub encode_scene_stack_ops: u64,
+    pub encode_scene_clip_ops: u64,
+    pub encode_scene_mask_ops: u64,
+    pub encode_scene_effect_ops: u64,
+    pub encode_scene_quad_ops: u64,
+    pub encode_scene_image_ops: u64,
+    pub encode_scene_text_ops: u64,
+    pub encode_scene_path_ops: u64,
+    pub encode_scene_viewport_ops: u64,
+    pub encode_scene_flushes: u64,
 
     // Non-text upload churn (best-effort). These counters attempt to make CPU->GPU texture uploads
     // visible in diagnostics, beyond text atlas updates.
@@ -696,6 +716,20 @@ pub struct RenderPerfSnapshot {
     pub path_material_paints_degraded_to_solid_base: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum EncodeSceneFamily {
+    Stack,
+    Clip,
+    Mask,
+    Effect,
+    Quad,
+    Image,
+    Text,
+    Path,
+    Viewport,
+    Flush,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct RenderPerfStats {
     pub(super) frames: u64,
@@ -708,6 +742,26 @@ pub(super) struct RenderPerfStats {
     pub(super) encoder_finish: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
+    pub(super) encode_scene_stack: Duration,
+    pub(super) encode_scene_clip: Duration,
+    pub(super) encode_scene_mask: Duration,
+    pub(super) encode_scene_effect: Duration,
+    pub(super) encode_scene_quad: Duration,
+    pub(super) encode_scene_image: Duration,
+    pub(super) encode_scene_text: Duration,
+    pub(super) encode_scene_path: Duration,
+    pub(super) encode_scene_viewport: Duration,
+    pub(super) encode_scene_flush: Duration,
+    pub(super) encode_scene_stack_ops: u64,
+    pub(super) encode_scene_clip_ops: u64,
+    pub(super) encode_scene_mask_ops: u64,
+    pub(super) encode_scene_effect_ops: u64,
+    pub(super) encode_scene_quad_ops: u64,
+    pub(super) encode_scene_image_ops: u64,
+    pub(super) encode_scene_text_ops: u64,
+    pub(super) encode_scene_path_ops: u64,
+    pub(super) encode_scene_viewport_ops: u64,
+    pub(super) encode_scene_flushes: u64,
 
     pub(super) svg_uploads: u64,
     pub(super) svg_upload_bytes: u64,
@@ -854,6 +908,77 @@ pub(super) struct RenderPerfStats {
     pub(super) material_degraded_due_to_budget: u64,
 
     pub(super) path_material_paints_degraded_to_solid_base: u64,
+}
+
+impl RenderPerfStats {
+    pub(super) fn record_encode_scene_family(
+        &mut self,
+        family: EncodeSceneFamily,
+        elapsed: Option<Duration>,
+    ) {
+        match family {
+            EncodeSceneFamily::Stack => {
+                self.encode_scene_stack_ops = self.encode_scene_stack_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_stack += elapsed;
+                }
+            }
+            EncodeSceneFamily::Clip => {
+                self.encode_scene_clip_ops = self.encode_scene_clip_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_clip += elapsed;
+                }
+            }
+            EncodeSceneFamily::Mask => {
+                self.encode_scene_mask_ops = self.encode_scene_mask_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_mask += elapsed;
+                }
+            }
+            EncodeSceneFamily::Effect => {
+                self.encode_scene_effect_ops = self.encode_scene_effect_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_effect += elapsed;
+                }
+            }
+            EncodeSceneFamily::Quad => {
+                self.encode_scene_quad_ops = self.encode_scene_quad_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_quad += elapsed;
+                }
+            }
+            EncodeSceneFamily::Image => {
+                self.encode_scene_image_ops = self.encode_scene_image_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_image += elapsed;
+                }
+            }
+            EncodeSceneFamily::Text => {
+                self.encode_scene_text_ops = self.encode_scene_text_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text += elapsed;
+                }
+            }
+            EncodeSceneFamily::Path => {
+                self.encode_scene_path_ops = self.encode_scene_path_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_path += elapsed;
+                }
+            }
+            EncodeSceneFamily::Viewport => {
+                self.encode_scene_viewport_ops = self.encode_scene_viewport_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_viewport += elapsed;
+                }
+            }
+            EncodeSceneFamily::Flush => {
+                self.encode_scene_flushes = self.encode_scene_flushes.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_flush += elapsed;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]

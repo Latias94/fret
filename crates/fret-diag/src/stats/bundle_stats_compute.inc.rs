@@ -587,6 +587,86 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_encode_scene_stack_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_stack_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_clip_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_clip_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_mask_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_mask_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_effect_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_effect_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_quad_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_quad_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_image_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_image_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_path_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_path_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_viewport_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_viewport_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_flush_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_flush_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_stack_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_stack_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_clip_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_clip_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_mask_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_mask_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_effect_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_effect_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_quad_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_image_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_image_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_path_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_path_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_viewport_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_viewport_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_flushes = stats
+                .and_then(|m| m.get("renderer_encode_scene_flushes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_svg_upload_bytes = stats
                 .and_then(|m| m.get("renderer_svg_upload_bytes"))
                 .and_then(|v| v.as_u64())
@@ -1680,6 +1760,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encoder_finish_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
+                renderer_encode_scene_stack_us,
+                renderer_encode_scene_clip_us,
+                renderer_encode_scene_mask_us,
+                renderer_encode_scene_effect_us,
+                renderer_encode_scene_quad_us,
+                renderer_encode_scene_image_us,
+                renderer_encode_scene_text_us,
+                renderer_encode_scene_path_us,
+                renderer_encode_scene_viewport_us,
+                renderer_encode_scene_flush_us,
+                renderer_encode_scene_stack_ops,
+                renderer_encode_scene_clip_ops,
+                renderer_encode_scene_mask_ops,
+                renderer_encode_scene_effect_ops,
+                renderer_encode_scene_quad_ops,
+                renderer_encode_scene_image_ops,
+                renderer_encode_scene_text_ops,
+                renderer_encode_scene_path_ops,
+                renderer_encode_scene_viewport_ops,
+                renderer_encode_scene_flushes,
                 renderer_svg_upload_bytes,
                 renderer_image_upload_bytes,
                 renderer_render_target_updates_ingest_unknown,

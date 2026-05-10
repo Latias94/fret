@@ -285,6 +285,26 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encoder_finish_us: u64,
     pub(super) renderer_prepare_text_us: u64,
     pub(super) renderer_prepare_svg_us: u64,
+    pub(super) renderer_encode_scene_stack_us: u64,
+    pub(super) renderer_encode_scene_clip_us: u64,
+    pub(super) renderer_encode_scene_mask_us: u64,
+    pub(super) renderer_encode_scene_effect_us: u64,
+    pub(super) renderer_encode_scene_quad_us: u64,
+    pub(super) renderer_encode_scene_image_us: u64,
+    pub(super) renderer_encode_scene_text_us: u64,
+    pub(super) renderer_encode_scene_path_us: u64,
+    pub(super) renderer_encode_scene_viewport_us: u64,
+    pub(super) renderer_encode_scene_flush_us: u64,
+    pub(super) renderer_encode_scene_stack_ops: u64,
+    pub(super) renderer_encode_scene_clip_ops: u64,
+    pub(super) renderer_encode_scene_mask_ops: u64,
+    pub(super) renderer_encode_scene_effect_ops: u64,
+    pub(super) renderer_encode_scene_quad_ops: u64,
+    pub(super) renderer_encode_scene_image_ops: u64,
+    pub(super) renderer_encode_scene_text_ops: u64,
+    pub(super) renderer_encode_scene_path_ops: u64,
+    pub(super) renderer_encode_scene_viewport_ops: u64,
+    pub(super) renderer_encode_scene_flushes: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
 
@@ -970,6 +990,16 @@ impl BundleStatsReport {
                 || row.renderer_prepare_svg_us > 0
                 || row.renderer_upload_us > 0
                 || row.renderer_record_passes_us > 0
+                || row.renderer_encode_scene_stack_us > 0
+                || row.renderer_encode_scene_clip_us > 0
+                || row.renderer_encode_scene_mask_us > 0
+                || row.renderer_encode_scene_effect_us > 0
+                || row.renderer_encode_scene_quad_us > 0
+                || row.renderer_encode_scene_image_us > 0
+                || row.renderer_encode_scene_text_us > 0
+                || row.renderer_encode_scene_path_us > 0
+                || row.renderer_encode_scene_viewport_us > 0
+                || row.renderer_encode_scene_flush_us > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -982,6 +1012,44 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                line.push_str(&format!(
+                    " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_stack_us,
+                    row.renderer_encode_scene_clip_us,
+                    row.renderer_encode_scene_mask_us,
+                    row.renderer_encode_scene_effect_us,
+                    row.renderer_encode_scene_quad_us,
+                    row.renderer_encode_scene_image_us,
+                    row.renderer_encode_scene_text_us,
+                    row.renderer_encode_scene_path_us,
+                    row.renderer_encode_scene_viewport_us,
+                    row.renderer_encode_scene_flush_us,
+                ));
+                if row.renderer_encode_scene_stack_ops > 0
+                    || row.renderer_encode_scene_clip_ops > 0
+                    || row.renderer_encode_scene_mask_ops > 0
+                    || row.renderer_encode_scene_effect_ops > 0
+                    || row.renderer_encode_scene_quad_ops > 0
+                    || row.renderer_encode_scene_image_ops > 0
+                    || row.renderer_encode_scene_text_ops > 0
+                    || row.renderer_encode_scene_path_ops > 0
+                    || row.renderer_encode_scene_viewport_ops > 0
+                    || row.renderer_encode_scene_flushes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.encode.ops(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                        row.renderer_encode_scene_stack_ops,
+                        row.renderer_encode_scene_clip_ops,
+                        row.renderer_encode_scene_mask_ops,
+                        row.renderer_encode_scene_effect_ops,
+                        row.renderer_encode_scene_quad_ops,
+                        row.renderer_encode_scene_image_ops,
+                        row.renderer_encode_scene_text_ops,
+                        row.renderer_encode_scene_path_ops,
+                        row.renderer_encode_scene_viewport_ops,
+                        row.renderer_encode_scene_flushes,
+                    ));
+                }
             }
             println!("{line}");
             if row.dispatch_post_dispatch_snapshot_time_us > 0
@@ -1328,6 +1396,16 @@ impl BundleStatsReport {
                 || row.renderer_prepare_svg_us > 0
                 || row.renderer_upload_us > 0
                 || row.renderer_record_passes_us > 0
+                || row.renderer_encode_scene_stack_us > 0
+                || row.renderer_encode_scene_clip_us > 0
+                || row.renderer_encode_scene_mask_us > 0
+                || row.renderer_encode_scene_effect_us > 0
+                || row.renderer_encode_scene_quad_us > 0
+                || row.renderer_encode_scene_image_us > 0
+                || row.renderer_encode_scene_text_us > 0
+                || row.renderer_encode_scene_path_us > 0
+                || row.renderer_encode_scene_viewport_us > 0
+                || row.renderer_encode_scene_flush_us > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -1340,6 +1418,44 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                line.push_str(&format!(
+                    " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_stack_us,
+                    row.renderer_encode_scene_clip_us,
+                    row.renderer_encode_scene_mask_us,
+                    row.renderer_encode_scene_effect_us,
+                    row.renderer_encode_scene_quad_us,
+                    row.renderer_encode_scene_image_us,
+                    row.renderer_encode_scene_text_us,
+                    row.renderer_encode_scene_path_us,
+                    row.renderer_encode_scene_viewport_us,
+                    row.renderer_encode_scene_flush_us,
+                ));
+                if row.renderer_encode_scene_stack_ops > 0
+                    || row.renderer_encode_scene_clip_ops > 0
+                    || row.renderer_encode_scene_mask_ops > 0
+                    || row.renderer_encode_scene_effect_ops > 0
+                    || row.renderer_encode_scene_quad_ops > 0
+                    || row.renderer_encode_scene_image_ops > 0
+                    || row.renderer_encode_scene_text_ops > 0
+                    || row.renderer_encode_scene_path_ops > 0
+                    || row.renderer_encode_scene_viewport_ops > 0
+                    || row.renderer_encode_scene_flushes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.encode.ops(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                        row.renderer_encode_scene_stack_ops,
+                        row.renderer_encode_scene_clip_ops,
+                        row.renderer_encode_scene_mask_ops,
+                        row.renderer_encode_scene_effect_ops,
+                        row.renderer_encode_scene_quad_ops,
+                        row.renderer_encode_scene_image_ops,
+                        row.renderer_encode_scene_text_ops,
+                        row.renderer_encode_scene_path_ops,
+                        row.renderer_encode_scene_viewport_ops,
+                        row.renderer_encode_scene_flushes,
+                    ));
+                }
             }
             println!("{line}");
             if row.layout_observation_record_time_us > 0
@@ -3036,6 +3152,86 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_stack_us".to_string(),
+                    Value::from(row.renderer_encode_scene_stack_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_clip_us".to_string(),
+                    Value::from(row.renderer_encode_scene_clip_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_mask_us".to_string(),
+                    Value::from(row.renderer_encode_scene_mask_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_effect_us".to_string(),
+                    Value::from(row.renderer_encode_scene_effect_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_quad_us".to_string(),
+                    Value::from(row.renderer_encode_scene_quad_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_image_us".to_string(),
+                    Value::from(row.renderer_encode_scene_image_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_path_us".to_string(),
+                    Value::from(row.renderer_encode_scene_path_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_viewport_us".to_string(),
+                    Value::from(row.renderer_encode_scene_viewport_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_flush_us".to_string(),
+                    Value::from(row.renderer_encode_scene_flush_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_stack_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_stack_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_clip_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_clip_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_mask_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_mask_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_effect_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_effect_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_quad_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_quad_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_image_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_image_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_text_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_path_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_path_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_viewport_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_viewport_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_flushes".to_string(),
+                    Value::from(row.renderer_encode_scene_flushes),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),

@@ -953,6 +953,20 @@ Renderer-aware baseline (2026-05-10):
   `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --dir target/fret-diag/perf-code-editor-renderer-aware-baseline-v2-gate4 --launch -- target/release/fret-ui-gallery.exe`
 - Result: `p50/us total-layout-paint=2006/122/1815`, `p95/max=2668/149/2291`, gate passed.
 
+Renderer encode attribution (2026-05-10):
+
+- Added opt-in `FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1` so `renderer_encode_scene_us` can be split into
+  stack/clip/mask/effect/quad/image/text/path/viewport/flush buckets. The new buckets now flow through
+  `fret-render-wgpu`, `fret-bootstrap` frame stats, and `diag stats` / triage JSON.
+- Suggested evidence command:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE=1 --dir target/fret-diag/perf-code-editor-renderer-family-profile --launch -- target/release/fret-ui-gallery.exe`
+- This is intentionally evidence-first. The next decision point is not another blind renderer rewrite; it is a fresh
+  bundle with the family profile enabled so the remaining encode tail can be assigned to the right family before any
+  structural refactor.
+- Current probe result (`target/fret-diag/perf-code-editor-renderer-family-profile-v2/1778412984109/bundle.schema2.json`):
+  `renderer.encode.us(text)=932-1030us`, `clip=16-21us`, `quad=6-12us`, `mask/effect/path/viewport/flush=0`.
+  That means the remaining encode tail on this probe is text-heavy, not clip/quad-heavy.
+
 ## Failure exemplar map
 
 - Layout-root build spikes: `Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)`.

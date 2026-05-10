@@ -58,6 +58,9 @@ impl Renderer {
             return (encoding, true);
         }
 
+        let encode_family_profile_enabled = perf_enabled
+            && std::env::var_os("FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE")
+                .is_some_and(|value| !value.is_empty());
         let encode_start = perf_enabled.then(Instant::now);
         {
             let encode_span = if trace_enabled {
@@ -72,6 +75,9 @@ impl Renderer {
                 viewport_size,
                 format_is_srgb,
                 &mut encoding,
+                perf_enabled,
+                encode_family_profile_enabled,
+                frame_perf,
             );
         }
         if let Some(encode_start) = encode_start {
