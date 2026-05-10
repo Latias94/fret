@@ -78,6 +78,20 @@
     `ns_row_scene_fast_path=243900`, `ns_row_content_resolve=396500`, `ns_text_draw=64700`, and
     `scratch_element_children_vec_pool_grow_events=57`. That keeps `RowGeomKey` / `RowSceneKey` splitting off the
     table unless a fresh low-overhead probe changes the shape of the bottleneck.
+  - 2026-05-11 Zed/GPUI reference pass:
+    `repo-ref/zed/crates/gpui/src/elements/canvas.rs` keeps Canvas thin (`prepaint` returns frame-local state and
+    `paint` only emits low-level primitives), while `repo-ref/zed/crates/gpui/src/text_system/line_layout.rs`
+    carries the durable text/layout reuse contract through current/previous-frame caches and caller-provided content
+    hashes. Fret already matches the important text-prep shape on this probe (`paint_text_prepare_calls=0`,
+    text blob miss only on the new entering row), so the next editor-grade slice should target Canvas/display-list
+    scene emission and renderer payload budget, not more row key construction.
+  - 2026-05-11 diag-stats confirmation:
+    `diag stats --sort cpu_cycles` on
+    `target/fret-diag/perf-code-editor-paint-detail-probe-v1/1778455020350/bundle.schema2.json` reports p50/p95
+    total `1603/1902us`, paint `1512/1809us`, layout `59/64us`, renderer upload p95 `337us`, and the steady footprint
+    `scene_ops=497`, `paint.nodes=235`, `renderer_instance_bytes~220-223KB`, `renderer_encode_scene_text_ops=338`.
+    The Canvas hotspot is therefore real but bounded: it is a surface/display-list efficiency issue, not a broad
+    framework layout regression.
 - [x] Smooth syntax-cache miss spikes on the code-editor paint path (prefetch or background fill) using
   `ui-gallery-code-editor-torture-autoscroll-steady` as the guardrail. Current telemetry shows a single syntax miss can
   add ~4.2ms to a frame (`tick=341` in
