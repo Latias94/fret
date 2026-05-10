@@ -1,7 +1,7 @@
 # UI Performance Contract Audit
 
 Status: Active audit; goal not complete.
-Date: 2026-05-09
+Date: 2026-05-11
 
 ## Objective
 
@@ -37,6 +37,8 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - `5998e1df82 docs(perf): document baseline maintenance policy`
   - `0121e7f10a fix(perf): separate baseline threshold surfaces`
   - `380db5d44d perf(ui): profile flex-wrap layout patch`
+  - `a58277f72 feat(diag): surface hotspot and scratch growth signals`
+  - `0ebcebd04 docs(perf): record code-editor hotspot evidence`
 - Short resize gate smoke:
   - Summary: `target/fret-diag/codex-resize-gate-default-hooks-smoke/summary.json`
   - Result: PASS, `failures=0`
@@ -52,9 +54,12 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`, attempts=3 repeat=7,
     `pass_attempts=3`.
 - Baseline p50 coverage scan:
-  - `BASELINE_FILES=60`
-  - `TOTAL_ROWS=299`
-  - `TOTAL_ROWS_WITH_P50=3`
+  - `BASELINE_FILES=71`
+  - `TOTAL_ROWS=307`
+  - `TOTAL_ROWS_WITH_P50=11`
+  - `TOTAL_ROWS_WITH_P90=156`
+  - `TOTAL_ROWS_WITH_P95=156`
+  - `TOTAL_ROWS_WITH_MAX=307`
 - Promoted Windows `ui-code-editor-resize-probes` v2 re-seed:
   - 20% headroom selector chose candidate 1 with `fail_total=0`:
     `target/fret-diag-baseline-select-ui-code-editor-resize-probes-windows-rtx4090-v2/selection-summary.json`.
@@ -64,6 +69,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - The failed attempt was paint-dominant, not layout-dominant:
     `top_total_time_us=13800` vs threshold `11282`, while layout/solve were below threshold and
     `diag stats --sort cpu_cycles` showed `paint.widget p95=10922us`.
+  - New code-editor hotspot evidence:
+    `target/fret-diag/perf-code-editor-hotspot-hint-probe-v1/check.perf_hints.json` flags
+    `paint.widget_heavy` on `ElementHostWidget::Canvas` plus `renderer.upload_churn`, while
+    `target/fret-diag/perf-code-editor-paint-detail-probe-v1/1778455020350/bundle.schema2.json` still replays
+    `288/289` visible rows and stores only 1 new row.
 - `ui-gallery-steady` re-seed attempts after `--reuse-launch-per-script` and `--prelude-each-run` normalization:
   - `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3b/selection-summary.json`:
     candidate-1 validated with `fail_total=2`, both failures on `ui-gallery-view-cache-toggle-perf-steady`.
@@ -76,16 +86,14 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 1. Split `ui-gallery-steady` into narrower steady-contract groups, or mark the broad suite as evidence-only until the
    membership is narrowed. The current Windows `ui-gallery-steady.windows-rtx4090.v2.json` re-seed is blocked by
    cross-script drift, not by a single threshold tweak.
-2. Run the remaining full formal gates after the helper normalization change.
-   - Done: `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7`
-   - Done: `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
-3. Decide whether the post-virtualization view-cache resize torture scripts should remain evidence-only or become a
+2. Decide whether the post-virtualization view-cache resize torture scripts should remain evidence-only or become a
    dedicated baseline suite.
-4. Add a stricter editor paint stressor before considering a `WindowedRowsSurface` display-list rewrite.
-5. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
+3. Add a stricter editor paint stressor before considering a `WindowedRowsSurface` display-list rewrite.
+4. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
 
 ## Audit Conclusion
 
 The goal is not complete. The Windows `ui-resize-probes` and `ui-code-editor-resize-probes` contracts now have
-checked-in `measured_p50` evidence and green formal repeat=7 gates, but the broader editor-grade contract still needs
-the steady-gallery suite split/narrowing work before `ui-gallery-steady` can be promoted as a stable Windows baseline.
+checked-in `measured_p50` evidence and green formal repeat=7 gates, and the broader baseline inventory now includes
+more `measured_p50/p90/p95/max` rows, but the broader editor-grade contract still needs the steady-gallery
+suite split/narrowing work before `ui-gallery-steady` can be promoted as a stable Windows baseline.
