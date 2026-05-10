@@ -289,6 +289,49 @@ Finding (2026-05-10): redundant row background quads are pure scene-op churn
 - Interpretation: this is a safe cleanup, but it is still a local optimization. The structural follow-on remains
   row/fragment retention or replay by stable keys, not more global cache gating.
 
+Scene text blob index for renderer text prepare (2026-05-10):
+
+- Finding: after syntax prefetch and row-cache compaction, the code-editor autoscroll probe still showed renderer
+  text prepare and scene encode as separate paint costs. `TextSystem::collect_scene_pinned_keys` scanned every
+  `SceneOp` each frame just to find text blobs. That is exactly the kind of hot-path churn that GPUI/Zed-style
+  rendering avoids by keeping explicit frame indexes for frequently consumed subsets.
+- Change: `SceneRecording` now records text blob ids in draw-op order as text ops are pushed. The index is cleared with
+  the scene, swapped with paint-cache storage, and replayed through the same cache boundary as the op vector. Renderer
+  atlas pinning now iterates `scene.text_blob_ids()` instead of scanning all scene ops.
+- Implementation anchors:
+  - `crates/fret-core/src/scene/mod.rs` (`SceneRecording::text_blob_ids`, `SceneRecording::push`,
+    `SceneRecording::swap_storage`)
+  - `crates/fret-ui/src/tree/paint_cache.rs` (`PaintCacheState::prev_text_blob_ids`)
+  - `crates/fret-ui/src/tree/ui_tree_view_cache.rs` (`ingest_paint_cache_source`)
+  - `crates/fret-render-wgpu/src/text/atlas_flow.rs` (`collect_scene_pinned_keys`)
+- Verification:
+  - `cargo fmt -p fret-core -p fret-ui -p fret-render-wgpu --check`
+  - `cargo check -p fret-core`
+  - `cargo check -p fret-ui`
+  - `cargo check -p fret-render-wgpu`
+  - `cargo nextest run -p fret-core --lib --no-fail-fast`
+  - `cargo build -p fretboard --release`
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev` (passed with existing
+    `fret-runtime` / `fret-ui` warnings only)
+- A/B evidence:
+  - Indexed version: `renderer_prepare_text_us` stayed around `100-111us` in the final gate.
+  - Temporary scan-all-ops version:
+    `target/fret-diag/perf-code-editor-scene-text-index-ab-scan/1778399707408/bundle.schema2.json`
+    reported `renderer_prepare_text_us` around `751-1165us`.
+- Final gate:
+  - Command:
+    `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --dir target/fret-diag/perf-code-editor-scene-text-index-gate-final --launch -- target/release/fret-ui-gallery.exe`
+  - Bundle:
+    `target/fret-diag/perf-code-editor-scene-text-index-gate-final/1778400442891/bundle.schema2.json`
+  - Result: gate passed with p50/p95/max total `2419/2709/2709us` and paint `2186/2478/2478us`.
+  - Renderer stats: p95/max upload `187us`, record `40us`, finish `123us`, encode `1079us`, text `111us`,
+    svg `9us`.
+  - Worst frame `tick=1445`: total/layout/prepaint/paint `2709/241/95/2373us`; renderer encode/text
+    `1017/109us`.
+- Interpretation: renderer text prepare is no longer the first-order renderer bottleneck for this script. The next
+  renderer slice should split `renderer_encode_scene_us` into op classification, text vertex construction, quad/text
+  batching, and draw-group flush/merge work.
+
 Workflow when it fails:
 
 - Read `target/fret-diag/check.perf_thresholds.json` and follow the bundle path printed as `worst overall`.

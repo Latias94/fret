@@ -55,6 +55,7 @@ impl<H: UiHost> UiTree<H> {
     pub fn ingest_paint_cache_source(&mut self, scene: &mut Scene) {
         scene.swap_storage(
             &mut self.paint_cache.prev_ops,
+            &mut self.paint_cache.prev_text_blob_ids,
             &mut self.paint_cache.prev_fingerprint,
         );
     }
