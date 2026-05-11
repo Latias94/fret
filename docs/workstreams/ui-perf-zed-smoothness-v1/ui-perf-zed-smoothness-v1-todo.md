@@ -53,7 +53,9 @@ Conventions:
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
   - Use this trio as the default “is the frame still good?” loop; keep full `ui-gallery-steady` for periodic
-    maintenance or suite membership changes.
+    drift evidence or suite membership changes, not as a single formal Windows contract.
+  - Split or explicitly defer the remaining broad-only steady members before another Windows `ui-gallery-steady`
+    promotion: hover layout, Material tabs, menubar keyboard nav, view-cache toggle, and virtual-list torture.
   - Evidence: perf log entries `2026-05-07 13:58` and `2026-05-07 14:01`.
 
 - [x] Stabilize `ui-gallery-overlay-pointer-move-steady` cleanup after pointer sweeps.

@@ -76,7 +76,10 @@ Budgets are guidance for representative probes. The committed gate is the script
   variability; treat that as the current Windows contract rationale rather than a renderer threshold problem.
 - The broad `ui-gallery-steady` suite is still too mixed for a single stable Windows baseline under the current
   membership. Keep the selector support, but treat the broad suite as evidence-only or split it into narrower
-  steady-contract groups before attempting another Windows v2 promotion.
+  steady-contract groups before attempting another Windows v2 promotion. The current broad-only members are
+  `ui-gallery-hover-layout-torture-steady`, `ui-gallery-material3-tabs-switch-perf-steady`,
+  `ui-gallery-menubar-keyboard-nav-steady`, `ui-gallery-view-cache-toggle-perf-steady`, and
+  `ui-gallery-virtual-list-torture-steady`.
 - The context-menu, dialog, dropdown, overlay pointer-move, and overlay-torture members now each have dedicated
   Windows baselines; keep `ui-gallery-overlay-steady` evidence-only because the broad suite still mixes overlay,
   modal, inspector, and legacy members.

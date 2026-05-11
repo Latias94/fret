@@ -179,6 +179,18 @@ We treat a small set of scripts as “editor-relevant perf probes”. The suite 
 
 The suite is intentionally *small*; additional pages/scripts should exist, but these are the “must not regress” set.
 
+Current contract split (2026-05-11):
+
+- Treat the broad `ui-gallery-steady` suite as drift evidence, not as a single formal Windows p50/p95/max contract.
+- The formal contract surface is `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`.
+- Do not attempt another single Windows `ui-gallery-steady` promotion until the broad-only members are either split
+  into narrower contracts or explicitly left as evidence-only:
+  `ui-gallery-hover-layout-torture-steady`, `ui-gallery-material3-tabs-switch-perf-steady`,
+  `ui-gallery-menubar-keyboard-nav-steady`, `ui-gallery-view-cache-toggle-perf-steady`, and
+  `ui-gallery-virtual-list-torture-steady`.
+- Keep `ui-resize-probes`, `ui-code-editor-resize-probes`, and `ui-gallery-code-editor-torture-autoscroll-steady`
+  as the current editor-grade hard contracts for resize and editor paint/payload pressure.
+
 ---
 
 ## 1) Measurement protocol (to avoid noise)
