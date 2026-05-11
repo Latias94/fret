@@ -67,6 +67,10 @@ Last updated: 2026-05-12
   - [x] handle method boundary,
   - [x] a11y,
   - [ ] input,
+    - [x] edit transactions / IME delete-surrounding / undo-redo / row-geom cache shift,
+    - [ ] keyboard and command dispatch,
+    - [ ] caret navigation and pointer selection,
+    - [ ] clipboard effects,
   - [ ] paint,
   - [ ] syntax,
   - [ ] diagnostics/decorations.
