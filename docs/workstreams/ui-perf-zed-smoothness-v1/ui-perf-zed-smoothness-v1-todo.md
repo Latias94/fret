@@ -54,8 +54,14 @@ Conventions:
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
   - Use this trio as the default “is the frame still good?” loop; keep full `ui-gallery-steady` for periodic
     drift evidence or suite membership changes, not as a single formal Windows contract.
-  - Split or explicitly defer the remaining broad-only steady members before another Windows `ui-gallery-steady`
-    promotion: hover layout, Material tabs, and menubar keyboard nav.
+  - Do not try another Windows `ui-gallery-steady` promotion by loosening thresholds; treat the broad suite as drift
+    evidence unless it is redefined as a suite-of-contracts.
+  - `ui-gallery-hover-layout-torture-steady` now has its own Windows v1 baseline plus a `diag stats
+    --check-hover-layout-max 0` semantic gate and no longer belongs to the broad-only member list.
+  - `ui-gallery-material3-tabs-switch-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
+  - `ui-gallery-menubar-keyboard-nav-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
   - `ui-gallery-view-cache-toggle-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
     broad-only member list.
   - `ui-gallery-virtual-list-torture-steady` now has its own Windows v1 baseline and no longer belongs to the

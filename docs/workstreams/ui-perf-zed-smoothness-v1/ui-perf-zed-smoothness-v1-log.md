@@ -12066,3 +12066,47 @@ Validation:
 Decision:
 - Treat `ui-gallery-view-cache-toggle-perf-steady.windows-rtx4090.v1.json` as a dedicated Windows contract.
 - Keep the remaining broad-only `ui-gallery-steady` members evidence-only until each is split or explicitly deferred.
+
+## 2026-05-11 (menubar, Material tabs, and hover-layout contracts v1)
+
+Question:
+- Can the remaining broad-only steady gallery members become dedicated Windows contracts instead of keeping
+  `ui-gallery-steady` as a mixed formal gate?
+
+Change:
+- Added checked-in Windows RTX 4090 baselines for:
+  - `docs/workstreams/perf-baselines/ui-gallery-menubar-keyboard-nav-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-material3-tabs-switch-perf-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-hover-layout-torture-steady.windows-rtx4090.v1.json`
+- Added seed policies for the two pointer-move-sensitive contracts:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-material3-tabs-switch-perf-steady.v1.json`
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-hover-layout-torture-steady.v1.json`
+
+Validation:
+- Menubar selector:
+  `target/fret-diag-baseline-select-ui-gallery-menubar-keyboard-nav-steady-windows-rtx4090-v1/selection-summary.json`
+  - candidate-1 validated `3/3` with `fail_total=0`
+  - p50/p95/max total=`1666/3385/3385us`
+  - thresholds total/layout/solve=`4062/3516/731us`
+- Material 3 tabs selector:
+  `target/fret-diag-baseline-select-ui-gallery-material3-tabs-switch-perf-steady-windows-rtx4090-v1-policy40/selection-summary.json`
+  - candidate-1 and candidate-2 both validated `3/3` with `fail_total=0`
+  - candidate-2 won on p90 (`1924` vs `2231`)
+  - p50/p95/max total=`1873/1924/1924us`
+  - thresholds total/layout/solve/pointer_move(dispatch/hit-test)=`2694/1610/0/1536/32`
+- Hover-layout selector:
+  `target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/selection-summary.json`
+  - candidate-2 validated `3/3` with `fail_total=0`
+  - p50/p95/max total=`998/1285/1285us`
+  - thresholds total/layout/solve/pointer_move(dispatch/hit-test)=`1542/248/0/448/32`
+  - no-policy attempts were rejected intentionally: 20% headroom failed on pointer/layout micro-metrics, and 40%
+    still had small pointer/layout failures. The v1 policy keeps the total-time gate tight while adding explicit
+    micro-metric slack.
+- Hover-layout semantic gate:
+  `cargo run -q -p fretboard -- diag stats target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/candidate-2-baseline/1778476920836/bundle.schema2.json --check-hover-layout-max 0`
+  passed with `hover.decl_inv(layout/hit/paint)=0/0/0`.
+
+Decision:
+- Treat all former broad-only steady gallery members as dedicated Windows contracts.
+- Keep `ui-gallery-steady` as drift evidence unless it is redefined as a suite-of-contracts; do not re-promote it by
+  loosening broad-suite thresholds.

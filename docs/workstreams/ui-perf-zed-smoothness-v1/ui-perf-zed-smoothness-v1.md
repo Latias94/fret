@@ -183,14 +183,20 @@ Current contract split (2026-05-11):
 
 - Treat the broad `ui-gallery-steady` suite as drift evidence, not as a single formal Windows p50/p95/max contract.
 - The formal contract surface is `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`.
-- Do not attempt another single Windows `ui-gallery-steady` promotion until the broad-only members are either split
-  into narrower contracts or explicitly left as evidence-only:
-  `ui-gallery-hover-layout-torture-steady`, `ui-gallery-material3-tabs-switch-perf-steady`,
-  `ui-gallery-menubar-keyboard-nav-steady`.
+- Do not attempt another single Windows `ui-gallery-steady` promotion by loosening thresholds. The former broad-only
+  members have been split into narrower Windows contracts; the broad suite is now only drift evidence unless it is
+  redefined as a suite-of-contracts.
+- `ui-gallery-hover-layout-torture-steady` now has its own Windows v1 baseline plus a `diag stats
+  --check-hover-layout-max 0` semantic gate and no longer belongs to the broad-only member list.
+- `ui-gallery-material3-tabs-switch-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
+  broad-only member list.
+- `ui-gallery-menubar-keyboard-nav-steady` now has its own Windows v1 baseline and no longer belongs to the
+  broad-only member list.
 - Keep `ui-resize-probes`, `ui-code-editor-resize-probes`,
   `ui-gallery-code-editor-torture-autoscroll-steady`, `ui-gallery-view-cache-toggle-perf-steady`, and
-  `ui-gallery-virtual-list-torture-steady` as the current editor-grade hard contracts for resize, view-cache,
-  virtualization, and editor paint/payload pressure.
+  `ui-gallery-virtual-list-torture-steady`, `ui-gallery-hover-layout-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
+  and `ui-gallery-material3-tabs-switch-perf-steady` as the current editor-grade hard contracts for resize, view-cache,
+  virtualization, hover structural stability, keyboard/menu flow, tabs switching, and editor paint/payload pressure.
 
 ---
 
