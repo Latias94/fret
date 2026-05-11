@@ -82,10 +82,18 @@ Experimental extension contracts:
 - `validate_diagnostic_spans`
 - `normalized_diagnostic_spans`
 - `diagnostic_line_summaries`
+- `GutterMarkerAnchor`
+- `GutterMarkerKind`
+- `GutterMarkerVisual`
+- `GutterMarkerHitTarget`
+- `GutterMarker`
+- `GutterMarkerError`
+- `validate_gutter_markers`
+- `normalized_gutter_markers`
 
 Rationale: diagnostics are the first M2 extension model slice. They use the correct view-layer
-coordinate ownership, but remain experimental until gutter markers, decorations, and a UI proof are
-wired on top of the data contract.
+coordinate ownership, and gutter markers now have an explicit payload/anchor contract. These remain
+experimental until decorations and a UI proof are wired on top of the data contract.
 
 Experimental:
 

@@ -68,9 +68,12 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md`
 - Diagnostic line summary contract:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md`
+- Gutter marker contract:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
+- Gutter marker source: `ecosystem/fret-code-editor-view/src/gutter.rs`
 - Surface root: `ecosystem/fret-code-editor/src/lib.rs`
 - Surface integration: `ecosystem/fret-code-editor/src/editor/mod.rs`
 - Paint hot path: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`

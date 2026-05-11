@@ -84,7 +84,8 @@ The editor should accept feature data through explicit owner-layer contracts:
 - Diagnostics: ranges, severity, source, message, optional code/action ids, and logical-line
   summaries for gutter/overview consumers.
 - Decorations: ranges, visual class, z/order, hover target, hit-test policy.
-- Gutter markers: line or display-row attachment, icon/text payload, tooltip/action hooks.
+- Gutter markers: logical-line or display-row attachment, semantic kind, optional icon/text
+  payload, tooltip/action ids, and explicit hit-target intent.
 - Semantic tokens: token ranges and semantic classes decoupled from paint colors.
 - Completion: request context, candidate model, active candidate, commit policy.
 - Hover/signature help: request context and overlay payloads without owning overlay dismissal policy.

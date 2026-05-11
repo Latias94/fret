@@ -62,7 +62,7 @@ cargo nextest run -p fret-code-editor-view --lib --no-fail-fast
 
 ## Follow-ups
 
-1. Define explicit gutter marker payloads on top of line summaries.
+1. Use `M2_GUTTER_MARKER_CONTRACT_2026-05-12.md` when wiring diagnostic summaries into gutter
+   markers.
 2. Add range decorations that share the same buffer-range validation vocabulary.
-3. Add display-row projection only when a UI surface needs wrapped-row gutter behavior.
-4. Wire a UI Gallery proof after diagnostics, gutter markers, and decorations have stable inputs.
+3. Wire a UI Gallery proof after diagnostics, gutter markers, and decorations have stable inputs.

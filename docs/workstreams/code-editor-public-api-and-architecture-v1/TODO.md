@@ -28,7 +28,7 @@ Last updated: 2026-05-12
 - [x] Specify the first diagnostics data contract as a view-layer buffer-range model.
 - [ ] Extend the first diagnostics contract into decorations/gutter data contracts.
   - [x] Add diagnostic logical-line summaries for gutter/overview consumers.
-  - [ ] Add explicit gutter marker payloads.
+  - [x] Add explicit gutter marker payloads.
   - [ ] Add range decoration payloads.
 - [ ] Decide the coordinate vocabulary for feature payloads: buffer byte range, display point,
       logical line, or display row.
@@ -43,7 +43,8 @@ Last updated: 2026-05-12
 
 - [ ] Land the first diagnostics/decorations/gutter API slice with tests.
   - [x] Diagnostic span + logical-line summary view-layer APIs and tests.
-  - [ ] Gutter marker and decoration payload APIs.
+  - [x] Gutter marker payload API and tests.
+  - [ ] Range decoration payload API.
 - [ ] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
       inlays, soft wrap, and selection.
 - [ ] Add a diagnostics bundle assertion for feature payload stability.

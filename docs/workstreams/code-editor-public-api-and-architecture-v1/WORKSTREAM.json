@@ -33,6 +33,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -104,6 +108,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
     "docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md",
@@ -112,7 +117,8 @@
     "ecosystem/fret-code-editor/src/lib.rs",
     "ecosystem/fret-code-editor-buffer/src/lib.rs",
     "ecosystem/fret-code-editor-view/src/lib.rs",
-    "ecosystem/fret-code-editor-view/src/diagnostics.rs"
+    "ecosystem/fret-code-editor-view/src/diagnostics.rs",
+    "ecosystem/fret-code-editor-view/src/gutter.rs"
   ],
   "adr_refs": [
     "docs/adr/0185-code-editor-ecosystem-v1.md",
