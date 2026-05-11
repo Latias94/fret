@@ -30,10 +30,11 @@ Last updated: 2026-05-12
   - [x] Add diagnostic logical-line summaries for gutter/overview consumers.
   - [x] Add explicit gutter marker payloads.
   - [x] Add range decoration payloads.
-- [ ] Decide the coordinate vocabulary for feature payloads: buffer byte range, display point,
+- [x] Decide the coordinate vocabulary for feature payloads: buffer byte range, display point,
       logical line, or display row.
   - [x] Diagnostics v1 uses `TextBuffer` UTF-8 byte ranges; line summaries use logical line indexes.
-  - [ ] Display-row projection remains open until wrapped-row gutter behavior needs it.
+  - [x] Display-row projection is view-owned, requires `DisplayMap` validation, and is allowed for
+        wrapped-row gutter attachments or current visible-row evidence.
 - [x] Define semantic-token inputs separately from paint colors.
 - [x] Define command/keymap/undo grouping boundaries for editor actions.
 - [x] Define how hover/completion/code-action overlays compose with Fret overlay/focus policy

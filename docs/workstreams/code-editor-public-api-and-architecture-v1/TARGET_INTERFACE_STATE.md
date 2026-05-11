@@ -54,6 +54,14 @@ Required convergence:
   text input queries,
 - view-owned materialization should be the default path for composed rows.
 
+Coordinate vocabulary:
+
+- buffer UTF-8 byte ranges are the default storage contract for source-backed feature payloads,
+- logical lines are for line aggregates and source-stable gutter summaries,
+- display points and display rows are `DisplayMap` projections for current-view anchors,
+  hit-testing, wrapped-row gutters, a11y, paint, and perf evidence,
+- window-space rects are UI/overlay geometry only and must not become model data.
+
 ## UI Surface and Controller
 
 Current app-facing surface:

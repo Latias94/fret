@@ -51,7 +51,8 @@ Exit criteria:
 - Coordinate ownership is explicit and shared with `DisplayMap`. (Diagnostic v1 uses
   `TextBuffer` UTF-8 byte ranges; semantic tokens and range decorations also use `TextBuffer`
   UTF-8 byte ranges; line summaries use logical line indexes. Display-row projection for gutter
-  markers validates against `DisplayMap::row_count`.)
+  markers validates against `DisplayMap::row_count`; the cross-feature coordinate vocabulary is
+  recorded in `M2_COORDINATE_VOCABULARY_2026-05-12.md`.)
 - At least one UI Gallery/example surface can exercise the target package.
 - A no-buffer-mutation gate exists for pure decoration toggles.
 
