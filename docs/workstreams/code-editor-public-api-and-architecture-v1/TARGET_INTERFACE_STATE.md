@@ -81,7 +81,8 @@ Target direction:
 
 The editor should accept feature data through explicit owner-layer contracts:
 
-- Diagnostics: ranges, severity, source, message, optional code/action ids.
+- Diagnostics: ranges, severity, source, message, optional code/action ids, and logical-line
+  summaries for gutter/overview consumers.
 - Decorations: ranges, visual class, z/order, hover target, hit-test policy.
 - Gutter markers: line or display-row attachment, icon/text payload, tooltip/action hooks.
 - Semantic tokens: token ranges and semantic classes decoupled from paint colors.

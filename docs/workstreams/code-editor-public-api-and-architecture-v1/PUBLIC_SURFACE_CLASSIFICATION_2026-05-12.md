@@ -72,6 +72,21 @@ Stable or near-stable:
 - `InlaySpanError`
 - `InlinePreedit`
 
+Experimental extension contracts:
+
+- `DiagnosticSeverity`
+- `DiagnosticSourceKind`
+- `DiagnosticSpan`
+- `DiagnosticSpanError`
+- `DiagnosticLineSummary`
+- `validate_diagnostic_spans`
+- `normalized_diagnostic_spans`
+- `diagnostic_line_summaries`
+
+Rationale: diagnostics are the first M2 extension model slice. They use the correct view-layer
+coordinate ownership, but remain experimental until gutter markers, decorations, and a UI proof are
+wired on top of the data contract.
+
 Experimental:
 
 - `code_wrap_policy::CodeWrapPreset`

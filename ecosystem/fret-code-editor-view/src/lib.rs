@@ -19,8 +19,9 @@ mod inlays;
 pub mod row_spans;
 
 pub use diagnostics::{
-    DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan, DiagnosticSpanError,
-    normalized_diagnostic_spans, validate_diagnostic_spans,
+    DiagnosticLineSummary, DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan,
+    DiagnosticSpanError, diagnostic_line_summaries, normalized_diagnostic_spans,
+    validate_diagnostic_spans,
 };
 pub use folds::{
     FoldSpan, FoldSpanError, apply_fold_spans, folded_byte_to_col, folded_col_count,

@@ -36,9 +36,12 @@ Status: In progress
 Exit criteria:
 
 - Diagnostics, decorations, gutter markers, and semantic tokens have target data contracts.
-  (Diagnostic range contract started in `M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md`.)
+  (Diagnostic range contract started in `M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md`;
+  logical-line summary projection added in
+  `M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md`.)
 - Coordinate ownership is explicit and shared with `DisplayMap`. (Diagnostic v1 uses
-  `TextBuffer` UTF-8 byte ranges.)
+  `TextBuffer` UTF-8 byte ranges; line summaries use logical line indexes. Display-row projection
+  remains open until wrapped-row gutter behavior needs it.)
 - At least one UI Gallery/example surface can exercise the target package.
 - A no-buffer-mutation gate exists for pure decoration toggles.
 

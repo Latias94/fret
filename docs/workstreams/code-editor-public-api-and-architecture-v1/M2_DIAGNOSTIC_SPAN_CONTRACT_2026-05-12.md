@@ -54,7 +54,8 @@ coordinate system a diagnostic payload uses and how it stays valid against a buf
 
 ## Follow-ups
 
-1. Add a gutter marker projection that can derive line/display-row summaries from diagnostic spans.
+1. Build on `M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md` with explicit gutter marker
+   payloads.
 2. Add decoration payloads that can share the same range validation.
 3. Wire a feature-heavy UI Gallery proof only after the data model can be tested without rendering.
 4. Add perf counters when diagnostic payloads become part of the paint path.

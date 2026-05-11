@@ -1739,7 +1739,7 @@ Rule:
 - `docs/workstreams/carousel-embla-parity-v2/` — first 2026-02-28, latest 2026-03-03, 5 markdown docs
 - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/` — first 2026-03-25, latest 2026-03-25, 5 markdown docs
 - `docs/workstreams/code-editor-ecosystem-v1/` — first 2026-01-27, latest 2026-02-16, 2 markdown docs
-- `docs/workstreams/code-editor-public-api-and-architecture-v1/` — first n/a, latest n/a, 8 markdown docs (active narrow follow-on for stabilizing the code editor public API, model boundaries, extension points, and perf/diagnostics gates; includes `WORKSTREAM.json`)
+- `docs/workstreams/code-editor-public-api-and-architecture-v1/` — first n/a, latest n/a, 9 markdown docs (active narrow follow-on for stabilizing the code editor public API, model boundaries, extension points, and perf/diagnostics gates; includes `WORKSTREAM.json`)
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
 - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
 - `docs/workstreams/container-aware-editor-rail-surface-v1/` — first 2026-04-11, latest 2026-04-11, 11 markdown docs

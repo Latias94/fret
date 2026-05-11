@@ -27,8 +27,13 @@ Last updated: 2026-05-12
 
 - [x] Specify the first diagnostics data contract as a view-layer buffer-range model.
 - [ ] Extend the first diagnostics contract into decorations/gutter data contracts.
+  - [x] Add diagnostic logical-line summaries for gutter/overview consumers.
+  - [ ] Add explicit gutter marker payloads.
+  - [ ] Add range decoration payloads.
 - [ ] Decide the coordinate vocabulary for feature payloads: buffer byte range, display point,
       logical line, or display row.
+  - [x] Diagnostics v1 uses `TextBuffer` UTF-8 byte ranges; line summaries use logical line indexes.
+  - [ ] Display-row projection remains open until wrapped-row gutter behavior needs it.
 - [ ] Define semantic-token inputs separately from paint colors.
 - [ ] Define command/keymap/undo grouping boundaries for editor actions.
 - [ ] Define how hover/completion/code-action overlays compose with Fret overlay/focus policy
@@ -37,6 +42,8 @@ Last updated: 2026-05-12
 ## P1 - Implementation Slices
 
 - [ ] Land the first diagnostics/decorations/gutter API slice with tests.
+  - [x] Diagnostic span + logical-line summary view-layer APIs and tests.
+  - [ ] Gutter marker and decoration payload APIs.
 - [ ] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
       inlays, soft wrap, and selection.
 - [ ] Add a diagnostics bundle assertion for feature payload stability.
