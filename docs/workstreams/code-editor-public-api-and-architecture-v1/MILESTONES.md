@@ -1,0 +1,62 @@
+# Milestones
+
+Status: Active milestone plan
+Last updated: 2026-05-12
+
+## M0 - Baseline Audit
+
+Status: Complete (2026-05-12)
+
+Exit criteria:
+
+- `WORKSTREAM.json` exists and names the first-open docs.
+- Baseline audit records current exports, crate size hazards, direct dependencies, and known gaps.
+- Workstream catalog is updated.
+- JSON/catalog/diff hygiene gates pass.
+
+## M1 - Public Surface Classification
+
+Exit criteria:
+
+- Every public item in `fret-code-editor`, `fret-code-editor-buffer`, and
+  `fret-code-editor-view` is classified as stable, experimental, or internal-by-accident.
+- `CodeEditorHandle` has a method-by-method owner table.
+- First proposed removals/renames/moves include migration notes.
+- Focused compile/tests cover unchanged current examples.
+
+## M2 - Target Extension Package
+
+Exit criteria:
+
+- Diagnostics, decorations, gutter markers, and semantic tokens have target data contracts.
+- Coordinate ownership is explicit and shared with `DisplayMap`.
+- At least one UI Gallery/example surface can exercise the target package.
+- A no-buffer-mutation gate exists for pure decoration toggles.
+
+## M3 - First API Cleanup Slice
+
+Exit criteria:
+
+- At least one public API cleanup lands with a surface-diff note.
+- Debug-only APIs are either clearly named as debug/staging or moved away from the default public
+  path.
+- Module/test ownership improves without changing behavior.
+- `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
+
+## M4 - Feature Surface Proof
+
+Exit criteria:
+
+- A realistic editor proof combines syntax, diagnostics/decorations, gutter markers, folds/inlays,
+  soft wrap, selection, and at least one overlay-style feature hook.
+- Diagnostics snapshots expose enough state to explain regressions.
+- The proof has one scripted repro and one gate.
+
+## M5 - Performance Contract Closure
+
+Exit criteria:
+
+- Feature-heavy editor stressors have p50/p95/max and renderer payload baselines.
+- Changes to editor paint/layout/rendering can be reviewed against existing complex wheel,
+  autoscroll, resize, and payload contracts.
+- No broad renderer/windowed-surface rewrite is started without failing or near-threshold evidence.

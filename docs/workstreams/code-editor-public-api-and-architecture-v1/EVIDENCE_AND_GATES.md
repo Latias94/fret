@@ -1,0 +1,76 @@
+# Evidence and Gates
+
+Status: Active gate list
+Last updated: 2026-05-12
+
+## First-Open Repro
+
+```powershell
+python tools/audit_crate.py --crate fret-code-editor
+rg -n "pub (struct|enum|trait|type|fn)|pub use|pub mod" ecosystem/fret-code-editor/src ecosystem/fret-code-editor-buffer/src ecosystem/fret-code-editor-view/src
+rg -n "0185|code editor ecosystem v1|fret-code-editor" docs/adr docs/workstreams -g "*.md"
+```
+
+Use this before public API changes to confirm the current surface and evidence anchors.
+
+## Documentation Gates
+
+```powershell
+python -m json.tool docs/workstreams/code-editor-public-api-and-architecture-v1/WORKSTREAM.json
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+## Code Editor Gates
+
+Run these when a slice changes editor source or public API:
+
+```powershell
+cargo fmt -p fret-code-editor --check
+cargo check -p fret-code-editor --features syntax-rust
+cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast
+python tools/check_layering.py
+```
+
+## Perf Gates
+
+Use the existing editor perf contract workstream as the first source of truth:
+
+- `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
+
+Hot-path editor changes should include:
+
+- p50/p95/max top-frame or frame-p95 evidence,
+- renderer payload fields where relevant,
+- paint/detail attribution when the change touches text, row scenes, Canvas replay, or syntax
+  materialization.
+
+Do not reseed thresholds solely because a new implementation is faster or slower. Reseed only after
+the target behavior and stressor scope are explicit.
+
+## Evidence Anchors
+
+- ADR split: `docs/adr/0185-code-editor-ecosystem-v1.md`
+- Display fragment composition: `docs/adr/0188-code-editor-display-fragments-and-displaymap-composition-v1.md`
+- Text navigation: `docs/adr/0179-text-navigation-and-word-boundaries-v1.md`
+- Platform text input: `docs/adr/0261-platform-text-input-client-interop-v1.md`
+- Replay/resource semantics: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
+- Current alignment: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+- Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
+- View source: `ecosystem/fret-code-editor-view/src/lib.rs`
+- Surface root: `ecosystem/fret-code-editor/src/lib.rs`
+- Surface integration: `ecosystem/fret-code-editor/src/editor/mod.rs`
+- Paint hot path: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
+- Input hot path: `ecosystem/fret-code-editor/src/editor/input/mod.rs`
+- A11y projection: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`
+
+## Known Caveats
+
+- Linux performance is not currently validated by this lane. Keep Windows and wasm evidence labeled
+  by environment.
+- Existing code editor tests are large and concentrated. Passing the current crate tests is useful
+  but does not replace a public API surface-diff note.
+- `code-editor-ecosystem-v1` remains the broad historical rollout lane; this follow-on owns public
+  API and extension architecture closure.

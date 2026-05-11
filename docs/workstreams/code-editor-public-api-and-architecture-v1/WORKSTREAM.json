@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "slug": "code-editor-public-api-and-architecture-v1",
+  "title": "Code Editor Public API and Architecture v1",
+  "status": "active",
+  "updated": "2026-05-12",
+  "scope_kind": "execution",
+  "follow_on_of": "code-editor-ecosystem-v1",
+  "problem": "Stabilize the Fret code editor as an editor-grade subsystem by auditing and tightening its public API, buffer/view/surface boundaries, feature extension points, and performance gates before adding more editor features or broad hot-path rewrites.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from a source-backed public-surface audit of the code editor crates and the existing editor perf contracts before changing public APIs or adding feature surfaces.",
+    "commands": [
+      "python tools/audit_crate.py --crate fret-code-editor",
+      "rg -n \"pub (struct|enum|trait|type|fn)|pub use|pub mod\" ecosystem/fret-code-editor/src ecosystem/fret-code-editor-buffer/src ecosystem/fret-code-editor-view/src",
+      "rg -n \"0185|code editor ecosystem v1|fret-code-editor\" docs/adr docs/workstreams -g \"*.md\""
+    ]
+  },
+  "gates": [
+    {
+      "name": "json shape",
+      "command": "python -m json.tool docs/workstreams/code-editor-public-api-and-architecture-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff hygiene",
+      "command": "git diff --check"
+    },
+    {
+      "name": "code editor format",
+      "command": "cargo fmt -p fret-code-editor --check"
+    },
+    {
+      "name": "code editor syntax feature check",
+      "command": "cargo check -p fret-code-editor --features syntax-rust"
+    },
+    {
+      "name": "code editor focused tests",
+      "command": "cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md",
+    "docs/adr/0185-code-editor-ecosystem-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md",
+    "docs/workstreams/editor-text-pipeline-v1/editor-text-pipeline-v1.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md",
+    "ecosystem/fret-code-editor/src/lib.rs",
+    "ecosystem/fret-code-editor-buffer/src/lib.rs",
+    "ecosystem/fret-code-editor-view/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0185-code-editor-ecosystem-v1.md",
+    "docs/adr/0188-code-editor-display-fragments-and-displaymap-composition-v1.md",
+    "docs/adr/0179-text-navigation-and-word-boundaries-v1.md",
+    "docs/adr/0261-platform-text-input-client-interop-v1.md",
+    "docs/adr/0055-frame-recording-and-subtree-replay-caching.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this narrow follow-on until the code editor public API, extension model, and first performance/diagnostics gate set are explicit. Keep broad feature implementation in smaller slices after M1."
+  }
+}
