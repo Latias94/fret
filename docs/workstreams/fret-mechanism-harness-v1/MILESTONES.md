@@ -161,3 +161,17 @@ Status: complete for the first matrix
 - Focused gates for context-menu click-through, dropdown-menu non-modal outside focus clear, select
   modal underlay blocking, context-menu Escape focus clear, and combobox close-auto-focus reason
   policy passed.
+
+## M14: Recipe Prevent-Default Outside-Press Policy Slice
+
+Status: complete
+
+- The shadcn focus-restore recipe fixture now covers prevent-default outside-press outcomes for
+  popover, select, dropdown-menu, and context-menu.
+- The matrix distinguishes modal keep-open + underlay-blocking behavior from non-modal keep-open +
+  click-through underlay focus/activation behavior.
+- The first run exposed a confirmed select modal barrier defect: a barrier pointer-up dismiss
+  handler accumulated across open frames and invoked the dismiss handler once per rendered frame.
+  The select primitive now installs a single owned pointer-up handler for that barrier behavior.
+- Focused gates for popover outside-press interception, select modal prevent-default, dropdown-menu
+  modal prevent-default, and context-menu click-through prevent-default passed.

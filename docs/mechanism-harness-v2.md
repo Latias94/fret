@@ -337,12 +337,21 @@ It covers:
 - context-menu non-modal outside-press dismissal focusing and activating the underlay target,
 - dialog outside-press dismissal restoring trigger focus,
 - popover click-through outside-press dismissal focusing and activating the underlay target,
-- open-state closure as a mechanism metric alongside focus restoration.
+- prevent-default outside-press outcomes for popover, select, dropdown-menu, and context-menu,
+- modal prevent-default outcomes keeping the overlay open while blocking underlay activation,
+- non-modal prevent-default outcomes keeping the overlay open while preserving click-through
+  underlay focus/activation,
+- open-state closure and dismiss-call counts as mechanism metrics alongside focus restoration.
 
 The select outside-press fixture uses the trigger pointer-open path. The first draft exposed a
 confirmed guard-cache defect: select's mouse-open pointer-up guard reused a suppress decision for a
 different pointer id when tick ids were adjacent. The guard now keys cached pointer-up decisions by
 pointer id as well as tick id.
+
+The prevent-default matrix exposed a second select defect: the modal barrier installed its
+pointer-up dismissal hook with an accumulating `add` API, so a long-lived open select invoked the
+dismiss handler once per rendered frame. The barrier now installs a single pointer-up handler for
+that owned behavior.
 
 The first run exposed a real harness oracle defect. `UiPredicateV1::FocusIs` used the normal
 barrier-filtered selector path, so it could not match a trigger outside a still-present pointer/modal

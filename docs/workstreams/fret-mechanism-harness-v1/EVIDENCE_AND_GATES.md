@@ -108,6 +108,10 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test popover_outside_click_dis
 cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_closes_and_focuses_underlay -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --lib select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib popover_outside_press_can_be_intercepted -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib select_modal_barrier_dismiss_can_be_prevented_via_dismiss_handler -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_modal_outside_press_can_be_prevented_via_dismiss_handler -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay -- --nocapture
 cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_maps_reasons -- --nocapture
 cargo test --profile dev-fast -p fret-ui-kit --lib mouse_open_guard_pointer_up_decision_is_reusable_within_tick -- --nocapture
 ```
@@ -205,6 +209,7 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
   `ecosystem/fret-ui-shadcn/tests/dialog_overlay_click_dismiss_focus_restore.rs`,
   `ecosystem/fret-ui-shadcn/tests/popover_outside_click_dismiss_focus_restore.rs`
 - Shadcn/lib outside-press focused tests:
+  `ecosystem/fret-ui-shadcn/src/popover.rs`,
   `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
   `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
   `ecosystem/fret-ui-shadcn/src/select.rs`

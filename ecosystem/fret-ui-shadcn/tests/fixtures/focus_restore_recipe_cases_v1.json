@@ -343,6 +343,196 @@
         "upstream_ref": "Radix Popover non-modal outside press can move focus to click-through target",
         "note": "Popover outside press closes without overriding the newly focused underlay target."
       }
+    },
+    {
+      "id": "popover-outside-click-prevent-default-keeps-open-and-focuses-underlay",
+      "scenario": { "kind": "popover_outside_press_prevent_default_focuses_underlay" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix DismissableLayer onPointerDownOutside preventDefault keeps a non-modal popover open",
+        "note": "Preventing dismissal should not consume click-through underlay focus/activation for non-modal popovers."
+      }
+    },
+    {
+      "id": "select-outside-click-prevent-default-keeps-open-and-blocks-underlay",
+      "scenario": { "kind": "select_outside_press_prevent_default_blocks_underlay" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Select modal outside press can be prevented by the dismiss handler",
+        "note": "Preventing select dismissal should keep the modal select open and still block the underlay."
+      }
+    },
+    {
+      "id": "dropdown-menu-non-modal-outside-click-prevent-default-keeps-open-and-focuses-underlay",
+      "scenario": {
+        "kind": "dropdown_menu_non_modal_outside_press_prevent_default_focuses_underlay"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menu non-modal outside press can be prevented without blocking click-through target interaction",
+        "note": "Non-modal dropdown preventDefault keeps the menu open while the underlay still receives focus/activation."
+      }
+    },
+    {
+      "id": "dropdown-menu-modal-outside-click-prevent-default-keeps-open-and-blocks-underlay",
+      "scenario": {
+        "kind": "dropdown_menu_modal_outside_press_prevent_default_blocks_underlay"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menu modal outside press can be prevented by the dismiss handler",
+        "note": "Modal dropdown preventDefault keeps the menu open and should not let the underlay activate."
+      }
+    },
+    {
+      "id": "context-menu-outside-click-prevent-default-keeps-open-and-focuses-underlay",
+      "scenario": { "kind": "context_menu_outside_press_prevent_default_focuses_underlay" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix context menu non-modal outside press can be prevented without blocking the click-through target",
+        "note": "Preventing context-menu dismissal keeps the menu open while the underlay still receives focus/activation."
+      }
     }
   ]
 }

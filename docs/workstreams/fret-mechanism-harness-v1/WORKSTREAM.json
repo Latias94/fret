@@ -216,6 +216,22 @@
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay -- --nocapture"
     },
     {
+      "name": "shadcn-popover-outside-prevent-default-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib popover_outside_press_can_be_intercepted -- --nocapture"
+    },
+    {
+      "name": "shadcn-select-modal-prevent-default-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib select_modal_barrier_dismiss_can_be_prevented_via_dismiss_handler -- --nocapture"
+    },
+    {
+      "name": "shadcn-dropdown-menu-modal-prevent-default-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_modal_outside_press_can_be_prevented_via_dismiss_handler -- --nocapture"
+    },
+    {
+      "name": "shadcn-context-menu-click-through-prevent-default-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay -- --nocapture"
+    },
+    {
       "name": "combobox-close-auto-focus-reason-policy-focused-gate",
       "command": "cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_maps_reasons -- --nocapture"
     },
@@ -289,6 +305,7 @@
     "ecosystem/fret-ui-shadcn/tests/context_menu_escape_dismiss_focus_clears.rs",
     "ecosystem/fret-ui-shadcn/tests/dialog_overlay_click_dismiss_focus_restore.rs",
     "ecosystem/fret-ui-shadcn/tests/popover_outside_click_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/src/popover.rs",
     "ecosystem/fret-ui-shadcn/src/context_menu.rs",
     "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
     "ecosystem/fret-ui-shadcn/src/select.rs",

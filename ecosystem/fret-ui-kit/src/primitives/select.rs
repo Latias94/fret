@@ -1627,7 +1627,7 @@ where
                 let open_for_pointer_up = open_for_pressable.clone();
                 let guard_for_pointer_up = guard_for_pressable.clone();
                 let on_dismiss_request_for_pointer_up = on_dismiss_request_for_pressable.clone();
-                cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
                     match select_mouse_open_guard_pointer_up_decision_shared(
                         &guard_for_pointer_up,
                         up,

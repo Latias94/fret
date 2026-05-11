@@ -49,6 +49,8 @@ date: 2026-05-12
   combobox, and context-menu policy differences.
 - [x] Fix the select pointer-open outside-press guard-cache defect exposed by the outside-press
   fixture.
+- [x] Add prevent-default outside-press policy matrices for select, dropdown-menu, popover, and
+  context-menu.
 - [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
   and selectors are identified.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
@@ -57,8 +59,6 @@ date: 2026-05-12
   test ids for underlay, overlay, and observer/capture state.
 - [ ] Add focus restore, active-descendant interaction, typeahead, nested focus scope, and
   stale-parent fixture suites.
-- [ ] Add prevent-default outside-press policy matrices for select, dropdown-menu, popover, and
-  context-menu.
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier
