@@ -212,3 +212,13 @@ Status: complete
   the query length metric, and the selected active item id.
 - No runtime defect was found in this slice; the gap was missing fixture-level coverage for
   already-correct active-descendant interaction behavior.
+
+## M18: Nested Focus Scope Interaction Slice
+
+Status: complete
+
+- A dedicated nested focus scope fixture suite now covers inner and outer trapped scope interaction.
+- The matrix asserts inner-scope next/previous traversal, outer-sibling traversal into the inner
+  scope, and outside pointer activation that preserves focus inside the trapped inner scope.
+- No runtime defect was found in this slice; the gap was missing fixture-level coverage for
+  already-correct nested focus scope behavior.

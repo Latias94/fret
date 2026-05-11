@@ -377,6 +377,23 @@ barrier during close transition even when runtime focus had already been restore
 unfiltered selector lookup for focus predicates while keeping normal `Exists`-style queries
 barrier-filtered.
 
+## Phase 2.12 Focus Interaction Extension Coverage
+
+The declarative focus/semantics extension suites now cover two high-risk intersections that were
+previously only implied by narrower tests:
+
+- `crates/fret-ui/src/declarative/tests/fixtures/combobox_active_descendant_interaction_v1.json`,
+  run by `mechanism_harness_combobox_active_descendant_interaction_matches_oracles`, drives a real
+  text-input query path and asserts the resulting active-descendant relation plus query, visible
+  count, and active-index metrics.
+- `crates/fret-ui/src/declarative/tests/fixtures/focus_scope_nested_interaction_v1.json`, run by
+  `mechanism_harness_nested_focus_scope_interaction_matches_oracles`, asserts inner/outer trapped
+  focus scope traversal and outside pointer activation without focus leakage from the trapped inner
+  scope.
+
+The first runs did not expose runtime defects. They closed fixture-level gaps before recipe-level
+typeahead, submenu, and nested overlay parity work depends on those mechanisms.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -424,8 +441,10 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-ui mechanism_harness_layout_dirty_invalidation_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_hit_test_routing_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_semantics_relations_match_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_combobox_active_descendant_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_roving_focus_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_focus_scope_interaction_matches_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_nested_focus_scope_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles`
 - `cargo check -p fret-bootstrap`

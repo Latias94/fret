@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.focus-scope-nested-interaction.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["focus"],
+  "cases": [
+    {
+      "id": "inner-next-stays-within-inner-scope",
+      "scenario": {
+        "kind": "nested_focus_scope",
+        "outer_trap_focus": true,
+        "inner_trap_focus": true,
+        "initial": "inner_a",
+        "steps": [
+          { "kind": "command", "command": "next" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "nested-inner-b" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "inner-previous-wraps-within-inner-scope",
+      "scenario": {
+        "kind": "nested_focus_scope",
+        "outer_trap_focus": true,
+        "inner_trap_focus": true,
+        "initial": "inner_a",
+        "steps": [
+          { "kind": "command", "command": "previous" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "nested-inner-b" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "outer-sibling-next-enters-inner-scope",
+      "scenario": {
+        "kind": "nested_focus_scope",
+        "outer_trap_focus": true,
+        "inner_trap_focus": true,
+        "initial": "outer_sibling",
+        "steps": [
+          { "kind": "command", "command": "next" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "nested-inner-a" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "clicking-outer-after-keeps-focus-inside-inner-scope",
+      "scenario": {
+        "kind": "nested_focus_scope",
+        "outer_trap_focus": true,
+        "inner_trap_focus": true,
+        "initial": "inner_a",
+        "steps": [
+          { "kind": "pointer_click", "target": "outer_after" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "nested.focus.in_inner_scope",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "nested.outer.after.activated",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Nested focus scopes should keep pointer focus inside the trapped inner scope while still allowing outside activation.",
+        "note": "A nested trapped scope must not leak pointer focus to the outer after node."
+      }
+    }
+  ]
+}
