@@ -48,7 +48,7 @@ Last updated: 2026-05-12
   - [x] Range decoration payload API and tests.
 - [x] Land the widget-facing feature payload store with public setters/readouts, buffer-revision
       clearing, display-map gutter validation, and row scene cache epoch wiring.
-- [ ] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
+- [x] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
       inlays, soft wrap, and selection.
 - [ ] Add a diagnostics bundle assertion for feature payload stability.
 - [ ] Split monolithic editor tests into feature-owned test modules or fixture-driven runners.

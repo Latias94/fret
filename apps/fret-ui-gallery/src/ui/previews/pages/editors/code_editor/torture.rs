@@ -2,6 +2,59 @@ use super::super::super::super::super::*;
 use crate::ui::doc_layout;
 use fret::AppComponentCx;
 
+fn first_range(text: &str, needle: &str) -> Option<std::ops::Range<usize>> {
+    let start = text.find(needle)?;
+    Some(start..start.saturating_add(needle.len()))
+}
+
+fn apply_torture_feature_payload_fixture(handle: &code_editor::CodeEditorHandle) {
+    let text = handle.with_buffer(|b| b.text_string());
+
+    let diagnostic_range = first_range(text.as_str(), "value_0").unwrap_or(0..0);
+    let decoration_range = first_range(text.as_str(), "stale lines").unwrap_or(0..0);
+    let let_range = first_range(text.as_str(), "let");
+
+    let mut diagnostic = code_editor::DiagnosticSpan::new(
+        diagnostic_range.clone(),
+        code_editor::DiagnosticSeverity::Warning,
+        "fixture warning",
+    );
+    diagnostic.source = Some(Arc::<str>::from("ui-gallery"));
+    diagnostic.code = Some(Arc::<str>::from("fixture"));
+
+    let mut decoration = code_editor::RangeDecoration::new(decoration_range, "diagnostic.warning");
+    decoration.layer = code_editor::RangeDecorationLayer::Underline;
+    decoration.hover_id = Some(Arc::<str>::from("ui-gallery.fixture.warning"));
+    decoration.hit_test = code_editor::RangeDecorationHitTest::Text;
+
+    let mut line_marker =
+        code_editor::GutterMarker::logical_line(3, code_editor::GutterMarkerKind::Diagnostic);
+    line_marker.visual = code_editor::GutterMarkerVisual::Icon(Arc::<str>::from("warning"));
+    line_marker.tooltip = Some(Arc::<str>::from("Fixture diagnostic"));
+    line_marker.priority = 10;
+
+    let mut row_marker =
+        code_editor::GutterMarker::display_row(0, code_editor::GutterMarkerKind::Bookmark);
+    row_marker.visual = code_editor::GutterMarkerVisual::Text(Arc::<str>::from("F"));
+    row_marker.tooltip = Some(Arc::<str>::from("Fixture display-row marker"));
+
+    let mut tokens = Vec::new();
+    if let Some(range) = let_range {
+        tokens.push(code_editor::SemanticToken::new(range, "keyword"));
+    }
+    if !diagnostic_range.is_empty() {
+        tokens.push(code_editor::SemanticToken::new(
+            diagnostic_range,
+            "variable",
+        ));
+    }
+
+    let _ = handle.set_diagnostic_spans(vec![diagnostic]);
+    let _ = handle.set_range_decorations(vec![decoration]);
+    let _ = handle.set_gutter_markers(vec![line_marker, row_marker]);
+    let _ = handle.set_semantic_tokens(tokens);
+}
+
 pub(in crate::ui) fn preview_code_editor_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -72,6 +125,14 @@ pub(in crate::ui) fn preview_code_editor_torture(
         || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
         |h| h.clone(),
     );
+    let last_feature_payload_revision =
+        cx.slot_state(|| Rc::new(Cell::new(None::<u64>)), |v| v.clone());
+    let feature_payload_revision = handle.buffer_revision().0;
+    if last_feature_payload_revision.get() != Some(feature_payload_revision) {
+        apply_torture_feature_payload_fixture(&handle);
+        last_feature_payload_revision.set(Some(feature_payload_revision));
+    }
+
     let last_applied = cx.slot_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
     if last_applied.get() != Some(syntax_enabled) {
         handle.set_language(if syntax_enabled { Some("rust") } else { None });
