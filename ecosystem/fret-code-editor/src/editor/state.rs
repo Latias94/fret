@@ -265,3 +265,320 @@ pub(super) struct RowRichCacheEntry {
     pub(super) code_font_feature_policy_rev: u64,
     pub(super) rich: fret_core::AttributedText,
 }
+
+impl CodeEditorState {
+    pub(super) fn update_font_stack_key(&mut self, next: fret_runtime::TextFontStackKey) {
+        if self.font_stack_key == next {
+            return;
+        }
+        self.font_stack_key = next;
+
+        // Font stack changes can affect shaping and therefore caret/selection geometry. Ensure we
+        // never answer platform geometry queries from stale cached row geometry.
+        self.row_geom_cache_tick = 0;
+        self.row_geom_cache.clear();
+        self.row_geom_cache_queue.clear();
+        self.row_geom_cache_caret_stops_len_total = 0;
+        self.invalidate_row_scene_cache();
+        self.baseline_measure_cache = None;
+    }
+
+    pub(super) fn clear_row_scene_cache(&mut self) {
+        self.row_scene_cache_tick = 0;
+        self.row_scene_cache.clear();
+        self.row_scene_cache_queue.clear();
+        self.row_scene_cache_scene_ops_len_total = 0;
+        self.cache_stats.row_scene_resets = self.cache_stats.row_scene_resets.saturating_add(1);
+    }
+
+    #[cfg(feature = "syntax")]
+    pub(super) fn clear_row_rich_prefetch_runtime(&mut self) {
+        if let Some(runtime) = self.row_rich_prefetch_runtime.as_ref() {
+            runtime.clear();
+        }
+    }
+
+    pub(super) fn sync_row_scene_cache_epoch(&mut self) {
+        self.row_scene_cache_rev = self.buffer.revision();
+        self.row_scene_cache_wrap_cols = self.display_wrap_cols;
+        self.row_scene_cache_folds_epoch = self.folds_epoch;
+        self.row_scene_cache_inlays_epoch = self.inlays_epoch;
+        self.row_scene_cache_display_map_epoch = self.display_map_epoch;
+        self.row_scene_cache_feature_payload_epoch = self.feature_payloads.epoch();
+    }
+
+    pub(super) fn invalidate_row_scene_cache(&mut self) {
+        self.sync_row_scene_cache_epoch();
+        self.clear_row_scene_cache();
+    }
+
+    pub(super) fn invalidate_feature_payload_paint_caches(&mut self) {
+        self.invalidate_row_scene_cache();
+
+        #[cfg(feature = "syntax")]
+        {
+            self.clear_row_rich_prefetch_runtime();
+            self.row_rich_cache_tick = 0;
+            self.row_rich_cache.clear();
+            self.row_rich_cache_queue.clear();
+            self.row_rich_cache_line_bytes_estimate_total = 0;
+            self.row_rich_cache_row_spans_len_total = 0;
+            self.row_rich_cache_syntax_spans_len_total = 0;
+            self.row_rich_cache_rich_spans_len_total = 0;
+            self.cache_stats.row_rich_resets = self.cache_stats.row_rich_resets.saturating_add(1);
+        }
+    }
+
+    pub(super) fn clear_feature_payloads_for_buffer_change(&mut self) {
+        if self
+            .feature_payloads
+            .clear_all_for_buffer_change(self.buffer.revision(), self.display_map_epoch)
+        {
+            self.invalidate_feature_payload_paint_caches();
+        }
+    }
+
+    pub(super) fn invalidate_row_caches(&mut self) {
+        self.row_text_cache_display_map_epoch = self.display_map_epoch;
+        self.row_text_cache_tick = 0;
+        self.row_text_cache.clear();
+        self.row_text_cache_queue.clear();
+        self.row_text_cache_text_bytes_estimate_total = 0;
+        self.row_text_cache_row_spans_len_total = 0;
+        self.cache_stats.row_text_resets = self.cache_stats.row_text_resets.saturating_add(1);
+
+        self.row_geom_cache_display_map_epoch = self.display_map_epoch;
+        self.row_geom_cache_tick = 0;
+        self.row_geom_cache.clear();
+        self.row_geom_cache_queue.clear();
+        self.row_geom_cache_caret_stops_len_total = 0;
+        self.invalidate_row_scene_cache();
+
+        #[cfg(feature = "syntax")]
+        {
+            self.clear_row_rich_prefetch_runtime();
+            self.row_rich_cache_tick = 0;
+            self.row_rich_cache.clear();
+            self.row_rich_cache_queue.clear();
+            self.row_rich_cache_line_bytes_estimate_total = 0;
+            self.row_rich_cache_row_spans_len_total = 0;
+            self.row_rich_cache_syntax_spans_len_total = 0;
+            self.row_rich_cache_rich_spans_len_total = 0;
+            self.cache_stats.row_rich_resets = self.cache_stats.row_rich_resets.saturating_add(1);
+        }
+    }
+
+    pub(super) fn refresh_display_map(&mut self) {
+        // ADR 0185 / ADR 0188:
+        //
+        // v1 baseline: inline IME preedit is modeled as a paint-time injection. This means we
+        // cannot allow wrap-driven row breaking to depend on the preedit string, so by default we
+        // suppress fold placeholders / inlays while preedit is active in wrapped mode.
+        //
+        // Staging: downstream consumers (and the UI Gallery harness) can opt into keeping
+        // decorations enabled under inline preedit even when wrapped. This keeps row-breaking
+        // stable (still based on fold/inlay composition only) while we migrate toward a fragment-
+        // composed DisplayMap (ADR 0188).
+        let force_inline_preedit = self
+            .preedit_replace_range
+            .as_ref()
+            .is_some_and(|r| !r.is_empty());
+        let compose_inline_preedit = self.compose_inline_preedit || force_inline_preedit;
+
+        let suppress_decorations = !compose_inline_preedit
+            && self.preedit.is_some()
+            && self.display_wrap_cols.is_some()
+            && !self.allow_decorations_under_inline_preedit;
+
+        let code_wrap_policy = self
+            .display_wrap_cols
+            .is_some()
+            .then_some(self.code_wrap_policy)
+            .flatten();
+
+        let preedit = compose_inline_preedit
+            .then_some(())
+            .and_then(|_| self.preedit.as_ref())
+            .map(|p| InlinePreedit {
+                anchor: self.selection.caret().min(self.buffer.len_bytes()),
+                replace_range: self.preedit_replace_range.clone(),
+                text: Arc::<str>::from(p.text.as_str()),
+            });
+
+        self.display_map = if suppress_decorations {
+            DisplayMap::new_with_code_wrap_policy(
+                &self.buffer,
+                self.display_wrap_cols,
+                code_wrap_policy,
+            )
+        } else if compose_inline_preedit {
+            DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
+                &self.buffer,
+                self.display_wrap_cols,
+                &self.line_folds,
+                &self.line_inlays,
+                preedit,
+                code_wrap_policy,
+            )
+        } else {
+            DisplayMap::new_with_decorations_and_preedit_and_code_wrap_policy(
+                &self.buffer,
+                self.display_wrap_cols,
+                &self.line_folds,
+                &self.line_inlays,
+                None,
+                code_wrap_policy,
+            )
+        };
+        self.display_map_epoch = self.display_map_epoch.saturating_add(1);
+        self.feature_payloads
+            .retain_gutter_markers_valid_for_display_map(
+                &self.buffer,
+                &self.display_map,
+                self.display_map_epoch,
+            );
+        #[cfg(feature = "syntax")]
+        self.clear_row_rich_prefetch_runtime();
+    }
+
+    pub(super) fn begin_paint_frame(&mut self, frame: WindowedRowsPaintFrame) {
+        let visible_window =
+            normalized_paint_frame_visible_window(frame.visible_start, frame.visible_end);
+        self.paint_frame_cache_min_entries =
+            paint_frame_cache_min_entries(self.paint_frame_visible_window, visible_window);
+        self.paint_frame_visible_window = visible_window;
+
+        if self.paint_perf_enabled {
+            self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
+            let visible_rows = visible_window
+                .map(|(start, end)| paint_frame_visible_row_count(start, end) as u64)
+                .unwrap_or(0);
+            self.paint_perf_frame = CodeEditorPaintPerfFrame {
+                frame_seq: self.paint_perf_frame_seq,
+                visible_start: frame.visible_start as u64,
+                visible_end: frame.visible_end as u64,
+                visible_rows,
+                cache_frame_min_entries: self.paint_frame_cache_min_entries as u64,
+                ..CodeEditorPaintPerfFrame::default()
+            };
+        }
+
+        let started = self.paint_perf_enabled.then(Instant::now);
+        let len = self.buffer.len_bytes();
+        let selection = self.selection.normalized();
+        let selection_start = selection.start.min(len);
+        let selection_end = selection.end.min(len);
+        let (selection_start_point, selection_end_point) = if selection_start < selection_end {
+            (
+                self.display_map
+                    .byte_to_display_point(&self.buffer, selection_start),
+                self.display_map
+                    .byte_to_display_point(&self.buffer, selection_end),
+            )
+        } else {
+            (DisplayPoint::default(), DisplayPoint::default())
+        };
+        let caret = if self.selection.is_caret() {
+            let byte = self.selection.caret().min(len);
+            let point = self.display_map.byte_to_display_point(&self.buffer, byte);
+            Some(PaintFrameCaretOverlay {
+                byte,
+                row: point.row,
+                col: point.col,
+            })
+        } else {
+            None
+        };
+        self.paint_frame_overlay = PaintFrameOverlayState {
+            selection_start,
+            selection_end,
+            selection_start_point,
+            selection_end_point,
+            caret,
+        };
+        if let Some(started) = started {
+            let elapsed = started.elapsed();
+            self.paint_perf_frame.us_frame_overlay_prepare =
+                u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX);
+            self.paint_perf_frame.ns_frame_overlay_prepare =
+                u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
+        }
+    }
+
+    pub(super) fn set_preedit(&mut self, preedit: Option<PreeditState>) {
+        let same = self.preedit == preedit;
+        let mut cleared = false;
+        if preedit.is_none() {
+            if self.preedit_replace_range.take().is_some() {
+                cleared = true;
+            }
+            if self.preedit_saved_selection.take().is_some() {
+                cleared = true;
+            }
+        }
+        if same && !cleared {
+            return;
+        }
+        self.preedit = preedit;
+        self.refresh_display_map();
+        self.invalidate_row_caches();
+    }
+
+    pub(super) fn set_allow_decorations_under_inline_preedit(&mut self, allowed: bool) {
+        if self.allow_decorations_under_inline_preedit == allowed {
+            return;
+        }
+        self.allow_decorations_under_inline_preedit = allowed;
+        self.refresh_display_map();
+        self.invalidate_row_caches();
+    }
+
+    pub(super) fn set_compose_inline_preedit(&mut self, enabled: bool) {
+        if self.compose_inline_preedit == enabled {
+            return;
+        }
+        self.compose_inline_preedit = enabled;
+        self.refresh_display_map();
+        self.invalidate_row_caches();
+    }
+
+    pub(super) fn set_interaction(&mut self, interaction: CodeEditorInteractionOptions) {
+        if self.interaction == interaction {
+            return;
+        }
+        self.interaction = interaction;
+
+        if !interaction.editable {
+            self.undo_group = None;
+            self.set_preedit(None);
+        }
+
+        if !interaction.enabled || !interaction.selectable {
+            self.dragging = false;
+            self.drag_pointer = None;
+            self.drag_autoscroll_viewport_pos = None;
+            // Keep any timer token so the next timer tick can self-cancel.
+        }
+    }
+
+    pub(super) fn ime_surrounding_text_best_effort_cached(
+        &mut self,
+    ) -> fret_runtime::WindowImeSurroundingText {
+        let revision = self.buffer.revision();
+        let selection = self.selection;
+        if let Some(cache) = self.ime_surrounding_text_cache.as_ref()
+            && cache.revision == revision
+            && cache.selection == selection
+        {
+            return cache.surrounding.clone();
+        }
+
+        let surrounding = best_effort_ime_surrounding_text(&self.buffer, selection);
+        self.ime_surrounding_text_cache = Some(ImeSurroundingTextCache {
+            revision,
+            selection,
+            surrounding: surrounding.clone(),
+        });
+        surrounding
+    }
+}

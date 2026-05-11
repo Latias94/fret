@@ -26,9 +26,14 @@ The new module owns:
 - baseline-measure cache state,
 - syntax-only rich-row cache entry state.
 
-Fields remain `pub(super)` because the current parent module still owns handle construction,
-state-method implementations, and paint/input call sites. A later slice can move methods once the
-handle boundary is ready.
+Fields remain `pub(super)` because the current parent and sibling modules still own handle
+construction, paint, input, and diagnostics call sites. A later handle-boundary slice can shrink
+field visibility once those call sites stop reaching into state internals directly.
+
+## Follow-Up
+
+The state-method move landed in
+`M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md`. `CodeEditorHandle` remains in `editor/mod.rs`.
 
 ## Non-Goals
 
