@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize
 use fret_mechanism_harness::{
     MechanismCase, MechanismHarness, MechanismSuite, ObservedTree, ScenarioObserveError,
 };
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model};
 use fret_ui::ElementContext;
 use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
 use fret_ui::element::AnyElement;
@@ -61,6 +61,9 @@ enum FocusRestoreScenario {
     ContextMenuOutsidePressPreventDefaultFocusesUnderlay,
     ContextMenuFocusOutsidePreservesUnderlayFocus,
     ContextMenuFocusOutsidePreventDefaultPreservesUnderlayFocus,
+    DropdownMenuSubmenuKeyboardRestore,
+    ContextMenuSubmenuKeyboardRestore,
+    MenubarSubmenuKeyboardRestore,
 }
 
 #[test]
@@ -133,6 +136,15 @@ fn observe_case(
         }
         FocusRestoreScenario::ContextMenuFocusOutsidePreventDefaultPreservesUnderlayFocus => {
             observe_context_menu_focus_outside_prevent_default_preserves_underlay_focus()
+        }
+        FocusRestoreScenario::DropdownMenuSubmenuKeyboardRestore => {
+            observe_dropdown_menu_submenu_keyboard_restore()
+        }
+        FocusRestoreScenario::ContextMenuSubmenuKeyboardRestore => {
+            observe_context_menu_submenu_keyboard_restore()
+        }
+        FocusRestoreScenario::MenubarSubmenuKeyboardRestore => {
+            observe_menubar_submenu_keyboard_restore()
         }
     }
 }
@@ -1601,6 +1613,476 @@ fn observe_context_menu_focus_outside_prevent_default_preserves_underlay_focus()
     Ok(observed)
 }
 
+fn observe_dropdown_menu_submenu_keyboard_restore() -> Result<ObservedTree, ScenarioObserveError> {
+    use std::time::Duration;
+
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    render_dropdown_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        open.clone(),
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    expect_open(&app, &open, true)?;
+
+    render_dropdown_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_trigger = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-trigger")
+        })
+        .expect("submenu trigger");
+    ui.set_focus(Some(submenu_trigger.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    render_dropdown_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        open.clone(),
+    );
+
+    let effects = app.flush_effects();
+    let focus_timer = effects.iter().find_map(|effect| match effect {
+        Effect::SetTimer { token, after, .. } if *after <= Duration::from_millis(250) => {
+            Some(*token)
+        }
+        _ => None,
+    });
+    let Some(focus_timer) = focus_timer else {
+        panic!("expected submenu focus timer effect");
+    };
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Timer { token: focus_timer },
+    );
+
+    render_dropdown_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_first = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-first-item")
+        })
+        .expect("submenu first item");
+    assert_eq!(
+        ui.focus(),
+        Some(submenu_first.id),
+        "expected keyboard-open to transfer focus into the submenu"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: KeyCode::ArrowLeft,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    render_dropdown_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        open.clone(),
+    );
+
+    let settle_frames = shadcn_motion::ticks_for_duration(Duration::from_millis(150));
+    for tick in 0..settle_frames {
+        render_dropdown_menu_submenu_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == settle_frames,
+            open.clone(),
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_trigger_after_close = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-trigger")
+        })
+        .expect("submenu trigger after close");
+    assert_eq!(
+        ui.focus(),
+        Some(submenu_trigger_after_close.id),
+        "ArrowLeft should restore focus to the submenu trigger"
+    );
+
+    let mut observed = observed_focus_restore_tree(&ui, &app, &open, bounds)?;
+    observed.set_metric("submenu.opened", 1.0);
+    observed.set_metric(
+        "submenu.closed",
+        if snap.nodes.iter().any(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-first-item")
+        }) {
+            0.0
+        } else {
+            1.0
+        },
+    );
+    Ok(observed)
+}
+
+fn observe_context_menu_submenu_keyboard_restore() -> Result<ObservedTree, ScenarioObserveError> {
+    use std::time::Duration;
+
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    render_context_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        open.clone(),
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    expect_open(&app, &open, true)?;
+
+    render_context_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_trigger = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-trigger")
+        })
+        .expect("submenu trigger");
+    ui.set_focus(Some(submenu_trigger.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    render_context_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        open.clone(),
+    );
+
+    let effects = app.flush_effects();
+    let focus_timer = effects.iter().find_map(|effect| match effect {
+        Effect::SetTimer { token, after, .. } if *after <= Duration::from_millis(250) => {
+            Some(*token)
+        }
+        _ => None,
+    });
+    let Some(focus_timer) = focus_timer else {
+        panic!("expected submenu focus timer effect");
+    };
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Timer { token: focus_timer },
+    );
+
+    render_context_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_first = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-first-item")
+        })
+        .expect("submenu first item");
+    assert_eq!(
+        ui.focus(),
+        Some(submenu_first.id),
+        "expected keyboard-open to transfer focus into the submenu"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: KeyCode::ArrowLeft,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    render_context_menu_submenu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        open.clone(),
+    );
+
+    let settle_frames = shadcn_motion::ticks_for_duration(Duration::from_millis(150));
+    for tick in 0..settle_frames {
+        render_context_menu_submenu_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == settle_frames,
+            open.clone(),
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_trigger_after_close = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-trigger")
+        })
+        .expect("submenu trigger after close");
+    assert_eq!(
+        ui.focus(),
+        Some(submenu_trigger_after_close.id),
+        "ArrowLeft should restore focus to the submenu trigger"
+    );
+
+    let mut observed = observed_focus_restore_tree(&ui, &app, &open, bounds)?;
+    observed.set_metric("submenu.opened", 1.0);
+    observed.set_metric(
+        "submenu.closed",
+        if snap.nodes.iter().any(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-first-item")
+        }) {
+            0.0
+        } else {
+            1.0
+        },
+    );
+    Ok(observed)
+}
+
+fn observe_menubar_submenu_keyboard_restore() -> Result<ObservedTree, ScenarioObserveError> {
+    use std::time::Duration;
+
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(true);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    render_menubar_submenu_frame(&mut ui, &mut app, &mut services, window, bounds, false);
+    expect_open(&app, &open, true)?;
+
+    render_menubar_submenu_frame(&mut ui, &mut app, &mut services, window, bounds, true);
+
+    let file_point = point_for_label(&ui, "File")?;
+    click_at(&mut ui, &mut app, &mut services, file_point);
+
+    render_menubar_submenu_frame(&mut ui, &mut app, &mut services, window, bounds, true);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let more = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem && node.label.as_deref() == Some("More")
+        })
+        .expect("More submenu trigger");
+    ui.set_focus(Some(more.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    render_menubar_submenu_frame(&mut ui, &mut app, &mut services, window, bounds, false);
+
+    let effects = app.flush_effects();
+    let focus_timer = effects.iter().find_map(|effect| match effect {
+        Effect::SetTimer { token, after, .. } if *after <= Duration::from_millis(250) => {
+            Some(*token)
+        }
+        _ => None,
+    });
+    let Some(focus_timer) = focus_timer else {
+        panic!("expected submenu focus timer effect");
+    };
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Timer { token: focus_timer },
+    );
+
+    render_menubar_submenu_frame(&mut ui, &mut app, &mut services, window, bounds, true);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_first = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-first-item")
+        })
+        .expect("submenu first item");
+    assert_eq!(
+        ui.focus(),
+        Some(submenu_first.id),
+        "expected keyboard-open to transfer focus into the submenu"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: KeyCode::ArrowLeft,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    render_menubar_submenu_frame(&mut ui, &mut app, &mut services, window, bounds, false);
+
+    let settle_frames = shadcn_motion::ticks_for_duration(Duration::from_millis(150));
+    for tick in 0..settle_frames {
+        render_menubar_submenu_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == settle_frames,
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let submenu_trigger_after_close = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-trigger")
+        })
+        .expect("submenu trigger after close");
+    assert_eq!(
+        ui.focus(),
+        Some(submenu_trigger_after_close.id),
+        "ArrowLeft should restore focus to the submenu trigger"
+    );
+
+    let mut observed = observed_focus_restore_tree(&ui, &app, &open, bounds)?;
+    observed.set_metric("submenu.opened", 1.0);
+    observed.set_metric(
+        "submenu.closed",
+        if snap.nodes.iter().any(|node| {
+            node.role == fret_core::SemanticsRole::MenuItem
+                && node.test_id.as_deref() == Some("submenu-first-item")
+        }) {
+            0.0
+        } else {
+            1.0
+        },
+    );
+    Ok(observed)
+}
+
 fn render_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -2030,6 +2512,52 @@ fn render_dropdown_menu_frame(
     );
 }
 
+fn render_dropdown_menu_submenu_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-dropdown-menu-submenu",
+        request_semantics,
+        move |cx| {
+            vec![shadcn::DropdownMenu::from_open(open).into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Open")
+                        .test_id("menu-trigger")
+                        .into_element(cx)
+                },
+                |_cx| {
+                    vec![shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("More")
+                            .test_id("submenu-trigger")
+                            .submenu(vec![
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("Sub Alpha")
+                                        .test_id("submenu-first-item"),
+                                ),
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("Sub Beta")
+                                        .test_id("submenu-second-item"),
+                                ),
+                            ]),
+                    )]
+                },
+            )]
+        },
+    );
+}
+
 fn render_dropdown_menu_non_modal_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -2154,6 +2682,99 @@ fn render_context_menu_frame(
                     ]
                 },
             )]
+        },
+    );
+}
+
+fn render_context_menu_submenu_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-context-menu-submenu",
+        request_semantics,
+        move |cx| {
+            vec![shadcn::ContextMenu::from_open(open).into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Right click")
+                        .test_id("context-trigger")
+                        .into_element(cx)
+                },
+                |_cx| {
+                    vec![shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("More")
+                            .test_id("submenu-trigger")
+                            .submenu(vec![
+                                shadcn::ContextMenuEntry::Item(
+                                    shadcn::ContextMenuItem::new("Sub Alpha")
+                                        .test_id("submenu-first-item"),
+                                ),
+                                shadcn::ContextMenuEntry::Item(
+                                    shadcn::ContextMenuItem::new("Sub Beta")
+                                        .test_id("submenu-second-item"),
+                                ),
+                            ]),
+                    )]
+                },
+            )]
+        },
+    );
+}
+
+fn render_menubar_submenu_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-menubar-submenu",
+        request_semantics,
+        move |cx| {
+            vec![
+                shadcn::Menubar::new(vec![
+                    shadcn::MenubarMenu::new("File").entries(vec![
+                        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New")),
+                        shadcn::MenubarEntry::Submenu(
+                            shadcn::MenubarItem::new("More")
+                                .test_id("submenu-trigger")
+                                .submenu(vec![
+                                    shadcn::MenubarEntry::Item(
+                                        shadcn::MenubarItem::new("Sub Alpha")
+                                            .test_id("submenu-first-item"),
+                                    ),
+                                    shadcn::MenubarEntry::Item(
+                                        shadcn::MenubarItem::new("Sub Beta")
+                                            .test_id("submenu-second-item"),
+                                    ),
+                                ]),
+                        ),
+                        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Exit")),
+                    ]),
+                    shadcn::MenubarMenu::new("Edit").entries(vec![shadcn::MenubarEntry::Item(
+                        shadcn::MenubarItem::new("Undo"),
+                    )]),
+                ])
+                .into_element(cx),
+            ]
         },
     );
 }
@@ -2333,6 +2954,21 @@ fn point_for_test_id(ui: &UiTree<App>, test_id: &str) -> Result<Point, ScenarioO
     Ok(Point::new(
         Px(trigger.bounds.origin.x.0 + 5.0),
         Px(trigger.bounds.origin.y.0 + 5.0),
+    ))
+}
+
+fn point_for_label(ui: &UiTree<App>, label: &str) -> Result<Point, ScenarioObserveError> {
+    let snap = ui.semantics_snapshot().cloned().ok_or_else(|| {
+        ScenarioObserveError::new("missing semantics snapshot before label lookup")
+    })?;
+    let node = snap
+        .nodes
+        .iter()
+        .find(|node| node.label.as_deref() == Some(label))
+        .ok_or_else(|| ScenarioObserveError::new(format!("missing label {label:?}")))?;
+    Ok(Point::new(
+        Px(node.bounds.origin.x.0 + 5.0),
+        Px(node.bounds.origin.y.0 + 5.0),
     ))
 }
 

@@ -233,3 +233,36 @@ Status: complete
   scope, and focus remaining inside the trapped scope after the click path.
 - No runtime defect was found in this slice; the gap was missing fixture-level coverage for
   already-correct stale-parent focus scope behavior.
+
+## M20: Recipe Submenu Restore Fixture Slice
+
+Status: complete
+
+- The shadcn focus-restore recipe fixture now covers dropdown-menu, context-menu, and menubar
+  submenu keyboard open / ArrowLeft restore flows with stable submenu test ids.
+- The harness records submenu-opened and submenu-closed metrics so the open/close sequence stays
+  observable even though the final snapshot only shows the closed tree.
+- No runtime defect was found in this slice; the gap was missing fixture-level coverage for
+  already-correct submenu policy paths.
+
+## M21: Menubar Submenu Restore Fixture Slice
+
+Status: complete
+
+- The submenu matrix now includes a menubar path in addition to dropdown-menu and context-menu.
+- The menubar harness case proves ArrowRight opens the submenu, focus transfers into it, and
+  ArrowLeft restores focus to the submenu trigger while the submenu contents unmount.
+- No runtime defect was found in this slice; the gap was missing fixture-level coverage for
+  already-correct menubar submenu policy paths.
+
+## M22: Recipe Typeahead Fixture Slice
+
+Status: complete
+
+- A dedicated shadcn recipe typeahead fixture suite now covers select trigger typeahead selection
+  without opening, dropdown-menu open-menu typeahead focus movement, and menubar open-menu
+  typeahead focus movement.
+- The select case records `select.selected.index` and `select.value_change.calls` so wrong targets
+  or duplicate value-change dispatch become observable harness facts.
+- No runtime defect was found in this slice; the gap was missing recipe-level fixture coverage above
+  the already-covered roving typeahead mechanism.

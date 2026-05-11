@@ -756,6 +756,147 @@
         "upstream_ref": "Radix Menu onFocusOutside preventDefault keeps the context menu open",
         "note": "Preventing focus-outside dismissal should be edge-triggered and preserve the externally focused target."
       }
+    },
+    {
+      "id": "dropdown-menu-submenu-keyboard-open-restores-focus-and-closes-submenu",
+      "scenario": { "kind": "dropdown_menu_submenu_keyboard_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "submenu-trigger" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "submenu-first-item" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "submenu.opened",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "submenu.closed",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix dropdown menu submenu ArrowRight opens and ArrowLeft restores focus",
+        "note": "Keyboard submenu transition should open the submenu, move focus into it, then close and restore focus to the submenu trigger."
+      }
+    },
+    {
+      "id": "context-menu-submenu-keyboard-open-restores-focus-and-closes-submenu",
+      "scenario": { "kind": "context_menu_submenu_keyboard_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "submenu-trigger" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "submenu-first-item" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "submenu.opened",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "submenu.closed",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix context menu submenu ArrowRight opens and ArrowLeft restores focus",
+        "note": "Keyboard submenu transition should open the submenu, move focus into it, then close and restore focus to the submenu trigger."
+      }
+    },
+    {
+      "id": "menubar-submenu-keyboard-open-restores-focus-and-closes-submenu",
+      "scenario": { "kind": "menubar_submenu_keyboard_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "submenu-trigger" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "submenu-first-item" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "submenu.opened",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "submenu.closed",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menubar submenu ArrowRight opens and ArrowLeft restores focus",
+        "note": "Keyboard submenu transition should open the submenu, move focus into it, then close and restore focus to the submenu trigger."
+      }
     }
   ]
 }

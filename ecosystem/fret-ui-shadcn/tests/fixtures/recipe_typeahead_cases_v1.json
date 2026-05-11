@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui-shadcn.recipe-typeahead.mechanism-harness-v1",
+  "owner_layer": "ecosystem/fret-ui-shadcn",
+  "domains": ["focus", "overlay"],
+  "cases": [
+    {
+      "id": "select-trigger-typeahead-selects-banana-without-opening",
+      "scenario": { "kind": "select_trigger_typeahead", "key": "key_b" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "select-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "select.selected.index",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "select.value_change.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Select trigger typeahead updates selection without opening",
+        "note": "Closed trigger typeahead should update the selected value while keeping the popup closed."
+      }
+    },
+    {
+      "id": "dropdown-menu-open-typeahead-focuses-billing",
+      "scenario": { "kind": "dropdown_menu_open_typeahead", "key": "key_b" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "dropdown-menu-item-billing" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menu roving typeahead moves focus to the matching item",
+        "note": "Open dropdown-menu typeahead should move focus to the matching menu item without closing the overlay."
+      }
+    },
+    {
+      "id": "menubar-open-typeahead-focuses-open",
+      "scenario": { "kind": "menubar_open_typeahead", "key": "key_o" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "menubar-item-open" }
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menubar roving typeahead moves focus to the matching item",
+        "note": "Open menubar typeahead should move focus to the matching menu item without closing the menu bar path."
+      }
+    }
+  ]
+}

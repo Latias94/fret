@@ -26,6 +26,7 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_nested_focus_sc
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_stale_parent_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
 ```
 
 ## View-Cache and Root-Boundary Gates
@@ -123,6 +124,12 @@ cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_map
 cargo test --profile dev-fast -p fret-ui-kit --lib mouse_open_guard_pointer_up_decision_is_reusable_within_tick -- --nocapture
 ```
 
+## Shadcn Recipe Typeahead Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
+```
+
 ## Runtime Diagnostics Gate
 
 ```powershell
@@ -152,6 +159,7 @@ python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/focus_scope_in
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/focus_scope_nested_interaction_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/focus_scope_stale_parent_interaction_v1.json | Out-Null
 python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json | Out-Null
+python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json | Out-Null
 python tools/check_workstream_catalog.py
@@ -208,8 +216,14 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/tree/tests/focus_scope_stale_parent_harness.rs`
 - Shadcn focus restore recipe fixture:
   `ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json`
+  - now includes dropdown-menu, context-menu, and menubar submenu keyboard open / ArrowLeft
+    restore cases with `submenu.opened` and `submenu.closed` metrics
 - Shadcn focus restore recipe runner:
   `ecosystem/fret-ui-shadcn/tests/focus_restore_mechanism_harness.rs`
+- Shadcn recipe typeahead fixture:
+  `ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json`
+- Shadcn recipe typeahead runner:
+  `ecosystem/fret-ui-shadcn/tests/recipe_typeahead_mechanism_harness.rs`
 - Previous focused tests: `crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs`
 - View-cache focused tests: `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Environment focused tests: `crates/fret-ui/src/declarative/tests/environment_queries.rs`
@@ -235,7 +249,10 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
   `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
   `ecosystem/fret-ui-shadcn/src/select.rs`
-- Shadcn submenu restore focused test: `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+- Shadcn submenu restore focused tests:
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
+  `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - Combobox reason policy focused tests:
   `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
 - Select mouse-open pointer-up guard focused tests:
