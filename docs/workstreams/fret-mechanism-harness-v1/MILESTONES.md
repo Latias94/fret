@@ -146,3 +146,18 @@ Status: complete
   `fret-mechanism-harness` regression test.
 - Focused recipe gates for dialog, popover, combobox, select, and dropdown-menu Escape focus
   restore passed.
+
+## M13: Recipe Outside-Press Focus Policy Slice
+
+Status: complete for the first matrix
+
+- The shadcn focus-restore recipe fixture now covers policy-different outside outcomes for
+  combobox, select, dropdown-menu, and context-menu in addition to dialog/popover.
+- The matrix distinguishes restore-to-trigger, click-through underlay focus/activation, modal
+  underlay blocking, and focus-clear outcomes.
+- The first draft exposed a follow-up candidate: select opened through the pointer-trigger path did
+  not close on the modeled outside click, while the controlled-open select barrier path remained
+  green. This needs a narrow pointer-open isolation test before classifying it as a runtime defect.
+- Focused gates for context-menu click-through, dropdown-menu non-modal outside focus clear, select
+  modal underlay blocking, context-menu Escape focus clear, and combobox close-auto-focus reason
+  policy passed.

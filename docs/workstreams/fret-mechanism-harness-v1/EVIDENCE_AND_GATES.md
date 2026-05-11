@@ -102,8 +102,13 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test popover_escape_dismiss_fo
 cargo test --profile dev-fast -p fret-ui-shadcn --test combobox_escape_dismiss_focus_restore combobox_escape_closes_and_restores_focus_to_trigger -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test select_escape_dismiss_focus_restore select_escape_closes_and_restores_focus_to_trigger -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test dropdown_menu_escape_dismiss_focus_restore dropdown_menu_escape_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test context_menu_escape_dismiss_focus_clears context_menu_escape_closes_and_clears_focus -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test dialog_overlay_click_dismiss_focus_restore dialog_overlay_click_closes_and_restores_focus_to_trigger -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test popover_outside_click_dismiss_focus_restore popover_outside_click_closes_and_activates_underlay -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_closes_and_focuses_underlay -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay -- --nocapture
+cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_maps_reasons -- --nocapture
 ```
 
 ## Runtime Diagnostics Gate
@@ -195,8 +200,15 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
   `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs`,
   `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs`,
   `ecosystem/fret-ui-shadcn/tests/dropdown_menu_escape_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/context_menu_escape_dismiss_focus_clears.rs`,
   `ecosystem/fret-ui-shadcn/tests/dialog_overlay_click_dismiss_focus_restore.rs`,
   `ecosystem/fret-ui-shadcn/tests/popover_outside_click_dismiss_focus_restore.rs`
+- Shadcn/lib outside-press focused tests:
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `ecosystem/fret-ui-shadcn/src/select.rs`
+- Combobox reason policy focused tests:
+  `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
 - Retained virtual-list focused test: `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
 - Scroll registry classification tests: `crates/fret-ui/src/declarative/frame.rs`
 - Scroll-contained frontier focused test: `crates/fret-ui/src/declarative/tests/layout/scroll.rs`

@@ -329,9 +329,19 @@ It covers:
 - combobox Escape dismissal restoring trigger focus,
 - select Escape dismissal restoring trigger focus,
 - dropdown-menu Escape dismissal restoring trigger focus,
+- combobox outside-press dismissal restoring trigger focus while allowing click-through underlay
+  activation,
+- select modal outside-press dismissal restoring trigger focus while keeping the underlay inactive,
+- dropdown-menu non-modal outside-press dismissal clearing focus instead of restoring the trigger,
+- context-menu Escape dismissal clearing focus,
+- context-menu non-modal outside-press dismissal focusing and activating the underlay target,
 - dialog outside-press dismissal restoring trigger focus,
 - popover click-through outside-press dismissal focusing and activating the underlay target,
 - open-state closure as a mechanism metric alongside focus restoration.
+
+The select outside-press fixture intentionally opens the model directly before dismissing. A
+trigger pointer-open sequence that then clicks outside needs a narrower follow-up because the first
+draft case stayed open while existing controlled-open select barrier gates passed.
 
 The first run exposed a real harness oracle defect. `UiPredicateV1::FocusIs` used the normal
 barrier-filtered selector path, so it could not match a trigger outside a still-present pointer/modal

@@ -135,6 +135,157 @@
       }
     },
     {
+      "id": "combobox-outside-click-closes-restores-trigger-focus-and-activates-underlay",
+      "scenario": { "kind": "combobox_outside_press_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "combobox-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Base UI combobox outside press closes and default policy restores trigger focus",
+        "note": "Desktop combobox is click-through, but its default close-auto-focus policy restores the trigger after outside press."
+      }
+    },
+    {
+      "id": "select-outside-click-closes-restores-trigger-focus-and-blocks-underlay",
+      "scenario": { "kind": "select_outside_press_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "select-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Select modal outside press dismisses without click-through activation",
+        "note": "Select installs a modal barrier, so outside press should close and restore trigger focus while leaving the underlay inactive."
+      }
+    },
+    {
+      "id": "dropdown-menu-non-modal-outside-click-closes-and-clears-focus",
+      "scenario": { "kind": "dropdown_menu_outside_press_clears_focus" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "focus.none",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menu non-modal outside press suppresses trigger refocus",
+        "note": "A non-modal dropdown outside press on an unfocusable underlay should not steal focus back to the trigger."
+      }
+    },
+    {
+      "id": "context-menu-escape-closes-and-clears-focus",
+      "scenario": { "kind": "context_menu_escape_clears_focus" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "focus.none",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Context menu has no trigger focus restore target after pointer invocation",
+        "note": "Escape dismissal should close the menu and leave focus cleared rather than restoring to the context trigger."
+      }
+    },
+    {
+      "id": "context-menu-click-through-outside-closes-and-focuses-underlay",
+      "scenario": { "kind": "context_menu_outside_press_focuses_underlay" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix context menu non-modal outside press can be click-through",
+        "note": "When authored as non-modal, outside press should close and allow the underlay to receive focus/activation."
+      }
+    },
+    {
       "id": "dialog-overlay-click-closes-and-restores-trigger-focus",
       "scenario": { "kind": "dialog_outside_press_restore" },
       "oracle": {

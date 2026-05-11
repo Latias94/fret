@@ -37,7 +37,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, roving focus interaction fixtures, focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/combobox/select/dropdown-menu, focused view-cache/environment/pointer/focus/semantics/recipe gates, and the UI Gallery checkbox underflow diagnostics gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, roving focus interaction fixtures, focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/combobox/select/dropdown-menu/context-menu Escape and outside-press policy outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, and the UI Gallery checkbox underflow diagnostics gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -192,12 +192,32 @@
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test dropdown_menu_escape_dismiss_focus_restore dropdown_menu_escape_closes_and_restores_focus_to_trigger -- --nocapture"
     },
     {
+      "name": "shadcn-context-menu-escape-focus-clear-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test context_menu_escape_dismiss_focus_clears context_menu_escape_closes_and_clears_focus -- --nocapture"
+    },
+    {
       "name": "shadcn-dialog-outside-focus-restore-focused-gate",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test dialog_overlay_click_dismiss_focus_restore dialog_overlay_click_closes_and_restores_focus_to_trigger -- --nocapture"
     },
     {
       "name": "shadcn-popover-outside-underlay-focus-focused-gate",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test popover_outside_click_dismiss_focus_restore popover_outside_click_closes_and_activates_underlay -- --nocapture"
+    },
+    {
+      "name": "shadcn-context-menu-click-through-outside-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_closes_and_focuses_underlay -- --nocapture"
+    },
+    {
+      "name": "shadcn-dropdown-menu-non-modal-outside-focus-clear-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-select-modal-underlay-block-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay -- --nocapture"
+    },
+    {
+      "name": "combobox-close-auto-focus-reason-policy-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_maps_reasons -- --nocapture"
     },
     {
       "name": "scroll-contained-frontier-focused-gate",
@@ -262,8 +282,13 @@
     "ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs",
     "ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs",
     "ecosystem/fret-ui-shadcn/tests/dropdown_menu_escape_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/context_menu_escape_dismiss_focus_clears.rs",
     "ecosystem/fret-ui-shadcn/tests/dialog_overlay_click_dismiss_focus_restore.rs",
     "ecosystem/fret-ui-shadcn/tests/popover_outside_click_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/src/context_menu.rs",
+    "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
+    "ecosystem/fret-ui-shadcn/src/select.rs",
+    "ecosystem/fret-ui-kit/src/primitives/combobox.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",

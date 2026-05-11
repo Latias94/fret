@@ -45,6 +45,8 @@ date: 2026-05-12
 - [x] Extend shadcn recipe-consumer Escape restore fixture coverage to select and dropdown-menu.
 - [x] Extend shadcn recipe focus policy fixture coverage to dialog overlay click and popover
   click-through outside press.
+- [x] Add shadcn outside-press focus restore/clear matrix coverage for select, dropdown-menu,
+  combobox, and context-menu policy differences.
 - [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
   and selectors are identified.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
@@ -53,8 +55,8 @@ date: 2026-05-12
   test ids for underlay, overlay, and observer/capture state.
 - [ ] Add focus restore, active-descendant interaction, typeahead, nested focus scope, and
   stale-parent fixture suites.
-- [ ] Add shadcn outside-press focus restore/clear matrices for select, dropdown-menu, combobox,
-  and context-menu policy differences.
+- [ ] Add a narrow select pointer-open outside-press isolation case to decide whether the draft
+  trigger-open -> outside-click failure is a scenario artifact or a runtime defect.
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier

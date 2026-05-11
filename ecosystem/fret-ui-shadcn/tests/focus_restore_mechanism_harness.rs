@@ -21,7 +21,7 @@ use fake_services::FakeServices;
 
 #[path = "support/input_events.rs"]
 mod input_events;
-use input_events::{click_at, dispatch_key_press};
+use input_events::{click_at, dispatch_key_press, right_click_at};
 
 #[path = "support/shadcn_motion.rs"]
 mod shadcn_motion;
@@ -43,6 +43,11 @@ enum FocusRestoreScenario {
     ComboboxEscapeRestore,
     SelectEscapeRestore,
     DropdownMenuEscapeRestore,
+    ComboboxOutsidePressRestore,
+    SelectOutsidePressRestore,
+    DropdownMenuOutsidePressClearsFocus,
+    ContextMenuEscapeClearsFocus,
+    ContextMenuOutsidePressFocusesUnderlay,
     DialogOutsidePressRestore,
     PopoverOutsidePressFocusesUnderlay,
 }
@@ -68,6 +73,19 @@ fn observe_case(
         FocusRestoreScenario::ComboboxEscapeRestore => observe_combobox_escape_restore(),
         FocusRestoreScenario::SelectEscapeRestore => observe_select_escape_restore(),
         FocusRestoreScenario::DropdownMenuEscapeRestore => observe_dropdown_menu_escape_restore(),
+        FocusRestoreScenario::ComboboxOutsidePressRestore => {
+            observe_combobox_outside_press_restore()
+        }
+        FocusRestoreScenario::SelectOutsidePressRestore => observe_select_outside_press_restore(),
+        FocusRestoreScenario::DropdownMenuOutsidePressClearsFocus => {
+            observe_dropdown_menu_outside_press_clears_focus()
+        }
+        FocusRestoreScenario::ContextMenuEscapeClearsFocus => {
+            observe_context_menu_escape_clears_focus()
+        }
+        FocusRestoreScenario::ContextMenuOutsidePressFocusesUnderlay => {
+            observe_context_menu_outside_press_focuses_underlay()
+        }
         FocusRestoreScenario::DialogOutsidePressRestore => observe_dialog_outside_press_restore(),
         FocusRestoreScenario::PopoverOutsidePressFocusesUnderlay => {
             observe_popover_outside_press_focuses_underlay()
@@ -105,7 +123,7 @@ fn observe_dialog_escape_restore() -> Result<ObservedTree, ScenarioObserveError>
             &mut services,
             window,
             bounds,
-            tick + 1 == shadcn_motion::ticks_100() + 2,
+            tick + 1 == shadcn_motion::ticks_200() + 2,
             open.clone(),
         );
     }
@@ -456,6 +474,312 @@ fn observe_dropdown_menu_escape_restore() -> Result<ObservedTree, ScenarioObserv
     observed_focus_restore_tree(&ui, &app, &open, bounds)
 }
 
+fn observe_combobox_outside_press_restore() -> Result<ObservedTree, ScenarioObserveError> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let underlay_activated: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_combobox_with_underlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        value.clone(),
+        open.clone(),
+        underlay_activated.clone(),
+    );
+    click_trigger(&mut ui, &mut app, &mut services, "combobox-trigger")?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    expect_open(&app, &open, true)?;
+
+    for tick in 0..(shadcn_motion::ticks_100() + 2) {
+        render_combobox_with_underlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == shadcn_motion::ticks_100() + 2,
+            value.clone(),
+            open.clone(),
+            underlay_activated.clone(),
+        );
+    }
+
+    click_trigger(&mut ui, &mut app, &mut services, "underlay")?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+
+    for tick in 0..(shadcn_motion::ticks_100() + 2) {
+        render_combobox_with_underlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == shadcn_motion::ticks_100() + 2,
+            value.clone(),
+            open.clone(),
+            underlay_activated.clone(),
+        );
+    }
+
+    let mut observed = observed_focus_policy_tree(&ui, &app, &open, bounds)?;
+    set_bool_model_metric(
+        &mut observed,
+        &app,
+        &underlay_activated,
+        "underlay.activated",
+    );
+    Ok(observed)
+}
+
+fn observe_select_outside_press_restore() -> Result<ObservedTree, ScenarioObserveError> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let underlay_activated: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_select_with_underlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        value.clone(),
+        open.clone(),
+        underlay_activated.clone(),
+    );
+    let underlay_point = point_for_test_id(&ui, "underlay")?;
+    let _ = app.models_mut().update(&open, |value| *value = true);
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    expect_open(&app, &open, true)?;
+
+    for tick in 0..(shadcn_motion::ticks_200() + 2) {
+        render_select_with_underlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == shadcn_motion::ticks_100() + 2,
+            value.clone(),
+            open.clone(),
+            underlay_activated.clone(),
+        );
+    }
+
+    click_at_with_pointer_id(&mut ui, &mut app, &mut services, 1, underlay_point);
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+
+    render_select_with_underlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        value,
+        open.clone(),
+        underlay_activated.clone(),
+    );
+
+    let mut observed = observed_focus_policy_tree(&ui, &app, &open, bounds)?;
+    set_bool_model_metric(
+        &mut observed,
+        &app,
+        &underlay_activated,
+        "underlay.activated",
+    );
+    Ok(observed)
+}
+
+fn observe_dropdown_menu_outside_press_clears_focus() -> Result<ObservedTree, ScenarioObserveError>
+{
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_dropdown_menu_non_modal_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+    click_trigger(&mut ui, &mut app, &mut services, "menu-trigger")?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    expect_open(&app, &open, true)?;
+
+    for tick in 0..(shadcn_motion::ticks_100() + 2) {
+        render_dropdown_menu_non_modal_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == shadcn_motion::ticks_100() + 2,
+            open.clone(),
+        );
+    }
+
+    click_at_with_pointer_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        1,
+        Point::new(Px(620.0), Px(460.0)),
+    );
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+
+    render_dropdown_menu_non_modal_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+    observed_focus_policy_tree(&ui, &app, &open, bounds)
+}
+
+fn observe_context_menu_escape_clears_focus() -> Result<ObservedTree, ScenarioObserveError> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_context_menu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+    right_click_trigger(&mut ui, &mut app, &mut services, "context-trigger")?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    expect_open(&app, &open, true)?;
+
+    for tick in 0..(shadcn_motion::ticks_100() + 2) {
+        render_context_menu_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == shadcn_motion::ticks_100() + 2,
+            open.clone(),
+        );
+    }
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+
+    render_context_menu_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+    );
+    observed_focus_policy_tree(&ui, &app, &open, bounds)
+}
+
+fn observe_context_menu_outside_press_focuses_underlay()
+-> Result<ObservedTree, ScenarioObserveError> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let underlay_activated: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_context_menu_with_underlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        underlay_activated.clone(),
+    );
+    let underlay_point = point_for_test_id(&ui, "underlay")?;
+    right_click_trigger(&mut ui, &mut app, &mut services, "context-trigger")?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    expect_open(&app, &open, true)?;
+
+    for tick in 0..(shadcn_motion::ticks_100() + 2) {
+        render_context_menu_with_underlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            tick + 1 == shadcn_motion::ticks_100() + 2,
+            open.clone(),
+            underlay_activated.clone(),
+        );
+    }
+
+    click_at_with_pointer_id(&mut ui, &mut app, &mut services, 1, underlay_point);
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+
+    render_context_menu_with_underlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        underlay_activated.clone(),
+    );
+
+    let mut observed = observed_focus_policy_tree(&ui, &app, &open, bounds)?;
+    set_bool_model_metric(
+        &mut observed,
+        &app,
+        &underlay_activated,
+        "underlay.activated",
+    );
+    Ok(observed)
+}
+
 fn render_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -599,6 +923,28 @@ fn render_popover_with_underlay_frame(
     );
 }
 
+fn underlay_button(
+    cx: &mut ElementContext<'_, App>,
+    underlay_activated: Model<bool>,
+) -> AnyElement {
+    let on_underlay_activate: OnActivate = Arc::new(move |host, acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&underlay_activated, |activated| *activated = true);
+        host.request_redraw(acx.window);
+    });
+    shadcn::Button::new("Underlay")
+        .test_id("underlay")
+        .on_activate(on_underlay_activate)
+        .refine_layout(
+            LayoutRefinement::default()
+                .absolute()
+                .right(Space::N4)
+                .bottom(Space::N4),
+        )
+        .into_element(cx)
+}
+
 fn render_combobox_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -649,6 +995,56 @@ fn render_combobox_frame(
     );
 }
 
+fn render_combobox_with_underlay_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    value: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    underlay_activated: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-combobox-outside",
+        request_semantics,
+        move |cx| {
+            let underlay = underlay_button(cx, underlay_activated);
+            let items = [
+                shadcn::ComboboxItem::new("next", "Next.js"),
+                shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+                shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+            ];
+            let combobox = shadcn::Combobox::new(value, open)
+                .a11y_label("Combobox")
+                .trigger_test_id("combobox-trigger")
+                .test_id_prefix("combobox-test")
+                .into_element_parts(cx, |_cx| {
+                    vec![
+                        shadcn::ComboboxPart::from(
+                            shadcn::ComboboxInput::new().placeholder("Select a framework"),
+                        ),
+                        shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+                            shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new(
+                                "No items found.",
+                            )),
+                            shadcn::ComboboxContentPart::from(
+                                shadcn::ComboboxList::new().items(items),
+                            ),
+                        ])),
+                    ]
+                });
+            vec![underlay, combobox]
+        },
+    );
+}
+
 fn render_select_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -680,6 +1076,42 @@ fn render_select_frame(
                     .items(items)
                     .into_element(cx),
             ]
+        },
+    );
+}
+
+fn render_select_with_underlay_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    value: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    underlay_activated: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-select-outside",
+        request_semantics,
+        move |cx| {
+            let underlay = underlay_button(cx, underlay_activated);
+            let items: Vec<shadcn::SelectItem> = ["apple", "banana", "blueberry"]
+                .into_iter()
+                .map(|value| shadcn::SelectItem::new(value, value))
+                .collect();
+            let select = shadcn::Select::new(value, open)
+                .value(shadcn::SelectValue::new().placeholder("Select"))
+                .a11y_label("Select")
+                .trigger_test_id("select-trigger")
+                .items(items)
+                .into_element(cx);
+            vec![underlay, select]
         },
     );
 }
@@ -724,31 +1156,196 @@ fn render_dropdown_menu_frame(
     );
 }
 
+fn render_dropdown_menu_non_modal_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-dropdown-menu-outside",
+        request_semantics,
+        move |cx| {
+            vec![
+                shadcn::DropdownMenu::from_open(open)
+                    .modal(false)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Open")
+                                .test_id("menu-trigger")
+                                .into_element(cx)
+                        },
+                        |_cx| {
+                            vec![
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("My Account").value("my-account"),
+                                ),
+                                shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("Profile").value("profile"),
+                                ),
+                            ]
+                        },
+                    ),
+            ]
+        },
+    );
+}
+
+fn render_context_menu_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-context-menu",
+        request_semantics,
+        move |cx| {
+            vec![shadcn::ContextMenu::from_open(open).into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Right click")
+                        .test_id("context-trigger")
+                        .into_element(cx)
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Copy")),
+                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Cut")),
+                    ]
+                },
+            )]
+        },
+    );
+}
+
+fn render_context_menu_with_underlay_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+    underlay_activated: Model<bool>,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-focus-restore-context-menu-outside",
+        request_semantics,
+        move |cx| {
+            let underlay = underlay_button(cx, underlay_activated);
+            let menu = shadcn::ContextMenu::from_open(open)
+                .modal(false)
+                .into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("Right click")
+                            .test_id("context-trigger")
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Copy")),
+                            shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Cut")),
+                        ]
+                    },
+                );
+            vec![underlay, menu]
+        },
+    );
+}
+
 fn click_trigger(
     ui: &mut UiTree<App>,
     app: &mut App,
     services: &mut dyn fret_core::UiServices,
     test_id: &str,
 ) -> Result<(), ScenarioObserveError> {
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
-        .ok_or_else(|| ScenarioObserveError::new("missing semantics snapshot before click"))?;
+    let point = point_for_test_id(ui, test_id)?;
+    click_at(ui, app, services, point);
+    Ok(())
+}
+
+fn right_click_trigger(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    test_id: &str,
+) -> Result<(), ScenarioObserveError> {
+    let point = point_for_test_id(ui, test_id)?;
+    right_click_at(ui, app, services, point);
+    Ok(())
+}
+
+fn click_at_with_pointer_id(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    pointer_id: u64,
+    position: Point,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(pointer_id),
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId(pointer_id),
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+}
+
+fn point_for_test_id(ui: &UiTree<App>, test_id: &str) -> Result<Point, ScenarioObserveError> {
+    let snap = ui.semantics_snapshot().cloned().ok_or_else(|| {
+        ScenarioObserveError::new("missing semantics snapshot before point lookup")
+    })?;
     let trigger = snap
         .nodes
         .iter()
         .find(|node| node.test_id.as_deref() == Some(test_id))
-        .ok_or_else(|| ScenarioObserveError::new(format!("missing trigger {test_id:?}")))?;
-    click_at(
-        ui,
-        app,
-        services,
-        Point::new(
-            Px(trigger.bounds.origin.x.0 + 5.0),
-            Px(trigger.bounds.origin.y.0 + 5.0),
-        ),
-    );
-    Ok(())
+        .ok_or_else(|| ScenarioObserveError::new(format!("missing test id {test_id:?}")))?;
+    Ok(Point::new(
+        Px(trigger.bounds.origin.x.0 + 5.0),
+        Px(trigger.bounds.origin.y.0 + 5.0),
+    ))
 }
 
 fn observed_focus_restore_tree(
@@ -771,6 +1368,40 @@ fn observed_focus_restore_tree(
         },
     );
     Ok(observed)
+}
+
+fn observed_focus_policy_tree(
+    ui: &UiTree<App>,
+    app: &App,
+    open: &Model<bool>,
+    bounds: Rect,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let mut observed = observed_focus_restore_tree(ui, app, open, bounds)?;
+    observed.set_metric(
+        "focus.none",
+        if observed.focus_node_id.is_none() {
+            1.0
+        } else {
+            0.0
+        },
+    );
+    Ok(observed)
+}
+
+fn set_bool_model_metric(
+    observed: &mut ObservedTree,
+    app: &App,
+    model: &Model<bool>,
+    metric_id: &'static str,
+) {
+    observed.set_metric(
+        metric_id,
+        if app.models().get_copied(model) == Some(true) {
+            1.0
+        } else {
+            0.0
+        },
+    );
 }
 
 fn expect_open(app: &App, open: &Model<bool>, expected: bool) -> Result<(), ScenarioObserveError> {
