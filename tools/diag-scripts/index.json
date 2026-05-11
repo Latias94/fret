@@ -6288,6 +6288,28 @@
       ]
     },
     {
+      "id": "ui-gallery-dialog-modal-barrier-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus"
+      ],
+      "tags": [
+        "dialog",
+        "focus_restore",
+        "modal_barrier",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the default Dialog component page.",
+        "Verifies modal barrier and focus barrier roots are installed while the dialog is open.",
+        "Verifies Escape clears both roots and restores focus to the public demo trigger."
+      ]
+    },
+    {
       "id": "ui-gallery-drawer-docs-smoke",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-docs-smoke.json",
       "required_capabilities": [

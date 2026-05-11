@@ -279,3 +279,14 @@ Status: complete
   before it reaches the mechanism invariant.
 - No runtime mechanism defect was found in the promoted default-compatible paths; the fix was to
   separate stable runtime coverage from a dev-only overlay script precondition.
+
+## M24: Public Dialog Modal Barrier Runtime Gate Slice
+
+Status: complete
+
+- The overlay/focus diagnostics suite now includes a public Dialog page modal-barrier gate that does
+  not depend on the `gallery-dev` Overlay preview page.
+- The gate asserts modal barrier and focus-barrier roots are installed together while the dialog is
+  open, remain aligned, clear together after Escape, and restore focus to the demo trigger.
+- No runtime mechanism defect was found; the gap was missing default-compatible runtime coverage for
+  barrier root lifecycle.

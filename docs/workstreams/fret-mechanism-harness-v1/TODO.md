@@ -72,5 +72,6 @@ date: 2026-05-12
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
-- [ ] Add modal-barrier runtime coverage on a default-compatible page, or split `gallery-dev`
-  diagnostics suites so dev-only overlay scripts cannot be run with the default gallery binary.
+- [x] Add modal-barrier root lifecycle runtime coverage on a default-compatible page.
+- [ ] Add default-compatible underlay block/click-through activation-status coverage once public
+  pages expose an underlay/status probe.

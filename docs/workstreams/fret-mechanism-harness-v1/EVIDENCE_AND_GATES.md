@@ -154,6 +154,7 @@ cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --
 Suite membership:
 
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json`
+- `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
@@ -241,6 +242,7 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
 - UI Gallery overlay/focus runtime scripts:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - Previous focused tests: `crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs`
