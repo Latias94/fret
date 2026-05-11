@@ -1306,14 +1306,19 @@ Perf acceptance:
     text draw, rich materialization, syntax work, and renderer encode/upload before a display-list rewrite is attempted.
   - Implementation: `diag stats --json` now emits top-level `code_editor_paint_perf` p50/p95/max/sum summaries and
     per-top-frame `top[].code_editor_paint_perf`; human output prints the same row-scene and text/content breakdown.
+    The stats reader now prefers `ns_*` paint counters when present, because summing per-row `as_micros()` values was
+    under-reporting editor paint by roughly 15-25% on the current complex wheel bundle.
   - Gate: `cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot`.
   - Evidence: `cargo run -p fretboard -- diag stats target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json --json --top 1 --sort time`
     now reports `code_editor_paint_perf.frames=34`, top frame `rows_scene_replayed=204`, `rows_scene_stored=1`,
-    `us_row_content_resolve=441`, `us_row_scene_replay_ops=10`, `us_row_scene_capture_ops=0`, `us_text_draw=0`,
-    and summary max `us_text_draw=288`.
-  - Decision: keep the next optimization evidence-led. The post-fix wheel bundle points more at content resolve /
-    Canvas paint-widget and renderer payload than at row-scene capture; do not start a broad row display-list rewrite
-    until a near-threshold or failing stressor shows replay/capture/store as the limiter.
+    `us_row_content_resolve=544`, `us_row_scene_fast_path=373`, `us_row_scene_fast_probe=63`,
+    `us_row_scene_replay_ops=70`, `us_row_scene_replay_touch=78`, `us_row_scene_capture_ops=0`,
+    and `us_text_draw=0`; summary p95 is `us_total=886`, `us_row_content_resolve=636`,
+    `us_row_scene_fast_path=347`, `us_row_text=88`, and `us_text_draw=147`.
+  - Decision: keep the next optimization evidence-led. The post-fix wheel bundle points at the row-scene fast replay
+    path plus Canvas paint-widget and renderer payload, not at row-scene capture/store or syntax materialization. Do
+    not start a broad row display-list rewrite until a near-threshold or failing stressor shows replay/capture/store
+    as the measured limiter.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.

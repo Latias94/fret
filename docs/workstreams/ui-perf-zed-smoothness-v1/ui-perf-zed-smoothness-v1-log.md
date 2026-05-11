@@ -12511,3 +12511,43 @@ Decision:
   before syntax/rich cache chunking.
 - A future row display-list/replay rewrite should start only from evidence where row scene replay/capture itself is the
   measured limiter after syntax/rich cache churn is absent.
+
+## 2026-05-11 23:05 (code editor paint stats ns attribution)
+
+Question:
+- The post-fix complex editor wheel bundle still showed Canvas paint-widget work. Are the `us_*` paint counters precise
+  enough to decide whether the next slice is row-scene replay, text draw, syntax materialization, or renderer payload?
+
+Discovery:
+- The original `code_editor.paint_perf` stats reader used frame `us_*` counters, but those are sums of many per-row
+  `elapsed.as_micros()` measurements. On the complex wheel bundle this hid roughly 15-25% of the editor paint work.
+- The same bundle already contains aggregate `ns_*` counters, which preserve sub-microsecond per-row costs before
+  converting to microseconds.
+
+Change:
+- `fretboard diag stats` now prefers `ns_*` paint counters when available and falls back to `us_*` for older bundles.
+- The `code_editor_paint_perf` JSON/text surface now also exposes existing content subfields that were previously
+  hidden at the stats layer: row text, geom key, rich cache compare, row-scene key compare, geom cache/resolve, overlay,
+  and frame overlay timings.
+
+Validation:
+- `cargo fmt -p fret-diag --check`.
+- `cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot`.
+- `cargo run -p fretboard -- diag stats target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json --json --top 3 --sort time`.
+- `target\debug\fretboard.exe diag stats target\fret-diag\perf-complex-editor-wheel-tail-syntax-line-prefetch-v1\1778501381582\bundle.json --top 3 --sort time`.
+
+Evidence:
+- Previous `us_*` summary for the bundle reported p95 `us_total=775`, `us_row_content_resolve=527`, and
+  `us_row_scene_fast_path=268`.
+- With `ns_*`-derived attribution, the same bundle reports p95 `us_total=886`, `us_row_content_resolve=636`,
+  `us_row_scene_fast_path=347`, `us_row_text=88`, and `us_text_draw=147`.
+- The worst top frame now reports `us_total=794`, `us_row_content_resolve=544`, `us_row_scene_fast_path=373`,
+  `us_row_scene_fast_probe=63`, `us_row_scene_fast_key_compare=28`, `us_row_scene_replay_ops=70`,
+  `us_row_scene_replay_touch=78`, `us_syntax_spans=51`, and `us_row_text=79`.
+
+Decision:
+- The next editor paint slice should focus on the row-scene fast replay path and Canvas/renderer payload. Row-scene
+  capture/store remains effectively absent (`capture_ops` p95 `1us`, store p95 `1us`), and syntax materialization is
+  not the current limiter.
+- Do not loosen the checked-in complex wheel contract and do not start a broad display-list rewrite from this evidence
+  alone.

@@ -12,6 +12,14 @@ fn snapshot_code_editor_paint_perf(
             p.get($key).and_then(|v| v.as_u64()).unwrap_or(0)
         };
     }
+    macro_rules! us_field {
+        ($us_key:literal, $ns_key:literal) => {
+            p.get($ns_key)
+                .and_then(|v| v.as_u64())
+                .map(|ns| ns / 1_000)
+                .unwrap_or_else(|| u64_field!($us_key))
+        };
+    }
 
     Some(BundleStatsCodeEditorPaintPerf {
         frame_seq: u64_field!("frame_seq"),
@@ -25,25 +33,68 @@ fn snapshot_code_editor_paint_perf(
         rows_drew_rich: u64_field!("rows_drew_rich"),
         rows_scene_replayed: u64_field!("rows_scene_replayed"),
         rows_scene_stored: u64_field!("rows_scene_stored"),
+        quads_selection: u64_field!("quads_selection"),
+        quads_caret: u64_field!("quads_caret"),
         syntax_rows_stored: u64_field!("syntax_rows_stored"),
-        us_total: u64_field!("us_total"),
-        us_row_content_resolve: u64_field!("us_row_content_resolve"),
-        us_rich_materialize: u64_field!("us_rich_materialize"),
-        us_text_draw: u64_field!("us_text_draw"),
-        us_row_scene_key: u64_field!("us_row_scene_key"),
-        us_row_scene_fast_probe: u64_field!("us_row_scene_fast_probe"),
-        us_row_scene_full_probe: u64_field!("us_row_scene_full_probe"),
-        us_row_scene_replay_touch: u64_field!("us_row_scene_replay_touch"),
-        us_row_scene_replay_ops: u64_field!("us_row_scene_replay_ops"),
-        us_row_scene_capture_ops: u64_field!("us_row_scene_capture_ops"),
-        us_row_scene_store: u64_field!("us_row_scene_store"),
-        us_row_scene_fast_path: u64_field!("us_row_scene_fast_path"),
-        us_row_scene_full_path: u64_field!("us_row_scene_full_path"),
-        us_syntax_spans: u64_field!("us_syntax_spans"),
-        us_syntax_slice: u64_field!("us_syntax_slice"),
-        us_syntax_highlight: u64_field!("us_syntax_highlight"),
-        us_syntax_distribute: u64_field!("us_syntax_distribute"),
-        us_syntax_store: u64_field!("us_syntax_store"),
+        us_total: us_field!("us_total", "ns_total"),
+        us_row_text: us_field!("us_row_text", "ns_row_text"),
+        us_baseline_measure: us_field!("us_baseline_measure", "ns_baseline_measure"),
+        us_row_content_resolve: us_field!("us_row_content_resolve", "ns_row_content_resolve"),
+        us_row_rich_cache_compare: us_field!(
+            "us_row_rich_cache_compare",
+            "ns_row_rich_cache_compare"
+        ),
+        us_row_geom_key: us_field!("us_row_geom_key", "ns_row_geom_key"),
+        us_rich_materialize: us_field!("us_rich_materialize", "ns_rich_materialize"),
+        us_text_draw: us_field!("us_text_draw", "ns_text_draw"),
+        us_row_scene_key: us_field!("us_row_scene_key", "ns_row_scene_key"),
+        us_row_scene_fast_probe: us_field!(
+            "us_row_scene_fast_probe",
+            "ns_row_scene_fast_probe"
+        ),
+        us_row_scene_full_probe: us_field!(
+            "us_row_scene_full_probe",
+            "ns_row_scene_full_probe"
+        ),
+        us_row_scene_fast_key_compare: us_field!(
+            "us_row_scene_fast_key_compare",
+            "ns_row_scene_fast_key_compare"
+        ),
+        us_row_scene_full_key_compare: us_field!(
+            "us_row_scene_full_key_compare",
+            "ns_row_scene_full_key_compare"
+        ),
+        us_row_scene_replay_touch: us_field!(
+            "us_row_scene_replay_touch",
+            "ns_row_scene_replay_touch"
+        ),
+        us_row_scene_replay_ops: us_field!(
+            "us_row_scene_replay_ops",
+            "ns_row_scene_replay_ops"
+        ),
+        us_row_scene_capture_ops: us_field!(
+            "us_row_scene_capture_ops",
+            "ns_row_scene_capture_ops"
+        ),
+        us_row_scene_store: us_field!("us_row_scene_store", "ns_row_scene_store"),
+        us_row_scene_fast_path: us_field!("us_row_scene_fast_path", "ns_row_scene_fast_path"),
+        us_row_scene_full_path: us_field!("us_row_scene_full_path", "ns_row_scene_full_path"),
+        us_syntax_spans: us_field!("us_syntax_spans", "ns_syntax_spans"),
+        us_syntax_slice: us_field!("us_syntax_slice", "ns_syntax_slice"),
+        us_syntax_highlight: us_field!("us_syntax_highlight", "ns_syntax_highlight"),
+        us_syntax_distribute: us_field!("us_syntax_distribute", "ns_syntax_distribute"),
+        us_syntax_store: us_field!("us_syntax_store", "ns_syntax_store"),
+        us_selection_rects: us_field!("us_selection_rects", "ns_selection_rects"),
+        us_caret_x: us_field!("us_caret_x", "ns_caret_x"),
+        us_caret_stops: us_field!("us_caret_stops", "ns_caret_stops"),
+        us_caret_rect: us_field!("us_caret_rect", "ns_caret_rect"),
+        us_row_geom_cache: us_field!("us_row_geom_cache", "ns_row_geom_cache"),
+        us_row_geom_resolve: us_field!("us_row_geom_resolve", "ns_row_geom_resolve"),
+        us_row_overlay: us_field!("us_row_overlay", "ns_row_overlay"),
+        us_frame_overlay_prepare: us_field!(
+            "us_frame_overlay_prepare",
+            "ns_frame_overlay_prepare"
+        ),
     })
 }
 
@@ -2104,14 +2155,22 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_drew_rich: metric!(rows_drew_rich),
             rows_scene_replayed: metric!(rows_scene_replayed),
             rows_scene_stored: metric!(rows_scene_stored),
+            quads_selection: metric!(quads_selection),
+            quads_caret: metric!(quads_caret),
             syntax_rows_stored: metric!(syntax_rows_stored),
             us_total: metric!(us_total),
+            us_row_text: metric!(us_row_text),
+            us_baseline_measure: metric!(us_baseline_measure),
             us_row_content_resolve: metric!(us_row_content_resolve),
+            us_row_rich_cache_compare: metric!(us_row_rich_cache_compare),
+            us_row_geom_key: metric!(us_row_geom_key),
             us_rich_materialize: metric!(us_rich_materialize),
             us_text_draw: metric!(us_text_draw),
             us_row_scene_key: metric!(us_row_scene_key),
             us_row_scene_fast_probe: metric!(us_row_scene_fast_probe),
             us_row_scene_full_probe: metric!(us_row_scene_full_probe),
+            us_row_scene_fast_key_compare: metric!(us_row_scene_fast_key_compare),
+            us_row_scene_full_key_compare: metric!(us_row_scene_full_key_compare),
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
             us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
@@ -2123,6 +2182,14 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_syntax_highlight: metric!(us_syntax_highlight),
             us_syntax_distribute: metric!(us_syntax_distribute),
             us_syntax_store: metric!(us_syntax_store),
+            us_selection_rects: metric!(us_selection_rects),
+            us_caret_x: metric!(us_caret_x),
+            us_caret_stops: metric!(us_caret_stops),
+            us_caret_rect: metric!(us_caret_rect),
+            us_row_geom_cache: metric!(us_row_geom_cache),
+            us_row_geom_resolve: metric!(us_row_geom_resolve),
+            us_row_overlay: metric!(us_row_overlay),
+            us_frame_overlay_prepare: metric!(us_frame_overlay_prepare),
         }
     }
 
