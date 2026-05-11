@@ -190,3 +190,14 @@ Status: complete
   focus to the submenu trigger.
 - No runtime defect was found in this slice; the gap was missing fixture/focused coverage for
   already-correct policy paths.
+
+## M16: Roving Typeahead Interaction Slice
+
+Status: complete
+
+- The roving focus interaction fixture now covers printable-key typeahead dispatch in addition to
+  arrow navigation.
+- The matrix asserts target focus/selection updates, no-match focus preservation, pointer-region
+  wrapper preservation, and `roving.typeahead.calls` so duplicate handler invocation becomes visible.
+- No runtime defect was found in this slice; the gap was missing fixture-level coverage for
+  already-correct typeahead behavior.

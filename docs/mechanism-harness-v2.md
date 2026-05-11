@@ -283,11 +283,18 @@ It covers:
 - arrow navigation skipping disabled items,
 - wrap-around from first to last item,
 - non-wrapping edge navigation preserving the current focus and selection,
-- pointer-region wrapped items still participating in roving item collection.
+- pointer-region wrapped items still participating in roving item collection,
+- printable-key typeahead dispatch moving focus and selection to a component-selected target,
+- no-match typeahead preserving current focus and active selection,
+- printable-key typeahead through pointer-region wrappers,
+- `roving.typeahead.calls` so duplicate handler invocation is visible as a fixture failure.
 
 The first run did not expose a runtime defect. It turned existing focused behavior into
 case-id-addressable coverage so future parity sweeps can add recipe-shaped roving scenarios without
 editing the harness runner.
+
+The typeahead extension also did not expose a runtime defect. It closed a mechanism coverage gap
+that previously lived only in `roving_flex` focused tests.
 
 ## Phase 2.10 Focus Scope Interaction Coverage
 

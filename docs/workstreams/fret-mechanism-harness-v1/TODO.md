@@ -53,14 +53,16 @@ date: 2026-05-12
   context-menu.
 - [x] Add focus-outside policy matrices for popover, dropdown-menu, and context-menu, plus a
   context-menu nested submenu keyboard restore focused gate.
+- [x] Extend the roving focus interaction fixture with printable-key typeahead dispatch,
+  no-match preservation, wrapper traversal, and call-count metrics.
 - [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
   and selectors are identified.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
   test ids for underlay, overlay, and observer/capture state.
-- [ ] Add active-descendant interaction, typeahead, nested focus scope, stale-parent, and submenu
-  fixture suites beyond the current recipe focus-restore matrix.
+- [ ] Add active-descendant interaction, nested focus scope, stale-parent, submenu fixture suites,
+  and recipe-level typeahead parity beyond the current mechanism matrices.
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier

@@ -177,9 +177,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
 - Semantics relation runner:
   `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
-- Roving focus interaction fixture:
+- Roving focus/typeahead interaction fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json`
-- Roving focus interaction runner:
+- Roving focus/typeahead interaction runner:
   `crates/fret-ui/src/declarative/tests/roving_focus_interaction_harness.rs`
 - Focus scope interaction fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/focus_scope_interaction_v1.json`

@@ -124,6 +124,127 @@
         "upstream_ref": "Component wrappers must not hide roving items from navigation",
         "note": "Pointer-region wrappers are common in custom painted item rows and must preserve roving item collection."
       }
+    },
+    {
+      "id": "typeahead-key-targets-third-item",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": true,
+        "disabled": [false, false, false],
+        "initial": "a",
+        "key": "key_c",
+        "typeahead": { "target": "c" }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-c" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 2.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.typeahead.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "APG composite widgets can use printable character typeahead to move active focus",
+        "note": "The mechanism must route printable keys to the component typeahead hook and update focus/selection exactly once."
+      }
+    },
+    {
+      "id": "typeahead-none-preserves-current-focus",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": true,
+        "disabled": [false, false, false],
+        "initial": "a",
+        "key": "key_x",
+        "typeahead": { "target": null }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-a" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.typeahead.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "APG typeahead should leave active focus unchanged when no item matches",
+        "note": "A component hook returning no target must not disturb current focus or active selection."
+      }
+    },
+    {
+      "id": "typeahead-through-pointer-region-wrapper-targets-third-item",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": true,
+        "disabled": [false, false, false],
+        "initial": "a",
+        "key": "key_c",
+        "wrap_items_in_pointer_regions": true,
+        "typeahead": { "target": "c" }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-c" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 2.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.typeahead.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Composite widget wrappers should preserve typeahead focus targets",
+        "note": "Pointer-region wrappers are common around painted menu/list rows and should not hide the target collected by roving focus."
+      }
     }
   ]
 }

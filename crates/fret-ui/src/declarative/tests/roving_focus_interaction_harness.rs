@@ -26,6 +26,13 @@ struct RovingFlexScenario {
     key: RovingKey,
     #[serde(default)]
     wrap_items_in_pointer_regions: bool,
+    #[serde(default)]
+    typeahead: Option<RovingTypeaheadScenario>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RovingTypeaheadScenario {
+    target: Option<RovingItem>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -41,6 +48,8 @@ enum RovingItem {
 enum RovingKey {
     ArrowDown,
     ArrowUp,
+    KeyC,
+    KeyX,
 }
 
 #[derive(Default)]
@@ -87,6 +96,7 @@ fn observe_roving_flex(
     let selection_model = app
         .models_mut()
         .insert(Option::<Arc<str>>::Some(scenario.initial.label()));
+    let typeahead_calls = app.models_mut().insert(0_u32);
     let mut ids = RovingElementIds::default();
 
     let root = render_root(
@@ -96,7 +106,15 @@ fn observe_roving_flex(
         window,
         bounds,
         "mechanism-harness-roving-focus",
-        |cx| build_roving_flex(cx, scenario, selection_model.clone(), &mut ids),
+        |cx| {
+            build_roving_flex(
+                cx,
+                scenario,
+                selection_model.clone(),
+                typeahead_calls.clone(),
+                &mut ids,
+            )
+        },
     );
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -130,6 +148,10 @@ fn observe_roving_flex(
         "roving.selection.index",
         selection_index(app.models().get_cloned(&selection_model).flatten()),
     );
+    observed.set_metric(
+        "roving.typeahead.calls",
+        app.models().get_copied(&typeahead_calls).unwrap_or(0) as f32,
+    );
     Ok(observed)
 }
 
@@ -137,6 +159,7 @@ fn build_roving_flex(
     cx: &mut ElementContext<'_, TestHost>,
     scenario: &RovingFlexScenario,
     selection_model: fret_runtime::Model<Option<Arc<str>>>,
+    typeahead_calls: fret_runtime::Model<u32>,
     ids: &mut RovingElementIds,
 ) -> Vec<AnyElement> {
     let props = crate::element::RovingFlexProps {
@@ -152,7 +175,13 @@ fn build_roving_flex(
     };
 
     vec![cx.roving_flex(props, |cx| {
-        install_roving_callbacks(cx, scenario.wrap, selection_model);
+        install_roving_callbacks(
+            cx,
+            scenario.wrap,
+            selection_model,
+            typeahead_calls,
+            scenario.typeahead.clone(),
+        );
         vec![
             build_roving_item(
                 cx,
@@ -183,6 +212,8 @@ fn install_roving_callbacks(
     cx: &mut ElementContext<'_, TestHost>,
     wrap: bool,
     selection_model: fret_runtime::Model<Option<Arc<str>>>,
+    typeahead_calls: fret_runtime::Model<u32>,
+    typeahead: Option<RovingTypeaheadScenario>,
 ) {
     let values: Arc<[Arc<str>]> = Arc::from([Arc::from("a"), Arc::from("b"), Arc::from("c")]);
     cx.roving_on_navigate(Arc::new(move |_host, _cx, it| {
@@ -228,6 +259,15 @@ fn install_roving_callbacks(
             .models_mut()
             .update(&selection_model, |selected| *selected = Some(value));
     }));
+
+    if let Some(typeahead) = typeahead {
+        cx.roving_on_typeahead(Arc::new(move |host, _cx, _it| {
+            let _ = host
+                .models_mut()
+                .update(&typeahead_calls, |calls| *calls += 1);
+            typeahead.target.map(RovingItem::index)
+        }));
+    }
 }
 
 fn build_roving_item(
@@ -304,6 +344,18 @@ impl RovingKey {
         match self {
             Self::ArrowDown => fret_core::KeyCode::ArrowDown,
             Self::ArrowUp => fret_core::KeyCode::ArrowUp,
+            Self::KeyC => fret_core::KeyCode::KeyC,
+            Self::KeyX => fret_core::KeyCode::KeyX,
+        }
+    }
+}
+
+impl RovingItem {
+    fn index(self) -> usize {
+        match self {
+            Self::A => 0,
+            Self::B => 1,
+            Self::C => 2,
         }
     }
 }
