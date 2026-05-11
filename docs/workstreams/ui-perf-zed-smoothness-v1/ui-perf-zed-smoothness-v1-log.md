@@ -12143,3 +12143,41 @@ Decision:
 - Do not start a `WindowedRowsSurface` display-list rewrite from this passing baseline alone. The rewrite still needs
   a near-threshold or failing high-stress editor paint surface that points at row scene op churn rather than layout,
   scheduling noise, or renderer micro-timing variability.
+
+## 2026-05-11 (suppressed dirty aggregation repair)
+
+Question:
+- The complex editor wheel stressor exposed `subtree layout dirty count underflow` while investigating whether editor
+  paint warranted a `WindowedRowsSurface` display-list rewrite. Is this a paint architecture signal, or a stale dirty
+  aggregation contract bug that must be fixed first?
+
+Change:
+- `layout_dirty_children_suppressed` now acts as a real child-dirty aggregation barrier for all delta paths:
+  subtree removal, direct ancestor delta propagation, and invalidation walks.
+- Removing a dirty child below a suppressed parent no longer subtracts that child's dirty count from ancestors that
+  never counted it.
+- Added a regression test for the suppressed-parent removal case.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo nextest run -p fret-ui tree::tests::subtree_layout_dirty_underflow_repair tree::tests::interactivity_gate tree::tests::barrier_subtree_layout_dirty_aggregation`
+  - 10 tests passed.
+- `git diff --check`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Passed with existing unused warnings.
+- Original complex editor wheel script, using the `gallery-full` release binary:
+  `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline.json --dir target/fret-diag-complex-editor-wheel-after-dirty-suppression-fix-full --session-auto --timeout-ms 240000 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch target/release/fret-ui-gallery.exe`
+  - Passed: `target/fret-diag-complex-editor-wheel-after-dirty-suppression-fix-full.log`.
+  - No `subtree layout dirty count underflow` / `underflow during invalidation walk` entries in the captured log.
+  - Evidence bundle:
+    `target/fret-diag-complex-editor-wheel-after-dirty-suppression-fix-full/sessions/1778484071307-173292/1778484083472-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline/bundle.schema2.json`.
+
+Perf evidence:
+- `diag stats --sort cpu_cycles --top 8` on the bundle reports p50/p95 total=`1666/4815us`,
+  layout=`285/2803us`, paint=`1325/2364us`, with worst CPU rows still showing invalidation-walk work plus editor
+  paint. This validates the counter fix but does not yet justify a row display-list rewrite.
+
+Decision:
+- Treat the underflow as a dirty aggregation correctness bug, not as evidence for a renderer/display-list rewrite.
+- Continue editor performance work from passing payload-aware baselines plus future high-stress evidence; keep any
+  `WindowedRowsSurface` rewrite gated on a failing or near-threshold paint/payload contract.

@@ -33,3 +33,61 @@ fn subtree_layout_dirty_underflow_repairs_counts_upwards() {
     assert_eq!(ui.nodes[b].subtree_layout_dirty_count, 1);
     assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 1);
 }
+
+#[test]
+fn removing_dirty_subtree_under_suppressed_parent_does_not_decrement_ancestors() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let gate = ui.create_node(TestStack);
+    let hidden_child = ui.create_node(TestStack);
+    let visible_dirty_sibling = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![gate, visible_dirty_sibling]);
+    ui.set_children(gate, vec![hidden_child]);
+
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(gate);
+    ui.test_clear_node_invalidations(hidden_child);
+    ui.test_clear_node_invalidations(visible_dirty_sibling);
+
+    ui.set_layout_dirty_children_suppressed(gate, true);
+    ui.test_set_layout_invalidation(hidden_child, true);
+    ui.test_set_layout_invalidation(visible_dirty_sibling, true);
+
+    assert_eq!(
+        ui.nodes[hidden_child].subtree_layout_dirty_count, 1,
+        "hidden dirty child tracks its own pending layout work"
+    );
+    assert_eq!(
+        ui.nodes[gate].subtree_layout_dirty_count, 0,
+        "suppressed parent must not expose hidden child dirty work"
+    );
+    assert_eq!(
+        ui.nodes[root].subtree_layout_dirty_count, 1,
+        "root should only count the visible dirty sibling"
+    );
+
+    let rebuilds_before = ui.debug_stats().layout_subtree_dirty_agg_rebuild_nodes;
+    let mut services = FakeUiServices;
+    ui.remove_subtree(&mut services, hidden_child);
+
+    assert!(!ui.nodes.contains_key(hidden_child));
+    assert_eq!(
+        ui.nodes[root].subtree_layout_dirty_count, 1,
+        "removing hidden dirty work must not subtract from ancestors that never counted it"
+    );
+    assert_eq!(ui.nodes[gate].subtree_layout_dirty_count, 0);
+    assert_eq!(
+        ui.nodes[visible_dirty_sibling].subtree_layout_dirty_count,
+        1
+    );
+    assert_eq!(
+        ui.debug_stats().layout_subtree_dirty_agg_rebuild_nodes,
+        rebuilds_before,
+        "the normal removal path should stay count-consistent without underflow repair"
+    );
+}

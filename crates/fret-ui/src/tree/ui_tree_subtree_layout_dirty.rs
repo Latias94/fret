@@ -376,17 +376,31 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         delta: i32,
     ) {
+        self.apply_subtree_layout_dirty_delta_walk(node, delta, true);
+    }
+
+    #[track_caller]
+    fn apply_subtree_layout_dirty_delta_walk(
+        &mut self,
+        node: NodeId,
+        delta: i32,
+        include_start_as_self: bool,
+    ) {
         if delta == 0 || !self.subtree_layout_dirty_aggregation_enabled() {
             return;
         }
 
         let mut walked_nodes: u32 = 0;
         let mut current = Some(node);
+        let mut apply_as_self = include_start_as_self;
         while let Some(id) = current {
             let (parent, element, stored, underflow) = {
                 let Some(n) = self.nodes.get_mut(id) else {
                     break;
                 };
+                if !apply_as_self && n.layout_dirty_children_suppressed {
+                    break;
+                }
                 let underflow = apply_i32_delta_to_u32(&mut n.subtree_layout_dirty_count, delta);
                 (n.parent, n.element, n.subtree_layout_dirty_count, underflow)
             };
@@ -418,6 +432,7 @@ impl<H: UiHost> UiTree<H> {
             }
             walked_nodes = walked_nodes.saturating_add(1);
             current = parent;
+            apply_as_self = false;
         }
 
         if self.debug_enabled {
@@ -440,7 +455,7 @@ impl<H: UiHost> UiTree<H> {
         let Some(node) = start else {
             return;
         };
-        self.apply_subtree_layout_dirty_delta_to_node_and_ancestors(node, delta);
+        self.apply_subtree_layout_dirty_delta_walk(node, delta, false);
     }
 
     pub(in crate::tree) fn validate_subtree_layout_dirty_counts_if_enabled(&mut self) {
