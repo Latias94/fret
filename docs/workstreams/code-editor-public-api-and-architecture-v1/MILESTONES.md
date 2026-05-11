@@ -77,7 +77,8 @@ Exit criteria:
   `M3_A11Y_MODULE_SPLIT_2026-05-12.md`; the first input owner slice moved edit transactions,
   IME delete-surrounding, undo/redo, and row-geom cache shifting into
   `M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md`; clipboard effects moved into
-  `M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`.)
+  `M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`; keyboard dispatch moved into
+  `M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
 
 ## M4 - Feature Surface Proof

@@ -68,7 +68,7 @@ Last updated: 2026-05-12
   - [x] a11y,
   - [ ] input,
     - [x] edit transactions / IME delete-surrounding / undo-redo / row-geom cache shift,
-    - [ ] keyboard and command dispatch,
+    - [x] keyboard and command dispatch,
     - [ ] caret navigation and pointer selection,
     - [x] clipboard effects,
   - [ ] paint,
