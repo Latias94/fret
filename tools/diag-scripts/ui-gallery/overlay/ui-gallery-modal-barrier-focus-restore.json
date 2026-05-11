@@ -1,5 +1,15 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-modal-barrier-focus-restore",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "gallery_dev", "overlay", "modal_barrier", "focus_restore"],
+    "target_hints": [
+      "Requires the UI Gallery gallery-dev feature because it targets the internal Overlay preview page.",
+      "Run with `cargo run -p fret-ui-gallery --release --features gallery-dev`.",
+      "Use `fret-mechanism-harness-overlay-focus` for default UI Gallery overlay/focus smoke coverage."
+    ]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
@@ -114,4 +124,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-modal-barrier-focus-restore" }
   ]
 }
-

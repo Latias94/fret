@@ -71,5 +71,6 @@ date: 2026-05-12
 - [x] Extend recipe-level typeahead parity beyond the current mechanism matrices.
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
-- [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier
-  selectors.
+- [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
+- [ ] Add modal-barrier runtime coverage on a default-compatible page, or split `gallery-dev`
+  diagnostics suites so dev-only overlay scripts cannot be run with the default gallery binary.

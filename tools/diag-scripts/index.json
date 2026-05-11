@@ -3137,6 +3137,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-alert-dialog-focus-trap-tab-cycle",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus"
+      ],
+      "tags": [
+        "alert_dialog",
+        "focus",
+        "keyboard",
+        "shadcn",
+        "trap",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-alert-dialog-least-destructive-initial-focus",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
       "required_capabilities": [],
@@ -6203,10 +6222,21 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus",
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "detached_trigger",
+        "dialog",
+        "focus_restore",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the default Dialog component page.",
+        "Verifies Escape restores focus to an inline detached trigger.",
+        "Verifies click dismissal restores focus to a toolbar detached trigger."
+      ]
     },
     {
       "id": "ui-gallery-dialog-docs-order-smoke",
@@ -7432,12 +7462,24 @@
     {
       "id": "ui-gallery-modal-barrier-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "focus_restore",
+        "gallery_dev",
+        "modal_barrier",
+        "overlay",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Requires the UI Gallery gallery-dev feature because it targets the internal Overlay preview page.",
+        "Run with `cargo run -p fret-ui-gallery --release --features gallery-dev`.",
+        "Use `fret-mechanism-harness-overlay-focus` for default UI Gallery overlay/focus smoke coverage."
+      ]
     },
     {
       "id": "ui-gallery-modal-barrier-underlay-block",
@@ -7811,6 +7853,24 @@
         "Verifies the docs-path sections plus the Fret follow-ups are present.",
         "Captures a bounded bundle for docs-surface triage."
       ]
+    },
+    {
+      "id": "ui-gallery-popover-escape-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus"
+      ],
+      "tags": [
+        "focus_restore",
+        "overlay",
+        "popover",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range",

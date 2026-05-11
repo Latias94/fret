@@ -145,6 +145,19 @@ Suite membership:
 - `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json`
 - `tools/diag-scripts/suites/diag-hardening-smoke/suite.json`
 
+## UI Gallery Overlay/Focus Runtime Gate
+
+```powershell
+cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --dir target/fret-diag-mechanism-harness-runtime --session-auto --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Suite membership:
+
+- `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json`
+- `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`
+- `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+- `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+
 ## Repo Integrity Gates
 
 ```powershell
@@ -224,6 +237,12 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json`
 - Shadcn recipe typeahead runner:
   `ecosystem/fret-ui-shadcn/tests/recipe_typeahead_mechanism_harness.rs`
+- UI Gallery overlay/focus runtime suite:
+  `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+- UI Gallery overlay/focus runtime scripts:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - Previous focused tests: `crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs`
 - View-cache focused tests: `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Environment focused tests: `crates/fret-ui/src/declarative/tests/environment_queries.rs`

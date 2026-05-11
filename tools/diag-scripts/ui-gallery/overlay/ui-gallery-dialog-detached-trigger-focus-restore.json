@@ -2,7 +2,13 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-dialog-detached-trigger-focus-restore",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "dialog", "focus_restore", "detached_trigger"],
+    "target_hints": [
+      "Navigates to the default Dialog component page.",
+      "Verifies Escape restores focus to an inline detached trigger.",
+      "Verifies click dismissal restores focus to a toolbar detached trigger."
+    ]
   },
   "steps": [
     {

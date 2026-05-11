@@ -266,3 +266,16 @@ Status: complete
   or duplicate value-change dispatch become observable harness facts.
 - No runtime defect was found in this slice; the gap was missing recipe-level fixture coverage above
   the already-covered roving typeahead mechanism.
+
+## M23: UI Gallery Overlay/Focus Runtime Gate Slice
+
+Status: complete
+
+- A dedicated diagnostics suite now promotes default-compatible UI Gallery overlay/focus paths:
+  AlertDialog focus trap/tab cycle, Dialog detached-trigger focus restore, and Popover Escape focus
+  restore.
+- The first attempted modal-barrier path exposed a harness precondition issue: that script targets
+  the `gallery-dev` Overlay preview page, so running it against the default gallery binary fails
+  before it reaches the mechanism invariant.
+- No runtime mechanism defect was found in the promoted default-compatible paths; the fix was to
+  separate stable runtime coverage from a dev-only overlay script precondition.
