@@ -195,6 +195,14 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     the checked-in v1 contract with worst top total `2859us` and payload `254/192368`.
     Next attribution should inspect renderer text prepare / glyph pinning and possible text-index compaction; do not
     treat the larger text-prepare number as a regression caused by row-scene replay.
+  - Follow-up renderer text prepare fix: `TextShape` now stores a pre-deduplicated `GlyphPinKeys` set and renderer
+    atlas pinning merges those sets instead of scanning every glyph instance each frame. Paint-detail repeat=3 evidence
+    in `target/fret-diag/perf-complex-editor-shape-pin-keys-v1/1778516581210/bundle.schema2.json` improves renderer
+    text p95/max from `1287/1302us` to `660/722us`, while top total p50/p95/max becomes `1925/2125/2125us`. The
+    non-instrumented repeat=3 baseline check in
+    `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passed the
+    checked-in v1 contract with worst top total `2206us`, `top_renderer_prepare_text_us` p50/p95/max `424/426/426us`,
+    and payload `254/192368`.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.

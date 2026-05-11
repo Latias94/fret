@@ -12604,3 +12604,54 @@ Decision:
   while `Scene::text_blob_ids()` owns renderer text atlas pinning.
 - The next measured slice should inspect renderer text prepare / glyph pinning and possible text-index compaction. Row
   scene capture/store remains too small to justify a broad row display-list rewrite from this evidence.
+
+## 2026-05-11 23:59 (text shape glyph pin-key precompute)
+
+Question:
+- After replayed text correctly enters `Scene::text_blob_ids()`, can renderer text prepare avoid re-deriving and
+  re-deduplicating glyph pin keys from every `GlyphInstance` every frame?
+
+Discovery:
+- `TextSystem::prepare_for_scene` collected glyph keys by iterating `scene.text_blob_ids()`, then scanning every
+  `TextShape::glyphs()` and inserting each glyph key into per-kind `HashSet`s.
+- The per-shape glyph-key set is stable for a prepared shape. Doing the unique-key derivation at shape creation keeps
+  atlas pinning semantics unchanged while removing repeated per-frame glyph-instance scans from renderer prepare.
+
+Change:
+- Added `GlyphPinKeys`, a per-kind pre-deduplicated key set stored on `TextShape`.
+- `collect_scene_pinned_keys` now merges each shape's precomputed pin keys instead of scanning all glyph instances.
+- Text diagnostics include the extra pin-key arrays in the shape heap-byte estimate.
+
+Validation:
+- `cargo fmt -p fret-render-wgpu --check`.
+- `cargo check -p fret-render-wgpu`.
+- `cargo nextest run -p fret-render-wgpu --lib glyph_pin_keys_deduplicate_by_bucket`.
+- Note: `cargo nextest run -p fret-render-wgpu glyph_pin_keys_deduplicate_by_bucket` without `--lib` attempted to
+  compile the package integration-test set and failed under Windows pagefile/mmap pressure (`os error 1455`); the
+  focused library gate above passed.
+- `cargo build -p fret-ui-gallery --release --features gallery-dev` (passed with existing unrelated warnings in
+  `fret-runtime` and `fret-ui`).
+
+Evidence:
+- Paint-detail complex wheel repeat=3:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-shape-pin-keys-v1 --timeout-ms 240000 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`.
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-shape-pin-keys-v1/1778516581210/bundle.schema2.json`.
+  - Compared with the replay text-index semantics slice, `diag stats` renderer text p95/max improved from
+    `1287/1302us` to `660/722us`; perf rows show top `renderer_prepare_text_us` p50/p95/max `441/541/541us`.
+  - Top total p50/p95/max improved to `1925/2125/2125us`, with paint p50/p95/max `1361/1598/1598us`.
+  - Code-editor p95 row-scene fast path also drops from `451us` to `262us` on this run, while atlas upload/eviction
+    remain `0`.
+- Formal baseline check without paint-detail instrumentation:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1 --timeout-ms 240000 --repeat 3 --warmup-frames 5 --sort time --top 5 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`.
+  - Passed the current Windows RTX 4090 v1 contract by exit status.
+  - Worst top total `2206us`; frame p95 total `2206us`; top `renderer_prepare_text_us` p50/p95/max `424/426/426us`;
+    payload text ops / instance bytes `254/192368`.
+
+Decision:
+- Keep the precomputed pin-key set on `TextShape`: it is a stable derived artifact of shape preparation, not a
+  frame-specific cache.
+- Do not promote a new complex wheel baseline yet. The current v1 contract remains green, and this slice reduces
+  headroom pressure without requiring threshold changes.
+- Next renderer-text work should look at remaining `prepare_for_scene` bucket churn and text encode costs only if a
+  representative script gets near a threshold again.

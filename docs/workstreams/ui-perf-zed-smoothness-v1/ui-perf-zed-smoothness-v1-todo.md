@@ -1336,6 +1336,21 @@ Perf acceptance:
     current Windows v1 contract with worst top total `2859us` and payload text ops / instance bytes `254/192368`.
   - Decision: keep hosted-resource touch for Canvas resource lifetime; treat renderer text prepare / glyph pinning as
     the next evidence target rather than row-scene capture/store or broad display-list replacement.
+- [x] Precompute per-shape glyph pin keys for renderer text prepare.
+  - Discovery: after replayed text correctly entered `Scene::text_blob_ids()`, renderer text prepare spent real CPU
+    walking every `TextShape::glyphs()` entry and inserting each glyph key into per-frame `HashSet`s. The unique pin-key
+    set is stable for the prepared shape.
+  - Implementation: `TextShape` stores `GlyphPinKeys` built once at shape creation; renderer atlas pinning merges those
+    pre-deduplicated key sets. Shape heap-byte diagnostics now include the pin-key arrays.
+  - Gate: `cargo fmt -p fret-render-wgpu --check`; `cargo check -p fret-render-wgpu`;
+    `cargo nextest run -p fret-render-wgpu --lib glyph_pin_keys_deduplicate_by_bucket`.
+    Package-wide `nextest` without `--lib` hit Windows pagefile/mmap pressure while compiling integration tests
+    (`os error 1455`), so the focused library gate is the reliable test evidence for this slice.
+  - Evidence: perf log entry `2026-05-11 23:59`. Complex wheel repeat=3 paint detail reports renderer text p95/max
+    `660/722us` versus the prior replay-index slice's `1287/1302us`; perf row `top_renderer_prepare_text_us`
+    p50/p95/max is `441/541/541us`. Formal baseline repeat=3 passes with worst top total `2206us`,
+    frame p95 total `2206us`, and payload text ops / instance bytes `254/192368`.
+  - Decision: keep the current v1 baseline unchanged; this reduces headroom pressure without changing thresholds.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.

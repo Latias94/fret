@@ -1,4 +1,4 @@
-use super::atlas::GlyphKey;
+use super::atlas::{GlyphKey, GlyphPinKeys};
 use fret_core::{TextMetrics, geometry::Px};
 use fret_render_text::{FontFaceKey, TextDecoration};
 use std::sync::{Arc, RwLock};
@@ -217,6 +217,7 @@ impl TextBlob {
 #[derive(Debug)]
 pub(super) struct TextShape {
     glyphs: Arc<[GlyphInstance]>,
+    pin_keys: GlyphPinKeys,
     metrics: TextMetrics,
     lines: Arc<[TextLine]>,
     caret_stops: Arc<[(usize, Px)]>,
@@ -234,8 +235,10 @@ impl TextShape {
         missing_glyphs: u32,
         font_faces: Arc<[TextFontFaceUsage]>,
     ) -> Self {
+        let pin_keys = GlyphPinKeys::from_keys(glyphs.iter().map(|glyph| glyph.key));
         Self {
             glyphs,
+            pin_keys,
             metrics,
             lines,
             caret_stops,
@@ -247,6 +250,10 @@ impl TextShape {
 
     pub(crate) fn glyphs(&self) -> &[GlyphInstance] {
         self.glyphs.as_ref()
+    }
+
+    pub(super) fn pin_keys(&self) -> &GlyphPinKeys {
+        &self.pin_keys
     }
 
     pub(crate) fn render_glyphs<F>(

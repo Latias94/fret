@@ -112,3 +112,9 @@ Budgets are guidance for representative probes. The committed gate is the script
   cost (`p95/max=1287/1302us`, no atlas upload/eviction). Keep the next editor-paint investigation focused on renderer
   text prepare / glyph pinning or text-index compaction unless a future contract actually shows row-scene capture/store
   as the limiter.
+- Renderer text prepare now precomputes each `TextShape`'s unique glyph pin keys. The complex wheel repeat=3
+  paint-detail evidence `target/fret-diag/perf-complex-editor-shape-pin-keys-v1/1778516581210/bundle.schema2.json`
+  reduces renderer text p95/max to `660/722us` and keeps top total p50/p95/max at `1925/2125/2125us`; the
+  non-instrumented baseline check
+  `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passes the current
+  v1 contract. Keep the baseline unchanged unless a deliberate re-seed policy is chosen.
