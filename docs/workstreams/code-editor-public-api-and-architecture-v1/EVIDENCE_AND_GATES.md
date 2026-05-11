@@ -81,6 +81,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md`
 - Semantic token contract:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md`
+- Overlay feature boundary:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
@@ -92,6 +94,8 @@ the target behavior and stressor scope are explicit.
 - Paint hot path: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
 - Input hot path: `ecosystem/fret-code-editor/src/editor/input/mod.rs`
 - A11y projection: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`
+- Overlay infrastructure: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
+- Existing editor anchored overlay recipe: `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs`
 
 ## Known Caveats
 

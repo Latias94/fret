@@ -88,9 +88,12 @@ The editor should accept feature data through explicit owner-layer contracts:
   payload, tooltip/action ids, and explicit hit-target intent.
 - Semantic tokens: non-empty buffer ranges, semantic classes, and unordered modifiers decoupled
   from paint colors.
-- Completion: request context, candidate model, active candidate, commit policy.
-- Hover/signature help: request context and overlay payloads without owning overlay dismissal policy.
-- Code actions: range/context payload plus command ids.
+- Completion: revision-aware request context, candidate payloads, active candidate identity, and
+  commit intent vocabulary without owning listbox, focus, dismissal, or placement policy.
+- Hover/signature help: request context, payload ids, and anchor facts without owning overlay
+  dismissal, focus, hover-intent, or placement policy.
+- Code actions: range/context payload, related diagnostic ids, and command ids without owning the
+  menu/popover/lightbulb policy.
 - Search highlights: range collection and active-match identity.
 - Bracket matching: paired ranges and transient highlight policy.
 - Multi-cursor: selection collection and edit transaction semantics.

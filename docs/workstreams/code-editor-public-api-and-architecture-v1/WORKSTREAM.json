@@ -53,6 +53,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -141,8 +145,12 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
+    "docs/adr/0011-overlays-and-multi-root.md",
+    "docs/adr/0020-focus-and-command-routing.md",
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/reference-stack-ui-behavior.md",
     "docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md",
     "docs/workstreams/editor-text-pipeline-v1/editor-text-pipeline-v1.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md",
@@ -152,9 +160,14 @@
     "ecosystem/fret-code-editor-view/src/diagnostics.rs",
     "ecosystem/fret-code-editor-view/src/gutter.rs",
     "ecosystem/fret-code-editor-view/src/decorations.rs",
-    "ecosystem/fret-code-editor-view/src/semantic_tokens.rs"
+    "ecosystem/fret-code-editor-view/src/semantic_tokens.rs",
+    "ecosystem/fret-ui-kit/src/overlay_controller.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select.rs"
   ],
   "adr_refs": [
+    "docs/adr/0011-overlays-and-multi-root.md",
+    "docs/adr/0020-focus-and-command-routing.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/0188-code-editor-display-fragments-and-displaymap-composition-v1.md",
     "docs/adr/0179-text-navigation-and-word-boundaries-v1.md",
