@@ -55,7 +55,9 @@ Conventions:
   - Use this trio as the default “is the frame still good?” loop; keep full `ui-gallery-steady` for periodic
     drift evidence or suite membership changes, not as a single formal Windows contract.
   - Split or explicitly defer the remaining broad-only steady members before another Windows `ui-gallery-steady`
-    promotion: hover layout, Material tabs, menubar keyboard nav, view-cache toggle, and virtual-list torture.
+    promotion: hover layout, Material tabs, menubar keyboard nav, and virtual-list torture.
+  - `ui-gallery-view-cache-toggle-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
   - Evidence: perf log entries `2026-05-07 13:58` and `2026-05-07 14:01`.
 
 - [x] Stabilize `ui-gallery-overlay-pointer-move-steady` cleanup after pointer sweeps.

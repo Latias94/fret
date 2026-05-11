@@ -186,10 +186,10 @@ Current contract split (2026-05-11):
 - Do not attempt another single Windows `ui-gallery-steady` promotion until the broad-only members are either split
   into narrower contracts or explicitly left as evidence-only:
   `ui-gallery-hover-layout-torture-steady`, `ui-gallery-material3-tabs-switch-perf-steady`,
-  `ui-gallery-menubar-keyboard-nav-steady`, `ui-gallery-view-cache-toggle-perf-steady`, and
-  `ui-gallery-virtual-list-torture-steady`.
-- Keep `ui-resize-probes`, `ui-code-editor-resize-probes`, and `ui-gallery-code-editor-torture-autoscroll-steady`
-  as the current editor-grade hard contracts for resize and editor paint/payload pressure.
+  `ui-gallery-menubar-keyboard-nav-steady`, and `ui-gallery-virtual-list-torture-steady`.
+- Keep `ui-resize-probes`, `ui-code-editor-resize-probes`,
+  `ui-gallery-code-editor-torture-autoscroll-steady`, and `ui-gallery-view-cache-toggle-perf-steady` as the current
+  editor-grade hard contracts for resize, view-cache, and editor paint/payload pressure.
 
 ---
 

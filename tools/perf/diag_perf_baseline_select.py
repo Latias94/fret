@@ -149,6 +149,16 @@ def _baseline_metrics(path: Path) -> BaselineMetrics:
     )
 
 
+def _rewrite_checked_in_out_path(path: Path, out_path_value: str) -> None:
+    doc = _load_json(path)
+    if not isinstance(doc, dict):
+        return
+    if doc.get("kind") != "perf_baseline":
+        return
+    doc["out_path"] = out_path_value
+    path.write_text(json.dumps(doc, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Select a stable perf baseline from multiple `fretboard-dev diag perf` candidates.",
@@ -450,6 +460,7 @@ def main() -> int:
         return 4
 
     shutil.copyfile(selected_baseline_path, baseline_out)
+    _rewrite_checked_in_out_path(baseline_out, str(args.baseline_out))
 
     summary = {
         "schema_version": 1,
