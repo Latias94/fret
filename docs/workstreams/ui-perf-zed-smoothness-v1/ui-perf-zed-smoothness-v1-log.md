@@ -12110,3 +12110,36 @@ Decision:
 - Treat all former broad-only steady gallery members as dedicated Windows contracts.
 - Keep `ui-gallery-steady` as drift evidence unless it is redefined as a suite-of-contracts; do not re-promote it by
   loosening broad-suite thresholds.
+
+## 2026-05-11 (payload-aware autoscroll typical baseline v2)
+
+Question:
+- Can the editor autoscroll contract cover typical-frame paint/payload pressure, not only the steady worst-frame
+  surface, before deciding whether a `WindowedRowsSurface` display-list rewrite is justified?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`.
+- Updated the contract matrix, audit, TODO, and workstream summary so the typical autoscroll payload contract is a
+  first-class Windows RTX 4090 editor paint baseline.
+
+Validation:
+- Selector command:
+  `python tools/perf/diag_perf_baseline_select.py --suite ui-gallery-code-editor-torture-autoscroll-typical --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json --candidates 2 --validate-runs 3 --repeat 15 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-typical-windows-rtx4090-v2 --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-typical-windows-rtx4090-v2/selection-summary.json`
+  - candidate-1 validated `3/3` with `fail_total=0`
+  - candidate-2 validated `3/3` with `fail_total=0`
+  - candidate-1 selected on lower suite p90 (`3375` vs `3834`)
+- Checked-in baseline:
+  - `threshold_surface=ui-renderer-payload`
+  - measured p50/p95/max top total=`2563/3603/3603us`
+  - measured p50/p95/max top layout=`77/123/123us`
+  - hard frame p95 thresholds total/layout/solve=`3360/368/0us`
+  - payload thresholds instance/text_ops=`262416/406`
+  - renderer micro-timings remain measured evidence, not hard thresholds
+
+Decision:
+- Treat the typical autoscroll v2 baseline as the typical-frame editor paint/payload contract.
+- Do not start a `WindowedRowsSurface` display-list rewrite from this passing baseline alone. The rewrite still needs
+  a near-threshold or failing high-stress editor paint surface that points at row scene op churn rather than layout,
+  scheduling noise, or renderer micro-timing variability.

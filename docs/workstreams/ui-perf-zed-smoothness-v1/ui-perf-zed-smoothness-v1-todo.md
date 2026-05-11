@@ -244,6 +244,13 @@ Conventions:
     `total/layout/paint/solve p95=3995/2137/1747/574us`, with the real 20k-line torture surface active and
     `paint_perf.us_total=365us` in the sampled bundle. Do not start the row display-list rewrite from this sample
     alone; either create a stricter editor paint stressor or move to a currently near-threshold gate.
+  - Latest payload-aware typical-frame contract: perf log entry `2026-05-11` promotes
+    `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json` with
+    `threshold_surface=ui-renderer-payload`, measured p50/p95/max top total=`2563/3603/3603us`, hard frame p95
+    thresholds total/layout/solve=`3360/368/0us`, and payload thresholds
+    `max_renderer_instance_bytes=262416`, `max_renderer_encode_scene_text_ops=406`. This covers the missing
+    typical-frame paint/payload surface, but it is still a passing contract; only start a `WindowedRowsSurface`
+    display-list rewrite from a future near-threshold or failing stressor.
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
       - record per-row display lists (ops) and replay with a transform/translation,
@@ -981,6 +988,14 @@ Perf acceptance:
   - Result: candidate-1 selected with `fail_total=0`; candidate-2 also validated `3/3`.
   - Contract: `threshold_surface=ui-renderer-payload`; `top_total_time_us` uses `p90` + `quantum_us=16`, `top_layout_time_us`
     uses `p90` + `min_slack_us=144` + `quantum_us=8`.
+  - Evidence: perf log entry `2026-05-11`.
+- [x] Promote payload-aware code-editor autoscroll typical Windows baseline.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`
+  - Seed policy: `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json`
+  - Selector summary: `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-typical-windows-rtx4090-v2/selection-summary.json`
+  - Result: candidate-1 selected with `fail_total=0`; candidate-2 also validated `3/3`.
+  - Contract: `threshold_surface=ui-renderer-payload`; measured p50/p95/max top total=`2563/3603/3603us`;
+    hard frame p95 thresholds total/layout/solve=`3360/368/0us`; payload thresholds instance/text_ops=`262416/406`.
   - Evidence: perf log entry `2026-05-11`.
 - [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
   - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
