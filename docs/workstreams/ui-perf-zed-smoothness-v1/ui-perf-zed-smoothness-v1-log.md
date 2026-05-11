@@ -12014,6 +12014,31 @@ Decision:
 - Keep renderer micro-timing growth in a separate renderer/effects contract; do not widen this UI+payload baseline to
   cover those timings.
 
+## 2026-05-11 (virtual-list contract v1)
+
+Question:
+- Can `ui-gallery-virtual-list-torture-steady` be split out of the broad steady suite as its own contract?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json`.
+- Updated the matrix and workstream docs so `ui-gallery-virtual-list-torture-steady` is now a dedicated Windows v1
+  contract instead of a broad-only `ui-gallery-steady` member.
+
+Validation:
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-virtual-list-torture-steady-windows-rtx4090-v1/selection-summary.json`
+  - candidate-1: `fail_total=3`
+  - candidate-2: `fail_total=0`
+  - selected thresholds: `max_top_total_us=9174`, `max_top_layout_us=7488`, `max_top_solve_us=2031`
+- Tooling checks:
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - `git diff --check`
+
+Decision:
+- Treat `ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json` as a dedicated Windows contract.
+- Keep the remaining broad-only `ui-gallery-steady` members as evidence-only until they are split or explicitly
+  deferred.
+
 ## 2026-05-11 (view-cache toggle contract v1)
 
 Question:
