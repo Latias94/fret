@@ -17,6 +17,11 @@ The default editor-state initializer moved from `CodeEditorHandle::new` into
 The state module owns default display-map, cache, diagnostics, paint-perf, syntax-cache, and
 feature-payload initialization.
 
+## Follow-Up
+
+The handle module split landed in `M3_HANDLE_MODULE_SPLIT_2026-05-12.md`. `editor/mod.rs` now
+re-exports `CodeEditorHandle` from `editor/handle.rs`.
+
 ## Coverage
 
 The moved initializer covers:

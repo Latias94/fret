@@ -132,6 +132,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md`
 - State initializer boundary:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md`
+- Handle module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_MODULE_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`

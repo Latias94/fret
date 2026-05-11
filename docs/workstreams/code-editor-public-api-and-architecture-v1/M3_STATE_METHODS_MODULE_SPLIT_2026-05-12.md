@@ -31,7 +31,7 @@ The state module now owns:
 
 This slice does not change `CodeEditorHandle` methods, public API shape, input behavior, paint
 behavior, cache semantics, diagnostics schemas, or performance thresholds. Public command/query APIs
-remain in `editor/mod.rs`.
+remain available through `editor/mod.rs`'s public re-export of `CodeEditorHandle`.
 
 ## Follow-Up
 

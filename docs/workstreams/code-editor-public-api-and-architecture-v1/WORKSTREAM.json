@@ -94,6 +94,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md"
     },
     {
@@ -218,6 +222,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md",
