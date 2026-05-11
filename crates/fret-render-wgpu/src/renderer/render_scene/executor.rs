@@ -32,6 +32,7 @@ pub(super) struct RenderSceneExecutor<'a> {
 
 pub(super) struct RecordPassResources<'a> {
     pub(super) viewport_vertex_buffer: &'a wgpu::Buffer,
+    pub(super) text_glyph_instance_buffer: &'a wgpu::Buffer,
     pub(super) text_vertex_buffer: &'a wgpu::Buffer,
     pub(super) path_vertex_buffer: &'a wgpu::Buffer,
     pub(super) quad_instance_bind_group: &'a wgpu::BindGroup,

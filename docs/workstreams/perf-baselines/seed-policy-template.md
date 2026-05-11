@@ -9,6 +9,8 @@ scope: perf, baseline, thresholds, anti-noise
 
 This template defines how `diag perf --perf-baseline-out` derives thresholds from run statistics.
 
+Maintenance runbook: `docs/workstreams/perf-baselines/README.md`
+
 ## Why this exists
 
 - Keep threshold derivation auditable (`threshold_seed_policy` in baseline JSON).
@@ -51,6 +53,12 @@ Notes:
 
 - The flag is repeatable; later rules override earlier ones for the same `(script, metric)`.
 - Built-in defaults still apply unless overridden by preset/CLI rules.
+- New baseline rows should include `measured_p50`, `measured_p90`, `measured_p95`, and `measured_max`. Do not backfill
+  `measured_p50` into old baselines without an intentional re-seed.
+- Renderer metrics such as `renderer_encode_scene_us`, `renderer_upload_us`,
+  `renderer_record_passes_us`, `renderer_encoder_finish_us`, `renderer_prepare_text_us`, and
+  `renderer_prepare_svg_us` can use the same `seed` and tuning fields when a suite needs an
+  auditable micro-threshold buffer.
 
 ## JSON preset schema (`--perf-baseline-seed-preset`)
 
@@ -61,16 +69,25 @@ Preset files are versioned policy artifacts (commit into `docs/workstreams/perf-
   "schema_version": 1,
   "kind": "perf_baseline_seed_policy",
   "default_seed": "max",
+  "ui_threshold_mode": "top",
   "rules": [
     {
       "scope": "ui-gallery-steady",
       "metric": "top_total_time_us",
-      "seed": "p90"
+      "seed": "p90",
+      "min_slack_us": 8,
+      "quantum_us": 4
     },
     {
       "scope": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "metric": "pointer_move_max_hit_test_time_us",
+      "seed": "max",
+      "quantum_us": 4
     }
   ]
 }
@@ -81,8 +98,21 @@ Requirements:
 - `schema_version` must be `1`.
 - `kind` must be `perf_baseline_seed_policy`.
 - `default_seed` is optional (`max|p90|p95`), and overrides built-in default seed when present.
+- `ui_threshold_mode` is optional and defaults to `top`:
+  - `top`: gate `max_top_*` values. Use this for tail / worst-frame contracts.
+  - `frame_p95`: gate `max_frame_p95_*` values. Use this for typical-frame contracts, usually with
+    `--perf-threshold-agg p90` or `p95`.
+  - `top_and_frame_p95`: gate both top and frame-p95 values when a probe intentionally protects tail and typical
+    smoothness together.
 - `rules` is required (can be empty).
 - Each rule requires `scope`, `metric`, `seed`.
+- Each rule may also declare:
+  - `min_slack_us`: a fixed minimum headroom floor applied before the final threshold is rounded.
+  - `quantum_us`: the rounding bucket applied to the final threshold (`1` keeps the raw value).
+- Omit both fields unless the script shows repeatable microsecond-level flakiness that needs a narrow, reviewable
+  buffer. The defaults are `min_slack_us=0` and `quantum_us=1`.
+- Direct max-based gate metrics such as pointer-move hit-test/dispatch can also use this schema. Keep `seed: "max"`
+  and use a narrow `min_slack_us` / `quantum_us` pair when the metric flaps by only a few microseconds.
 
 ## Recommended baseline profile (v15)
 
@@ -94,6 +124,8 @@ Current default bias:
     - `top_total_time_us`
     - `top_layout_time_us`
     - `top_layout_engine_solve_time_us`
+- If a rule still flaps by 1-2us after headroom is chosen, prefer a small `min_slack_us` plus a modest
+  `quantum_us` over widening the entire suite or adding ad-hoc special cases.
 
 Example command (steady suite + preset + local override):
 
@@ -144,6 +176,9 @@ tools/perf/diag_perf_baseline_select.sh \
   --work-dir target/fret-diag-codex-perf-v18-select \
   --launch-bin target/release/fret-ui-gallery
 ```
+
+The Python and shell selectors apply the default font prewarm and reset-diagnostics prelude hooks. Use
+`--no-default-suite-hooks` only when intentionally debugging setup behavior.
 
 Selection priority:
 

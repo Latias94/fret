@@ -37,6 +37,10 @@ Tracking:
 
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md`
 - Perf log (commit-addressable results): `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
+- Contract matrix (scripts, baselines, gates, latest evidence):
+  `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+- Contract audit (objective coverage + open gaps):
+  `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`
 
 ---
 
@@ -174,6 +178,34 @@ We treat a small set of scripts as “editor-relevant perf probes”. The suite 
   - `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json`
 
 The suite is intentionally *small*; additional pages/scripts should exist, but these are the “must not regress” set.
+
+Current contract split (2026-05-11):
+
+- Treat the broad `ui-gallery-steady` suite as drift evidence, not as a single formal Windows p50/p95/max contract.
+- The formal contract surface is `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`.
+- Do not attempt another single Windows `ui-gallery-steady` promotion by loosening thresholds. The former broad-only
+  members have been split into narrower Windows contracts; the broad suite is now only drift evidence unless it is
+  redefined as a suite-of-contracts.
+- `ui-gallery-hover-layout-torture-steady` now has its own Windows v1 baseline plus a `diag stats
+  --check-hover-layout-max 0` semantic gate and no longer belongs to the broad-only member list.
+- `ui-gallery-material3-tabs-switch-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
+  broad-only member list.
+- `ui-gallery-menubar-keyboard-nav-steady` now has its own Windows v1 baseline and no longer belongs to the
+  broad-only member list.
+- Keep `ui-resize-probes`, `ui-code-editor-resize-probes`,
+  `ui-gallery-code-editor-torture-autoscroll-steady`,
+  `ui-gallery-code-editor-torture-autoscroll-typical`,
+  `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady`,
+  `ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`,
+  `ui-gallery-hover-layout-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`, and
+  `ui-gallery-material3-tabs-switch-perf-steady` as the current editor-grade hard contracts for resize, view-cache,
+  virtualization, hover structural stability, keyboard/menu flow, tabs switching, and editor steady/typical/high-stress
+  paint/payload pressure.
+- The typical autoscroll payload contract is a passing baseline, not proof that a `WindowedRowsSurface` display-list
+  rewrite is required. Start that rewrite only from a future near-threshold or failing editor paint stressor.
+- The complex editor wheel frame-overlay cache proves a narrower GPUI/Zed-style direction first: move stable derived
+  overlay state to the frame boundary before row paint. Its latest paint-detail probe reduced row overlay work without
+  changing the checked-in baseline; keep the display-list rewrite gated on future row-op evidence.
 
 ---
 

@@ -1,4 +1,5 @@
 use super::*;
+use fret_core::TextBlobId;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct PaintCacheKey {
@@ -89,6 +90,7 @@ pub enum PaintCachePolicy {
 pub(super) struct PaintCacheState {
     pub(super) generation: u64,
     pub(super) prev_ops: Vec<SceneOp>,
+    pub(super) prev_text_blob_ids: Vec<TextBlobId>,
     pub(super) prev_fingerprint: u64,
     pub(super) source_generation: u64,
     pub(super) target_generation: u64,
@@ -112,6 +114,7 @@ impl PaintCacheState {
 
     pub(super) fn invalidate_recording(&mut self) {
         self.prev_ops.clear();
+        self.prev_text_blob_ids.clear();
         self.prev_fingerprint = 0;
         self.generation = self.generation.saturating_add(1);
     }

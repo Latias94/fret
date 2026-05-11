@@ -11364,3 +11364,1150 @@ Decision:
   - view-cache root: reduce or coalesce key-changed 962-node Taffy solves without stale engine rects;
   - content viewport: narrow clean real-bounds application across the 1k-node subtree without skipping required
     layout-time side effects.
+
+## 2026-05-09 16:38 (pre-commit evidence)
+
+Question:
+- Can clean, engine-solved resize frames propagate final geometry without rerunning structural `widget.layout` across
+  a ~1k-node subtree, while preserving Fret's retained runtime semantics and current element bounds contract?
+
+Change:
+- Added a guarded clean engine-solved geometry propagation path in `fret-ui` layout:
+  - only final-pass, clean, non-subtree-dirty nodes are eligible;
+  - supported elements are mechanism-only layout wrappers (`Container`, `Pressable`, `Semantics`, `ViewCache`,
+    `FocusScope`, `ForegroundScope`, `Opacity`, `Stack`, `Grid`, and non-auto-margin
+    `Flex`/`SemanticFlex`/`RovingFlex`);
+  - `Spacer` is eligible only as a leaf, and text leaves are eligible only when size is unchanged.
+- Explicitly rejected side-effectful or policy-heavy nodes from the fast path: `Scroll`, `VirtualList`, text input/area,
+  transforms, anchored overlays, layout-query regions, retained/custom widgets, absolute-positioned children,
+  suppressed dirty-child subtrees, and flex auto margins.
+- Refreshed `current_bounds_for_element` from both the existing translation-only fast path and the new size-delta
+  propagation path, so layout queries and overlay/focus geometry do not read stale element bounds.
+
+Validation:
+- `cargo fmt -p fret-ui --check`
+- `cargo check -p fret-ui`
+- `cargo nextest run -p fret-ui clean_engine_solved_size_delta_propagates_geometry_without_relayouting_structure solve_barrier_flow_root_reuses_solved_root_even_after_other_solves solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes nested_flow_is_solved_once_per_island`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release gallery build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this slice did not clean unrelated warnings.
+
+Perf evidence:
+- Stress final repeat=3 command used the normalized prewarm/prelude setup:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-clean-engine-propagation-stress-final-r3 --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Summary: `target/fret-diag/codex-clean-engine-propagation-stress-final-r3/regression.summary.json`
+  - Worst bundle: `target/fret-diag/codex-clean-engine-propagation-stress-final-r3/1778315800951/bundle.schema2.json`
+  - Result: `total_time_us p50/p95/max=8576/9089/9089`, `layout_time_us=4518/4746/4746`,
+    `paint_time_us=3714/3920/3920`, `layout_engine_solve_time_us=2208/2352/2352`.
+- Drag-jitter final repeat=3 command used the same normalized setup with
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - Summary: `target/fret-diag/codex-clean-engine-propagation-drag-jitter-final-r3/regression.summary.json`
+  - Worst bundle: `target/fret-diag/codex-clean-engine-propagation-drag-jitter-final-r3/1778315862970/bundle.schema2.json`
+  - Result: `total_time_us p50/p95/max=5846/6495/6495`, `layout_time_us=3658/3947/3947`,
+    `paint_time_us=1989/2304/2304`, `layout_engine_solve_time_us=2149/2328/2328`.
+
+Decision:
+- Keep this optimization: it follows the GPUI/Zed-style "reuse solved geometry" direction while preserving Fret's
+  retained state semantics through an explicit safe-element allow list and current element-bound updates.
+- Do not broaden the allow list without a side-effect-specific test. The next open performance lane remains the
+  clean view-cache root barrier solve cost (`reason=new_frame_key_changed`, `subtree_nodes≈962`), not child-rect lookup
+  or broad structural `layout()` replay.
+- Unprewarmed resize script timeouts remain a setup drift around `font_catalog_populated`; perf evidence for this lane
+  should continue to use `tooling-suite-prewarm-fonts.json`.
+
+## 2026-05-09 17:18 (pre-commit evidence)
+
+Question:
+- Is the remaining clean view-cache root `new_frame_key_changed` barrier solve caused by small float/scale jitter, or
+  by real logical resize deltas that must not be skipped with a looser root solve key?
+
+Change:
+- Extended `top_layout_engine_solves[].solve_profile` with previous root solve inputs:
+  `previous_available_w_kind`, `previous_available_h_kind`, `previous_available_w`, `previous_available_h`,
+  `available_w_delta`, `available_h_delta`, `previous_scale_factor`, `scale_factor_delta`, and
+  `previous_frame_delta`.
+- Surfaced the fields through the diagnostics bundle schema, `fretboard diag stats` text/JSON output,
+  `layout.perf.summary.v1.json`, and triage JSON.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check`
+- `cargo check -p fret-ui -p fret-diag -p fret-bootstrap`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame summary_extracts_layout_lists_from_stats_json summary_clips_arrays_by_top`
+- `cargo nextest run -p fret-ui solve_barrier_flow_root_reuses_solved_root_even_after_other_solves solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release gallery build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this diagnostics slice did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-root-solve-delta-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 12 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-root-solve-delta-smoke/1778317739977/bundle.schema2.json`
+- Layout summary:
+  `target/fret-diag/codex-root-solve-delta-smoke/layout.perf.summary.v1.json`
+- Result:
+  - Smoke top frame: `total/layout/solve/paint=8810/4774/2229/3711us`.
+  - Top view-cache root solve reports `reason=new_frame_key_changed`, `subtree_nodes=962`,
+    `available_w=930`, `previous_available_w=692`, `available_w_delta=238`, `available_h_delta=0`,
+    `scale_factor_delta=0`, and `previous_frame_delta=3`.
+  - Content root and window root solve profiles show similarly large width/height deltas (`available_w_delta=320`
+    for content/window roots in this sample), not sub-pixel churn.
+
+Decision:
+- Do not pursue root-solve-key quantization as the next optimization for this lane. The sampled key changes are real
+  scripted resize deltas, so reusing old engine rects would risk stale layout geometry.
+- The next correct direction is to reduce the 962-node root's solve sensitivity or solve boundary size, or to optimize
+  Taffy solve cost directly. Keep this aligned with the GPUI/Zed direction of explicit per-root layout work and solved
+  geometry reuse, rather than hiding retained-state invalidation behind broad cross-frame skips.
+
+## 2026-05-09 17:52 (pre-commit evidence)
+
+Question:
+- Is the view-cache resize harness itself manufacturing an avoidably broad solve boundary by rendering a long
+  non-virtualized row list inside the cached subtree?
+
+Change:
+- Replaced the 240 plain shadcn button rows in the view-cache torture preview with
+  `fret_ui_kit::declarative::list::list_virtualized_retained_v0`.
+- Kept this in the gallery/component layer. The mechanism-layer conclusion from the previous slice still stands:
+  real width deltas must not be hidden by root-solve-key quantization.
+
+Validation:
+- `cargo fmt -p fret-ui-gallery --check`
+- `cargo check -p fret-ui-gallery --features gallery-full`
+- `cargo nextest run -p fret-ui-gallery harness_preview_shells_prefer_ui_cx_on_the_internal_gallery_surface selected_internal_preview_pages_use_typed_doc_sections`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release gallery build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this slice did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-view-cache-virtualized-list-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 12 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-view-cache-virtualized-list-smoke/1778319357983/bundle.schema2.json`
+- Result:
+  - New smoke top frame: `total/layout/solve/paint=3971/1788/784/1988us`.
+  - Previous comparable smoke top frame:
+    `target/fret-diag/codex-root-solve-delta-smoke/1778317739977/bundle.schema2.json`, with
+    `total/layout/solve/paint=8810/4774/2229/3711us`.
+  - `diag stats` top layout nodes dropped from `278` to `34`, paint nodes from `2161` to `1196`, and cache replay
+    ops from `1667` to `708`.
+  - Bundle runtime evidence shows the main view-cache reuse root element count dropped from `1104` to `137`; the shell
+    reuse root remains `1015`, so the harness fix reduced the page-local torture subtree rather than hiding the shell
+    cost.
+- Repeat=3 confirmation after commit:
+  - Stress summary:
+    `target/fret-diag/codex-view-cache-virtualized-list-stress-r3/regression.summary.json`; worst bundle
+    `target/fret-diag/codex-view-cache-virtualized-list-stress-r3/1778319562851/bundle.schema2.json`.
+    Result: `total/layout/solve/paint p95=4252/1719/717/2352us`, with `view_cache_roots_reused=2/2`.
+  - Drag-jitter summary:
+    `target/fret-diag/codex-view-cache-virtualized-list-drag-jitter-r3/regression.summary.json`; worst bundle
+    `target/fret-diag/codex-view-cache-virtualized-list-drag-jitter-r3/1778319609621/bundle.schema2.json`.
+    Result: `total/layout/solve/paint p95=2066/1310/754/643us`, with `view_cache_roots_reused=2/2`.
+
+Decision:
+- Keep the harness virtualized. This follows the GPUI/Zed-style direction of shrinking hot layout boundaries and using
+  retained/virtualized surfaces for editor-grade long lists instead of relying on broad root solve skips.
+- Do not treat this as a full core-layout closure. Remaining performance work should continue on real application
+  roots that are legitimately wide or width-sensitive after the demo no longer injects an artificial 240-row subtree.
+
+## 2026-05-09 18:05 (no-code-change evidence)
+
+Question:
+- After the view-cache resize harness correction, is `ui-code-editor-resize-probes` still the next obvious
+  editor-grade performance bottleneck on the current Windows RTX 4090 machine?
+
+Run:
+- Script:
+  `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json --dir target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-r3 --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 12 --json --launch -- target\release\fret-ui-gallery.exe`
+- Summary:
+  `target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-r3/regression.summary.json`
+- Worst bundle:
+  `target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-r3/1778319815524/bundle.schema2.json`
+
+Result:
+- Repeat=3 p95: `total/layout/paint/solve=3995/2137/1747/574us`.
+- The script reached the real code-editor torture surface: `text_len_bytes=1477870`, `buffer_line_count=20004`,
+  `syntax_rust=true`, `rows_painted=289`.
+- Code-editor internal paint work is not the current large hotspot in this environment:
+  `app_snapshot.code_editor.torture.paint_perf.us_total=365us` in the sampled single-run bundle
+  `target/fret-diag/codex-code-editor-resize-drag-jitter-attrib-smoke/1778319738246/bundle.schema2.json`.
+- The larger remaining visible costs are renderer-facing work (`top_renderer_encode_scene_us≈961..1109us`,
+  `top_renderer_prepare_text_us≈700..762us`) plus layout wrapper work, not the older 15ms-class row scene churn
+  assumption.
+
+Decision:
+- Do not start a `WindowedRowsSurface` per-row display-list rewrite from this evidence alone. On this machine the
+  existing code-editor resize probe is already under 4ms p95 and needs a stricter or more representative editor
+  workload before a large paint architecture change is justified.
+- Next perf investigations should either create a more targeted editor paint stressor, or move to a currently failing
+  or near-threshold gate rather than optimizing an already-green probe.
+
+## 2026-05-09 18:12 (pre-commit evidence)
+
+Question:
+- Does the perf baseline contract record the typical case (`p50`) alongside the existing `p90`, `p95`, and `max`
+  samples, so the Zed smoothness workstream can track both typical and tail behavior without rewriting old baselines?
+
+Change:
+- Added row-level `measured_p50` output to new `diag perf --perf-baseline-out` JSON files.
+- Kept schema version `1` as an additive-compatible change; old baselines remain valid because gate reads consume the
+  existing `thresholds` object.
+- Added `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` to tie representative scripts,
+  checked-in baselines, gate commands, recent evidence, and Zed/GPUI plus egui reference pressure together.
+
+Validation:
+- `cargo fmt -p fret-diag --check`
+- `cargo check -p fret-diag`
+- `cargo nextest run -p fret-diag single_baseline_row_records_measured_p50 repeat_baseline_row_records_measured_p50`
+
+Smoke evidence:
+- Command:
+  `cargo run -p fretboard --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json --dir target/fret-diag/codex-p50-baseline-smoke --repeat 1 --warmup-frames 1 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 3 --json --perf-baseline-out target/fret-diag/codex-p50-baseline-smoke/baseline.json --launch -- target\release\fret-ui-gallery.exe`
+- Output check:
+  `target/fret-diag/codex-p50-baseline-smoke/baseline.json` row `measured_p50` contains
+  `top_total_time_us=626`, `top_layout_time_us=258`, and `top_layout_engine_solve_time_us=0`.
+
+Decision:
+- Keep old checked-in baseline JSON files untouched. They should gain `measured_p50` only through intentional
+  re-seeding on the relevant machine profile.
+
+## 2026-05-09 18:20 (pre-commit evidence)
+
+Question:
+- Can contributors run the resize gate helper on Windows without accidentally enforcing the older macOS baseline or
+  missing the normalization hooks required by this workstream?
+
+Change:
+- `tools/perf/diag_resize_probes_gate.py` and `.sh` now choose the checked-in Windows RTX 4090 or macOS baseline by
+  host platform when `--baseline` is omitted.
+- Non-Windows/macOS platforms still require an explicit `--baseline`.
+- Both helpers now apply the default font prewarm and reset-diagnostics prelude hooks unless
+  `--no-default-suite-hooks` is passed.
+- Added `.gitattributes` rules for `*.py` and `*.sh` so script files stay LF-normalized; this also fixed the bash
+  helper's CRLF `pipefail` failure under local `bash`.
+
+Discovery:
+- A short `ui-resize-probes` smoke without the default hooks selected the correct Windows baseline, but failed before
+  threshold evaluation because `ui-gallery-window-resize-drag-jitter-steady.json` timed out at step 23 and did not
+  produce `check.perf_thresholds.json`.
+
+Validation:
+- Imported `tools/perf/diag_resize_probes_gate.py` and confirmed the current host selects:
+  - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json`
+- `python tools/perf/diag_resize_probes_gate.py --help`
+- `bash tools/perf/diag_resize_probes_gate.sh --help`
+- `bash -n tools/perf/diag_resize_probes_gate.sh`
+- Short real-gate smoke:
+  `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --out-dir target/fret-diag/codex-resize-gate-default-hooks-smoke --attempts 1 --repeat 1 --warmup-frames 5 --launch-bin target/release/fret-ui-gallery.exe`
+  - Result: PASS, selected Windows baseline, default hooks present in `summary.json`.
+  - `drag-jitter`: `top_total/layout/solve=1728/1103/661us`.
+  - `resize-stress`: `top_total/layout/solve=4021/1664/671us`.
+
+Decision:
+- Keep the helper default platform-aware, but keep machine-profile overrides explicit through `--baseline`; do not infer
+  GPU model or loosen thresholds automatically.
+- Keep the normalization hooks on by default; disabling them is a targeted setup-debugging mode, not the normal gate.
+
+## 2026-05-09 18:36 (pre-commit evidence)
+
+Question:
+- Is there a concrete maintenance contract for re-seeding checked-in perf baselines without silently loosening gates or
+  losing the p50/p95/max evidence requirement?
+
+Change:
+- Added `docs/workstreams/perf-baselines/README.md` with baseline maintenance rules:
+  - machine-tag policy,
+  - when re-seeding is allowed,
+  - required normalization hooks,
+  - candidate-selection and validation workflows,
+  - old-baseline `measured_p50` handling,
+  - review checklist before committing a baseline.
+- Updated the seed-policy template and contract matrix to link the runbook and clarify p50/default-hook rules.
+- `tools/perf/diag_perf_baseline_select.py` and `.sh` now apply the same default font prewarm and reset-diagnostics
+  prelude hooks as the resize gate helpers, unless `--no-default-suite-hooks` is passed.
+
+Validation:
+- `python tools/perf/diag_perf_baseline_select.py --help`
+- `bash -n tools/perf/diag_perf_baseline_select.sh`
+- `bash tools/perf/diag_perf_baseline_select.sh --help`
+- `git ls-files --eol tools/perf/diag_perf_baseline_select.py tools/perf/diag_perf_baseline_select.sh docs/workstreams/perf-baselines/seed-policy-template.md`
+
+Decision:
+- Treat `docs/workstreams/perf-baselines/README.md` as the baseline maintenance runbook. Re-seeding remains an
+  explicit workstream action with command/evidence in the perf log; old baselines are not mass-edited just to add p50.
+
+## 2026-05-09 18:48 (audit)
+
+Question:
+- Is the active goal complete after the matrix, p50 writer, helper normalization, and baseline runbook work?
+
+Audit:
+- Added `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`.
+- Baseline p50 scan found 58 checked-in perf baseline files, 296 rows, and 0 rows with `measured_p50`.
+- Recent helper smoke proves the short `ui-resize-probes` path works with Windows baseline and default hooks, but no
+  full attempts=3 repeat=7 gate has been run after the helper normalization changes.
+
+Decision:
+- Do not mark the goal complete. The next concrete work is to intentionally re-seed primary Windows baselines with
+  `measured_p50` and run full formal gates, or explicitly defer that re-seed with owner/date in the workstream.
+
+## 2026-05-09 19:19 (baseline surface hardening)
+
+Question:
+- Can `ui-resize-probes.windows-rtx4090.v2.json` be re-seeded with `measured_p50` without turning renderer micro
+  timing noise into resize/layout hard thresholds?
+
+Change:
+- Added `--perf-baseline-threshold-surface ui|renderer|all` to `diag perf --perf-baseline-out` and
+  `diag perf-baseline-from-bundles`.
+- Resize/layout baselines now use `threshold_surface=ui` by default: renderer timings are still recorded under
+  `measured_*`, but `rows[].thresholds.max_renderer_*` stay null unless `renderer` or `all` is requested.
+- Hardened `tools/perf/diag_perf_baseline_select.py` and `.sh`:
+  - validation repeat defaults to the same value as baseline generation,
+  - selected candidates must have `fail_total=0` unless `--allow-failures` is explicitly passed.
+
+Evidence:
+- Smoke baseline:
+  `cargo run -q -p fretboard -- diag perf ui-resize-probes --dir target/fret-diag/codex-threshold-surface-smoke --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --reuse-launch --repeat 1 --warmup-frames 5 --sort time --top 5 --json --perf-baseline-out target/fret-diag/codex-threshold-surface-smoke/baseline.json --perf-baseline-headroom-pct 20 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - `threshold_surface=ui`
+  - `rows[0].thresholds.max_top_total_us=3110`
+  - `rows[0].thresholds.max_renderer_prepare_text_us=null`
+- Selector attempt with old repeat=3 validation selected a 20% headroom candidate, but the formal gate rejected it:
+  - `target/fret-diag/codex-resize-gate-v2/summary.json`
+  - attempts=3, repeat=7, passes=1/3.
+- Selector attempt with consistent repeat=7 validation rejected 20% headroom:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2b/selection-summary.json`
+  - best candidate `fail_total=5`; no baseline copied.
+- Selector attempt with consistent repeat=7 validation also rejected 40% headroom:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2-headroom40/selection-summary.json`
+  - best candidate `fail_total=2`; no baseline copied.
+
+Validation:
+- `cargo fmt -p fret-diag --check`
+- `cargo check -p fret-diag`
+- `cargo nextest run -p fret-diag single_baseline_row_records_measured_p50 repeat_baseline_row_records_measured_p50 ui_threshold_surface_keeps_renderer_measurements_but_omits_renderer_thresholds renderer_threshold_surface_omits_ui_thresholds perf_contract_captures_threshold_and_suite_args perf_baseline_from_bundles_contract_captures_script_bundle_and_threshold_args migrated_perf_baseline_from_bundles_builds_a_real_context`
+- `python tools/perf/diag_perf_baseline_select.py --help`
+- `bash -n tools/perf/diag_perf_baseline_select.sh`
+- `bash tools/perf/diag_perf_baseline_select.sh --help`
+
+Decision:
+- Do not commit `ui-resize-probes.windows-rtx4090.v2.json` yet. Removing renderer thresholds was necessary, but the
+  repeat=7 evidence still shows real resize/layout threshold failures.
+- Next work should attribute the remaining `top_layout_time_us` / `top_layout_engine_solve_time_us` variability in
+  `ui-gallery-window-resize-drag-jitter-steady.json` and `ui-gallery-window-resize-stress-steady.json`, or decide on a
+  deliberately broader Windows resize contract with matching selector and formal gate evidence.
+
+## 2026-05-09 20:10 (pre-commit evidence)
+
+Question:
+- Is the remaining `ui-resize-probes` tail caused by the flex-wrap intrinsic auto-min patch that runs before the main
+  Taffy solve, or by the main solve / paint path?
+
+Change:
+- Added `flex_wrap_patch_*` fields to layout-engine solve profiles and diagnostic bundle stats:
+  - `flex_wrap_patch_time_us`
+  - `flex_wrap_patch_visited_nodes`
+  - `flex_wrap_patch_wrap_nodes`
+  - `flex_wrap_patch_candidate_children`
+  - `flex_wrap_patch_probes`
+  - `flex_wrap_patch_mutations`
+  - `flex_wrap_patch_skipped_no_wrap_descendant`
+- Added a conservative layout-engine fast path: if the solved root has no seen flex-wrap descendant, skip the
+  flex-wrap intrinsic patch traversal entirely.
+- Added focused `fret-ui` layout-engine tests for the no-wrap skip and the positive intrinsic auto-min patch profile.
+
+Evidence:
+- Repeat=1 attribution:
+  - command output: `target/fret-diag/codex-resize-flex-patch-profile-r1`
+  - `drag-jitter`: `top_total/layout/solve=2769/1904/1184us`
+  - `resize-stress`: `top_total/layout/solve=4526/2531/1242us`
+  - worst bundle: `target/fret-diag/codex-resize-flex-patch-profile-r1/1778328337452/bundle.schema2.json`
+  - `diag stats --json` showed both top solves had `flex_wrap_patch_skipped_no_wrap_descendant=true`,
+    `flex_wrap_patch_probes=0`, and `flex_wrap_patch_visited_nodes=0`.
+- Repeat=7 smoke:
+  - command output: `target/fret-diag/codex-resize-flex-patch-profile-r7-smoke`
+  - worst overall: `top_total_time_us=4358`
+  - `resize-stress` stats: `max layout_engine_solve_time_us=1407`, `max layout_time_us=2482`,
+    `max paint_time_us=1917`
+- Formal Windows RTX4090 gate:
+  - `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --out-dir target/fret-diag/codex-resize-flex-patch-gate-r7 --attempts 1 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+  - Result: PASS, `failures=0`
+  - Summary: `target/fret-diag/codex-resize-flex-patch-gate-r7/summary.json`
+  - Threshold check: `target/fret-diag/codex-resize-flex-patch-gate-r7/check.perf_thresholds.json`
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-ui layout::engine::tests::flex_wrap_patch_profile --no-fail-fast`
+- `cargo nextest run -p fret-ui layout::engine --no-fail-fast`
+- `cargo build -p fretboard -p fret-ui-gallery --release`
+
+Decision:
+- The current resize top solves are not spending time in flex-wrap intrinsic patch probes. Keep the new patch profile
+  fields as a regression/attribution surface, and keep the no-wrap-descendant skip because it removes an unnecessary
+  fixed traversal from ordinary resize roots.
+- The next optimization target should stay on root solve stability and paint/cache work, not on flex-wrap intrinsic
+  probe caching, unless a future bundle shows nonzero `flex_wrap_patch_probes` or `flex_wrap_patch_time_us`.
+
+## 2026-05-09 20:41 (baseline promotion)
+
+Question:
+- After the flex-wrap patch attribution, can the Windows `ui-resize-probes` contract move from the legacy v1 baseline
+  to a p50-carrying v2 baseline without hiding real resize/layout failures?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`.
+- Promoted the Windows default baseline in `tools/perf/diag_resize_probes_gate.py` and
+  `tools/perf/diag_resize_probes_gate.sh` from v1 to v2.
+- Updated the contract matrix, audit, and Windows RTX 4090 workstream docs to treat v2 as the active Windows resize
+  contract.
+
+Evidence:
+- 20% headroom remained too tight under repeat=7 validation:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2-flexpatch/selection-summary.json`
+  - best candidate `fail_total=3`
+- 30% headroom selected a clean candidate:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2-headroom30-flexpatch/selection-summary.json`
+  - best candidate `candidate-2`, `fail_total=0`
+  - `suite_p90_total_time_us_sum=7393`, `threshold_sum_max_top_total_us=9612`
+- Matching formal gate:
+  - command:
+    `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --out-dir target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30 --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+  - summary: `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`
+  - result: PASS, `pass_attempts=3`, `fail_attempts=0`
+- Baseline p50 coverage after promotion:
+  - `BASELINE_FILES=59`
+  - `TOTAL_ROWS=298`
+  - `TOTAL_ROWS_WITH_P50=2`
+
+Validation:
+- `python tools/perf/diag_resize_probes_gate.py --help`
+- `bash -n tools/perf/diag_resize_probes_gate.sh`
+- `bash tools/perf/diag_resize_probes_gate.sh --help`
+- `git diff --check`
+- Python helper default check: `ui-resize-probes -> docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
+- PowerShell baseline scan: `baseline_files=59 total_rows=298 rows_with_p50=2`
+
+Decision:
+- Promote Windows `ui-resize-probes.windows-rtx4090.v2.json` as the active resize contract. The 30% headroom is a
+  documented Windows resize/layout tail allowance, not a renderer micro-timing allowance, because the baseline uses
+  `threshold_surface=ui`.
+- Keep the next p50 re-seed work focused on `ui-code-editor-resize-probes.windows-rtx4090.v2.json` and
+  `ui-gallery-steady.windows-rtx4090.v2.json`.
+
+## 2026-05-09 21:32 (code-editor resize gate stabilization)
+
+Question:
+- Can `ui-code-editor-resize-probes` still pass the formal repeat=7 gate after switching the gallery nav selection
+  path in `ui-gallery-code-editor-window-resize-drag-jitter-steady.json` back to the repo-standard click-and-type
+  flow?
+
+Change:
+- Replaced the code-editor resize script's nav search `type_text_into` target with the stable pattern used by other
+  gallery scripts: `click_stable` on `ui-gallery-nav-search`, `Ctrl+A`, `Backspace`, then `type_text`.
+
+Evidence:
+- Helper smoke:
+  - command: `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 1 --repeat 1`
+  - summary: `target/fret-diag-resize-probes-gate-1778333162/summary.json`
+  - result: PASS
+- Formal gate:
+  - command: `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
+  - summary: `target/fret-diag-resize-probes-gate-1778333202/summary.json`
+  - result: PASS, `pass_attempts=3`, `fail_attempts=0`
+
+Validation:
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 1 --repeat 1`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
+
+Decision:
+- Keep the code-editor resize contract on baseline v1 for now. The remaining work is still p50 re-seeding and a
+  stricter editor paint stressor, not navigation stability.
+
+## 2026-05-09 21:56 (code-editor resize baseline promotion)
+
+Question:
+- Can the Windows `ui-code-editor-resize-probes` contract move from the legacy v1 baseline to a p50-carrying v2
+  baseline without hiding real layout/resize failures?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`.
+- Promoted the Windows default baseline in `tools/perf/diag_resize_probes_gate.py` and
+  `tools/perf/diag_resize_probes_gate.sh` from v1 to v2.
+- Kept the baseline threshold surface at `ui`, so renderer micro timings remain attribution evidence instead of hard
+  renderer thresholds.
+
+Evidence:
+- Baseline selector:
+  - command:
+    `python tools/perf/diag_perf_baseline_select.py --suite ui-code-editor-resize-probes --baseline-out docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --preset docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui --work-dir target/fret-diag-baseline-select-ui-code-editor-resize-probes-windows-rtx4090-v2 --launch-bin target/release/fret-ui-gallery.exe --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+  - summary:
+    `target/fret-diag-baseline-select-ui-code-editor-resize-probes-windows-rtx4090-v2/selection-summary.json`
+  - selected candidate: `candidate-1`, `fail_total=0`, `suite_p90_total_time_us_sum=9401`,
+    `threshold_sum_max_top_total_us=11282`
+  - rejected candidate: `candidate-2`, `fail_total=3`
+- Matching formal gate:
+  - command:
+    `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7 --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+  - summary:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`
+  - result: PASS, `pass_attempts=2`, `fail_attempts=1`
+- Default-baseline smoke:
+  - command:
+    `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-default-smoke --attempts 1 --repeat 1 --launch-bin target/release/fret-ui-gallery.exe`
+  - summary:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-default-smoke/summary.json`
+  - result: PASS; helper selected `ui-code-editor-resize-probes.windows-rtx4090.v2.json`
+- Failure attribution:
+  - failed attempt:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/attempt-2/check.perf_thresholds.json`
+  - threshold failure: `top_total_time_us=13800` vs `11282`
+  - layout stayed within the v2 contract: observed `top_layout_time_us=3124`, `top_layout_engine_solve_time_us=1151`
+  - worst bundle:
+    `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/attempt-2/1778334772910/bundle.schema2.json`
+  - `diag stats --sort cpu_cycles`: `paint.widget p95=10922us`, renderer text p95/max `1879us`, cache replay small
+    (`cache.replay_us` around `53..120us` in the top frames).
+- Baseline p50 coverage after promotion:
+  - `BASELINE_FILES=60`
+  - `TOTAL_ROWS=299`
+  - `TOTAL_ROWS_WITH_P50=3`
+
+Validation:
+- `python -m json.tool docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`
+- `python tools/perf/diag_resize_probes_gate.py --help`
+- `bash -n tools/perf/diag_resize_probes_gate.sh`
+- `bash tools/perf/diag_resize_probes_gate.sh --help`
+- `git diff --check`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7 --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --out-dir target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-default-smoke --attempts 1 --repeat 1 --launch-bin target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag stats target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/attempt-2/1778334772910/bundle.schema2.json --sort cpu_cycles --top 30`
+
+Decision:
+- Promote Windows `ui-code-editor-resize-probes.windows-rtx4090.v2.json` as the active code-editor resize contract.
+  The new baseline is much tighter than v1 and carries p50 evidence; the majority gate is the intended flake guard for
+  occasional tails.
+- Do not widen layout thresholds from the failed attempt. The remaining evidence points at a paint-dominant editor
+  tail, so the next editor work should add a stricter paint stressor before any `WindowedRowsSurface` display-list
+  rewrite.
+- Keep `ui-gallery-steady.windows-rtx4090.v2.json` as the next p50 re-seed candidate; its selector is substantially
+  heavier than this single-script code-editor suite and should be landed as a separate evidence chunk.
+
+## 2026-05-09 23:54 (steady-suite re-seed blocked)
+
+Question:
+- Can the broad `ui-gallery-steady` Windows suite be promoted to a p50-carrying v2 baseline after adding
+  `--reuse-launch-per-script` support and `--prelude-each-run` normalization?
+
+Attempts:
+- `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3b/selection-summary.json`
+  - `--reuse-launch-per-script --prelude-each-run`
+  - candidate-1 `fail_total=2`
+  - failures were only on `ui-gallery-view-cache-toggle-perf-steady`:
+    `top_total_time_us=3146/2948`, `top_layout_time_us=2548/2404`
+- `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3c/selection-summary.json`
+  - `--reuse-launch-per-script --prelude-each-run --headroom-pct 30`
+  - candidate-1 still failed across multiple scripts:
+    hover-layout, dropdown, overlay, view-cache-toggle, virtual-list, and window-resize
+
+Decision:
+- The suite is too broad for a stable single Windows steady baseline under current membership.
+- Keep the selector and baseline policy tuning support, but do not promote `ui-gallery-steady.windows-rtx4090.v2.json`
+  yet.
+- The next workstream action should be to split `ui-gallery-steady` into narrower steady-contract groups or reclassify
+  the broad suite as evidence-only until the membership is narrowed.
+
+## 2026-05-10 (core trio split attempt rejected)
+
+Question:
+- Can the daily smoke trio (`context-menu`, `dialog`, `material3-tabs`) be promoted into a new
+  `ui-gallery-core-steady` Windows baseline?
+
+Attempt:
+- Registry and manifest were added for `perf-ui-gallery-core-steady`, then selected with
+  `python tools/perf/diag_perf_baseline_select.py --suite ui-gallery-core-steady --baseline-out docs/workstreams/perf-baselines/ui-gallery-core-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-core-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui --work-dir target/fret-diag-baseline-select-ui-gallery-core-steady-windows-rtx4090-v1 --launch-bin target/release/fret-ui-gallery.exe --reuse-launch-per-script --prelude-each-run --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+- Candidate results:
+  - candidate-1 `fail_total=10`
+  - candidate-2 `fail_total=11`
+- Failure aggregation:
+  - `ui-gallery-context-menu-right-click-steady`: `top_total_time_us` + `top_layout_time_us`
+  - `ui-gallery-dialog-escape-focus-restore-steady`: `top_total_time_us` + `top_layout_time_us`
+  - `ui-gallery-material3-tabs-switch-perf-steady`: `top_layout_engine_solve_time_us` + pointer-move max metrics
+
+Decision:
+- Do not promote the combined `ui-gallery-core-steady` baseline. It is not a stable contract boundary under the
+  current membership and seed policy.
+- Keep the existing narrower suites (`ui-gallery-overlay-steady`, `perf-ui-gallery`) as the correct partitioning
+  boundary for these scripts.
+- Broad `ui-gallery-steady` remains maintenance/evidence-only until a narrower split is promoted with cleaner
+  thresholds.
+
+## 2026-05-11 (renderer payload perf contract surface)
+
+Question:
+- Can the code-editor paint/autoscroll contract guard renderer payload growth, not only wall-clock renderer timing?
+
+Change:
+- Extended `fret-diag` perf output and baseline plumbing so `renderer_instance_bytes` and
+  `renderer_encode_scene_text_ops` flow through:
+  - single-run and repeat perf JSON rows,
+  - repeat summary JSON,
+  - `diag perf --perf-baseline-out`,
+  - `perf-baseline-from-bundles`,
+  - baseline parsing,
+  - threshold rows and threshold failure emission.
+- Kept payload baseline seeding fixed to measured `max`. These are deterministic payload/capacity counters, not
+  percentile-only wall-clock timings.
+
+Validation:
+- `cargo check -p fret-diag --all-targets`
+- `cargo test -p fret-diag --lib`
+
+Decision:
+- The tooling is now ready for a time + payload editor paint contract.
+- Do not patch the existing
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json` baseline
+  by hand: it predates payload fields and has no measured payload evidence.
+- Next action is to re-seed that autoscroll baseline from a fresh repeat=7 run, producing a payload-aware v3 baseline
+  with `max_renderer_instance_bytes` and `max_renderer_encode_scene_text_ops` thresholds.
+
+## 2026-05-11 (payload-aware autoscroll baseline v4)
+
+Question:
+- Can the code-editor autoscroll contract gate renderer payload growth while keeping renderer micro-timings as
+  attribution evidence only?
+
+Change:
+- Added `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-steady.v2.json`.
+- Extended the selector surface support so `ui-renderer-payload` and `renderer-payload` are accepted alongside the
+  older `ui|renderer|all` forms.
+- Tightened the baseline audit matrix scan so seed policy JSON files under `perf-baselines/policies/` are not reported
+  as legacy baselines.
+- Re-seeded the Windows RTX 4090 autoscroll baseline as
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`.
+
+Validation:
+- Early no-slack selector pass
+  (`target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-steady-windows-rtx4090-v4b/selection-summary.json`)
+  failed on `top_layout_time_us` (`393us` actual vs `302us` threshold), so layout needed explicit slack.
+- Final selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-steady-windows-rtx4090-v4c/selection-summary.json`
+  - `best_candidate.fail_total=0`
+  - candidate-1 and candidate-2 both validated `3/3`
+  - selected candidate-1 thresholds:
+    `max_top_total_us=3072`, `max_top_layout_us=320`,
+    `max_renderer_instance_bytes=323482`, `max_renderer_encode_scene_text_ops=611`
+- Tooling checks:
+  - `python tools/perf/diag_perf_baseline_select.py --help`
+  - `python -m py_compile tools/perf/audit_perf_baselines.py tools/perf/diag_perf_baseline_select.py`
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - `cargo fmt -p fret-diag --check`
+  - `cargo nextest run -p fret-diag`
+
+Decision:
+- Treat v4 as the checked-in payload-aware contract.
+- Keep renderer micro-timing growth in a separate renderer/effects contract; do not widen this UI+payload baseline to
+  cover those timings.
+
+## 2026-05-11 (virtual-list contract v1)
+
+Question:
+- Can `ui-gallery-virtual-list-torture-steady` be split out of the broad steady suite as its own contract?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json`.
+- Updated the matrix and workstream docs so `ui-gallery-virtual-list-torture-steady` is now a dedicated Windows v1
+  contract instead of a broad-only `ui-gallery-steady` member.
+
+Validation:
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-virtual-list-torture-steady-windows-rtx4090-v1/selection-summary.json`
+  - candidate-1: `fail_total=3`
+  - candidate-2: `fail_total=0`
+  - selected thresholds: `max_top_total_us=9174`, `max_top_layout_us=7488`, `max_top_solve_us=2031`
+- Tooling checks:
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - `git diff --check`
+
+Decision:
+- Treat `ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json` as a dedicated Windows contract.
+- Keep the remaining broad-only `ui-gallery-steady` members as evidence-only until they are split or explicitly
+  deferred.
+
+## 2026-05-11 (view-cache toggle contract v1)
+
+Question:
+- Can the broad `ui-gallery-steady` suite be reduced further by promoting `ui-gallery-view-cache-toggle-perf-steady`
+  into its own contract?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.windows-rtx4090.v1.json`.
+- Fixed `tools/perf/diag_perf_baseline_select.py` so copied checked-in baselines rewrite `out_path` to the final
+  destination instead of leaving a candidate `target/...` path behind.
+- Updated the contract matrix and workstream docs so `ui-gallery-view-cache-toggle-perf-steady` is no longer treated
+  as a broad-only `ui-gallery-steady` member.
+
+Validation:
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-view-cache-toggle-perf-steady-windows-rtx4090-v1/selection-summary.json`
+  - candidate-1: `fail_total=2`
+  - candidate-2: `fail_total=0`
+  - selected thresholds: `max_top_total_us=2949`, `max_top_layout_us=2378`, `max_top_solve_us=80`
+- Tooling checks:
+  - `python -m py_compile tools/perf/diag_perf_baseline_select.py`
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - `git diff --check`
+
+Decision:
+- Treat `ui-gallery-view-cache-toggle-perf-steady.windows-rtx4090.v1.json` as a dedicated Windows contract.
+- Keep the remaining broad-only `ui-gallery-steady` members evidence-only until each is split or explicitly deferred.
+
+## 2026-05-11 (menubar, Material tabs, and hover-layout contracts v1)
+
+Question:
+- Can the remaining broad-only steady gallery members become dedicated Windows contracts instead of keeping
+  `ui-gallery-steady` as a mixed formal gate?
+
+Change:
+- Added checked-in Windows RTX 4090 baselines for:
+  - `docs/workstreams/perf-baselines/ui-gallery-menubar-keyboard-nav-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-material3-tabs-switch-perf-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-hover-layout-torture-steady.windows-rtx4090.v1.json`
+- Added seed policies for the two pointer-move-sensitive contracts:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-material3-tabs-switch-perf-steady.v1.json`
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-hover-layout-torture-steady.v1.json`
+
+Validation:
+- Menubar selector:
+  `target/fret-diag-baseline-select-ui-gallery-menubar-keyboard-nav-steady-windows-rtx4090-v1/selection-summary.json`
+  - candidate-1 validated `3/3` with `fail_total=0`
+  - p50/p95/max total=`1666/3385/3385us`
+  - thresholds total/layout/solve=`4062/3516/731us`
+- Material 3 tabs selector:
+  `target/fret-diag-baseline-select-ui-gallery-material3-tabs-switch-perf-steady-windows-rtx4090-v1-policy40/selection-summary.json`
+  - candidate-1 and candidate-2 both validated `3/3` with `fail_total=0`
+  - candidate-2 won on p90 (`1924` vs `2231`)
+  - p50/p95/max total=`1873/1924/1924us`
+  - thresholds total/layout/solve/pointer_move(dispatch/hit-test)=`2694/1610/0/1536/32`
+- Hover-layout selector:
+  `target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/selection-summary.json`
+  - candidate-2 validated `3/3` with `fail_total=0`
+  - p50/p95/max total=`998/1285/1285us`
+  - thresholds total/layout/solve/pointer_move(dispatch/hit-test)=`1542/248/0/448/32`
+  - no-policy attempts were rejected intentionally: 20% headroom failed on pointer/layout micro-metrics, and 40%
+    still had small pointer/layout failures. The v1 policy keeps the total-time gate tight while adding explicit
+    micro-metric slack.
+- Hover-layout semantic gate:
+  `cargo run -q -p fretboard -- diag stats target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/candidate-2-baseline/1778476920836/bundle.schema2.json --check-hover-layout-max 0`
+  passed with `hover.decl_inv(layout/hit/paint)=0/0/0`.
+
+Decision:
+- Treat all former broad-only steady gallery members as dedicated Windows contracts.
+- Keep `ui-gallery-steady` as drift evidence unless it is redefined as a suite-of-contracts; do not re-promote it by
+  loosening broad-suite thresholds.
+
+## 2026-05-11 (payload-aware autoscroll typical baseline v2)
+
+Question:
+- Can the editor autoscroll contract cover typical-frame paint/payload pressure, not only the steady worst-frame
+  surface, before deciding whether a `WindowedRowsSurface` display-list rewrite is justified?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`.
+- Updated the contract matrix, audit, TODO, and workstream summary so the typical autoscroll payload contract is a
+  first-class Windows RTX 4090 editor paint baseline.
+
+Validation:
+- Selector command:
+  `python tools/perf/diag_perf_baseline_select.py --suite ui-gallery-code-editor-torture-autoscroll-typical --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json --candidates 2 --validate-runs 3 --repeat 15 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-typical-windows-rtx4090-v2 --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-typical-windows-rtx4090-v2/selection-summary.json`
+  - candidate-1 validated `3/3` with `fail_total=0`
+  - candidate-2 validated `3/3` with `fail_total=0`
+  - candidate-1 selected on lower suite p90 (`3375` vs `3834`)
+- Checked-in baseline:
+  - `threshold_surface=ui-renderer-payload`
+  - measured p50/p95/max top total=`2563/3603/3603us`
+  - measured p50/p95/max top layout=`77/123/123us`
+  - hard frame p95 thresholds total/layout/solve=`3360/368/0us`
+  - payload thresholds instance/text_ops=`262416/406`
+  - renderer micro-timings remain measured evidence, not hard thresholds
+
+Decision:
+- Treat the typical autoscroll v2 baseline as the typical-frame editor paint/payload contract.
+- Do not start a `WindowedRowsSurface` display-list rewrite from this passing baseline alone. The rewrite still needs
+  a near-threshold or failing high-stress editor paint surface that points at row scene op churn rather than layout,
+  scheduling noise, or renderer micro-timing variability.
+
+## 2026-05-11 (suppressed dirty aggregation repair)
+
+Question:
+- The complex editor wheel stressor exposed `subtree layout dirty count underflow` while investigating whether editor
+  paint warranted a `WindowedRowsSurface` display-list rewrite. Is this a paint architecture signal, or a stale dirty
+  aggregation contract bug that must be fixed first?
+
+Change:
+- `layout_dirty_children_suppressed` now acts as a real child-dirty aggregation barrier for all delta paths:
+  subtree removal, direct ancestor delta propagation, and invalidation walks.
+- Removing a dirty child below a suppressed parent no longer subtracts that child's dirty count from ancestors that
+  never counted it.
+- Added a regression test for the suppressed-parent removal case.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo nextest run -p fret-ui tree::tests::subtree_layout_dirty_underflow_repair tree::tests::interactivity_gate tree::tests::barrier_subtree_layout_dirty_aggregation`
+  - 10 tests passed.
+- `git diff --check`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Passed with existing unused warnings.
+- Original complex editor wheel script, using the `gallery-full` release binary:
+  `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline.json --dir target/fret-diag-complex-editor-wheel-after-dirty-suppression-fix-full --session-auto --timeout-ms 240000 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch target/release/fret-ui-gallery.exe`
+  - Passed: `target/fret-diag-complex-editor-wheel-after-dirty-suppression-fix-full.log`.
+  - No `subtree layout dirty count underflow` / `underflow during invalidation walk` entries in the captured log.
+  - Evidence bundle:
+    `target/fret-diag-complex-editor-wheel-after-dirty-suppression-fix-full/sessions/1778484071307-173292/1778484083472-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline/bundle.schema2.json`.
+
+Perf evidence:
+- `diag stats --sort cpu_cycles --top 8` on the bundle reports p50/p95 total=`1666/4815us`,
+  layout=`285/2803us`, paint=`1325/2364us`, with worst CPU rows still showing invalidation-walk work plus editor
+  paint. This validates the counter fix but does not yet justify a row display-list rewrite.
+
+Decision:
+- Treat the underflow as a dirty aggregation correctness bug, not as evidence for a renderer/display-list rewrite.
+- Continue editor performance work from passing payload-aware baselines plus future high-stress evidence; keep any
+  `WindowedRowsSurface` rewrite gated on a failing or near-threshold paint/payload contract.
+
+## 2026-05-11 (complex editor wheel steady baseline v1)
+
+Question:
+- After the dirty aggregation repair, can the complex editor wheel path become a formal contract that isolates
+  wheel-phase editor paint/payload instead of mixing setup, toggles, font warmup, and navigation costs?
+
+Change:
+- Added `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`.
+  - It opens the code editor torture page, enables soft wrap / preedit decorations / composed preedit / folds /
+    inlays, waits for font stabilization, injects preedit, then calls `reset_diagnostics` before wheel actions.
+- Added seed policy
+  `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json`.
+  - The first 20% policy was too tight on sub-ms `top_layout_time_us`; the final policy keeps the UI + renderer
+    payload surface but adds an explicit 512us minimum slack for `top_layout_time_us`.
+- Added checked-in Windows baseline
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`.
+
+Validation:
+- Smoke script:
+  `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag-complex-editor-wheel-steady-smoke --session-auto --timeout-ms 240000 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch target/release/fret-ui-gallery.exe`
+  - Passed, no dirty aggregation underflow in the log.
+  - Smoke stats on
+    `target/fret-diag-complex-editor-wheel-steady-smoke/sessions/1778484657175-160976/1778484681044-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady/bundle.schema2.json`:
+    p50/p95 total=`3228/3631us`, layout=`114/512us`, paint=`2795/3362us`.
+- Selector:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2 --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+  - Selected candidate-1 with `fail_total=0`.
+  - Candidate-2 failed 2 validations because its p90/threshold sum was faster but too tight for the observed wheel
+    tail.
+  - Selection summary:
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`.
+
+Checked-in baseline:
+- `threshold_surface=ui-renderer-payload`
+- measured p50/p95/max top total=`2703/4325/4325us`
+- measured p50/p95/max top layout=`352/595/595us`
+- measured p50/p95/max top solve=`0/0/0us`
+- measured max payload instance/text_ops=`215440/338`
+- hard thresholds total/layout/solve/payload(instance,text_ops)=`5190/1120/0/258528/406`
+
+Decision:
+- Treat this as the high-stress editor wheel tail contract for soft-wrap/decorations/inline-preedit/folds/inlays.
+- It strengthens the evidence surface, but it still passes; do not use it alone to justify a `WindowedRowsSurface`
+  display-list rewrite.
+
+## 2026-05-11 (explicit UI threshold mode for perf baselines)
+
+Question:
+- Can perf baseline tooling distinguish tail and typical-frame UI contracts without relying on suite names such as
+  `typical`?
+
+Change:
+- Added explicit UI threshold modes to `fret-diag` baseline generation and seed policy:
+  - `top`: write tail `max_top_*` thresholds.
+  - `frame_p95`: write typical-frame `max_frame_p95_*` thresholds.
+  - `top_and_frame_p95`: write both for probes that intentionally protect rare tail and typical smoothness.
+- `diag perf --perf-baseline-ui-threshold-mode <MODE>` can override preset policy, and
+  `tools/perf/diag_perf_baseline_select.py --ui-threshold-mode <MODE>` forwards that override for selector runs.
+- Removed the old `suite_name.contains("typical")` contract inference.
+- Updated the typical code-editor autoscroll and complex typical seed policies to `frame_p95`; updated the complex
+  editor wheel policy and checked-in baseline to `top_and_frame_p95`.
+
+Validation:
+- `cargo fmt -p fret-diag`
+- `cargo nextest run -p fret-diag seed_policy_preset_and_cli_can_set_ui_threshold_mode frame_p95_ui_threshold_mode_omits_top_thresholds top_and_frame_p95_ui_threshold_mode_records_both_thresholds perf_contract_captures_threshold_and_suite_args`
+  - 4 tests passed.
+- `cargo nextest run -p fret-diag`
+  - 795 tests passed.
+- `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - Passed; legacy baselines remain classified as expected.
+- JSON parse smoke covered the updated seed policies and complex editor wheel baseline.
+- Direct complex wheel gate smoke after adding frame-p95 thresholds missed only the existing top-tail total threshold:
+  `top_total_time_us actual=5291us` vs `threshold=5190us`, while bundle p50/p95 total stayed `1821/2353us` and the
+  worst frame was paint-dominant. Evidence:
+  `target/fret-diag-gate-complex-editor-wheel-explicit-ui-mode/check.perf_thresholds.json` and
+  `target/fret-diag-gate-complex-editor-wheel-explicit-ui-mode/1778487945237/bundle.schema2.json`.
+
+Decision:
+- Treat explicit UI threshold mode as a baseline contract fix, not as a renderer optimization.
+- Do not loosen the complex wheel top threshold from one direct tail outlier. Re-run the selector intentionally if the
+  tail miss repeats and use that selector result as the source of truth.
+
+## 2026-05-11 (complex editor wheel explicit-mode re-seed)
+
+Question:
+- After making `ui_threshold_mode=top_and_frame_p95` explicit, does the complex editor wheel baseline need an
+  intentional re-seed instead of a hand-tuned threshold bump?
+
+Change:
+- Increased the complex wheel seed policy's `frame_p95_total_time_us` minimum slack from `512us` to `1024us`.
+- Re-seeded
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+  through the selector with `--ui-threshold-mode top_and_frame_p95`.
+
+Validation:
+- Selector command:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --ui-threshold-mode top_and_frame_p95 --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3 --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
+  - candidate-1 validated `3/3` with `fail_total=0`.
+  - candidate-2 validated `3/3` with `fail_total=0`.
+  - candidate-2 selected on lower suite p90 (`5027` vs `5600`) and lower threshold sum (`6033` vs `6720`).
+- Selected baseline:
+  - measured p50/p90/max top total=`2424/5027/5027us`
+  - measured p50/p90/max frame-p95 total=`2250/2784/2784us`
+  - hard thresholds top(total/layout/solve)=`6033/848/0us`
+  - hard thresholds frame-p95(total/layout/solve)=`3808/592/0us`
+  - payload thresholds instance/text_ops=`258663/406`
+
+Decision:
+- Treat policy3 as the canonical Windows RTX 4090 complex editor wheel v1 baseline.
+- The remaining tail is paint-widget dominant and renderer payload remains bounded, so this still does not justify a
+  renderer pass-organization rewrite or `WindowedRowsSurface` rewrite by itself.
+
+## 2026-05-11 (complex editor wheel frame overlay cache)
+
+Question:
+- The complex editor wheel v1 contract passes, but the paint-detail probe shows `row_overlay` is a large fraction of
+  code-editor Canvas work. Is this evidence for a `WindowedRowsSurface` display-list rewrite, or duplicated
+  frame-stable overlay derivation inside the row loop?
+
+Reference direction:
+- GPUI carries request-layout and prepaint state into paint (`repo-ref/zed/crates/gpui/src/element.rs`) and its Canvas
+  element returns prepaint data directly to paint (`repo-ref/zed/crates/gpui/src/elements/canvas.rs`).
+- Zed's editor prepares visible row layouts and a `PositionMap` before the hot paint/event geometry paths
+  (`repo-ref/zed/crates/editor/src/element.rs`, `line_layouts` and `PositionMap`).
+- Fret should follow that direction here: prepare stable overlay state once per `WindowedRowsSurface` frame, then keep
+  row paint as a consumer of already-derived geometry/points.
+
+Change:
+- Added `PaintFrameOverlayState` to `CodeEditorState`.
+  - It stores normalized selection bytes, selection display points for fallback geometry, and caret byte/row/col.
+  - `begin_paint_frame` now runs for every `WindowedRowsSurface` paint frame, not only when
+    `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, because row paint needs this semantic snapshot for correctness.
+- `paint_row` now consumes that frame overlay snapshot for:
+  - non-composed preedit caret injection,
+  - fallback selection geometry,
+  - caret overlay painting with or without shaped caret stops.
+- `CodeEditorPaintPerfFrame` and gallery diagnostics now expose `us_frame_overlay_prepare` /
+  `ns_frame_overlay_prepare`; paint perf schema is now version 7.
+
+Validation:
+- Build requirement learned during the probe: use a `gallery-dev` or `gallery-full` release build for this dev-only
+  page; the default release gallery has only the smaller page set and the script times out looking for
+  `ui-gallery-nav-code-editor-torture`.
+- Focused gates:
+  - `cargo fmt -p fret-code-editor -p fret-ui-gallery`
+  - `cargo nextest run -p fret-code-editor` - 95 tests passed.
+  - `cargo check -p fret-ui-gallery --tests` - passed.
+  - `cargo check -p fret-demo --tests` - passed.
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev` - passed.
+  - `git diff --check` - passed.
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+    - passed.
+- Paint-detail probe command:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final --timeout-ms 240000 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Passed.
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/1778495502010/bundle.schema2.json`.
+  - Repeat summary:
+    `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/regression.summary.json`.
+
+Paint-detail attribution:
+- Before:
+  `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
+  - `ns_total` p50/p95/max=`1041.1/1345.3/1371.3us`.
+  - `ns_row_overlay` p50/p95/max=`523.1/556.0/763.8us`.
+  - `ns_frame_overlay_prepare` p50/p95/max=`0.0/0.0/0.0us`.
+- After:
+  `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/1778495502010/bundle.schema2.json`.
+  - `ns_total` p50/p95/max=`488.8/730.8/832.4us`.
+  - `ns_row_overlay` p50/p95/max=`6.9/8.2/9.6us`.
+  - `ns_frame_overlay_prepare` p50/p95/max=`7.9/9.2/16.7us`.
+- Repeat-level top time also improved:
+  - before repeat summary total/paint/layout p50/p95/max=`2705/3099/3099us`, `2393/2748/2748us`,
+    `311/465/465us`.
+  - after repeat summary total/paint/layout p50/p95/max=`1874/2111/2111us`, `1540/1812/1812us`,
+    `296/296/296us`.
+
+Baseline decision:
+- Do not promote the attempted post-optimization re-seed yet.
+- Initial post-optimization selector attempt:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --ui-threshold-mode top_and_frame_p95 --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy4-overlay-cache --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`.
+- Summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy4-overlay-cache/selection-summary.json`.
+  - candidate-1 failed `3/3` validations.
+  - candidate-2 passed `2/3` validations but selected with `selected_fail_total=1`.
+  - The remaining miss was a single `top_total_time_us=4389us` paint-tail sample against candidate-2's
+    `3365us` top threshold; frame p95 total in that failed run was `2176us`.
+- Keep the checked-in policy3 v1 baseline as the formal contract for now. The optimization is real, but tightening
+  `top_total_time_us` needs an intentional policy decision for tail noise rather than a mechanical overwrite.
+
+Decision:
+- This was the correct first optimization before any row display-list rewrite: it removes duplicated display-map work
+  from row paint and follows the GPUI/Zed frame/prepaint-derived-state model.
+- The remaining row scene replay/cache behavior is still healthy enough that this slice does not justify a
+  `WindowedRowsSurface` display-list rewrite. Revisit that only with a future near-threshold/failing stressor where
+  row op replay/capture, not overlay derivation, is the measured limiter.
+
+## 2026-05-11 (baseline selector threshold-loosening guard)
+
+Question:
+- After the frame-overlay cache, can the selector promote a tighter complex editor wheel baseline without silently
+  weakening the existing Windows RTX 4090 contract?
+
+Observation:
+- A post-optimization selector attempt with an added `top_total_time_us` slack rule selected a candidate that validated
+  `3/3`, but it would have widened `max_top_total_us` from `6033us` to `6912us`.
+- That is the wrong contract direction for this slice: the optimization reduced row overlay work and total paint detail
+  cost, but it did not prove that the checked-in tail threshold should become looser.
+
+Change:
+- `tools/perf/diag_perf_baseline_select.py` now compares candidates against an existing `--baseline-out` file by
+  default and treats hard-threshold increases/removals as selection failures.
+- If a future machine-profile reset or intentional contract reset needs looser numbers, the command must pass
+  `--allow-threshold-loosening` and the perf log must explain why.
+- Added unit coverage for max-threshold increases, min-threshold decreases, threshold removal, row removal, and
+  previously ungated `null` thresholds.
+
+Validation:
+- `python -m unittest discover -s tools/perf -p 'test_*.py'` - 3 tests passed.
+- `python tools/perf/diag_perf_baseline_select.py --help` - exposes `--allow-threshold-loosening`.
+- `git diff --check` - passed.
+
+Decision:
+- Do not promote the looser complex editor wheel candidate.
+- Use a follow-up clamp/no-loosen selector run if we want post-optimization measured evidence without weakening the
+  existing contract.
+
+## 2026-05-11 (complex editor wheel clamp/no-loosen re-seed)
+
+Question:
+- Can the complex editor wheel baseline record post-overlay-cache measured evidence while preserving the existing
+  hard thresholds wherever the candidate still fits the older contract?
+
+Change:
+- Added `--clamp-threshold-loosening` to `tools/perf/diag_perf_baseline_select.py`.
+  - The selector rewrites candidate thresholds before validation, preserving the existing stricter value when the
+    candidate's own measured value is still below that existing threshold.
+  - If the candidate's measured value no longer fits the old threshold, the threshold is not clamped and the candidate
+    remains a loosening candidate.
+- Added `top_total_time_us` seed policy with `min_slack_us=3200` for this stressor, but the selected baseline still
+  clamps `max_top_total_us` back to the existing `6033us` contract because the generated threshold would have widened.
+- Re-seeded
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+  with clamp/no-loosen mode.
+
+Validation:
+- Selector command:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --ui-threshold-mode top_and_frame_p95 --clamp-threshold-loosening --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-clamp-no-loosen --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`.
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-clamp-no-loosen/selection-summary.json`.
+  - candidate-1 validated `3/3` with `fail_total=0`, `threshold_loosening_count=0`, and
+    `threshold_clamp_count=5`.
+  - candidate-2 failed validation `3/3`; one run had `top_total_time_us=8514us` against the preserved
+    `6033us` threshold, and two runs exceeded the generated frame-p95 total threshold.
+- Selected baseline:
+  - measured p50/p90/max top total=`2257/4617/4617us`
+  - measured p50/p90/max frame-p95 total=`1730/2968/2968us`
+  - hard thresholds top(total/layout/solve)=`6033/848/0us`
+  - hard thresholds frame-p95(total/layout/solve)=`3808/592/0us`
+  - pointer thresholds dispatch/hit-test=`489/14us`
+  - payload thresholds instance/text_ops=`258663/406`
+- Tool validation:
+  - `python -m unittest discover -s tools/perf -p 'test_*.py'` - 5 tests passed.
+  - `python tools/perf/diag_perf_baseline_select.py --help` - exposes `--clamp-threshold-loosening`.
+  - `git diff --check` - passed.
+
+Decision:
+- Promote the clamp/no-loosen baseline as updated evidence, not as proof that the top-tail contract can tighten yet.
+- The top threshold remains `6033us`; candidate-2's `8514us` tail confirms that we still need more attribution before
+  forcing a tighter max gate.
+
+## 2026-05-11 20:18 (complex editor wheel syntax prefetch line mapping)
+
+Question:
+- After the frame-overlay cache, a paint-detail probe still showed one high-tail paint sample with many row scene
+  rebuilds. Is the remaining tail caused by row display-list replay/capture cost, or by cache churn from a wrong
+  invalidation/prefetch contract?
+
+Root cause:
+- The syntax prefetch path treated `WindowedRowsPaintFrame.visible_start` / `visible_end` as physical buffer lines.
+- Under soft wrap those values are display rows, so the prefetcher warmed the wrong syntax chunks and could evict the
+  currently visible syntax/rich rows.
+- That eviction invalidated row scene cache keys and produced an avoidable repaint spike. This is a semantic bug, not a
+  reason to start a broader `WindowedRowsSurface` display-list rewrite.
+
+Change:
+- `begin_paint_frame` now records the actual visible display-row window and computes a frame-local cache floor from
+  the union of previous/current visible windows.
+- Code editor paint diagnostics schema is now version `8` and exports `cache_base_entries`,
+  `cache_frame_min_entries`, and `cache_effective_entries`.
+- Syntax prefetch now maps visible display rows through `DisplayMap::display_row_line(...)` before chunk selection.
+- Rich/syntax prefetch capacity uses the frame-aware cache floor so reverse wheel steps can keep both windows resident.
+
+Validation:
+- Focused gates:
+  - `cargo fmt -p fret-code-editor -p fret-ui-gallery`
+  - `cargo nextest run -p fret-code-editor` - 97 tests passed.
+  - `cargo check -p fret-ui-gallery --tests --features gallery-dev` - passed.
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev` - passed.
+  - `git diff --check` - passed.
+- Paint-detail capacity probe:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-tail-paint-cache-window-v1 --timeout-ms 240000 --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-wheel-tail-paint-cache-window-v1/1778500307499/bundle.schema2.json`.
+  - Worst frame: `top_total_time_us=5681`, `rows_scene_stored=86`, `rows_scene_replayed=203`,
+    `syntax_evict_delta=85`, `row_rich_miss_delta=85`.
+  - Diagnosis: `cache_base_entries=431` was already above the frame cache floor (`289/299`), so raw cache capacity was
+    not the root cause.
+- Paint-detail post-fix probe:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1 --timeout-ms 240000 --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json`.
+  - Worst paint-detail total dropped from `5681us` to `3580us`.
+  - `syntax_evict_delta=0`, `row_rich_miss_delta=0`, and row scene misses fell from an `86`-row spike to mostly
+    `1..5` rows.
+- Formal baseline check without paint-detail instrumentation:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-existing-baseline-check-syntax-prefetch-v1 --timeout-ms 240000 --repeat 7 --warmup-frames 5 --sort time --top 5 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Passed the existing Windows RTX 4090 v1 baseline.
+  - Summary: max total `3238us`, p50 total `2829us`, p95 total `3238us`; max paint `3046us`.
+  - Renderer payload also stayed below the current contract: text ops max `266` and instance bytes max `195440`.
+
+Decision:
+- Keep the checked-in baseline unchanged: this slice improves tail behavior without requiring threshold loosening.
+- The right architectural invariant is now explicit: display-row windows must be translated through the display map
+  before syntax/rich cache chunking.
+- A future row display-list/replay rewrite should start only from evidence where row scene replay/capture itself is the
+  measured limiter after syntax/rich cache churn is absent.

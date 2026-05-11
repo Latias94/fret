@@ -86,6 +86,8 @@ pub struct ElementDiagnosticsSnapshotV1 {
     #[serde(default)]
     pub scratch_element_children_vec_pool_bytes_estimate_total: u64,
     #[serde(default)]
+    pub scratch_element_children_vec_pool_grow_events: u64,
+    #[serde(default)]
     pub retained_keep_alive_roots_len: u32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub retained_keep_alive_roots_head: Vec<u64>,

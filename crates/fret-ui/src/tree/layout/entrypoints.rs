@@ -209,12 +209,12 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
             }
             self.last_layout_frame_id = Some(app.frame_id());
-            self.refine_pending_window_runtime_snapshots_after_layout(app);
             if let Some(started) = started {
                 self.debug_stats.layout_time = started
                     .elapsed()
                     .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
             }
+            self.refine_pending_window_runtime_snapshots_after_layout(app);
             return;
         }
 
@@ -253,24 +253,42 @@ impl<H: UiHost> UiTree<H> {
             && !force_post_resize_rebuild
         {
             self.debug_stats.layout_fast_path_taken = true;
+            let prepaint_started = self.debug_enabled.then(Instant::now);
             self.prepaint_after_layout(app, scale_factor);
+            if let Some(prepaint_started) = prepaint_started {
+                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
+            }
 
+            let focus_started = self.debug_enabled.then(Instant::now);
             self.repair_focus_node_from_focused_element_if_needed(app);
+            if let Some(focus_started) = focus_started {
+                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
+            }
 
             if self.semantics_requested {
+                let semantics_started = self.debug_enabled.then(Instant::now);
                 self.semantics_requested = false;
                 self.refresh_semantics_snapshot(app);
+                if let Some(semantics_started) = semantics_started {
+                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
+                }
             }
+            let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
             self.flush_deferred_cleanup(services);
+            if let Some(deferred_cleanup_started) = deferred_cleanup_started {
+                self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
+            }
             self.last_layout_frame_id = Some(app.frame_id());
-            self.refine_pending_window_runtime_snapshots_after_layout(app);
 
             self.last_layout_bounds = Some(bounds);
             self.last_layout_scale_factor = Some(scale_factor);
 
             if let Some(started) = started {
-                self.debug_stats.layout_time = started.elapsed();
+                self.debug_stats.layout_time = started
+                    .elapsed()
+                    .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
             }
+            self.refine_pending_window_runtime_snapshots_after_layout(app);
             return;
         }
 

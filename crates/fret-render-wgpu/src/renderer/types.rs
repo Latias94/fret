@@ -68,6 +68,9 @@ pub(super) struct ViewportUniform {
     /// Enhanced contrast factor for subpixel text (RGB coverage glyphs).
     pub(super) text_subpixel_enhanced_contrast: f32,
     pub(super) _pad_text_quality: [u32; 2],
+    /// Physical-pixel transform rows used by instanced text expansion.
+    pub(super) text_transform0: [f32; 4],
+    pub(super) text_transform1: [f32; 4],
 }
 
 #[repr(C)]
@@ -140,6 +143,16 @@ pub(super) struct TextVertex {
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
     pub(super) outline_params: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct TextGlyphInstance {
+    pub(super) local_rect: [f32; 4],
+    pub(super) uv: [f32; 4],
+    pub(super) color: [f32; 4],
+    pub(super) outline_params: u32,
+    pub(super) paint_index: u32,
 }
 
 #[repr(C)]
@@ -414,6 +427,35 @@ pub struct RenderPerfSnapshot {
     pub encoder_finish_us: u64,
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
+    pub encode_scene_stack_us: u64,
+    pub encode_scene_clip_us: u64,
+    pub encode_scene_mask_us: u64,
+    pub encode_scene_effect_us: u64,
+    pub encode_scene_quad_us: u64,
+    pub encode_scene_image_us: u64,
+    pub encode_scene_text_us: u64,
+    pub encode_scene_path_us: u64,
+    pub encode_scene_viewport_us: u64,
+    pub encode_scene_flush_us: u64,
+    pub encode_scene_text_shadow_us: u64,
+    pub encode_scene_text_setup_us: u64,
+    pub encode_scene_text_glyphs_us: u64,
+    pub encode_scene_text_glyph_transform_us: u64,
+    pub encode_scene_text_glyph_emit_us: u64,
+    pub encode_scene_text_group_flush_us: u64,
+    pub encode_scene_text_vertex_grow_events: u64,
+    pub encode_scene_text_transform_fast_path_glyphs: u64,
+    pub encode_scene_text_transform_generic_glyphs: u64,
+    pub encode_scene_stack_ops: u64,
+    pub encode_scene_clip_ops: u64,
+    pub encode_scene_mask_ops: u64,
+    pub encode_scene_effect_ops: u64,
+    pub encode_scene_quad_ops: u64,
+    pub encode_scene_image_ops: u64,
+    pub encode_scene_text_ops: u64,
+    pub encode_scene_path_ops: u64,
+    pub encode_scene_viewport_ops: u64,
+    pub encode_scene_flushes: u64,
 
     // Non-text upload churn (best-effort). These counters attempt to make CPU->GPU texture uploads
     // visible in diagnostics, beyond text atlas updates.
@@ -696,6 +738,29 @@ pub struct RenderPerfSnapshot {
     pub path_material_paints_degraded_to_solid_base: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum EncodeSceneFamily {
+    Stack,
+    Clip,
+    Mask,
+    Effect,
+    Quad,
+    Image,
+    Text,
+    Path,
+    Viewport,
+    Flush,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum EncodeSceneTextPhase {
+    Shadow,
+    Setup,
+    Glyphs,
+    GlyphEmit,
+    GroupFlush,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct RenderPerfStats {
     pub(super) frames: u64,
@@ -708,6 +773,35 @@ pub(super) struct RenderPerfStats {
     pub(super) encoder_finish: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
+    pub(super) encode_scene_stack: Duration,
+    pub(super) encode_scene_clip: Duration,
+    pub(super) encode_scene_mask: Duration,
+    pub(super) encode_scene_effect: Duration,
+    pub(super) encode_scene_quad: Duration,
+    pub(super) encode_scene_image: Duration,
+    pub(super) encode_scene_text: Duration,
+    pub(super) encode_scene_path: Duration,
+    pub(super) encode_scene_viewport: Duration,
+    pub(super) encode_scene_flush: Duration,
+    pub(super) encode_scene_text_shadow: Duration,
+    pub(super) encode_scene_text_setup: Duration,
+    pub(super) encode_scene_text_glyphs: Duration,
+    pub(super) encode_scene_text_glyph_transform: Duration,
+    pub(super) encode_scene_text_glyph_emit: Duration,
+    pub(super) encode_scene_text_group_flush: Duration,
+    pub(super) encode_scene_text_vertex_grow_events: u64,
+    pub(super) encode_scene_text_transform_fast_path_glyphs: u64,
+    pub(super) encode_scene_text_transform_generic_glyphs: u64,
+    pub(super) encode_scene_stack_ops: u64,
+    pub(super) encode_scene_clip_ops: u64,
+    pub(super) encode_scene_mask_ops: u64,
+    pub(super) encode_scene_effect_ops: u64,
+    pub(super) encode_scene_quad_ops: u64,
+    pub(super) encode_scene_image_ops: u64,
+    pub(super) encode_scene_text_ops: u64,
+    pub(super) encode_scene_path_ops: u64,
+    pub(super) encode_scene_viewport_ops: u64,
+    pub(super) encode_scene_flushes: u64,
 
     pub(super) svg_uploads: u64,
     pub(super) svg_upload_bytes: u64,
@@ -854,6 +948,111 @@ pub(super) struct RenderPerfStats {
     pub(super) material_degraded_due_to_budget: u64,
 
     pub(super) path_material_paints_degraded_to_solid_base: u64,
+}
+
+impl RenderPerfStats {
+    pub(super) fn record_encode_scene_family(
+        &mut self,
+        family: EncodeSceneFamily,
+        elapsed: Option<Duration>,
+    ) {
+        match family {
+            EncodeSceneFamily::Stack => {
+                self.encode_scene_stack_ops = self.encode_scene_stack_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_stack += elapsed;
+                }
+            }
+            EncodeSceneFamily::Clip => {
+                self.encode_scene_clip_ops = self.encode_scene_clip_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_clip += elapsed;
+                }
+            }
+            EncodeSceneFamily::Mask => {
+                self.encode_scene_mask_ops = self.encode_scene_mask_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_mask += elapsed;
+                }
+            }
+            EncodeSceneFamily::Effect => {
+                self.encode_scene_effect_ops = self.encode_scene_effect_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_effect += elapsed;
+                }
+            }
+            EncodeSceneFamily::Quad => {
+                self.encode_scene_quad_ops = self.encode_scene_quad_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_quad += elapsed;
+                }
+            }
+            EncodeSceneFamily::Image => {
+                self.encode_scene_image_ops = self.encode_scene_image_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_image += elapsed;
+                }
+            }
+            EncodeSceneFamily::Text => {
+                self.encode_scene_text_ops = self.encode_scene_text_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text += elapsed;
+                }
+            }
+            EncodeSceneFamily::Path => {
+                self.encode_scene_path_ops = self.encode_scene_path_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_path += elapsed;
+                }
+            }
+            EncodeSceneFamily::Viewport => {
+                self.encode_scene_viewport_ops = self.encode_scene_viewport_ops.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_viewport += elapsed;
+                }
+            }
+            EncodeSceneFamily::Flush => {
+                self.encode_scene_flushes = self.encode_scene_flushes.saturating_add(1);
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_flush += elapsed;
+                }
+            }
+        }
+    }
+
+    pub(super) fn record_encode_scene_text_phase(
+        &mut self,
+        phase: EncodeSceneTextPhase,
+        elapsed: Option<Duration>,
+    ) {
+        match phase {
+            EncodeSceneTextPhase::Shadow => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_shadow += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::Setup => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_setup += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::Glyphs => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_glyphs += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::GlyphEmit => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_glyph_emit += elapsed;
+                }
+            }
+            EncodeSceneTextPhase::GroupFlush => {
+                if let Some(elapsed) = elapsed {
+                    self.encode_scene_text_group_flush += elapsed;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1067,8 +1266,8 @@ pub(super) struct MaskDraw {
 pub(super) struct TextDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
-    pub(super) first_vertex: u32,
-    pub(super) vertex_count: u32,
+    pub(super) first_instance: u32,
+    pub(super) instance_count: u32,
     pub(super) kind: TextDrawKind,
     pub(super) atlas_page: u16,
     pub(super) paint_index: u32,
@@ -1167,6 +1366,7 @@ pub(super) struct SceneEncoding {
     pub(super) path_paints: Vec<PaintGpu>,
     pub(super) text_paints: Vec<PaintGpu>,
     pub(super) viewport_vertices: Vec<ViewportVertex>,
+    pub(super) text_glyph_instances: Vec<TextGlyphInstance>,
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
     pub(super) clip_path_masks: Vec<ClipPathMaskDraw>,
@@ -1201,6 +1401,7 @@ impl SceneEncoding {
         self.path_paints.clear();
         self.text_paints.clear();
         self.viewport_vertices.clear();
+        self.text_glyph_instances.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();
         self.clip_path_masks.clear();

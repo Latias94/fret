@@ -5,6 +5,7 @@ pub(super) struct GeometryUploadState {
     path_paints: buffers::StorageRingBuffer<PaintGpu>,
     text_paints: buffers::StorageRingBuffer<PaintGpu>,
     viewport_vertices: buffers::RingBuffer<ViewportVertex>,
+    text_glyph_instances: buffers::RingBuffer<TextGlyphInstance>,
     text_vertices: buffers::RingBuffer<TextVertex>,
     path_vertices: buffers::RingBuffer<PathVertex>,
 }
@@ -14,6 +15,7 @@ pub(super) struct FrameGeometryUploads {
     pub(super) text_paint_bind_group: wgpu::BindGroup,
     pub(super) path_paint_bind_group: wgpu::BindGroup,
     pub(super) viewport_vertex_buffer: wgpu::Buffer,
+    pub(super) text_glyph_instance_buffer: wgpu::Buffer,
     pub(super) text_vertex_buffer: wgpu::Buffer,
     pub(super) path_vertex_buffer: wgpu::Buffer,
 }
@@ -104,6 +106,13 @@ impl GeometryUploadState {
             "fret viewport vertices",
             vertex_usage,
         );
+        let text_glyph_instances = buffers::RingBuffer::<TextGlyphInstance>::new(
+            device,
+            FRAMES_IN_FLIGHT,
+            512 * 6,
+            "fret text glyph instances",
+            vertex_usage,
+        );
         let text_vertices = buffers::RingBuffer::<TextVertex>::new(
             device,
             FRAMES_IN_FLIGHT,
@@ -124,6 +133,7 @@ impl GeometryUploadState {
             path_paints,
             text_paints,
             viewport_vertices,
+            text_glyph_instances,
             text_vertices,
             path_vertices,
         }
@@ -149,6 +159,7 @@ impl GeometryUploadState {
         path_paints: &[PaintGpu],
         text_paints: &[PaintGpu],
         viewport_vertices: &[ViewportVertex],
+        text_glyph_instances: &[TextGlyphInstance],
         text_vertices: &[TextVertex],
         path_vertices: &[PathVertex],
         perf_enabled: bool,
@@ -159,6 +170,8 @@ impl GeometryUploadState {
         self.text_paints.ensure_capacity(device, text_paints.len());
         self.viewport_vertices
             .ensure_capacity(device, viewport_vertices.len());
+        self.text_glyph_instances
+            .ensure_capacity(device, text_glyph_instances.len());
         self.text_vertices
             .ensure_capacity(device, text_vertices.len());
         self.path_vertices
@@ -208,6 +221,20 @@ impl GeometryUploadState {
             }
         }
 
+        let text_glyph_instance_buffer = self.text_glyph_instances.next_buffer();
+        if !text_glyph_instances.is_empty() {
+            queue.write_buffer(
+                &text_glyph_instance_buffer,
+                0,
+                bytemuck::cast_slice(text_glyph_instances),
+            );
+            if perf_enabled {
+                frame_perf.instance_bytes = frame_perf
+                    .instance_bytes
+                    .saturating_add(std::mem::size_of_val(text_glyph_instances) as u64);
+            }
+        }
+
         let text_vertex_buffer = self.text_vertices.next_buffer();
         if !text_vertices.is_empty() {
             queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
@@ -233,6 +260,7 @@ impl GeometryUploadState {
             text_paint_bind_group,
             path_paint_bind_group,
             viewport_vertex_buffer,
+            text_glyph_instance_buffer,
             text_vertex_buffer,
             path_vertex_buffer,
         }

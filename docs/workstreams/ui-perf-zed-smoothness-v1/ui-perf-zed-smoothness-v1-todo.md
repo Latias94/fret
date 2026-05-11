@@ -30,6 +30,13 @@ Conventions:
 
 ## Current priorities (updated 2026-02-08)
 
+- [x] Keep an explicit perf contract matrix for editor-grade probes.
+  - Matrix: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+  - Scope: representative scripts, checked-in baselines, gate commands, recent evidence, and Zed/GPUI plus egui
+    reference pressure.
+  - Note: new `diag perf --perf-baseline-out` rows record `measured_p50`; old baselines remain valid and should only
+    gain p50 when intentionally re-seeded.
+
 - [ ] Pause checkpoint (2026-02-10): consolidate and avoid new experiments unless a gate regresses.
   - Summary + rollback switches: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md` (“Checkpoint (2026-02-10)”).
   - Evidence anchors:
@@ -46,7 +53,19 @@ Conventions:
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
   - Use this trio as the default “is the frame still good?” loop; keep full `ui-gallery-steady` for periodic
-    maintenance or suite membership changes.
+    drift evidence or suite membership changes, not as a single formal Windows contract.
+  - Do not try another Windows `ui-gallery-steady` promotion by loosening thresholds; treat the broad suite as drift
+    evidence unless it is redefined as a suite-of-contracts.
+  - `ui-gallery-hover-layout-torture-steady` now has its own Windows v1 baseline plus a `diag stats
+    --check-hover-layout-max 0` semantic gate and no longer belongs to the broad-only member list.
+  - `ui-gallery-material3-tabs-switch-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
+  - `ui-gallery-menubar-keyboard-nav-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
+  - `ui-gallery-view-cache-toggle-perf-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
+  - `ui-gallery-virtual-list-torture-steady` now has its own Windows v1 baseline and no longer belongs to the
+    broad-only member list.
   - Evidence: perf log entries `2026-05-07 13:58` and `2026-05-07 14:01`.
 
 - [x] Stabilize `ui-gallery-overlay-pointer-move-steady` cleanup after pointer sweeps.
@@ -220,11 +239,46 @@ Conventions:
   - [x] Make `CodeEditorHandle::set_language(...)` idempotent (no per-frame cache reset).
     - Implementation: `perf(fret-code-editor): make set_language idempotent` (commit `1778ba563`).
     - Evidence: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`).
+  - Latest no-code evidence on Windows RTX 4090: perf log entry `2026-05-09 18:05` shows
+    `ui-gallery-code-editor-window-resize-drag-jitter-steady` repeat=3 at
+    `total/layout/paint/solve p95=3995/2137/1747/574us`, with the real 20k-line torture surface active and
+    `paint_perf.us_total=365us` in the sampled bundle. Do not start the row display-list rewrite from this sample
+    alone; either create a stricter editor paint stressor or move to a currently near-threshold gate.
+  - Latest payload-aware typical-frame contract: perf log entry `2026-05-11` promotes
+    `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json` with
+    `threshold_surface=ui-renderer-payload`, measured p50/p95/max top total=`2563/3603/3603us`, hard frame p95
+    thresholds total/layout/solve=`3360/368/0us`, and payload thresholds
+    `max_renderer_instance_bytes=262416`, `max_renderer_encode_scene_text_ops=406`. This covers the missing
+    typical-frame paint/payload surface, but it is still a passing contract; only start a `WindowedRowsSurface`
+    display-list rewrite from a future near-threshold or failing stressor.
+  - [x] Cache code-editor frame overlay state before row paint.
+    - Change: `begin_paint_frame` now prepares normalized selection bytes/display points plus caret byte/row/col once
+      per `WindowedRowsSurface` frame, and `paint_row` consumes that snapshot for preedit injection, fallback
+      selection geometry, and caret overlay painting.
+    - Evidence: perf log entry `2026-05-11` (`complex editor wheel frame overlay cache`); paint-detail
+      `ns_row_overlay` p95 drops from `556.0us` to `8.2us`, while frame overlay preparation is `9.2us` p95.
+    - Decision: this follows the GPUI/Zed prepaint-derived-state direction and fixes duplicated display-map work. It
+      does not by itself justify a row display-list rewrite because row scene replay remains high and renderer payload
+      is still bounded.
+  - [x] Fix soft-wrap syntax prefetch to use buffer lines, not display rows.
+    - Change: syntax prefetch now maps `WindowedRowsPaintFrame` display rows through
+      `DisplayMap::display_row_line(...)` before chunk selection, and row/rich cache capacity observes a frame-local
+      visible-window floor.
+    - Evidence: perf log entry `2026-05-11 20:18` (`complex editor wheel syntax prefetch line mapping`); the
+      paint-detail spike drops from `5681us` with `syntax_evict_delta=85`, `row_rich_miss_delta=85`, and
+      `rows_scene_stored=86` to `3580us` with syntax/rich evictions gone and row scene misses mostly `1..5`.
+    - Decision: this is the correct semantic fix before any row display-list rewrite. The cache window uses display
+      rows, while syntax/rich chunking must use physical buffer lines.
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
-      - record per-row display lists (ops) and replay with a transform/translation,
+      - record per-row scene ops once and replay them with a pure transform/translation boundary,
+      - split replay/capture cost from renderer encode/upload cost before changing thresholds,
       - reduce quads/text ops count (batching or fewer per-row background ops),
       - avoid per-frame allocations in the hot loop (scratch vec reuse, pre-sized buffers).
+    - Current blocker: latest complex wheel evidence points first at frame-derived overlay work, then at a
+      display-row/physical-line syntax prefetch bug, and now at Canvas paint-widget / renderer encode payload cost
+      rather than missed row-scene reuse. Start this only from a future near-threshold or failing stressor where the
+      measured limiter is replay/capture itself, not syntax/rich cache churn or a stale display-row mapping.
   - [ ] Re-evaluate text blob cache behavior for editor rows under resize jitter.
     - Confirm whether the hitch is dominated by fingerprint comparison, text prepare, atlas upload, or pure CPU list building.
     - If dominated by fingerprint compare, consider pointer-fast-pathing for more content variants (and/or richer cache keys).
@@ -950,6 +1004,42 @@ Perf acceptance:
   - Rule: choose candidate by failures -> resize p90 -> threshold-sum.
   - Template doc updated: `docs/workstreams/perf-baselines/seed-policy-template.md` (`Candidate selection workflow`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Promote payload-aware code-editor autoscroll Windows baseline.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`
+  - Seed policy: `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-steady.v2.json`
+  - Selector summary: `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-steady-windows-rtx4090-v4c/selection-summary.json`
+  - Result: candidate-1 selected with `fail_total=0`; candidate-2 also validated `3/3`.
+  - Contract: `threshold_surface=ui-renderer-payload`; `top_total_time_us` uses `p90` + `quantum_us=16`, `top_layout_time_us`
+    uses `p90` + `min_slack_us=144` + `quantum_us=8`.
+  - Evidence: perf log entry `2026-05-11`.
+- [x] Promote payload-aware code-editor autoscroll typical Windows baseline.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`
+  - Seed policy: `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json`
+  - Selector summary: `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-typical-windows-rtx4090-v2/selection-summary.json`
+  - Result: candidate-1 selected with `fail_total=0`; candidate-2 also validated `3/3`.
+  - Contract: `threshold_surface=ui-renderer-payload`; measured p50/p95/max top total=`2563/3603/3603us`;
+    hard frame p95 thresholds total/layout/solve=`3360/368/0us`; payload thresholds instance/text_ops=`262416/406`.
+  - Evidence: perf log entry `2026-05-11`.
+- [x] Promote complex code-editor wheel Windows baseline after dirty aggregation repair.
+  - Script:
+    `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`.
+  - Baseline:
+    `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`.
+  - Seed policy:
+    `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json`.
+  - Selector summary:
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
+  - Result: candidate-1 and candidate-2 both validated `3/3` with `fail_total=0`; candidate-2 selected on lower
+    suite p90.
+  - Contract: `threshold_surface=ui-renderer-payload`, `ui_threshold_mode=top_and_frame_p95`; measured p50/p90/max
+    top total=`2424/5027/5027us`, frame-p95 total=`2250/2784/2784us`; thresholds top(total/layout/solve)=
+    `6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`, payload instance/text_ops=`258663/406`.
+  - Evidence: perf log entry `2026-05-11`.
+- [x] Make perf baseline UI threshold mode explicit.
+  - Seed policy now chooses `top`, `frame_p95`, or `top_and_frame_p95`.
+  - The tooling no longer infers typical-frame contracts from suite names; use `frame_p95` for typical contracts and
+    `top_and_frame_p95` when a probe intentionally protects tail and typical smoothness together.
+  - Evidence: perf log entry `2026-05-11` (`explicit UI threshold mode for perf baselines`).
 - [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
   - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
   - Commit: `c7ea64bb5`
@@ -1063,7 +1153,7 @@ Perf acceptance:
     selection changes rebuild the semantics snapshot.
   - Follow-up: if real semantic-change frames become the next bottleneck, design incremental semantics/diffing instead
     of broadening the dirty filter.
-- [ ] Audit layout side effects before adding an engine-solved subtree apply fast path.
+- [x] Audit layout side effects for the first engine-solved geometry propagation slice.
   - Scope: `Scroll`, `VirtualList`, text/text input widgets, canvas/viewport surfaces, layout-query regions,
     transforms, and anchored/overlay-related nodes.
   - Rationale: resize profiling shows the remaining `ScrollArea` hotspot is broad `layout_in` recursion after Taffy has
@@ -1071,14 +1161,32 @@ Perf acceptance:
     affected subtree has no layout-time side effects.
   - Evidence: perf log entry `2026-05-08 15:40`; clean or near-clean resize frames can still visit roughly `962-1044`
     child-layout nodes.
-- [ ] Prototype a guarded engine-solved subtree apply path for proven-safe layout nodes.
-  - Candidate safe subset: pure container/flex/grid/wrapper leaves whose bounds and children are already solved by the
-    layout engine and whose layout method only propagates final rects.
-  - Required proof: scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry, text
-    input state, and virtual-list visible ranges stay identical to the full `layout_in` path on targeted scripts.
-  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild` plus a prewarmed
-    `ui-gallery-window-resize-stress-steady.json` perf sample.
-- [x] Reject the guarded engine-solved subtree apply experiment on the current resize-stress sample.
+  - Result: the landed slice only allows mechanism-only nodes whose layout can be represented as solved geometry
+    propagation (`Container`, `Pressable`, `Semantics`, `ViewCache`, `FocusScope`, `ForegroundScope`, `Opacity`,
+    `Stack`, `Grid`, and non-auto-margin `Flex`/`SemanticFlex`/`RovingFlex`). Leaf text stays eligible only when its
+    size is unchanged.
+  - Explicitly rejected in this slice: `Scroll`, `VirtualList`, text input/area, transforms, anchored overlays,
+    layout-query regions, retained/custom widgets, absolute-positioned children, suppressed dirty-child subtrees, and
+    flex auto margins.
+  - Semantic guard: both translation-only and size-delta fast paths refresh `current_bounds_for_element`, so layout
+    queries and overlay/focus geometry do not read stale element bounds.
+  - Evidence: perf log entry `2026-05-09 16:38`.
+- [x] Land a guarded engine-solved subtree apply path for proven-safe layout nodes.
+  - Implementation: clean, final-pass, non-dirty engine-solved nodes can propagate cached child rects without rerunning
+    structural `widget.layout`, falling back to normal layout for unsupported or side-effectful nodes.
+  - Gate:
+    `cargo nextest run -p fret-ui clean_engine_solved_size_delta_propagates_geometry_without_relayouting_structure solve_barrier_flow_root_reuses_solved_root_even_after_other_solves solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes nested_flow_is_solved_once_per_island`.
+  - Release/perf gates: `cargo build -p fretboard --release`, `cargo build -p fret-ui-gallery --release --features
+    gallery-full`, plus prewarmed repeat=3 `ui-gallery-window-resize-stress-steady.json` and
+    `ui-gallery-window-resize-drag-jitter-steady.json`.
+  - Evidence:
+    - Stress final repeat=3:
+      `target/fret-diag/codex-clean-engine-propagation-stress-final-r3/regression.summary.json`
+      (`total/layout/solve p95=9089/4746/2352us`).
+    - Drag-jitter final repeat=3:
+      `target/fret-diag/codex-clean-engine-propagation-drag-jitter-final-r3/regression.summary.json`
+      (`total/layout/solve p95=6495/3947/2328us`).
+- [x] Reject the earlier broad guarded engine-solved subtree apply experiment on the current resize-stress sample.
   - Evidence: perf log entry `2026-05-08 16:45`; `ui-gallery-window-resize-stress` p95 total/layout/paint worsened
     from `8234/4505/3494us` to `8659/4692/3629us`.
   - Decision: do not promote the broad fast path; keep the next implementation pass focused on the narrower
@@ -1139,7 +1247,7 @@ Perf acceptance:
     dominated by `layout_children_first_pass` (`p95=3640us`) with secondary `solve_barrier` (`p95=672us`).
     View-cache root phase cost is dominated by `solve_barrier` (`p95=1674us`) with secondary
     `layout_children_first_pass` (`p95=1296us`). Probe/cache/overflow/handle phases are near-zero.
-- [ ] Investigate content scroll real bounds application cost.
+- [x] Investigate and reduce content scroll real bounds application cost.
   - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
     `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
     `layout_child_max_subtree_dirty=false`.
@@ -1150,10 +1258,13 @@ Perf acceptance:
     shows `layout_children_first_pass` dominates (`p95=3640us`) and measure/probe/overflow phases are negligible.
   - Latest child-rect evidence: `layout_engine_child_rect_queries=1196` costs only `70us` in the latest worst frame,
     so the content lane should stay focused on clean bounds-size application, not child-rect lookup overhead.
+  - Result: safe-subset engine-solved geometry propagation removes most structural relayout churn while keeping
+    side-effectful widgets on the full `layout_in` path. Final normalized stress evidence reports
+    `total/layout/solve p95=9089/4746/2352us`, and drag-jitter reports `6495/3947/2328us`.
   - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
     text input layout state, virtual-list visible ranges, and layout query semantics.
-  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled
-    `ui-gallery-window-resize-stress-steady.json` smoke.
+  - Gate: focused layout-engine regression tests plus prewarmed repeat=3
+    `ui-gallery-window-resize-stress-steady.json` and `ui-gallery-window-resize-drag-jitter-steady.json` perf samples.
 - [ ] Investigate clean view-cache scroll barrier solve cost.
   - Target: `ui-gallery-view-cache-root` live resize profiles where `solve_barrier_us` dominates while child subtree
     dirty flags are false.
@@ -1173,6 +1284,20 @@ Perf acceptance:
   - Latest root-solve evidence: clean live-resize view-cache frames still show
     `solve_barrier_us=1616..1795us` with view-cache root solve profile
     `reason=new_frame_key_changed`, `subtree_nodes=962`, and `batch_roots=1`.
+  - Latest root-solve delta evidence: solve profiles now include previous available size / scale factor and deltas.
+    The resize-stress smoke reports the view-cache root solve at `available_w=930`, `previous_available_w=692`,
+    `available_w_delta=238`, `available_h_delta=0`, `scale_factor_delta=0`, and `previous_frame_delta=3`.
+    Decision: this is a real logical width delta, not float jitter; do not pursue root-solve-key quantization as the
+    next optimization. Focus next on reducing the 962-node root's width sensitivity, splitting the solve boundary, or
+    optimizing Taffy solve cost with evidence.
+  - Latest harness-topology evidence: perf log entry `2026-05-09 17:52` replaces the view-cache torture page's
+    artificial 240-row non-virtualized button list with a retained virtual list. The page-local view-cache reuse root
+    element count drops from `1104` to `137`; top layout nodes drop from `278` to `34`; and the normalized resize
+    smoke drops from `total/layout/solve/paint=8810/4774/2229/3711us` to `3971/1788/784/1988us`.
+    Repeat=3 confirmation reports resize-stress p95 `4252/1719/717/2352us` and drag-jitter p95
+    `2066/1310/754/643us`, both with `view_cache_roots_reused=2/2`.
+    Decision: keep this as a gallery/component-layer correction, not a core-layout shortcut. Remaining core work should
+    target legitimate wide or width-sensitive roots after demo pressure sources are removed.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.

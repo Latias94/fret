@@ -23,6 +23,7 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
         shape.font_faces().len(),
         std::mem::size_of::<TextFontFaceUsage>(),
     ));
+    bytes = bytes.saturating_add(shape.render_cache_bytes_estimate());
 
     for line in shape.lines() {
         bytes = bytes.saturating_add(mul(

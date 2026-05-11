@@ -5,7 +5,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde_json::{Value, json};
 use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
@@ -41,6 +41,7 @@ pub struct TaffyLayoutEngine {
     styles: SecondaryMap<NodeId, taffy::Style>,
     children: SecondaryMap<NodeId, Vec<NodeId>>,
     parent: SecondaryMap<NodeId, NodeId>,
+    flex_wrap_nodes: FxHashSet<NodeId>,
     seen_generation: u32,
     seen_stamp: SecondaryMap<NodeId, u32>,
     seen_count: usize,
@@ -117,9 +118,30 @@ pub(crate) struct LayoutEngineSolveProfile {
     pub(crate) available_h_kind: &'static str,
     pub(crate) available_w: Option<f32>,
     pub(crate) available_h: Option<f32>,
+    pub(crate) previous_available_w_kind: Option<&'static str>,
+    pub(crate) previous_available_h_kind: Option<&'static str>,
+    pub(crate) previous_available_w: Option<f32>,
+    pub(crate) previous_available_h: Option<f32>,
+    pub(crate) available_w_delta: Option<f32>,
+    pub(crate) available_h_delta: Option<f32>,
     pub(crate) scale_factor: f32,
+    pub(crate) previous_scale_factor: Option<f32>,
+    pub(crate) scale_factor_delta: Option<f32>,
+    pub(crate) previous_frame_delta: Option<u64>,
     pub(crate) batch_roots: u32,
     pub(crate) subtree_nodes: u32,
+    pub(crate) flex_wrap_patch: LayoutEngineFlexWrapPatchProfile,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct LayoutEngineFlexWrapPatchProfile {
+    pub(crate) elapsed: Duration,
+    pub(crate) visited_nodes: u32,
+    pub(crate) wrap_nodes: u32,
+    pub(crate) candidate_children: u32,
+    pub(crate) probes: u32,
+    pub(crate) mutations: u32,
+    pub(crate) skipped_no_wrap_descendant: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -129,8 +151,23 @@ struct LayoutEngineSolveProfileBase {
     available_h_kind: &'static str,
     available_w: Option<f32>,
     available_h: Option<f32>,
+    previous_available_w_kind: Option<&'static str>,
+    previous_available_h_kind: Option<&'static str>,
+    previous_available_w: Option<f32>,
+    previous_available_h: Option<f32>,
+    available_w_delta: Option<f32>,
+    available_h_delta: Option<f32>,
     scale_factor: f32,
+    previous_scale_factor: Option<f32>,
+    scale_factor_delta: Option<f32>,
+    previous_frame_delta: Option<u64>,
     batch_roots: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FlexWrapMainAxis {
+    Row,
+    Column,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -165,6 +202,7 @@ impl Default for TaffyLayoutEngine {
             styles: SecondaryMap::new(),
             children: SecondaryMap::new(),
             parent: SecondaryMap::new(),
+            flex_wrap_nodes: FxHashSet::default(),
             seen_generation: 1,
             seen_stamp: SecondaryMap::new(),
             seen_count: 0,
@@ -303,6 +341,7 @@ impl TaffyLayoutEngine {
             };
             self.layout_to_node.remove(&layout_id);
             self.styles.remove(node);
+            self.flex_wrap_nodes.remove(&node);
             self.seen_stamp.remove(node);
             let stale_parent = self.parent.get(node).copied();
             if let Some(parent) = stale_parent
@@ -393,18 +432,62 @@ impl TaffyLayoutEngine {
         }
     }
 
-    fn root_solve_key(available: LayoutSize<AvailableSpace>, scale_factor: f32) -> RootSolveKey {
-        fn key_bits(axis: AvailableSpace) -> u64 {
-            match axis {
-                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
-                AvailableSpace::MinContent => 1u64 << 32,
-                AvailableSpace::MaxContent => 2u64 << 32,
-            }
+    fn flex_wrap_main_axis_for_style(style: &taffy::Style) -> Option<FlexWrapMainAxis> {
+        use taffy::style::{Display, FlexDirection, FlexWrap};
+
+        if style.display != Display::Flex || style.flex_wrap != FlexWrap::Wrap {
+            return None;
         }
 
+        Some(match style.flex_direction {
+            FlexDirection::Row | FlexDirection::RowReverse => FlexWrapMainAxis::Row,
+            FlexDirection::Column | FlexDirection::ColumnReverse => FlexWrapMainAxis::Column,
+        })
+    }
+
+    fn node_is_descendant_of(&self, mut node: NodeId, ancestor: NodeId) -> bool {
+        loop {
+            if node == ancestor {
+                return true;
+            }
+            let Some(parent) = self.parent.get(node).copied() else {
+                return false;
+            };
+            node = parent;
+        }
+    }
+
+    fn root_may_contain_flex_wrap_node(&self, root: NodeId) -> bool {
+        self.flex_wrap_nodes
+            .iter()
+            .copied()
+            .any(|node| self.is_seen(node) && self.node_is_descendant_of(node, root))
+    }
+
+    const ROOT_SOLVE_KEY_MIN_CONTENT_BITS: u64 = 1u64 << 32;
+    const ROOT_SOLVE_KEY_MAX_CONTENT_BITS: u64 = 2u64 << 32;
+
+    fn root_solve_key_axis_bits(axis: AvailableSpace) -> u64 {
+        match axis {
+            AvailableSpace::Definite(px) => px.0.to_bits() as u64,
+            AvailableSpace::MinContent => Self::ROOT_SOLVE_KEY_MIN_CONTENT_BITS,
+            AvailableSpace::MaxContent => Self::ROOT_SOLVE_KEY_MAX_CONTENT_BITS,
+        }
+    }
+
+    fn root_solve_key_axis_profile(bits: u64) -> (&'static str, Option<f32>) {
+        match bits {
+            Self::ROOT_SOLVE_KEY_MIN_CONTENT_BITS => ("min_content", None),
+            Self::ROOT_SOLVE_KEY_MAX_CONTENT_BITS => ("max_content", None),
+            bits if bits <= u32::MAX as u64 => ("definite", Some(f32::from_bits(bits as u32))),
+            _ => ("unknown", None),
+        }
+    }
+
+    fn root_solve_key(available: LayoutSize<AvailableSpace>, scale_factor: f32) -> RootSolveKey {
         RootSolveKey {
-            width_bits: key_bits(available.width),
-            height_bits: key_bits(available.height),
+            width_bits: Self::root_solve_key_axis_bits(available.width),
+            height_bits: Self::root_solve_key_axis_bits(available.height),
             scale_bits: Self::sanitized_scale_factor(scale_factor).to_bits(),
         }
     }
@@ -426,7 +509,8 @@ impl TaffyLayoutEngine {
 
         let sf = Self::sanitized_scale_factor(scale_factor);
         let key = Self::root_solve_key(available, sf);
-        let reason = match self.debug_last_root_solve_key.get(root).copied() {
+        let previous = self.debug_last_root_solve_key.get(root).copied();
+        let reason = match previous {
             None => "first_solve",
             Some(prev) if prev.frame_id == self.frame_id && prev.key == key => {
                 "same_frame_same_key_forced"
@@ -437,6 +521,35 @@ impl TaffyLayoutEngine {
         };
         let (available_w_kind, available_w) = axis_profile(available.width);
         let (available_h_kind, available_h) = axis_profile(available.height);
+        let (
+            previous_available_w_kind,
+            previous_available_h_kind,
+            previous_available_w,
+            previous_available_h,
+            previous_scale_factor,
+            previous_frame_delta,
+        ) = previous.map_or((None, None, None, None, None, None), |prev| {
+            let (prev_w_kind, prev_w) = Self::root_solve_key_axis_profile(prev.key.width_bits);
+            let (prev_h_kind, prev_h) = Self::root_solve_key_axis_profile(prev.key.height_bits);
+            let prev_scale_factor = f32::from_bits(prev.key.scale_bits);
+            let frame_delta = match (prev.frame_id, self.frame_id) {
+                (Some(prev), Some(current)) => Some(current.0.saturating_sub(prev.0)),
+                _ => None,
+            };
+            (
+                Some(prev_w_kind),
+                Some(prev_h_kind),
+                prev_w,
+                prev_h,
+                Some(prev_scale_factor),
+                frame_delta,
+            )
+        });
+        let available_w_delta =
+            previous_available_w.and_then(|previous| available_w.map(|current| current - previous));
+        let available_h_delta =
+            previous_available_h.and_then(|previous| available_h.map(|current| current - previous));
+        let scale_factor_delta = previous_scale_factor.map(|previous| sf - previous);
 
         LayoutEngineSolveProfileBase {
             reason,
@@ -444,7 +557,16 @@ impl TaffyLayoutEngine {
             available_h_kind,
             available_w,
             available_h,
+            previous_available_w_kind,
+            previous_available_h_kind,
+            previous_available_w,
+            previous_available_h,
+            available_w_delta,
+            available_h_delta,
             scale_factor: sf,
+            previous_scale_factor,
+            scale_factor_delta,
+            previous_frame_delta,
             batch_roots,
         }
     }
@@ -970,9 +1092,19 @@ impl TaffyLayoutEngine {
                 available_h_kind: profile.available_h_kind,
                 available_w: profile.available_w,
                 available_h: profile.available_h,
+                previous_available_w_kind: profile.previous_available_w_kind,
+                previous_available_h_kind: profile.previous_available_h_kind,
+                previous_available_w: profile.previous_available_w,
+                previous_available_h: profile.previous_available_h,
+                available_w_delta: profile.available_w_delta,
+                available_h_delta: profile.available_h_delta,
                 scale_factor: profile.scale_factor,
+                previous_scale_factor: profile.previous_scale_factor,
+                scale_factor_delta: profile.scale_factor_delta,
+                previous_frame_delta: profile.previous_frame_delta,
                 batch_roots: profile.batch_roots,
                 subtree_nodes,
+                flex_wrap_patch: LayoutEngineFlexWrapPatchProfile::default(),
             });
         }
 
@@ -1113,12 +1245,18 @@ impl TaffyLayoutEngine {
         if self.styles.get(node) == Some(&style) {
             return;
         }
+        let is_flex_wrap = Self::flex_wrap_main_axis_for_style(&style).is_some();
         self.node_solved_stamp.remove(node);
         self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
         match self.tree.set_style(id, style.clone()) {
             Ok(()) => {
                 self.styles.insert(node, style);
+                if is_flex_wrap {
+                    self.flex_wrap_nodes.insert(node);
+                } else {
+                    self.flex_wrap_nodes.remove(&node);
+                }
                 if let Err(err) = self.tree.mark_dirty(id) {
                     Self::warn_taffy_error_once("mark_dirty", err);
                 }
@@ -1248,52 +1386,59 @@ impl TaffyLayoutEngine {
         root_node: NodeId,
         sf: f32,
         measure: &mut impl FnMut(NodeId, LayoutConstraints) -> Size,
-    ) {
+    ) -> LayoutEngineFlexWrapPatchProfile {
         use taffy::style::{
             AvailableSpace as TaffyAvailableSpace, Dimension, Display, FlexDirection, FlexWrap,
         };
 
-        #[derive(Clone, Copy)]
-        enum MainAxis {
-            Row,
-            Column,
+        let started = Instant::now();
+        let mut profile = LayoutEngineFlexWrapPatchProfile::default();
+
+        if !self.root_may_contain_flex_wrap_node(root_node) {
+            profile.skipped_no_wrap_descendant = true;
+            profile.elapsed = started.elapsed();
+            return profile;
         }
 
         let mut stack: Vec<NodeId> = vec![root_node];
         while let Some(node) = stack.pop() {
+            profile.visited_nodes = profile.visited_nodes.saturating_add(1);
             let children = self.children.get(node).cloned().unwrap_or_default();
 
             if let Some(style) = self.styles.get(node).cloned()
                 && style.display == Display::Flex
                 && style.flex_wrap == FlexWrap::Wrap
             {
+                profile.wrap_nodes = profile.wrap_nodes.saturating_add(1);
                 let main_axis = match style.flex_direction {
-                    FlexDirection::Row | FlexDirection::RowReverse => MainAxis::Row,
-                    FlexDirection::Column | FlexDirection::ColumnReverse => MainAxis::Column,
+                    FlexDirection::Row | FlexDirection::RowReverse => FlexWrapMainAxis::Row,
+                    FlexDirection::Column | FlexDirection::ColumnReverse => {
+                        FlexWrapMainAxis::Column
+                    }
                 };
 
                 let compute_intrinsic_main_size =
                     |engine: &mut Self,
                      child_id: LayoutId,
-                     main_axis: MainAxis,
+                     main_axis: FlexWrapMainAxis,
                      use_min_content: bool,
                      sf: f32,
                      measure: &mut dyn FnMut(NodeId, LayoutConstraints) -> Size|
                      -> Option<f32> {
                         let avail = match (main_axis, use_min_content) {
-                            (MainAxis::Row, true) => taffy::geometry::Size {
+                            (FlexWrapMainAxis::Row, true) => taffy::geometry::Size {
                                 width: TaffyAvailableSpace::MinContent,
                                 height: TaffyAvailableSpace::MaxContent,
                             },
-                            (MainAxis::Row, false) => taffy::geometry::Size {
+                            (FlexWrapMainAxis::Row, false) => taffy::geometry::Size {
                                 width: TaffyAvailableSpace::MaxContent,
                                 height: TaffyAvailableSpace::MaxContent,
                             },
-                            (MainAxis::Column, true) => taffy::geometry::Size {
+                            (FlexWrapMainAxis::Column, true) => taffy::geometry::Size {
                                 width: TaffyAvailableSpace::MaxContent,
                                 height: TaffyAvailableSpace::MinContent,
                             },
-                            (MainAxis::Column, false) => taffy::geometry::Size {
+                            (FlexWrapMainAxis::Column, false) => taffy::geometry::Size {
                                 width: TaffyAvailableSpace::MaxContent,
                                 height: TaffyAvailableSpace::MaxContent,
                             },
@@ -1358,8 +1503,8 @@ impl TaffyLayoutEngine {
 
                         let layout = engine.tree.layout(child_id.0).ok()?;
                         let main_dp = match main_axis {
-                            MainAxis::Row => layout.size.width,
-                            MainAxis::Column => layout.size.height,
+                            FlexWrapMainAxis::Row => layout.size.width,
+                            FlexWrapMainAxis::Column => layout.size.height,
                         };
                         if main_dp.is_finite() && main_dp > 0.0 {
                             Some(main_dp)
@@ -1374,8 +1519,10 @@ impl TaffyLayoutEngine {
                     };
 
                     let overflow_visible_in_main = match main_axis {
-                        MainAxis::Row => child_style.overflow.x == taffy::style::Overflow::Visible,
-                        MainAxis::Column => {
+                        FlexWrapMainAxis::Row => {
+                            child_style.overflow.x == taffy::style::Overflow::Visible
+                        }
+                        FlexWrapMainAxis::Column => {
                             child_style.overflow.y == taffy::style::Overflow::Visible
                         }
                     };
@@ -1390,11 +1537,11 @@ impl TaffyLayoutEngine {
                     // their intrinsic min-content size unless an explicit min-size override (e.g.
                     // `min-w-0`) is applied.
                     let (main_size_is_auto, main_min_is_auto) = match main_axis {
-                        MainAxis::Row => (
+                        FlexWrapMainAxis::Row => (
                             child_style.size.width.is_auto(),
                             child_style.min_size.width.is_auto(),
                         ),
-                        MainAxis::Column => (
+                        FlexWrapMainAxis::Column => (
                             child_style.size.height.is_auto(),
                             child_style.min_size.height.is_auto(),
                         ),
@@ -1407,6 +1554,8 @@ impl TaffyLayoutEngine {
                         continue;
                     };
 
+                    profile.candidate_children = profile.candidate_children.saturating_add(1);
+
                     // Taffy supports `MinContent`/`MaxContent` probes for leaf nodes, but some
                     // internal layout containers (notably shrink-wrapped grid wrappers) may report
                     // an empty intrinsic size under `MinContent` even when they have non-empty
@@ -1416,9 +1565,11 @@ impl TaffyLayoutEngine {
                     // interactive wrappers (e.g. shadcn-style `Pressable` controls inside a
                     // wrapping row) keep a non-zero main-axis allocation and don't collapse to
                     // `w=0` hit-test bounds.
+                    profile.probes = profile.probes.saturating_add(1);
                     let main_dp =
                         compute_intrinsic_main_size(self, child_id, main_axis, true, sf, measure)
                             .or_else(|| {
+                                profile.probes = profile.probes.saturating_add(1);
                                 compute_intrinsic_main_size(
                                     self, child_id, main_axis, false, sf, measure,
                                 )
@@ -1428,11 +1579,14 @@ impl TaffyLayoutEngine {
                     };
 
                     match main_axis {
-                        MainAxis::Row => child_style.min_size.width = Dimension::length(main_dp),
-                        MainAxis::Column => {
+                        FlexWrapMainAxis::Row => {
+                            child_style.min_size.width = Dimension::length(main_dp)
+                        }
+                        FlexWrapMainAxis::Column => {
                             child_style.min_size.height = Dimension::length(main_dp)
                         }
                     }
+                    profile.mutations = profile.mutations.saturating_add(1);
                     self.set_style(child, child_style);
                 }
             }
@@ -1440,6 +1594,9 @@ impl TaffyLayoutEngine {
             // Continue traversing the subtree.
             stack.extend(children);
         }
+
+        profile.elapsed = started.elapsed();
+        profile
     }
 
     #[stacksafe::stacksafe]
@@ -1497,8 +1654,10 @@ impl TaffyLayoutEngine {
         let profile_base =
             root_node.map(|root_node| self.solve_profile_base(root_node, available, sf, 1));
         self.last_solve_profile = None;
+        let mut flex_wrap_patch = LayoutEngineFlexWrapPatchProfile::default();
         if let Some(root_node) = root_node {
-            self.apply_flex_wrap_intrinsic_main_min_size_patches(root_node, sf, &mut measure);
+            flex_wrap_patch =
+                self.apply_flex_wrap_intrinsic_main_min_size_patches(root_node, sf, &mut measure);
         }
 
         let taffy_available = taffy::geometry::Size {
@@ -1692,9 +1851,19 @@ impl TaffyLayoutEngine {
                     available_h_kind: profile.available_h_kind,
                     available_w: profile.available_w,
                     available_h: profile.available_h,
+                    previous_available_w_kind: profile.previous_available_w_kind,
+                    previous_available_h_kind: profile.previous_available_h_kind,
+                    previous_available_w: profile.previous_available_w,
+                    previous_available_h: profile.previous_available_h,
+                    available_w_delta: profile.available_w_delta,
+                    available_h_delta: profile.available_h_delta,
                     scale_factor: profile.scale_factor,
+                    previous_scale_factor: profile.previous_scale_factor,
+                    scale_factor_delta: profile.scale_factor_delta,
+                    previous_frame_delta: profile.previous_frame_delta,
                     batch_roots: profile.batch_roots,
                     subtree_nodes,
+                    flex_wrap_patch,
                 });
             }
         } else {
@@ -2207,6 +2376,108 @@ mod tests {
         let rect = engine.layout_rect(child_id);
         assert!((rect.origin.x.0 - 0.5).abs() < 0.0001);
         assert!((rect.size.width.0 - 0.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn flex_wrap_patch_profile_skips_roots_without_wrap_descendants() {
+        let [root, child, unrelated_wrap_root] = fresh_node_ids(3).try_into().unwrap();
+
+        let mut engine = TaffyLayoutEngine::default();
+        engine.begin_frame(FrameId(1));
+
+        engine.set_children(root, &[child]);
+        engine.set_style(
+            root,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                ..Default::default()
+            },
+        );
+        engine.set_style(
+            child,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                ..Default::default()
+            },
+        );
+        engine.set_style(
+            unrelated_wrap_root,
+            taffy::Style {
+                display: taffy::style::Display::Flex,
+                flex_wrap: taffy::style::FlexWrap::Wrap,
+                ..Default::default()
+            },
+        );
+
+        let root_id = engine.layout_id_for_node(root).unwrap();
+        engine.compute_root(
+            root_id,
+            LayoutSize::new(
+                AvailableSpace::Definite(Px(100.0)),
+                AvailableSpace::Definite(Px(40.0)),
+            ),
+            1.0,
+        );
+
+        let profile = engine.last_solve_profile().unwrap().flex_wrap_patch;
+        assert!(profile.skipped_no_wrap_descendant);
+        assert_eq!(profile.visited_nodes, 0);
+        assert_eq!(profile.probes, 0);
+        assert_eq!(profile.mutations, 0);
+    }
+
+    #[test]
+    fn flex_wrap_patch_profile_records_intrinsic_auto_min_work() {
+        let [root, child] = fresh_node_ids(2).try_into().unwrap();
+
+        let mut engine = TaffyLayoutEngine::default();
+        engine.begin_frame(FrameId(1));
+
+        engine.set_children(root, &[child]);
+        engine.set_style(
+            root,
+            taffy::Style {
+                display: taffy::style::Display::Flex,
+                flex_wrap: taffy::style::FlexWrap::Wrap,
+                flex_direction: taffy::style::FlexDirection::Row,
+                ..Default::default()
+            },
+        );
+        engine.set_style(
+            child,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                ..Default::default()
+            },
+        );
+        engine.set_measured(child, true);
+
+        let root_id = engine.layout_id_for_node(root).unwrap();
+        engine.compute_root_with_measure(
+            root_id,
+            LayoutSize::new(
+                AvailableSpace::Definite(Px(100.0)),
+                AvailableSpace::Definite(Px(40.0)),
+            ),
+            1.0,
+            |node, _constraints| {
+                if node == child {
+                    Size::new(Px(42.0), Px(10.0))
+                } else {
+                    Size::default()
+                }
+            },
+        );
+
+        let profile = engine.last_solve_profile().unwrap().flex_wrap_patch;
+        assert!(!profile.skipped_no_wrap_descendant);
+        assert_eq!(profile.wrap_nodes, 1);
+        assert_eq!(profile.candidate_children, 1);
+        assert!(profile.probes >= 1);
+        assert_eq!(profile.mutations, 1);
+
+        let child_style = engine.debug_style_for_node(child).unwrap();
+        assert!(!child_style.min_size.width.is_auto());
     }
 
     #[test]

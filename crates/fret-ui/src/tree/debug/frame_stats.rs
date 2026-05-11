@@ -21,6 +21,8 @@ pub struct UiDebugFrameStats {
     pub element_children_vec_pool_reuses: u32,
     /// Number of child-element vectors that had to be newly allocated during element build.
     pub element_children_vec_pool_misses: u32,
+    /// Number of reused child-element vectors that had to grow capacity to satisfy a request.
+    pub element_children_vec_pool_grow_events: u32,
     /// Total time spent in event dispatch during the current frame.
     ///
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does

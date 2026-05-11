@@ -1,0 +1,253 @@
+{
+  "generated_unix_ms": 1778329915613,
+  "headroom_pct": 30,
+  "kind": "perf_baseline",
+  "out_path": "docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json",
+  "repeat": 7,
+  "rows": [
+    {
+      "measured_max": {
+        "frame_p95_layout_engine_solve_time_us": 1204,
+        "frame_p95_layout_time_us": 1831,
+        "frame_p95_total_time_us": 3098,
+        "pointer_move_max_dispatch_time_us": 0,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "renderer_encode_scene_us": 214,
+        "renderer_encoder_finish_us": 220,
+        "renderer_prepare_svg_us": 5,
+        "renderer_prepare_text_us": 361,
+        "renderer_record_passes_us": 51,
+        "renderer_upload_us": 509,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 1204,
+        "top_layout_time_us": 1831,
+        "top_total_time_us": 3098
+      },
+      "measured_p50": {
+        "frame_p95_layout_engine_solve_time_us": 1087,
+        "frame_p95_layout_time_us": 1697,
+        "frame_p95_total_time_us": 2563,
+        "renderer_encode_scene_us": 164,
+        "renderer_encoder_finish_us": 170,
+        "renderer_prepare_svg_us": 4,
+        "renderer_prepare_text_us": 268,
+        "renderer_record_passes_us": 42,
+        "renderer_upload_us": 129,
+        "top_layout_engine_solve_time_us": 1087,
+        "top_layout_time_us": 1697,
+        "top_total_time_us": 2563
+      },
+      "measured_p90": {
+        "frame_p95_layout_engine_solve_time_us": 1204,
+        "frame_p95_layout_time_us": 1831,
+        "frame_p95_total_time_us": 3098,
+        "renderer_encode_scene_us": 214,
+        "renderer_encoder_finish_us": 220,
+        "renderer_prepare_svg_us": 5,
+        "renderer_prepare_text_us": 361,
+        "renderer_record_passes_us": 51,
+        "renderer_upload_us": 509,
+        "top_layout_engine_solve_time_us": 1204,
+        "top_layout_time_us": 1831,
+        "top_total_time_us": 3098
+      },
+      "measured_p95": {
+        "frame_p95_layout_engine_solve_time_us": 1204,
+        "frame_p95_layout_time_us": 1831,
+        "frame_p95_total_time_us": 3098,
+        "renderer_encode_scene_us": 214,
+        "renderer_encoder_finish_us": 220,
+        "renderer_prepare_svg_us": 5,
+        "renderer_prepare_text_us": 361,
+        "renderer_record_passes_us": 51,
+        "renderer_upload_us": 509,
+        "top_layout_engine_solve_time_us": 1204,
+        "top_layout_time_us": 1831,
+        "top_total_time_us": 3098
+      },
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
+      "threshold_seed": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "top_layout_engine_solve_time_us": 1204,
+        "top_layout_time_us": 1831,
+        "top_total_time_us": 3098
+      },
+      "threshold_seed_source": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "top_layout_engine_solve_time_us": "p95",
+        "top_layout_time_us": "p95",
+        "top_total_time_us": "p95"
+      },
+      "thresholds": {
+        "max_frame_p95_layout_us": null,
+        "max_frame_p95_solve_us": null,
+        "max_frame_p95_total_us": null,
+        "max_pointer_move_dispatch_us": 0,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 0,
+        "max_renderer_encode_scene_us": null,
+        "max_renderer_encoder_finish_us": null,
+        "max_renderer_prepare_svg_us": null,
+        "max_renderer_prepare_text_us": null,
+        "max_renderer_record_passes_us": null,
+        "max_renderer_upload_us": null,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 2381,
+        "max_top_solve_us": 1566,
+        "max_top_total_us": 4028,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    },
+    {
+      "measured_max": {
+        "frame_p95_layout_engine_solve_time_us": 1195,
+        "frame_p95_layout_time_us": 2161,
+        "frame_p95_total_time_us": 4295,
+        "pointer_move_max_dispatch_time_us": 0,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "renderer_encode_scene_us": 218,
+        "renderer_encoder_finish_us": 174,
+        "renderer_prepare_svg_us": 4,
+        "renderer_prepare_text_us": 297,
+        "renderer_record_passes_us": 72,
+        "renderer_upload_us": 536,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 1195,
+        "top_layout_time_us": 2161,
+        "top_total_time_us": 4295
+      },
+      "measured_p50": {
+        "frame_p95_layout_engine_solve_time_us": 976,
+        "frame_p95_layout_time_us": 1805,
+        "frame_p95_total_time_us": 3032,
+        "renderer_encode_scene_us": 165,
+        "renderer_encoder_finish_us": 146,
+        "renderer_prepare_svg_us": 3,
+        "renderer_prepare_text_us": 254,
+        "renderer_record_passes_us": 35,
+        "renderer_upload_us": 123,
+        "top_layout_engine_solve_time_us": 976,
+        "top_layout_time_us": 1805,
+        "top_total_time_us": 3032
+      },
+      "measured_p90": {
+        "frame_p95_layout_engine_solve_time_us": 1195,
+        "frame_p95_layout_time_us": 2161,
+        "frame_p95_total_time_us": 4295,
+        "renderer_encode_scene_us": 218,
+        "renderer_encoder_finish_us": 174,
+        "renderer_prepare_svg_us": 4,
+        "renderer_prepare_text_us": 297,
+        "renderer_record_passes_us": 72,
+        "renderer_upload_us": 536,
+        "top_layout_engine_solve_time_us": 1195,
+        "top_layout_time_us": 2161,
+        "top_total_time_us": 4295
+      },
+      "measured_p95": {
+        "frame_p95_layout_engine_solve_time_us": 1195,
+        "frame_p95_layout_time_us": 2161,
+        "frame_p95_total_time_us": 4295,
+        "renderer_encode_scene_us": 218,
+        "renderer_encoder_finish_us": 174,
+        "renderer_prepare_svg_us": 4,
+        "renderer_prepare_text_us": 297,
+        "renderer_record_passes_us": 72,
+        "renderer_upload_us": 536,
+        "top_layout_engine_solve_time_us": 1195,
+        "top_layout_time_us": 2161,
+        "top_total_time_us": 4295
+      },
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+      "threshold_seed": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "top_layout_engine_solve_time_us": 1195,
+        "top_layout_time_us": 2161,
+        "top_total_time_us": 4295
+      },
+      "threshold_seed_source": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "top_layout_engine_solve_time_us": "p95",
+        "top_layout_time_us": "p95",
+        "top_total_time_us": "p95"
+      },
+      "thresholds": {
+        "max_frame_p95_layout_us": null,
+        "max_frame_p95_solve_us": null,
+        "max_frame_p95_total_us": null,
+        "max_pointer_move_dispatch_us": 0,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 0,
+        "max_renderer_encode_scene_us": null,
+        "max_renderer_encoder_finish_us": null,
+        "max_renderer_prepare_svg_us": null,
+        "max_renderer_prepare_text_us": null,
+        "max_renderer_record_passes_us": null,
+        "max_renderer_upload_us": null,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 2810,
+        "max_top_solve_us": 1554,
+        "max_top_total_us": 5584,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "threshold_seed_policy": {
+    "default_seed": "max",
+    "rules": [
+      {
+        "metric": "top_layout_engine_solve_time_us",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_layout_engine_solve_time_us",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      }
+    ],
+    "schema_version": 1
+  },
+  "threshold_surface": "ui",
+  "warmup_frames": 5
+}

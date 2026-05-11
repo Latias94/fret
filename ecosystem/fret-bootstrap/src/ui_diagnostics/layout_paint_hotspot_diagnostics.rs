@@ -126,9 +126,41 @@ pub struct UiLayoutEngineSolveProfileV1 {
     pub available_w: Option<f32>,
     #[serde(default)]
     pub available_h: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_w_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_h_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_h: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub available_w_delta: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub available_h_delta: Option<f32>,
     pub scale_factor: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_scale_factor: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scale_factor_delta: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_frame_delta: Option<u64>,
     pub batch_roots: u32,
     pub subtree_nodes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_time_us: u64,
+    #[serde(default)]
+    pub flex_wrap_patch_visited_nodes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_wrap_nodes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_candidate_children: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_probes: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_mutations: u32,
+    #[serde(default)]
+    pub flex_wrap_patch_skipped_no_wrap_descendant: bool,
 }
 
 impl UiLayoutEngineSolveV1 {
@@ -147,9 +179,29 @@ impl UiLayoutEngineSolveV1 {
                     available_h_kind: p.available_h_kind.to_string(),
                     available_w: p.available_w,
                     available_h: p.available_h,
+                    previous_available_w_kind: p.previous_available_w_kind.map(str::to_string),
+                    previous_available_h_kind: p.previous_available_h_kind.map(str::to_string),
+                    previous_available_w: p.previous_available_w,
+                    previous_available_h: p.previous_available_h,
+                    available_w_delta: p.available_w_delta,
+                    available_h_delta: p.available_h_delta,
                     scale_factor: p.scale_factor,
+                    previous_scale_factor: p.previous_scale_factor,
+                    scale_factor_delta: p.scale_factor_delta,
+                    previous_frame_delta: p.previous_frame_delta,
                     batch_roots: p.batch_roots,
                     subtree_nodes: p.subtree_nodes,
+                    flex_wrap_patch_time_us: p
+                        .flex_wrap_patch_time
+                        .as_micros()
+                        .min(u64::MAX as u128) as u64,
+                    flex_wrap_patch_visited_nodes: p.flex_wrap_patch_visited_nodes,
+                    flex_wrap_patch_wrap_nodes: p.flex_wrap_patch_wrap_nodes,
+                    flex_wrap_patch_candidate_children: p.flex_wrap_patch_candidate_children,
+                    flex_wrap_patch_probes: p.flex_wrap_patch_probes,
+                    flex_wrap_patch_mutations: p.flex_wrap_patch_mutations,
+                    flex_wrap_patch_skipped_no_wrap_descendant: p
+                        .flex_wrap_patch_skipped_no_wrap_descendant,
                 }),
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,

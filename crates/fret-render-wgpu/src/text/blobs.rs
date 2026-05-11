@@ -1,57 +1,9 @@
-use super::{GlyphInstance, TextBlob, TextDecoration, TextRenderGlyphKind, TextSystem};
+use super::{TextBlob, TextDecoration, TextRenderGlyph, TextSystem};
 use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct TextRenderGlyph {
-    kind: TextRenderGlyphKind,
-    rect: [f32; 4],
-    paint_span: Option<u16>,
-    atlas_page: u16,
-    uv: [f32; 4],
-}
-
-impl TextRenderGlyph {
-    fn new(
-        kind: TextRenderGlyphKind,
-        rect: [f32; 4],
-        paint_span: Option<u16>,
-        atlas_page: u16,
-        uv: [f32; 4],
-    ) -> Self {
-        Self {
-            kind,
-            rect,
-            paint_span,
-            atlas_page,
-            uv,
-        }
-    }
-
-    pub(crate) fn kind(&self) -> TextRenderGlyphKind {
-        self.kind
-    }
-
-    pub(crate) fn rect(&self) -> [f32; 4] {
-        self.rect
-    }
-
-    pub(crate) fn paint_span(&self) -> Option<u16> {
-        self.paint_span
-    }
-
-    pub(crate) fn atlas_page(&self) -> u16 {
-        self.atlas_page
-    }
-
-    pub(crate) fn uv(&self) -> [f32; 4] {
-        self.uv
-    }
-}
-
 pub(crate) struct TextBlobRenderData<'a> {
-    text_system: &'a TextSystem,
-    glyphs: &'a [GlyphInstance],
+    glyphs: Arc<[TextRenderGlyph]>,
     baseline: Px,
     decorations: &'a [TextDecoration],
     paint_palette: Option<&'a [Option<Color>]>,
@@ -60,9 +12,11 @@ pub(crate) struct TextBlobRenderData<'a> {
 impl<'a> TextBlobRenderData<'a> {
     fn new(text_system: &'a TextSystem, blob: &'a TextBlob) -> Self {
         let shape = blob.shape();
+        let glyphs = shape.render_glyphs(text_system.atlas_revision(), |glyph| {
+            text_system.glyph_uv_for_instance(glyph)
+        });
         Self {
-            text_system,
-            glyphs: shape.glyphs(),
+            glyphs,
             baseline: shape.metrics().baseline,
             decorations: blob.decorations(),
             paint_palette: blob.paint_palette(),
@@ -81,17 +35,8 @@ impl<'a> TextBlobRenderData<'a> {
         self.paint_palette
     }
 
-    pub(crate) fn glyphs(&'a self) -> impl Iterator<Item = TextRenderGlyph> + 'a {
-        self.glyphs.iter().filter_map(|glyph| {
-            let (atlas_page, uv) = self.text_system.glyph_uv_for_instance(glyph)?;
-            Some(TextRenderGlyph::new(
-                glyph.render_kind(),
-                glyph.rect(),
-                glyph.paint_span(),
-                atlas_page,
-                uv,
-            ))
-        })
+    pub(crate) fn glyphs(&self) -> impl Iterator<Item = TextRenderGlyph> + '_ {
+        self.glyphs.iter().copied()
     }
 }
 

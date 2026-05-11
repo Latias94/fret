@@ -1,11 +1,59 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-code-editor-torture-autoscroll-typical",
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This typical perf script waits for font stabilization; keep font bootstrap enabled when launching it standalone.",
+      "This is a non-accessibility CPU/renderer typical-scroll baseline. Keep platform accessibility disabled here; use a dedicated a11y perf probe when measuring AccessKit activation cost."
+    ],
+    "env_defaults": {
+      "FRET_A11Y_DISABLE": "1",
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+    }
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "code_editor_torture",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-torture" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-torture" },
+      "delta_y": 120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
 
     {
       "type": "click",
@@ -17,6 +65,13 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-root" }
       },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "",
+      "clear_before_type": true,
       "timeout_frames": 600
     },
 

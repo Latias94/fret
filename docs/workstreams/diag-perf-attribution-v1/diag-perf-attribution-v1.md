@@ -141,6 +141,7 @@ Example heuristic categories:
 - `layout.build_roots_heavy`
 - `layout.roots_heavy`
 - `view_cache.layout_invalidated`
+- `paint.widget_heavy`
 - `paint.text_prepare_churn`
 - `renderer.upload_churn`
 - `hit_test.bounds_tree_fallback_churn`

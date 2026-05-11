@@ -1599,7 +1599,8 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                 "stats": {
                 "layout_time_us": 10_000,
                 "prepaint_time_us": 0,
-                "paint_time_us": 0,
+                "paint_time_us": 5_000,
+                "paint_widget_time_us": 4_500,
                 "layout_engine_solves": 1,
                 "layout_engine_solve_time_us": 7_000,
                 "layout_request_build_roots_time_us": 3_000,
@@ -1609,11 +1610,24 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                     "paint_text_prepare_time_us": 2_500,
                     "paint_text_prepare_calls": 10,
                     "paint_text_prepare_reason_text_changed": 10,
+                    "renderer_uniform_bytes": 48,
+                    "renderer_instance_bytes": 96,
+                    "renderer_vertex_bytes": 192,
                     "renderer_upload_us": 123,
                     "renderer_record_passes_us": 45,
                     "renderer_encoder_finish_us": 67,
                     "renderer_text_atlas_upload_bytes": 2_000_000,
                 },
+                "paint_widget_hotspots": [{
+                    "node": 60,
+                    "element": 300,
+                    "element_kind": "CodeEditor",
+                    "widget_type": "WindowedRowsSurface",
+                    "paint_time_us": 4_200,
+                    "inclusive_time_us": 4_500,
+                    "inclusive_scene_ops_delta": 640,
+                    "exclusive_scene_ops_delta": 620
+                }],
                 "layout_request_build_roots": [{
                     "root_node": 42,
                     "root_kind": "window",
@@ -1760,8 +1774,58 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
     assert!(codes.contains(&"layout.solve_heavy"));
     assert!(codes.contains(&"layout.build_roots_heavy"));
     assert!(codes.contains(&"layout.scroll_profile_present"));
+    assert!(codes.contains(&"paint.widget_heavy"));
     assert!(codes.contains(&"paint.text_prepare_churn"));
     assert!(codes.contains(&"renderer.upload_churn"));
+    assert!(codes.contains(&"phase.timeline_hotspots"));
+
+    let paint_widget_evidence = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("paint.widget_heavy"))
+        .and_then(|h| h.get("evidence"))
+        .expect("paint.widget_heavy evidence");
+    assert_eq!(
+        paint_widget_evidence
+            .get("paint_widget_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(4_500)
+    );
+    assert_eq!(
+        paint_widget_evidence
+            .get("paint_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(5_000)
+    );
+    assert!(
+        (paint_widget_evidence
+            .get("paint_widget_pct_of_paint")
+            .and_then(|v| v.as_f64())
+            .unwrap_or_default()
+            - 90.0)
+            .abs()
+            < f64::EPSILON
+    );
+    let paint_widget_examples = paint_widget_evidence
+        .get("examples")
+        .and_then(|v| v.as_array())
+        .expect("paint.widget_heavy examples");
+    assert_eq!(
+        paint_widget_examples
+            .first()
+            .and_then(|v| v.get("widget_type"))
+            .and_then(|v| v.as_str()),
+        Some("WindowedRowsSurface")
+    );
+    assert_eq!(
+        paint_widget_examples
+            .first()
+            .and_then(|v| v.get("inclusive_scene_ops_delta"))
+            .and_then(|v| v.as_u64()),
+        Some(640)
+    );
 
     assert_eq!(
         triage
@@ -1786,6 +1850,111 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.as_u64())
             .unwrap_or(0),
         67
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("renderer_uniform_bytes"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        48
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("renderer_instance_bytes"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        96
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("renderer_vertex_bytes"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        192
+    );
+
+    let renderer_upload_evidence = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("renderer.upload_churn"))
+        .and_then(|h| h.get("evidence"))
+        .expect("renderer.upload_churn evidence");
+    assert_eq!(
+        renderer_upload_evidence
+            .get("upload_bytes_total")
+            .and_then(|v| v.as_u64()),
+        Some(2_000_336)
+    );
+    assert_eq!(
+        renderer_upload_evidence
+            .get("renderer_uniform_bytes")
+            .and_then(|v| v.as_u64()),
+        Some(48)
+    );
+    assert_eq!(
+        renderer_upload_evidence
+            .get("renderer_instance_bytes")
+            .and_then(|v| v.as_u64()),
+        Some(96)
+    );
+    assert_eq!(
+        renderer_upload_evidence
+            .get("renderer_vertex_bytes")
+            .and_then(|v| v.as_u64()),
+        Some(192)
+    );
+
+    let phase_timeline_evidence = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("phase.timeline_hotspots"))
+        .and_then(|h| h.get("evidence"))
+        .expect("phase.timeline_hotspots evidence");
+    assert_eq!(
+        phase_timeline_evidence
+            .get("phase_times_us")
+            .and_then(|v| v.get("layout"))
+            .and_then(|v| v.as_u64()),
+        Some(10_000)
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("phase_times_us")
+            .and_then(|v| v.get("paint"))
+            .and_then(|v| v.as_u64()),
+        Some(5_000)
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("layout_request_build_roots")
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("root_kind"))
+            .and_then(|v| v.as_str()),
+        Some("window")
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("paint_widget_hotspots")
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("widget_type"))
+            .and_then(|v| v.as_str()),
+        Some("WindowedRowsSurface")
+    );
+    assert_eq!(
+        phase_timeline_evidence
+            .get("renderer_hotspots")
+            .and_then(|v| v.as_array())
+            .map(|v| v.len()),
+        Some(4)
     );
 
     assert_eq!(
@@ -5332,6 +5501,8 @@ fn perf_threshold_scan_passes_when_under_limits() {
             max_renderer_encoder_finish_us: None,
             max_renderer_prepare_text_us: None,
             max_renderer_prepare_svg_us: None,
+            max_renderer_instance_bytes: None,
+            max_renderer_encode_scene_text_ops: None,
         },
         PerfThresholds::default(),
         99,
@@ -5355,6 +5526,12 @@ fn perf_threshold_scan_passes_when_under_limits() {
         true,
         1999,
         1499,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -5410,6 +5587,8 @@ fn perf_threshold_scan_reports_each_exceeded_metric() {
             max_renderer_encoder_finish_us: None,
             max_renderer_prepare_text_us: None,
             max_renderer_prepare_svg_us: None,
+            max_renderer_instance_bytes: None,
+            max_renderer_encode_scene_text_ops: None,
         },
         PerfThresholds::default(),
         101,
@@ -5434,6 +5613,12 @@ fn perf_threshold_scan_reports_each_exceeded_metric() {
         2001,
         1501,
         2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,

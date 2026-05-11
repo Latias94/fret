@@ -3,7 +3,7 @@ use super::atlas::{GlyphKey, GlyphKeyBuckets};
 use super::prepare::{
     build_glyph_scaler_from_face_bytes, glyph_render_at_bins, render_glyph_image,
 };
-use fret_core::scene::{Scene, SceneOp};
+use fret_core::scene::Scene;
 
 impl TextSystem {
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
@@ -115,10 +115,7 @@ impl TextSystem {
 
     fn collect_scene_pinned_keys(&self, scene: &Scene) -> GlyphKeyBuckets {
         let mut pinned_keys = GlyphKeyBuckets::default();
-        for op in scene.ops() {
-            let SceneOp::Text { text, .. } = *op else {
-                continue;
-            };
+        for &text in scene.text_blob_ids() {
             let Some(blob) = self.blob_state.blobs.get(text) else {
                 continue;
             };

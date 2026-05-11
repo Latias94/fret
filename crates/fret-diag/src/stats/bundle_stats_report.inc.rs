@@ -165,6 +165,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) frame_arena_grow_events: u32,
     pub(super) element_children_vec_pool_reuses: u32,
     pub(super) element_children_vec_pool_misses: u32,
+    pub(super) element_children_vec_pool_grow_events: u32,
     pub(super) ui_thread_cpu_time_us: u64,
     pub(super) ui_thread_cpu_total_time_us: u64,
     pub(super) ui_thread_cpu_cycle_time_delta_cycles: u64,
@@ -285,8 +286,40 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encoder_finish_us: u64,
     pub(super) renderer_prepare_text_us: u64,
     pub(super) renderer_prepare_svg_us: u64,
+    pub(super) renderer_encode_scene_stack_us: u64,
+    pub(super) renderer_encode_scene_clip_us: u64,
+    pub(super) renderer_encode_scene_mask_us: u64,
+    pub(super) renderer_encode_scene_effect_us: u64,
+    pub(super) renderer_encode_scene_quad_us: u64,
+    pub(super) renderer_encode_scene_image_us: u64,
+    pub(super) renderer_encode_scene_text_us: u64,
+    pub(super) renderer_encode_scene_path_us: u64,
+    pub(super) renderer_encode_scene_viewport_us: u64,
+    pub(super) renderer_encode_scene_flush_us: u64,
+    pub(super) renderer_encode_scene_text_shadow_us: u64,
+    pub(super) renderer_encode_scene_text_setup_us: u64,
+    pub(super) renderer_encode_scene_text_glyphs_us: u64,
+    pub(super) renderer_encode_scene_text_glyph_transform_us: u64,
+    pub(super) renderer_encode_scene_text_glyph_emit_us: u64,
+    pub(super) renderer_encode_scene_text_group_flush_us: u64,
+    pub(super) renderer_encode_scene_text_vertex_grow_events: u64,
+    pub(super) renderer_encode_scene_text_transform_fast_path_glyphs: u64,
+    pub(super) renderer_encode_scene_text_transform_generic_glyphs: u64,
+    pub(super) renderer_encode_scene_stack_ops: u64,
+    pub(super) renderer_encode_scene_clip_ops: u64,
+    pub(super) renderer_encode_scene_mask_ops: u64,
+    pub(super) renderer_encode_scene_effect_ops: u64,
+    pub(super) renderer_encode_scene_quad_ops: u64,
+    pub(super) renderer_encode_scene_image_ops: u64,
+    pub(super) renderer_encode_scene_text_ops: u64,
+    pub(super) renderer_encode_scene_path_ops: u64,
+    pub(super) renderer_encode_scene_viewport_ops: u64,
+    pub(super) renderer_encode_scene_flushes: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
+    pub(super) renderer_uniform_bytes: u64,
+    pub(super) renderer_instance_bytes: u64,
+    pub(super) renderer_vertex_bytes: u64,
 
     pub(super) renderer_render_target_updates_ingest_unknown: u64,
     pub(super) renderer_render_target_updates_ingest_owned: u64,
@@ -689,9 +722,25 @@ pub(super) struct BundleStatsLayoutEngineSolveProfile {
     pub(super) available_h_kind: String,
     pub(super) available_w: Option<f64>,
     pub(super) available_h: Option<f64>,
+    pub(super) previous_available_w_kind: Option<String>,
+    pub(super) previous_available_h_kind: Option<String>,
+    pub(super) previous_available_w: Option<f64>,
+    pub(super) previous_available_h: Option<f64>,
+    pub(super) available_w_delta: Option<f64>,
+    pub(super) available_h_delta: Option<f64>,
     pub(super) scale_factor: f64,
+    pub(super) previous_scale_factor: Option<f64>,
+    pub(super) scale_factor_delta: Option<f64>,
+    pub(super) previous_frame_delta: Option<u64>,
     pub(super) batch_roots: u64,
     pub(super) subtree_nodes: u64,
+    pub(super) flex_wrap_patch_time_us: u64,
+    pub(super) flex_wrap_patch_visited_nodes: u64,
+    pub(super) flex_wrap_patch_wrap_nodes: u64,
+    pub(super) flex_wrap_patch_candidate_children: u64,
+    pub(super) flex_wrap_patch_probes: u64,
+    pub(super) flex_wrap_patch_mutations: u64,
+    pub(super) flex_wrap_patch_skipped_no_wrap_descendant: bool,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -954,6 +1003,28 @@ impl BundleStatsReport {
                 || row.renderer_prepare_svg_us > 0
                 || row.renderer_upload_us > 0
                 || row.renderer_record_passes_us > 0
+                || row.renderer_uniform_bytes > 0
+                || row.renderer_instance_bytes > 0
+                || row.renderer_vertex_bytes > 0
+                || row.renderer_encode_scene_stack_us > 0
+                || row.renderer_encode_scene_clip_us > 0
+                || row.renderer_encode_scene_mask_us > 0
+                || row.renderer_encode_scene_effect_us > 0
+                || row.renderer_encode_scene_quad_us > 0
+                || row.renderer_encode_scene_image_us > 0
+                || row.renderer_encode_scene_text_us > 0
+                || row.renderer_encode_scene_path_us > 0
+                || row.renderer_encode_scene_viewport_us > 0
+                || row.renderer_encode_scene_flush_us > 0
+                || row.renderer_encode_scene_text_shadow_us > 0
+                || row.renderer_encode_scene_text_setup_us > 0
+                || row.renderer_encode_scene_text_glyphs_us > 0
+                || row.renderer_encode_scene_text_glyph_transform_us > 0
+                || row.renderer_encode_scene_text_glyph_emit_us > 0
+                || row.renderer_encode_scene_text_group_flush_us > 0
+                || row.renderer_encode_scene_text_vertex_grow_events > 0
+                || row.renderer_encode_scene_text_transform_fast_path_glyphs > 0
+                || row.renderer_encode_scene_text_transform_generic_glyphs > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -966,6 +1037,76 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_uniform_bytes > 0
+                    || row.renderer_instance_bytes > 0
+                    || row.renderer_vertex_bytes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.bytes(uniform/instance/vertex)={}/{}/{}",
+                        row.renderer_uniform_bytes,
+                        row.renderer_instance_bytes,
+                        row.renderer_vertex_bytes,
+                    ));
+                }
+                line.push_str(&format!(
+                    " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_stack_us,
+                    row.renderer_encode_scene_clip_us,
+                    row.renderer_encode_scene_mask_us,
+                    row.renderer_encode_scene_effect_us,
+                    row.renderer_encode_scene_quad_us,
+                    row.renderer_encode_scene_image_us,
+                    row.renderer_encode_scene_text_us,
+                    row.renderer_encode_scene_path_us,
+                    row.renderer_encode_scene_viewport_us,
+                    row.renderer_encode_scene_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/shadow/setup/glyphs)={}/{}/{}",
+                    row.renderer_encode_scene_text_shadow_us,
+                    row.renderer_encode_scene_text_setup_us,
+                    row.renderer_encode_scene_text_glyphs_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/transform/emit/flush)={}/{}/{}",
+                    row.renderer_encode_scene_text_glyph_transform_us,
+                    row.renderer_encode_scene_text_glyph_emit_us,
+                    row.renderer_encode_scene_text_group_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(vertex_grow_events)={}",
+                    row.renderer_encode_scene_text_vertex_grow_events,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(transform_fast/generic)={}/{}",
+                    row.renderer_encode_scene_text_transform_fast_path_glyphs,
+                    row.renderer_encode_scene_text_transform_generic_glyphs,
+                ));
+                if row.renderer_encode_scene_stack_ops > 0
+                    || row.renderer_encode_scene_clip_ops > 0
+                    || row.renderer_encode_scene_mask_ops > 0
+                    || row.renderer_encode_scene_effect_ops > 0
+                    || row.renderer_encode_scene_quad_ops > 0
+                    || row.renderer_encode_scene_image_ops > 0
+                    || row.renderer_encode_scene_text_ops > 0
+                    || row.renderer_encode_scene_path_ops > 0
+                    || row.renderer_encode_scene_viewport_ops > 0
+                    || row.renderer_encode_scene_flushes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.encode.ops(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                        row.renderer_encode_scene_stack_ops,
+                        row.renderer_encode_scene_clip_ops,
+                        row.renderer_encode_scene_mask_ops,
+                        row.renderer_encode_scene_effect_ops,
+                        row.renderer_encode_scene_quad_ops,
+                        row.renderer_encode_scene_image_ops,
+                        row.renderer_encode_scene_text_ops,
+                        row.renderer_encode_scene_path_ops,
+                        row.renderer_encode_scene_viewport_ops,
+                        row.renderer_encode_scene_flushes,
+                    ));
+                }
             }
             println!("{line}");
             if row.dispatch_post_dispatch_snapshot_time_us > 0
@@ -975,7 +1116,7 @@ impl BundleStatsReport {
                 || row.window_runtime_snapshot_shortcut_overlay_time_us > 0
             {
                 println!(
-                    "    dispatch_snapshot.us(total/focus_repair/input_ctx/command_availability/shortcut_overlay)={}/{}/{}/{}/{}",
+                    "    window_runtime_snapshot.us(dispatch_total/focus_repair/input_ctx/command_availability/shortcut_overlay)={}/{}/{}/{}/{}",
                     row.dispatch_post_dispatch_snapshot_time_us,
                     row.window_runtime_snapshot_focus_repair_time_us,
                     row.window_runtime_snapshot_input_context_time_us,
@@ -988,7 +1129,7 @@ impl BundleStatsReport {
                 || row.window_runtime_snapshot_command_availability_eval_time_us > 0
             {
                 println!(
-                    "    dispatch_snapshot.command_availability(widget_count/collect_us/eval_us)={}/{}/{}",
+                    "    window_runtime_snapshot.command_availability(widget_count/collect_us/eval_us)={}/{}/{}",
                     row.window_runtime_snapshot_widget_command_count,
                     row.window_runtime_snapshot_command_registry_collect_time_us,
                     row.window_runtime_snapshot_command_availability_eval_time_us
@@ -1312,6 +1453,25 @@ impl BundleStatsReport {
                 || row.renderer_prepare_svg_us > 0
                 || row.renderer_upload_us > 0
                 || row.renderer_record_passes_us > 0
+                || row.renderer_encode_scene_stack_us > 0
+                || row.renderer_encode_scene_clip_us > 0
+                || row.renderer_encode_scene_mask_us > 0
+                || row.renderer_encode_scene_effect_us > 0
+                || row.renderer_encode_scene_quad_us > 0
+                || row.renderer_encode_scene_image_us > 0
+                || row.renderer_encode_scene_text_us > 0
+                || row.renderer_encode_scene_path_us > 0
+                || row.renderer_encode_scene_viewport_us > 0
+                || row.renderer_encode_scene_flush_us > 0
+                || row.renderer_encode_scene_text_shadow_us > 0
+                || row.renderer_encode_scene_text_setup_us > 0
+                || row.renderer_encode_scene_text_glyphs_us > 0
+                || row.renderer_encode_scene_text_glyph_transform_us > 0
+                || row.renderer_encode_scene_text_glyph_emit_us > 0
+                || row.renderer_encode_scene_text_group_flush_us > 0
+                || row.renderer_encode_scene_text_vertex_grow_events > 0
+                || row.renderer_encode_scene_text_transform_fast_path_glyphs > 0
+                || row.renderer_encode_scene_text_transform_generic_glyphs > 0
             {
                 line.push_str(&format!(
                     " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
@@ -1324,6 +1484,65 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                line.push_str(&format!(
+                    " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_stack_us,
+                    row.renderer_encode_scene_clip_us,
+                    row.renderer_encode_scene_mask_us,
+                    row.renderer_encode_scene_effect_us,
+                    row.renderer_encode_scene_quad_us,
+                    row.renderer_encode_scene_image_us,
+                    row.renderer_encode_scene_text_us,
+                    row.renderer_encode_scene_path_us,
+                    row.renderer_encode_scene_viewport_us,
+                    row.renderer_encode_scene_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/shadow/setup/glyphs)={}/{}/{}",
+                    row.renderer_encode_scene_text_shadow_us,
+                    row.renderer_encode_scene_text_setup_us,
+                    row.renderer_encode_scene_text_glyphs_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(us/transform/emit/flush)={}/{}/{}",
+                    row.renderer_encode_scene_text_glyph_transform_us,
+                    row.renderer_encode_scene_text_glyph_emit_us,
+                    row.renderer_encode_scene_text_group_flush_us,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(vertex_grow_events)={}",
+                    row.renderer_encode_scene_text_vertex_grow_events,
+                ));
+                line.push_str(&format!(
+                    " renderer.encode.text(transform_fast/generic)={}/{}",
+                    row.renderer_encode_scene_text_transform_fast_path_glyphs,
+                    row.renderer_encode_scene_text_transform_generic_glyphs,
+                ));
+                if row.renderer_encode_scene_stack_ops > 0
+                    || row.renderer_encode_scene_clip_ops > 0
+                    || row.renderer_encode_scene_mask_ops > 0
+                    || row.renderer_encode_scene_effect_ops > 0
+                    || row.renderer_encode_scene_quad_ops > 0
+                    || row.renderer_encode_scene_image_ops > 0
+                    || row.renderer_encode_scene_text_ops > 0
+                    || row.renderer_encode_scene_path_ops > 0
+                    || row.renderer_encode_scene_viewport_ops > 0
+                    || row.renderer_encode_scene_flushes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.encode.ops(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                        row.renderer_encode_scene_stack_ops,
+                        row.renderer_encode_scene_clip_ops,
+                        row.renderer_encode_scene_mask_ops,
+                        row.renderer_encode_scene_effect_ops,
+                        row.renderer_encode_scene_quad_ops,
+                        row.renderer_encode_scene_image_ops,
+                        row.renderer_encode_scene_text_ops,
+                        row.renderer_encode_scene_path_ops,
+                        row.renderer_encode_scene_viewport_ops,
+                        row.renderer_encode_scene_flushes,
+                    ));
+                }
             }
             println!("{line}");
             if row.layout_observation_record_time_us > 0
@@ -1903,6 +2122,20 @@ impl BundleStatsReport {
                             if profile.batch_roots > 1 {
                                 out.push_str(&format!(" batch_roots={}", profile.batch_roots));
                             }
+                            if profile.flex_wrap_patch_time_us > 0
+                                || profile.flex_wrap_patch_probes > 0
+                                || profile.flex_wrap_patch_mutations > 0
+                            {
+                                out.push_str(&format!(
+                                    " flex_patch.us={} flex_patch.nodes={} flex_patch.wrap={} flex_patch.candidates={} flex_patch.probes={} flex_patch.mutations={}",
+                                    profile.flex_wrap_patch_time_us,
+                                    profile.flex_wrap_patch_visited_nodes,
+                                    profile.flex_wrap_patch_wrap_nodes,
+                                    profile.flex_wrap_patch_candidate_children,
+                                    profile.flex_wrap_patch_probes,
+                                    profile.flex_wrap_patch_mutations
+                                ));
+                            }
                             if let Some(w) = profile.available_w {
                                 out.push_str(&format!(" avail.w={w:.1}"));
                             } else if !profile.available_w_kind.is_empty() {
@@ -1912,6 +2145,23 @@ impl BundleStatsReport {
                                 out.push_str(&format!(" avail.h={h:.1}"));
                             } else if !profile.available_h_kind.is_empty() {
                                 out.push_str(&format!(" avail.h={}", profile.available_h_kind));
+                            }
+                            if let Some(dw) = profile.available_w_delta {
+                                out.push_str(&format!(" delta.w={dw:.1}"));
+                            } else if let Some(kind) = profile.previous_available_w_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" prev.w={kind}"));
+                            }
+                            if let Some(dh) = profile.available_h_delta {
+                                out.push_str(&format!(" delta.h={dh:.1}"));
+                            } else if let Some(kind) = profile.previous_available_h_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" prev.h={kind}"));
+                            }
+                            if let Some(frame_delta) = profile.previous_frame_delta {
+                                out.push_str(&format!(" frame_delta={frame_delta}"));
                             }
                         }
                         if let Some(el) = s.root_element {
@@ -2989,6 +3239,134 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_uniform_bytes".to_string(),
+                    Value::from(row.renderer_uniform_bytes),
+                );
+                obj.insert(
+                    "renderer_instance_bytes".to_string(),
+                    Value::from(row.renderer_instance_bytes),
+                );
+                obj.insert(
+                    "renderer_vertex_bytes".to_string(),
+                    Value::from(row.renderer_vertex_bytes),
+                );
+                obj.insert(
+                    "renderer_encode_scene_stack_us".to_string(),
+                    Value::from(row.renderer_encode_scene_stack_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_clip_us".to_string(),
+                    Value::from(row.renderer_encode_scene_clip_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_mask_us".to_string(),
+                    Value::from(row.renderer_encode_scene_mask_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_effect_us".to_string(),
+                    Value::from(row.renderer_encode_scene_effect_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_quad_us".to_string(),
+                    Value::from(row.renderer_encode_scene_quad_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_image_us".to_string(),
+                    Value::from(row.renderer_encode_scene_image_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_path_us".to_string(),
+                    Value::from(row.renderer_encode_scene_path_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_viewport_us".to_string(),
+                    Value::from(row.renderer_encode_scene_viewport_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_flush_us".to_string(),
+                    Value::from(row.renderer_encode_scene_flush_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_shadow_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_shadow_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_setup_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_setup_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_glyphs_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_glyphs_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_glyph_transform_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_glyph_transform_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_glyph_emit_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_glyph_emit_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_group_flush_us".to_string(),
+                    Value::from(row.renderer_encode_scene_text_group_flush_us),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_vertex_grow_events".to_string(),
+                    Value::from(row.renderer_encode_scene_text_vertex_grow_events),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_transform_fast_path_glyphs".to_string(),
+                    Value::from(row.renderer_encode_scene_text_transform_fast_path_glyphs),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_transform_generic_glyphs".to_string(),
+                    Value::from(row.renderer_encode_scene_text_transform_generic_glyphs),
+                );
+                obj.insert(
+                    "renderer_encode_scene_stack_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_stack_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_clip_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_clip_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_mask_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_mask_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_effect_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_effect_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_quad_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_quad_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_image_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_image_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_text_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_text_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_path_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_path_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_viewport_ops".to_string(),
+                    Value::from(row.renderer_encode_scene_viewport_ops),
+                );
+                obj.insert(
+                    "renderer_encode_scene_flushes".to_string(),
+                    Value::from(row.renderer_encode_scene_flushes),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),
@@ -4187,8 +4565,64 @@ impl BundleStatsReport {
                                         p.available_h.map(Value::from).unwrap_or(Value::Null),
                                     );
                                     p_obj.insert(
+                                        "previous_available_w_kind".to_string(),
+                                        p.previous_available_w_kind
+                                            .clone()
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_available_h_kind".to_string(),
+                                        p.previous_available_h_kind
+                                            .clone()
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_available_w".to_string(),
+                                        p.previous_available_w
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_available_h".to_string(),
+                                        p.previous_available_h
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "available_w_delta".to_string(),
+                                        p.available_w_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "available_h_delta".to_string(),
+                                        p.available_h_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
                                         "scale_factor".to_string(),
                                         Value::from(p.scale_factor),
+                                    );
+                                    p_obj.insert(
+                                        "previous_scale_factor".to_string(),
+                                        p.previous_scale_factor
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "scale_factor_delta".to_string(),
+                                        p.scale_factor_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_frame_delta".to_string(),
+                                        p.previous_frame_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
                                     );
                                     p_obj.insert(
                                         "batch_roots".to_string(),
@@ -4197,6 +4631,36 @@ impl BundleStatsReport {
                                     p_obj.insert(
                                         "subtree_nodes".to_string(),
                                         Value::from(p.subtree_nodes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_time_us".to_string(),
+                                        Value::from(p.flex_wrap_patch_time_us),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_visited_nodes".to_string(),
+                                        Value::from(p.flex_wrap_patch_visited_nodes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_wrap_nodes".to_string(),
+                                        Value::from(p.flex_wrap_patch_wrap_nodes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_candidate_children".to_string(),
+                                        Value::from(p.flex_wrap_patch_candidate_children),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_probes".to_string(),
+                                        Value::from(p.flex_wrap_patch_probes),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_mutations".to_string(),
+                                        Value::from(p.flex_wrap_patch_mutations),
+                                    );
+                                    p_obj.insert(
+                                        "flex_wrap_patch_skipped_no_wrap_descendant".to_string(),
+                                        Value::from(
+                                            p.flex_wrap_patch_skipped_no_wrap_descendant,
+                                        ),
                                     );
                                     Value::Object(p_obj)
                                 })

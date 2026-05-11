@@ -741,6 +741,7 @@ impl Default for EffectChain {
 #[derive(Debug, Default, Clone)]
 pub struct SceneRecording {
     ops: Vec<SceneOp>,
+    text_blob_ids: Vec<TextBlobId>,
     fingerprint: u64,
     #[cfg(debug_assertions)]
     storage_swapped_since_clear: bool,
@@ -751,6 +752,7 @@ pub type Scene = SceneRecording;
 impl SceneRecording {
     pub fn clear(&mut self) {
         self.ops.clear();
+        self.text_blob_ids.clear();
         self.fingerprint = 0;
         #[cfg(debug_assertions)]
         {
@@ -853,6 +855,9 @@ impl SceneRecording {
             other => other,
         };
 
+        if let SceneOp::Text { text, .. } = op {
+            self.text_blob_ids.push(text);
+        }
         self.fingerprint = mix_scene_op(self.fingerprint, op);
         self.ops.push(op);
     }
@@ -987,7 +992,12 @@ impl SceneRecording {
     ///
     /// In debug builds, this asserts if called more than once without an intervening `clear()`,
     /// because repeated swaps typically indicate multiple paint-cache ingestions from the same scene.
-    pub fn swap_storage(&mut self, other_ops: &mut Vec<SceneOp>, other_fingerprint: &mut u64) {
+    pub fn swap_storage(
+        &mut self,
+        other_ops: &mut Vec<SceneOp>,
+        other_text_blob_ids: &mut Vec<TextBlobId>,
+        other_fingerprint: &mut u64,
+    ) {
         #[cfg(debug_assertions)]
         debug_assert!(
             !self.storage_swapped_since_clear,
@@ -995,6 +1005,7 @@ impl SceneRecording {
 this is not supported because swap_storage() is destructive and typically indicates multiple paint-cache ingestions"
         );
         std::mem::swap(&mut self.ops, other_ops);
+        std::mem::swap(&mut self.text_blob_ids, other_text_blob_ids);
         std::mem::swap(&mut self.fingerprint, other_fingerprint);
         #[cfg(debug_assertions)]
         {
@@ -1004,6 +1015,10 @@ this is not supported because swap_storage() is destructive and typically indica
 
     pub fn fingerprint(&self) -> u64 {
         self.fingerprint
+    }
+
+    pub fn text_blob_ids(&self) -> &[TextBlobId] {
+        &self.text_blob_ids
     }
 }
 
@@ -1304,6 +1319,22 @@ pub const SHADOW_RRECT_V1_MAX_BLUR_RADIUS_PX: crate::Px = crate::Px(64.0);
 mod tests {
     use super::*;
     use crate::geometry::{Px, Size};
+    use slotmap::KeyData;
+
+    fn text_blob_id(raw: u64) -> TextBlobId {
+        TextBlobId::from(KeyData::from_ffi(raw))
+    }
+
+    fn text_op(text: TextBlobId) -> SceneOp {
+        SceneOp::Text {
+            order: DrawOrder(0),
+            origin: Point::new(Px(0.0), Px(0.0)),
+            text,
+            paint: Paint::Solid(Color::TRANSPARENT).into(),
+            outline: None,
+            shadow: None,
+        }
+    }
 
     #[test]
     fn replay_ops_translated_wraps_in_transform_stack() {
@@ -1323,6 +1354,52 @@ mod tests {
         assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
         assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
         assert!(matches!(scene.ops()[2], SceneOp::PopTransform));
+    }
+
+    #[test]
+    fn scene_tracks_text_blob_ids_in_op_order() {
+        let first = text_blob_id(1);
+        let second = text_blob_id(2);
+        let mut scene = Scene::default();
+
+        scene.push(text_op(first));
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            background: Paint::Solid(Color::TRANSPARENT).into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        scene.push(text_op(second));
+
+        assert_eq!(scene.text_blob_ids(), &[first, second]);
+
+        scene.clear();
+        assert!(scene.text_blob_ids().is_empty());
+    }
+
+    #[test]
+    fn scene_swap_storage_keeps_text_blob_index_with_swapped_ops() {
+        let first = text_blob_id(1);
+        let second = text_blob_id(2);
+        let mut scene = Scene::default();
+        scene.push(text_op(first));
+
+        let mut other_ops = vec![text_op(second)];
+        let mut other_text_blob_ids = vec![second];
+        let mut other_fingerprint = 123;
+
+        scene.swap_storage(
+            &mut other_ops,
+            &mut other_text_blob_ids,
+            &mut other_fingerprint,
+        );
+
+        assert_eq!(scene.text_blob_ids(), &[second]);
+        assert_eq!(other_text_blob_ids, vec![first]);
+        assert_eq!(other_ops.len(), 1);
+        assert!(matches!(other_ops[0], SceneOp::Text { text, .. } if text == first));
     }
 
     #[test]

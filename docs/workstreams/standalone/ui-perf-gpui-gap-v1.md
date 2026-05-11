@@ -612,6 +612,27 @@ Fret reference points:
 - Canvas resource caching (text/path/svg) exists but does not by itself eliminate per-frame scene construction:
   `crates/fret-ui/src/canvas.rs` (`CanvasCache`, `CanvasCachePolicy`)
 
+Current status (2026-05-11):
+
+- Fret's code-editor autoscroll probe is no longer text-prep or layout dominated. The low-overhead stats pass on
+  `target/fret-diag/perf-code-editor-paint-detail-probe-v1/1778455020350/bundle.schema2.json` reports p50/p95 total
+  `1603/1902us`, paint `1512/1809us`, layout `59/64us`, renderer upload p95 `337us`, and `paint_text_prepare_calls=0`.
+- The visible editor surface still emits a steady payload each frame: about `497` scene ops, `338` text ops, and
+  `~220-223KB` renderer instance bytes. The hottest widget is still the declarative `Canvas` host, with the detailed
+  editor paint probe replaying `288/289` row scenes and storing only one new row.
+- GPUI's relevant lesson is not "make Canvas heavier". Its `Canvas` element is intentionally thin, while durable reuse
+  lives in text/layout frame caches (`LineLayoutCache`, including current/previous-frame reuse and hash-keyed line
+  layout probes). Fret already has the analogous text-prep win for this scenario; the remaining gap is the editor
+  surface/display-list budget.
+
+Updated proposal:
+
+1) Keep row text/geometry key splitting out of the hot lane unless fresh low-overhead evidence changes the shape.
+2) Prototype a narrow Canvas/display-list or row-fragment payload contract that can reduce per-frame scene emission
+   for stable visible rows without hiding real editor invalidations.
+3) Gate the prototype with the existing code-editor autoscroll steady/typical baselines and record renderer payload
+   deltas (`scene_ops`, text ops, `renderer_instance_bytes`, `renderer_upload_us`) alongside p50/p95/max.
+
 ### Gap C: “Cached view” ergonomics and defaults
 
 GPUI:

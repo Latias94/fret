@@ -573,6 +573,7 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "ui_element_runtime_scratch_element_children_vec_pool_len": er_u64("scratch_element_children_vec_pool_len"),
         "ui_element_runtime_scratch_element_children_vec_pool_capacity_total": er_u64("scratch_element_children_vec_pool_capacity_total"),
         "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total": er_u64("scratch_element_children_vec_pool_bytes_estimate_total"),
+        "ui_element_runtime_scratch_element_children_vec_pool_grow_events": er_u64("scratch_element_children_vec_pool_grow_events"),
         "ui_gallery_nav_scroll_semantics_subtree_nodes": ui_gallery_nav_scroll_semantics_subtree_nodes,
         "ui_gallery_page_overlay_semantics_subtree_nodes": ui_gallery_page_overlay_semantics_subtree_nodes,
         "ui_gallery_command_palette_semantics_subtree_nodes": ui_gallery_command_palette_semantics_subtree_nodes,

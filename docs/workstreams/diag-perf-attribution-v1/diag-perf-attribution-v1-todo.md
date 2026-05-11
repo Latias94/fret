@@ -25,6 +25,7 @@
   - [x] `layout.observation_heavy`
   - [x] `layout.solve_heavy`
   - [x] `renderer.upload_churn`
+  - [x] `paint.widget_heavy`
   - [x] `paint.text_prepare_churn`
 
 ## P2 (M2): opt-in trace workflow

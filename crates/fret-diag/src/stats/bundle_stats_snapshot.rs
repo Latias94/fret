@@ -832,12 +832,55 @@ pub(super) fn snapshot_layout_engine_solves(
                         .to_string(),
                     available_w: p.get("available_w").and_then(|v| v.as_f64()),
                     available_h: p.get("available_h").and_then(|v| v.as_f64()),
+                    previous_available_w_kind: p
+                        .get("previous_available_w_kind")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    previous_available_h_kind: p
+                        .get("previous_available_h_kind")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    previous_available_w: p.get("previous_available_w").and_then(|v| v.as_f64()),
+                    previous_available_h: p.get("previous_available_h").and_then(|v| v.as_f64()),
+                    available_w_delta: p.get("available_w_delta").and_then(|v| v.as_f64()),
+                    available_h_delta: p.get("available_h_delta").and_then(|v| v.as_f64()),
                     scale_factor: p
                         .get("scale_factor")
                         .and_then(|v| v.as_f64())
                         .unwrap_or(0.0),
+                    previous_scale_factor: p.get("previous_scale_factor").and_then(|v| v.as_f64()),
+                    scale_factor_delta: p.get("scale_factor_delta").and_then(|v| v.as_f64()),
+                    previous_frame_delta: p.get("previous_frame_delta").and_then(|v| v.as_u64()),
                     batch_roots: p.get("batch_roots").and_then(|v| v.as_u64()).unwrap_or(0),
                     subtree_nodes: p.get("subtree_nodes").and_then(|v| v.as_u64()).unwrap_or(0),
+                    flex_wrap_patch_time_us: p
+                        .get("flex_wrap_patch_time_us")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_visited_nodes: p
+                        .get("flex_wrap_patch_visited_nodes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_wrap_nodes: p
+                        .get("flex_wrap_patch_wrap_nodes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_candidate_children: p
+                        .get("flex_wrap_patch_candidate_children")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_probes: p
+                        .get("flex_wrap_patch_probes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_mutations: p
+                        .get("flex_wrap_patch_mutations")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                    flex_wrap_patch_skipped_no_wrap_descendant: p
+                        .get("flex_wrap_patch_skipped_no_wrap_descendant")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false),
                 }
             });
 

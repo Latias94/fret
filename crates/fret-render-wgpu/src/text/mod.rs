@@ -56,7 +56,9 @@ pub(crate) use self::types::TextLine;
 #[cfg(test)]
 pub(crate) use self::types::subpixel_mask_to_alpha;
 use self::types::{GlyphInstance, TextBlob, TextShape};
-pub(crate) use self::types::{TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyphKind};
+pub(crate) use self::types::{
+    TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyph, TextRenderGlyphKind,
+};
 
 pub struct TextSystem {
     parley_shaper: ParleyShaper,

@@ -93,6 +93,7 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub scratch_element_children_vec_pool_len: u64,
     pub scratch_element_children_vec_pool_capacity_total: u64,
     pub scratch_element_children_vec_pool_bytes_estimate_total: u64,
+    pub scratch_element_children_vec_pool_grow_events: u64,
     /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0177).
     ///
     /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0176).
@@ -471,6 +472,7 @@ pub struct WindowElementState {
     scratch_element_children_vec_pool: Vec<Vec<AnyElement>>,
     element_children_vec_pool_reuses: u32,
     element_children_vec_pool_misses: u32,
+    element_children_vec_pool_grow_events: u32,
     transient_events: HashMap<(GlobalElementId, u64), FrameId>,
     authoring_identities_current_frame: HashSet<GlobalElementId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
@@ -594,6 +596,10 @@ impl WindowElementState {
         self.element_children_vec_pool_misses
     }
 
+    pub(crate) fn element_children_vec_pool_grow_events(&self) -> u32 {
+        self.element_children_vec_pool_grow_events
+    }
+
     pub(crate) fn take_scratch_element_children_vec(
         &mut self,
         min_capacity: usize,
@@ -602,8 +608,13 @@ impl WindowElementState {
             self.element_children_vec_pool_reuses =
                 self.element_children_vec_pool_reuses.saturating_add(1);
             out.clear();
-            if out.capacity() < min_capacity {
-                out.reserve(min_capacity - out.capacity());
+            let capacity_before = out.capacity();
+            if capacity_before < min_capacity {
+                out.reserve(min_capacity - capacity_before);
+                if out.capacity() > capacity_before {
+                    self.element_children_vec_pool_grow_events =
+                        self.element_children_vec_pool_grow_events.saturating_add(1);
+                }
             }
             return out;
         }
@@ -688,6 +699,7 @@ impl WindowElementState {
         self.view_cache_key_mismatch_roots.clear();
         self.element_children_vec_pool_reuses = 0;
         self.element_children_vec_pool_misses = 0;
+        self.element_children_vec_pool_grow_events = 0;
 
         std::mem::swap(
             &mut self.view_cache_keys_rendered,
@@ -2384,6 +2396,8 @@ impl WindowElementState {
                         .saturating_mul(std::mem::size_of::<AnyElement>() as u64),
                 )
             });
+        let scratch_element_children_vec_pool_grow_events =
+            self.element_children_vec_pool_grow_events as u64;
 
         const KEEP_ALIVE_ROOT_SAMPLE: usize = 16;
         let mut retained_keep_alive_roots: Vec<NodeId> = self
@@ -2482,6 +2496,7 @@ impl WindowElementState {
             scratch_element_children_vec_pool_len,
             scratch_element_children_vec_pool_capacity_total,
             scratch_element_children_vec_pool_bytes_estimate_total,
+            scratch_element_children_vec_pool_grow_events,
             retained_keep_alive_roots_len,
             retained_keep_alive_roots_head,
             retained_keep_alive_roots_tail,
@@ -2892,6 +2907,20 @@ mod tests {
             runtime.selectable_text_interactive_span_bounds_for_element(window, element),
             Some(vec![expected])
         );
+    }
+
+    #[test]
+    fn scratch_element_children_vec_pool_grow_events_increment_when_reused_vec_expands() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        state.restore_scratch_element_children_vec(Vec::new());
+
+        let scratch = state.take_scratch_element_children_vec(1);
+        assert!(scratch.capacity() >= 1);
+        assert_eq!(state.element_children_vec_pool_reuses(), 1);
+        assert_eq!(state.element_children_vec_pool_misses(), 0);
+        assert_eq!(state.element_children_vec_pool_grow_events(), 1);
     }
 
     #[test]

@@ -7,6 +7,7 @@ pub(crate) fn write_perf_baseline_json(
     sort: BundleStatsSort,
     repeat: usize,
     headroom_pct: u32,
+    threshold_surface: PerfBaselineThresholdSurface,
     threshold_seed_policy: serde_json::Value,
     rows: &[serde_json::Value],
     stats_json: bool,
@@ -20,6 +21,7 @@ pub(crate) fn write_perf_baseline_json(
         "sort": sort.as_str(),
         "repeat": repeat,
         "headroom_pct": headroom_pct,
+        "threshold_surface": threshold_surface.as_str(),
         "threshold_seed_policy": threshold_seed_policy,
         "rows": rows,
     });

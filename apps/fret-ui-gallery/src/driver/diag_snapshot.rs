@@ -61,6 +61,106 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
     })
 }
 
+#[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
+fn code_editor_paint_perf_json(
+    frame: fret_code_editor::CodeEditorPaintPerfFrame,
+) -> serde_json::Value {
+    let mut out = serde_json::Map::with_capacity(88);
+    macro_rules! insert_u64 {
+        ($key:literal, $value:expr) => {
+            out.insert($key.to_string(), serde_json::Value::from($value));
+        };
+    }
+
+    insert_u64!("schema_version", 8);
+    insert_u64!("frame_seq", frame.frame_seq);
+    insert_u64!("visible_start", frame.visible_start);
+    insert_u64!("visible_end", frame.visible_end);
+    insert_u64!("visible_rows", frame.visible_rows);
+    insert_u64!("cache_base_entries", frame.cache_base_entries);
+    insert_u64!("cache_frame_min_entries", frame.cache_frame_min_entries);
+    insert_u64!("cache_effective_entries", frame.cache_effective_entries);
+    insert_u64!("rows_painted", frame.rows_painted);
+    insert_u64!("rows_drew_rich", frame.rows_drew_rich);
+    insert_u64!("rows_scene_replayed", frame.rows_scene_replayed);
+    insert_u64!("rows_scene_stored", frame.rows_scene_stored);
+    insert_u64!("quads_selection", frame.quads_selection);
+    insert_u64!("quads_caret", frame.quads_caret);
+    insert_u64!("us_total", frame.us_total);
+    insert_u64!("us_row_text", frame.us_row_text);
+    insert_u64!("us_baseline_measure", frame.us_baseline_measure);
+    insert_u64!("us_syntax_spans", frame.us_syntax_spans);
+    insert_u64!("us_rich_materialize", frame.us_rich_materialize);
+    insert_u64!("us_text_draw", frame.us_text_draw);
+    insert_u64!("us_row_rich_cache_compare", frame.us_row_rich_cache_compare);
+    insert_u64!("us_row_geom_key", frame.us_row_geom_key);
+    insert_u64!("us_row_scene_key", frame.us_row_scene_key);
+    insert_u64!("us_row_scene_fast_probe", frame.us_row_scene_fast_probe);
+    insert_u64!("us_row_scene_full_probe", frame.us_row_scene_full_probe);
+    insert_u64!("us_row_scene_fast_key_compare", frame.us_row_scene_fast_key_compare);
+    insert_u64!("us_row_scene_full_key_compare", frame.us_row_scene_full_key_compare);
+    insert_u64!("us_row_scene_replay_touch", frame.us_row_scene_replay_touch);
+    insert_u64!("us_row_scene_replay_ops", frame.us_row_scene_replay_ops);
+    insert_u64!("us_row_scene_capture_ops", frame.us_row_scene_capture_ops);
+    insert_u64!("us_row_scene_store", frame.us_row_scene_store);
+    insert_u64!("us_row_scene_fast_path", frame.us_row_scene_fast_path);
+    insert_u64!("us_row_scene_full_path", frame.us_row_scene_full_path);
+    insert_u64!("us_selection_rects", frame.us_selection_rects);
+    insert_u64!("us_caret_x", frame.us_caret_x);
+    insert_u64!("us_caret_stops", frame.us_caret_stops);
+    insert_u64!("us_caret_rect", frame.us_caret_rect);
+    insert_u64!("us_row_geom_cache", frame.us_row_geom_cache);
+    insert_u64!("us_row_content_resolve", frame.us_row_content_resolve);
+    insert_u64!("us_row_geom_resolve", frame.us_row_geom_resolve);
+    insert_u64!("us_row_overlay", frame.us_row_overlay);
+    insert_u64!(
+        "us_frame_overlay_prepare",
+        frame.us_frame_overlay_prepare
+    );
+    insert_u64!("syntax_rows_stored", frame.syntax_rows_stored);
+    insert_u64!("us_syntax_slice", frame.us_syntax_slice);
+    insert_u64!("us_syntax_highlight", frame.us_syntax_highlight);
+    insert_u64!("us_syntax_distribute", frame.us_syntax_distribute);
+    insert_u64!("us_syntax_store", frame.us_syntax_store);
+    insert_u64!("ns_total", frame.ns_total);
+    insert_u64!("ns_row_text", frame.ns_row_text);
+    insert_u64!("ns_baseline_measure", frame.ns_baseline_measure);
+    insert_u64!("ns_syntax_spans", frame.ns_syntax_spans);
+    insert_u64!("ns_rich_materialize", frame.ns_rich_materialize);
+    insert_u64!("ns_text_draw", frame.ns_text_draw);
+    insert_u64!("ns_row_rich_cache_compare", frame.ns_row_rich_cache_compare);
+    insert_u64!("ns_row_geom_key", frame.ns_row_geom_key);
+    insert_u64!("ns_row_scene_key", frame.ns_row_scene_key);
+    insert_u64!("ns_row_scene_fast_probe", frame.ns_row_scene_fast_probe);
+    insert_u64!("ns_row_scene_full_probe", frame.ns_row_scene_full_probe);
+    insert_u64!("ns_row_scene_fast_key_compare", frame.ns_row_scene_fast_key_compare);
+    insert_u64!("ns_row_scene_full_key_compare", frame.ns_row_scene_full_key_compare);
+    insert_u64!("ns_row_scene_replay_touch", frame.ns_row_scene_replay_touch);
+    insert_u64!("ns_row_scene_replay_ops", frame.ns_row_scene_replay_ops);
+    insert_u64!("ns_row_scene_capture_ops", frame.ns_row_scene_capture_ops);
+    insert_u64!("ns_row_scene_store", frame.ns_row_scene_store);
+    insert_u64!("ns_row_scene_fast_path", frame.ns_row_scene_fast_path);
+    insert_u64!("ns_row_scene_full_path", frame.ns_row_scene_full_path);
+    insert_u64!("ns_selection_rects", frame.ns_selection_rects);
+    insert_u64!("ns_caret_x", frame.ns_caret_x);
+    insert_u64!("ns_caret_stops", frame.ns_caret_stops);
+    insert_u64!("ns_caret_rect", frame.ns_caret_rect);
+    insert_u64!("ns_row_geom_cache", frame.ns_row_geom_cache);
+    insert_u64!("ns_row_content_resolve", frame.ns_row_content_resolve);
+    insert_u64!("ns_row_geom_resolve", frame.ns_row_geom_resolve);
+    insert_u64!("ns_row_overlay", frame.ns_row_overlay);
+    insert_u64!(
+        "ns_frame_overlay_prepare",
+        frame.ns_frame_overlay_prepare
+    );
+    insert_u64!("ns_syntax_slice", frame.ns_syntax_slice);
+    insert_u64!("ns_syntax_highlight", frame.ns_syntax_highlight);
+    insert_u64!("ns_syntax_distribute", frame.ns_syntax_distribute);
+    insert_u64!("ns_syntax_store", frame.ns_syntax_store);
+
+    serde_json::Value::Object(out)
+}
+
 fn command_palette_entries_bytes_estimate(app: &App) -> serde_json::Value {
     let mut entries = 0u64;
     let mut groups = 0u64;
@@ -231,30 +331,8 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let stats = handle.cache_stats();
                                 let sizes = handle.cache_size_snapshot();
                                 let mem = handle.memory_snapshot();
-                                let paint_perf = handle.paint_perf_frame().map(|frame| {
-                                    serde_json::json!({
-                                        "schema_version": 1,
-                                        "frame_seq": frame.frame_seq,
-                                        "visible_start": frame.visible_start,
-                                        "visible_end": frame.visible_end,
-                                        "visible_rows": frame.visible_rows,
-                                        "rows_painted": frame.rows_painted,
-                                        "rows_drew_rich": frame.rows_drew_rich,
-                                        "quads_background": frame.quads_background,
-                                        "quads_selection": frame.quads_selection,
-                                        "quads_caret": frame.quads_caret,
-                                        "us_total": frame.us_total,
-                                        "us_row_text": frame.us_row_text,
-                                        "us_baseline_measure": frame.us_baseline_measure,
-                                        "us_syntax_spans": frame.us_syntax_spans,
-                                        "us_rich_materialize": frame.us_rich_materialize,
-                                        "us_text_draw": frame.us_text_draw,
-                                        "us_selection_rects": frame.us_selection_rects,
-                                        "us_caret_x": frame.us_caret_x,
-                                        "us_caret_stops": frame.us_caret_stops,
-                                        "us_caret_rect": frame.us_caret_rect,
-                                    })
-                                });
+                                let paint_perf =
+                                    handle.paint_perf_frame().map(code_editor_paint_perf_json);
                                 let preedit_active = handle.preedit_active();
                                 let allow_decorations_under_inline_preedit =
                                     handle.allow_decorations_under_inline_preedit();
@@ -290,6 +368,14 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "row_text_misses": stats.row_text_misses,
                                         "row_text_evictions": stats.row_text_evictions,
                                         "row_text_resets": stats.row_text_resets,
+                                        "row_scene_get_calls": stats.row_scene_get_calls(),
+                                        "row_scene_hits": stats.row_scene_hits(),
+                                        "row_scene_misses": stats.row_scene_misses(),
+                                        "row_scene_evictions": stats.row_scene_evictions(),
+                                        "row_scene_resets": stats.row_scene_resets(),
+                                        "row_scene_fast_get_calls": stats.row_scene_fast_get_calls(),
+                                        "row_scene_fast_hits": stats.row_scene_fast_hits(),
+                                        "row_scene_fast_misses": stats.row_scene_fast_misses(),
                                         "row_rich_get_calls": stats.row_rich_get_calls(),
                                         "row_rich_hits": stats.row_rich_hits(),
                                         "row_rich_misses": stats.row_rich_misses(),
@@ -307,13 +393,20 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                     "cache_sizes": {
                                         "schema_version": sizes.schema_version,
                                         "row_text_cache_entries": sizes.row_text_cache_entries,
+                                        "row_text_cache_queue_len": sizes.row_text_cache_queue_len,
                                         "row_text_cache_text_bytes_estimate_total": sizes.row_text_cache_text_bytes_estimate_total,
                                         "row_text_cache_row_spans_len_total": sizes.row_text_cache_row_spans_len_total,
                                         "row_geom_cache_entries": sizes.row_geom_cache_entries,
+                                        "row_geom_cache_queue_len": sizes.row_geom_cache_queue_len,
                                         "row_geom_cache_caret_stops_len_total": sizes.row_geom_cache_caret_stops_len_total,
+                                        "row_scene_cache_entries": sizes.row_scene_cache_entries,
+                                        "row_scene_cache_queue_len": sizes.row_scene_cache_queue_len,
+                                        "row_scene_cache_scene_ops_len_total": sizes.row_scene_cache_scene_ops_len_total,
                                         "syntax_row_cache_entries": sizes.syntax_row_cache_entries,
+                                        "syntax_row_cache_queue_len": sizes.syntax_row_cache_queue_len,
                                         "syntax_row_cache_spans_len_total": sizes.syntax_row_cache_spans_len_total,
                                         "row_rich_cache_entries": sizes.row_rich_cache_entries,
+                                        "row_rich_cache_queue_len": sizes.row_rich_cache_queue_len,
                                         "row_rich_cache_line_bytes_estimate_total": sizes.row_rich_cache_line_bytes_estimate_total,
                                         "row_rich_cache_row_spans_len_total": sizes.row_rich_cache_row_spans_len_total,
                                         "row_rich_cache_syntax_spans_len_total": sizes.row_rich_cache_syntax_spans_len_total,

@@ -187,10 +187,44 @@ pub(crate) struct WindowCommandActionAvailabilitySnapshotSignature {
     pub(crate) barrier_root: Option<NodeId>,
     pub(crate) focus: Option<NodeId>,
     pub(crate) command_availability_revision: u64,
-    pub(crate) input_ctx: InputContext,
+    /// Cache key for action-availability publishing.
+    ///
+    /// This intentionally excludes pointer-arbitration state and dispatch-phase noise so
+    /// high-frequency pointer-move traffic does not keep invalidating the whole snapshot when
+    /// the actual command-gating inputs are unchanged.
+    pub(crate) input_ctx: WindowCommandActionAvailabilityInputSignature,
     pub(crate) key_contexts: Vec<Arc<str>>,
     pub(crate) command_registry_revision: u64,
     pub(crate) menu_bar_present: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WindowCommandActionAvailabilityInputSignature {
+    pub(crate) platform: Platform,
+    pub(crate) caps: PlatformCapabilities,
+    pub(crate) ui_has_modal: bool,
+    pub(crate) focus_is_text_input: bool,
+    pub(crate) text_boundary_mode: fret_runtime::TextBoundaryMode,
+    pub(crate) edit_can_undo: bool,
+    pub(crate) edit_can_redo: bool,
+    pub(crate) router_can_back: bool,
+    pub(crate) router_can_forward: bool,
+}
+
+impl From<&InputContext> for WindowCommandActionAvailabilityInputSignature {
+    fn from(input_ctx: &InputContext) -> Self {
+        Self {
+            platform: input_ctx.platform,
+            caps: input_ctx.caps.clone(),
+            ui_has_modal: input_ctx.ui_has_modal,
+            focus_is_text_input: input_ctx.focus_is_text_input,
+            text_boundary_mode: input_ctx.text_boundary_mode,
+            edit_can_undo: input_ctx.edit_can_undo,
+            edit_can_redo: input_ctx.edit_can_redo,
+            router_can_back: input_ctx.router_can_back,
+            router_can_forward: input_ctx.router_can_forward,
+        }
+    }
 }
 
 /// Retained UI tree and per-window interaction state machine.

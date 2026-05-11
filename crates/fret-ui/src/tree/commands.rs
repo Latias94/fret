@@ -764,7 +764,7 @@ impl<H: UiHost> UiTree<H> {
             barrier_root,
             focus,
             command_availability_revision: self.command_availability_revision,
-            input_ctx: input_ctx.clone(),
+            input_ctx: WindowCommandActionAvailabilityInputSignature::from(input_ctx),
             key_contexts: next_key_contexts.clone(),
             command_registry_revision: app.commands().revision(),
             menu_bar_present,

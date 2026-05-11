@@ -1,11 +1,15 @@
 //! Implementation details for the Fret code editor surface.
 
 use std::cell::{Cell, RefCell};
+#[cfg(feature = "syntax")]
+use std::collections::HashSet;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
+#[cfg(feature = "syntax")]
+use std::sync::Mutex;
 use std::sync::{Arc, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
@@ -15,11 +19,13 @@ use fret_code_editor_view::{
 };
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
-    Edges, FontId, KeyCode, Modifiers, MouseButton, PointerType, Px, Rect, SceneOp, Size,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, Point, PointerType, Px, Rect, SceneOp, Size,
     TextFontFeatureSetting, TextOverflow, TextPaintStyle, TextShapingStyle, TextSpan, TextStyle,
     TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode, TimerToken};
+#[cfg(feature = "syntax")]
+use fret_runtime::{DispatcherHandle, ExecBackgroundWork, ExecWake};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
@@ -54,6 +60,42 @@ use geom::{
 };
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+const CODE_EDITOR_ROW_CACHE_MIN_ENTRIES: usize = 256;
+const CODE_EDITOR_ROW_CACHE_MAX_ENTRIES: usize = 8_192;
+
+fn normalized_paint_frame_visible_window(
+    visible_start: usize,
+    visible_end: usize,
+) -> Option<(usize, usize)> {
+    (visible_start <= visible_end).then_some((visible_start, visible_end))
+}
+
+fn paint_frame_visible_row_count(visible_start: usize, visible_end: usize) -> usize {
+    visible_end.saturating_sub(visible_start).saturating_add(1)
+}
+
+fn paint_frame_interval_union_count(a: (usize, usize), b: (usize, usize)) -> usize {
+    let a_count = paint_frame_visible_row_count(a.0, a.1);
+    let b_count = paint_frame_visible_row_count(b.0, b.1);
+    if a.1 < b.0 || b.1 < a.0 {
+        return a_count.saturating_add(b_count);
+    }
+
+    a.1.max(b.1).saturating_sub(a.0.min(b.0)).saturating_add(1)
+}
+
+fn paint_frame_cache_min_entries(
+    previous: Option<(usize, usize)>,
+    current: Option<(usize, usize)>,
+) -> usize {
+    let Some(current) = current else {
+        return 0;
+    };
+    let entries = previous
+        .map(|previous| paint_frame_interval_union_count(previous, current))
+        .unwrap_or_else(|| paint_frame_visible_row_count(current.0, current.1));
+    entries.min(CODE_EDITOR_ROW_CACHE_MAX_ENTRIES)
+}
 
 pub(super) fn preedit_cursor_bytes_for_marked_range_utf16(
     insertion_start_utf16: u32,
@@ -490,6 +532,366 @@ struct SyntaxSpan {
     highlight: &'static str,
 }
 
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct SyntaxPrefetchKey {
+    doc: DocId,
+    rev: fret_code_editor_buffer::Revision,
+    language: Arc<str>,
+    chunk_start: usize,
+    chunk_end: usize,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct SyntaxPrefetchChunk {
+    key: SyntaxPrefetchKey,
+    rows: Arc<[(usize, Arc<[SyntaxSpan]>)]>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Default)]
+struct SyntaxPrefetchRuntimeState {
+    pending: HashSet<SyntaxPrefetchKey>,
+    ready: VecDeque<SyntaxPrefetchChunk>,
+    last_visible_start: Option<usize>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Clone)]
+struct SyntaxPrefetchRuntime {
+    shared: Arc<Mutex<SyntaxPrefetchRuntimeState>>,
+    dispatcher: DispatcherHandle,
+}
+
+#[cfg(feature = "syntax")]
+impl std::fmt::Debug for SyntaxPrefetchRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SyntaxPrefetchRuntime")
+            .field("shared", &self.shared)
+            .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "syntax")]
+impl SyntaxPrefetchRuntime {
+    fn new(dispatcher: DispatcherHandle) -> Self {
+        Self {
+            shared: Arc::new(Mutex::new(SyntaxPrefetchRuntimeState::default())),
+            dispatcher,
+        }
+    }
+
+    fn clear(&self) {
+        let mut state = self.lock_state();
+        state.pending.clear();
+        state.ready.clear();
+        state.last_visible_start = None;
+    }
+
+    fn lock_state(&self) -> std::sync::MutexGuard<'_, SyntaxPrefetchRuntimeState> {
+        self.shared
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn note_visible_start(&self, visible_start: usize) -> i8 {
+        let mut state = self.lock_state();
+        let direction = match state.last_visible_start {
+            Some(prev) if visible_start < prev => -1,
+            Some(prev) if visible_start > prev => 1,
+            _ => 1,
+        };
+        state.last_visible_start = Some(visible_start);
+        direction
+    }
+
+    fn drain_ready(&self) -> Vec<SyntaxPrefetchChunk> {
+        let mut state = self.lock_state();
+        state.ready.drain(..).collect()
+    }
+
+    fn try_mark_pending(&self, key: SyntaxPrefetchKey) -> bool {
+        const MAX_PENDING: usize = 12;
+
+        let mut state = self.lock_state();
+        if state.pending.contains(&key) || state.ready.iter().any(|chunk| chunk.key == key) {
+            return false;
+        }
+        if state.pending.len() >= MAX_PENDING {
+            return false;
+        }
+        state.pending.insert(key)
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowRichPrefetchKey {
+    doc: DocId,
+    rev: fret_code_editor_buffer::Revision,
+    language: Arc<str>,
+    row: usize,
+    row_range: Range<usize>,
+    theme_revision: u64,
+    code_font_feature_policy_rev: u64,
+    line: Arc<str>,
+    syntax_spans: Arc<[SyntaxSpan]>,
+    row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+}
+
+#[cfg(feature = "syntax")]
+impl RowRichPrefetchKey {
+    fn new(
+        doc: DocId,
+        rev: fret_code_editor_buffer::Revision,
+        language: Arc<str>,
+        row: usize,
+        row_range: Range<usize>,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        line: Arc<str>,
+        syntax_spans: Arc<[SyntaxSpan]>,
+        row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    ) -> Self {
+        Self {
+            doc,
+            rev,
+            language,
+            row,
+            row_range,
+            theme_revision,
+            code_font_feature_policy_rev,
+            line,
+            syntax_spans,
+            row_spans,
+        }
+    }
+
+    fn matches(&self, other: &Self) -> bool {
+        self.doc == other.doc
+            && self.rev == other.rev
+            && self.language.as_ref() == other.language.as_ref()
+            && self.row == other.row
+            && self.row_range == other.row_range
+            && self.theme_revision == other.theme_revision
+            && self.code_font_feature_policy_rev == other.code_font_feature_policy_rev
+            && Arc::ptr_eq(&self.line, &other.line)
+            && Arc::ptr_eq(&self.syntax_spans, &other.syntax_spans)
+            && Arc::ptr_eq(&self.row_spans, &other.row_spans)
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowRichPrefetchChunk {
+    key: RowRichPrefetchKey,
+    rich: AttributedText,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Default)]
+struct RowRichPrefetchRuntimeState {
+    pending: Vec<RowRichPrefetchKey>,
+    ready: VecDeque<RowRichPrefetchChunk>,
+    last_visible_start: Option<usize>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Clone)]
+struct RowRichPrefetchRuntime {
+    shared: Arc<Mutex<RowRichPrefetchRuntimeState>>,
+    dispatcher: DispatcherHandle,
+}
+
+#[cfg(feature = "syntax")]
+impl std::fmt::Debug for RowRichPrefetchRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RowRichPrefetchRuntime")
+            .field("shared", &self.shared)
+            .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "syntax")]
+impl RowRichPrefetchRuntime {
+    fn new(dispatcher: DispatcherHandle) -> Self {
+        Self {
+            shared: Arc::new(Mutex::new(RowRichPrefetchRuntimeState::default())),
+            dispatcher,
+        }
+    }
+
+    fn clear(&self) {
+        let mut state = self.lock_state();
+        state.pending.clear();
+        state.ready.clear();
+        state.last_visible_start = None;
+    }
+
+    fn lock_state(&self) -> std::sync::MutexGuard<'_, RowRichPrefetchRuntimeState> {
+        self.shared
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn note_visible_start(&self, visible_start: usize) -> i8 {
+        let mut state = self.lock_state();
+        let direction = match state.last_visible_start {
+            Some(prev) if visible_start < prev => -1,
+            Some(prev) if visible_start > prev => 1,
+            _ => 1,
+        };
+        state.last_visible_start = Some(visible_start);
+        direction
+    }
+
+    fn drain_ready(&self) -> Vec<RowRichPrefetchChunk> {
+        let mut state = self.lock_state();
+        state.ready.drain(..).collect()
+    }
+
+    fn try_mark_pending(&self, key: RowRichPrefetchKey) -> bool {
+        const MAX_PENDING: usize = 3;
+
+        let mut state = self.lock_state();
+        if state.pending.iter().any(|pending| pending.matches(&key))
+            || state.ready.iter().any(|chunk| chunk.key.matches(&key))
+        {
+            return false;
+        }
+        if state.pending.len() >= MAX_PENDING {
+            return false;
+        }
+        state.pending.push(key);
+        true
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct RowSceneTextStyleKey {
+    font: FontId,
+    size_bits: u32,
+    weight: fret_core::FontWeight,
+    slant: fret_core::TextSlant,
+    line_height_bits: Option<u32>,
+    letter_spacing_em_bits: Option<u32>,
+}
+
+#[cfg(feature = "syntax")]
+impl RowSceneTextStyleKey {
+    fn from_style(style: &TextStyle) -> Self {
+        Self {
+            font: style.font.clone(),
+            size_bits: style.size.0.to_bits(),
+            weight: style.weight,
+            slant: style.slant,
+            line_height_bits: style.line_height.map(|h| h.0.to_bits()),
+            letter_spacing_em_bits: style.letter_spacing_em.map(f32::to_bits),
+        }
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct RowSceneTextConstraintsKey {
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+}
+
+#[cfg(feature = "syntax")]
+impl RowSceneTextConstraintsKey {
+    fn from_constraints(constraints: CanvasTextConstraints) -> Self {
+        let max_width_bits = match constraints.wrap {
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => None,
+            _ => constraints.max_width.map(|w| w.0.to_bits()),
+        };
+        Self {
+            max_width_bits,
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+        }
+    }
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowSceneSyntaxReplayKey {
+    row_range: Range<usize>,
+    line: Arc<str>,
+    row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    syntax_spans: Arc<[SyntaxSpan]>,
+    text_style: RowSceneTextStyleKey,
+    constraints: RowSceneTextConstraintsKey,
+    font_stack_key: u64,
+    scale_bits: u32,
+    theme_revision: u64,
+    code_font_feature_policy_rev: u64,
+    fg: ColorKey,
+}
+
+#[cfg(feature = "syntax")]
+impl RowSceneSyntaxReplayKey {
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        row_range: Range<usize>,
+        line: Arc<str>,
+        row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+        syntax_spans: Arc<[SyntaxSpan]>,
+        text_style: &TextStyle,
+        constraints: CanvasTextConstraints,
+        font_stack_key: fret_runtime::TextFontStackKey,
+        scale_factor: f32,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        fg: Color,
+    ) -> Self {
+        Self {
+            row_range,
+            line,
+            row_spans,
+            syntax_spans,
+            text_style: RowSceneTextStyleKey::from_style(text_style),
+            constraints: RowSceneTextConstraintsKey::from_constraints(constraints),
+            font_stack_key: font_stack_key.0,
+            scale_bits: scale_factor.max(1.0).to_bits(),
+            theme_revision,
+            code_font_feature_policy_rev,
+            fg: fg.into(),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn matches_current(
+        &self,
+        row_range: &Range<usize>,
+        line: &Arc<str>,
+        row_spans: &Arc<[fret_code_editor_view::DisplayRowSpan]>,
+        syntax_spans: &Arc<[SyntaxSpan]>,
+        text_style: &TextStyle,
+        constraints: CanvasTextConstraints,
+        font_stack_key: fret_runtime::TextFontStackKey,
+        scale_factor: f32,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        fg: Color,
+    ) -> bool {
+        self.row_range == *row_range
+            && Arc::ptr_eq(&self.line, line)
+            && Arc::ptr_eq(&self.row_spans, row_spans)
+            && Arc::ptr_eq(&self.syntax_spans, syntax_spans)
+            && self.text_style == RowSceneTextStyleKey::from_style(text_style)
+            && self.constraints == RowSceneTextConstraintsKey::from_constraints(constraints)
+            && self.font_stack_key == font_stack_key.0
+            && self.scale_bits == scale_factor.max(1.0).to_bits()
+            && self.theme_revision == theme_revision
+            && self.code_font_feature_policy_rev == code_font_feature_policy_rev
+            && self.fg == fg.into()
+    }
+}
+
 /// Lightweight counters for editor-local caches (bundle-friendly, no allocations).
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct CodeEditorCacheStats {
@@ -498,6 +900,18 @@ pub struct CodeEditorCacheStats {
     pub row_text_misses: u64,
     pub row_text_evictions: u64,
     pub row_text_resets: u64,
+
+    pub row_scene_get_calls: u64,
+    pub row_scene_hits: u64,
+    pub row_scene_misses: u64,
+    pub row_scene_evictions: u64,
+    pub row_scene_resets: u64,
+    #[cfg(feature = "syntax")]
+    pub row_scene_fast_get_calls: u64,
+    #[cfg(feature = "syntax")]
+    pub row_scene_fast_hits: u64,
+    #[cfg(feature = "syntax")]
+    pub row_scene_fast_misses: u64,
 
     #[cfg(feature = "syntax")]
     pub row_rich_get_calls: u64,
@@ -536,16 +950,24 @@ pub struct CodeEditorCacheSizeSnapshotV1 {
     pub schema_version: u32,
 
     pub row_text_cache_entries: u64,
+    pub row_text_cache_queue_len: u64,
     pub row_text_cache_text_bytes_estimate_total: u64,
     pub row_text_cache_row_spans_len_total: u64,
 
     pub row_geom_cache_entries: u64,
+    pub row_geom_cache_queue_len: u64,
     pub row_geom_cache_caret_stops_len_total: u64,
 
+    pub row_scene_cache_entries: u64,
+    pub row_scene_cache_queue_len: u64,
+    pub row_scene_cache_scene_ops_len_total: u64,
+
     pub syntax_row_cache_entries: u64,
+    pub syntax_row_cache_queue_len: u64,
     pub syntax_row_cache_spans_len_total: u64,
 
     pub row_rich_cache_entries: u64,
+    pub row_rich_cache_queue_len: u64,
     pub row_rich_cache_line_bytes_estimate_total: u64,
     pub row_rich_cache_row_spans_len_total: u64,
     pub row_rich_cache_syntax_spans_len_total: u64,
@@ -653,6 +1075,56 @@ impl CodeEditorCacheStats {
             0
         }
     }
+
+    pub fn row_scene_get_calls(&self) -> u64 {
+        self.row_scene_get_calls
+    }
+
+    pub fn row_scene_hits(&self) -> u64 {
+        self.row_scene_hits
+    }
+
+    pub fn row_scene_misses(&self) -> u64 {
+        self.row_scene_misses
+    }
+
+    pub fn row_scene_evictions(&self) -> u64 {
+        self.row_scene_evictions
+    }
+
+    pub fn row_scene_resets(&self) -> u64 {
+        self.row_scene_resets
+    }
+
+    #[cfg(feature = "syntax")]
+    pub fn row_scene_fast_get_calls(&self) -> u64 {
+        self.row_scene_fast_get_calls
+    }
+
+    #[cfg(not(feature = "syntax"))]
+    pub fn row_scene_fast_get_calls(&self) -> u64 {
+        0
+    }
+
+    #[cfg(feature = "syntax")]
+    pub fn row_scene_fast_hits(&self) -> u64 {
+        self.row_scene_fast_hits
+    }
+
+    #[cfg(not(feature = "syntax"))]
+    pub fn row_scene_fast_hits(&self) -> u64 {
+        0
+    }
+
+    #[cfg(feature = "syntax")]
+    pub fn row_scene_fast_misses(&self) -> u64 {
+        self.row_scene_fast_misses
+    }
+
+    #[cfg(not(feature = "syntax"))]
+    pub fn row_scene_fast_misses(&self) -> u64 {
+        0
+    }
 }
 
 /// Frame-local timing counters for the code editor's Canvas paint path.
@@ -664,10 +1136,14 @@ pub struct CodeEditorPaintPerfFrame {
     pub visible_start: u64,
     pub visible_end: u64,
     pub visible_rows: u64,
+    pub cache_base_entries: u64,
+    pub cache_frame_min_entries: u64,
+    pub cache_effective_entries: u64,
 
     pub rows_painted: u64,
     pub rows_drew_rich: u64,
-    pub quads_background: u64,
+    pub rows_scene_replayed: u64,
+    pub rows_scene_stored: u64,
     pub quads_selection: u64,
     pub quads_caret: u64,
 
@@ -677,10 +1153,66 @@ pub struct CodeEditorPaintPerfFrame {
     pub us_syntax_spans: u64,
     pub us_rich_materialize: u64,
     pub us_text_draw: u64,
+    pub us_row_rich_cache_compare: u64,
+    pub us_row_geom_key: u64,
+    pub us_row_scene_key: u64,
+    pub us_row_scene_fast_probe: u64,
+    pub us_row_scene_full_probe: u64,
+    pub us_row_scene_fast_key_compare: u64,
+    pub us_row_scene_full_key_compare: u64,
+    pub us_row_scene_replay_touch: u64,
+    pub us_row_scene_replay_ops: u64,
+    pub us_row_scene_capture_ops: u64,
+    pub us_row_scene_store: u64,
+    pub us_row_scene_fast_path: u64,
+    pub us_row_scene_full_path: u64,
+    pub syntax_rows_stored: u64,
+    pub us_syntax_slice: u64,
+    pub us_syntax_highlight: u64,
+    pub us_syntax_distribute: u64,
+    pub us_syntax_store: u64,
     pub us_selection_rects: u64,
     pub us_caret_x: u64,
     pub us_caret_stops: u64,
     pub us_caret_rect: u64,
+    pub us_row_geom_cache: u64,
+    pub us_row_content_resolve: u64,
+    pub us_row_geom_resolve: u64,
+    pub us_row_overlay: u64,
+    pub us_frame_overlay_prepare: u64,
+
+    pub ns_total: u64,
+    pub ns_row_text: u64,
+    pub ns_baseline_measure: u64,
+    pub ns_syntax_spans: u64,
+    pub ns_rich_materialize: u64,
+    pub ns_text_draw: u64,
+    pub ns_row_rich_cache_compare: u64,
+    pub ns_row_geom_key: u64,
+    pub ns_row_scene_key: u64,
+    pub ns_row_scene_fast_probe: u64,
+    pub ns_row_scene_full_probe: u64,
+    pub ns_row_scene_fast_key_compare: u64,
+    pub ns_row_scene_full_key_compare: u64,
+    pub ns_row_scene_replay_touch: u64,
+    pub ns_row_scene_replay_ops: u64,
+    pub ns_row_scene_capture_ops: u64,
+    pub ns_row_scene_store: u64,
+    pub ns_row_scene_fast_path: u64,
+    pub ns_row_scene_full_path: u64,
+    pub ns_syntax_slice: u64,
+    pub ns_syntax_highlight: u64,
+    pub ns_syntax_distribute: u64,
+    pub ns_syntax_store: u64,
+    pub ns_selection_rects: u64,
+    pub ns_caret_x: u64,
+    pub ns_caret_stops: u64,
+    pub ns_caret_rect: u64,
+    pub ns_row_geom_cache: u64,
+    pub ns_row_content_resolve: u64,
+    pub ns_row_geom_resolve: u64,
+    pub ns_row_overlay: u64,
+    pub ns_frame_overlay_prepare: u64,
 }
 
 fn paint_perf_enabled_from_env() -> bool {
@@ -689,6 +1221,28 @@ fn paint_perf_enabled_from_env() -> bool {
         std::env::var_os("FRET_CODE_EDITOR_DIAG_PAINT_PERF")
             .is_some_and(|v| !v.is_empty() && v != "0")
     })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PaintFrameCaretOverlay {
+    byte: usize,
+    row: usize,
+    col: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct PaintFrameOverlayState {
+    selection_start: usize,
+    selection_end: usize,
+    selection_start_point: DisplayPoint,
+    selection_end_point: DisplayPoint,
+    caret: Option<PaintFrameCaretOverlay>,
+}
+
+impl PaintFrameOverlayState {
+    fn selection_range(self) -> Range<usize> {
+        self.selection_start..self.selection_end
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -744,12 +1298,24 @@ struct CodeEditorState {
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
     row_geom_cache_caret_stops_len_total: u64,
+    row_scene_cache_rev: fret_code_editor_buffer::Revision,
+    row_scene_cache_wrap_cols: Option<usize>,
+    row_scene_cache_folds_epoch: u64,
+    row_scene_cache_inlays_epoch: u64,
+    row_scene_cache_display_map_epoch: u64,
+    row_scene_cache_tick: u64,
+    row_scene_cache: HashMap<usize, (RowSceneCacheEntry, u64)>,
+    row_scene_cache_queue: VecDeque<(usize, u64)>,
+    row_scene_cache_scene_ops_len_total: u64,
+    paint_frame_visible_window: Option<(usize, usize)>,
+    paint_frame_cache_min_entries: usize,
     ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
     selection_rect_scratch: Vec<Rect>,
     baseline_measure_cache: Option<BaselineMeasureCache>,
     paint_perf_enabled: bool,
     paint_perf_frame_seq: u64,
     paint_perf_frame: CodeEditorPaintPerfFrame,
+    paint_frame_overlay: PaintFrameOverlayState,
     #[cfg(feature = "syntax")]
     language: Option<Arc<str>>,
     #[cfg(feature = "syntax")]
@@ -764,6 +1330,10 @@ struct CodeEditorState {
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
     #[cfg(feature = "syntax")]
     syntax_row_cache_spans_len_total: u64,
+    #[cfg(feature = "syntax")]
+    syntax_prefetch_runtime: Option<SyntaxPrefetchRuntime>,
+    #[cfg(feature = "syntax")]
+    row_rich_prefetch_runtime: Option<RowRichPrefetchRuntime>,
     #[cfg(feature = "syntax")]
     row_rich_cache_tick: u64,
     #[cfg(feature = "syntax")]
@@ -812,6 +1382,89 @@ struct RowTextCacheEntry {
     row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ColorKey {
+    r: u32,
+    g: u32,
+    b: u32,
+    a: u32,
+}
+
+impl From<Color> for ColorKey {
+    fn from(value: Color) -> Self {
+        Self {
+            r: value.r.to_bits(),
+            g: value.g.to_bits(),
+            b: value.b.to_bits(),
+            a: value.a.to_bits(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum RowScenePaintKey {
+    Plain {
+        fg: ColorKey,
+    },
+    #[cfg(feature = "syntax")]
+    Syntax {
+        fg: ColorKey,
+        theme_revision: u64,
+    },
+    Preedit {
+        fg: ColorKey,
+        selection_bg: ColorKey,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct RowSceneKey {
+    row_geom_key: geom::RowGeomKey,
+    paint_key: RowScenePaintKey,
+}
+
+impl RowSceneKey {
+    fn plain(row_geom_key: geom::RowGeomKey, fg: Color) -> Self {
+        Self {
+            row_geom_key,
+            paint_key: RowScenePaintKey::Plain { fg: fg.into() },
+        }
+    }
+
+    #[cfg(feature = "syntax")]
+    fn syntax(row_geom_key: geom::RowGeomKey, fg: Color, theme_revision: u64) -> Self {
+        Self {
+            row_geom_key,
+            paint_key: RowScenePaintKey::Syntax {
+                fg: fg.into(),
+                theme_revision,
+            },
+        }
+    }
+
+    fn preedit(row_geom_key: geom::RowGeomKey, fg: Color, selection_bg: Color) -> Self {
+        Self {
+            row_geom_key,
+            paint_key: RowScenePaintKey::Preedit {
+                fg: fg.into(),
+                selection_bg: selection_bg.into(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RowSceneCacheEntry {
+    key: RowSceneKey,
+    origin: Point,
+    geom: geom::RowGeom,
+    is_rich: bool,
+    ops: Vec<SceneOp>,
+    hosted_resources: fret_ui::canvas::CanvasHostedResources,
+    #[cfg(feature = "syntax")]
+    syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct BaselineMeasureCache {
     max_width: Px,
@@ -847,7 +1500,36 @@ impl CodeEditorState {
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
         self.row_geom_cache_caret_stops_len_total = 0;
+        self.invalidate_row_scene_cache();
         self.baseline_measure_cache = None;
+    }
+
+    fn clear_row_scene_cache(&mut self) {
+        self.row_scene_cache_tick = 0;
+        self.row_scene_cache.clear();
+        self.row_scene_cache_queue.clear();
+        self.row_scene_cache_scene_ops_len_total = 0;
+        self.cache_stats.row_scene_resets = self.cache_stats.row_scene_resets.saturating_add(1);
+    }
+
+    #[cfg(feature = "syntax")]
+    fn clear_row_rich_prefetch_runtime(&mut self) {
+        if let Some(runtime) = self.row_rich_prefetch_runtime.as_ref() {
+            runtime.clear();
+        }
+    }
+
+    fn sync_row_scene_cache_epoch(&mut self) {
+        self.row_scene_cache_rev = self.buffer.revision();
+        self.row_scene_cache_wrap_cols = self.display_wrap_cols;
+        self.row_scene_cache_folds_epoch = self.folds_epoch;
+        self.row_scene_cache_inlays_epoch = self.inlays_epoch;
+        self.row_scene_cache_display_map_epoch = self.display_map_epoch;
+    }
+
+    fn invalidate_row_scene_cache(&mut self) {
+        self.sync_row_scene_cache_epoch();
+        self.clear_row_scene_cache();
     }
 
     fn invalidate_row_caches(&mut self) {
@@ -864,9 +1546,11 @@ impl CodeEditorState {
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
         self.row_geom_cache_caret_stops_len_total = 0;
+        self.invalidate_row_scene_cache();
 
         #[cfg(feature = "syntax")]
         {
+            self.clear_row_rich_prefetch_runtime();
             self.row_rich_cache_tick = 0;
             self.row_rich_cache.clear();
             self.row_rich_cache_queue.clear();
@@ -941,25 +1625,72 @@ impl CodeEditorState {
             )
         };
         self.display_map_epoch = self.display_map_epoch.saturating_add(1);
+        #[cfg(feature = "syntax")]
+        self.clear_row_rich_prefetch_runtime();
     }
 
-    fn paint_perf_begin_frame(&mut self, frame: WindowedRowsPaintFrame) {
-        if !self.paint_perf_enabled {
-            return;
+    fn begin_paint_frame(&mut self, frame: WindowedRowsPaintFrame) {
+        let visible_window =
+            normalized_paint_frame_visible_window(frame.visible_start, frame.visible_end);
+        self.paint_frame_cache_min_entries =
+            paint_frame_cache_min_entries(self.paint_frame_visible_window, visible_window);
+        self.paint_frame_visible_window = visible_window;
+
+        if self.paint_perf_enabled {
+            self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
+            let visible_rows = visible_window
+                .map(|(start, end)| paint_frame_visible_row_count(start, end) as u64)
+                .unwrap_or(0);
+            self.paint_perf_frame = CodeEditorPaintPerfFrame {
+                frame_seq: self.paint_perf_frame_seq,
+                visible_start: frame.visible_start as u64,
+                visible_end: frame.visible_end as u64,
+                visible_rows,
+                cache_frame_min_entries: self.paint_frame_cache_min_entries as u64,
+                ..CodeEditorPaintPerfFrame::default()
+            };
         }
 
-        self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
-        let visible_rows = frame
-            .visible_end
-            .saturating_sub(frame.visible_start)
-            .saturating_add(1) as u64;
-        self.paint_perf_frame = CodeEditorPaintPerfFrame {
-            frame_seq: self.paint_perf_frame_seq,
-            visible_start: frame.visible_start as u64,
-            visible_end: frame.visible_end as u64,
-            visible_rows,
-            ..CodeEditorPaintPerfFrame::default()
+        let started = self.paint_perf_enabled.then(Instant::now);
+        let len = self.buffer.len_bytes();
+        let selection = self.selection.normalized();
+        let selection_start = selection.start.min(len);
+        let selection_end = selection.end.min(len);
+        let (selection_start_point, selection_end_point) = if selection_start < selection_end {
+            (
+                self.display_map
+                    .byte_to_display_point(&self.buffer, selection_start),
+                self.display_map
+                    .byte_to_display_point(&self.buffer, selection_end),
+            )
+        } else {
+            (DisplayPoint::default(), DisplayPoint::default())
         };
+        let caret = if self.selection.is_caret() {
+            let byte = self.selection.caret().min(len);
+            let point = self.display_map.byte_to_display_point(&self.buffer, byte);
+            Some(PaintFrameCaretOverlay {
+                byte,
+                row: point.row,
+                col: point.col,
+            })
+        } else {
+            None
+        };
+        self.paint_frame_overlay = PaintFrameOverlayState {
+            selection_start,
+            selection_end,
+            selection_start_point,
+            selection_end_point,
+            caret,
+        };
+        if let Some(started) = started {
+            let elapsed = started.elapsed();
+            self.paint_perf_frame.us_frame_overlay_prepare =
+                u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX);
+            self.paint_perf_frame.ns_frame_overlay_prepare =
+                u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
+        }
     }
 
     fn set_preedit(&mut self, preedit: Option<PreeditState>) {
@@ -1105,12 +1836,24 @@ impl CodeEditorHandle {
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
                 row_geom_cache_caret_stops_len_total: 0,
+                row_scene_cache_rev: fret_code_editor_buffer::Revision(0),
+                row_scene_cache_wrap_cols: None,
+                row_scene_cache_folds_epoch: 0,
+                row_scene_cache_inlays_epoch: 0,
+                row_scene_cache_display_map_epoch: 0,
+                row_scene_cache_tick: 0,
+                row_scene_cache: HashMap::new(),
+                row_scene_cache_queue: VecDeque::new(),
+                row_scene_cache_scene_ops_len_total: 0,
+                paint_frame_visible_window: None,
+                paint_frame_cache_min_entries: 0,
                 ime_surrounding_text_cache: None,
                 selection_rect_scratch: Vec::new(),
                 baseline_measure_cache: None,
                 paint_perf_enabled: paint_perf_enabled_from_env(),
                 paint_perf_frame_seq: 0,
                 paint_perf_frame: CodeEditorPaintPerfFrame::default(),
+                paint_frame_overlay: PaintFrameOverlayState::default(),
                 #[cfg(feature = "syntax")]
                 language: None,
                 #[cfg(feature = "syntax")]
@@ -1125,6 +1868,10 @@ impl CodeEditorHandle {
                 syntax_row_cache_queue: VecDeque::new(),
                 #[cfg(feature = "syntax")]
                 syntax_row_cache_spans_len_total: 0,
+                #[cfg(feature = "syntax")]
+                syntax_prefetch_runtime: None,
+                #[cfg(feature = "syntax")]
+                row_rich_prefetch_runtime: None,
                 #[cfg(feature = "syntax")]
                 row_rich_cache_tick: 0,
                 #[cfg(feature = "syntax")]
@@ -1176,6 +1923,7 @@ impl CodeEditorHandle {
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
             st.syntax_row_cache_spans_len_total = 0;
+            st.clear_row_rich_prefetch_runtime();
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
@@ -1183,6 +1931,7 @@ impl CodeEditorHandle {
             st.row_rich_cache_row_spans_len_total = 0;
             st.row_rich_cache_syntax_spans_len_total = 0;
             st.row_rich_cache_rich_spans_len_total = 0;
+            st.invalidate_row_scene_cache();
             st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
         }
         #[cfg(not(feature = "syntax"))]
@@ -1367,12 +2116,17 @@ impl CodeEditorHandle {
     pub fn cache_size_snapshot(&self) -> CodeEditorCacheSizeSnapshotV1 {
         let st = self.state.borrow();
         let mut out = CodeEditorCacheSizeSnapshotV1 {
-            schema_version: 1,
+            schema_version: 2,
             row_text_cache_entries: st.row_text_cache.len() as u64,
+            row_text_cache_queue_len: st.row_text_cache_queue.len() as u64,
             row_text_cache_text_bytes_estimate_total: st.row_text_cache_text_bytes_estimate_total,
             row_text_cache_row_spans_len_total: st.row_text_cache_row_spans_len_total,
             row_geom_cache_entries: st.row_geom_cache.len() as u64,
+            row_geom_cache_queue_len: st.row_geom_cache_queue.len() as u64,
             row_geom_cache_caret_stops_len_total: st.row_geom_cache_caret_stops_len_total,
+            row_scene_cache_entries: st.row_scene_cache.len() as u64,
+            row_scene_cache_queue_len: st.row_scene_cache_queue.len() as u64,
+            row_scene_cache_scene_ops_len_total: st.row_scene_cache_scene_ops_len_total,
             selection_rect_scratch_capacity: st.selection_rect_scratch.capacity() as u64,
             ..Default::default()
         };
@@ -1380,8 +2134,10 @@ impl CodeEditorHandle {
         #[cfg(feature = "syntax")]
         {
             out.syntax_row_cache_entries = st.syntax_row_cache.len() as u64;
+            out.syntax_row_cache_queue_len = st.syntax_row_cache_queue.len() as u64;
             out.syntax_row_cache_spans_len_total = st.syntax_row_cache_spans_len_total;
             out.row_rich_cache_entries = st.row_rich_cache.len() as u64;
+            out.row_rich_cache_queue_len = st.row_rich_cache_queue.len() as u64;
             out.row_rich_cache_line_bytes_estimate_total =
                 st.row_rich_cache_line_bytes_estimate_total;
             out.row_rich_cache_row_spans_len_total = st.row_rich_cache_row_spans_len_total;
@@ -1487,6 +2243,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn clear_all_folds(&self) {
@@ -1514,6 +2271,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn set_line_inlays(&self, line: usize, spans: Vec<InlaySpan>) {
@@ -1552,6 +2310,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn clear_all_inlays(&self) {
@@ -1579,6 +2338,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     pub fn debug_decorated_line_text(&self, line: usize) -> Option<String> {
@@ -1594,6 +2354,10 @@ impl CodeEditorHandle {
     pub fn replace_buffer(&self, buffer: TextBuffer) {
         let mut st = self.state.borrow_mut();
         st.buffer = buffer;
+        #[cfg(feature = "syntax")]
+        if let Some(runtime) = st.syntax_prefetch_runtime.as_ref() {
+            runtime.clear();
+        }
         st.selection = Selection::default();
         st.preedit = None;
         st.caret_preferred_x = None;
@@ -1630,6 +2394,11 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.sync_row_scene_cache_epoch();
+        st.row_scene_cache_tick = 0;
+        st.row_scene_cache.clear();
+        st.row_scene_cache_queue.clear();
+        st.row_scene_cache_scene_ops_len_total = 0;
         #[cfg(feature = "syntax")]
         {
             st.syntax_row_cache_rev = st.buffer.revision();
@@ -1638,6 +2407,7 @@ impl CodeEditorHandle {
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
             st.syntax_row_cache_spans_len_total = 0;
+            st.clear_row_rich_prefetch_runtime();
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
@@ -1723,6 +2493,7 @@ impl CodeEditorHandle {
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
+        st.invalidate_row_scene_cache();
     }
 
     /// v1 code-wrap seam (ecosystem policy).
@@ -1756,6 +2527,7 @@ impl CodeEditorHandle {
             st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
             #[cfg(feature = "syntax")]
             {
+                st.clear_row_rich_prefetch_runtime();
                 st.row_rich_cache_tick = 0;
                 st.row_rich_cache.clear();
                 st.row_rich_cache_queue.clear();
@@ -1765,6 +2537,7 @@ impl CodeEditorHandle {
                 st.row_rich_cache_rich_spans_len_total = 0;
                 st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
             }
+            st.invalidate_row_scene_cache();
         }
     }
 }
@@ -1901,7 +2674,39 @@ impl CodeEditor {
             let text_cache_max_entries = viewport_rows
                 .saturating_add(overscan.saturating_mul(2))
                 .saturating_add(128)
-                .clamp(256, 8_192);
+                .clamp(
+                    CODE_EDITOR_ROW_CACHE_MIN_ENTRIES,
+                    CODE_EDITOR_ROW_CACHE_MAX_ENTRIES,
+                );
+            #[cfg(feature = "syntax")]
+            let window = cx.window;
+
+            #[cfg(feature = "syntax")]
+            {
+                if let Some(dispatcher) = cx.app.global::<DispatcherHandle>().cloned() {
+                    let exec = dispatcher.exec_capabilities();
+                    let supports_prefetch = exec.background_work != ExecBackgroundWork::None
+                        && exec.wake != ExecWake::None;
+                    let mut st = editor_state.borrow_mut();
+                    if supports_prefetch {
+                        if st.syntax_prefetch_runtime.is_none() {
+                            st.syntax_prefetch_runtime =
+                                Some(SyntaxPrefetchRuntime::new(dispatcher.clone()));
+                        }
+                        if st.row_rich_prefetch_runtime.is_none() {
+                            st.row_rich_prefetch_runtime =
+                                Some(RowRichPrefetchRuntime::new(dispatcher));
+                        }
+                    } else {
+                        if let Some(runtime) = st.syntax_prefetch_runtime.take() {
+                            runtime.clear();
+                        }
+                        if let Some(runtime) = st.row_rich_prefetch_runtime.take() {
+                            runtime.clear();
+                        }
+                    }
+                }
+            }
 
             cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
             let font_stack_key = cx
@@ -2002,13 +2807,45 @@ impl CodeEditor {
                 path: CanvasCacheTuning::transient(),
                 svg: CanvasCacheTuning::transient(),
             };
-            let paint_perf_hook = paint_perf_enabled_from_env().then(|| {
+            #[cfg(feature = "syntax")]
+            let syntax_prefetch_hook = {
                 let editor_state = editor_state.clone();
                 let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
-                    editor_state.borrow_mut().paint_perf_begin_frame(frame);
+                    paint::schedule_syntax_prefetch_for_frame(
+                        &mut editor_state.borrow_mut(),
+                        frame,
+                        text_cache_max_entries,
+                        window,
+                    );
+                });
+                Some(hook)
+            };
+            #[cfg(not(feature = "syntax"))]
+            let syntax_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
+            #[cfg(feature = "syntax")]
+            let row_rich_prefetch_hook = {
+                let editor_state = editor_state.clone();
+                let hook: OnWindowedRowsPaintFrame = Arc::new(move |painter, frame| {
+                    let theme = painter.theme().clone();
+                    paint::schedule_row_rich_prefetch_for_frame(
+                        &mut editor_state.borrow_mut(),
+                        frame,
+                        text_cache_max_entries,
+                        window,
+                        theme,
+                    );
+                });
+                Some(hook)
+            };
+            #[cfg(not(feature = "syntax"))]
+            let row_rich_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
+            let paint_frame_hook = {
+                let editor_state = editor_state.clone();
+                let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
+                    editor_state.borrow_mut().begin_paint_frame(frame);
                 });
                 hook
-            });
+            };
 
             let torture_hook = torture.map(|torture| {
                 let scroll_handle = scroll_handle.clone();
@@ -2071,6 +2908,33 @@ impl CodeEditor {
                                     row_text_resets: stats
                                         .row_text_resets
                                         .saturating_sub(prev.row_text_resets),
+                                    row_scene_get_calls: stats
+                                        .row_scene_get_calls
+                                        .saturating_sub(prev.row_scene_get_calls),
+                                    row_scene_hits: stats
+                                        .row_scene_hits
+                                        .saturating_sub(prev.row_scene_hits),
+                                    row_scene_misses: stats
+                                        .row_scene_misses
+                                        .saturating_sub(prev.row_scene_misses),
+                                    row_scene_evictions: stats
+                                        .row_scene_evictions
+                                        .saturating_sub(prev.row_scene_evictions),
+                                    row_scene_resets: stats
+                                        .row_scene_resets
+                                        .saturating_sub(prev.row_scene_resets),
+                                    #[cfg(feature = "syntax")]
+                                    row_scene_fast_get_calls: stats
+                                        .row_scene_fast_get_calls
+                                        .saturating_sub(prev.row_scene_fast_get_calls),
+                                    #[cfg(feature = "syntax")]
+                                    row_scene_fast_hits: stats
+                                        .row_scene_fast_hits
+                                        .saturating_sub(prev.row_scene_fast_hits),
+                                    #[cfg(feature = "syntax")]
+                                    row_scene_fast_misses: stats
+                                        .row_scene_fast_misses
+                                        .saturating_sub(prev.row_scene_fast_misses),
 
                                     #[cfg(feature = "syntax")]
                                     row_rich_get_calls: stats
@@ -2129,7 +2993,7 @@ impl CodeEditor {
                         );
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
-                            rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
+                            rect: Rect::new(origin, Size::new(Px(820.0), Px(24.0))),
                             background: fret_core::Paint::Solid(overlay_bg).into(),
 
                             border: Edges::all(Px(0.0)),
@@ -2139,7 +3003,7 @@ impl CodeEditor {
                         });
 
                         let label = format!(
-                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{}) geom row={} pref_x={:?} stops={:?} cache={}",
+                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) scene {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{}) geom row={} pref_x={:?} stops={:?} cache={}",
                             frame.visible_start,
                             frame.visible_end,
                             offset.y.0,
@@ -2151,6 +3015,12 @@ impl CodeEditor {
                             delta.row_text_get_calls,
                             delta.row_text_hits,
                             delta.row_text_misses,
+                            stats.row_scene_get_calls,
+                            stats.row_scene_hits,
+                            stats.row_scene_misses,
+                            delta.row_scene_get_calls,
+                            delta.row_scene_hits,
+                            delta.row_scene_misses,
                             stats.syntax_get_calls,
                             stats.syntax_hits,
                             stats.syntax_misses,
@@ -2176,7 +3046,7 @@ impl CodeEditor {
                                 a: 1.0,
                             },
                             CanvasTextConstraints {
-                                max_width: Some(Px(600.0)),
+                                max_width: Some(Px(800.0)),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                             },
@@ -2187,16 +3057,27 @@ impl CodeEditor {
                 hook
             });
 
-            surface_props.on_paint_frame = match (paint_perf_hook, torture_hook) {
-                (Some(a), Some(b)) => {
-                    let hook: OnWindowedRowsPaintFrame = Arc::new(move |painter, frame| {
-                        a(painter, frame);
-                        b(painter, frame);
-                    });
-                    Some(hook)
+            surface_props.on_paint_frame = {
+                let mut hooks: Vec<OnWindowedRowsPaintFrame> = Vec::new();
+                hooks.push(paint_frame_hook);
+                if let Some(hook) = syntax_prefetch_hook {
+                    hooks.push(hook);
                 }
-                (Some(h), None) | (None, Some(h)) => Some(h),
-                (None, None) => None,
+                if let Some(hook) = row_rich_prefetch_hook {
+                    hooks.push(hook);
+                }
+                if let Some(hook) = torture_hook {
+                    hooks.push(hook);
+                }
+                match hooks.len() {
+                    0 => None,
+                    1 => hooks.pop(),
+                    _ => Some(Arc::new(move |painter, frame| {
+                        for hook in &hooks {
+                            hook(painter, frame);
+                        }
+                    })),
+                }
             };
 
             cx.text_input_region(region_props, |cx| {

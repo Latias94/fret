@@ -13,11 +13,23 @@ Usage:
     [--repeat <n>] \
     [--warmup-frames <n>] \
     [--headroom-pct <n>] \
+    [--threshold-surface <ui|ui-renderer-payload|renderer-payload|renderer|all>] \
     [--work-dir <path>] \
-    [--launch-bin <path>]
+    [--launch-bin <path>] \
+    [--prewarm-script <path>] \
+    [--prelude-script <path>] \
+    [--reuse-launch-per-script] \
+    [--no-default-suite-hooks] \
+    [--allow-failures]
 
 Notes:
   - Designed for Fret `diag perf` baseline generation/selection.
+  - By default, applies the font prewarm and reset-diagnostics prelude hooks used by the perf workstream.
+  - By default, uses the UI threshold surface; renderer timings stay measured but are not hard
+    thresholds unless --threshold-surface renderer/all is passed. Use ui-renderer-payload when
+    UI thresholds plus renderer payload metrics should be gated, or renderer-payload for payload-only gates.
+  - Validation repeats use the same repeat count as baseline generation.
+  - The selected candidate must have zero validation failures unless --allow-failures is passed.
   - Candidate winner priority:
       1) fewer validation failures
       2) lower suite p90 (sum of top_total_time_us)
@@ -43,9 +55,15 @@ validate_runs=3
 repeat=7
 warmup_frames=5
 headroom_pct=20
+threshold_surface="ui"
 work_dir="target/fret-diag-baseline-select-$(date +%s)"
 launch_bin="target/release/fret-ui-gallery"
+default_suite_hooks=true
+reuse_launch_per_script=false
+allow_failures=false
 declare -a preset_paths=()
+declare -a prewarm_scripts=()
+declare -a prelude_scripts=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -81,6 +99,10 @@ while [[ $# -gt 0 ]]; do
       headroom_pct="$2"
       shift 2
       ;;
+    --threshold-surface)
+      threshold_surface="$2"
+      shift 2
+      ;;
     --work-dir)
       work_dir="$2"
       shift 2
@@ -88,6 +110,26 @@ while [[ $# -gt 0 ]]; do
     --launch-bin)
       launch_bin="$2"
       shift 2
+      ;;
+    --prewarm-script)
+      prewarm_scripts+=("$2")
+      shift 2
+      ;;
+    --prelude-script)
+      prelude_scripts+=("$2")
+      shift 2
+      ;;
+    --reuse-launch-per-script)
+      reuse_launch_per_script=true
+      shift
+      ;;
+    --no-default-suite-hooks)
+      default_suite_hooks=false
+      shift
+      ;;
+    --allow-failures)
+      allow_failures=true
+      shift
       ;;
     -h|--help)
       usage
@@ -118,6 +160,25 @@ if [[ "$baseline_out" = /* ]]; then
   baseline_out_abs="$baseline_out"
 fi
 
+if [[ "$default_suite_hooks" == "true" ]]; then
+  prewarm_scripts=("tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json" "${prewarm_scripts[@]}")
+  prelude_scripts=("tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json" "${prelude_scripts[@]}")
+fi
+
+for hook in "${prewarm_scripts[@]}" "${prelude_scripts[@]}"; do
+  if [[ ! -f "$hook" ]]; then
+    echo "error: suite hook script not found: $hook" >&2
+    exit 2
+  fi
+done
+
+printf '[select] prewarm:'
+printf ' %s' "${prewarm_scripts[@]}"
+echo
+printf '[select] prelude:'
+printf ' %s' "${prelude_scripts[@]}"
+echo
+
 candidate_results_path="$work_dir/candidate-results.json"
 candidate_results_payload='[]'
 
@@ -136,7 +197,20 @@ run_baseline() {
     diag perf "$suite"
     --dir "$candidate_out_dir"
     --timeout-ms 300000
+  )
+  for script in "${prewarm_scripts[@]}"; do
+    cmd+=(--prewarm-script "$script")
+  done
+  for script in "${prelude_scripts[@]}"; do
+    cmd+=(--prelude-script "$script")
+  done
+  cmd+=(
     --reuse-launch
+  )
+  if [[ "$reuse_launch_per_script" == "true" ]]; then
+    cmd+=(--reuse-launch-per-script)
+  fi
+  cmd+=(
     --repeat "$repeat"
     --warmup-frames "$warmup_frames"
     --sort time
@@ -144,6 +218,7 @@ run_baseline() {
     --json
     --perf-baseline-out "$candidate_baseline"
     --perf-baseline-headroom-pct "$headroom_pct"
+    --perf-baseline-threshold-surface "$threshold_surface"
   )
 
   if ((${#preset_paths[@]})); then
@@ -175,8 +250,21 @@ run_validation() {
     diag perf "$suite"
     --dir "$validation_out_dir"
     --timeout-ms 300000
+  )
+  for script in "${prewarm_scripts[@]}"; do
+    cmd+=(--prewarm-script "$script")
+  done
+  for script in "${prelude_scripts[@]}"; do
+    cmd+=(--prelude-script "$script")
+  done
+  cmd+=(
     --reuse-launch
-    --repeat 3
+  )
+  if [[ "$reuse_launch_per_script" == "true" ]]; then
+    cmd+=(--reuse-launch-per-script)
+  fi
+  cmd+=(
+    --repeat "$repeat"
     --warmup-frames "$warmup_frames"
     --sort time
     --top 3
@@ -272,24 +360,47 @@ if [[ -z "$best_candidate" ]]; then
   exit 3
 fi
 
-mkdir -p "$(dirname "$baseline_out_abs")"
-cp "$best_candidate" "$baseline_out_abs"
 printf '%s\n' "$candidate_results_payload" > "$candidate_results_path"
+
+prewarm_scripts_json="[]"
+if [[ "${#prewarm_scripts[@]}" -gt 0 ]]; then
+  prewarm_scripts_json="$(printf '%s\n' "${prewarm_scripts[@]}" | jq -R . | jq -s .)"
+fi
+prelude_scripts_json="[]"
+if [[ "${#prelude_scripts[@]}" -gt 0 ]]; then
+  prelude_scripts_json="$(printf '%s\n' "${prelude_scripts[@]}" | jq -R . | jq -s .)"
+fi
 
 summary_file="$work_dir/selection-summary.json"
 jq -n \
   --arg suite "$suite" \
   --arg baseline_out "$baseline_out_abs" \
   --arg best_candidate "$best_candidate" \
+  --arg threshold_surface "$threshold_surface" \
   --argjson best_failures "$best_failures" \
   --argjson best_resize_p90 "$best_resize_p90" \
   --argjson best_threshold_sum "$best_threshold_sum" \
+  --argjson prewarm_scripts "$prewarm_scripts_json" \
+  --argjson prelude_scripts "$prelude_scripts_json" \
+  --argjson default_suite_hooks "$default_suite_hooks" \
+  --argjson reuse_launch_per_script "$reuse_launch_per_script" \
+  --argjson repeat "$repeat" \
+  --argjson allow_failures "$([[ "$allow_failures" == "true" ]] && echo true || echo false)" \
   --argjson candidate_results "$candidate_results_payload" \
   '{
     schema_version: 1,
     kind: "perf_baseline_selection",
     suite: $suite,
     baseline_out: $baseline_out,
+    suite_hooks: {
+      prewarm: $prewarm_scripts,
+      prelude: $prelude_scripts,
+      reuse_launch_per_script: $reuse_launch_per_script,
+      default_suite_hooks: $default_suite_hooks
+    },
+    threshold_surface: $threshold_surface,
+    validate_repeat: $repeat,
+    allow_failures: $allow_failures,
     best_candidate: {
       path: $best_candidate,
       fail_total: $best_failures,
@@ -299,6 +410,14 @@ jq -n \
     },
     candidates: $candidate_results
   }' > "$summary_file"
+
+if ((best_failures != 0)) && [[ "$allow_failures" != "true" ]]; then
+  echo "error: selected candidate still has validation failures (fail_total=${best_failures}). See: ${summary_file}" >&2
+  exit 4
+fi
+
+mkdir -p "$(dirname "$baseline_out_abs")"
+cp "$best_candidate" "$baseline_out_abs"
 
 echo "[done] baseline_out=${baseline_out_abs}"
 echo "[done] candidate_results=${candidate_results_path}"

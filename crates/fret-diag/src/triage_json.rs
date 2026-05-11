@@ -436,6 +436,43 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // paint.widget_heavy
+        if worst.paint_widget_time_us > 0 {
+            let pct = ratio_pct(worst.paint_widget_time_us, worst.paint_time_us);
+            if worst.paint_widget_time_us >= 2_000 || (worst.paint_time_us > 0 && pct >= 50.0) {
+                let examples: Vec<serde_json::Value> = worst
+                    .paint_widget_hotspots
+                    .iter()
+                    .take(4)
+                    .map(|h| {
+                        json!({
+                            "node": h.node,
+                            "element": h.element,
+                            "element_kind": h.element_kind,
+                            "widget_type": h.widget_type,
+                            "paint_time_us": h.paint_time_us,
+                            "inclusive_time_us": h.inclusive_time_us,
+                            "inclusive_scene_ops_delta": h.inclusive_scene_ops_delta,
+                            "exclusive_scene_ops_delta": h.exclusive_scene_ops_delta,
+                            "role": h.role,
+                            "test_id": h.test_id,
+                        })
+                    })
+                    .collect();
+                out.push(json!({
+                    "code": "paint.widget_heavy",
+                    "severity": "warn",
+                    "message": "Widget paint work is a significant slice of paint time in the worst frame; inspect paint_widget_hotspots before changing renderer or layout thresholds.",
+                    "evidence": {
+                        "paint_widget_time_us": worst.paint_widget_time_us,
+                        "paint_time_us": worst.paint_time_us,
+                        "paint_widget_pct_of_paint": pct,
+                        "examples": examples,
+                    }
+                }));
+            }
+        }
+
         // paint.text_prepare_churn
         if worst.paint_text_prepare_time_us > 0 || worst.paint_text_prepare_calls > 0 {
             let per_call = if worst.paint_text_prepare_calls == 0 {
@@ -474,7 +511,10 @@ pub(crate) fn triage_json_from_stats(
         let upload_bytes = worst
             .renderer_text_atlas_upload_bytes
             .saturating_add(worst.renderer_svg_upload_bytes)
-            .saturating_add(worst.renderer_image_upload_bytes);
+            .saturating_add(worst.renderer_image_upload_bytes)
+            .saturating_add(worst.renderer_uniform_bytes)
+            .saturating_add(worst.renderer_instance_bytes)
+            .saturating_add(worst.renderer_vertex_bytes);
         if upload_bytes >= 1_000_000
             || worst.renderer_text_atlas_evicted_pages > 0
             || worst.renderer_svg_raster_budget_evictions > 0
@@ -486,6 +526,9 @@ pub(crate) fn triage_json_from_stats(
                 "message": "Renderer uploads/evictions are present in the worst frame (may indicate cache pressure or invalidation churn).",
                 "evidence": {
                     "upload_bytes_total": upload_bytes,
+                    "renderer_uniform_bytes": worst.renderer_uniform_bytes,
+                    "renderer_instance_bytes": worst.renderer_instance_bytes,
+                    "renderer_vertex_bytes": worst.renderer_vertex_bytes,
                     "renderer_text_atlas_upload_bytes": worst.renderer_text_atlas_upload_bytes,
                     "renderer_svg_upload_bytes": worst.renderer_svg_upload_bytes,
                     "renderer_image_upload_bytes": worst.renderer_image_upload_bytes,
@@ -889,6 +932,148 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // phase.timeline_hotspots
+        if worst.layout_time_us > 0
+            || worst.paint_time_us > 0
+            || worst.renderer_encode_scene_us > 0
+            || worst.renderer_upload_us > 0
+            || worst.renderer_record_passes_us > 0
+            || worst.renderer_encoder_finish_us > 0
+        {
+            let layout_examples: Vec<serde_json::Value> = worst
+                .layout_hotspots
+                .iter()
+                .take(3)
+                .map(|h| {
+                    json!({
+                        "node": h.node,
+                        "element": h.element,
+                        "element_kind": h.element_kind,
+                        "widget_type": h.widget_type,
+                        "layout_time_us": h.layout_time_us,
+                        "inclusive_time_us": h.inclusive_time_us,
+                        "role": h.role,
+                        "test_id": h.test_id,
+                        "element_path": h.element_path,
+                    })
+                })
+                .collect();
+            let layout_request_build_roots_examples: Vec<serde_json::Value> = worst
+                .layout_request_build_roots
+                .iter()
+                .take(3)
+                .map(|r| {
+                    json!({
+                        "root_node": r.root_node,
+                        "root_kind": r.root_kind,
+                        "elapsed_us": r.elapsed_us,
+                        "mode": r.mode,
+                        "layout_invalidated": r.layout_invalidated,
+                        "subtree_layout_dirty": r.subtree_layout_dirty,
+                        "subtree_layout_dirty_count": r.subtree_layout_dirty_count,
+                        "descendant_layout_dirty_count": r.descendant_layout_dirty_count,
+                        "needs_layout": r.needs_layout,
+                        "is_translation_only": r.is_translation_only,
+                        "root_role": r.root_role,
+                        "root_test_id": r.root_test_id,
+                    })
+                })
+                .collect();
+            let scroll_phase_examples: Vec<serde_json::Value> = worst
+                .scroll_layout_profiles
+                .iter()
+                .take(3)
+                .map(|p| {
+                    json!({
+                        "node": p.node,
+                        "element": p.element,
+                        "axis": p.axis,
+                        "pass": p.pass,
+                        "total_us": p.total_us,
+                        "measure_children_us": p.measure_children_us,
+                        "solve_barrier_us": p.solve_barrier_us,
+                        "layout_children_us": p.layout_children_us,
+                        "layout_children_first_pass_us": p.layout_children_first_pass_us,
+                        "phase_profiles": p.phase_profiles.iter().take(4).map(|phase| {
+                            json!({
+                                "phase": phase.phase,
+                                "us": phase.us,
+                            })
+                        }).collect::<Vec<_>>(),
+                        "element_path": p.element_path,
+                    })
+                })
+                .collect();
+            let paint_widget_examples: Vec<serde_json::Value> = worst
+                .paint_widget_hotspots
+                .iter()
+                .take(3)
+                .map(|h| {
+                    json!({
+                        "node": h.node,
+                        "element": h.element,
+                        "element_kind": h.element_kind,
+                        "widget_type": h.widget_type,
+                        "paint_time_us": h.paint_time_us,
+                        "inclusive_time_us": h.inclusive_time_us,
+                        "inclusive_scene_ops_delta": h.inclusive_scene_ops_delta,
+                        "exclusive_scene_ops_delta": h.exclusive_scene_ops_delta,
+                        "role": h.role,
+                        "test_id": h.test_id,
+                    })
+                })
+                .collect();
+            let upload_bytes = worst
+                .renderer_text_atlas_upload_bytes
+                .saturating_add(worst.renderer_svg_upload_bytes)
+                .saturating_add(worst.renderer_image_upload_bytes)
+                .saturating_add(worst.renderer_uniform_bytes)
+                .saturating_add(worst.renderer_instance_bytes)
+                .saturating_add(worst.renderer_vertex_bytes);
+
+            out.push(json!({
+                "code": "phase.timeline_hotspots",
+                "severity": "info",
+                "message": "Phase timing and hotspot evidence are linked in the same summary for the worst frame.",
+                "evidence": {
+                    "phase_times_us": {
+                        "layout": worst.layout_time_us,
+                        "prepaint": worst.prepaint_time_us,
+                        "paint": worst.paint_time_us,
+                        "renderer_encode_scene": worst.renderer_encode_scene_us,
+                        "renderer_upload": worst.renderer_upload_us,
+                        "renderer_record_passes": worst.renderer_record_passes_us,
+                        "renderer_encoder_finish": worst.renderer_encoder_finish_us,
+                    },
+                    "layout_hotspots": layout_examples,
+                    "layout_request_build_roots": layout_request_build_roots_examples,
+                    "scroll_phase_profiles": scroll_phase_examples,
+                    "paint_widget_hotspots": paint_widget_examples,
+                    "renderer_hotspots": [
+                        {
+                            "kind": "renderer.upload_churn",
+                            "upload_bytes_total": upload_bytes,
+                            "renderer_uniform_bytes": worst.renderer_uniform_bytes,
+                            "renderer_instance_bytes": worst.renderer_instance_bytes,
+                            "renderer_vertex_bytes": worst.renderer_vertex_bytes,
+                        },
+                        {
+                            "kind": "renderer.record_passes",
+                            "time_us": worst.renderer_record_passes_us,
+                        },
+                        {
+                            "kind": "renderer.encoder_finish",
+                            "time_us": worst.renderer_encoder_finish_us,
+                        },
+                        {
+                            "kind": "renderer.encode_scene_text",
+                            "time_us": worst.renderer_encode_scene_text_us,
+                        },
+                    ],
+                }
+            }));
+        }
+
         out
     }
 
@@ -927,10 +1112,47 @@ pub(crate) fn triage_json_from_stats(
 	            "paint_time_us": row.paint_time_us,
 	            "renderer_encode_scene_us": row.renderer_encode_scene_us,
 	            "renderer_upload_us": row.renderer_upload_us,
-	            "renderer_record_passes_us": row.renderer_record_passes_us,
-	            "renderer_encoder_finish_us": row.renderer_encoder_finish_us,
-	            "renderer_prepare_text_us": row.renderer_prepare_text_us,
-	            "renderer_prepare_svg_us": row.renderer_prepare_svg_us,
+            "renderer_record_passes_us": row.renderer_record_passes_us,
+            "renderer_encoder_finish_us": row.renderer_encoder_finish_us,
+            "renderer_prepare_text_us": row.renderer_prepare_text_us,
+            "renderer_prepare_svg_us": row.renderer_prepare_svg_us,
+            "renderer_uniform_bytes": row.renderer_uniform_bytes,
+            "renderer_instance_bytes": row.renderer_instance_bytes,
+            "renderer_vertex_bytes": row.renderer_vertex_bytes,
+            "renderer_encode_scene_stack_us": row.renderer_encode_scene_stack_us,
+            "renderer_encode_scene_clip_us": row.renderer_encode_scene_clip_us,
+            "renderer_encode_scene_mask_us": row.renderer_encode_scene_mask_us,
+            "renderer_encode_scene_effect_us": row.renderer_encode_scene_effect_us,
+            "renderer_encode_scene_quad_us": row.renderer_encode_scene_quad_us,
+            "renderer_encode_scene_image_us": row.renderer_encode_scene_image_us,
+            "renderer_encode_scene_text_us": row.renderer_encode_scene_text_us,
+            "renderer_encode_scene_path_us": row.renderer_encode_scene_path_us,
+            "renderer_encode_scene_viewport_us": row.renderer_encode_scene_viewport_us,
+            "renderer_encode_scene_flush_us": row.renderer_encode_scene_flush_us,
+            "renderer_encode_scene_text_shadow_us": row.renderer_encode_scene_text_shadow_us,
+            "renderer_encode_scene_text_setup_us": row.renderer_encode_scene_text_setup_us,
+            "renderer_encode_scene_text_glyphs_us": row.renderer_encode_scene_text_glyphs_us,
+            "renderer_encode_scene_text_glyph_transform_us": row
+                .renderer_encode_scene_text_glyph_transform_us,
+            "renderer_encode_scene_text_glyph_emit_us": row.renderer_encode_scene_text_glyph_emit_us,
+            "renderer_encode_scene_text_group_flush_us": row
+                .renderer_encode_scene_text_group_flush_us,
+            "renderer_encode_scene_text_vertex_grow_events": row
+                .renderer_encode_scene_text_vertex_grow_events,
+            "renderer_encode_scene_text_transform_fast_path_glyphs": row
+                .renderer_encode_scene_text_transform_fast_path_glyphs,
+            "renderer_encode_scene_text_transform_generic_glyphs": row
+                .renderer_encode_scene_text_transform_generic_glyphs,
+            "renderer_encode_scene_stack_ops": row.renderer_encode_scene_stack_ops,
+            "renderer_encode_scene_clip_ops": row.renderer_encode_scene_clip_ops,
+            "renderer_encode_scene_mask_ops": row.renderer_encode_scene_mask_ops,
+            "renderer_encode_scene_effect_ops": row.renderer_encode_scene_effect_ops,
+            "renderer_encode_scene_quad_ops": row.renderer_encode_scene_quad_ops,
+            "renderer_encode_scene_image_ops": row.renderer_encode_scene_image_ops,
+            "renderer_encode_scene_text_ops": row.renderer_encode_scene_text_ops,
+            "renderer_encode_scene_path_ops": row.renderer_encode_scene_path_ops,
+            "renderer_encode_scene_viewport_ops": row.renderer_encode_scene_viewport_ops,
+            "renderer_encode_scene_flushes": row.renderer_encode_scene_flushes,
             "layout_observation_record_time_us": row.layout_observation_record_time_us,
             "layout_observation_record_models_items": row.layout_observation_record_models_items,
             "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
@@ -1099,9 +1321,25 @@ pub(crate) fn triage_json_from_stats(
                         "available_h_kind": p.available_h_kind,
                         "available_w": p.available_w,
                         "available_h": p.available_h,
+                        "previous_available_w_kind": p.previous_available_w_kind,
+                        "previous_available_h_kind": p.previous_available_h_kind,
+                        "previous_available_w": p.previous_available_w,
+                        "previous_available_h": p.previous_available_h,
+                        "available_w_delta": p.available_w_delta,
+                        "available_h_delta": p.available_h_delta,
                         "scale_factor": p.scale_factor,
+                        "previous_scale_factor": p.previous_scale_factor,
+                        "scale_factor_delta": p.scale_factor_delta,
+                        "previous_frame_delta": p.previous_frame_delta,
                         "batch_roots": p.batch_roots,
                         "subtree_nodes": p.subtree_nodes,
+                        "flex_wrap_patch_time_us": p.flex_wrap_patch_time_us,
+                        "flex_wrap_patch_visited_nodes": p.flex_wrap_patch_visited_nodes,
+                        "flex_wrap_patch_wrap_nodes": p.flex_wrap_patch_wrap_nodes,
+                        "flex_wrap_patch_candidate_children": p.flex_wrap_patch_candidate_children,
+                        "flex_wrap_patch_probes": p.flex_wrap_patch_probes,
+                        "flex_wrap_patch_mutations": p.flex_wrap_patch_mutations,
+                        "flex_wrap_patch_skipped_no_wrap_descendant": p.flex_wrap_patch_skipped_no_wrap_descendant,
                     })),
                     "measure_calls": s.measure_calls,
                     "measure_cache_hits": s.measure_cache_hits,

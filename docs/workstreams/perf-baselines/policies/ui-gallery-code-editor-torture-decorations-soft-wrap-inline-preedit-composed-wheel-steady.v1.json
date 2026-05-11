@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "perf_baseline_seed_policy",
+  "default_seed": "max",
+  "ui_threshold_mode": "top_and_frame_p95",
+  "rules": [
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "max",
+      "min_slack_us": 3200,
+      "quantum_us": 16
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "frame_p95_total_time_us",
+      "seed": "p90",
+      "min_slack_us": 1024,
+      "quantum_us": 16
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "frame_p95_layout_time_us",
+      "seed": "p90",
+      "min_slack_us": 256,
+      "quantum_us": 16
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "frame_p95_layout_engine_solve_time_us",
+      "seed": "p95",
+      "min_slack_us": 128,
+      "quantum_us": 16
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "max",
+      "min_slack_us": 512,
+      "quantum_us": 16
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "renderer_record_passes_us",
+      "seed": "max",
+      "min_slack_us": 16,
+      "quantum_us": 8
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "renderer_encoder_finish_us",
+      "seed": "max",
+      "min_slack_us": 48,
+      "quantum_us": 8
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "renderer_prepare_text_us",
+      "seed": "max",
+      "min_slack_us": 128,
+      "quantum_us": 16
+    }
+  ]
+}

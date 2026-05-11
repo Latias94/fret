@@ -2070,6 +2070,8 @@ pub(super) struct PerfThresholds {
     pub(super) max_renderer_encoder_finish_us: Option<u64>,
     pub(super) max_renderer_prepare_text_us: Option<u64>,
     pub(super) max_renderer_prepare_svg_us: Option<u64>,
+    pub(super) max_renderer_instance_bytes: Option<u64>,
+    pub(super) max_renderer_encode_scene_text_ops: Option<u64>,
 }
 
 impl PerfThresholds {
@@ -2095,6 +2097,8 @@ impl PerfThresholds {
             || self.max_renderer_encoder_finish_us.is_some()
             || self.max_renderer_prepare_text_us.is_some()
             || self.max_renderer_prepare_svg_us.is_some()
+            || self.max_renderer_instance_bytes.is_some()
+            || self.max_renderer_encode_scene_text_ops.is_some()
     }
 }
 
@@ -2236,6 +2240,12 @@ pub(super) fn read_perf_baseline_file(
             max_renderer_prepare_svg_us: t
                 .and_then(|m| m.get("max_renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64()),
+            max_renderer_instance_bytes: t
+                .and_then(|m| m.get("max_renderer_instance_bytes"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_encode_scene_text_ops: t
+                .and_then(|m| m.get("max_renderer_encode_scene_text_ops"))
+                .and_then(|v| v.as_u64()),
         };
 
         thresholds_by_script.insert(script.to_string(), thresholds);
@@ -2261,7 +2271,6 @@ pub(super) fn apply_perf_baseline_floor(value: u64, headroom_pct: u32) -> u64 {
     floored.max(1)
 }
 
-#[cfg(test)]
 pub(super) fn apply_perf_baseline_headroom_with_slack_and_quantum(
     value_us: u64,
     headroom_pct: u32,
@@ -2357,6 +2366,145 @@ impl std::str::FromStr for PerfThresholdAggregate {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PerfBaselineThresholdSurface {
+    Ui,
+    UiRendererPayload,
+    RendererPayload,
+    Renderer,
+    All,
+}
+
+impl PerfBaselineThresholdSurface {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            PerfBaselineThresholdSurface::Ui => "ui",
+            PerfBaselineThresholdSurface::UiRendererPayload => "ui-renderer-payload",
+            PerfBaselineThresholdSurface::RendererPayload => "renderer-payload",
+            PerfBaselineThresholdSurface::Renderer => "renderer",
+            PerfBaselineThresholdSurface::All => "all",
+        }
+    }
+
+    pub(super) fn includes_ui(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineThresholdSurface::Ui
+                | PerfBaselineThresholdSurface::UiRendererPayload
+                | PerfBaselineThresholdSurface::All
+        )
+    }
+
+    pub(super) fn includes_renderer_times(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineThresholdSurface::Renderer | PerfBaselineThresholdSurface::All
+        )
+    }
+
+    pub(super) fn includes_renderer_payload(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineThresholdSurface::UiRendererPayload
+                | PerfBaselineThresholdSurface::RendererPayload
+                | PerfBaselineThresholdSurface::Renderer
+                | PerfBaselineThresholdSurface::All
+        )
+    }
+}
+
+impl std::fmt::Display for PerfBaselineThresholdSurface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for PerfBaselineThresholdSurface {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "ui" | "cpu" | "frame" | "frames" => Ok(PerfBaselineThresholdSurface::Ui),
+            "ui-renderer-payload"
+            | "ui+renderer-payload"
+            | "frame+renderer-payload"
+            | "ui+payload"
+            | "frame+payload"
+            | "ui-payload" => Ok(PerfBaselineThresholdSurface::UiRendererPayload),
+            "renderer-payload" | "render-payload" | "payload" => {
+                Ok(PerfBaselineThresholdSurface::RendererPayload)
+            }
+            "renderer" | "render" => Ok(PerfBaselineThresholdSurface::Renderer),
+            "all" | "ui+renderer" | "renderer+ui" | "frame+renderer" | "renderer+frame" => {
+                Ok(PerfBaselineThresholdSurface::All)
+            }
+            _ => Err(format!(
+                "invalid threshold surface (expected ui|ui-renderer-payload|renderer-payload|renderer|all): {s:?}"
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PerfBaselineUiThresholdMode {
+    Top,
+    FrameP95,
+    TopAndFrameP95,
+}
+
+impl PerfBaselineUiThresholdMode {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            PerfBaselineUiThresholdMode::Top => "top",
+            PerfBaselineUiThresholdMode::FrameP95 => "frame_p95",
+            PerfBaselineUiThresholdMode::TopAndFrameP95 => "top_and_frame_p95",
+        }
+    }
+
+    pub(super) fn includes_top(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineUiThresholdMode::Top | PerfBaselineUiThresholdMode::TopAndFrameP95
+        )
+    }
+
+    pub(super) fn includes_frame_p95(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineUiThresholdMode::FrameP95 | PerfBaselineUiThresholdMode::TopAndFrameP95
+        )
+    }
+}
+
+impl Default for PerfBaselineUiThresholdMode {
+    fn default() -> Self {
+        Self::Top
+    }
+}
+
+impl std::fmt::Display for PerfBaselineUiThresholdMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for PerfBaselineUiThresholdMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_ascii_lowercase().replace('-', "_").as_str() {
+            "top" | "max" | "tail" => Ok(PerfBaselineUiThresholdMode::Top),
+            "frame_p95" | "framep95" | "typical" => Ok(PerfBaselineUiThresholdMode::FrameP95),
+            "top_and_frame_p95" | "top_frame_p95" | "both" => {
+                Ok(PerfBaselineUiThresholdMode::TopAndFrameP95)
+            }
+            _ => Err(format!(
+                "invalid UI threshold mode (expected top|frame_p95|top_and_frame_p95): {s:?}"
+            )),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn scan_perf_threshold_failures(
     script: &str,
@@ -2406,6 +2554,12 @@ pub(super) fn scan_perf_threshold_failures(
     observed_renderer_prepare_svg_us: u64,
     max_renderer_prepare_svg_us: u64,
     p95_renderer_prepare_svg_us: u64,
+    observed_renderer_instance_bytes: u64,
+    max_renderer_instance_bytes: u64,
+    p95_renderer_instance_bytes: u64,
+    observed_renderer_encode_scene_text_ops: u64,
+    max_renderer_encode_scene_text_ops: u64,
+    p95_renderer_encode_scene_text_ops: u64,
     evidence_bundle_total: Option<&Path>,
     evidence_run_index_total: Option<u64>,
     evidence_bundle_layout: Option<&Path>,
@@ -2488,6 +2642,15 @@ pub(super) fn scan_perf_threshold_failures(
         cli.max_renderer_prepare_svg_us,
         baseline.max_renderer_prepare_svg_us,
     );
+    let (threshold_renderer_instance_bytes, source_renderer_instance_bytes) = resolve_threshold(
+        cli.max_renderer_instance_bytes,
+        baseline.max_renderer_instance_bytes,
+    );
+    let (threshold_renderer_encode_scene_text_ops, source_renderer_encode_scene_text_ops) =
+        resolve_threshold(
+            cli.max_renderer_encode_scene_text_ops,
+            baseline.max_renderer_encode_scene_text_ops,
+        );
 
     if let Some(threshold_us) = threshold_total
         && observed_total_time_us > threshold_us
@@ -2759,6 +2922,42 @@ pub(super) fn scan_perf_threshold_failures(
             "actual_max_us": max_renderer_prepare_svg_us,
             "actual_p95_us": p95_renderer_prepare_svg_us,
             "outlier_suspected": p95_renderer_prepare_svg_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold) = threshold_renderer_instance_bytes
+        && observed_renderer_instance_bytes > threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_instance_bytes",
+            "threshold": threshold,
+            "threshold_source": source_renderer_instance_bytes,
+            "actual": observed_renderer_instance_bytes,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max": max_renderer_instance_bytes,
+            "actual_p95": p95_renderer_instance_bytes,
+            "outlier_suspected": p95_renderer_instance_bytes <= threshold,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold) = threshold_renderer_encode_scene_text_ops
+        && observed_renderer_encode_scene_text_ops > threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_encode_scene_text_ops",
+            "threshold": threshold,
+            "threshold_source": source_renderer_encode_scene_text_ops,
+            "actual": observed_renderer_encode_scene_text_ops,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max": max_renderer_encode_scene_text_ops,
+            "actual_p95": p95_renderer_encode_scene_text_ops,
+            "outlier_suspected": p95_renderer_encode_scene_text_ops <= threshold,
             "script": script,
             "sort": sort.as_str(),
             "evidence_bundle": evidence_bundle.clone(),

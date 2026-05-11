@@ -390,6 +390,10 @@ mod tests {
             "--prelude-each-run",
             "--perf-threshold-agg",
             "p95",
+            "--perf-baseline-threshold-surface",
+            "renderer",
+            "--perf-baseline-ui-threshold-mode",
+            "frame-p95",
             "--max-frame-p95-total-us",
             "18000",
             "--check-perf-hints",
@@ -433,6 +437,14 @@ mod tests {
             args.perf_threshold_agg,
             Some(crate::PerfThresholdAggregate::P95)
         );
+        assert_eq!(
+            args.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::Renderer
+        );
+        assert_eq!(
+            args.perf_baseline_ui_threshold_mode,
+            Some(crate::PerfBaselineUiThresholdMode::FrameP95)
+        );
         assert_eq!(args.max_frame_p95_total_us, Some(18_000));
         assert!(args.check_perf_hints);
         assert_eq!(args.check_perf_hints_min_severity.as_deref(), Some("error"));
@@ -452,6 +464,33 @@ mod tests {
                 "-p".to_string(),
                 "fret-ui-gallery".to_string(),
             ])
+        );
+    }
+
+    #[test]
+    fn perf_contract_parses_ui_renderer_payload_threshold_surface() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "perf",
+            "ui-gallery",
+            "--perf-baseline-threshold-surface",
+            "ui-renderer-payload",
+            "--launch",
+            "--",
+            "cargo",
+            "run",
+            "-p",
+            "fret-ui-gallery",
+        ])
+        .expect("perf contract should parse ui-renderer-payload threshold surface");
+
+        let DiagCommandContract::Perf(args) = cli.command else {
+            panic!("expected perf command");
+        };
+
+        assert_eq!(
+            args.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::UiRendererPayload
         );
     }
 
@@ -481,6 +520,8 @@ mod tests {
             "target/perf.baseline.json",
             "--perf-baseline-headroom-pct",
             "25",
+            "--perf-baseline-threshold-surface",
+            "all",
             "--warmup-frames",
             "5",
             "--json",
@@ -508,6 +549,10 @@ mod tests {
             PathBuf::from("target/perf.baseline.json")
         );
         assert_eq!(args.perf_baseline_headroom_pct, 25);
+        assert_eq!(
+            args.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::All
+        );
         assert_eq!(args.warmup.warmup_frames, 5);
         assert!(args.json);
     }

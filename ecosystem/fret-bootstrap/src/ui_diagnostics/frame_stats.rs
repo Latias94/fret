@@ -9,6 +9,8 @@ pub struct UiFrameStatsV1 {
     pub element_children_vec_pool_reuses: u32,
     #[serde(default)]
     pub element_children_vec_pool_misses: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_grow_events: u32,
     /// UI thread CPU time spent since the previous snapshot (approx frame CPU time).
     ///
     /// This is intended to distinguish "real work" from schedule noise: if wall time spikes but
@@ -386,6 +388,64 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
     #[serde(default)]
+    pub renderer_encode_scene_stack_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_clip_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_mask_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_effect_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_quad_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_image_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_path_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_viewport_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_flush_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_shadow_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_setup_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_glyphs_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_glyph_transform_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_glyph_emit_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_group_flush_us: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_vertex_grow_events: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_transform_fast_path_glyphs: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_transform_generic_glyphs: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_stack_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_clip_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_mask_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_effect_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_quad_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_image_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_text_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_path_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_viewport_ops: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_flushes: u64,
+    #[serde(default)]
     pub renderer_svg_uploads: u64,
     #[serde(default)]
     pub renderer_svg_upload_bytes: u64,
@@ -712,6 +772,7 @@ impl UiFrameStatsV1 {
             frame_arena_grow_events: stats.frame_arena_grow_events,
             element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
             element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
+            element_children_vec_pool_grow_events: stats.element_children_vec_pool_grow_events,
             ui_thread_cpu_time_us: cpu.delta_time_us,
             ui_thread_cpu_total_time_us: cpu.total_time_us,
             ui_thread_cpu_cycle_time_delta_cycles: cpu.delta_cycles,
@@ -973,6 +1034,35 @@ impl UiFrameStatsV1 {
             renderer_encoder_finish_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
+            renderer_encode_scene_stack_us: 0,
+            renderer_encode_scene_clip_us: 0,
+            renderer_encode_scene_mask_us: 0,
+            renderer_encode_scene_effect_us: 0,
+            renderer_encode_scene_quad_us: 0,
+            renderer_encode_scene_image_us: 0,
+            renderer_encode_scene_text_us: 0,
+            renderer_encode_scene_path_us: 0,
+            renderer_encode_scene_viewport_us: 0,
+            renderer_encode_scene_flush_us: 0,
+            renderer_encode_scene_text_shadow_us: 0,
+            renderer_encode_scene_text_setup_us: 0,
+            renderer_encode_scene_text_glyphs_us: 0,
+            renderer_encode_scene_text_glyph_transform_us: 0,
+            renderer_encode_scene_text_glyph_emit_us: 0,
+            renderer_encode_scene_text_group_flush_us: 0,
+            renderer_encode_scene_text_vertex_grow_events: 0,
+            renderer_encode_scene_text_transform_fast_path_glyphs: 0,
+            renderer_encode_scene_text_transform_generic_glyphs: 0,
+            renderer_encode_scene_stack_ops: 0,
+            renderer_encode_scene_clip_ops: 0,
+            renderer_encode_scene_mask_ops: 0,
+            renderer_encode_scene_effect_ops: 0,
+            renderer_encode_scene_quad_ops: 0,
+            renderer_encode_scene_image_ops: 0,
+            renderer_encode_scene_text_ops: 0,
+            renderer_encode_scene_path_ops: 0,
+            renderer_encode_scene_viewport_ops: 0,
+            renderer_encode_scene_flushes: 0,
             renderer_svg_uploads: 0,
             renderer_svg_upload_bytes: 0,
             renderer_image_uploads: 0,
@@ -1129,6 +1219,40 @@ impl UiFrameStatsV1 {
             out.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
             out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
             out.renderer_prepare_text_us = sample.perf.prepare_text_us;
+            out.renderer_encode_scene_stack_us = sample.perf.encode_scene_stack_us;
+            out.renderer_encode_scene_clip_us = sample.perf.encode_scene_clip_us;
+            out.renderer_encode_scene_mask_us = sample.perf.encode_scene_mask_us;
+            out.renderer_encode_scene_effect_us = sample.perf.encode_scene_effect_us;
+            out.renderer_encode_scene_quad_us = sample.perf.encode_scene_quad_us;
+            out.renderer_encode_scene_image_us = sample.perf.encode_scene_image_us;
+            out.renderer_encode_scene_text_us = sample.perf.encode_scene_text_us;
+            out.renderer_encode_scene_path_us = sample.perf.encode_scene_path_us;
+            out.renderer_encode_scene_viewport_us = sample.perf.encode_scene_viewport_us;
+            out.renderer_encode_scene_flush_us = sample.perf.encode_scene_flush_us;
+            out.renderer_encode_scene_text_shadow_us = sample.perf.encode_scene_text_shadow_us;
+            out.renderer_encode_scene_text_setup_us = sample.perf.encode_scene_text_setup_us;
+            out.renderer_encode_scene_text_glyphs_us = sample.perf.encode_scene_text_glyphs_us;
+            out.renderer_encode_scene_text_glyph_transform_us =
+                sample.perf.encode_scene_text_glyph_transform_us;
+            out.renderer_encode_scene_text_glyph_emit_us = sample.perf.encode_scene_text_glyph_emit_us;
+            out.renderer_encode_scene_text_group_flush_us =
+                sample.perf.encode_scene_text_group_flush_us;
+            out.renderer_encode_scene_text_vertex_grow_events =
+                sample.perf.encode_scene_text_vertex_grow_events;
+            out.renderer_encode_scene_text_transform_fast_path_glyphs =
+                sample.perf.encode_scene_text_transform_fast_path_glyphs;
+            out.renderer_encode_scene_text_transform_generic_glyphs =
+                sample.perf.encode_scene_text_transform_generic_glyphs;
+            out.renderer_encode_scene_stack_ops = sample.perf.encode_scene_stack_ops;
+            out.renderer_encode_scene_clip_ops = sample.perf.encode_scene_clip_ops;
+            out.renderer_encode_scene_mask_ops = sample.perf.encode_scene_mask_ops;
+            out.renderer_encode_scene_effect_ops = sample.perf.encode_scene_effect_ops;
+            out.renderer_encode_scene_quad_ops = sample.perf.encode_scene_quad_ops;
+            out.renderer_encode_scene_image_ops = sample.perf.encode_scene_image_ops;
+            out.renderer_encode_scene_text_ops = sample.perf.encode_scene_text_ops;
+            out.renderer_encode_scene_path_ops = sample.perf.encode_scene_path_ops;
+            out.renderer_encode_scene_viewport_ops = sample.perf.encode_scene_viewport_ops;
+            out.renderer_encode_scene_flushes = sample.perf.encode_scene_flushes;
             out.renderer_svg_uploads = sample.perf.svg_uploads;
             out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
             out.renderer_image_uploads = sample.perf.image_uploads;

@@ -1,7 +1,7 @@
 use super::atlas::GlyphKey;
 use fret_core::{TextMetrics, geometry::Px};
 use fret_render_text::{FontFaceKey, TextDecoration};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TextRenderGlyphKind {
@@ -61,6 +61,53 @@ impl GlyphInstance {
 
     pub(crate) fn paint_span(&self) -> Option<u16> {
         self.paint_span
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TextRenderGlyph {
+    kind: TextRenderGlyphKind,
+    rect: [f32; 4],
+    paint_span: Option<u16>,
+    atlas_page: u16,
+    uv: [f32; 4],
+}
+
+impl TextRenderGlyph {
+    pub(crate) fn new(
+        kind: TextRenderGlyphKind,
+        rect: [f32; 4],
+        paint_span: Option<u16>,
+        atlas_page: u16,
+        uv: [f32; 4],
+    ) -> Self {
+        Self {
+            kind,
+            rect,
+            paint_span,
+            atlas_page,
+            uv,
+        }
+    }
+
+    pub(crate) fn kind(&self) -> TextRenderGlyphKind {
+        self.kind
+    }
+
+    pub(crate) fn rect(&self) -> [f32; 4] {
+        self.rect
+    }
+
+    pub(crate) fn paint_span(&self) -> Option<u16> {
+        self.paint_span
+    }
+
+    pub(crate) fn atlas_page(&self) -> u16 {
+        self.atlas_page
+    }
+
+    pub(crate) fn uv(&self) -> [f32; 4] {
+        self.uv
     }
 }
 
@@ -167,7 +214,7 @@ impl TextBlob {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(super) struct TextShape {
     glyphs: Arc<[GlyphInstance]>,
     metrics: TextMetrics,
@@ -175,6 +222,7 @@ pub(super) struct TextShape {
     caret_stops: Arc<[(usize, Px)]>,
     missing_glyphs: u32,
     font_faces: Arc<[TextFontFaceUsage]>,
+    render_cache: RwLock<Option<TextShapeRenderCache>>,
 }
 
 impl TextShape {
@@ -193,11 +241,63 @@ impl TextShape {
             caret_stops,
             missing_glyphs,
             font_faces,
+            render_cache: RwLock::new(None),
         }
     }
 
     pub(crate) fn glyphs(&self) -> &[GlyphInstance] {
         self.glyphs.as_ref()
+    }
+
+    pub(crate) fn render_glyphs<F>(
+        &self,
+        atlas_revision: u64,
+        mut resolve_uv: F,
+    ) -> Arc<[TextRenderGlyph]>
+    where
+        F: FnMut(&GlyphInstance) -> Option<(u16, [f32; 4])>,
+    {
+        let cached = self.render_cache.read().ok().and_then(|cache| {
+            cache
+                .as_ref()
+                .filter(|cache| cache.atlas_revision == atlas_revision)
+                .map(|cache| cache.glyphs.clone())
+        });
+        if let Some(cached) = cached {
+            return cached;
+        }
+
+        let mut render_glyphs: Vec<TextRenderGlyph> = Vec::with_capacity(self.glyphs.len());
+        for glyph in self.glyphs.iter() {
+            let Some((atlas_page, uv)) = resolve_uv(glyph) else {
+                continue;
+            };
+            render_glyphs.push(TextRenderGlyph::new(
+                glyph.render_kind(),
+                glyph.rect(),
+                glyph.paint_span(),
+                atlas_page,
+                uv,
+            ));
+        }
+
+        let render_glyphs: Arc<[TextRenderGlyph]> = Arc::from(render_glyphs);
+        if let Ok(mut cache) = self.render_cache.write() {
+            match cache.as_ref() {
+                Some(existing) if existing.atlas_revision == atlas_revision => {
+                    existing.glyphs.clone()
+                }
+                _ => {
+                    *cache = Some(TextShapeRenderCache {
+                        atlas_revision,
+                        glyphs: render_glyphs.clone(),
+                    });
+                    render_glyphs
+                }
+            }
+        } else {
+            render_glyphs
+        }
     }
 
     pub(crate) fn metrics(&self) -> TextMetrics {
@@ -219,6 +319,26 @@ impl TextShape {
     pub(crate) fn font_faces(&self) -> &[TextFontFaceUsage] {
         self.font_faces.as_ref()
     }
+
+    pub(crate) fn render_cache_bytes_estimate(&self) -> u64 {
+        let Some(glyphs) = self
+            .render_cache
+            .read()
+            .ok()
+            .and_then(|cache| cache.as_ref().map(|cache| cache.glyphs.len()))
+        else {
+            return 0;
+        };
+
+        ((glyphs as u128) * (std::mem::size_of::<TextRenderGlyph>() as u128)).min(u64::MAX as u128)
+            as u64
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TextShapeRenderCache {
+    atlas_revision: u64,
+    glyphs: Arc<[TextRenderGlyph]>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

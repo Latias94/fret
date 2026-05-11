@@ -248,12 +248,18 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats
     }
 
-    pub(crate) fn debug_set_element_children_vec_pool_stats(&mut self, reuses: u32, misses: u32) {
+    pub(crate) fn debug_set_element_children_vec_pool_stats(
+        &mut self,
+        reuses: u32,
+        misses: u32,
+        grow_events: u32,
+    ) {
         if !self.debug_enabled {
             return;
         }
         self.debug_stats.element_children_vec_pool_reuses = reuses;
         self.debug_stats.element_children_vec_pool_misses = misses;
+        self.debug_stats.element_children_vec_pool_grow_events = grow_events;
     }
 
     #[cfg(test)]

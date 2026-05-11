@@ -140,6 +140,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let element_children_vec_pool_grow_events = stats
+                .and_then(|m| m.get("element_children_vec_pool_grow_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
 
             let layout_time_us = stats
                 .and_then(|m| m.get("layout_time_us"))
@@ -585,6 +590,134 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let renderer_prepare_svg_us = stats
                 .and_then(|m| m.get("renderer_prepare_svg_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_uniform_bytes = stats
+                .and_then(|m| m.get("renderer_uniform_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_instance_bytes = stats
+                .and_then(|m| m.get("renderer_instance_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_vertex_bytes = stats
+                .and_then(|m| m.get("renderer_vertex_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_stack_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_stack_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_clip_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_clip_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_mask_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_mask_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_effect_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_effect_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_quad_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_quad_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_image_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_image_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_path_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_path_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_viewport_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_viewport_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_flush_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_flush_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_shadow_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_shadow_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_setup_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_setup_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_glyphs_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_glyphs_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_vertex_grow_events = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_vertex_grow_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_glyph_transform_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_glyph_transform_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_glyph_emit_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_glyph_emit_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_group_flush_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_group_flush_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_transform_fast_path_glyphs = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_transform_fast_path_glyphs"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_transform_generic_glyphs = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_transform_generic_glyphs"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_stack_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_stack_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_clip_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_clip_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_mask_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_mask_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_effect_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_effect_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_quad_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_quad_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_image_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_image_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_text_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_text_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_path_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_path_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_viewport_ops = stats
+                .and_then(|m| m.get("renderer_encode_scene_viewport_ops"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_flushes = stats
+                .and_then(|m| m.get("renderer_encode_scene_flushes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_svg_upload_bytes = stats
@@ -1560,6 +1693,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 frame_arena_grow_events,
                 element_children_vec_pool_reuses,
                 element_children_vec_pool_misses,
+                element_children_vec_pool_grow_events,
                 ui_thread_cpu_time_us,
                 ui_thread_cpu_total_time_us,
                 ui_thread_cpu_cycle_time_delta_cycles,
@@ -1680,6 +1814,38 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encoder_finish_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
+                renderer_uniform_bytes,
+                renderer_instance_bytes,
+                renderer_vertex_bytes,
+                renderer_encode_scene_stack_us,
+                renderer_encode_scene_clip_us,
+                renderer_encode_scene_mask_us,
+                renderer_encode_scene_effect_us,
+                renderer_encode_scene_quad_us,
+                renderer_encode_scene_image_us,
+                renderer_encode_scene_text_us,
+                renderer_encode_scene_path_us,
+                renderer_encode_scene_viewport_us,
+                renderer_encode_scene_flush_us,
+                renderer_encode_scene_text_shadow_us,
+                renderer_encode_scene_text_setup_us,
+                renderer_encode_scene_text_glyphs_us,
+                renderer_encode_scene_text_glyph_transform_us,
+                renderer_encode_scene_text_glyph_emit_us,
+                renderer_encode_scene_text_group_flush_us,
+                renderer_encode_scene_text_vertex_grow_events,
+                renderer_encode_scene_text_transform_fast_path_glyphs,
+                renderer_encode_scene_text_transform_generic_glyphs,
+                renderer_encode_scene_stack_ops,
+                renderer_encode_scene_clip_ops,
+                renderer_encode_scene_mask_ops,
+                renderer_encode_scene_effect_ops,
+                renderer_encode_scene_quad_ops,
+                renderer_encode_scene_image_ops,
+                renderer_encode_scene_text_ops,
+                renderer_encode_scene_path_ops,
+                renderer_encode_scene_viewport_ops,
+                renderer_encode_scene_flushes,
                 renderer_svg_upload_bytes,
                 renderer_image_upload_bytes,
                 renderer_render_target_updates_ingest_unknown,

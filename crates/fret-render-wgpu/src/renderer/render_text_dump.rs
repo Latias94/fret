@@ -1,4 +1,4 @@
-use super::{OrderedDraw, SceneEncoding, TextDrawKind, TextVertex};
+use super::{OrderedDraw, SceneEncoding, TextDrawKind, TextGlyphInstance, ViewportUniform};
 use crate::text::DebugGlyphAtlasLookup;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -93,15 +93,20 @@ struct JsonBoundsPx {
 }
 
 impl JsonBoundsPx {
-    fn from_vertices(vertices: &[TextVertex]) -> Option<Self> {
-        let first = vertices.first()?;
-        let mut min_x = first.pos_px[0];
-        let mut max_x = first.pos_px[0];
-        let mut min_y = first.pos_px[1];
-        let mut max_y = first.pos_px[1];
-        for v in vertices {
-            let x = v.pos_px[0];
-            let y = v.pos_px[1];
+    fn from_instance(uniform: &ViewportUniform, instance: &TextGlyphInstance) -> Option<Self> {
+        let rect = instance.local_rect;
+        let pts = [
+            transform_text_point(uniform, rect[0], rect[1]),
+            transform_text_point(uniform, rect[2], rect[1]),
+            transform_text_point(uniform, rect[2], rect[3]),
+            transform_text_point(uniform, rect[0], rect[3]),
+        ];
+        let first = pts.first()?;
+        let mut min_x = first.0;
+        let mut max_x = first.0;
+        let mut min_y = first.1;
+        let mut max_y = first.1;
+        for (x, y) in pts {
             min_x = min_x.min(x);
             max_x = max_x.max(x);
             min_y = min_y.min(y);
@@ -116,6 +121,15 @@ impl JsonBoundsPx {
     }
 }
 
+fn transform_text_point(uniform: &ViewportUniform, x: f32, y: f32) -> (f32, f32) {
+    let row0 = uniform.text_transform0;
+    let row1 = uniform.text_transform1;
+    (
+        row0[0] * x + row0[1] * y + row0[2],
+        row1[0] * x + row1[1] * y + row1[2],
+    )
+}
+
 #[derive(Debug, serde::Serialize)]
 struct JsonTextDrawDump {
     ordered_draw_ix: usize,
@@ -124,8 +138,8 @@ struct JsonTextDrawDump {
     paint_index: u32,
     uniform_index: u32,
     scissor: [u32; 4],
-    first_vertex: u32,
-    vertex_count: u32,
+    first_instance: u32,
+    instance_count: u32,
     bounds_px: Option<JsonBoundsPx>,
 }
 
@@ -136,7 +150,7 @@ struct JsonGlyphProbeDump {
     atlas_page: u16,
     paint_index: u32,
     uniform_index: u32,
-    vertex_ix: u32,
+    instance_ix: u32,
     bounds_px: JsonBoundsPx,
     uv: [f32; 4],
     atlas_xywh: [u32; 4],
@@ -244,14 +258,28 @@ impl RenderTextDumpState {
             };
 
             let atlas_kind_json = atlas_kind_for_text_draw(draw.kind);
+            let Some(uniform) = encoding.uniforms.get(draw.uniform_index as usize) else {
+                continue;
+            };
 
-            let first = draw.first_vertex as usize;
-            let count = draw.vertex_count as usize;
+            let first = draw.first_instance as usize;
+            let count = draw.instance_count as usize;
             let end = first
                 .saturating_add(count)
-                .min(encoding.text_vertices.len());
-            let vertices = &encoding.text_vertices[first..end];
-            let bounds_px = JsonBoundsPx::from_vertices(vertices);
+                .min(encoding.text_glyph_instances.len());
+            let instances = &encoding.text_glyph_instances[first..end];
+            let bounds_px = instances.first().and_then(|_| {
+                instances
+                    .iter()
+                    .filter_map(|instance| JsonBoundsPx::from_instance(uniform, instance))
+                    .reduce(|mut a, b| {
+                        a.min_x = a.min_x.min(b.min_x);
+                        a.min_y = a.min_y.min(b.min_y);
+                        a.max_x = a.max_x.max(b.max_x);
+                        a.max_y = a.max_y.max(b.max_y);
+                        a
+                    })
+            });
 
             self.text_draws.push(JsonTextDrawDump {
                 ordered_draw_ix,
@@ -265,8 +293,8 @@ impl RenderTextDumpState {
                     draw.scissor.w,
                     draw.scissor.h,
                 ],
-                first_vertex: draw.first_vertex,
-                vertex_count: draw.vertex_count,
+                first_instance: draw.first_instance,
+                instance_count: draw.instance_count,
                 bounds_px,
             });
 
@@ -275,28 +303,21 @@ impl RenderTextDumpState {
             };
 
             let (atlas_w, atlas_h) = atlas_dims_for_text_draw(text_system, draw.kind);
-            if draw.vertex_count < 6 {
+            if draw.instance_count == 0 {
                 continue;
             }
-            let glyph_count = (draw.vertex_count as usize) / 6;
-            for g_ix in 0..glyph_count {
-                let base = first.saturating_add(g_ix.saturating_mul(6));
-                let end6 = base.saturating_add(6);
-                if end6 > encoding.text_vertices.len() {
-                    break;
-                }
-                let glyph_vs = &encoding.text_vertices[base..end6];
-                let Some(glyph_bounds) = JsonBoundsPx::from_vertices(glyph_vs) else {
+            for (g_ix, instance) in instances.iter().enumerate() {
+                let Some(glyph_bounds) = JsonBoundsPx::from_instance(uniform, instance) else {
                     continue;
                 };
                 if !probe.intersects_bounds(&glyph_bounds) {
                     continue;
                 }
 
-                let u0 = glyph_vs[0].uv[0];
-                let v0 = glyph_vs[0].uv[1];
-                let u1 = glyph_vs[2].uv[0];
-                let v1 = glyph_vs[2].uv[1];
+                let u0 = instance.uv[0];
+                let v0 = instance.uv[1];
+                let u1 = instance.uv[2];
+                let v1 = instance.uv[3];
                 let atlas_xywh = uv_to_atlas_xywh(u0, v0, u1, v1, atlas_w, atlas_h);
                 let glyph = lookup_glyph_atlas_entry_for_text_draw(
                     text_system,
@@ -314,7 +335,7 @@ impl RenderTextDumpState {
                     atlas_page: draw.atlas_page,
                     paint_index: draw.paint_index,
                     uniform_index: draw.uniform_index,
-                    vertex_ix: (base as u32).saturating_sub(draw.first_vertex),
+                    instance_ix: (first.saturating_add(g_ix)) as u32,
                     bounds_px: glyph_bounds,
                     uv: [u0, v0, u1, v1],
                     atlas_xywh,
@@ -324,7 +345,7 @@ impl RenderTextDumpState {
         }
 
         let dump = JsonRenderTextDump {
-            schema_version: 1,
+            schema_version: 2,
             frame_index,
             viewport_size: [viewport_size.0, viewport_size.1],
             probe_px,
@@ -379,8 +400,8 @@ mod tests {
             paint_index: 0,
             uniform_index: 0,
             scissor: [0, 0, 1, 1],
-            first_vertex: 0,
-            vertex_count: 6,
+            first_instance: 0,
+            instance_count: 1,
             bounds_px: None,
         });
         state.probe_hits.push(JsonGlyphProbeDump {
@@ -389,7 +410,7 @@ mod tests {
             atlas_page: 0,
             paint_index: 0,
             uniform_index: 0,
-            vertex_ix: 0,
+            instance_ix: 0,
             bounds_px: JsonBoundsPx {
                 min_x: 0.0,
                 min_y: 0.0,

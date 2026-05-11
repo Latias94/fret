@@ -12,6 +12,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) path_paints: &'a mut Vec<PaintGpu>,
     pub(super) text_paints: &'a mut Vec<PaintGpu>,
     pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
+    pub(super) text_glyph_instances: &'a mut Vec<TextGlyphInstance>,
     pub(super) text_vertices: &'a mut Vec<TextVertex>,
     pub(super) path_vertices: &'a mut Vec<PathVertex>,
     pub(super) clip_path_masks: &'a mut Vec<ClipPathMaskDraw>,
@@ -79,6 +80,7 @@ impl<'a> EncodeState<'a> {
         let path_paints = &mut encoding.path_paints;
         let text_paints = &mut encoding.text_paints;
         let viewport_vertices = &mut encoding.viewport_vertices;
+        let text_glyph_instances = &mut encoding.text_glyph_instances;
         let text_vertices = &mut encoding.text_vertices;
         let path_vertices = &mut encoding.path_vertices;
         let clip_path_masks = &mut encoding.clip_path_masks;
@@ -130,6 +132,7 @@ impl<'a> EncodeState<'a> {
             path_paints,
             text_paints,
             viewport_vertices,
+            text_glyph_instances,
             text_vertices,
             path_vertices,
             clip_path_masks,
@@ -189,7 +192,7 @@ impl<'a> EncodeState<'a> {
     }
 
     pub(super) fn push_text_draw(&mut self, draw: TextDraw) {
-        if draw.vertex_count == 0 {
+        if draw.instance_count == 0 {
             return;
         }
 
@@ -203,16 +206,16 @@ impl<'a> EncodeState<'a> {
             return;
         };
 
-        let prev_end = prev.first_vertex.saturating_add(prev.vertex_count);
+        let prev_end = prev.first_instance.saturating_add(prev.instance_count);
         let can_merge = prev.scissor == draw.scissor
             && prev.uniform_index == draw.uniform_index
             && prev.kind == draw.kind
             && prev.atlas_page == draw.atlas_page
             && prev.paint_index == draw.paint_index
-            && prev_end == draw.first_vertex;
+            && prev_end == draw.first_instance;
 
         if can_merge {
-            prev.vertex_count = prev.vertex_count.saturating_add(draw.vertex_count);
+            prev.instance_count = prev.instance_count.saturating_add(draw.instance_count);
         } else {
             self.ordered_draws.push(OrderedDraw::Text(draw));
         }
@@ -228,6 +231,7 @@ impl<'a> EncodeState<'a> {
         mask_scope_count: u32,
     ) -> u32 {
         let uniform_index = self.uniforms.len() as u32;
+        let (text_transform0, text_transform1) = transform_rows(self.current_transform_px());
         self.uniforms.push(ViewportUniform {
             viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
             clip_head,
@@ -245,6 +249,8 @@ impl<'a> EncodeState<'a> {
             text_grayscale_enhanced_contrast: self.text_grayscale_enhanced_contrast,
             text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
             _pad_text_quality: [0; 2],
+            text_transform0,
+            text_transform1,
         });
         self.uniform_mask_images.push(self.mask_image);
         uniform_index
@@ -261,6 +267,7 @@ impl<'a> EncodeState<'a> {
         let uniform_index = self.uniforms.len() as u32;
         let w = mask_viewport.w.max(1) as f32;
         let h = mask_viewport.h.max(1) as f32;
+        let (text_transform0, text_transform1) = transform_rows(self.current_transform_px());
         self.uniforms.push(ViewportUniform {
             viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
             clip_head,
@@ -278,6 +285,8 @@ impl<'a> EncodeState<'a> {
             text_grayscale_enhanced_contrast: self.text_grayscale_enhanced_contrast,
             text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
             _pad_text_quality: [0; 2],
+            text_transform0,
+            text_transform1,
         });
         self.uniform_mask_images.push(self.mask_image);
         uniform_index
@@ -296,6 +305,7 @@ impl<'a> EncodeState<'a> {
         let uniform_index = self.uniforms.len() as u32;
         let w = mask_viewport.w.max(1) as f32;
         let h = mask_viewport.h.max(1) as f32;
+        let (text_transform0, text_transform1) = transform_rows(self.current_transform_px());
         self.uniforms.push(ViewportUniform {
             viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
             clip_head,
@@ -313,6 +323,8 @@ impl<'a> EncodeState<'a> {
             text_grayscale_enhanced_contrast: self.text_grayscale_enhanced_contrast,
             text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
             _pad_text_quality: [0; 2],
+            text_transform0,
+            text_transform1,
         });
         self.uniform_mask_images.push(self.mask_image);
         uniform_index

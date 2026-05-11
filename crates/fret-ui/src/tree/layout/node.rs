@@ -64,6 +64,8 @@ impl<H: UiHost> UiTree<H> {
             );
             if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
                 self.layout_engine.mark_seen_if_present(node);
+                let mut propagated_bounds = Vec::new();
+                propagated_bounds.push((node, bounds));
 
                 let mut stack: Vec<NodeId> = Vec::new();
                 let mut i = 0usize;
@@ -83,16 +85,25 @@ impl<H: UiHost> UiTree<H> {
                 while let Some(id) = stack.pop() {
                     self.layout_engine.mark_seen_if_present(id);
 
-                    let Some(n) = self.nodes.get_mut(id) else {
+                    let Some(child_bounds) = (|| {
+                        let n = self.nodes.get_mut(id)?;
+                        n.bounds.origin =
+                            Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
+                        let child_bounds = n.bounds;
+                        if !n.layout_dirty_children_suppressed {
+                            for &child in &n.children {
+                                stack.push(child);
+                            }
+                        }
+                        Some(child_bounds)
+                    })() else {
                         continue;
                     };
-                    n.bounds.origin =
-                        Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
-                    if n.layout_dirty_children_suppressed {
-                        continue;
-                    }
-                    for &child in &n.children {
-                        stack.push(child);
+                    propagated_bounds.push((id, child_bounds));
+                }
+                if let Some(window) = self.window {
+                    for (id, bounds) in propagated_bounds {
+                        self.queue_layout_bounds_for_node_element(app, window, id, bounds);
                     }
                 }
             }
@@ -110,6 +121,22 @@ impl<H: UiHost> UiTree<H> {
         let needs_layout = invalidated_for_pass || prev_bounds != bounds;
         if !needs_layout {
             return measured;
+        }
+        if !invalidated_for_pass
+            && !subtree_dirty
+            && let Some(size) = self.try_propagate_clean_engine_layout(
+                app,
+                services,
+                node,
+                bounds,
+                prev_bounds,
+                measured,
+                scale_factor,
+                pass_kind,
+                overflow_ctx,
+            )
+        {
+            return size;
         }
         if self.debug_enabled {
             self.debug_stats.layout_nodes_performed =
@@ -375,6 +402,179 @@ impl<H: UiHost> UiTree<H> {
         }
 
         size
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_propagate_clean_engine_layout(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        node: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        measured_size: Size,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
+    ) -> Option<Size> {
+        if pass_kind != LayoutPassKind::Final {
+            return None;
+        }
+        let window = self.window?;
+        let (children, layout_dirty_children_suppressed) = {
+            let entry = self.nodes.get(node)?;
+            if entry.invalidation.layout || self.node_subtree_layout_dirty(node) {
+                return None;
+            }
+            (
+                entry.children.clone(),
+                entry.layout_dirty_children_suppressed,
+            )
+        };
+        if measured_size == Size::default() || layout_dirty_children_suppressed {
+            return None;
+        }
+        let element = self.clean_engine_geometry_propagation_supported_element(
+            app,
+            window,
+            node,
+            &children,
+            bounds,
+            prev_bounds,
+        )?;
+
+        let mut child_bounds = Vec::with_capacity(children.len());
+        for &child in &children {
+            let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            if child_style.position != crate::element::PositionStyle::Static {
+                return None;
+            }
+            let local = self.layout_engine_child_local_rect_profiled(node, child)?;
+            child_bounds.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(bounds.origin.x.0 + local.origin.x.0),
+                        Px(bounds.origin.y.0 + local.origin.y.0),
+                    ),
+                    local.size,
+                ),
+            ));
+        }
+
+        self.layout_engine.mark_seen_if_present(node);
+        let size = if children.is_empty() && prev_bounds.size == bounds.size {
+            measured_size
+        } else {
+            bounds.size
+        };
+        if let Some(entry) = self.nodes.get_mut(node) {
+            entry.bounds = bounds;
+            entry.measured_size = size;
+        }
+        self.queue_layout_bounds_for_element(element, bounds);
+
+        for (child, child_bounds) in child_bounds {
+            let child_prev_bounds = self
+                .nodes
+                .get(child)
+                .map(|entry| entry.bounds)
+                .unwrap_or_default();
+            let child_measured_size = self
+                .nodes
+                .get(child)
+                .map(|entry| entry.measured_size)
+                .unwrap_or_default();
+            if self
+                .try_propagate_clean_engine_layout(
+                    app,
+                    services,
+                    child,
+                    child_bounds,
+                    child_prev_bounds,
+                    child_measured_size,
+                    scale_factor,
+                    pass_kind,
+                    overflow_ctx,
+                )
+                .is_none()
+            {
+                let _ = self.layout_node(
+                    app,
+                    services,
+                    child,
+                    child_bounds,
+                    scale_factor,
+                    pass_kind,
+                    overflow_ctx,
+                );
+            }
+        }
+
+        Some(size)
+    }
+
+    fn clean_engine_geometry_propagation_supported_element(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+    ) -> Option<GlobalElementId> {
+        let Some(record) = crate::declarative::frame::element_record_for_node(app, window, node)
+        else {
+            return None;
+        };
+
+        let supported = match record.instance {
+            crate::declarative::frame::ElementInstance::Container(_)
+            | crate::declarative::frame::ElementInstance::Pressable(_)
+            | crate::declarative::frame::ElementInstance::Semantics(_)
+            | crate::declarative::frame::ElementInstance::ViewCache(_)
+            | crate::declarative::frame::ElementInstance::FocusScope(_)
+            | crate::declarative::frame::ElementInstance::ForegroundScope(_)
+            | crate::declarative::frame::ElementInstance::Opacity(_)
+            | crate::declarative::frame::ElementInstance::Stack(_)
+            | crate::declarative::frame::ElementInstance::Grid(_) => true,
+            crate::declarative::frame::ElementInstance::Flex(_)
+            | crate::declarative::frame::ElementInstance::SemanticFlex(_)
+            | crate::declarative::frame::ElementInstance::RovingFlex(_) => {
+                !children.iter().copied().any(|child| {
+                    let style =
+                        crate::declarative::frame::layout_style_for_node(app, window, child);
+                    matches!(style.margin.left, crate::element::MarginEdge::Auto)
+                        || matches!(style.margin.right, crate::element::MarginEdge::Auto)
+                        || matches!(style.margin.top, crate::element::MarginEdge::Auto)
+                        || matches!(style.margin.bottom, crate::element::MarginEdge::Auto)
+                })
+            }
+            crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
+            crate::declarative::frame::ElementInstance::Text(_)
+            | crate::declarative::frame::ElementInstance::StyledText(_)
+            | crate::declarative::frame::ElementInstance::SelectableText(_) => {
+                children.is_empty() && prev_bounds.size == bounds.size
+            }
+            _ => false,
+        };
+        supported.then_some(record.element)
+    }
+
+    fn queue_layout_bounds_for_node_element(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        bounds: Rect,
+    ) {
+        if let Some(element) =
+            crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
+                record.element
+            })
+        {
+            self.queue_layout_bounds_for_element(element, bounds);
+        }
     }
 
     pub(super) fn measure_node(

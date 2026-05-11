@@ -1079,6 +1079,8 @@ impl ElementDiagnosticsSnapshotV1 {
                 .scratch_element_children_vec_pool_capacity_total,
             scratch_element_children_vec_pool_bytes_estimate_total: snapshot
                 .scratch_element_children_vec_pool_bytes_estimate_total,
+            scratch_element_children_vec_pool_grow_events: snapshot
+                .scratch_element_children_vec_pool_grow_events,
             retained_keep_alive_roots_len: snapshot.retained_keep_alive_roots_len,
             retained_keep_alive_roots_head: snapshot
                 .retained_keep_alive_roots_head

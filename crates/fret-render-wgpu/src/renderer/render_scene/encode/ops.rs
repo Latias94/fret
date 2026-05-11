@@ -66,16 +66,38 @@ fn clip_path_mask_cache_key(
     key
 }
 
-pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &SceneOp) {
+pub(super) fn handle_op(
+    renderer: &Renderer,
+    state: &mut EncodeState<'_>,
+    op: &SceneOp,
+    perf_enabled: bool,
+    frame_perf: &mut RenderPerfStats,
+) {
     match *op {
         SceneOp::PushTransform { transform } => {
             let current = state.current_transform();
             state.transform_stack.push(current * transform);
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
         }
         SceneOp::PopTransform => {
             if state.transform_stack.len() > 1 {
                 state.transform_stack.pop();
             }
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
         }
 
         SceneOp::PushOpacity { opacity } => {
@@ -463,7 +485,17 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             shadow,
             ..
         } => {
-            draw::encode_text(renderer, state, origin, text, paint, outline, shadow);
+            draw::encode_text(
+                renderer,
+                state,
+                origin,
+                text,
+                paint,
+                outline,
+                shadow,
+                perf_enabled,
+                frame_perf,
+            );
         }
         SceneOp::Path {
             origin,

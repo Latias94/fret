@@ -22,6 +22,8 @@ struct Viewport {
   text_subpixel_enhanced_contrast: f32,
   _pad_text_quality0: u32,
   _pad_text_quality1: u32,
+  text_transform0: vec4<f32>,
+  text_transform1: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -92,11 +94,11 @@ struct TextPaints {
 @group(2) @binding(0) var<storage, read> text_paints: TextPaints;
 
 struct VsIn {
-  @location(0) pos_px: vec2<f32>,
-  @location(1) local_pos_px: vec2<f32>,
-  @location(2) uv: vec2<f32>,
-  @location(3) color: vec4<f32>,
-  @location(4) outline_params: u32,
+  @location(0) local_rect: vec4<f32>,
+  @location(1) uv_rect: vec4<f32>,
+  @location(2) color: vec4<f32>,
+  @location(3) outline_params: u32,
+  @location(4) paint_index: u32,
 };
 
 struct VsOut {
@@ -114,6 +116,24 @@ fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   let ndc_x = (local.x / render_space.size_px.x) * 2.0 - 1.0;
   let ndc_y = 1.0 - (local.y / render_space.size_px.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn text_vertex_xy(vertex_index: u32) -> vec2<f32> {
+  switch vertex_index {
+    case 0u: { return vec2<f32>(0.0, 0.0); }
+    case 1u: { return vec2<f32>(1.0, 0.0); }
+    case 2u: { return vec2<f32>(1.0, 1.0); }
+    case 3u: { return vec2<f32>(0.0, 0.0); }
+    case 4u: { return vec2<f32>(1.0, 1.0); }
+    default: { return vec2<f32>(0.0, 1.0); }
+  }
+}
+
+fn apply_text_transform(local_pos: vec2<f32>) -> vec2<f32> {
+  return vec2<f32>(
+    dot(viewport.text_transform0.xy, local_pos) + viewport.text_transform0.z,
+    dot(viewport.text_transform1.xy, local_pos) + viewport.text_transform1.z
+  );
 }
 
 fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
@@ -453,15 +473,25 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 }
 
 @vertex
-fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
+fn vs_main(input: VsIn, @builtin(vertex_index) vertex_index: u32) -> VsOut {
+  let corner = text_vertex_xy(vertex_index);
+  let local_pos_px = vec2<f32>(
+    mix(input.local_rect.x, input.local_rect.z, corner.x),
+    mix(input.local_rect.y, input.local_rect.w, corner.y)
+  );
+  let uv = vec2<f32>(
+    mix(input.uv_rect.x, input.uv_rect.z, corner.x),
+    mix(input.uv_rect.y, input.uv_rect.w, corner.y)
+  );
+  let pixel_pos = apply_text_transform(local_pos_px);
   var out: VsOut;
-  let clip_xy = to_clip_space(input.pos_px);
+  let clip_xy = to_clip_space(pixel_pos);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
-  out.uv = input.uv;
+  out.uv = uv;
   out.color = input.color;
-  out.pixel_pos = input.pos_px;
-  out.local_pos_px = input.local_pos_px;
-  out.paint_index = instance_index;
+  out.pixel_pos = pixel_pos;
+  out.local_pos_px = local_pos_px;
+  out.paint_index = input.paint_index;
   out.outline_params = input.outline_params;
   return out;
 }

@@ -8,6 +8,18 @@ fn parse_bundle_stats_sort(raw: &str) -> Result<crate::BundleStatsSort, String> 
     crate::BundleStatsSort::parse(raw)
 }
 
+fn parse_perf_baseline_threshold_surface(
+    raw: &str,
+) -> Result<crate::PerfBaselineThresholdSurface, String> {
+    raw.parse::<crate::PerfBaselineThresholdSurface>()
+}
+
+fn parse_perf_baseline_ui_threshold_mode(
+    raw: &str,
+) -> Result<crate::PerfBaselineUiThresholdMode, String> {
+    raw.parse::<crate::PerfBaselineUiThresholdMode>()
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct PerfCommandArgs {
     #[arg(value_name = "TARGET", num_args = 1.., required = true)]
@@ -128,6 +140,21 @@ pub(crate) struct PerfCommandArgs {
         action = ArgAction::Append
     )]
     pub perf_baseline_seed_specs: Vec<String>,
+
+    #[arg(
+        long = "perf-baseline-ui-threshold-mode",
+        value_name = "MODE",
+        value_parser = parse_perf_baseline_ui_threshold_mode
+    )]
+    pub perf_baseline_ui_threshold_mode: Option<crate::PerfBaselineUiThresholdMode>,
+
+    #[arg(
+        long = "perf-baseline-threshold-surface",
+        value_name = "SURFACE",
+        default_value_t = crate::PerfBaselineThresholdSurface::Ui,
+        value_parser = parse_perf_baseline_threshold_surface
+    )]
+    pub perf_baseline_threshold_surface: crate::PerfBaselineThresholdSurface,
 
     #[arg(long = "check-pixels-changed", value_name = "TEST_ID")]
     pub check_pixels_changed: Option<String>,
