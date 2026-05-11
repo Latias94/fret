@@ -89,6 +89,154 @@ pub(in crate::editor) fn apply_ime_delete_surrounding(
     )
 }
 
+pub(in crate::editor) fn delete_word_backward(st: &mut CodeEditorState) {
+    let range = st.selection.normalized();
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    if start != end {
+        let _ = apply_and_record_edit(
+            st,
+            UndoGroupKind::Backspace,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
+        st.caret_preferred_x = None;
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    if caret == 0 {
+        return;
+    }
+
+    let prev = move_word_left_in_buffer(&st.buffer, caret, st.active_text_boundary_mode).min(caret);
+    if prev == caret {
+        return;
+    }
+
+    let _ = apply_and_record_edit(
+        st,
+        UndoGroupKind::Backspace,
+        Edit::Delete { range: prev..caret },
+        Selection {
+            anchor: prev,
+            focus: prev,
+        },
+    );
+    st.caret_preferred_x = None;
+}
+
+pub(in crate::editor) fn delete_word_forward(st: &mut CodeEditorState) {
+    let range = st.selection.normalized();
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    if start != end {
+        let _ = apply_and_record_edit(
+            st,
+            UndoGroupKind::DeleteForward,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
+        st.caret_preferred_x = None;
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    let next = move_word_right_in_buffer(&st.buffer, caret, st.active_text_boundary_mode)
+        .max(caret)
+        .min(st.buffer.len_bytes());
+    if next == caret {
+        return;
+    }
+
+    let _ = apply_and_record_edit(
+        st,
+        UndoGroupKind::DeleteForward,
+        Edit::Delete { range: caret..next },
+        Selection {
+            anchor: caret,
+            focus: caret,
+        },
+    );
+    st.caret_preferred_x = None;
+}
+
+pub(in crate::editor) fn delete_backward(st: &mut CodeEditorState) {
+    let range = st.selection.normalized();
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    if start != end {
+        let _ = apply_and_record_edit(
+            st,
+            UndoGroupKind::Backspace,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
+        st.caret_preferred_x = None;
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    if caret == 0 {
+        return;
+    }
+    let prev = st.buffer.prev_char_boundary(caret);
+    let _ = apply_and_record_edit(
+        st,
+        UndoGroupKind::Backspace,
+        Edit::Delete { range: prev..caret },
+        Selection {
+            anchor: prev,
+            focus: prev,
+        },
+    );
+    st.caret_preferred_x = None;
+}
+
+pub(in crate::editor) fn delete_forward(st: &mut CodeEditorState) {
+    let range = st.selection.normalized();
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    if start != end {
+        let _ = apply_and_record_edit(
+            st,
+            UndoGroupKind::DeleteForward,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
+        st.caret_preferred_x = None;
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    let next = st.buffer.next_char_boundary(caret);
+    if next == caret {
+        return;
+    }
+    let _ = apply_and_record_edit(
+        st,
+        UndoGroupKind::DeleteForward,
+        Edit::Delete { range: caret..next },
+        Selection {
+            anchor: caret,
+            focus: caret,
+        },
+    );
+    st.caret_preferred_x = None;
+}
+
 pub(in crate::editor) fn apply_and_record_edit(
     st: &mut CodeEditorState,
     kind: UndoGroupKind,

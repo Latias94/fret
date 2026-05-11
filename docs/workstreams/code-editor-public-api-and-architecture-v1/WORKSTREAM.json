@@ -118,6 +118,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md"
     },
     {
@@ -252,6 +256,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md",

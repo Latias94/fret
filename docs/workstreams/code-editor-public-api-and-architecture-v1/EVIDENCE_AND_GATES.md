@@ -164,6 +164,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`
 - Input keyboard split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md`
+- Input navigation/pointer split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
@@ -179,6 +181,8 @@ Latest resize probe with paint attribution enabled:
 - Input edit transaction owner: `ecosystem/fret-code-editor/src/editor/input/edit.rs`
 - Input clipboard effect owner: `ecosystem/fret-code-editor/src/editor/input/clipboard.rs`
 - Input keyboard dispatch owner: `ecosystem/fret-code-editor/src/editor/input/keyboard.rs`
+- Input navigation owner: `ecosystem/fret-code-editor/src/editor/input/navigation.rs`
+- Input pointer selection owner: `ecosystem/fret-code-editor/src/editor/input/pointer.rs`
 - A11y projection boundary: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`
 - A11y text-window owner: `ecosystem/fret-code-editor/src/editor/a11y/window.rs`
 - A11y offset-mapping owner: `ecosystem/fret-code-editor/src/editor/a11y/mapping.rs`
