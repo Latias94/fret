@@ -13,12 +13,17 @@ use std::ops::Range;
 use std::sync::Arc;
 
 pub mod code_wrap_policy;
+mod decorations;
 mod diagnostics;
 mod folds;
 mod gutter;
 mod inlays;
 pub mod row_spans;
 
+pub use decorations::{
+    RangeDecoration, RangeDecorationError, RangeDecorationHitTest, RangeDecorationLayer,
+    normalized_range_decorations, validate_range_decorations,
+};
 pub use diagnostics::{
     DiagnosticLineSummary, DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan,
     DiagnosticSpanError, diagnostic_line_summaries, normalized_diagnostic_spans,

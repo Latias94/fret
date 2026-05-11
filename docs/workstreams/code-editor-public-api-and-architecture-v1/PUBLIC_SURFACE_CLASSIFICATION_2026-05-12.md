@@ -90,10 +90,17 @@ Experimental extension contracts:
 - `GutterMarkerError`
 - `validate_gutter_markers`
 - `normalized_gutter_markers`
+- `RangeDecorationLayer`
+- `RangeDecorationHitTest`
+- `RangeDecoration`
+- `RangeDecorationError`
+- `validate_range_decorations`
+- `normalized_range_decorations`
 
 Rationale: diagnostics are the first M2 extension model slice. They use the correct view-layer
-coordinate ownership, and gutter markers now have an explicit payload/anchor contract. These remain
-experimental until decorations and a UI proof are wired on top of the data contract.
+coordinate ownership, and gutter markers/range decorations now have explicit payload contracts.
+These remain experimental until semantic tokens and a UI proof are wired on top of the data
+contract.
 
 Experimental:
 

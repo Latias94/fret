@@ -67,7 +67,7 @@ cargo nextest run -p fret-code-editor-view --lib --no-fail-fast
 
 ## Follow-ups
 
-1. Add range decoration payloads that share the buffer-range validation vocabulary.
+1. Use `M2_RANGE_DECORATION_CONTRACT_2026-05-12.md` for range-based editor feature overlays.
 2. Add a widget-level gutter proof after diagnostics, markers, and decorations can be passed as
    explicit extension inputs.
 3. Add feature-payload counters once these payloads enter the paint path.

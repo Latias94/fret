@@ -64,5 +64,5 @@ cargo nextest run -p fret-code-editor-view --lib --no-fail-fast
 
 1. Use `M2_GUTTER_MARKER_CONTRACT_2026-05-12.md` when wiring diagnostic summaries into gutter
    markers.
-2. Add range decorations that share the same buffer-range validation vocabulary.
+2. Use `M2_RANGE_DECORATION_CONTRACT_2026-05-12.md` for range-based diagnostic/search overlays.
 3. Wire a UI Gallery proof after diagnostics, gutter markers, and decorations have stable inputs.

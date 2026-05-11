@@ -26,10 +26,10 @@ Last updated: 2026-05-12
 ## P0 - Extension Model
 
 - [x] Specify the first diagnostics data contract as a view-layer buffer-range model.
-- [ ] Extend the first diagnostics contract into decorations/gutter data contracts.
+- [x] Extend the first diagnostics contract into decorations/gutter data contracts.
   - [x] Add diagnostic logical-line summaries for gutter/overview consumers.
   - [x] Add explicit gutter marker payloads.
-  - [ ] Add range decoration payloads.
+  - [x] Add range decoration payloads.
 - [ ] Decide the coordinate vocabulary for feature payloads: buffer byte range, display point,
       logical line, or display row.
   - [x] Diagnostics v1 uses `TextBuffer` UTF-8 byte ranges; line summaries use logical line indexes.
@@ -41,10 +41,10 @@ Last updated: 2026-05-12
 
 ## P1 - Implementation Slices
 
-- [ ] Land the first diagnostics/decorations/gutter API slice with tests.
+- [x] Land the first diagnostics/decorations/gutter API slice with tests.
   - [x] Diagnostic span + logical-line summary view-layer APIs and tests.
   - [x] Gutter marker payload API and tests.
-  - [ ] Range decoration payload API.
+  - [x] Range decoration payload API and tests.
 - [ ] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
       inlays, soft wrap, and selection.
 - [ ] Add a diagnostics bundle assertion for feature payload stability.

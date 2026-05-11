@@ -56,6 +56,7 @@ coordinate system a diagnostic payload uses and how it stays valid against a buf
 
 1. Build on `M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md` and
    `M2_GUTTER_MARKER_CONTRACT_2026-05-12.md` when wiring diagnostics into gutter UI.
-2. Add decoration payloads that can share the same range validation.
+2. Use `M2_RANGE_DECORATION_CONTRACT_2026-05-12.md` for diagnostic underlines and related range
+   highlights.
 3. Wire a feature-heavy UI Gallery proof only after the data model can be tested without rendering.
 4. Add perf counters when diagnostic payloads become part of the paint path.
