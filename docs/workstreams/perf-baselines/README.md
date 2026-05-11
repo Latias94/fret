@@ -20,8 +20,12 @@ Related:
 - New baselines also declare `threshold_surface`:
   - `ui`: frame/layout/pointer/cache thresholds only. Renderer timings stay in `measured_*` for attribution, but are
     not hard gate thresholds.
-  - `renderer`: renderer micro-thresholds only.
-  - `all`: both surfaces. Use this only for suites that intentionally gate renderer micro timings.
+  - `ui-renderer-payload`: UI thresholds plus renderer payload thresholds such as instance bytes and encoded text ops.
+    Renderer micro-timings stay in `measured_*` for attribution.
+  - `renderer-payload`: renderer payload thresholds only.
+  - `renderer`: renderer micro-timing thresholds plus renderer payload thresholds.
+  - `all`: UI thresholds, renderer micro-timing thresholds, and renderer payload thresholds. Use this only for suites
+    that intentionally gate renderer micro timings.
 - Existing baselines created before `measured_p50` was added remain valid. Do not synthesize `measured_p50` into old
   JSON files. Add it only by intentionally re-seeding on the target machine profile.
 - Baselines are environment-specific. Do not use a macOS baseline to judge Windows, or a high-end Windows baseline to
@@ -131,7 +135,8 @@ Before committing a new or replaced baseline:
 - Confirm the JSON row set matches the intended suite.
 - Confirm new rows include `measured_p50` unless the baseline is intentionally old and unchanged.
 - Confirm `threshold_surface` matches the suite intent. Resize/layout suites normally use `ui`; renderer/effects suites
-  use `renderer` or `all` only when those micro timings are the contract.
+  use `renderer` or `all` only when those micro timings are the contract. Use `ui-renderer-payload` when the suite
+  should gate CPU/UI time plus renderer payload size/counts without gating noisy renderer micro-timings.
 - Confirm validation passes with `failures=[]`.
 - Record the exact commands, selected candidate, validation result, and worst bundles in the perf log.
 - Update `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` if the suite, baseline path, or gate

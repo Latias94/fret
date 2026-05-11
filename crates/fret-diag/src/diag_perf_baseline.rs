@@ -141,7 +141,9 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
     }
 
     let wants_ui_thresholds = perf_baseline_threshold_surface.includes_ui();
-    let wants_renderer_thresholds = perf_baseline_threshold_surface.includes_renderer();
+    let wants_renderer_time_thresholds = perf_baseline_threshold_surface.includes_renderer_times();
+    let wants_renderer_payload_thresholds =
+        perf_baseline_threshold_surface.includes_renderer_payload();
     let thresholds = serde_json::json!({
         "max_top_total_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_total_us, perf_baseline_headroom_pct)),
         "max_top_layout_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_layout_us, perf_baseline_headroom_pct)),
@@ -151,14 +153,14 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         "max_pointer_move_global_changes": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct)),
         "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(apply_perf_baseline_floor(measured_max_run_paint_cache_hit_test_only_replay_allowed_max, perf_baseline_headroom_pct)),
         "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max, perf_baseline_headroom_pct)),
-        "max_renderer_encode_scene_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_us, perf_baseline_headroom_pct)),
-        "max_renderer_upload_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_upload_us, perf_baseline_headroom_pct)),
-        "max_renderer_record_passes_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_record_passes_us, perf_baseline_headroom_pct)),
-        "max_renderer_encoder_finish_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encoder_finish_us, perf_baseline_headroom_pct)),
-        "max_renderer_prepare_text_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_text_us, perf_baseline_headroom_pct)),
-        "max_renderer_prepare_svg_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_svg_us, perf_baseline_headroom_pct)),
-        "max_renderer_instance_bytes": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_instance_bytes, perf_baseline_headroom_pct)),
-        "max_renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_text_ops, perf_baseline_headroom_pct)),
+        "max_renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_us, perf_baseline_headroom_pct)),
+        "max_renderer_upload_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_upload_us, perf_baseline_headroom_pct)),
+        "max_renderer_record_passes_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_record_passes_us, perf_baseline_headroom_pct)),
+        "max_renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encoder_finish_us, perf_baseline_headroom_pct)),
+        "max_renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_text_us, perf_baseline_headroom_pct)),
+        "max_renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_svg_us, perf_baseline_headroom_pct)),
+        "max_renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_instance_bytes, perf_baseline_headroom_pct)),
+        "max_renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_text_ops, perf_baseline_headroom_pct)),
     });
 
     let measured_max = serde_json::json!({

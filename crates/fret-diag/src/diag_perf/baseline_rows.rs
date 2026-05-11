@@ -163,7 +163,8 @@ pub(crate) fn push_perf_baseline_row_single(
     thr_renderer_payload: RendererPayloadMetrics,
 ) {
     let wants_ui_thresholds = threshold_surface.includes_ui();
-    let wants_renderer_thresholds = threshold_surface.includes_renderer();
+    let wants_renderer_time_thresholds = threshold_surface.includes_renderer_times();
+    let wants_renderer_payload_thresholds = threshold_surface.includes_renderer_payload();
     rows.push(serde_json::json!({
         "script": script_key.to_string(),
         "measured_max": {
@@ -203,27 +204,27 @@ pub(crate) fn push_perf_baseline_row_single(
             "top_total_time_us": wants_ui_thresholds.then_some(seed_total_value),
             "top_layout_time_us": wants_ui_thresholds.then_some(seed_layout_value),
             "top_layout_engine_solve_time_us": wants_ui_thresholds.then_some(seed_solve_value),
-            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer_value.encode_scene_us),
-            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer_value.upload_us),
-            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer_value.record_passes_us),
-            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer_value.encoder_finish_us),
-            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_text_us),
-            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_svg_us),
-            "renderer_instance_bytes": wants_renderer_thresholds.then_some(seed_renderer_payload_value.instance_bytes),
-            "renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(seed_renderer_payload_value.encode_scene_text_ops),
+            "renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.encode_scene_us),
+            "renderer_upload_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.upload_us),
+            "renderer_record_passes_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.record_passes_us),
+            "renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.encoder_finish_us),
+            "renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.prepare_text_us),
+            "renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.prepare_svg_us),
+            "renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(seed_renderer_payload_value.instance_bytes),
+            "renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(seed_renderer_payload_value.encode_scene_text_ops),
         },
         "threshold_seed_source": {
             "top_total_time_us": wants_ui_thresholds.then_some(seed_total.as_str()),
             "top_layout_time_us": wants_ui_thresholds.then_some(seed_layout.as_str()),
             "top_layout_engine_solve_time_us": wants_ui_thresholds.then_some(seed_solve.as_str()),
-            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer.encode_scene_us.as_str()),
-            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer.upload_us.as_str()),
-            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer.record_passes_us.as_str()),
-            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer.encoder_finish_us.as_str()),
-            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_text_us.as_str()),
-            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_svg_us.as_str()),
-            "renderer_instance_bytes": wants_renderer_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
-            "renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
+            "renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(seed_renderer.encode_scene_us.as_str()),
+            "renderer_upload_us": wants_renderer_time_thresholds.then_some(seed_renderer.upload_us.as_str()),
+            "renderer_record_passes_us": wants_renderer_time_thresholds.then_some(seed_renderer.record_passes_us.as_str()),
+            "renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(seed_renderer.encoder_finish_us.as_str()),
+            "renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(seed_renderer.prepare_text_us.as_str()),
+            "renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(seed_renderer.prepare_svg_us.as_str()),
+            "renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
+            "renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
         },
         "thresholds": {
             "max_top_total_us": wants_ui_thresholds.then_some(thr_total),
@@ -234,14 +235,14 @@ pub(crate) fn push_perf_baseline_row_single(
             "max_pointer_move_global_changes": wants_ui_thresholds.then_some(thr_pointer_move.snapshots_with_global_changes),
             "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(thr_min_hit_test_only_replay_allowed_max),
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(thr_max_hit_test_only_replay_rejected_key_mismatch_max),
-            "max_renderer_encode_scene_us": wants_renderer_thresholds.then_some(thr_renderer.encode_scene_us),
-            "max_renderer_upload_us": wants_renderer_thresholds.then_some(thr_renderer.upload_us),
-            "max_renderer_record_passes_us": wants_renderer_thresholds.then_some(thr_renderer.record_passes_us),
-            "max_renderer_encoder_finish_us": wants_renderer_thresholds.then_some(thr_renderer.encoder_finish_us),
-            "max_renderer_prepare_text_us": wants_renderer_thresholds.then_some(thr_renderer.prepare_text_us),
-            "max_renderer_prepare_svg_us": wants_renderer_thresholds.then_some(thr_renderer.prepare_svg_us),
-            "max_renderer_instance_bytes": wants_renderer_thresholds.then_some(thr_renderer_payload.instance_bytes),
-            "max_renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(thr_renderer_payload.encode_scene_text_ops),
+            "max_renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(thr_renderer.encode_scene_us),
+            "max_renderer_upload_us": wants_renderer_time_thresholds.then_some(thr_renderer.upload_us),
+            "max_renderer_record_passes_us": wants_renderer_time_thresholds.then_some(thr_renderer.record_passes_us),
+            "max_renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(thr_renderer.encoder_finish_us),
+            "max_renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(thr_renderer.prepare_text_us),
+            "max_renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(thr_renderer.prepare_svg_us),
+            "max_renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(thr_renderer_payload.instance_bytes),
+            "max_renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(thr_renderer_payload.encode_scene_text_ops),
         },
     }));
 }
@@ -298,7 +299,8 @@ pub(crate) fn push_perf_baseline_row_repeat(
     thr_renderer_payload: RendererPayloadMetrics,
 ) {
     let wants_ui_thresholds = threshold_surface.includes_ui();
-    let wants_renderer_thresholds = threshold_surface.includes_renderer();
+    let wants_renderer_time_thresholds = threshold_surface.includes_renderer_times();
+    let wants_renderer_payload_thresholds = threshold_surface.includes_renderer_payload();
     rows.push(serde_json::json!({
         "script": script_key.to_string(),
         "measured_max": {
@@ -377,14 +379,14 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "frame_p95_total_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_total_value),
             "frame_p95_layout_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_layout_value),
             "frame_p95_layout_engine_solve_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_solve_value),
-            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer_value.encode_scene_us),
-            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer_value.upload_us),
-            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer_value.record_passes_us),
-            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer_value.encoder_finish_us),
-            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_text_us),
-            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer_value.prepare_svg_us),
-            "renderer_instance_bytes": wants_renderer_thresholds.then_some(seed_renderer_payload_value.instance_bytes),
-            "renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(seed_renderer_payload_value.encode_scene_text_ops),
+            "renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.encode_scene_us),
+            "renderer_upload_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.upload_us),
+            "renderer_record_passes_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.record_passes_us),
+            "renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.encoder_finish_us),
+            "renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.prepare_text_us),
+            "renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(seed_renderer_value.prepare_svg_us),
+            "renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(seed_renderer_payload_value.instance_bytes),
+            "renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(seed_renderer_payload_value.encode_scene_text_ops),
         },
         "threshold_seed_source": {
             "top_total_time_us": wants_ui_thresholds.then_some(seed_total.as_str()),
@@ -393,14 +395,14 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "frame_p95_total_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_total.as_str()),
             "frame_p95_layout_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_layout.as_str()),
             "frame_p95_layout_engine_solve_time_us": (wants_ui_thresholds && wants_frame_p95_thresholds).then_some(seed_frame_p95_solve.as_str()),
-            "renderer_encode_scene_us": wants_renderer_thresholds.then_some(seed_renderer.encode_scene_us.as_str()),
-            "renderer_upload_us": wants_renderer_thresholds.then_some(seed_renderer.upload_us.as_str()),
-            "renderer_record_passes_us": wants_renderer_thresholds.then_some(seed_renderer.record_passes_us.as_str()),
-            "renderer_encoder_finish_us": wants_renderer_thresholds.then_some(seed_renderer.encoder_finish_us.as_str()),
-            "renderer_prepare_text_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_text_us.as_str()),
-            "renderer_prepare_svg_us": wants_renderer_thresholds.then_some(seed_renderer.prepare_svg_us.as_str()),
-            "renderer_instance_bytes": wants_renderer_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
-            "renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
+            "renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(seed_renderer.encode_scene_us.as_str()),
+            "renderer_upload_us": wants_renderer_time_thresholds.then_some(seed_renderer.upload_us.as_str()),
+            "renderer_record_passes_us": wants_renderer_time_thresholds.then_some(seed_renderer.record_passes_us.as_str()),
+            "renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(seed_renderer.encoder_finish_us.as_str()),
+            "renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(seed_renderer.prepare_text_us.as_str()),
+            "renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(seed_renderer.prepare_svg_us.as_str()),
+            "renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
+            "renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(PerfBaselineSeed::Max.as_str()),
         },
         "thresholds": {
             "max_top_total_us": (wants_ui_thresholds && !wants_frame_p95_thresholds).then_some(thr_total),
@@ -414,14 +416,14 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "max_pointer_move_global_changes": wants_ui_thresholds.then_some(thr_pointer_move.snapshots_with_global_changes),
             "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(thr_min_hit_test_only_replay_allowed_max),
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(thr_max_hit_test_only_replay_rejected_key_mismatch_max),
-            "max_renderer_encode_scene_us": wants_renderer_thresholds.then_some(thr_renderer.encode_scene_us),
-            "max_renderer_upload_us": wants_renderer_thresholds.then_some(thr_renderer.upload_us),
-            "max_renderer_record_passes_us": wants_renderer_thresholds.then_some(thr_renderer.record_passes_us),
-            "max_renderer_encoder_finish_us": wants_renderer_thresholds.then_some(thr_renderer.encoder_finish_us),
-            "max_renderer_prepare_text_us": wants_renderer_thresholds.then_some(thr_renderer.prepare_text_us),
-            "max_renderer_prepare_svg_us": wants_renderer_thresholds.then_some(thr_renderer.prepare_svg_us),
-            "max_renderer_instance_bytes": wants_renderer_thresholds.then_some(thr_renderer_payload.instance_bytes),
-            "max_renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(thr_renderer_payload.encode_scene_text_ops),
+            "max_renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(thr_renderer.encode_scene_us),
+            "max_renderer_upload_us": wants_renderer_time_thresholds.then_some(thr_renderer.upload_us),
+            "max_renderer_record_passes_us": wants_renderer_time_thresholds.then_some(thr_renderer.record_passes_us),
+            "max_renderer_encoder_finish_us": wants_renderer_time_thresholds.then_some(thr_renderer.encoder_finish_us),
+            "max_renderer_prepare_text_us": wants_renderer_time_thresholds.then_some(thr_renderer.prepare_text_us),
+            "max_renderer_prepare_svg_us": wants_renderer_time_thresholds.then_some(thr_renderer.prepare_svg_us),
+            "max_renderer_instance_bytes": wants_renderer_payload_thresholds.then_some(thr_renderer_payload.instance_bytes),
+            "max_renderer_encode_scene_text_ops": wants_renderer_payload_thresholds.then_some(thr_renderer_payload.encode_scene_text_ops),
         },
     }));
 }
@@ -637,6 +639,85 @@ mod tests {
         assert!(rows[0]["thresholds"]["max_renderer_encode_scene_us"].is_null());
         assert!(rows[0]["thresholds"]["max_renderer_prepare_svg_us"].is_null());
         assert!(rows[0]["thresholds"]["max_renderer_instance_bytes"].is_null());
+    }
+
+    #[test]
+    fn ui_renderer_payload_surface_gates_ui_and_payload_only() {
+        let mut rows = Vec::new();
+
+        push_perf_baseline_row_repeat(
+            &mut rows,
+            "tools/diag-scripts/repeat.json",
+            PerfBaselineThresholdSurface::UiRendererPayload,
+            TopTimesUs::new(100, 80, 60),
+            TopTimesUs::new(40, 30, 20),
+            pointer(10, 11, 0),
+            paint_cache(12, 13),
+            renderer(1000),
+            payload(100),
+            TopTimesUs::new(70, 50, 30),
+            TopTimesUs::new(25, 20, 15),
+            renderer(2000),
+            payload(200),
+            TopTimesUs::new(90, 70, 50),
+            TopTimesUs::new(35, 30, 25),
+            renderer(3000),
+            payload(300),
+            TopTimesUs::new(95, 75, 55),
+            TopTimesUs::new(38, 33, 28),
+            renderer(4000),
+            payload(400),
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::P95,
+            PerfBaselineSeed::P95,
+            PerfBaselineSeed::P95,
+            100,
+            80,
+            60,
+            38,
+            33,
+            28,
+            renderer_seed(PerfBaselineSeed::Max),
+            renderer(1000),
+            payload(100),
+            false,
+            120,
+            96,
+            72,
+            None,
+            None,
+            None,
+            pointer(12, 13, 0),
+            10,
+            16,
+            renderer(5000),
+            payload(500),
+        );
+
+        assert_eq!(
+            "ui-renderer-payload"
+                .parse::<PerfBaselineThresholdSurface>()
+                .unwrap(),
+            PerfBaselineThresholdSurface::UiRendererPayload
+        );
+        assert_eq!(rows[0]["measured_max"]["renderer_encode_scene_us"], 1000);
+        assert_eq!(rows[0]["measured_max"]["renderer_instance_bytes"], 100);
+        assert_eq!(rows[0]["thresholds"]["max_top_total_us"], 120);
+        assert_eq!(rows[0]["thresholds"]["max_renderer_instance_bytes"], 500);
+        assert_eq!(
+            rows[0]["thresholds"]["max_renderer_encode_scene_text_ops"],
+            501
+        );
+        assert_eq!(rows[0]["threshold_seed"]["renderer_instance_bytes"], 100);
+        assert_eq!(
+            rows[0]["threshold_seed_source"]["renderer_instance_bytes"],
+            "max"
+        );
+        assert!(rows[0]["thresholds"]["max_renderer_encode_scene_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_renderer_record_passes_us"].is_null());
+        assert!(rows[0]["threshold_seed"]["renderer_prepare_text_us"].is_null());
     }
 
     #[test]

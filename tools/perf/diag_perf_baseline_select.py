@@ -11,6 +11,8 @@ This mirrors the intent of `tools/perf/diag_perf_baseline_select.sh`:
     stable typical performance before threshold size.
   - By default, generated baselines use the UI threshold surface. Renderer timings remain
     recorded under measured_* but are not hard thresholds unless explicitly requested.
+    Use ui-renderer-payload for UI thresholds plus renderer payload counters without gating
+    renderer micro-timings.
   - Pick a winner with priority:
       1) fewer validation failures
       2) lower suite p90 sum (rows[].measured_p90.top_total_time_us)
@@ -169,10 +171,12 @@ def main() -> int:
     ap.add_argument(
         "--threshold-surface",
         default="ui",
-        choices=["ui", "renderer", "all"],
+        choices=["ui", "ui-renderer-payload", "renderer-payload", "renderer", "all"],
         help=(
             "Forwarded to `diag perf --perf-baseline-threshold-surface`. "
-            "Use 'ui' for resize/layout contracts; use 'renderer' or 'all' for renderer-focused gates."
+            "Use 'ui' for resize/layout contracts; 'ui-renderer-payload' when UI thresholds plus renderer payload "
+            "metrics should be gated; 'renderer-payload' for payload-only gates; 'renderer' or 'all' for "
+            "renderer-focused gates."
         ),
     )
     ap.add_argument("--work-dir", default="")

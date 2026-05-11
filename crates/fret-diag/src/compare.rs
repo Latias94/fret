@@ -2369,6 +2369,8 @@ impl std::str::FromStr for PerfThresholdAggregate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PerfBaselineThresholdSurface {
     Ui,
+    UiRendererPayload,
+    RendererPayload,
     Renderer,
     All,
 }
@@ -2377,6 +2379,8 @@ impl PerfBaselineThresholdSurface {
     pub(super) fn as_str(self) -> &'static str {
         match self {
             PerfBaselineThresholdSurface::Ui => "ui",
+            PerfBaselineThresholdSurface::UiRendererPayload => "ui-renderer-payload",
+            PerfBaselineThresholdSurface::RendererPayload => "renderer-payload",
             PerfBaselineThresholdSurface::Renderer => "renderer",
             PerfBaselineThresholdSurface::All => "all",
         }
@@ -2385,14 +2389,26 @@ impl PerfBaselineThresholdSurface {
     pub(super) fn includes_ui(self) -> bool {
         matches!(
             self,
-            PerfBaselineThresholdSurface::Ui | PerfBaselineThresholdSurface::All
+            PerfBaselineThresholdSurface::Ui
+                | PerfBaselineThresholdSurface::UiRendererPayload
+                | PerfBaselineThresholdSurface::All
         )
     }
 
-    pub(super) fn includes_renderer(self) -> bool {
+    pub(super) fn includes_renderer_times(self) -> bool {
         matches!(
             self,
             PerfBaselineThresholdSurface::Renderer | PerfBaselineThresholdSurface::All
+        )
+    }
+
+    pub(super) fn includes_renderer_payload(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineThresholdSurface::UiRendererPayload
+                | PerfBaselineThresholdSurface::RendererPayload
+                | PerfBaselineThresholdSurface::Renderer
+                | PerfBaselineThresholdSurface::All
         )
     }
 }
@@ -2409,12 +2425,21 @@ impl std::str::FromStr for PerfBaselineThresholdSurface {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_ascii_lowercase().as_str() {
             "ui" | "cpu" | "frame" | "frames" => Ok(PerfBaselineThresholdSurface::Ui),
+            "ui-renderer-payload"
+            | "ui+renderer-payload"
+            | "frame+renderer-payload"
+            | "ui+payload"
+            | "frame+payload"
+            | "ui-payload" => Ok(PerfBaselineThresholdSurface::UiRendererPayload),
+            "renderer-payload" | "render-payload" | "payload" => {
+                Ok(PerfBaselineThresholdSurface::RendererPayload)
+            }
             "renderer" | "render" => Ok(PerfBaselineThresholdSurface::Renderer),
             "all" | "ui+renderer" | "renderer+ui" | "frame+renderer" | "renderer+frame" => {
                 Ok(PerfBaselineThresholdSurface::All)
             }
             _ => Err(format!(
-                "invalid threshold surface (expected ui|renderer|all): {s:?}"
+                "invalid threshold surface (expected ui|ui-renderer-payload|renderer-payload|renderer|all): {s:?}"
             )),
         }
     }

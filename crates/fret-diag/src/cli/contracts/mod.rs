@@ -462,6 +462,33 @@ mod tests {
     }
 
     #[test]
+    fn perf_contract_parses_ui_renderer_payload_threshold_surface() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "perf",
+            "ui-gallery",
+            "--perf-baseline-threshold-surface",
+            "ui-renderer-payload",
+            "--launch",
+            "--",
+            "cargo",
+            "run",
+            "-p",
+            "fret-ui-gallery",
+        ])
+        .expect("perf contract should parse ui-renderer-payload threshold surface");
+
+        let DiagCommandContract::Perf(args) = cli.command else {
+            panic!("expected perf command");
+        };
+
+        assert_eq!(
+            args.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::UiRendererPayload
+        );
+    }
+
+    #[test]
     fn perf_baseline_from_bundles_contract_requires_an_output_path() {
         let err = try_parse_contract([
             "fretboard",

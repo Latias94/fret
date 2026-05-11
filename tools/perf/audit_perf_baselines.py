@@ -41,6 +41,8 @@ def discover_from_matrix(matrix_path: pathlib.Path) -> list[pathlib.Path]:
     seen: set[str] = set()
     for match in re.finditer(r"docs/workstreams/perf-baselines/[^`\s)]+\.json", text):
         rel = match.group(0)
+        if "/policies/" in rel.replace("\\", "/"):
+            continue
         if rel in seen:
             continue
         seen.add(rel)

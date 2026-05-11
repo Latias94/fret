@@ -13,7 +13,7 @@ Usage:
     [--repeat <n>] \
     [--warmup-frames <n>] \
     [--headroom-pct <n>] \
-    [--threshold-surface <ui|renderer|all>] \
+    [--threshold-surface <ui|ui-renderer-payload|renderer-payload|renderer|all>] \
     [--work-dir <path>] \
     [--launch-bin <path>] \
     [--prewarm-script <path>] \
@@ -26,7 +26,8 @@ Notes:
   - Designed for Fret `diag perf` baseline generation/selection.
   - By default, applies the font prewarm and reset-diagnostics prelude hooks used by the perf workstream.
   - By default, uses the UI threshold surface; renderer timings stay measured but are not hard
-    thresholds unless --threshold-surface renderer/all is passed.
+    thresholds unless --threshold-surface renderer/all is passed. Use ui-renderer-payload when
+    UI thresholds plus renderer payload metrics should be gated, or renderer-payload for payload-only gates.
   - Validation repeats use the same repeat count as baseline generation.
   - The selected candidate must have zero validation failures unless --allow-failures is passed.
   - Candidate winner priority:
