@@ -962,6 +962,14 @@ Perf acceptance:
   - Rule: choose candidate by failures -> resize p90 -> threshold-sum.
   - Template doc updated: `docs/workstreams/perf-baselines/seed-policy-template.md` (`Candidate selection workflow`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Promote payload-aware code-editor autoscroll Windows baseline.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`
+  - Seed policy: `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-steady.v2.json`
+  - Selector summary: `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-steady-windows-rtx4090-v4c/selection-summary.json`
+  - Result: candidate-1 selected with `fail_total=0`; candidate-2 also validated `3/3`.
+  - Contract: `threshold_surface=ui-renderer-payload`; `top_total_time_us` uses `p90` + `quantum_us=16`, `top_layout_time_us`
+    uses `p90` + `min_slack_us=144` + `quantum_us=8`.
+  - Evidence: perf log entry `2026-05-11`.
 - [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
   - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
   - Commit: `c7ea64bb5`

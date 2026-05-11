@@ -11975,3 +11975,41 @@ Decision:
   by hand: it predates payload fields and has no measured payload evidence.
 - Next action is to re-seed that autoscroll baseline from a fresh repeat=7 run, producing a payload-aware v3 baseline
   with `max_renderer_instance_bytes` and `max_renderer_encode_scene_text_ops` thresholds.
+
+## 2026-05-11 (payload-aware autoscroll baseline v4)
+
+Question:
+- Can the code-editor autoscroll contract gate renderer payload growth while keeping renderer micro-timings as
+  attribution evidence only?
+
+Change:
+- Added `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-steady.v2.json`.
+- Extended the selector surface support so `ui-renderer-payload` and `renderer-payload` are accepted alongside the
+  older `ui|renderer|all` forms.
+- Tightened the baseline audit matrix scan so seed policy JSON files under `perf-baselines/policies/` are not reported
+  as legacy baselines.
+- Re-seeded the Windows RTX 4090 autoscroll baseline as
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`.
+
+Validation:
+- Early no-slack selector pass
+  (`target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-steady-windows-rtx4090-v4b/selection-summary.json`)
+  failed on `top_layout_time_us` (`393us` actual vs `302us` threshold), so layout needed explicit slack.
+- Final selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-autoscroll-steady-windows-rtx4090-v4c/selection-summary.json`
+  - `best_candidate.fail_total=0`
+  - candidate-1 and candidate-2 both validated `3/3`
+  - selected candidate-1 thresholds:
+    `max_top_total_us=3072`, `max_top_layout_us=320`,
+    `max_renderer_instance_bytes=323482`, `max_renderer_encode_scene_text_ops=611`
+- Tooling checks:
+  - `python tools/perf/diag_perf_baseline_select.py --help`
+  - `python -m py_compile tools/perf/audit_perf_baselines.py tools/perf/diag_perf_baseline_select.py`
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - `cargo fmt -p fret-diag --check`
+  - `cargo nextest run -p fret-diag`
+
+Decision:
+- Treat v4 as the checked-in payload-aware contract.
+- Keep renderer micro-timing growth in a separate renderer/effects contract; do not widen this UI+payload baseline to
+  cover those timings.
