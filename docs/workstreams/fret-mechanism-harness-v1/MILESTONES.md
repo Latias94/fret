@@ -155,9 +155,9 @@ Status: complete for the first matrix
   combobox, select, dropdown-menu, and context-menu in addition to dialog/popover.
 - The matrix distinguishes restore-to-trigger, click-through underlay focus/activation, modal
   underlay blocking, and focus-clear outcomes.
-- The first draft exposed a follow-up candidate: select opened through the pointer-trigger path did
-  not close on the modeled outside click, while the controlled-open select barrier path remained
-  green. This needs a narrow pointer-open isolation test before classifying it as a runtime defect.
+- The first draft exposed a confirmed select pointer-open defect: a cached suppress decision from
+  the opening pointer-up was reused for a different pointer id on the outside click. The guard now
+  keys cached decisions by pointer id as well as tick id.
 - Focused gates for context-menu click-through, dropdown-menu non-modal outside focus clear, select
   modal underlay blocking, context-menu Escape focus clear, and combobox close-auto-focus reason
   policy passed.

@@ -109,6 +109,7 @@ cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through
 cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --lib select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay -- --nocapture
 cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_maps_reasons -- --nocapture
+cargo test --profile dev-fast -p fret-ui-kit --lib mouse_open_guard_pointer_up_decision_is_reusable_within_tick -- --nocapture
 ```
 
 ## Runtime Diagnostics Gate
@@ -209,6 +210,8 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
   `ecosystem/fret-ui-shadcn/src/select.rs`
 - Combobox reason policy focused tests:
   `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
+- Select mouse-open pointer-up guard focused tests:
+  `ecosystem/fret-ui-kit/src/primitives/select.rs`
 - Retained virtual-list focused test: `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
 - Scroll registry classification tests: `crates/fret-ui/src/declarative/frame.rs`
 - Scroll-contained frontier focused test: `crates/fret-ui/src/declarative/tests/layout/scroll.rs`

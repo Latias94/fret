@@ -339,9 +339,10 @@ It covers:
 - popover click-through outside-press dismissal focusing and activating the underlay target,
 - open-state closure as a mechanism metric alongside focus restoration.
 
-The select outside-press fixture intentionally opens the model directly before dismissing. A
-trigger pointer-open sequence that then clicks outside needs a narrower follow-up because the first
-draft case stayed open while existing controlled-open select barrier gates passed.
+The select outside-press fixture uses the trigger pointer-open path. The first draft exposed a
+confirmed guard-cache defect: select's mouse-open pointer-up guard reused a suppress decision for a
+different pointer id when tick ids were adjacent. The guard now keys cached pointer-up decisions by
+pointer id as well as tick id.
 
 The first run exposed a real harness oracle defect. `UiPredicateV1::FocusIs` used the normal
 barrier-filtered selector path, so it could not match a trigger outside a still-present pointer/modal

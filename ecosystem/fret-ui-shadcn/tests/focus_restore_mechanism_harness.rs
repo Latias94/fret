@@ -566,7 +566,7 @@ fn observe_select_outside_press_restore() -> Result<ObservedTree, ScenarioObserv
         underlay_activated.clone(),
     );
     let underlay_point = point_for_test_id(&ui, "underlay")?;
-    let _ = app.models_mut().update(&open, |value| *value = true);
+    click_trigger(&mut ui, &mut app, &mut services, "select-trigger")?;
     flush_timers(&mut ui, &mut app, &mut services, &mut timers);
     expect_open(&app, &open, true)?;
 

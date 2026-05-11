@@ -514,14 +514,18 @@ pub fn select_mouse_open_guard_pointer_up_decision(
     guard: &mut SelectMouseOpenGuardState,
     up: PointerUpCx,
 ) -> SelectMouseOpenGuardPointerUpDecision {
-    if let (Some(last_tick), Some(decision)) = (
+    if let (Some(last_tick), Some(last_pointer_id), Some(decision)) = (
         guard.last_pointer_up_tick_id,
+        guard.last_pointer_up_pointer_id,
         guard.last_pointer_up_decision,
     ) {
         // The same platform pointer-up can be routed to multiple elements (e.g. trigger capture +
         // barrier dismissal). Prefer a tolerant tick match so both consumers observe the same
-        // decision even if the runtime assigns adjacent `TickId`s during routing.
-        if up.tick_id == last_tick || up.tick_id.0 == last_tick.0 + 1 {
+        // decision even if the runtime assigns adjacent `TickId`s during routing. Do not reuse the
+        // decision for a different pointer id: that is a new interaction, not duplicate routing.
+        if up.pointer_id == last_pointer_id
+            && (up.tick_id == last_tick || up.tick_id.0 == last_tick.0 + 1)
+        {
             return decision;
         }
     }
@@ -545,6 +549,7 @@ pub fn select_mouse_open_guard_pointer_up_decision(
     };
 
     guard.last_pointer_up_tick_id = Some(up.tick_id);
+    guard.last_pointer_up_pointer_id = Some(up.pointer_id);
     guard.last_pointer_up_decision = Some(decision);
 
     decision
@@ -1111,6 +1116,7 @@ impl SelectTriggerKeyState {
 pub struct SelectMouseOpenGuardState {
     mouse_open_down_pos: Option<Point>,
     last_pointer_up_tick_id: Option<fret_runtime::TickId>,
+    last_pointer_up_pointer_id: Option<fret_core::PointerId>,
     last_pointer_up_decision: Option<SelectMouseOpenGuardPointerUpDecision>,
 }
 
@@ -1118,6 +1124,7 @@ impl SelectMouseOpenGuardState {
     pub fn clear(&mut self) {
         self.mouse_open_down_pos = None;
         self.last_pointer_up_tick_id = None;
+        self.last_pointer_up_pointer_id = None;
         self.last_pointer_up_decision = None;
     }
 
@@ -1128,6 +1135,7 @@ impl SelectMouseOpenGuardState {
             self.mouse_open_down_pos = None;
         }
         self.last_pointer_up_tick_id = None;
+        self.last_pointer_up_pointer_id = None;
         self.last_pointer_up_decision = None;
     }
 
@@ -2957,8 +2965,18 @@ mod tests {
             SelectMouseOpenGuardPointerUpDecision::Suppress
         );
 
-        let up_clear = PointerUpCx {
+        let up_new_pointer = PointerUpCx {
+            pointer_id: fret_core::PointerId(1),
             tick_id: fret_runtime::TickId(44),
+            ..up
+        };
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up_new_pointer),
+            SelectMouseOpenGuardPointerUpDecision::NoGuard
+        );
+
+        let up_clear = PointerUpCx {
+            tick_id: fret_runtime::TickId(45),
             ..up
         };
         assert_eq!(
