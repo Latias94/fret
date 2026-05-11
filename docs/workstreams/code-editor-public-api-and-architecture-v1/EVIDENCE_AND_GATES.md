@@ -106,6 +106,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md`
 - Feature payload bundle assertion:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md`
+- First editor test module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`

@@ -52,6 +52,8 @@ Last updated: 2026-05-12
       inlays, soft wrap, and selection.
 - [x] Add a diagnostics bundle assertion for feature payload stability.
 - [ ] Split monolithic editor tests into feature-owned test modules or fixture-driven runners.
+  - [x] Extract feature payload API tests into
+        `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`.
 - [ ] Split large internal owners only when the public API or test ownership benefits:
   - state/handle,
   - input,

@@ -65,7 +65,8 @@ Exit criteria:
 - At least one public API cleanup lands with a surface-diff note.
 - Debug-only APIs are either clearly named as debug/staging or moved away from the default public
   path.
-- Module/test ownership improves without changing behavior.
+- Module/test ownership improves without changing behavior. (First test split landed in
+  `M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
 
 ## M4 - Feature Surface Proof
