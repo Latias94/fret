@@ -1,5 +1,5 @@
 {
-  "generated_unix_ms": 1778490250843,
+  "generated_unix_ms": 1778497703057,
   "headroom_pct": 20,
   "kind": "perf_baseline",
   "out_path": "docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json",
@@ -8,89 +8,89 @@
     {
       "measured_max": {
         "frame_p95_layout_engine_solve_time_us": 0,
-        "frame_p95_layout_time_us": 336,
-        "frame_p95_total_time_us": 2784,
-        "pointer_move_max_dispatch_time_us": 447,
-        "pointer_move_max_hit_test_time_us": 13,
+        "frame_p95_layout_time_us": 495,
+        "frame_p95_total_time_us": 2968,
+        "pointer_move_max_dispatch_time_us": 407,
+        "pointer_move_max_hit_test_time_us": 11,
         "pointer_move_snapshots_with_global_changes": 0,
         "renderer_encode_scene_text_ops": 338,
-        "renderer_encode_scene_us": 1039,
-        "renderer_encoder_finish_us": 184,
-        "renderer_instance_bytes": 215552,
-        "renderer_prepare_svg_us": 9,
-        "renderer_prepare_text_us": 296,
-        "renderer_record_passes_us": 79,
-        "renderer_upload_us": 150,
+        "renderer_encode_scene_us": 987,
+        "renderer_encoder_finish_us": 296,
+        "renderer_instance_bytes": 218968,
+        "renderer_prepare_svg_us": 11,
+        "renderer_prepare_text_us": 269,
+        "renderer_record_passes_us": 78,
+        "renderer_upload_us": 134,
         "run_paint_cache_hit_test_only_replay_allowed_max": 0,
         "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
         "top_layout_engine_solve_time_us": 0,
-        "top_layout_time_us": 336,
-        "top_total_time_us": 5027
+        "top_layout_time_us": 495,
+        "top_total_time_us": 4617
       },
       "measured_p50": {
         "frame_p95_layout_engine_solve_time_us": 0,
-        "frame_p95_layout_time_us": 321,
-        "frame_p95_total_time_us": 2250,
+        "frame_p95_layout_time_us": 303,
+        "frame_p95_total_time_us": 1730,
         "renderer_encode_scene_text_ops": 338,
-        "renderer_encode_scene_us": 415,
-        "renderer_encoder_finish_us": 148,
-        "renderer_instance_bytes": 215160,
-        "renderer_prepare_svg_us": 7,
-        "renderer_prepare_text_us": 175,
-        "renderer_record_passes_us": 63,
-        "renderer_upload_us": 91,
+        "renderer_encode_scene_us": 305,
+        "renderer_encoder_finish_us": 160,
+        "renderer_instance_bytes": 215272,
+        "renderer_prepare_svg_us": 9,
+        "renderer_prepare_text_us": 207,
+        "renderer_record_passes_us": 58,
+        "renderer_upload_us": 127,
         "top_layout_engine_solve_time_us": 0,
-        "top_layout_time_us": 311,
-        "top_total_time_us": 2424
+        "top_layout_time_us": 308,
+        "top_total_time_us": 2257
       },
       "measured_p90": {
         "frame_p95_layout_engine_solve_time_us": 0,
-        "frame_p95_layout_time_us": 336,
-        "frame_p95_total_time_us": 2784,
+        "frame_p95_layout_time_us": 495,
+        "frame_p95_total_time_us": 2968,
         "renderer_encode_scene_text_ops": 338,
-        "renderer_encode_scene_us": 1039,
-        "renderer_encoder_finish_us": 184,
-        "renderer_instance_bytes": 215552,
-        "renderer_prepare_svg_us": 9,
-        "renderer_prepare_text_us": 296,
-        "renderer_record_passes_us": 79,
-        "renderer_upload_us": 150,
+        "renderer_encode_scene_us": 987,
+        "renderer_encoder_finish_us": 296,
+        "renderer_instance_bytes": 218968,
+        "renderer_prepare_svg_us": 11,
+        "renderer_prepare_text_us": 269,
+        "renderer_record_passes_us": 78,
+        "renderer_upload_us": 134,
         "top_layout_engine_solve_time_us": 0,
-        "top_layout_time_us": 336,
-        "top_total_time_us": 5027
+        "top_layout_time_us": 495,
+        "top_total_time_us": 4617
       },
       "measured_p95": {
         "frame_p95_layout_engine_solve_time_us": 0,
-        "frame_p95_layout_time_us": 336,
-        "frame_p95_total_time_us": 2784,
+        "frame_p95_layout_time_us": 495,
+        "frame_p95_total_time_us": 2968,
         "renderer_encode_scene_text_ops": 338,
-        "renderer_encode_scene_us": 1039,
-        "renderer_encoder_finish_us": 184,
-        "renderer_instance_bytes": 215552,
-        "renderer_prepare_svg_us": 9,
-        "renderer_prepare_text_us": 296,
-        "renderer_record_passes_us": 79,
-        "renderer_upload_us": 150,
+        "renderer_encode_scene_us": 987,
+        "renderer_encoder_finish_us": 296,
+        "renderer_instance_bytes": 218968,
+        "renderer_prepare_svg_us": 11,
+        "renderer_prepare_text_us": 269,
+        "renderer_record_passes_us": 78,
+        "renderer_upload_us": 134,
         "top_layout_engine_solve_time_us": 0,
-        "top_layout_time_us": 336,
-        "top_total_time_us": 5027
+        "top_layout_time_us": 495,
+        "top_total_time_us": 4617
       },
       "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": 0,
-        "frame_p95_layout_time_us": 336,
-        "frame_p95_total_time_us": 2784,
+        "frame_p95_layout_time_us": 495,
+        "frame_p95_total_time_us": 2968,
         "renderer_encode_scene_text_ops": 338,
         "renderer_encode_scene_us": null,
         "renderer_encoder_finish_us": null,
-        "renderer_instance_bytes": 215552,
+        "renderer_instance_bytes": 218968,
         "renderer_prepare_svg_us": null,
         "renderer_prepare_text_us": null,
         "renderer_record_passes_us": null,
         "renderer_upload_us": null,
         "top_layout_engine_solve_time_us": 0,
-        "top_layout_time_us": 336,
-        "top_total_time_us": 5027
+        "top_layout_time_us": 495,
+        "top_total_time_us": 4617
       },
       "threshold_seed_source": {
         "frame_p95_layout_engine_solve_time_us": "p95",
@@ -112,9 +112,9 @@
         "max_frame_p95_layout_us": 592,
         "max_frame_p95_solve_us": 0,
         "max_frame_p95_total_us": 3808,
-        "max_pointer_move_dispatch_us": 537,
+        "max_pointer_move_dispatch_us": 489,
         "max_pointer_move_global_changes": 0,
-        "max_pointer_move_hit_test_us": 16,
+        "max_pointer_move_hit_test_us": 14,
         "max_renderer_encode_scene_text_ops": 406,
         "max_renderer_encode_scene_us": null,
         "max_renderer_encoder_finish_us": null,
@@ -205,11 +205,68 @@
           "min_slack_us": 512,
           "quantum_us": 16
         }
+      },
+      {
+        "metric": "top_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "max",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 3200,
+          "quantum_us": 16
+        }
       }
     ],
     "schema_version": 1,
     "ui_threshold_mode": "top_and_frame_p95"
   },
   "threshold_surface": "ui-renderer-payload",
-  "warmup_frames": 5
+  "warmup_frames": 5,
+  "threshold_clamp_policy": {
+    "schema_version": 1,
+    "mode": "no_threshold_loosening",
+    "source_baseline": "docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json",
+    "clamps": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "threshold": "max_frame_p95_layout_us",
+        "old_value": 592,
+        "new_value_before_clamp": 752,
+        "new_value_after_clamp": 592,
+        "reason": "max_clamped_to_existing"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "threshold": "max_frame_p95_total_us",
+        "old_value": 3808,
+        "new_value_before_clamp": 4000,
+        "new_value_after_clamp": 3808,
+        "reason": "max_clamped_to_existing"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "threshold": "max_renderer_instance_bytes",
+        "old_value": 258663,
+        "new_value_before_clamp": 262762,
+        "new_value_after_clamp": 258663,
+        "reason": "max_clamped_to_existing"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "threshold": "max_top_layout_us",
+        "old_value": 848,
+        "new_value_before_clamp": 1008,
+        "new_value_after_clamp": 848,
+        "reason": "max_clamped_to_existing"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "threshold": "max_top_total_us",
+        "old_value": 6033,
+        "new_value_before_clamp": 7824,
+        "new_value_after_clamp": 6033,
+        "reason": "max_clamped_to_existing"
+      }
+    ]
+  }
 }

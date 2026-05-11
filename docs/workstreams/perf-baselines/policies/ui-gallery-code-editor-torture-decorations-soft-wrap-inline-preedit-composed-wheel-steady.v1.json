@@ -6,6 +6,13 @@
   "rules": [
     {
       "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "max",
+      "min_slack_us": 3200,
+      "quantum_us": 16
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
       "metric": "frame_p95_total_time_us",
       "seed": "p90",
       "min_slack_us": 1024,

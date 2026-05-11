@@ -21,6 +21,8 @@ This mirrors the intent of `tools/perf/diag_perf_baseline_select.sh`:
   - The selected candidate must have zero validation failures unless --allow-failures is passed.
   - The selected candidate must not loosen existing numeric thresholds unless
     --allow-threshold-loosening is passed.
+  - Use --clamp-threshold-loosening to validate candidates with the existing stricter thresholds
+    preserved whenever their measured values still fit that older contract.
 
 Example:
   python tools/perf/diag_perf_baseline_select.py \
@@ -48,6 +50,31 @@ from typing import Any
 
 DEFAULT_PREWARM_SCRIPT = "tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json"
 DEFAULT_PRELUDE_SCRIPT = "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json"
+THRESHOLD_TO_MEASURED_METRIC = {
+    "max_frame_p95_layout_us": "frame_p95_layout_time_us",
+    "max_frame_p95_solve_us": "frame_p95_layout_engine_solve_time_us",
+    "max_frame_p95_total_us": "frame_p95_total_time_us",
+    "max_pointer_move_dispatch_us": "pointer_move_max_dispatch_time_us",
+    "max_pointer_move_global_changes": "pointer_move_snapshots_with_global_changes",
+    "max_pointer_move_hit_test_us": "pointer_move_max_hit_test_time_us",
+    "max_renderer_encode_scene_text_ops": "renderer_encode_scene_text_ops",
+    "max_renderer_encode_scene_us": "renderer_encode_scene_us",
+    "max_renderer_encoder_finish_us": "renderer_encoder_finish_us",
+    "max_renderer_instance_bytes": "renderer_instance_bytes",
+    "max_renderer_prepare_svg_us": "renderer_prepare_svg_us",
+    "max_renderer_prepare_text_us": "renderer_prepare_text_us",
+    "max_renderer_record_passes_us": "renderer_record_passes_us",
+    "max_renderer_upload_us": "renderer_upload_us",
+    "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": (
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max"
+    ),
+    "max_top_layout_us": "top_layout_time_us",
+    "max_top_solve_us": "top_layout_engine_solve_time_us",
+    "max_top_total_us": "top_total_time_us",
+    "min_run_paint_cache_hit_test_only_replay_allowed_max": (
+        "run_paint_cache_hit_test_only_replay_allowed_max"
+    ),
+}
 
 
 def _workspace_root() -> Path:
@@ -241,6 +268,92 @@ def _threshold_loosening_report(old_path: Path, new_path: Path) -> list[dict[str
     return loosening
 
 
+def _measured_value_for_threshold(row: dict[str, Any], threshold_name: str) -> Any:
+    metric = THRESHOLD_TO_MEASURED_METRIC.get(threshold_name)
+    if metric is None:
+        return None
+    for section_name in ("measured_max", "threshold_seed", "measured_p95", "measured_p90"):
+        section = row.get(section_name) or {}
+        if not isinstance(section, dict):
+            continue
+        value = section.get(metric)
+        if _is_number(value):
+            return value
+    return None
+
+
+def _clamp_threshold_loosening(
+    *,
+    old_path: Path,
+    new_path: Path,
+    source_baseline: str,
+) -> list[dict[str, Any]]:
+    if not old_path.is_file():
+        return []
+
+    old_doc = _load_json(old_path)
+    new_doc = _load_json(new_path)
+    old_rows = {
+        str((row or {}).get("script") or ""): row
+        for row in (old_doc.get("rows", []) or [])
+        if isinstance(row, dict)
+    }
+    new_rows = {
+        str((row or {}).get("script") or ""): row
+        for row in (new_doc.get("rows", []) or [])
+        if isinstance(row, dict)
+    }
+
+    clamps: list[dict[str, Any]] = []
+    for script, old_row in old_rows.items():
+        new_row = new_rows.get(script)
+        if new_row is None:
+            continue
+        old_thresholds = (old_row or {}).get("thresholds") or {}
+        new_thresholds = new_row.setdefault("thresholds", {})
+        if not isinstance(new_thresholds, dict):
+            continue
+
+        for threshold_name, old_value in old_thresholds.items():
+            if old_value is None or not _is_number(old_value):
+                continue
+            new_value = new_thresholds.get(threshold_name)
+            if threshold_name.startswith("min_"):
+                should_clamp = (not _is_number(new_value)) or float(new_value) < float(old_value)
+                reason = "min_clamped_to_existing"
+            else:
+                should_clamp = (not _is_number(new_value)) or float(new_value) > float(old_value)
+                reason = "max_clamped_to_existing"
+                measured_value = _measured_value_for_threshold(new_row, threshold_name)
+                if _is_number(measured_value) and float(measured_value) > float(old_value):
+                    should_clamp = False
+            if not should_clamp:
+                continue
+
+            new_thresholds[threshold_name] = old_value
+            clamps.append(
+                {
+                    "script": script,
+                    "threshold": threshold_name,
+                    "old_value": old_value,
+                    "new_value_before_clamp": new_value,
+                    "new_value_after_clamp": old_value,
+                    "reason": reason,
+                }
+            )
+
+    if clamps:
+        new_doc["threshold_clamp_policy"] = {
+            "schema_version": 1,
+            "mode": "no_threshold_loosening",
+            "source_baseline": source_baseline,
+            "clamps": clamps,
+        }
+        new_path.write_text(json.dumps(new_doc, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+
+    return clamps
+
+
 def _rewrite_checked_in_out_path(path: Path, out_path_value: str) -> None:
     doc = _load_json(path)
     if not isinstance(doc, dict):
@@ -348,6 +461,15 @@ def main() -> int:
             "--baseline-out file. Without this, threshold increases/removals fail selection."
         ),
     )
+    ap.add_argument(
+        "--clamp-threshold-loosening",
+        action="store_true",
+        default=False,
+        help=(
+            "Before validating each candidate, clamp generated thresholds to the existing "
+            "--baseline-out values when the candidate's measured value still fits the existing threshold."
+        ),
+    )
 
     args = ap.parse_args()
 
@@ -388,6 +510,7 @@ def main() -> int:
 
     candidate_results: list[dict[str, Any]] = []
     compare_existing_thresholds = baseline_out.is_file() and not bool(args.allow_threshold_loosening)
+    clamp_existing_thresholds = baseline_out.is_file() and bool(args.clamp_threshold_loosening)
     best: tuple[int, int, int, int, str] | None = None
 
     def diag_cmd_common(out_dir: Path) -> list[str]:
@@ -477,6 +600,8 @@ def main() -> int:
                     "name": candidate_name,
                     "baseline": str(candidate_baseline),
                     "fail_total": 10_000,
+                    "threshold_clamp_count": 0,
+                    "threshold_clamps": [],
                     "threshold_loosening_count": 10_000 if compare_existing_thresholds else 0,
                     "threshold_loosening": [],
                     "suite_p90_total_time_us_sum": 2**31 - 1,
@@ -485,6 +610,18 @@ def main() -> int:
                 }
             )
             continue
+
+        threshold_clamps = (
+            _clamp_threshold_loosening(
+                old_path=baseline_out,
+                new_path=candidate_baseline,
+                source_baseline=str(args.baseline_out),
+            )
+            if clamp_existing_thresholds
+            else []
+        )
+        if threshold_clamps:
+            print(f"[candidate] name={candidate_name} threshold_clamp_count={len(threshold_clamps)}")
 
         fail_total = 0
         validate_runs: list[dict[str, Any]] = []
@@ -542,6 +679,8 @@ def main() -> int:
                 "name": candidate_name,
                 "baseline": str(candidate_baseline),
                 "fail_total": int(fail_total),
+                "threshold_clamp_count": int(len(threshold_clamps)),
+                "threshold_clamps": threshold_clamps[:50],
                 "threshold_loosening_count": int(threshold_loosening_count),
                 "threshold_loosening": threshold_loosening[:50],
                 "suite_p90_total_time_us_sum": int(p90_sum),
@@ -576,6 +715,7 @@ def main() -> int:
             "validate_repeat": int(validate_repeat),
             "allow_failures": False,
             "allow_threshold_loosening": bool(args.allow_threshold_loosening),
+            "clamp_threshold_loosening": bool(args.clamp_threshold_loosening),
             "selected_candidate": str(selected_baseline_path),
             "selected_fail_total": int(best[0]),
             "selected_threshold_loosening_count": int(best[1]),
@@ -609,6 +749,7 @@ def main() -> int:
             "validate_repeat": int(validate_repeat),
             "allow_failures": bool(args.allow_failures),
             "allow_threshold_loosening": False,
+            "clamp_threshold_loosening": bool(args.clamp_threshold_loosening),
             "selected_candidate": str(selected_baseline_path),
             "selected_fail_total": int(best[0]),
             "selected_threshold_loosening_count": len(selected_threshold_loosening),
@@ -647,6 +788,7 @@ def main() -> int:
         "validate_repeat": int(validate_repeat),
         "allow_failures": bool(args.allow_failures),
         "allow_threshold_loosening": bool(args.allow_threshold_loosening),
+        "clamp_threshold_loosening": bool(args.clamp_threshold_loosening),
         "best_candidate": {
             "path": str(selected_baseline_path),
             "fail_total": int(best[0]),

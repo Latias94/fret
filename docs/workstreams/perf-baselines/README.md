@@ -114,6 +114,11 @@ copying to `--baseline-out` unless `--allow-failures` is explicitly passed for a
 `--allow-threshold-loosening` is explicitly passed for an intentional machine-profile or contract reset. The selector
 writes `selection-summary.json` in `--work-dir`.
 
+For optimization-led re-seeds where only part of the contract should move, pass `--clamp-threshold-loosening`.
+Candidate baselines are validated with existing stricter thresholds preserved whenever the candidate's measured value
+still fits that older threshold. If a metric really cannot satisfy the old threshold, it remains a loosening and must
+either fail selection or be justified with `--allow-threshold-loosening`.
+
 For mixed suites whose scripts declare different launch-time `meta.env_defaults`, pass
 `--reuse-launch-per-script` so `diag perf` reuses one launched process per compatible script group instead of forcing a
 single launch environment across the entire suite.

@@ -155,11 +155,12 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - The checked-in
     `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
     baseline adds the high-stress editor wheel tail + typical-frame contract after setup reset. Selector evidence:
-    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
-  - Candidate-1 and candidate-2 both validated `3/3` with `fail_total=0`; candidate-2 won on lower suite p90.
-    Selected candidate-2 measured p50/p90/max top total=`2424/5027/5027us`, frame-p95 total=`2250/2784/2784us`,
-    hard thresholds top(total/layout/solve)=`6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`, and
-    payload thresholds instance/text_ops=`258663/406`.
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-clamp-no-loosen/selection-summary.json`.
+  - Candidate-1 validated `3/3` with `fail_total=0`, `threshold_loosening_count=0`, and
+    `threshold_clamp_count=5`; candidate-2 failed validation `3/3`, including one `top_total_time_us=8514us` tail.
+    Selected candidate-1 measured p50/p90/max top total=`2257/4617/4617us`, frame-p95 total=`1730/2968/2968us`,
+    hard thresholds top(total/layout/solve)=`6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`,
+    pointer dispatch/hit-test=`489/14us`, and payload thresholds instance/text_ops=`258663/406`.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
@@ -177,7 +178,9 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - A later post-optimization selector attempt selected a candidate that validated `3/3`, but would have widened the
     complex editor wheel `max_top_total_us` threshold from `6033us` to `6912us`; it was not promoted.
   - `tools/perf/diag_perf_baseline_select.py` now compares candidates against an existing `--baseline-out` file and
-    rejects threshold increases/removals unless `--allow-threshold-loosening` is explicitly passed.
+    rejects threshold increases/removals unless `--allow-threshold-loosening` is explicitly passed. The selector also
+    supports `--clamp-threshold-loosening`, which validates candidates with existing stricter thresholds preserved when
+    the candidate's measured value still fits the old contract.
   - Validation: `python -m unittest discover -s tools/perf -p 'test_*.py'`;
     `python tools/perf/diag_perf_baseline_select.py --help`; `git diff --check`.
 

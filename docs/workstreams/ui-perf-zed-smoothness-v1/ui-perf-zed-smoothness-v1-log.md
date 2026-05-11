@@ -12408,5 +12408,49 @@ Validation:
 
 Decision:
 - Do not promote the looser complex editor wheel candidate.
-- Keep the checked-in policy3 v1 baseline as the formal contract until a no-loosening selector run validates a stricter
-  replacement or a future perf log entry explicitly justifies a contract reset.
+- Use a follow-up clamp/no-loosen selector run if we want post-optimization measured evidence without weakening the
+  existing contract.
+
+## 2026-05-11 (complex editor wheel clamp/no-loosen re-seed)
+
+Question:
+- Can the complex editor wheel baseline record post-overlay-cache measured evidence while preserving the existing
+  hard thresholds wherever the candidate still fits the older contract?
+
+Change:
+- Added `--clamp-threshold-loosening` to `tools/perf/diag_perf_baseline_select.py`.
+  - The selector rewrites candidate thresholds before validation, preserving the existing stricter value when the
+    candidate's own measured value is still below that existing threshold.
+  - If the candidate's measured value no longer fits the old threshold, the threshold is not clamped and the candidate
+    remains a loosening candidate.
+- Added `top_total_time_us` seed policy with `min_slack_us=3200` for this stressor, but the selected baseline still
+  clamps `max_top_total_us` back to the existing `6033us` contract because the generated threshold would have widened.
+- Re-seeded
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+  with clamp/no-loosen mode.
+
+Validation:
+- Selector command:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --ui-threshold-mode top_and_frame_p95 --clamp-threshold-loosening --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-clamp-no-loosen --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`.
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-clamp-no-loosen/selection-summary.json`.
+  - candidate-1 validated `3/3` with `fail_total=0`, `threshold_loosening_count=0`, and
+    `threshold_clamp_count=5`.
+  - candidate-2 failed validation `3/3`; one run had `top_total_time_us=8514us` against the preserved
+    `6033us` threshold, and two runs exceeded the generated frame-p95 total threshold.
+- Selected baseline:
+  - measured p50/p90/max top total=`2257/4617/4617us`
+  - measured p50/p90/max frame-p95 total=`1730/2968/2968us`
+  - hard thresholds top(total/layout/solve)=`6033/848/0us`
+  - hard thresholds frame-p95(total/layout/solve)=`3808/592/0us`
+  - pointer thresholds dispatch/hit-test=`489/14us`
+  - payload thresholds instance/text_ops=`258663/406`
+- Tool validation:
+  - `python -m unittest discover -s tools/perf -p 'test_*.py'` - 5 tests passed.
+  - `python tools/perf/diag_perf_baseline_select.py --help` - exposes `--clamp-threshold-loosening`.
+  - `git diff --check` - passed.
+
+Decision:
+- Promote the clamp/no-loosen baseline as updated evidence, not as proof that the top-tail contract can tighten yet.
+- The top threshold remains `6033us`; candidate-2's `8514us` tail confirms that we still need more attribution before
+  forcing a tighter max gate.
