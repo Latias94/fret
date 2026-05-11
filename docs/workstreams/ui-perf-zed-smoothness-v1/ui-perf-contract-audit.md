@@ -167,6 +167,10 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json` drops
     `top_total_time_us` from `5681us` to `3580us`, with `syntax_evict_delta=0` and `row_rich_miss_delta=0`; the
     checked-in baseline still passes with max total `3238us` and max paint `3046us`.
+  - Fresh CPU attribution on the post-fix worst bundle shows the remaining hot path is Canvas paint-widget work
+    (`paint_widget_time_us=1550`, Canvas hotspot `1250us`) with renderer encode/upload still visible
+    (`renderer_encode_scene_us=319`, `renderer_upload_us=78`). That means the next slice should compare row-scene
+    replay/capture against renderer encode/upload before changing thresholds again.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.

@@ -271,13 +271,14 @@ Conventions:
       rows, while syntax/rich chunking must use physical buffer lines.
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
-      - record per-row display lists (ops) and replay with a transform/translation,
+      - record per-row scene ops once and replay them with a pure transform/translation boundary,
+      - split replay/capture cost from renderer encode/upload cost before changing thresholds,
       - reduce quads/text ops count (batching or fewer per-row background ops),
       - avoid per-frame allocations in the hot loop (scratch vec reuse, pre-sized buffers).
-    - Current blocker: latest complex wheel evidence points first at frame-derived overlay work and then at a
-      display-row/physical-line syntax prefetch bug, not failed row scene replay. Start this only from a future
-      near-threshold or failing stressor where row op replay/capture is the measured limiter after syntax/rich cache
-      churn is absent.
+    - Current blocker: latest complex wheel evidence points first at frame-derived overlay work, then at a
+      display-row/physical-line syntax prefetch bug, and now at Canvas paint-widget / renderer encode payload cost
+      rather than missed row-scene reuse. Start this only from a future near-threshold or failing stressor where the
+      measured limiter is replay/capture itself, not syntax/rich cache churn or a stale display-row mapping.
   - [ ] Re-evaluate text blob cache behavior for editor rows under resize jitter.
     - Confirm whether the hitch is dominated by fingerprint comparison, text prepare, atlas upload, or pure CPU list building.
     - If dominated by fingerprint compare, consider pointer-fast-pathing for more content variants (and/or richer cache keys).
