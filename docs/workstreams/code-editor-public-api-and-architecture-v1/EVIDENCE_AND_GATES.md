@@ -122,6 +122,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md`
 - First editor test module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`
+- Feature payload store module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
@@ -130,6 +132,7 @@ the target behavior and stressor scope are explicit.
 - Semantic token source: `ecosystem/fret-code-editor-view/src/semantic_tokens.rs`
 - Surface root: `ecosystem/fret-code-editor/src/lib.rs`
 - Surface integration: `ecosystem/fret-code-editor/src/editor/mod.rs`
+- Feature payload store: `ecosystem/fret-code-editor/src/editor/feature_payloads.rs`
 - Paint hot path: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
 - Input hot path: `ecosystem/fret-code-editor/src/editor/input/mod.rs`
 - A11y projection: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`

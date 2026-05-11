@@ -62,7 +62,7 @@ fn feature_payload_setters_are_idempotent_for_same_normalized_value() {
 
     let (epoch_before, row_scene_resets_before) = {
         let st = handle.state.borrow();
-        (st.feature_payloads.epoch, st.cache_stats.row_scene_resets)
+        (st.feature_payloads.epoch(), st.cache_stats.row_scene_resets)
     };
 
     handle
@@ -78,7 +78,8 @@ fn feature_payload_setters_are_idempotent_for_same_normalized_value() {
 
     let st = handle.state.borrow();
     assert_eq!(
-        st.feature_payloads.epoch, epoch_before,
+        st.feature_payloads.epoch(),
+        epoch_before,
         "idempotent feature payload setters must not bump feature epoch"
     );
     assert_eq!(

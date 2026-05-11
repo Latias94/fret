@@ -56,6 +56,7 @@ Last updated: 2026-05-12
   - [x] Extract feature payload API tests into
         `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`.
 - [ ] Split large internal owners only when the public API or test ownership benefits:
+  - [x] feature payload store/snapshot,
   - state/handle,
   - input,
   - paint,

@@ -1691,7 +1691,7 @@ fn ensure_row_scene_cache_fresh(st: &mut CodeEditorState) {
     let folds_epoch = st.folds_epoch;
     let inlays_epoch = st.inlays_epoch;
     let display_map_epoch = st.display_map_epoch;
-    let feature_payload_epoch = st.feature_payloads.epoch;
+    let feature_payload_epoch = st.feature_payloads.epoch();
     if st.row_scene_cache_rev != rev
         || st.row_scene_cache_wrap_cols != wrap_cols
         || st.row_scene_cache_folds_epoch != folds_epoch
