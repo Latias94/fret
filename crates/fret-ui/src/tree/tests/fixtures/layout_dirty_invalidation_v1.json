@@ -203,6 +203,278 @@
       "evidence": {
         "note": "The repair path should rebuild aggregate counts upward when a stale decrement would otherwise underflow."
       }
+    },
+    {
+      "id": "contained-cache-root-descendant-layout-dirty-relayouts-without-rerender",
+      "scenario": {
+        "kind": "tree",
+        "view_cache_enabled": true,
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["boundary"] },
+          { "id": "boundary", "children": ["leaf"] },
+          { "id": "leaf" }
+        ],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "boundary",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 40.0 },
+          { "op": "layout_all", "width": 100.0, "height": 40.0 },
+          { "op": "clear_all_invalidations" },
+          { "op": "capture_metrics", "label": "stable" },
+          { "op": "invalidate", "node": "leaf", "invalidation": "layout" },
+          { "op": "capture_metrics", "label": "after_descendant_dirty" },
+          { "op": "advance_frame" },
+          { "op": "layout_all", "width": 100.0, "height": 40.0 },
+          { "op": "capture_metrics", "label": "after_contained_relayout" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.stable.debug.dirty_cache_roots_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_descendant_dirty.node.leaf.layout_dirty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_descendant_dirty.node.boundary.layout_dirty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_descendant_dirty.node.boundary.dirty_cache_root",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_descendant_dirty.node.boundary.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_contained_relayout.debug.view_cache_contained_relayouts",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_contained_relayout.node.boundary.layout_dirty",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_contained_relayout.node.leaf.layout_dirty",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_contained_relayout.node.boundary.should_reuse_view_cache",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "A retained contained cache root should consume descendant layout dirtiness with contained relayout and should not escalate to declarative rerender."
+      }
+    },
+    {
+      "id": "contained-view-cache-dirty-frontier-is-covered-at-parent",
+      "scenario": {
+        "kind": "tree",
+        "view_cache_enabled": true,
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["wrapper"] },
+          { "id": "wrapper", "children": ["cache_root"] },
+          { "id": "cache_root", "children": ["leaf"] },
+          { "id": "leaf" }
+        ],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 120.0, "height": 40.0 },
+          { "op": "clear_all_invalidations" },
+          { "op": "invalidate", "node": "leaf", "invalidation": "layout" },
+          { "op": "capture_metrics", "label": "after_leaf_dirty" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_leaf_dirty.node.wrapper.node_needs_layout",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_leaf_dirty.node.wrapper.subtree_layout_dirty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_leaf_dirty.node.wrapper.subtree_layout_dirty_covered_by_contained_view_cache_roots",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_leaf_dirty.node.cache_root.dirty_cache_root",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_leaf_dirty.node.cache_root.layout_dirty",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "A scroll/direct-child-style wrapper can know all descendant dirty work is covered by contained cache roots without becoming layout-dirty itself."
+      }
+    },
+    {
+      "id": "detached-dirty-cache-root-pruned-before-layout-followups",
+      "scenario": {
+        "kind": "tree",
+        "view_cache_enabled": true,
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["boundary"] },
+          { "id": "boundary" }
+        ],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "boundary",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 40.0 },
+          { "op": "clear_all_invalidations" },
+          { "op": "set_layout_dirty", "node": "boundary", "dirty": true },
+          { "op": "set_children", "node": "root", "children": [] },
+          { "op": "layout_all", "width": 100.0, "height": 40.0 },
+          { "op": "capture_metrics", "label": "after_prune" },
+          { "op": "advance_frame" },
+          { "op": "layout_all", "width": 100.0, "height": 40.0 },
+          { "op": "capture_metrics", "label": "after_next_stable" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_prune.node.boundary.contained_relayout_root",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_prune.node.boundary.dirty_view",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_prune.debug.dirty_views_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_next_stable.debug.layout_fast_path_or_skipped",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "Detached dirty cache roots must be pruned from contained relayout and dirty-view follow-up surfaces before the next stable frame."
+      }
+    },
+    {
+      "id": "view-cache-layout-dirty-expansion-is-classified-for-declarative-root",
+      "scenario": {
+        "kind": "tree",
+        "view_cache_enabled": true,
+        "root": "root",
+        "nodes": [
+          { "id": "root", "element_id": 1, "children": ["boundary"] },
+          { "id": "boundary", "element_id": 2, "children": ["leaf"] },
+          { "id": "leaf", "element_id": 3 }
+        ],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "boundary",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 320.0, "height": 240.0 },
+          { "op": "layout_all", "width": 320.0, "height": 240.0 },
+          { "op": "clear_all_invalidations" },
+          { "op": "advance_frame" },
+          { "op": "begin_debug_frame" },
+          { "op": "set_layout_dirty", "node": "boundary", "dirty": true },
+          { "op": "layout_all", "width": 320.0, "height": 240.0 },
+          { "op": "capture_metrics", "label": "after_layout" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_layout.node.root.layout_request_dirty_descendant_detail.view_cache_layout_dirty_expansion_count",
+            "comparison": "ge",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_layout.node.root.layout_request_dirty_descendant_detail.view_cache_layout_dirty_expansion_from.boundary_count",
+            "comparison": "ge",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_layout.node.root.layout_request_dirty_descendant_detail.view_cache_layout_dirty_expansion_node.leaf_count",
+            "comparison": "ge",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "When a declarative-style cache root turns layout-dirty, expanded descendants should be classified with ViewCacheLayoutDirtyExpansion for diagnostics and resize follow-up attribution."
+      }
     }
   ]
 }

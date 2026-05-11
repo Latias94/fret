@@ -16,3 +16,7 @@ date: 2026-05-11
   - Result: no new confirmed defect appeared in this slice; the known suppressed-boundary defect was
     already fixed and is now locked by fixture coverage plus diagnostics.
 - [x] Pick the next slice from the largest uncovered mechanism gap.
+- [x] Extend layout dirty invalidation fixtures into view-cache/root-boundary invalidation:
+  retained contained relayout, scroll/direct-child dirty frontier coverage, detached dirty-cache-root
+  pruning, and view-cache layout-dirty expansion attribution.
+- [x] Run focused gates for the view-cache/root-boundary slice and record the results.

@@ -123,7 +123,12 @@ It covers:
 - suppressed parents that still count their own dirty flag,
 - dirty child removal under suppressed parents,
 - hidden dirty subtree removal while visible dirty siblings remain counted,
-- underflow repair rebuilding aggregate counts upward after simulated count drift.
+- underflow repair rebuilding aggregate counts upward after simulated count drift,
+- contained view-cache roots consuming descendant layout dirtiness without forcing declarative
+  rerender,
+- direct-child/root-boundary dirty frontiers that are fully covered by contained view-cache roots,
+- detached dirty cache roots being pruned from contained-relayout and dirty-view follow-up surfaces,
+- view-cache layout-dirty expansion attribution for declarative-style element nodes.
 
 The runtime counterpart is the UI Gallery checkbox script
 `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json`,

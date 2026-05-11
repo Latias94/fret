@@ -38,3 +38,15 @@ Status: complete for the first slice
 - Classify defects by layer.
 - Fix confirmed defects.
 - Leave evidence, regression coverage, and the next-slice recommendation.
+
+## M4: View-Cache and Root-Boundary Invalidation Slice
+
+Status: complete
+
+- The layout dirty invalidation fixture now covers retained contained relayout, dirty frontier
+  coverage at a wrapper/direct-child boundary, detached dirty-cache-root pruning, and view-cache
+  layout-dirty expansion attribution.
+- The harness runner can capture intermediate metrics so frontier state can be asserted before
+  layout consumes it.
+- Focused gates for `view_cache`, scroll-contained frontier behavior, and layout request build-root
+  attribution passed.
