@@ -870,4 +870,112 @@ mod tests {
         assert_eq!(top.element_children_vec_pool_misses, 5);
         assert_eq!(top.element_children_vec_pool_grow_events, 6);
     }
+
+    #[test]
+    fn bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot() {
+        let bundle = serde_json::json!({
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "tick_id": 11,
+                    "timestamp_unix_ms": 12,
+                    "debug": {
+                        "stats": {
+                            "total_time_us": 1000,
+                            "layout_time_us": 100,
+                            "prepaint_time_us": 50,
+                            "paint_time_us": 850,
+                            "paint_widget_time_us": 700
+                        }
+                    },
+                    "app_snapshot": {
+                        "kind": "fret_ui_gallery",
+                        "selected_page": "code_editor_torture",
+                        "code_editor": {
+                            "torture": {
+                                "paint_perf": {
+                                    "schema_version": 8,
+                                    "frame_seq": 7,
+                                    "visible_start": 20,
+                                    "visible_end": 30,
+                                    "visible_rows": 10,
+                                    "cache_base_entries": 128,
+                                    "cache_frame_min_entries": 32,
+                                    "cache_effective_entries": 160,
+                                    "rows_painted": 10,
+                                    "rows_drew_rich": 3,
+                                    "rows_scene_replayed": 8,
+                                    "rows_scene_stored": 2,
+                                    "syntax_rows_stored": 1,
+                                    "us_total": 500,
+                                    "us_row_content_resolve": 40,
+                                    "us_rich_materialize": 30,
+                                    "us_text_draw": 120,
+                                    "us_row_scene_key": 9,
+                                    "us_row_scene_fast_probe": 11,
+                                    "us_row_scene_full_probe": 13,
+                                    "us_row_scene_replay_touch": 5,
+                                    "us_row_scene_replay_ops": 25,
+                                    "us_row_scene_capture_ops": 70,
+                                    "us_row_scene_store": 20,
+                                    "us_row_scene_fast_path": 15,
+                                    "us_row_scene_full_path": 17,
+                                    "us_syntax_spans": 60,
+                                    "us_syntax_slice": 6,
+                                    "us_syntax_highlight": 50,
+                                    "us_syntax_distribute": 4,
+                                    "us_syntax_store": 10
+                                }
+                            }
+                        }
+                    }
+                }]
+            }]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats");
+
+        let top = report.top.first().expect("top row");
+        let perf = top
+            .code_editor_paint_perf
+            .as_ref()
+            .expect("code editor paint perf");
+        assert_eq!(perf.rows_scene_replayed, 8);
+        assert_eq!(perf.rows_scene_stored, 2);
+        assert_eq!(perf.us_row_scene_replay_ops, 25);
+        assert_eq!(perf.us_row_scene_capture_ops, 70);
+        assert_eq!(perf.us_row_scene_store, 20);
+        assert_eq!(perf.us_row_content_resolve, 40);
+        assert_eq!(perf.us_text_draw, 120);
+        assert_eq!(perf.us_rich_materialize, 30);
+
+        let json = report.to_json();
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/frames")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_capture_ops")
+                .and_then(|v| v.as_u64()),
+            Some(70)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/p95/us_row_scene_replay_ops")
+                .and_then(|v| v.as_u64()),
+            Some(25)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/rows_scene_replayed")
+                .and_then(|v| v.as_u64()),
+            Some(8)
+        );
+    }
 }

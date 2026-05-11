@@ -171,6 +171,14 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     (`paint_widget_time_us=1550`, Canvas hotspot `1250us`) with renderer encode/upload still visible
     (`renderer_encode_scene_us=319`, `renderer_upload_us=78`). That means the next slice should compare row-scene
     replay/capture against renderer encode/upload before changing thresholds again.
+  - `diag stats` now surfaces the existing editor `paint_perf` counters as first-class JSON/text attribution.
+    Validation on
+    `target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json` reports
+    `code_editor_paint_perf.frames=34`; the worst top frame has `rows_scene_replayed=204`,
+    `rows_scene_stored=1`, `us_row_content_resolve=441`, `us_row_scene_replay_ops=10`,
+    `us_row_scene_capture_ops=0`, and `us_text_draw=0`. The summary max has `us_text_draw=288` and
+    `us_row_content_resolve=566`. Keep the next optimization focused on measured content/Canvas/renderer cost unless
+    a new stressor shows row-scene capture/store as the limiter.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.

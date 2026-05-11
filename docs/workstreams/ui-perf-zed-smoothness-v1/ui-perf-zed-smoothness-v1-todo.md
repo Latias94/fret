@@ -1300,6 +1300,20 @@ Perf acceptance:
     target legitimate wide or width-sensitive roots after demo pressure sources are removed.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
+- [x] Surface code-editor row-scene paint attribution in `diag stats`.
+  - Target: make the existing `app_snapshot.code_editor.torture.paint_perf` counters queryable from normal
+    `fretboard diag stats` output so editor paint work can be split between row-scene replay/store, content resolve,
+    text draw, rich materialization, syntax work, and renderer encode/upload before a display-list rewrite is attempted.
+  - Implementation: `diag stats --json` now emits top-level `code_editor_paint_perf` p50/p95/max/sum summaries and
+    per-top-frame `top[].code_editor_paint_perf`; human output prints the same row-scene and text/content breakdown.
+  - Gate: `cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot`.
+  - Evidence: `cargo run -p fretboard -- diag stats target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json --json --top 1 --sort time`
+    now reports `code_editor_paint_perf.frames=34`, top frame `rows_scene_replayed=204`, `rows_scene_stored=1`,
+    `us_row_content_resolve=441`, `us_row_scene_replay_ops=10`, `us_row_scene_capture_ops=0`, `us_text_draw=0`,
+    and summary max `us_text_draw=288`.
+  - Decision: keep the next optimization evidence-led. The post-fix wheel bundle points more at content resolve /
+    Canvas paint-widget and renderer payload than at row-scene capture; do not start a broad row display-list rewrite
+    until a near-threshold or failing stressor shows replay/capture/store as the limiter.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.

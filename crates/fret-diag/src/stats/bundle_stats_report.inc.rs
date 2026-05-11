@@ -149,6 +149,7 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    code_editor_paint_perf: BundleStatsCodeEditorPaintPerfSummary,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -221,6 +222,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_collect_roots_time_us: u64,
     pub(super) paint_publish_text_input_snapshot_time_us: u64,
     pub(super) paint_collapse_observations_time_us: u64,
+    pub(super) code_editor_paint_perf: Option<BundleStatsCodeEditorPaintPerf>,
     pub(super) dispatch_time_us: u64,
     pub(super) dispatch_pointer_events: u32,
     pub(super) dispatch_pointer_event_time_us: u64,
@@ -484,6 +486,251 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCodeEditorPaintPerf {
+    pub(super) frame_seq: u64,
+    pub(super) visible_start: u64,
+    pub(super) visible_end: u64,
+    pub(super) visible_rows: u64,
+    pub(super) cache_base_entries: u64,
+    pub(super) cache_frame_min_entries: u64,
+    pub(super) cache_effective_entries: u64,
+    pub(super) rows_painted: u64,
+    pub(super) rows_drew_rich: u64,
+    pub(super) rows_scene_replayed: u64,
+    pub(super) rows_scene_stored: u64,
+    pub(super) syntax_rows_stored: u64,
+    pub(super) us_total: u64,
+    pub(super) us_row_content_resolve: u64,
+    pub(super) us_rich_materialize: u64,
+    pub(super) us_text_draw: u64,
+    pub(super) us_row_scene_key: u64,
+    pub(super) us_row_scene_fast_probe: u64,
+    pub(super) us_row_scene_full_probe: u64,
+    pub(super) us_row_scene_replay_touch: u64,
+    pub(super) us_row_scene_replay_ops: u64,
+    pub(super) us_row_scene_capture_ops: u64,
+    pub(super) us_row_scene_store: u64,
+    pub(super) us_row_scene_fast_path: u64,
+    pub(super) us_row_scene_full_path: u64,
+    pub(super) us_syntax_spans: u64,
+    pub(super) us_syntax_slice: u64,
+    pub(super) us_syntax_highlight: u64,
+    pub(super) us_syntax_distribute: u64,
+    pub(super) us_syntax_store: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsCodeEditorPaintPerfSummary {
+    frames: u32,
+    sum: BundleStatsCodeEditorPaintPerfTotals,
+    max: BundleStatsCodeEditorPaintPerfTotals,
+    p50: BundleStatsCodeEditorPaintPerfTotals,
+    p95: BundleStatsCodeEditorPaintPerfTotals,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsCodeEditorPaintPerfTotals {
+    rows_painted: u64,
+    rows_drew_rich: u64,
+    rows_scene_replayed: u64,
+    rows_scene_stored: u64,
+    syntax_rows_stored: u64,
+    us_total: u64,
+    us_row_content_resolve: u64,
+    us_rich_materialize: u64,
+    us_text_draw: u64,
+    us_row_scene_key: u64,
+    us_row_scene_fast_probe: u64,
+    us_row_scene_full_probe: u64,
+    us_row_scene_replay_touch: u64,
+    us_row_scene_replay_ops: u64,
+    us_row_scene_capture_ops: u64,
+    us_row_scene_store: u64,
+    us_row_scene_fast_path: u64,
+    us_row_scene_full_path: u64,
+    us_syntax_spans: u64,
+    us_syntax_slice: u64,
+    us_syntax_highlight: u64,
+    us_syntax_distribute: u64,
+    us_syntax_store: u64,
+}
+
+impl BundleStatsCodeEditorPaintPerfTotals {
+    fn add_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
+        self.rows_painted = self.rows_painted.saturating_add(p.rows_painted);
+        self.rows_drew_rich = self.rows_drew_rich.saturating_add(p.rows_drew_rich);
+        self.rows_scene_replayed = self
+            .rows_scene_replayed
+            .saturating_add(p.rows_scene_replayed);
+        self.rows_scene_stored = self.rows_scene_stored.saturating_add(p.rows_scene_stored);
+        self.syntax_rows_stored = self
+            .syntax_rows_stored
+            .saturating_add(p.syntax_rows_stored);
+        self.us_total = self.us_total.saturating_add(p.us_total);
+        self.us_row_content_resolve = self
+            .us_row_content_resolve
+            .saturating_add(p.us_row_content_resolve);
+        self.us_rich_materialize = self
+            .us_rich_materialize
+            .saturating_add(p.us_rich_materialize);
+        self.us_text_draw = self.us_text_draw.saturating_add(p.us_text_draw);
+        self.us_row_scene_key = self.us_row_scene_key.saturating_add(p.us_row_scene_key);
+        self.us_row_scene_fast_probe = self
+            .us_row_scene_fast_probe
+            .saturating_add(p.us_row_scene_fast_probe);
+        self.us_row_scene_full_probe = self
+            .us_row_scene_full_probe
+            .saturating_add(p.us_row_scene_full_probe);
+        self.us_row_scene_replay_touch = self
+            .us_row_scene_replay_touch
+            .saturating_add(p.us_row_scene_replay_touch);
+        self.us_row_scene_replay_ops = self
+            .us_row_scene_replay_ops
+            .saturating_add(p.us_row_scene_replay_ops);
+        self.us_row_scene_capture_ops = self
+            .us_row_scene_capture_ops
+            .saturating_add(p.us_row_scene_capture_ops);
+        self.us_row_scene_store = self
+            .us_row_scene_store
+            .saturating_add(p.us_row_scene_store);
+        self.us_row_scene_fast_path = self
+            .us_row_scene_fast_path
+            .saturating_add(p.us_row_scene_fast_path);
+        self.us_row_scene_full_path = self
+            .us_row_scene_full_path
+            .saturating_add(p.us_row_scene_full_path);
+        self.us_syntax_spans = self.us_syntax_spans.saturating_add(p.us_syntax_spans);
+        self.us_syntax_slice = self.us_syntax_slice.saturating_add(p.us_syntax_slice);
+        self.us_syntax_highlight = self
+            .us_syntax_highlight
+            .saturating_add(p.us_syntax_highlight);
+        self.us_syntax_distribute = self
+            .us_syntax_distribute
+            .saturating_add(p.us_syntax_distribute);
+        self.us_syntax_store = self.us_syntax_store.saturating_add(p.us_syntax_store);
+    }
+
+    fn max_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
+        self.rows_painted = self.rows_painted.max(p.rows_painted);
+        self.rows_drew_rich = self.rows_drew_rich.max(p.rows_drew_rich);
+        self.rows_scene_replayed = self.rows_scene_replayed.max(p.rows_scene_replayed);
+        self.rows_scene_stored = self.rows_scene_stored.max(p.rows_scene_stored);
+        self.syntax_rows_stored = self.syntax_rows_stored.max(p.syntax_rows_stored);
+        self.us_total = self.us_total.max(p.us_total);
+        self.us_row_content_resolve = self
+            .us_row_content_resolve
+            .max(p.us_row_content_resolve);
+        self.us_rich_materialize = self.us_rich_materialize.max(p.us_rich_materialize);
+        self.us_text_draw = self.us_text_draw.max(p.us_text_draw);
+        self.us_row_scene_key = self.us_row_scene_key.max(p.us_row_scene_key);
+        self.us_row_scene_fast_probe = self
+            .us_row_scene_fast_probe
+            .max(p.us_row_scene_fast_probe);
+        self.us_row_scene_full_probe = self
+            .us_row_scene_full_probe
+            .max(p.us_row_scene_full_probe);
+        self.us_row_scene_replay_touch = self
+            .us_row_scene_replay_touch
+            .max(p.us_row_scene_replay_touch);
+        self.us_row_scene_replay_ops = self.us_row_scene_replay_ops.max(p.us_row_scene_replay_ops);
+        self.us_row_scene_capture_ops = self
+            .us_row_scene_capture_ops
+            .max(p.us_row_scene_capture_ops);
+        self.us_row_scene_store = self.us_row_scene_store.max(p.us_row_scene_store);
+        self.us_row_scene_fast_path = self.us_row_scene_fast_path.max(p.us_row_scene_fast_path);
+        self.us_row_scene_full_path = self.us_row_scene_full_path.max(p.us_row_scene_full_path);
+        self.us_syntax_spans = self.us_syntax_spans.max(p.us_syntax_spans);
+        self.us_syntax_slice = self.us_syntax_slice.max(p.us_syntax_slice);
+        self.us_syntax_highlight = self.us_syntax_highlight.max(p.us_syntax_highlight);
+        self.us_syntax_distribute = self.us_syntax_distribute.max(p.us_syntax_distribute);
+        self.us_syntax_store = self.us_syntax_store.max(p.us_syntax_store);
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "rows_painted": self.rows_painted,
+            "rows_drew_rich": self.rows_drew_rich,
+            "rows_scene_replayed": self.rows_scene_replayed,
+            "rows_scene_stored": self.rows_scene_stored,
+            "syntax_rows_stored": self.syntax_rows_stored,
+            "us_total": self.us_total,
+            "us_row_content_resolve": self.us_row_content_resolve,
+            "us_rich_materialize": self.us_rich_materialize,
+            "us_text_draw": self.us_text_draw,
+            "us_row_scene_key": self.us_row_scene_key,
+            "us_row_scene_fast_probe": self.us_row_scene_fast_probe,
+            "us_row_scene_full_probe": self.us_row_scene_full_probe,
+            "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
+            "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
+            "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
+            "us_row_scene_store": self.us_row_scene_store,
+            "us_row_scene_fast_path": self.us_row_scene_fast_path,
+            "us_row_scene_full_path": self.us_row_scene_full_path,
+            "us_syntax_spans": self.us_syntax_spans,
+            "us_syntax_slice": self.us_syntax_slice,
+            "us_syntax_highlight": self.us_syntax_highlight,
+            "us_syntax_distribute": self.us_syntax_distribute,
+            "us_syntax_store": self.us_syntax_store,
+        })
+    }
+}
+
+impl BundleStatsCodeEditorPaintPerfSummary {
+    fn observe(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
+        self.frames = self.frames.saturating_add(1);
+        self.sum.add_frame(p);
+        self.max.max_frame(p);
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "frames": self.frames,
+            "sum": self.sum.to_json(),
+            "max": self.max.to_json(),
+            "p50": self.p50.to_json(),
+            "p95": self.p95.to_json(),
+        })
+    }
+}
+
+impl BundleStatsCodeEditorPaintPerf {
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "frame_seq": self.frame_seq,
+            "visible_start": self.visible_start,
+            "visible_end": self.visible_end,
+            "visible_rows": self.visible_rows,
+            "cache_base_entries": self.cache_base_entries,
+            "cache_frame_min_entries": self.cache_frame_min_entries,
+            "cache_effective_entries": self.cache_effective_entries,
+            "rows_painted": self.rows_painted,
+            "rows_drew_rich": self.rows_drew_rich,
+            "rows_scene_replayed": self.rows_scene_replayed,
+            "rows_scene_stored": self.rows_scene_stored,
+            "syntax_rows_stored": self.syntax_rows_stored,
+            "us_total": self.us_total,
+            "us_row_content_resolve": self.us_row_content_resolve,
+            "us_rich_materialize": self.us_rich_materialize,
+            "us_text_draw": self.us_text_draw,
+            "us_row_scene_key": self.us_row_scene_key,
+            "us_row_scene_fast_probe": self.us_row_scene_fast_probe,
+            "us_row_scene_full_probe": self.us_row_scene_full_probe,
+            "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
+            "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
+            "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
+            "us_row_scene_store": self.us_row_scene_store,
+            "us_row_scene_fast_path": self.us_row_scene_fast_path,
+            "us_row_scene_full_path": self.us_row_scene_full_path,
+            "us_syntax_spans": self.us_syntax_spans,
+            "us_syntax_slice": self.us_syntax_slice,
+            "us_syntax_highlight": self.us_syntax_highlight,
+            "us_syntax_distribute": self.us_syntax_distribute,
+            "us_syntax_store": self.us_syntax_store,
+        })
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -812,6 +1059,98 @@ impl BundleStatsReport {
         self.derived_from_frames_index
     }
 
+    fn print_code_editor_paint_perf_summary(&self) {
+        let p = &self.code_editor_paint_perf;
+        if p.frames == 0 {
+            return;
+        }
+
+        println!(
+            "code_editor.paint_perf frames={} sum.rows(painted/replayed/stored/rich/syntax_stored)={}/{}/{}/{}/{} max.rows(painted/replayed/stored)={}/{}/{}",
+            p.frames,
+            p.sum.rows_painted,
+            p.sum.rows_scene_replayed,
+            p.sum.rows_scene_stored,
+            p.sum.rows_drew_rich,
+            p.sum.syntax_rows_stored,
+            p.max.rows_painted,
+            p.max.rows_scene_replayed,
+            p.max.rows_scene_stored,
+        );
+        println!(
+            "code_editor.paint_perf sum.us(total/content/text/rich/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/syntax_highlight/syntax_store)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            p.sum.us_total,
+            p.sum.us_row_content_resolve,
+            p.sum.us_text_draw,
+            p.sum.us_rich_materialize,
+            p.sum.us_row_scene_replay_touch,
+            p.sum.us_row_scene_replay_ops,
+            p.sum.us_row_scene_capture_ops,
+            p.sum.us_row_scene_store,
+            p.sum.us_row_scene_fast_probe,
+            p.sum.us_row_scene_full_probe,
+            p.sum.us_syntax_highlight,
+            p.sum.us_syntax_store,
+        );
+        println!(
+            "code_editor.paint_perf p50/p95.us(total/content/text/rich/replay_ops/capture_ops/store)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            p.p50.us_total,
+            p.p95.us_total,
+            p.p50.us_row_content_resolve,
+            p.p95.us_row_content_resolve,
+            p.p50.us_text_draw,
+            p.p95.us_text_draw,
+            p.p50.us_rich_materialize,
+            p.p95.us_rich_materialize,
+            p.p50.us_row_scene_replay_ops,
+            p.p95.us_row_scene_replay_ops,
+            p.p50.us_row_scene_capture_ops,
+            p.p95.us_row_scene_capture_ops,
+            p.p50.us_row_scene_store,
+            p.p95.us_row_scene_store,
+        );
+    }
+
+    fn print_code_editor_paint_perf_row(row: &BundleStatsSnapshotRow) {
+        let Some(p) = row.code_editor_paint_perf.as_ref() else {
+            return;
+        };
+
+        println!(
+            "    code_editor.paint_perf frame_seq={} visible(start/end/rows)={}/{}/{} cache(base/min/effective)={}/{}/{} rows(painted/replayed/stored/rich/syntax_stored)={}/{}/{}/{}/{}",
+            p.frame_seq,
+            p.visible_start,
+            p.visible_end,
+            p.visible_rows,
+            p.cache_base_entries,
+            p.cache_frame_min_entries,
+            p.cache_effective_entries,
+            p.rows_painted,
+            p.rows_scene_replayed,
+            p.rows_scene_stored,
+            p.rows_drew_rich,
+            p.syntax_rows_stored,
+        );
+        println!(
+            "    code_editor.paint_perf.us(total/content/text/rich/key/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/fast_path/full_path/syntax_highlight/syntax_store)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            p.us_total,
+            p.us_row_content_resolve,
+            p.us_text_draw,
+            p.us_rich_materialize,
+            p.us_row_scene_key,
+            p.us_row_scene_replay_touch,
+            p.us_row_scene_replay_ops,
+            p.us_row_scene_capture_ops,
+            p.us_row_scene_store,
+            p.us_row_scene_fast_probe,
+            p.us_row_scene_full_probe,
+            p.us_row_scene_fast_path,
+            p.us_row_scene_full_path,
+            p.us_syntax_highlight,
+            p.us_syntax_store,
+        );
+    }
+
     pub(super) fn print_human_brief(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         if self.derived_from_frames_index {
@@ -914,6 +1253,7 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_svg_us,
             );
         }
+        self.print_code_editor_paint_perf_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
             let mode = if self.pointer_move_frames_present {
                 "pointer_move"
@@ -1109,6 +1449,7 @@ impl BundleStatsReport {
                 }
             }
             println!("{line}");
+            Self::print_code_editor_paint_perf_row(row);
             if row.dispatch_post_dispatch_snapshot_time_us > 0
                 || row.window_runtime_snapshot_focus_repair_time_us > 0
                 || row.window_runtime_snapshot_input_context_time_us > 0
@@ -1318,6 +1659,7 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_text_us,
             );
         }
+        self.print_code_editor_paint_perf_summary();
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -1545,6 +1887,7 @@ impl BundleStatsReport {
                 }
             }
             println!("{line}");
+            Self::print_code_editor_paint_perf_row(row);
             if row.layout_observation_record_time_us > 0
                 || row.layout_observation_record_models_items > 0
                 || row.layout_observation_record_globals_items > 0
@@ -2498,6 +2841,10 @@ impl BundleStatsReport {
                 },
                 "snapshots_with_global_changes": self.pointer_move_snapshots_with_global_changes,
             }),
+        );
+        root.insert(
+            "code_editor_paint_perf".to_string(),
+            self.code_editor_paint_perf.to_json(),
         );
 
         let mut sum = Map::new();
@@ -3784,6 +4131,13 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_text_prepare_reason_font_stack_changed".to_string(),
                     Value::from(row.paint_text_prepare_reason_font_stack_changed),
+                );
+                obj.insert(
+                    "code_editor_paint_perf".to_string(),
+                    row.code_editor_paint_perf
+                        .as_ref()
+                        .map(BundleStatsCodeEditorPaintPerf::to_json)
+                        .unwrap_or(Value::Null),
                 );
                 obj.insert(
                     "paint_input_context_time_us".to_string(),
