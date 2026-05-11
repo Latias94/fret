@@ -64,7 +64,7 @@ Last updated: 2026-05-12
   - [x] state methods,
   - [x] state initializer,
   - [x] handle module,
-  - [ ] handle method boundary,
+  - [x] handle method boundary,
   - [ ] input,
   - [ ] paint,
   - [ ] syntax,
