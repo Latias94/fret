@@ -895,7 +895,7 @@ mod tests {
                         "code_editor": {
                             "torture": {
                                 "paint_perf": {
-                                    "schema_version": 8,
+                                    "schema_version": 9,
                                     "frame_seq": 7,
                                     "visible_start": 20,
                                     "visible_end": 30,
@@ -907,6 +907,7 @@ mod tests {
                                     "rows_drew_rich": 3,
                                     "rows_scene_replayed": 8,
                                     "rows_scene_stored": 2,
+                                    "row_scene_ops_stored": 19,
                                     "quads_selection": 4,
                                     "quads_caret": 1,
                                     "syntax_rows_stored": 1,
@@ -959,6 +960,7 @@ mod tests {
             .expect("code editor paint perf");
         assert_eq!(perf.rows_scene_replayed, 8);
         assert_eq!(perf.rows_scene_stored, 2);
+        assert_eq!(perf.row_scene_ops_stored, 19);
         assert_eq!(perf.quads_selection, 4);
         assert_eq!(perf.quads_caret, 1);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
@@ -1002,6 +1004,11 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/rows_scene_replayed")
                 .and_then(|v| v.as_u64()),
             Some(8)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/row_scene_ops_stored")
+                .and_then(|v| v.as_u64()),
+            Some(19)
         );
     }
 }

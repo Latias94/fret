@@ -390,8 +390,13 @@ Conventions:
     - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
     - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
   - Work items (fearless refactor allowed; log every perf-affecting change):
-    - [ ] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
+    - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
+      - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and
+        `code_editor_paint_perf.*.row_scene_ops_stored` in `fretboard diag stats --json`.
+      - Evidence: perf log entry `2026-05-12` (`code editor row-scene stored-op signal`); gallery-dev typical
+        autoscroll smoke bundle `target/fret-diag/codex-row-scene-ops-smoke-gallery-dev/1778538679777/bundle.schema2.json`
+        reports frames `180`, sum/p50/p95/max `row_scene_ops_stored=90/0/1/1`.
     - [ ] Decide the replay boundary:
       - Option A (component-level): `fret-code-editor` caches per-row paint ops and replays when inputs unchanged.
       - Option B (mechanism-level): add a general `CanvasPainter` op cache (keyed, bounded, frame-aware) that any

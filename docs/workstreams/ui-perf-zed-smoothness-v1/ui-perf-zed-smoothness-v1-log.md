@@ -12655,3 +12655,49 @@ Decision:
   headroom pressure without requiring threshold changes.
 - Next renderer-text work should look at remaining `prepare_for_scene` bucket churn and text encode costs only if a
   representative script gets near a threshold again.
+
+## 2026-05-12 (code editor row-scene stored-op signal)
+
+Question:
+- Can diagnostics distinguish “stored one row scene” from “stored hundreds of scene ops” before choosing an editor
+  display-list or Canvas replay boundary?
+
+Change:
+- Added `row_scene_ops_stored` to `CodeEditorPaintPerfFrame`.
+- UI Gallery app snapshots now emit `code_editor.torture.paint_perf.row_scene_ops_stored` with paint-perf schema
+  version `9`.
+- `fretboard diag stats` now parses, aggregates, prints, and exports
+  `code_editor_paint_perf.*.row_scene_ops_stored` in JSON output.
+
+Validation:
+- `cargo fmt -p fret-code-editor --check`.
+- `cargo fmt -p fret-ui-gallery --check`.
+- `cargo fmt -p fret-diag --check`.
+- `git diff --check`.
+- `cargo nextest run -p fret-code-editor --lib --features syntax-rust --no-fail-fast`.
+- `cargo nextest run -p fret-diag --lib --no-fail-fast`.
+- `cargo check -p fret-ui-gallery`.
+- `python tools/check_workstream_catalog.py`.
+- `python tools/check_layering.py`.
+- `cargo build -p fretboard -p fret-ui-gallery --release` passed with existing unrelated warnings in `fret-runtime`
+  and `fret-ui`.
+- `cargo build -p fret-ui-gallery --release --features gallery-dev` passed with the same existing unrelated warnings.
+
+Evidence:
+- Initial probe without `gallery-dev` intentionally failed to reach the code-editor page; the failure bundle had no
+  editor paint frames and confirmed the script requires the dev feature set.
+- Gallery-dev typical autoscroll smoke:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json --dir target/fret-diag/codex-row-scene-ops-smoke-gallery-dev --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`.
+  - Bundle: `target/fret-diag/codex-row-scene-ops-smoke-gallery-dev/1778538679777/bundle.schema2.json`.
+  - `diag stats --json --top 1 --sort time` reports `code_editor_paint_perf.frames=180`.
+  - `row_scene_ops_stored` sum/p50/p95/max is `90/0/1/1`.
+  - Code-editor paint p95 `us_total=767`; top total `2174us`.
+  - Top frame `code_editor_paint_perf.row_scene_ops_stored=0`; another top frame records
+    `rows_scene_stored=1` and `row_scene_ops_stored=1`, proving the field survives real app snapshot capture and
+    stats export.
+
+Decision:
+- Treat `row_scene_ops_stored` as the stable row-op store signal for the next editor Canvas replay decision.
+- Do not start a broad `CanvasPainter` op-cache rewrite from this smoke: the current typical run stores at most one
+  row op per frame while replaying the visible rows, so the next replay-boundary decision still needs a near-threshold
+  or failing stressor where row-scene store/capture is the measured limiter.

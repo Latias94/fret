@@ -501,6 +501,7 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) rows_drew_rich: u64,
     pub(super) rows_scene_replayed: u64,
     pub(super) rows_scene_stored: u64,
+    pub(super) row_scene_ops_stored: u64,
     pub(super) quads_selection: u64,
     pub(super) quads_caret: u64,
     pub(super) syntax_rows_stored: u64,
@@ -553,6 +554,7 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     rows_drew_rich: u64,
     rows_scene_replayed: u64,
     rows_scene_stored: u64,
+    row_scene_ops_stored: u64,
     quads_selection: u64,
     quads_caret: u64,
     syntax_rows_stored: u64,
@@ -598,6 +600,9 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             .rows_scene_replayed
             .saturating_add(p.rows_scene_replayed);
         self.rows_scene_stored = self.rows_scene_stored.saturating_add(p.rows_scene_stored);
+        self.row_scene_ops_stored = self
+            .row_scene_ops_stored
+            .saturating_add(p.row_scene_ops_stored);
         self.quads_selection = self.quads_selection.saturating_add(p.quads_selection);
         self.quads_caret = self.quads_caret.saturating_add(p.quads_caret);
         self.syntax_rows_stored = self
@@ -682,6 +687,7 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.rows_drew_rich = self.rows_drew_rich.max(p.rows_drew_rich);
         self.rows_scene_replayed = self.rows_scene_replayed.max(p.rows_scene_replayed);
         self.rows_scene_stored = self.rows_scene_stored.max(p.rows_scene_stored);
+        self.row_scene_ops_stored = self.row_scene_ops_stored.max(p.row_scene_ops_stored);
         self.quads_selection = self.quads_selection.max(p.quads_selection);
         self.quads_caret = self.quads_caret.max(p.quads_caret);
         self.syntax_rows_stored = self.syntax_rows_stored.max(p.syntax_rows_stored);
@@ -743,6 +749,7 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "rows_drew_rich": self.rows_drew_rich,
             "rows_scene_replayed": self.rows_scene_replayed,
             "rows_scene_stored": self.rows_scene_stored,
+            "row_scene_ops_stored": self.row_scene_ops_stored,
             "quads_selection": self.quads_selection,
             "quads_caret": self.quads_caret,
             "syntax_rows_stored": self.syntax_rows_stored,
@@ -814,6 +821,7 @@ impl BundleStatsCodeEditorPaintPerf {
             "rows_drew_rich": self.rows_drew_rich,
             "rows_scene_replayed": self.rows_scene_replayed,
             "rows_scene_stored": self.rows_scene_stored,
+            "row_scene_ops_stored": self.row_scene_ops_stored,
             "quads_selection": self.quads_selection,
             "quads_caret": self.quads_caret,
             "syntax_rows_stored": self.syntax_rows_stored,
@@ -1186,11 +1194,12 @@ impl BundleStatsReport {
         }
 
         println!(
-            "code_editor.paint_perf frames={} sum.rows(painted/replayed/stored/rich/syntax_stored)={}/{}/{}/{}/{} sum.quads(selection/caret)={}/{} max.rows(painted/replayed/stored)={}/{}/{}",
+            "code_editor.paint_perf frames={} sum.rows(painted/replayed/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{} sum.quads(selection/caret)={}/{} max.rows(painted/replayed/stored/row_ops)={}/{}/{}/{}",
             p.frames,
             p.sum.rows_painted,
             p.sum.rows_scene_replayed,
             p.sum.rows_scene_stored,
+            p.sum.row_scene_ops_stored,
             p.sum.rows_drew_rich,
             p.sum.syntax_rows_stored,
             p.sum.quads_selection,
@@ -1198,6 +1207,7 @@ impl BundleStatsReport {
             p.max.rows_painted,
             p.max.rows_scene_replayed,
             p.max.rows_scene_stored,
+            p.max.row_scene_ops_stored,
         );
         println!(
             "code_editor.paint_perf sum.us(content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/syntax_spans/text/rich/fast_path/full_path)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
@@ -1257,7 +1267,7 @@ impl BundleStatsReport {
         };
 
         println!(
-            "    code_editor.paint_perf frame_seq={} visible(start/end/rows)={}/{}/{} cache(base/min/effective)={}/{}/{} rows(painted/replayed/stored/rich/syntax_stored)={}/{}/{}/{}/{} quads(selection/caret)={}/{}",
+            "    code_editor.paint_perf frame_seq={} visible(start/end/rows)={}/{}/{} cache(base/min/effective)={}/{}/{} rows(painted/replayed/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{} quads(selection/caret)={}/{}",
             p.frame_seq,
             p.visible_start,
             p.visible_end,
@@ -1268,6 +1278,7 @@ impl BundleStatsReport {
             p.rows_painted,
             p.rows_scene_replayed,
             p.rows_scene_stored,
+            p.row_scene_ops_stored,
             p.rows_drew_rich,
             p.syntax_rows_stored,
             p.quads_selection,

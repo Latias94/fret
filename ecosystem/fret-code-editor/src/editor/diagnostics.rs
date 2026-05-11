@@ -254,6 +254,7 @@ pub struct CodeEditorPaintPerfFrame {
     pub rows_drew_rich: u64,
     pub rows_scene_replayed: u64,
     pub rows_scene_stored: u64,
+    pub row_scene_ops_stored: u64,
     pub quads_selection: u64,
     pub quads_caret: u64,
 

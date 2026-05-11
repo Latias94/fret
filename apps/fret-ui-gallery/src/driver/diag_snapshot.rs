@@ -65,14 +65,14 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(88);
+    let mut out = serde_json::Map::with_capacity(89);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
         };
     }
 
-    insert_u64!("schema_version", 8);
+    insert_u64!("schema_version", 9);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -84,6 +84,7 @@ fn code_editor_paint_perf_json(
     insert_u64!("rows_drew_rich", frame.rows_drew_rich);
     insert_u64!("rows_scene_replayed", frame.rows_scene_replayed);
     insert_u64!("rows_scene_stored", frame.rows_scene_stored);
+    insert_u64!("row_scene_ops_stored", frame.row_scene_ops_stored);
     insert_u64!("quads_selection", frame.quads_selection);
     insert_u64!("quads_caret", frame.quads_caret);
     insert_u64!("us_total", frame.us_total);

@@ -2400,6 +2400,10 @@ fn store_row_scene_cache(
     if st.paint_perf_enabled {
         st.paint_perf_frame.rows_scene_stored =
             st.paint_perf_frame.rows_scene_stored.saturating_add(1);
+        st.paint_perf_frame.row_scene_ops_stored = st
+            .paint_perf_frame
+            .row_scene_ops_stored
+            .saturating_add(ops_len);
     }
 }
 
@@ -2481,6 +2485,10 @@ fn store_row_scene_cache(
     if st.paint_perf_enabled {
         st.paint_perf_frame.rows_scene_stored =
             st.paint_perf_frame.rows_scene_stored.saturating_add(1);
+        st.paint_perf_frame.row_scene_ops_stored = st
+            .paint_perf_frame
+            .row_scene_ops_stored
+            .saturating_add(ops_len);
     }
 }
 
