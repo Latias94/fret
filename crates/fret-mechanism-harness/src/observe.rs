@@ -32,6 +32,10 @@ pub struct ObservedTree {
     pub focus_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub barrier_root_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_node_id: Option<u64>,
 }
 
 impl ObservedTree {
@@ -46,6 +50,8 @@ impl ObservedTree {
             metrics: Vec::new(),
             focus_node_id: None,
             barrier_root_node_id: None,
+            focus_barrier_root_node_id: None,
+            captured_node_id: None,
         }
     }
 
@@ -92,6 +98,8 @@ impl ObservedTree {
             metrics: Vec::new(),
             focus_node_id: snapshot.focus.map(|id| id.data().as_ffi()),
             barrier_root_node_id: snapshot.barrier_root.map(|id| id.data().as_ffi()),
+            focus_barrier_root_node_id: snapshot.focus_barrier_root.map(|id| id.data().as_ffi()),
+            captured_node_id: snapshot.captured.map(|id| id.data().as_ffi()),
         };
 
         let parent_by_id = snapshot
@@ -121,6 +129,20 @@ impl ObservedTree {
                 visible: all_visible || visible_ids.contains(&node_id),
                 hit_testable: true,
                 focusable: None,
+                active_descendant_node_id: node.active_descendant.map(|id| id.data().as_ffi()),
+                labelled_by_node_ids: node
+                    .labelled_by
+                    .iter()
+                    .map(|id| id.data().as_ffi())
+                    .collect(),
+                described_by_node_ids: node
+                    .described_by
+                    .iter()
+                    .map(|id| id.data().as_ffi())
+                    .collect(),
+                controls_node_ids: node.controls.iter().map(|id| id.data().as_ffi()).collect(),
+                disabled: Some(node.flags.disabled),
+                hidden: Some(node.flags.hidden),
             });
         }
 
@@ -206,10 +228,22 @@ impl ObservedTree {
     }
 
     pub fn select<'a>(&'a self, selector: &UiSelectorV1) -> Vec<&'a ObservedNode> {
+        self.select_with_filter(selector, true)
+    }
+
+    pub fn select_unfiltered<'a>(&'a self, selector: &UiSelectorV1) -> Vec<&'a ObservedNode> {
+        self.select_with_filter(selector, false)
+    }
+
+    fn select_with_filter<'a>(
+        &'a self,
+        selector: &UiSelectorV1,
+        apply_barrier_filter: bool,
+    ) -> Vec<&'a ObservedNode> {
         let mut matches = self
             .nodes
             .iter()
-            .filter(|node| self.node_is_selectable(node))
+            .filter(|node| !apply_barrier_filter || self.node_is_selectable(node))
             .filter(|node| self.matches_selector(node, selector))
             .collect::<Vec<_>>();
         matches.sort_by_key(|node| {
@@ -227,6 +261,18 @@ impl ObservedTree {
         selector: &UiSelectorV1,
     ) -> Result<&'a ObservedNode, QueryError> {
         self.select(selector)
+            .into_iter()
+            .next()
+            .ok_or_else(|| QueryError::NoMatch {
+                selector: format!("{selector:?}"),
+            })
+    }
+
+    pub fn select_best_unfiltered<'a>(
+        &'a self,
+        selector: &UiSelectorV1,
+    ) -> Result<&'a ObservedNode, QueryError> {
+        self.select_unfiltered(selector)
             .into_iter()
             .next()
             .ok_or_else(|| QueryError::NoMatch {
@@ -429,6 +475,18 @@ pub struct ObservedNode {
     pub hit_testable: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focusable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_descendant_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labelled_by_node_ids: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub described_by_node_ids: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub controls_node_ids: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
 }
 
 impl ObservedNode {
@@ -447,6 +505,12 @@ impl ObservedNode {
             visible: true,
             hit_testable: true,
             focusable: None,
+            active_descendant_node_id: None,
+            labelled_by_node_ids: Vec::new(),
+            described_by_node_ids: Vec::new(),
+            controls_node_ids: Vec::new(),
+            disabled: None,
+            hidden: None,
         }
     }
 
@@ -460,6 +524,22 @@ impl ObservedNode {
                 .unwrap_or(self.bounds),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsRelation {
+    ActiveDescendant,
+    LabelledBy,
+    DescribedBy,
+    Controls,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsFlag {
+    Disabled,
+    Hidden,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

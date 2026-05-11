@@ -241,6 +241,104 @@ The first run exposed a runner type-boundary issue rather than a runtime defect:
 must be represented as a closed enum in the runner instead of dynamically borrowed strings, because
 `CommandId::from` is intentionally optimized for static command ids in these paths.
 
+## Phase 2.8 Semantics Relation Coverage
+
+The semantics relation fixture suite is
+`crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`, run by
+`mechanism_harness_semantics_relations_match_oracles`.
+
+This suite promotes accessibility relationship facts into the shared mechanism harness instead of
+leaving them as one-off assertions in declarative tests. `ObservedTree::from_semantics_snapshot`
+now carries active-descendant, labelled-by, described-by, controls, disabled, hidden, focus-barrier,
+and captured-node facts from `SemanticsSnapshot`; the oracle can assert relation membership and
+boolean semantics flags by selector.
+
+It covers:
+
+- text-input combobox `controls_element` resolving to a listbox semantics node,
+- text-input combobox `active_descendant_element` resolving to a listbox option semantics node,
+- `attach_semantics` preserving active-descendant, labelled-by, described-by, controls, disabled,
+  and hidden state without adding a layout wrapper,
+- `SemanticsProps` wrapper exposing the same labelled-by, described-by, controls, disabled, and
+  hidden outcomes.
+
+The first run did not expose a runtime defect. It did expose a harness observability gap: the runtime
+already produced these relationships in `SemanticsSnapshot`, but the mechanism harness could not
+express them as reusable fixture predicates. This blocked proactive parity sweeps for combobox,
+listbox, autocomplete, menu, and future Material 3 composite widgets.
+
+## Phase 2.9 Roving Focus Interaction Coverage
+
+The roving focus interaction fixture suite is
+`crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json`, run by
+`mechanism_harness_roving_focus_interaction_matches_oracles`.
+
+This suite lifts declarative roving-focus behavior into a fixture matrix because roving focus is the
+shared substrate for menu, select, combobox, command, tab, toolbar, and Material listbox recipes. It
+does not assert recipe-specific keyboard policy; it asserts the lower-level mechanism outcome after
+the recipe supplies a navigation callback.
+
+It covers:
+
+- arrow navigation skipping disabled items,
+- wrap-around from first to last item,
+- non-wrapping edge navigation preserving the current focus and selection,
+- pointer-region wrapped items still participating in roving item collection.
+
+The first run did not expose a runtime defect. It turned existing focused behavior into
+case-id-addressable coverage so future parity sweeps can add recipe-shaped roving scenarios without
+editing the harness runner.
+
+## Phase 2.10 Focus Scope Interaction Coverage
+
+The focus scope interaction fixture suite is
+`crates/fret-ui/src/declarative/tests/fixtures/focus_scope_interaction_v1.json`, run by
+`mechanism_harness_focus_scope_interaction_matches_oracles`.
+
+This suite covers the declarative focus-containment primitive that overlay recipes depend on before
+they add Radix-style restore policy. It intentionally asserts mechanism outcomes only: traversal,
+containment, and pointer-focus arbitration.
+
+It covers:
+
+- trapped `focus.next` traversal staying inside the scope,
+- trapped `focus.next` wrapping from the last item back to the first item,
+- trapped `focus.previous` wrapping from the first item to the last item,
+- non-trapped scopes allowing focus traversal to leave the scope,
+- outside pointer activation still running while trapped focus remains inside the scope.
+
+The first run did not expose a runtime defect. It confirmed that `trap_focus=false` does not
+accidentally behave as containment and converted existing procedural focus-scope checks into a
+case-id-addressable fixture surface.
+
+## Phase 2.11 Shadcn Focus Restore Recipe Coverage
+
+The shadcn focus-restore fixture suite is
+`ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json`, run by
+`mechanism_harness_focus_restore_recipe_cases_match_oracles`.
+
+This suite is the first recipe-consumer parity slice in the mechanism harness lane. It exercises the
+common Radix/shadcn outcome shared by dialog, popover, combobox, select, and dropdown-menu recipes:
+trigger opens an overlay, dismissal closes it, and focus follows the recipe policy for the
+dismissal reason.
+
+It covers:
+
+- dialog Escape dismissal restoring trigger focus,
+- popover Escape dismissal restoring trigger focus,
+- combobox Escape dismissal restoring trigger focus,
+- select Escape dismissal restoring trigger focus,
+- dropdown-menu Escape dismissal restoring trigger focus,
+- dialog outside-press dismissal restoring trigger focus,
+- popover click-through outside-press dismissal focusing and activating the underlay target,
+- open-state closure as a mechanism metric alongside focus restoration.
+
+The first run exposed a real harness oracle defect. `UiPredicateV1::FocusIs` used the normal
+barrier-filtered selector path, so it could not match a trigger outside a still-present pointer/modal
+barrier during close transition even when runtime focus had already been restored. The fix adds
+unfiltered selector lookup for focus predicates while keeping normal `Exists`-style queries
+barrier-filtered.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -287,7 +385,11 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-ui mechanism_harness_layout_primitives_match_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_layout_dirty_invalidation_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_hit_test_routing_matches_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_semantics_relations_match_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_roving_focus_interaction_matches_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_focus_scope_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
+- `cargo nextest run -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
@@ -299,7 +401,8 @@ predicates in this order:
 
 1. hit-test routing matrices: transformed, clipped, transparent, overlay roots, pointer occlusion,
    and captured-pointer routing;
-2. semantics tree invariants: roles, labels, relationships, active descendant, and hidden nodes;
+2. semantics tree invariants: value/editing metadata, collection metadata, actions, live regions,
+   and hidden-subtree policy;
 3. overlay placement/focus containment: anchor spaces, focus trap/restore, active descendants, and
    nested modal roots;
 4. Material 3 recipe parity: consume the same mechanism fixture/oracle format with Material-specific

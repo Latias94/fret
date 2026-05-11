@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui-shadcn.focus-restore-recipes.mechanism-harness-v1",
+  "owner_layer": "ecosystem/fret-ui-shadcn",
+  "domains": ["focus", "overlay"],
+  "cases": [
+    {
+      "id": "dialog-escape-closes-and-restores-trigger-focus",
+      "scenario": { "kind": "dialog_escape_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "dialog-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Dialog Escape dismissal restores focus to trigger",
+        "note": "Recipe policy sits above the focus-scope mechanism and should restore trigger focus after Escape dismissal."
+      }
+    },
+    {
+      "id": "popover-escape-closes-and-restores-trigger-focus",
+      "scenario": { "kind": "popover_escape_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "popover-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Popover Escape dismissal restores focus to trigger",
+        "note": "Non-modal overlay policy should close and restore focus to the invoking trigger."
+      }
+    },
+    {
+      "id": "combobox-escape-closes-and-restores-trigger-focus",
+      "scenario": { "kind": "combobox_escape_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "combobox-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Combobox Escape dismissal restores focus to trigger",
+        "note": "Combobox composes popover-like dismissal with active-descendant/listbox policy."
+      }
+    },
+    {
+      "id": "select-escape-closes-and-restores-trigger-focus",
+      "scenario": { "kind": "select_escape_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "select-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Select Escape dismissal restores focus to trigger",
+        "note": "Select composes listbox policy with popover-like dismissal and trigger focus restore."
+      }
+    },
+    {
+      "id": "dropdown-menu-escape-closes-and-restores-trigger-focus",
+      "scenario": { "kind": "dropdown_menu_escape_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "menu-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "DropdownMenu Escape dismissal restores focus to trigger",
+        "note": "Menu escape close should return focus to the invoking menu trigger."
+      }
+    },
+    {
+      "id": "dialog-overlay-click-closes-and-restores-trigger-focus",
+      "scenario": { "kind": "dialog_outside_press_restore" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "dialog-trigger" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Dialog outside press dismissal restores focus to trigger",
+        "note": "Modal dialog outside press should dismiss and restore focus to the invoking trigger."
+      }
+    },
+    {
+      "id": "popover-outside-click-closes-and-focuses-underlay",
+      "scenario": { "kind": "popover_outside_press_focuses_underlay" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Popover non-modal outside press can move focus to click-through target",
+        "note": "Popover outside press closes without overriding the newly focused underlay target."
+      }
+    }
+  ]
+}

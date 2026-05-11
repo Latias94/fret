@@ -31,12 +31,31 @@ date: 2026-05-12
   hit-test routing coverage.
 - [x] Promote focus barrier and focus traversal routing into a fixture-driven tree harness.
 - [x] Run focused gates for focus barrier and focus scope coverage.
+- [x] Promote semantics relations and boolean accessibility flags into shared harness observations
+  and fixture predicates.
+- [x] Add declarative semantics relation fixtures for text-input combobox controls,
+  active-descendant, `attach_semantics`, and `SemanticsProps` relation/state outcomes.
+- [x] Add declarative roving focus fixture coverage for disabled skip, wrap, no-wrap edge behavior,
+  and pointer-region wrapped items.
+- [x] Add declarative focus scope fixture coverage for trapped traversal, wrap, non-trap traversal,
+  and pointer activation without focus escape.
+- [x] Add shadcn recipe-consumer focus restore fixture coverage for dialog, popover, and combobox
+  Escape dismissal.
+- [x] Fix the focus oracle bug exposed by recipe focus restore coverage.
+- [x] Extend shadcn recipe-consumer Escape restore fixture coverage to select and dropdown-menu.
+- [x] Extend shadcn recipe focus policy fixture coverage to dialog overlay click and popover
+  click-through outside press.
 - [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
   and selectors are identified.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
   test ids for underlay, overlay, and observer/capture state.
-- [ ] Add declarative focus scope, focus restore, roving focus, and active-descendant fixture suites.
+- [ ] Add focus restore, active-descendant interaction, typeahead, nested focus scope, and
+  stale-parent fixture suites.
+- [ ] Add shadcn outside-press focus restore/clear matrices for select, dropdown-menu, combobox,
+  and context-menu policy differences.
+- [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
+  and hidden-subtree policy.
 - [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier
   selectors.

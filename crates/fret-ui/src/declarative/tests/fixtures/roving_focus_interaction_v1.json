@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.roving-focus-interaction.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["focus"],
+  "cases": [
+    {
+      "id": "arrow-down-skips-disabled-item",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": true,
+        "disabled": [false, true, false],
+        "initial": "a",
+        "key": "arrow_down"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-c" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 2.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix roving focus skips disabled items",
+        "note": "Arrow navigation must skip disabled entries while updating active selection state."
+      }
+    },
+    {
+      "id": "arrow-up-wraps-from-first-to-last",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": true,
+        "disabled": [false, false, false],
+        "initial": "a",
+        "key": "arrow_up"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-c" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 2.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "arrow-up-without-wrap-stays-on-first",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": false,
+        "disabled": [false, false, false],
+        "initial": "a",
+        "key": "arrow_up"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-a" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "pointer-region-wrapped-items-still-participate",
+      "scenario": {
+        "kind": "roving_flex",
+        "wrap": true,
+        "disabled": [false, false, false],
+        "initial": "a",
+        "key": "arrow_down",
+        "wrap_items_in_pointer_regions": true
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "roving-b" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "roving.selection.index",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Component wrappers must not hide roving items from navigation",
+        "note": "Pointer-region wrappers are common in custom painted item rows and must preserve roving item collection."
+      }
+    }
+  ]
+}

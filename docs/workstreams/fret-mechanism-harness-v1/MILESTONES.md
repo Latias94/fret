@@ -96,3 +96,53 @@ Status: complete
 - The first run exposed a runner type-boundary issue rather than a runtime defect: fixture commands
   must map to a closed enum before constructing static `CommandId` values.
 - Focused gates for focus barrier transition and focus scope behavior passed.
+
+## M9: Semantics Relation Slice
+
+Status: complete
+
+- `ObservedTree::from_semantics_snapshot` now preserves accessibility relation and state facts that
+  were previously dropped by the shared harness observation layer.
+- `MechanismPredicate` now supports selector-addressable semantics relation and boolean flag
+  oracles.
+- A dedicated declarative semantics relation fixture suite covers text-input combobox controls,
+  active-descendant, `attach_semantics`, and `SemanticsProps` relation/state outcomes.
+- Focused gates for text input semantics relations and attach-semantics relation/state behavior
+  passed.
+
+## M10: Roving Focus Interaction Slice
+
+Status: complete
+
+- A dedicated roving focus fixture suite now covers disabled item skipping, wrapping navigation,
+  non-wrapping edge preservation, and pointer-region wrapped item collection.
+- The runner asserts both the resulting focused semantics node and the active-selection model via a
+  mechanism metric.
+- Focused gates for existing roving flex behavior passed.
+
+## M11: Focus Scope Interaction Slice
+
+Status: complete
+
+- A dedicated focus scope fixture suite now covers trapped traversal, wrap behavior, non-trapped
+  traversal, and outside pointer activation without focus escape.
+- The runner asserts exact focus for command traversal and mechanism metrics for pointer activation
+  plus focus containment.
+- Focused gates for existing focus scope and layered focus scope behavior passed.
+
+## M12: Shadcn Focus Restore Recipe Slice
+
+Status: complete
+
+- A dedicated shadcn focus-restore recipe fixture suite now covers dialog, popover, combobox,
+  select, and dropdown-menu Escape dismissal restoring focus to the invoking trigger and closing
+  the open model.
+- The same fixture suite now also covers outside-press policy differences: dialog overlay click
+  restores trigger focus, while popover click-through outside press focuses and activates the
+  underlay target.
+- The first run exposed a real harness oracle defect: `FocusIs` used barrier-filtered selector
+  lookup and could not observe restored focus outside a still-present pointer/modal barrier.
+- The oracle now uses unfiltered selector lookup for focus predicates, with a focused
+  `fret-mechanism-harness` regression test.
+- Focused recipe gates for dialog, popover, combobox, select, and dropdown-menu Escape focus
+  restore passed.

@@ -17,7 +17,12 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitiv
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_interaction_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture
 ```
 
 ## View-Cache and Root-Boundary Gates
@@ -63,6 +68,44 @@ cargo test --profile dev-fast -p fret-ui --lib focus_barrier -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
 ```
 
+## Semantics Relation Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_controls_element_is_exposed -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_active_descendant_element_is_exposed -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib declarative_attach_semantics_can_override_state_and_relations -- --nocapture
+```
+
+## Roving Focus Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_interaction_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib roving_flex -- --nocapture
+```
+
+## Focus Scope Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
+```
+
+## Shadcn Focus Restore Recipe Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-mechanism-harness --lib focus_oracle_can_match_restored_focus_outside_pointer_barrier -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test dialog_escape_dismiss_focus_restore dialog_escape_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test popover_escape_dismiss_focus_restore popover_escape_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test combobox_escape_dismiss_focus_restore combobox_escape_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test select_escape_dismiss_focus_restore select_escape_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test dropdown_menu_escape_dismiss_focus_restore dropdown_menu_escape_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test dialog_overlay_click_dismiss_focus_restore dialog_overlay_click_closes_and_restores_focus_to_trigger -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --test popover_outside_click_dismiss_focus_restore popover_outside_click_closes_and_activates_underlay -- --nocapture
+```
+
 ## Runtime Diagnostics Gate
 
 ```powershell
@@ -85,6 +128,10 @@ python -m json.tool docs/workstreams/fret-mechanism-harness-v1/WORKSTREAM.json |
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/layout_dirty_invalidation_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/scroll_handle_invalidation_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json | Out-Null
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json | Out-Null
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json | Out-Null
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/focus_scope_interaction_v1.json | Out-Null
+python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json | Out-Null
 python tools/check_workstream_catalog.py
@@ -115,6 +162,22 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
   `crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`
 - Focus barrier routing runner:
   `crates/fret-ui/src/tree/tests/focus_barrier_routing_harness.rs`
+- Semantics relation fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
+- Semantics relation runner:
+  `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+- Roving focus interaction fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json`
+- Roving focus interaction runner:
+  `crates/fret-ui/src/declarative/tests/roving_focus_interaction_harness.rs`
+- Focus scope interaction fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/focus_scope_interaction_v1.json`
+- Focus scope interaction runner:
+  `crates/fret-ui/src/declarative/tests/focus_scope_interaction_harness.rs`
+- Shadcn focus restore recipe fixture:
+  `ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json`
+- Shadcn focus restore recipe runner:
+  `ecosystem/fret-ui-shadcn/tests/focus_restore_mechanism_harness.rs`
 - Previous focused tests: `crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs`
 - View-cache focused tests: `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Environment focused tests: `crates/fret-ui/src/declarative/tests/environment_queries.rs`
@@ -123,6 +186,17 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
 - Focus barrier focused tests: `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
 - Focus scope focused tests: `crates/fret-ui/src/tree/tests/focus_scope.rs`,
   `crates/fret-ui/src/tree/tests/focus_scope_layered.rs`
+- Semantics relation focused tests: `crates/fret-ui/src/declarative/tests/interactions/text_input.rs`,
+  `crates/fret-ui/src/declarative/tests/semantics.rs`
+- Roving focus focused tests: `crates/fret-ui/src/declarative/tests/interactions/roving_flex.rs`
+- Shadcn focus restore focused tests:
+  `ecosystem/fret-ui-shadcn/tests/dialog_escape_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/popover_escape_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/dropdown_menu_escape_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/dialog_overlay_click_dismiss_focus_restore.rs`,
+  `ecosystem/fret-ui-shadcn/tests/popover_outside_click_dismiss_focus_restore.rs`
 - Retained virtual-list focused test: `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
 - Scroll registry classification tests: `crates/fret-ui/src/declarative/frame.rs`
 - Scroll-contained frontier focused test: `crates/fret-ui/src/declarative/tests/layout/scroll.rs`

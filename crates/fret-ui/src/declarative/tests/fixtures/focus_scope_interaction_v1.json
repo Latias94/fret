@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.focus-scope-interaction.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["focus"],
+  "cases": [
+    {
+      "id": "trapped-next-stays-inside-scope",
+      "scenario": {
+        "kind": "focus_scope",
+        "trap_focus": true,
+        "initial": "inside_a",
+        "steps": [{ "kind": "command", "command": "next" }]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "scope-inside-b" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "trapped-next-wraps-to-first-inside-item",
+      "scenario": {
+        "kind": "focus_scope",
+        "trap_focus": true,
+        "initial": "inside_a",
+        "steps": [
+          { "kind": "command", "command": "next" },
+          { "kind": "command", "command": "next" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "scope-inside-a" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "trapped-previous-wraps-to-last-inside-item",
+      "scenario": {
+        "kind": "focus_scope",
+        "trap_focus": true,
+        "initial": "inside_a",
+        "steps": [{ "kind": "command", "command": "previous" }]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "scope-inside-b" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-trapped-next-can-leave-scope",
+      "scenario": {
+        "kind": "focus_scope",
+        "trap_focus": false,
+        "initial": "inside_b",
+        "steps": [{ "kind": "command", "command": "next" }]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "scope-after" }
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "FocusScope trap flag separates grouping from containment",
+        "note": "A non-trapped focus scope must not behave like a modal focus barrier."
+      }
+    },
+    {
+      "id": "trapped-pointer-outside-activates-without-stealing-focus",
+      "scenario": {
+        "kind": "focus_scope",
+        "trap_focus": true,
+        "initial": "inside_a",
+        "steps": [{ "kind": "pointer_click", "target": "after" }]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "focus.in_scope",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "scope.after.activated",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Focus trap blocks focus transfer without swallowing pointer activation",
+        "note": "This is the mechanism outcome recipe layers rely on for modal-like focus containment."
+      }
+    }
+  ]
+}

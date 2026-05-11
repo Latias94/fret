@@ -15,7 +15,8 @@ pub use fixture::{
 };
 pub use observe::{
     BoundsSpace, ObservedHitTestSample, ObservedMechanismMetric, ObservedNode, ObservedOverlay,
-    ObservedRoot, ObservedTree, QueryError, role_label,
+    ObservedRoot, ObservedSemanticsFlag, ObservedSemanticsRelation, ObservedTree, QueryError,
+    role_label,
 };
 pub use oracle::{
     MechanismPredicate, OracleEvalError, PredicateFailure, PredicatePass, evaluate_predicate,
@@ -265,6 +266,120 @@ mod tests {
                 comparison: UiComparisonV1::Eq,
                 value: 0.0,
                 eps: 0.0,
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn semantics_relation_and_flag_oracles_match_observed_nodes() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ));
+
+        let mut combo = ObservedNode::new(
+            "combo",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        combo.node_id = Some(1);
+        combo.active_descendant_node_id = Some(2);
+        combo.controls_node_ids = vec![3];
+        combo.disabled = Some(true);
+
+        let mut option = ObservedNode::new(
+            "option",
+            Rect::new(Point::new(Px(0.0), Px(24.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        option.node_id = Some(2);
+
+        let mut listbox = ObservedNode::new(
+            "listbox",
+            Rect::new(Point::new(Px(0.0), Px(48.0)), Size::new(Px(80.0), Px(48.0))),
+        );
+        listbox.node_id = Some(3);
+
+        tree.push_node(combo);
+        tree.push_node(option);
+        tree.push_node(listbox);
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "combo".to_string(),
+                    root_z_index: None,
+                },
+                relation: ObservedSemanticsRelation::ActiveDescendant,
+                target: UiSelectorV1::TestId {
+                    id: "option".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "combo".to_string(),
+                    root_z_index: None,
+                },
+                relation: ObservedSemanticsRelation::Controls,
+                target: UiSelectorV1::TestId {
+                    id: "listbox".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsFlagIs {
+                target: UiSelectorV1::TestId {
+                    id: "combo".to_string(),
+                    root_z_index: None,
+                },
+                flag: ObservedSemanticsFlag::Disabled,
+                expected: true,
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn focus_oracle_can_match_restored_focus_outside_pointer_barrier() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        ));
+        let mut trigger = ObservedNode::new(
+            "trigger",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        trigger.node_id = Some(1);
+        let mut modal = ObservedNode::new(
+            "modal",
+            Rect::new(
+                Point::new(Px(0.0), Px(30.0)),
+                Size::new(Px(120.0), Px(80.0)),
+            ),
+        );
+        modal.node_id = Some(2);
+        tree.focus_node_id = Some(1);
+        tree.barrier_root_node_id = Some(2);
+        tree.push_node(trigger);
+        tree.push_node(modal);
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::FocusIs {
+                    target: UiSelectorV1::TestId {
+                        id: "trigger".to_string(),
+                        root_z_index: None,
+                    },
+                },
             },
         )
         .unwrap();

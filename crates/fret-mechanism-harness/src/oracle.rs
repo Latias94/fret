@@ -2,7 +2,9 @@ use fret_core::Rect;
 use fret_diag_protocol::{UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1};
 use serde::{Deserialize, Serialize};
 
-use crate::{BoundsSpace, ObservedNode, ObservedTree};
+use crate::{
+    BoundsSpace, ObservedNode, ObservedSemanticsFlag, ObservedSemanticsRelation, ObservedTree,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -93,6 +95,16 @@ pub enum MechanismPredicate {
         value: f32,
         #[serde(default)]
         eps: f32,
+    },
+    SemanticsRelationIncludes {
+        source: UiSelectorV1,
+        relation: ObservedSemanticsRelation,
+        target: UiSelectorV1,
+    },
+    SemanticsFlagIs {
+        target: UiSelectorV1,
+        flag: ObservedSemanticsFlag,
+        expected: bool,
     },
 }
 
@@ -324,6 +336,60 @@ pub fn evaluate_predicate(
                 )
             })
         }
+        MechanismPredicate::SemanticsRelationIncludes {
+            source,
+            relation,
+            target,
+        } => {
+            let source_node = tree.select_best(source).map_err(fail)?;
+            let target_node = tree.select_best(target).map_err(fail)?;
+            let Some(target_id) = target_node.node_id else {
+                return Err(failure(format!(
+                    "semantics_relation_includes target has no node id target={target:?}"
+                )));
+            };
+            let relation_ids = semantics_relation_ids(source_node, *relation);
+            pass_bool(relation_ids.contains(&target_id), || {
+                format!(
+                    "semantics_relation_includes mismatch source={source:?} relation={relation:?} target={target:?} expected_node={target_id:?} actual={relation_ids:?}"
+                )
+            })
+        }
+        MechanismPredicate::SemanticsFlagIs {
+            target,
+            flag,
+            expected,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let Some(actual) = semantics_flag_value(node, *flag) else {
+                return Err(failure(format!(
+                    "semantics_flag_is target has no observed flag target={target:?} flag={flag:?}"
+                )));
+            };
+            pass_bool(actual == *expected, || {
+                format!(
+                    "semantics_flag_is mismatch target={target:?} flag={flag:?} expected={expected} actual={actual}"
+                )
+            })
+        }
+    }
+}
+
+fn semantics_relation_ids(node: &ObservedNode, relation: ObservedSemanticsRelation) -> Vec<u64> {
+    match relation {
+        ObservedSemanticsRelation::ActiveDescendant => {
+            node.active_descendant_node_id.into_iter().collect()
+        }
+        ObservedSemanticsRelation::LabelledBy => node.labelled_by_node_ids.clone(),
+        ObservedSemanticsRelation::DescribedBy => node.described_by_node_ids.clone(),
+        ObservedSemanticsRelation::Controls => node.controls_node_ids.clone(),
+    }
+}
+
+fn semantics_flag_value(node: &ObservedNode, flag: ObservedSemanticsFlag) -> Option<bool> {
+    match flag {
+        ObservedSemanticsFlag::Disabled => node.disabled,
+        ObservedSemanticsFlag::Hidden => node.hidden,
     }
 }
 
@@ -349,7 +415,7 @@ fn eval_ui_predicate(
             })
         }
         UiPredicateV1::FocusIs { target } => {
-            let expected = tree.select_best(target).map_err(fail)?;
+            let expected = tree.select_best_unfiltered(target).map_err(fail)?;
             pass_bool(expected.node_id == tree.focus_node_id, || {
                 format!(
                     "expected focus target {target:?}, actual={:?}",

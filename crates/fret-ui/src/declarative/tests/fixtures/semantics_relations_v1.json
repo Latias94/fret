@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.semantics-relations.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["semantics"],
+  "cases": [
+    {
+      "id": "text-input-controls-element-resolves-to-listbox",
+      "scenario": { "kind": "text_input_controls_element" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "role_is",
+              "target": { "kind": "test_id", "id": "combo" },
+              "role": "combo_box"
+            }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "combo" },
+            "relation": "controls",
+            "target": { "kind": "test_id", "id": "listbox" }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA combobox aria-controls relation",
+        "note": "TextInputProps.controls_element must resolve declarative element ids into semantics NodeIds."
+      }
+    },
+    {
+      "id": "text-input-active-descendant-resolves-to-option",
+      "scenario": { "kind": "text_input_active_descendant_element" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "combo" },
+            "relation": "active_descendant",
+            "target": { "kind": "test_id", "id": "option" }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA combobox aria-activedescendant relation",
+        "note": "Composite text inputs keep DOM-style focus on the input while exposing the active option."
+      }
+    },
+    {
+      "id": "attach-semantics-relations-and-flags",
+      "scenario": { "kind": "attach_semantics_relations_and_flags" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "decorated-target" },
+            "relation": "active_descendant",
+            "target": { "kind": "test_id", "id": "decorated-option" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "decorated-target" },
+            "relation": "labelled_by",
+            "target": { "kind": "test_id", "id": "decorated-label" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "decorated-target" },
+            "relation": "described_by",
+            "target": { "kind": "test_id", "id": "decorated-description" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "decorated-target" },
+            "relation": "controls",
+            "target": { "kind": "test_id", "id": "decorated-listbox" }
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "decorated-target" },
+            "flag": "disabled",
+            "expected": true
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "decorated-target" },
+            "flag": "hidden",
+            "expected": true
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA relation and state decoration parity",
+        "note": "SemanticsDecoration must remain a layout-transparent way to stamp relations and AT state."
+      }
+    },
+    {
+      "id": "semantics-wrapper-relations-and-flags",
+      "scenario": { "kind": "semantics_wrapper_relations_and_flags" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "wrapper-target" },
+            "relation": "labelled_by",
+            "target": { "kind": "test_id", "id": "wrapper-label" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "wrapper-target" },
+            "relation": "described_by",
+            "target": { "kind": "test_id", "id": "wrapper-description" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "wrapper-target" },
+            "relation": "controls",
+            "target": { "kind": "test_id", "id": "wrapper-controlled" }
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "wrapper-target" },
+            "flag": "disabled",
+            "expected": true
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "wrapper-target" },
+            "flag": "hidden",
+            "expected": true
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA labelledby/describedby/controls state relation parity",
+        "note": "SemanticsProps wrapper and attach_semantics decoration must expose equivalent relation outcomes."
+      }
+    }
+  ]
+}

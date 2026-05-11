@@ -37,7 +37,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, focused view-cache/environment/pointer/focus gates, and the UI Gallery checkbox underflow diagnostics gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, roving focus interaction fixtures, focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/combobox/select/dropdown-menu, focused view-cache/environment/pointer/focus/semantics/recipe gates, and the UI Gallery checkbox underflow diagnostics gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -46,6 +46,11 @@
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_interaction_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture"
     ]
   },
@@ -81,6 +86,30 @@
     {
       "name": "focus-barrier-routing-fixture",
       "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "semantics-relation-oracle-unit",
+      "command": "cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture"
+    },
+    {
+      "name": "semantics-relations-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture"
+    },
+    {
+      "name": "roving-focus-interaction-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_interaction_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "focus-scope-interaction-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "shadcn-focus-restore-recipe-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture"
+    },
+    {
+      "name": "focus-oracle-restored-focus-outside-pointer-barrier",
+      "command": "cargo test --profile dev-fast -p fret-mechanism-harness --lib focus_oracle_can_match_restored_focus_outside_pointer_barrier -- --nocapture"
     },
     {
       "name": "checkbox-underflow-focused-rust-test",
@@ -127,6 +156,50 @@
       "command": "cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture"
     },
     {
+      "name": "roving-focus-focused-gates",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib roving_flex -- --nocapture"
+    },
+    {
+      "name": "semantics-controls-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_controls_element_is_exposed -- --nocapture"
+    },
+    {
+      "name": "semantics-active-descendant-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_active_descendant_element_is_exposed -- --nocapture"
+    },
+    {
+      "name": "semantics-attach-decoration-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib declarative_attach_semantics_can_override_state_and_relations -- --nocapture"
+    },
+    {
+      "name": "shadcn-dialog-escape-focus-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test dialog_escape_dismiss_focus_restore dialog_escape_closes_and_restores_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-popover-escape-focus-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test popover_escape_dismiss_focus_restore popover_escape_closes_and_restores_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-combobox-escape-focus-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test combobox_escape_dismiss_focus_restore combobox_escape_closes_and_restores_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-select-escape-focus-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test select_escape_dismiss_focus_restore select_escape_closes_and_restores_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-dropdown-menu-escape-focus-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test dropdown_menu_escape_dismiss_focus_restore dropdown_menu_escape_closes_and_restores_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-dialog-outside-focus-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test dialog_overlay_click_dismiss_focus_restore dialog_overlay_click_closes_and_restores_focus_to_trigger -- --nocapture"
+    },
+    {
+      "name": "shadcn-popover-outside-underlay-focus-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --test popover_outside_click_dismiss_focus_restore popover_outside_click_closes_and_activates_underlay -- --nocapture"
+    },
+    {
       "name": "scroll-contained-frontier-focused-gate",
       "command": "cargo test --profile dev-fast -p fret-ui --lib scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation -- --nocapture"
     },
@@ -164,6 +237,14 @@
     "crates/fret-ui/src/tree/tests/pointer_occlusion_routing_harness.rs",
     "crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json",
     "crates/fret-ui/src/tree/tests/focus_barrier_routing_harness.rs",
+    "crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json",
+    "crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs",
+    "crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json",
+    "crates/fret-ui/src/declarative/tests/roving_focus_interaction_harness.rs",
+    "crates/fret-ui/src/declarative/tests/fixtures/focus_scope_interaction_v1.json",
+    "crates/fret-ui/src/declarative/tests/focus_scope_interaction_harness.rs",
+    "ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json",
+    "ecosystem/fret-ui-shadcn/tests/focus_restore_mechanism_harness.rs",
     "crates/fret-ui/src/tree/tests/view_cache.rs",
     "crates/fret-ui/src/declarative/tests/environment_queries.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/retained.rs",
@@ -173,6 +254,16 @@
     "crates/fret-ui/src/tree/tests/focus_barrier_transition.rs",
     "crates/fret-ui/src/tree/tests/focus_scope.rs",
     "crates/fret-ui/src/tree/tests/focus_scope_layered.rs",
+    "crates/fret-ui/src/declarative/tests/interactions/text_input.rs",
+    "crates/fret-ui/src/declarative/tests/semantics.rs",
+    "crates/fret-ui/src/declarative/tests/interactions/roving_flex.rs",
+    "ecosystem/fret-ui-shadcn/tests/dialog_escape_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/popover_escape_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/dropdown_menu_escape_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/dialog_overlay_click_dismiss_focus_restore.rs",
+    "ecosystem/fret-ui-shadcn/tests/popover_outside_click_dismiss_focus_restore.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
