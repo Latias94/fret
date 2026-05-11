@@ -17,6 +17,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TARGET_INTERFACE_STATE.md"
     },
     {
+      "role": "guide",
+      "path": "docs/code-editor.md"
+    },
+    {
       "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md"
     },
@@ -146,6 +150,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md",
+    "docs/code-editor.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/0011-overlays-and-multi-root.md",
     "docs/adr/0020-focus-and-command-routing.md",

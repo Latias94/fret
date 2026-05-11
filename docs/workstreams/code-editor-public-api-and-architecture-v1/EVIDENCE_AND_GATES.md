@@ -65,6 +65,7 @@ the target behavior and stressor scope are explicit.
 - Platform text input: `docs/adr/0261-platform-text-input-client-interop-v1.md`
 - Replay/resource semantics: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - Current alignment: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+- Public app-author guide: `docs/code-editor.md`
 - Public surface classification:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md`
 - Selection ownership move:

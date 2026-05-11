@@ -20,7 +20,7 @@ Last updated: 2026-05-12
 - [x] Decide whether `Selection` remains in `fret-code-editor` or moves toward buffer/view model
       ownership.
 - [x] Add a public surface diff note for the first ownership move (`Selection`).
-- [ ] Define the minimum public docs for app authors who want a code editor surface without reading
+- [x] Define the minimum public docs for app authors who want a code editor surface without reading
       internal modules.
 
 ## P0 - Extension Model

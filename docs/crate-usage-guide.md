@@ -957,6 +957,26 @@ instead of root-level install helpers.
 
 **Use them when:** you need editor/documentation-like rich content surfaces.
 
+### `fret-code-editor` / `fret-code-editor-buffer` / `fret-code-editor-view`
+
+**What they are:** the current code-editor ecosystem split:
+
+- `fret-code-editor`: UI surface, input, paint, a11y projection, cache/perf snapshots.
+- `fret-code-editor-buffer`: document identity, revisions, byte-indexed edits, transactions, and
+  `Selection`.
+- `fret-code-editor-view`: display projection plus folds, inlays, diagnostics, decorations, gutter
+  markers, semantic tokens, and wrap-policy contracts.
+
+**Use them when:** you need an editable, editor-grade text surface rather than a passive code block
+or Markdown renderer.
+
+**Start here:** `docs/code-editor.md`.
+
+**Boundary note:** keep workspace persistence, LSP clients, completion providers, code-action
+execution services, and document-global undo policy app-owned. Keep overlay/focus/listbox policy in
+`fret-ui-kit`, `fret-ui-editor`, `fret-ui-shadcn`, or an app shell; do not move those policies into
+`fret-code-editor`.
+
 ### `fret-undo`
 
 **What it is:** app-owned undo/redo infrastructure with explicit transaction boundaries and coalescing.
