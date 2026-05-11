@@ -1,7 +1,7 @@
 ---
 title: Fret Mechanism Harness v1 Milestones
 status: active
-date: 2026-05-11
+date: 2026-05-12
 ---
 
 # Milestones
@@ -73,3 +73,26 @@ Status: complete
   committed into `ElementRuntime` before declarative rendering.
 - `render_root` now synchronizes the missing environment keys, and the fixture plus focused
   environment gates pass.
+
+## M7: Pointer Occlusion and Capture Routing Slice
+
+Status: complete
+
+- A dedicated pointer occlusion routing fixture suite now covers event-routing outcomes that are not
+  visible in plain hit-test geometry: underlay dispatch suppression, wheel exceptions, modal barrier
+  scoping, outside-press observers, pointer-move observers, and captured-pointer routing.
+- The first run exposed a fixture schema constraint rather than a runtime defect: `domains` is a
+  fixed mechanism enum and cannot be used as a free-form subdomain tag list.
+- Focused gates for pointer occlusion, pointer-move observer/capture routing, and the existing
+  hit-test routing fixture passed.
+
+## M8: Focus Barrier Routing Slice
+
+Status: complete
+
+- A dedicated focus barrier routing fixture suite now covers tree-level overlay/focus outcomes:
+  hit-test-inert focus barriers, explicit focus barrier activation, underlay focus rejection,
+  focus traversal inside a barrier, modal barrier reporting, and timer dispatch stability.
+- The first run exposed a runner type-boundary issue rather than a runtime defect: fixture commands
+  must map to a closed enum before constructing static `CommandId` values.
+- Focused gates for focus barrier transition and focus scope behavior passed.

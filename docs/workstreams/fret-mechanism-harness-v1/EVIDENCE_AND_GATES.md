@@ -1,7 +1,7 @@
 ---
 title: Fret Mechanism Harness v1 Evidence and Gates
 status: active
-date: 2026-05-11
+date: 2026-05-12
 ---
 
 # Evidence and Gates
@@ -15,6 +15,8 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_scroll_handle_i
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_environment_view_cache_invalidation_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles -- --nocapture
 ```
 
@@ -44,6 +46,23 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_environment_vie
 cargo test --profile dev-fast -p fret-ui --lib environment_ -- --nocapture
 ```
 
+## Hit-Test Routing and Pointer Occlusion Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib pointer_occlusion -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture
+```
+
+## Focus Barrier Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib focus_barrier -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
+```
+
 ## Runtime Diagnostics Gate
 
 ```powershell
@@ -66,6 +85,8 @@ python -m json.tool docs/workstreams/fret-mechanism-harness-v1/WORKSTREAM.json |
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/layout_dirty_invalidation_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/scroll_handle_invalidation_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json | Out-Null
+python -m json.tool crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json | Out-Null
+python -m json.tool crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json | Out-Null
 python tools/check_workstream_catalog.py
 python tools/check_diag_scripts_registry.py
 cargo fmt -p fret-mechanism-harness -p fret-ui --check
@@ -84,9 +105,24 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
   `crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json`
 - Environment view-cache runner:
   `crates/fret-ui/src/declarative/tests/environment_view_cache_harness.rs`
+- Hit-test routing fixture: `crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json`
+- Hit-test routing runner: `crates/fret-ui/src/declarative/tests/layout/hit_test_mechanism_harness.rs`
+- Pointer occlusion routing fixture:
+  `crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json`
+- Pointer occlusion routing runner:
+  `crates/fret-ui/src/tree/tests/pointer_occlusion_routing_harness.rs`
+- Focus barrier routing fixture:
+  `crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`
+- Focus barrier routing runner:
+  `crates/fret-ui/src/tree/tests/focus_barrier_routing_harness.rs`
 - Previous focused tests: `crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs`
 - View-cache focused tests: `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Environment focused tests: `crates/fret-ui/src/declarative/tests/environment_queries.rs`
+- Pointer occlusion focused tests: `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+- Pointer move/capture focused tests: `crates/fret-ui/src/tree/tests/pointer_move_layers.rs`
+- Focus barrier focused tests: `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
+- Focus scope focused tests: `crates/fret-ui/src/tree/tests/focus_scope.rs`,
+  `crates/fret-ui/src/tree/tests/focus_scope_layered.rs`
 - Retained virtual-list focused test: `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
 - Scroll registry classification tests: `crates/fret-ui/src/declarative/frame.rs`
 - Scroll-contained frontier focused test: `crates/fret-ui/src/declarative/tests/layout/scroll.rs`

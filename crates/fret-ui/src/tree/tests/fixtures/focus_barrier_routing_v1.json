@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.focus-barrier-routing.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["focus", "overlay"],
+  "cases": [
+    {
+      "id": "hit-test-inert-focus-barrier-keeps-overlay-focus-and-rejects-underlay",
+      "scenario": {
+        "kind": "focus_barrier_routing",
+        "overlay_blocks_underlay_input": false,
+        "overlay_hit_testable": false,
+        "steps": [
+          { "op": "set_focus", "target": "overlay_a" },
+          { "op": "capture_metrics", "label": "before_barrier" },
+          { "op": "set_focus_barrier", "enabled": true },
+          { "op": "capture_metrics", "label": "after_barrier_enabled" },
+          { "op": "set_focus", "target": "overlay_b" },
+          { "op": "capture_metrics", "label": "after_overlay_b_focus" },
+          { "op": "set_focus", "target": "underlay" },
+          { "op": "capture_metrics", "label": "after_underlay_focus_attempt" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.before_barrier.focus.overlay_a", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_barrier_enabled.focus.overlay_a", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_barrier_enabled.arbitration.focus_barrier_present", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_barrier_enabled.arbitration.modal_barrier_present", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_overlay_b_focus.focus.overlay_b", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_underlay_focus_attempt.focus.underlay", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_underlay_focus_attempt.focus.overlay_b", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "focus-next-uses-focus-barrier-when-input-barrier-is-off",
+      "scenario": {
+        "kind": "focus_barrier_routing",
+        "overlay_blocks_underlay_input": false,
+        "overlay_hit_testable": false,
+        "steps": [
+          { "op": "set_focus_barrier", "enabled": true },
+          { "op": "set_focus", "target": "overlay_a" },
+          { "op": "dispatch_command", "command": "focus.next", "label": "after_first_next" },
+          { "op": "dispatch_command", "command": "focus.next", "label": "after_second_next" },
+          { "op": "dispatch_command", "command": "focus.previous", "label": "after_previous" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "command.after_first_next.handled", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_first_next.focus.overlay_b", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "command.after_second_next.handled", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_second_next.focus.overlay_a", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "command.after_previous.handled", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_previous.focus.overlay_b", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_previous.focus.underlay", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    },
+    {
+      "id": "modal-overlay-focus-barrier-rejects-underlay-focus",
+      "scenario": {
+        "kind": "focus_barrier_routing",
+        "overlay_blocks_underlay_input": true,
+        "overlay_hit_testable": true,
+        "steps": [
+          { "op": "set_focus", "target": "overlay_a" },
+          { "op": "capture_metrics", "label": "after_overlay_focus" },
+          { "op": "set_focus", "target": "underlay" },
+          { "op": "capture_metrics", "label": "after_underlay_focus_attempt" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.after_overlay_focus.arbitration.focus_barrier_present", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_overlay_focus.arbitration.modal_barrier_present", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_underlay_focus_attempt.focus.underlay", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_underlay_focus_attempt.focus.overlay_a", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "timer-dispatch-does-not-clear-focus-inside-hit-test-inert-focus-barrier",
+      "scenario": {
+        "kind": "focus_barrier_routing",
+        "overlay_blocks_underlay_input": false,
+        "overlay_hit_testable": false,
+        "steps": [
+          { "op": "set_focus", "target": "overlay_a" },
+          { "op": "set_focus_barrier", "enabled": true },
+          { "op": "dispatch_timer", "token": 1, "label": "after_timer" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.focus.overlay_a", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.arbitration.focus_barrier_present", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.arbitration.modal_barrier_present", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.pointer-occlusion-routing.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["hit_test", "overlay"],
+  "cases": [
+    {
+      "id": "block-mouse-except-scroll-suppresses-underlay-dispatch-but-allows-wheel",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "overlay_kind": "transparent",
+        "pointer_occlusion": "block_mouse_except_scroll",
+        "hit_test_before": { "x": 10.0, "y": 10.0 },
+        "events": [
+          { "kind": "move", "x": 10.0, "y": 10.0 },
+          { "kind": "down", "x": 10.0, "y": 10.0 },
+          { "kind": "wheel", "x": 10.0, "y": 10.0 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "hit.before.hit_underlay", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "hit.before.barrier_present", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.moves", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.downs", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.wheels", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "arbitration.pointer_occlusion_kind", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "arbitration.modal_barrier_present", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    },
+    {
+      "id": "block-mouse-suppresses-underlay-dispatch-including-wheel",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "overlay_kind": "transparent",
+        "pointer_occlusion": "block_mouse",
+        "events": [
+          { "kind": "move", "x": 10.0, "y": 10.0 },
+          { "kind": "down", "x": 10.0, "y": 10.0 },
+          { "kind": "wheel", "x": 10.0, "y": 10.0 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "underlay.moves", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.downs", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.wheels", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "arbitration.pointer_occlusion_kind", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "modal-hit-test-inert-barrier-blocks-underlay-wheel",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "overlay_kind": "transparent",
+        "overlay_blocks_underlay_input": true,
+        "overlay_hit_testable": false,
+        "pointer_occlusion": "none",
+        "hit_test_before": { "x": 10.0, "y": 10.0 },
+        "events": [
+          { "kind": "wheel", "x": 10.0, "y": 10.0 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "hit.before.hit_miss", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "hit.before.barrier_present", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.wheels", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "arbitration.modal_barrier_present", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "pointer-occlusion-keeps-outside-press-observer-while-suppressing-underlay",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "overlay_kind": "observer_down",
+        "wants_pointer_down_outside": true,
+        "pointer_occlusion": "block_mouse_except_scroll",
+        "events": [
+          { "kind": "down", "x": 10.0, "y": 10.0 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "observer.downs", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.downs", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.any_active", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    },
+    {
+      "id": "pointer-occlusion-keeps-pointer-move-observer-while-suppressing-underlay",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "overlay_kind": "observer_move",
+        "wants_pointer_move": true,
+        "pointer_occlusion": "block_mouse_except_scroll",
+        "events": [
+          { "kind": "move", "x": 10.0, "y": 10.0 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "observer.moves", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.moves", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.any_active", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    },
+    {
+      "id": "captured-underlay-pointer-suppresses-unrelated-overlay-move-observer",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "underlay_capture_on_down": true,
+        "overlay_kind": "observer_move",
+        "wants_pointer_move": true,
+        "pointer_occlusion": "none",
+        "events": [
+          { "kind": "down", "x": 10.0, "y": 10.0, "pointer_id": 0 },
+          { "kind": "move", "x": 20.0, "y": 10.0, "pointer_id": 0, "buttons_left": true }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "underlay.downs", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.moves", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observer.moves", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.pointer0_active", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "arbitration.pointer_capture_active", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "pointer-occlusion-respects-captured-pointer-but-occludes-uncaptured-pointer",
+      "scenario": {
+        "kind": "pointer_occlusion_routing",
+        "overlay_kind": "corner_capture",
+        "wants_pointer_down_outside": true,
+        "pointer_occlusion": "block_mouse_except_scroll",
+        "events": [
+          { "kind": "down", "x": 10.0, "y": 10.0, "pointer_id": 0 },
+          { "kind": "move", "x": 50.0, "y": 50.0, "pointer_id": 0, "buttons_left": true },
+          { "kind": "down", "x": 50.0, "y": 50.0, "pointer_id": 1 },
+          { "kind": "wheel", "x": 50.0, "y": 50.0, "pointer_id": 1 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "overlay.downs", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "overlay.moves", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observer.downs", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.downs", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "underlay.wheels", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.pointer0_active", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.pointer1_active", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "arbitration.pointer_capture_active", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    }
+  ]
+}

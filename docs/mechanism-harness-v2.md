@@ -189,6 +189,58 @@ while a sibling plain cache root stays reused. The first fixture run exposed a r
 It now commits all known platform environment values into `ElementRuntime` before declarative
 rendering, so environment dependency fingerprints can invalidate cache roots correctly.
 
+## Phase 2.6 Pointer Occlusion and Capture Routing Coverage
+
+The pointer occlusion routing fixture suite is
+`crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json`, run by
+`mechanism_harness_pointer_occlusion_routing_matches_oracles`.
+
+This suite covers the event-routing side of hit testing: the top-level hit result may still point at
+an underlay node, while overlay pointer occlusion, modal barriers, observer passes, and pointer
+capture decide which event chains are actually allowed to run.
+
+It covers:
+
+- `BlockMouseExceptScroll` suppressing underlay move/down dispatch while allowing wheel routing,
+- `BlockMouse` suppressing underlay wheel dispatch too,
+- hit-test-inert modal barriers scoping underlay wheel routing,
+- outside-press observers still receiving preview events while pointer occlusion suppresses
+  underlay bubble dispatch,
+- pointer-move observers still running for occluding overlays while underlay move dispatch is
+  suppressed,
+- captured underlay pointers suppressing unrelated overlay pointer-move observers,
+- captured overlay pointers continuing to receive moves while uncaptured pointers remain occluded.
+
+The first run exposed a harness schema constraint rather than a runtime defect: `domains` is a fixed
+mechanism enum, not a free-form tag list. Specific subdomain names such as pointer occlusion and
+pointer capture should live in suite/case ids and coverage docs unless the shared schema is
+intentionally extended.
+
+## Phase 2.7 Focus Barrier Routing Coverage
+
+The focus barrier routing fixture suite is
+`crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`, run by
+`mechanism_harness_focus_barrier_routing_matches_oracles`.
+
+This suite covers the tree-level overlay/focus substrate that component-layer focus traps and
+restore policies depend on. It intentionally stays below Radix policy: the fixture asserts focus
+barrier, modal barrier, and focus traversal outcomes, not when a component should open, close, or
+restore focus.
+
+It covers:
+
+- hit-test-inert overlays that still keep an active focus barrier,
+- focus barrier activation preserving existing overlay focus,
+- underlay focus attempts being rejected while the focus barrier is active,
+- `focus.next` / `focus.previous` traversal staying inside the focus barrier even when the input
+  barrier is off,
+- modal overlays reporting both modal and focus barriers,
+- timer dispatch not clearing focus inside a hit-test-inert focus barrier.
+
+The first run exposed a runner type-boundary issue rather than a runtime defect: fixture command ids
+must be represented as a closed enum in the runner instead of dynamically borrowed strings, because
+`CommandId::from` is intentionally optimized for static command ids in these paths.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -242,12 +294,14 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 ## Future Domains
 
 The observed model already has slots for hit-test samples, overlay records, and focus ids, plus
-basic overlay bounds predicates. Follow-up suites should add domain-specific adapters and predicates
-in this order:
+basic overlay bounds predicates. Follow-up suites should add or extend domain-specific adapters and
+predicates in this order:
 
-1. hit-test routing matrices: transformed, clipped, transparent, and overlay roots;
+1. hit-test routing matrices: transformed, clipped, transparent, overlay roots, pointer occlusion,
+   and captured-pointer routing;
 2. semantics tree invariants: roles, labels, relationships, active descendant, and hidden nodes;
-3. overlay placement/focus containment: anchor spaces, focus trap/restore, and nested modal roots;
+3. overlay placement/focus containment: anchor spaces, focus trap/restore, active descendants, and
+   nested modal roots;
 4. Material 3 recipe parity: consume the same mechanism fixture/oracle format with Material-specific
    scenarios in the ecosystem layer.
 

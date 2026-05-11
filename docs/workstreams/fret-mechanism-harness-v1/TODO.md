@@ -1,7 +1,7 @@
 ---
 title: Fret Mechanism Harness v1 TODO
 status: active
-date: 2026-05-11
+date: 2026-05-12
 ---
 
 # TODO
@@ -26,7 +26,17 @@ date: 2026-05-11
 - [x] Promote environment-triggered cache-root invalidation into a fixture-driven declarative
   cache-hit harness using the real `WindowMetricsService` entry point.
 - [x] Fix the confirmed environment sync defect exposed by the harness.
+- [x] Promote pointer occlusion and captured-pointer routing into a fixture-driven tree harness.
+- [x] Run focused gates for pointer occlusion, pointer-move observer, captured-pointer, and existing
+  hit-test routing coverage.
+- [x] Promote focus barrier and focus traversal routing into a fixture-driven tree harness.
+- [x] Run focused gates for focus barrier and focus scope coverage.
 - [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
   and selectors are identified.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
+- [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
+  test ids for underlay, overlay, and observer/capture state.
+- [ ] Add declarative focus scope, focus restore, roving focus, and active-descendant fixture suites.
+- [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier
+  selectors.

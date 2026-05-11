@@ -37,12 +37,15 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness invalidation slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, focused view-cache/environment gates, and the UI Gallery checkbox underflow diagnostics gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, focused view-cache/environment/pointer/focus gates, and the UI Gallery checkbox underflow diagnostics gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_scroll_handle_invalidation_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_environment_view_cache_invalidation_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture"
     ]
   },
@@ -66,6 +69,18 @@
     {
       "name": "layout-primitives-fixture",
       "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture"
+    },
+    {
+      "name": "hit-test-routing-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "pointer-occlusion-routing-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "focus-barrier-routing-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture"
     },
     {
       "name": "checkbox-underflow-focused-rust-test",
@@ -94,6 +109,22 @@
     {
       "name": "scroll-handle-registry-classification-focused-gate",
       "command": "cargo test --profile dev-fast -p fret-ui --lib scroll_handle_changes_classify -- --nocapture"
+    },
+    {
+      "name": "pointer-occlusion-focused-gates",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib pointer_occlusion -- --nocapture"
+    },
+    {
+      "name": "pointer-move-capture-focused-gates",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture"
+    },
+    {
+      "name": "focus-barrier-focused-gates",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib focus_barrier -- --nocapture"
+    },
+    {
+      "name": "focus-scope-focused-gates",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture"
     },
     {
       "name": "scroll-contained-frontier-focused-gate",
@@ -127,10 +158,21 @@
     "crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json",
     "crates/fret-ui/src/declarative/tests/environment_view_cache_harness.rs",
     "crates/fret-ui/src/declarative/mount.rs",
+    "crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json",
+    "crates/fret-ui/src/declarative/tests/layout/hit_test_mechanism_harness.rs",
+    "crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json",
+    "crates/fret-ui/src/tree/tests/pointer_occlusion_routing_harness.rs",
+    "crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json",
+    "crates/fret-ui/src/tree/tests/focus_barrier_routing_harness.rs",
     "crates/fret-ui/src/tree/tests/view_cache.rs",
     "crates/fret-ui/src/declarative/tests/environment_queries.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/retained.rs",
     "crates/fret-ui/src/declarative/frame.rs",
+    "crates/fret-ui/src/tree/tests/pointer_occlusion.rs",
+    "crates/fret-ui/src/tree/tests/pointer_move_layers.rs",
+    "crates/fret-ui/src/tree/tests/focus_barrier_transition.rs",
+    "crates/fret-ui/src/tree/tests/focus_scope.rs",
+    "crates/fret-ui/src/tree/tests/focus_scope_layered.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
