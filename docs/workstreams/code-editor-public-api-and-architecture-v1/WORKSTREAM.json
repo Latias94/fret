@@ -65,6 +65,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -139,6 +143,10 @@
       "command": "cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast"
     },
     {
+      "name": "ui gallery check",
+      "command": "cargo check -p fret-ui-gallery"
+    },
+    {
       "name": "layering",
       "command": "python tools/check_layering.py"
     }
@@ -155,6 +163,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md",
     "docs/code-editor.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/0011-overlays-and-multi-root.md",

@@ -702,6 +702,7 @@ fn apply_and_record_edit_inner(
     if st.display_wrap_cols.is_some() || delta.lines.old_count != delta.lines.new_count {
         st.refresh_display_map();
     }
+    st.clear_feature_payloads_for_buffer_change();
     #[cfg(feature = "syntax")]
     invalidate_syntax_row_cache_for_delta(st, delta);
     #[cfg(not(feature = "syntax"))]
@@ -872,6 +873,7 @@ pub(super) fn undo(st: &mut CodeEditorState) -> bool {
     });
     if applied {
         st.refresh_display_map();
+        st.clear_feature_payloads_for_buffer_change();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
         st.row_geom_cache_folds_epoch = st.folds_epoch;
@@ -914,6 +916,7 @@ pub(super) fn redo(st: &mut CodeEditorState) -> bool {
     });
     if applied {
         st.refresh_display_map();
+        st.clear_feature_payloads_for_buffer_change();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
         st.row_geom_cache_folds_epoch = st.folds_epoch;

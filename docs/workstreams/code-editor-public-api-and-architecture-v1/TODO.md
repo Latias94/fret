@@ -46,6 +46,8 @@ Last updated: 2026-05-12
   - [x] Diagnostic span + logical-line summary view-layer APIs and tests.
   - [x] Gutter marker payload API and tests.
   - [x] Range decoration payload API and tests.
+- [x] Land the widget-facing feature payload store with public setters/readouts, buffer-revision
+      clearing, display-map gutter validation, and row scene cache epoch wiring.
 - [ ] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
       inlays, soft wrap, and selection.
 - [ ] Add a diagnostics bundle assertion for feature payload stability.
@@ -61,7 +63,7 @@ Last updated: 2026-05-12
 ## P2 - Performance and Diagnostics
 
 - [ ] Require p50/p95/max and renderer payload evidence for any hot-path editor change.
-- [ ] Add feature-payload counters once diagnostics/decorations are implemented.
+- [x] Add feature-payload counters once diagnostics/decorations are implemented.
 - [ ] Compare feature-heavy editor stressors against the existing complex wheel and autoscroll
       contracts.
 - [ ] Add Linux evidence when a Linux runner/profile is available; do not infer it from Windows

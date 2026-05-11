@@ -333,6 +333,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let mem = handle.memory_snapshot();
                                 let paint_perf =
                                     handle.paint_perf_frame().map(code_editor_paint_perf_json);
+                                let feature_payloads = handle.feature_payload_snapshot();
                                 let preedit_active = handle.preedit_active();
                                 let allow_decorations_under_inline_preedit =
                                     handle.allow_decorations_under_inline_preedit();
@@ -425,6 +426,17 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "redo_text_bytes_estimate_total": mem.redo_text_bytes_estimate_total,
                                         "undo_edit_count_total": mem.undo_edit_count_total,
                                         "redo_edit_count_total": mem.redo_edit_count_total,
+                                    },
+                                    "feature_payloads": {
+                                        "schema_version": feature_payloads.schema_version,
+                                        "epoch": feature_payloads.epoch,
+                                        "buffer_revision": feature_payloads.buffer_revision,
+                                        "display_map_epoch": feature_payloads.display_map_epoch,
+                                        "diagnostic_spans_count": feature_payloads.diagnostic_spans_count,
+                                        "diagnostic_line_summaries_count": feature_payloads.diagnostic_line_summaries_count,
+                                        "range_decorations_count": feature_payloads.range_decorations_count,
+                                        "gutter_markers_count": feature_payloads.gutter_markers_count,
+                                        "semantic_tokens_count": feature_payloads.semantic_tokens_count,
                                     },
                                     "paint_perf": paint_perf,
                                 })

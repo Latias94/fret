@@ -8,9 +8,18 @@
 mod editor;
 
 pub use fret_code_editor_buffer::Selection;
+pub use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
+pub use fret_code_editor_view::{
+    DiagnosticLineSummary, DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan,
+    DiagnosticSpanError, FoldSpan, GutterMarker, GutterMarkerAnchor, GutterMarkerError,
+    GutterMarkerHitTarget, GutterMarkerKind, GutterMarkerVisual, InlaySpan, RangeDecoration,
+    RangeDecorationError, RangeDecorationHitTest, RangeDecorationLayer, SemanticToken,
+    SemanticTokenError,
+};
 
 pub use editor::{
-    CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats, CodeEditorHandle,
-    CodeEditorInteractionOptions, CodeEditorMemorySnapshotV1, CodeEditorPaintPerfFrame,
-    CodeEditorTorture, CodeFontFeaturePolicy, CodeFontFeaturePreset, PreeditState,
+    CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats,
+    CodeEditorFeaturePayloadSnapshotV1, CodeEditorHandle, CodeEditorInteractionOptions,
+    CodeEditorMemorySnapshotV1, CodeEditorPaintPerfFrame, CodeEditorTorture, CodeFontFeaturePolicy,
+    CodeFontFeaturePreset, PreeditState,
 };

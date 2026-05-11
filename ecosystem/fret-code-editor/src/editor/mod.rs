@@ -16,8 +16,12 @@ use fret_code_editor_buffer::{
 };
 use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
 use fret_code_editor_view::{
-    DisplayMap, DisplayPoint, FoldSpan, InlaySpan, InlinePreedit, move_word_left_in_buffer,
-    move_word_right_in_buffer, select_word_range_in_buffer,
+    DiagnosticLineSummary, DiagnosticSpan, DiagnosticSpanError, DisplayMap, DisplayPoint, FoldSpan,
+    GutterMarker, GutterMarkerAnchor, GutterMarkerError, InlaySpan, InlinePreedit, RangeDecoration,
+    RangeDecorationError, SemanticToken, SemanticTokenError, diagnostic_line_summaries,
+    move_word_left_in_buffer, move_word_right_in_buffer, normalized_diagnostic_spans,
+    normalized_gutter_markers, normalized_range_decorations, normalized_semantic_tokens,
+    select_word_range_in_buffer, validate_gutter_markers,
 };
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
@@ -979,6 +983,25 @@ pub struct CodeEditorMemorySnapshotV1 {
     pub redo_edit_count_total: u64,
 }
 
+/// Feature-payload counts exposed to diagnostics bundles.
+///
+/// The payloads are source/display facts owned by the editor surface; presentation policy and
+/// overlay behavior stay outside `fret-code-editor`.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorFeaturePayloadSnapshotV1 {
+    pub schema_version: u32,
+
+    pub epoch: u64,
+    pub buffer_revision: u64,
+    pub display_map_epoch: u64,
+
+    pub diagnostic_spans_count: u64,
+    pub diagnostic_line_summaries_count: u64,
+    pub range_decorations_count: u64,
+    pub gutter_markers_count: u64,
+    pub semantic_tokens_count: u64,
+}
+
 fn estimate_edit_text_bytes(edit: &Edit) -> u64 {
     match edit {
         Edit::Insert { text, .. } | Edit::Replace { text, .. } => text.len() as u64,
@@ -1224,6 +1247,180 @@ impl PaintFrameOverlayState {
 }
 
 #[derive(Debug, Clone)]
+struct CodeEditorFeaturePayloadStore {
+    buffer_revision: fret_code_editor_buffer::Revision,
+    display_map_epoch: u64,
+    epoch: u64,
+    diagnostic_spans: Arc<[DiagnosticSpan]>,
+    diagnostic_line_summaries: Arc<[DiagnosticLineSummary]>,
+    range_decorations: Arc<[RangeDecoration]>,
+    gutter_markers: Arc<[GutterMarker]>,
+    semantic_tokens: Arc<[SemanticToken]>,
+}
+
+impl CodeEditorFeaturePayloadStore {
+    fn new(buffer_revision: fret_code_editor_buffer::Revision, display_map_epoch: u64) -> Self {
+        Self {
+            buffer_revision,
+            display_map_epoch,
+            epoch: 0,
+            diagnostic_spans: Arc::from(Vec::<DiagnosticSpan>::new()),
+            diagnostic_line_summaries: Arc::from(Vec::<DiagnosticLineSummary>::new()),
+            range_decorations: Arc::from(Vec::<RangeDecoration>::new()),
+            gutter_markers: Arc::from(Vec::<GutterMarker>::new()),
+            semantic_tokens: Arc::from(Vec::<SemanticToken>::new()),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.diagnostic_spans.is_empty()
+            && self.diagnostic_line_summaries.is_empty()
+            && self.range_decorations.is_empty()
+            && self.gutter_markers.is_empty()
+            && self.semantic_tokens.is_empty()
+    }
+
+    fn bump_epoch(&mut self) {
+        self.epoch = self.epoch.saturating_add(1);
+    }
+
+    fn clear_all_for_buffer_change(
+        &mut self,
+        buffer_revision: fret_code_editor_buffer::Revision,
+        display_map_epoch: u64,
+    ) -> bool {
+        let changed = !self.is_empty();
+        self.buffer_revision = buffer_revision;
+        self.display_map_epoch = display_map_epoch;
+        if changed {
+            self.diagnostic_spans = Arc::from(Vec::<DiagnosticSpan>::new());
+            self.diagnostic_line_summaries = Arc::from(Vec::<DiagnosticLineSummary>::new());
+            self.range_decorations = Arc::from(Vec::<RangeDecoration>::new());
+            self.gutter_markers = Arc::from(Vec::<GutterMarker>::new());
+            self.semantic_tokens = Arc::from(Vec::<SemanticToken>::new());
+            self.bump_epoch();
+        }
+        changed
+    }
+
+    fn retain_gutter_markers_valid_for_display_map(
+        &mut self,
+        buf: &TextBuffer,
+        display_map: &DisplayMap,
+        display_map_epoch: u64,
+    ) -> bool {
+        self.display_map_epoch = display_map_epoch;
+        if self.gutter_markers.is_empty() {
+            return false;
+        }
+
+        let line_count = buf.line_count().max(1);
+        let row_count = display_map.row_count();
+        let retained = self
+            .gutter_markers
+            .iter()
+            .filter(|marker| match marker.anchor {
+                GutterMarkerAnchor::LogicalLine(line) => line < line_count,
+                GutterMarkerAnchor::DisplayRow(row) => row < row_count,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        if retained.len() == self.gutter_markers.len() {
+            return false;
+        }
+
+        self.gutter_markers = Arc::from(retained);
+        self.bump_epoch();
+        true
+    }
+
+    fn set_diagnostic_spans(
+        &mut self,
+        buffer_revision: fret_code_editor_buffer::Revision,
+        spans: Vec<DiagnosticSpan>,
+        summaries: Vec<DiagnosticLineSummary>,
+    ) -> bool {
+        if self.buffer_revision == buffer_revision
+            && self.diagnostic_spans.as_ref() == spans.as_slice()
+            && self.diagnostic_line_summaries.as_ref() == summaries.as_slice()
+        {
+            return false;
+        }
+        self.buffer_revision = buffer_revision;
+        self.diagnostic_spans = Arc::from(spans);
+        self.diagnostic_line_summaries = Arc::from(summaries);
+        self.bump_epoch();
+        true
+    }
+
+    fn set_range_decorations(
+        &mut self,
+        buffer_revision: fret_code_editor_buffer::Revision,
+        decorations: Vec<RangeDecoration>,
+    ) -> bool {
+        if self.buffer_revision == buffer_revision
+            && self.range_decorations.as_ref() == decorations.as_slice()
+        {
+            return false;
+        }
+        self.buffer_revision = buffer_revision;
+        self.range_decorations = Arc::from(decorations);
+        self.bump_epoch();
+        true
+    }
+
+    fn set_gutter_markers(
+        &mut self,
+        buffer_revision: fret_code_editor_buffer::Revision,
+        display_map_epoch: u64,
+        markers: Vec<GutterMarker>,
+    ) -> bool {
+        if self.buffer_revision == buffer_revision
+            && self.display_map_epoch == display_map_epoch
+            && self.gutter_markers.as_ref() == markers.as_slice()
+        {
+            return false;
+        }
+        self.buffer_revision = buffer_revision;
+        self.display_map_epoch = display_map_epoch;
+        self.gutter_markers = Arc::from(markers);
+        self.bump_epoch();
+        true
+    }
+
+    fn set_semantic_tokens(
+        &mut self,
+        buffer_revision: fret_code_editor_buffer::Revision,
+        tokens: Vec<SemanticToken>,
+    ) -> bool {
+        if self.buffer_revision == buffer_revision
+            && self.semantic_tokens.as_ref() == tokens.as_slice()
+        {
+            return false;
+        }
+        self.buffer_revision = buffer_revision;
+        self.semantic_tokens = Arc::from(tokens);
+        self.bump_epoch();
+        true
+    }
+
+    fn snapshot(&self) -> CodeEditorFeaturePayloadSnapshotV1 {
+        CodeEditorFeaturePayloadSnapshotV1 {
+            schema_version: 1,
+            epoch: self.epoch,
+            buffer_revision: self.buffer_revision.0,
+            display_map_epoch: self.display_map_epoch,
+            diagnostic_spans_count: self.diagnostic_spans.len() as u64,
+            diagnostic_line_summaries_count: self.diagnostic_line_summaries.len() as u64,
+            range_decorations_count: self.range_decorations.len() as u64,
+            gutter_markers_count: self.gutter_markers.len() as u64,
+            semantic_tokens_count: self.semantic_tokens.len() as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
@@ -1244,6 +1441,7 @@ struct CodeEditorState {
     code_wrap_policy: Option<CodeWrapPolicy>,
     display_map: DisplayMap,
     display_map_epoch: u64,
+    feature_payloads: CodeEditorFeaturePayloadStore,
     caret_preferred_x: Option<Px>,
     undo: UndoHistory<CodeEditorTx>,
     undo_group: Option<UndoGroup>,
@@ -1281,6 +1479,7 @@ struct CodeEditorState {
     row_scene_cache_folds_epoch: u64,
     row_scene_cache_inlays_epoch: u64,
     row_scene_cache_display_map_epoch: u64,
+    row_scene_cache_feature_payload_epoch: u64,
     row_scene_cache_tick: u64,
     row_scene_cache: HashMap<usize, (RowSceneCacheEntry, u64)>,
     row_scene_cache_queue: VecDeque<(usize, u64)>,
@@ -1503,11 +1702,38 @@ impl CodeEditorState {
         self.row_scene_cache_folds_epoch = self.folds_epoch;
         self.row_scene_cache_inlays_epoch = self.inlays_epoch;
         self.row_scene_cache_display_map_epoch = self.display_map_epoch;
+        self.row_scene_cache_feature_payload_epoch = self.feature_payloads.epoch;
     }
 
     fn invalidate_row_scene_cache(&mut self) {
         self.sync_row_scene_cache_epoch();
         self.clear_row_scene_cache();
+    }
+
+    fn invalidate_feature_payload_paint_caches(&mut self) {
+        self.invalidate_row_scene_cache();
+
+        #[cfg(feature = "syntax")]
+        {
+            self.clear_row_rich_prefetch_runtime();
+            self.row_rich_cache_tick = 0;
+            self.row_rich_cache.clear();
+            self.row_rich_cache_queue.clear();
+            self.row_rich_cache_line_bytes_estimate_total = 0;
+            self.row_rich_cache_row_spans_len_total = 0;
+            self.row_rich_cache_syntax_spans_len_total = 0;
+            self.row_rich_cache_rich_spans_len_total = 0;
+            self.cache_stats.row_rich_resets = self.cache_stats.row_rich_resets.saturating_add(1);
+        }
+    }
+
+    fn clear_feature_payloads_for_buffer_change(&mut self) {
+        if self
+            .feature_payloads
+            .clear_all_for_buffer_change(self.buffer.revision(), self.display_map_epoch)
+        {
+            self.invalidate_feature_payload_paint_caches();
+        }
     }
 
     fn invalidate_row_caches(&mut self) {
@@ -1603,6 +1829,12 @@ impl CodeEditorState {
             )
         };
         self.display_map_epoch = self.display_map_epoch.saturating_add(1);
+        self.feature_payloads
+            .retain_gutter_markers_valid_for_display_map(
+                &self.buffer,
+                &self.display_map,
+                self.display_map_epoch,
+            );
         #[cfg(feature = "syntax")]
         self.clear_row_rich_prefetch_runtime();
     }
@@ -1761,6 +1993,7 @@ impl CodeEditorHandle {
             TextBuffer::new(doc, String::new()).expect("empty buffer must be valid")
         });
         let display_map = DisplayMap::new(&buffer, None);
+        let buffer_revision = buffer.revision();
         Self {
             state: Rc::new(RefCell::new(CodeEditorState {
                 buffer,
@@ -1782,6 +2015,7 @@ impl CodeEditorHandle {
                 code_wrap_policy: Some(CodeWrapPolicy::preset(CodeWrapPreset::Balanced)),
                 display_map,
                 display_map_epoch: 0,
+                feature_payloads: CodeEditorFeaturePayloadStore::new(buffer_revision, 0),
                 caret_preferred_x: None,
                 undo: UndoHistory::with_limit(512),
                 undo_group: None,
@@ -1819,6 +2053,7 @@ impl CodeEditorHandle {
                 row_scene_cache_folds_epoch: 0,
                 row_scene_cache_inlays_epoch: 0,
                 row_scene_cache_display_map_epoch: 0,
+                row_scene_cache_feature_payload_epoch: 0,
                 row_scene_cache_tick: 0,
                 row_scene_cache: HashMap::new(),
                 row_scene_cache_queue: VecDeque::new(),
@@ -2169,6 +2404,100 @@ impl CodeEditorHandle {
         self.state.borrow_mut().cache_stats = CodeEditorCacheStats::default();
     }
 
+    pub fn feature_payload_snapshot(&self) -> CodeEditorFeaturePayloadSnapshotV1 {
+        self.state.borrow().feature_payloads.snapshot()
+    }
+
+    pub fn diagnostic_line_summaries(&self) -> Vec<DiagnosticLineSummary> {
+        self.state
+            .borrow()
+            .feature_payloads
+            .diagnostic_line_summaries
+            .iter()
+            .cloned()
+            .collect()
+    }
+
+    pub fn set_diagnostic_spans(
+        &self,
+        spans: Vec<DiagnosticSpan>,
+    ) -> Result<(), DiagnosticSpanError> {
+        let mut st = self.state.borrow_mut();
+        let normalized = normalized_diagnostic_spans(&st.buffer, &spans)?;
+        let summaries = diagnostic_line_summaries(&st.buffer, &normalized)?;
+        let buffer_revision = st.buffer.revision();
+        if st
+            .feature_payloads
+            .set_diagnostic_spans(buffer_revision, normalized, summaries)
+        {
+            st.invalidate_feature_payload_paint_caches();
+        }
+        Ok(())
+    }
+
+    pub fn clear_diagnostic_spans(&self) {
+        let _ = self.set_diagnostic_spans(Vec::new());
+    }
+
+    pub fn set_range_decorations(
+        &self,
+        decorations: Vec<RangeDecoration>,
+    ) -> Result<(), RangeDecorationError> {
+        let mut st = self.state.borrow_mut();
+        let normalized = normalized_range_decorations(&st.buffer, &decorations)?;
+        let buffer_revision = st.buffer.revision();
+        if st
+            .feature_payloads
+            .set_range_decorations(buffer_revision, normalized)
+        {
+            st.invalidate_feature_payload_paint_caches();
+        }
+        Ok(())
+    }
+
+    pub fn clear_range_decorations(&self) {
+        let _ = self.set_range_decorations(Vec::new());
+    }
+
+    pub fn set_gutter_markers(&self, markers: Vec<GutterMarker>) -> Result<(), GutterMarkerError> {
+        let mut st = self.state.borrow_mut();
+        validate_gutter_markers(&st.buffer, Some(&st.display_map), &markers)?;
+        let normalized = normalized_gutter_markers(&markers);
+        let buffer_revision = st.buffer.revision();
+        let display_map_epoch = st.display_map_epoch;
+        if st
+            .feature_payloads
+            .set_gutter_markers(buffer_revision, display_map_epoch, normalized)
+        {
+            st.invalidate_feature_payload_paint_caches();
+        }
+        Ok(())
+    }
+
+    pub fn clear_gutter_markers(&self) {
+        let _ = self.set_gutter_markers(Vec::new());
+    }
+
+    pub fn set_semantic_tokens(
+        &self,
+        tokens: Vec<SemanticToken>,
+    ) -> Result<(), SemanticTokenError> {
+        let mut st = self.state.borrow_mut();
+        let normalized = normalized_semantic_tokens(&st.buffer, &tokens)?;
+        let buffer_revision = st.buffer.revision();
+        if st
+            .feature_payloads
+            .set_semantic_tokens(buffer_revision, normalized)
+        {
+            st.invalidate_feature_payload_paint_caches();
+        }
+        Ok(())
+    }
+
+    pub fn clear_semantic_tokens(&self) {
+        let _ = self.set_semantic_tokens(Vec::new());
+    }
+
     pub fn set_text_boundary_mode(&self, mode: TextBoundaryMode) {
         self.set_text_boundary_mode_override(Some(mode));
     }
@@ -2354,6 +2683,7 @@ impl CodeEditorHandle {
         st.line_inlays.clear();
         st.inlays_epoch = st.inlays_epoch.saturating_add(1);
         st.refresh_display_map();
+        st.clear_feature_payloads_for_buffer_change();
         st.row_text_cache_rev = st.buffer.revision();
         st.row_text_cache_folds_epoch = st.folds_epoch;
         st.row_text_cache_inlays_epoch = st.inlays_epoch;

@@ -1691,11 +1691,13 @@ fn ensure_row_scene_cache_fresh(st: &mut CodeEditorState) {
     let folds_epoch = st.folds_epoch;
     let inlays_epoch = st.inlays_epoch;
     let display_map_epoch = st.display_map_epoch;
+    let feature_payload_epoch = st.feature_payloads.epoch;
     if st.row_scene_cache_rev != rev
         || st.row_scene_cache_wrap_cols != wrap_cols
         || st.row_scene_cache_folds_epoch != folds_epoch
         || st.row_scene_cache_inlays_epoch != inlays_epoch
         || st.row_scene_cache_display_map_epoch != display_map_epoch
+        || st.row_scene_cache_feature_payload_epoch != feature_payload_epoch
     {
         st.invalidate_row_scene_cache();
     }

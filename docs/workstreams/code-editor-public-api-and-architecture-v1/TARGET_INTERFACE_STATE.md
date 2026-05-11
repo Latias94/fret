@@ -83,6 +83,8 @@ Target direction:
   - debug-only hook.
 - Prefer grouped option structs or extension inputs over one setter per feature.
 - Make debug-only methods visibly debug-only or move them out of the default public surface.
+- Keep feature payload readouts diagnostic-friendly: the handle exposes a feature payload snapshot
+  and derived diagnostic line summaries without exposing the internal store.
 
 ## Feature Extension Inputs
 
@@ -108,6 +110,15 @@ The editor should accept feature data through explicit owner-layer contracts:
 
 Not every item needs implementation in this lane, but each needs an owner layer before public API
 is widened.
+
+Current v1 surface:
+
+- `CodeEditorHandle` accepts diagnostic spans, range decorations, gutter markers, and semantic
+  tokens through public setters.
+- Source-backed payloads are normalized against the current `TextBuffer` revision.
+- Buffer mutations clear payloads instead of attempting unproven range remapping.
+- Display-row gutter markers are validated against `DisplayMap` and pruned when display-map changes
+  make them invalid.
 
 ## Commands, Keymap, Undo
 

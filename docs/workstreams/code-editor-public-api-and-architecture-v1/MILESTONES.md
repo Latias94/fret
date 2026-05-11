@@ -53,6 +53,8 @@ Exit criteria:
   UTF-8 byte ranges; line summaries use logical line indexes. Display-row projection for gutter
   markers validates against `DisplayMap::row_count`; the cross-feature coordinate vocabulary is
   recorded in `M2_COORDINATE_VOCABULARY_2026-05-12.md`.)
+- Widget-facing payload storage, public setters/readouts, revision/display-map invalidation, and
+  diagnostics snapshot counts exist. (`M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md`.)
 - At least one UI Gallery/example surface can exercise the target package.
 - A no-buffer-mutation gate exists for pure decoration toggles.
 

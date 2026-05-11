@@ -36,6 +36,7 @@ cargo fmt -p fret-code-editor --check
 cargo check -p fret-code-editor --features syntax-rust
 cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast
 cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast
+cargo check -p fret-ui-gallery
 python tools/check_layering.py
 ```
 
@@ -86,6 +87,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md`
 - Coordinate vocabulary:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md`
+- Widget-facing feature payload surface:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`

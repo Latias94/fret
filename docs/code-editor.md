@@ -100,10 +100,15 @@ Use `TextBoundaryMode::Identifier` for code-like movement and
 
 ## View Features
 
-Folds and inlays are currently wired through the editor handle:
+Folds, inlays, diagnostics, range decorations, gutter markers, and semantic tokens are wired through
+the editor handle. Source-backed feature payloads use `TextBuffer` UTF-8 byte ranges; display-row
+gutter markers are validated against the current `DisplayMap`.
 
 ```rust
-use fret_code_editor_view::{FoldSpan, InlaySpan};
+use fret_code_editor::{
+    DiagnosticSeverity, DiagnosticSpan, FoldSpan, GutterMarker, GutterMarkerKind, InlaySpan,
+    RangeDecoration, SemanticToken,
+};
 use std::sync::Arc;
 
 handle.set_line_folds(
@@ -121,10 +126,27 @@ handle.set_line_inlays(
         text: Arc::<str>::from(": usize"),
     }],
 );
+
+handle.set_diagnostic_spans(vec![DiagnosticSpan::new(
+    0..2,
+    DiagnosticSeverity::Error,
+    "expected expression",
+)])?;
+
+handle.set_range_decorations(vec![RangeDecoration::new(0..2, "search.match")])?;
+handle.set_gutter_markers(vec![GutterMarker::logical_line(
+    0,
+    GutterMarkerKind::Diagnostic,
+)])?;
+handle.set_semantic_tokens(vec![SemanticToken::new(0..2, "keyword")])?;
 ```
 
-Diagnostics, decorations, gutter markers, and semantic tokens already have data contracts in
-`fret-code-editor-view`, but the combined widget-facing feature package is still being stabilized.
+The v1 editor handle does not remap feature payloads across text edits. Buffer edits and explicit
+buffer replacement clear source/display payloads; producers such as language services should
+re-publish payloads for the new `buffer_revision()`. The `feature_payload_snapshot()` readout is
+included in diagnostics bundles so tests can assert payload stability without parsing editor
+internals.
+
 Keep feature data expressed as buffer ranges, semantic classes, ids, and command ids rather than
 paint colors or app-specific callbacks.
 
