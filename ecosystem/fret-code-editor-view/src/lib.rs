@@ -19,6 +19,7 @@ mod folds;
 mod gutter;
 mod inlays;
 pub mod row_spans;
+mod semantic_tokens;
 
 pub use decorations::{
     RangeDecoration, RangeDecorationError, RangeDecorationHitTest, RangeDecorationLayer,
@@ -38,6 +39,9 @@ pub use gutter::{
     GutterMarkerVisual, normalized_gutter_markers, validate_gutter_markers,
 };
 pub use inlays::{InlaySpan, InlaySpanError, apply_inlay_spans, validate_inlay_spans};
+pub use semantic_tokens::{
+    SemanticToken, SemanticTokenError, normalized_semantic_tokens, validate_semantic_tokens,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InlinePreedit {

@@ -66,6 +66,7 @@ cargo nextest run -p fret-code-editor-view --lib --no-fail-fast
 
 ## Follow-ups
 
-1. Define semantic-token inputs separately from decoration paint classes.
+1. Use `M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md` for source-language token inputs before mapping
+   to paint spans.
 2. Wire diagnostics, gutter markers, and range decorations into a UI Gallery/editor proof.
 3. Add feature-payload counters once these payloads enter the paint path.

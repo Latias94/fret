@@ -41,6 +41,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -114,6 +118,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
     "docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md",
@@ -124,7 +129,8 @@
     "ecosystem/fret-code-editor-view/src/lib.rs",
     "ecosystem/fret-code-editor-view/src/diagnostics.rs",
     "ecosystem/fret-code-editor-view/src/gutter.rs",
-    "ecosystem/fret-code-editor-view/src/decorations.rs"
+    "ecosystem/fret-code-editor-view/src/decorations.rs",
+    "ecosystem/fret-code-editor-view/src/semantic_tokens.rs"
   ],
   "adr_refs": [
     "docs/adr/0185-code-editor-ecosystem-v1.md",

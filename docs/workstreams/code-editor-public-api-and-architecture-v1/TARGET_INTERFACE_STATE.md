@@ -87,7 +87,8 @@ The editor should accept feature data through explicit owner-layer contracts:
   policy.
 - Gutter markers: logical-line or display-row attachment, semantic kind, optional icon/text
   payload, tooltip/action ids, and explicit hit-target intent.
-- Semantic tokens: token ranges and semantic classes decoupled from paint colors.
+- Semantic tokens: non-empty buffer ranges, semantic classes, and unordered modifiers decoupled
+  from paint colors.
 - Completion: request context, candidate model, active candidate, commit policy.
 - Hover/signature help: request context and overlay payloads without owning overlay dismissal policy.
 - Code actions: range/context payload plus command ids.

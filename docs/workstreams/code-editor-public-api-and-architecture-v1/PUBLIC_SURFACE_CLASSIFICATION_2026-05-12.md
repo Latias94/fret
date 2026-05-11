@@ -96,11 +96,15 @@ Experimental extension contracts:
 - `RangeDecorationError`
 - `validate_range_decorations`
 - `normalized_range_decorations`
+- `SemanticToken`
+- `SemanticTokenError`
+- `validate_semantic_tokens`
+- `normalized_semantic_tokens`
 
 Rationale: diagnostics are the first M2 extension model slice. They use the correct view-layer
 coordinate ownership, and gutter markers/range decorations now have explicit payload contracts.
-These remain experimental until semantic tokens and a UI proof are wired on top of the data
-contract.
+Semantic tokens now have a paint-color-free input contract. These remain experimental until a UI
+proof is wired on top of the data contract.
 
 Experimental:
 

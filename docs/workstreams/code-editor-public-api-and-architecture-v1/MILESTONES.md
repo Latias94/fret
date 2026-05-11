@@ -40,10 +40,12 @@ Exit criteria:
   logical-line summary projection added in
   `M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md`; gutter marker payload contract added in
   `M2_GUTTER_MARKER_CONTRACT_2026-05-12.md`; range decoration payload contract added in
-  `M2_RANGE_DECORATION_CONTRACT_2026-05-12.md`. Semantic tokens remain open.)
+  `M2_RANGE_DECORATION_CONTRACT_2026-05-12.md`; semantic token input contract added in
+  `M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md`.)
 - Coordinate ownership is explicit and shared with `DisplayMap`. (Diagnostic v1 uses
-  `TextBuffer` UTF-8 byte ranges; line summaries use logical line indexes. Display-row projection
-  for gutter markers validates against `DisplayMap::row_count`.)
+  `TextBuffer` UTF-8 byte ranges; semantic tokens and range decorations also use `TextBuffer`
+  UTF-8 byte ranges; line summaries use logical line indexes. Display-row projection for gutter
+  markers validates against `DisplayMap::row_count`.)
 - At least one UI Gallery/example surface can exercise the target package.
 - A no-buffer-mutation gate exists for pure decoration toggles.
 
