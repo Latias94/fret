@@ -17,9 +17,9 @@ Last updated: 2026-05-12
   - debug-only hook.
 - [x] Re-export `fret-code-editor` public-signature types that were only reachable through the
       private `editor` module.
-- [ ] Decide whether `Selection` remains in `fret-code-editor` or moves toward buffer/view model
+- [x] Decide whether `Selection` remains in `fret-code-editor` or moves toward buffer/view model
       ownership.
-- [ ] Add a public surface diff note before any API rename, move, or deletion.
+- [x] Add a public surface diff note for the first ownership move (`Selection`).
 - [ ] Define the minimum public docs for app authors who want a code editor surface without reading
       internal modules.
 

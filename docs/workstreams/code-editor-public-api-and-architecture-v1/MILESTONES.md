@@ -25,7 +25,8 @@ Exit criteria:
   pass complete: `PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md`.)
 - `CodeEditorHandle` has a method-by-method owner table. (Initial pass complete:
   `PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md`.)
-- First proposed removals/renames/moves include migration notes.
+- First proposed removals/renames/moves include migration notes. (`Selection` ownership move
+  recorded in `M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md`.)
 - Focused compile/tests cover unchanged current examples. (Initial public-signature re-export test:
   `ecosystem/fret-code-editor/tests/public_surface.rs`.)
 

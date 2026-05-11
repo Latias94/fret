@@ -11,7 +11,9 @@ use std::sync::Mutex;
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
-use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
+use fret_code_editor_buffer::{
+    DocId, Edit, Selection, TextBuffer, TextBufferTransaction, TextBufferTx,
+};
 use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
 use fret_code_editor_view::{
     DisplayMap, DisplayPoint, FoldSpan, InlaySpan, InlinePreedit, move_word_left_in_buffer,
@@ -338,30 +340,6 @@ fn viewport_pos_for_pointer(
     };
 
     fret_core::Point::new(x, y)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Selection {
-    pub anchor: usize,
-    pub focus: usize,
-}
-
-impl Selection {
-    pub fn is_caret(self) -> bool {
-        self.anchor == self.focus
-    }
-
-    pub fn normalized(self) -> Range<usize> {
-        if self.anchor <= self.focus {
-            self.anchor..self.focus
-        } else {
-            self.focus..self.anchor
-        }
-    }
-
-    pub fn caret(self) -> usize {
-        self.focus
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

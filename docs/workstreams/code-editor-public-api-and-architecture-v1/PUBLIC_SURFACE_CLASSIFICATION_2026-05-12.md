@@ -31,6 +31,7 @@ Stable:
 - `DocId`
 - `DocUri`
 - `Revision`
+- `Selection`
 - `Edit`
 - `AppliedEdit`
 - `TextBufferTx`
@@ -40,8 +41,8 @@ Stable:
 - `EditError`
 - `TextBuffer`
 
-Rationale: these are the document identity, edit, revision, and transaction contracts that ADR 0185
-places in the buffer layer. They are also free of UI/runtime dependencies.
+Rationale: these are the document identity, byte-indexed selection, edit, revision, and transaction
+contracts that ADR 0185 places in the buffer layer. They are also free of UI/runtime dependencies.
 
 Experimental:
 
@@ -147,7 +148,6 @@ Stable:
 
 - `CodeEditor`
 - `CodeEditorHandle`
-- `Selection`
 - `CodeEditorInteractionOptions`
 
 Near-stable diagnostics/perf:
@@ -160,6 +160,11 @@ Near-stable diagnostics/perf:
 Rationale: these are already consumed by diagnostics and perf workstreams. They are versioned or
 diagnostics-oriented, but still need root export and compatibility discipline because they are
 returned by public methods.
+
+Compatibility re-export:
+
+- `Selection` remains available from `fret-code-editor` root, but its canonical owner is now
+  `fret-code-editor-buffer` because it is a byte-indexed buffer model type.
 
 Experimental:
 

@@ -22,13 +22,12 @@ Stable target:
 
 - `DocId`, `DocUri`, `Revision`
 - `TextBuffer`
+- `Selection`
 - `Edit`, `AppliedEdit`, `BufferDelta`, `LineDelta`
 - `TextBufferTransaction`, `TextBufferTx`
 
 Open design questions:
 
-- Whether `Selection` belongs in `fret-code-editor-buffer`, `fret-code-editor-view`, or remains a
-  surface-level single-cursor v1 type.
 - Whether multi-cursor uses a new collection type or a versioned extension above the current
   single-selection contract.
 - How external workspace owners receive edits without coupling to UI handles.

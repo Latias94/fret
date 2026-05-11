@@ -26,6 +26,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md"
     },
     {
@@ -91,6 +95,18 @@
       "command": "cargo nextest run -p fret-code-editor-view --lib --no-fail-fast"
     },
     {
+      "name": "code editor buffer format",
+      "command": "cargo fmt -p fret-code-editor-buffer --check"
+    },
+    {
+      "name": "code editor buffer check",
+      "command": "cargo check -p fret-code-editor-buffer"
+    },
+    {
+      "name": "code editor buffer tests",
+      "command": "cargo nextest run -p fret-code-editor-buffer --lib --no-fail-fast"
+    },
+    {
       "name": "code editor format",
       "command": "cargo fmt -p fret-code-editor --check"
     },
@@ -114,6 +130,7 @@
   "evidence": [
     "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md",

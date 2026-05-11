@@ -7,8 +7,10 @@
 
 mod editor;
 
+pub use fret_code_editor_buffer::Selection;
+
 pub use editor::{
     CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats, CodeEditorHandle,
     CodeEditorInteractionOptions, CodeEditorMemorySnapshotV1, CodeEditorPaintPerfFrame,
-    CodeEditorTorture, CodeFontFeaturePolicy, CodeFontFeaturePreset, PreeditState, Selection,
+    CodeEditorTorture, CodeFontFeaturePolicy, CodeFontFeaturePreset, PreeditState,
 };
