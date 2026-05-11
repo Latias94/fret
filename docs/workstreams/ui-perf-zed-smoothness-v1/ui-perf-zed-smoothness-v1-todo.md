@@ -260,14 +260,24 @@ Conventions:
     - Decision: this follows the GPUI/Zed prepaint-derived-state direction and fixes duplicated display-map work. It
       does not by itself justify a row display-list rewrite because row scene replay remains high and renderer payload
       is still bounded.
+  - [x] Fix soft-wrap syntax prefetch to use buffer lines, not display rows.
+    - Change: syntax prefetch now maps `WindowedRowsPaintFrame` display rows through
+      `DisplayMap::display_row_line(...)` before chunk selection, and row/rich cache capacity observes a frame-local
+      visible-window floor.
+    - Evidence: perf log entry `2026-05-11 20:18` (`complex editor wheel syntax prefetch line mapping`); the
+      paint-detail spike drops from `5681us` with `syntax_evict_delta=85`, `row_rich_miss_delta=85`, and
+      `rows_scene_stored=86` to `3580us` with syntax/rich evictions gone and row scene misses mostly `1..5`.
+    - Decision: this is the correct semantic fix before any row display-list rewrite. The cache window uses display
+      rows, while syntax/rich chunking must use physical buffer lines.
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
       - record per-row display lists (ops) and replay with a transform/translation,
       - reduce quads/text ops count (batching or fewer per-row background ops),
       - avoid per-frame allocations in the hot loop (scratch vec reuse, pre-sized buffers).
-    - Current blocker: latest complex wheel evidence points at overlay derived-state churn, not failed row scene
-      replay. Start this only from a future near-threshold or failing stressor where row op replay/capture is the
-      measured limiter.
+    - Current blocker: latest complex wheel evidence points first at frame-derived overlay work and then at a
+      display-row/physical-line syntax prefetch bug, not failed row scene replay. Start this only from a future
+      near-threshold or failing stressor where row op replay/capture is the measured limiter after syntax/rich cache
+      churn is absent.
   - [ ] Re-evaluate text blob cache behavior for editor rows under resize jitter.
     - Confirm whether the hitch is dominated by fingerprint comparison, text prepare, atlas upload, or pure CPU list building.
     - If dominated by fingerprint compare, consider pointer-fast-pathing for more content variants (and/or richer cache keys).

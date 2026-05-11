@@ -422,6 +422,86 @@ fn cached_row_text_lru_eviction_rebuilds_evicted_rows() {
 }
 
 #[test]
+fn paint_frame_cache_min_entries_tracks_visible_window_union() {
+    assert_eq!(
+        super::paint_frame_cache_min_entries(None, Some((10, 20))),
+        11
+    );
+    assert_eq!(
+        super::paint_frame_cache_min_entries(Some((10, 20)), Some((15, 25))),
+        16
+    );
+    assert_eq!(
+        super::paint_frame_cache_min_entries(Some((20, 30)), Some((10, 20))),
+        21
+    );
+    assert_eq!(
+        super::paint_frame_cache_min_entries(Some((0, 10)), Some((100, 110))),
+        22
+    );
+    assert_eq!(super::paint_frame_cache_min_entries(Some((0, 10)), None), 0);
+}
+
+#[test]
+fn begin_paint_frame_sets_cache_floor_from_actual_visible_rows() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let (first, second, perf_frame) = {
+        let mut st = handle.state.borrow_mut();
+        st.paint_perf_enabled = true;
+        st.begin_paint_frame(WindowedRowsPaintFrame {
+            viewport_height: Px(520.0),
+            offset_y: Px(0.0),
+            visible_start: 10,
+            visible_end: 298,
+        });
+        let first = st.paint_frame_cache_min_entries;
+
+        st.begin_paint_frame(WindowedRowsPaintFrame {
+            viewport_height: Px(520.0),
+            offset_y: Px(0.0),
+            visible_start: 0,
+            visible_end: 288,
+        });
+        (first, st.paint_frame_cache_min_entries, st.paint_perf_frame)
+    };
+
+    assert_eq!(first, 289);
+    assert_eq!(
+        second, 299,
+        "reverse scrolling must keep the previous and current visible windows resident"
+    );
+    assert_eq!(perf_frame.visible_rows, 289);
+    assert_eq!(perf_frame.cache_frame_min_entries, 299);
+}
+
+#[cfg(feature = "syntax")]
+#[test]
+fn syntax_prefetch_visible_window_uses_display_map_lines_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef\nuvwxyz\n123456");
+    handle.set_soft_wrap_cols(Some(2));
+
+    let visible_lines = {
+        let st = handle.state.borrow();
+        paint::syntax_prefetch_visible_line_window(
+            &st,
+            WindowedRowsPaintFrame {
+                viewport_height: Px(64.0),
+                offset_y: Px(0.0),
+                visible_start: 2,
+                visible_end: 4,
+            },
+        )
+    };
+
+    assert_eq!(
+        visible_lines,
+        Some((0, 1)),
+        "syntax prefetch must translate display rows to physical buffer lines before chunking"
+    );
+}
+
+#[test]
 fn paint_source_does_not_materialize_whole_buffer_string() {
     // Regression guard: the editor paint path should never call `TextBuffer::text_string()`.
     // Materializing the entire rope would scale with document size and defeat row virtualization.

@@ -60,6 +60,42 @@ use geom::{
 };
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+const CODE_EDITOR_ROW_CACHE_MIN_ENTRIES: usize = 256;
+const CODE_EDITOR_ROW_CACHE_MAX_ENTRIES: usize = 8_192;
+
+fn normalized_paint_frame_visible_window(
+    visible_start: usize,
+    visible_end: usize,
+) -> Option<(usize, usize)> {
+    (visible_start <= visible_end).then_some((visible_start, visible_end))
+}
+
+fn paint_frame_visible_row_count(visible_start: usize, visible_end: usize) -> usize {
+    visible_end.saturating_sub(visible_start).saturating_add(1)
+}
+
+fn paint_frame_interval_union_count(a: (usize, usize), b: (usize, usize)) -> usize {
+    let a_count = paint_frame_visible_row_count(a.0, a.1);
+    let b_count = paint_frame_visible_row_count(b.0, b.1);
+    if a.1 < b.0 || b.1 < a.0 {
+        return a_count.saturating_add(b_count);
+    }
+
+    a.1.max(b.1).saturating_sub(a.0.min(b.0)).saturating_add(1)
+}
+
+fn paint_frame_cache_min_entries(
+    previous: Option<(usize, usize)>,
+    current: Option<(usize, usize)>,
+) -> usize {
+    let Some(current) = current else {
+        return 0;
+    };
+    let entries = previous
+        .map(|previous| paint_frame_interval_union_count(previous, current))
+        .unwrap_or_else(|| paint_frame_visible_row_count(current.0, current.1));
+    entries.min(CODE_EDITOR_ROW_CACHE_MAX_ENTRIES)
+}
 
 pub(super) fn preedit_cursor_bytes_for_marked_range_utf16(
     insertion_start_utf16: u32,
@@ -1100,6 +1136,9 @@ pub struct CodeEditorPaintPerfFrame {
     pub visible_start: u64,
     pub visible_end: u64,
     pub visible_rows: u64,
+    pub cache_base_entries: u64,
+    pub cache_frame_min_entries: u64,
+    pub cache_effective_entries: u64,
 
     pub rows_painted: u64,
     pub rows_drew_rich: u64,
@@ -1268,6 +1307,8 @@ struct CodeEditorState {
     row_scene_cache: HashMap<usize, (RowSceneCacheEntry, u64)>,
     row_scene_cache_queue: VecDeque<(usize, u64)>,
     row_scene_cache_scene_ops_len_total: u64,
+    paint_frame_visible_window: Option<(usize, usize)>,
+    paint_frame_cache_min_entries: usize,
     ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
     selection_rect_scratch: Vec<Rect>,
     baseline_measure_cache: Option<BaselineMeasureCache>,
@@ -1589,17 +1630,23 @@ impl CodeEditorState {
     }
 
     fn begin_paint_frame(&mut self, frame: WindowedRowsPaintFrame) {
+        let visible_window =
+            normalized_paint_frame_visible_window(frame.visible_start, frame.visible_end);
+        self.paint_frame_cache_min_entries =
+            paint_frame_cache_min_entries(self.paint_frame_visible_window, visible_window);
+        self.paint_frame_visible_window = visible_window;
+
         if self.paint_perf_enabled {
             self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
-            let visible_rows = frame
-                .visible_end
-                .saturating_sub(frame.visible_start)
-                .saturating_add(1) as u64;
+            let visible_rows = visible_window
+                .map(|(start, end)| paint_frame_visible_row_count(start, end) as u64)
+                .unwrap_or(0);
             self.paint_perf_frame = CodeEditorPaintPerfFrame {
                 frame_seq: self.paint_perf_frame_seq,
                 visible_start: frame.visible_start as u64,
                 visible_end: frame.visible_end as u64,
                 visible_rows,
+                cache_frame_min_entries: self.paint_frame_cache_min_entries as u64,
                 ..CodeEditorPaintPerfFrame::default()
             };
         }
@@ -1798,6 +1845,8 @@ impl CodeEditorHandle {
                 row_scene_cache: HashMap::new(),
                 row_scene_cache_queue: VecDeque::new(),
                 row_scene_cache_scene_ops_len_total: 0,
+                paint_frame_visible_window: None,
+                paint_frame_cache_min_entries: 0,
                 ime_surrounding_text_cache: None,
                 selection_rect_scratch: Vec::new(),
                 baseline_measure_cache: None,
@@ -2625,7 +2674,10 @@ impl CodeEditor {
             let text_cache_max_entries = viewport_rows
                 .saturating_add(overscan.saturating_mul(2))
                 .saturating_add(128)
-                .clamp(256, 8_192);
+                .clamp(
+                    CODE_EDITOR_ROW_CACHE_MIN_ENTRIES,
+                    CODE_EDITOR_ROW_CACHE_MAX_ENTRIES,
+                );
             #[cfg(feature = "syntax")]
             let window = cx.window;
 

@@ -12454,3 +12454,60 @@ Decision:
 - Promote the clamp/no-loosen baseline as updated evidence, not as proof that the top-tail contract can tighten yet.
 - The top threshold remains `6033us`; candidate-2's `8514us` tail confirms that we still need more attribution before
   forcing a tighter max gate.
+
+## 2026-05-11 20:18 (complex editor wheel syntax prefetch line mapping)
+
+Question:
+- After the frame-overlay cache, a paint-detail probe still showed one high-tail paint sample with many row scene
+  rebuilds. Is the remaining tail caused by row display-list replay/capture cost, or by cache churn from a wrong
+  invalidation/prefetch contract?
+
+Root cause:
+- The syntax prefetch path treated `WindowedRowsPaintFrame.visible_start` / `visible_end` as physical buffer lines.
+- Under soft wrap those values are display rows, so the prefetcher warmed the wrong syntax chunks and could evict the
+  currently visible syntax/rich rows.
+- That eviction invalidated row scene cache keys and produced an avoidable repaint spike. This is a semantic bug, not a
+  reason to start a broader `WindowedRowsSurface` display-list rewrite.
+
+Change:
+- `begin_paint_frame` now records the actual visible display-row window and computes a frame-local cache floor from
+  the union of previous/current visible windows.
+- Code editor paint diagnostics schema is now version `8` and exports `cache_base_entries`,
+  `cache_frame_min_entries`, and `cache_effective_entries`.
+- Syntax prefetch now maps visible display rows through `DisplayMap::display_row_line(...)` before chunk selection.
+- Rich/syntax prefetch capacity uses the frame-aware cache floor so reverse wheel steps can keep both windows resident.
+
+Validation:
+- Focused gates:
+  - `cargo fmt -p fret-code-editor -p fret-ui-gallery`
+  - `cargo nextest run -p fret-code-editor` - 97 tests passed.
+  - `cargo check -p fret-ui-gallery --tests --features gallery-dev` - passed.
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev` - passed.
+  - `git diff --check` - passed.
+- Paint-detail capacity probe:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-tail-paint-cache-window-v1 --timeout-ms 240000 --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-wheel-tail-paint-cache-window-v1/1778500307499/bundle.schema2.json`.
+  - Worst frame: `top_total_time_us=5681`, `rows_scene_stored=86`, `rows_scene_replayed=203`,
+    `syntax_evict_delta=85`, `row_rich_miss_delta=85`.
+  - Diagnosis: `cache_base_entries=431` was already above the frame cache floor (`289/299`), so raw cache capacity was
+    not the root cause.
+- Paint-detail post-fix probe:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1 --timeout-ms 240000 --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json`.
+  - Worst paint-detail total dropped from `5681us` to `3580us`.
+  - `syntax_evict_delta=0`, `row_rich_miss_delta=0`, and row scene misses fell from an `86`-row spike to mostly
+    `1..5` rows.
+- Formal baseline check without paint-detail instrumentation:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-existing-baseline-check-syntax-prefetch-v1 --timeout-ms 240000 --repeat 7 --warmup-frames 5 --sort time --top 5 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Passed the existing Windows RTX 4090 v1 baseline.
+  - Summary: max total `3238us`, p50 total `2829us`, p95 total `3238us`; max paint `3046us`.
+  - Renderer payload also stayed below the current contract: text ops max `266` and instance bytes max `195440`.
+
+Decision:
+- Keep the checked-in baseline unchanged: this slice improves tail behavior without requiring threshold loosening.
+- The right architectural invariant is now explicit: display-row windows must be translated through the display map
+  before syntax/rich cache chunking.
+- A future row display-list/replay rewrite should start only from evidence where row scene replay/capture itself is the
+  measured limiter after syntax/rich cache churn is absent.

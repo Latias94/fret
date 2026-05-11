@@ -40,6 +40,16 @@ fn add_paint_perf_elapsed(us: &mut u64, ns: &mut u64, started: Instant) {
     *ns = ns.saturating_add(nanos);
 }
 
+fn frame_cache_max_entries(st: &CodeEditorState, max_entries: usize) -> usize {
+    if max_entries == 0 {
+        return 0;
+    }
+
+    max_entries
+        .max(st.paint_frame_cache_min_entries)
+        .min(CODE_EDITOR_ROW_CACHE_MAX_ENTRIES)
+}
+
 #[cfg(feature = "syntax")]
 fn normalize_syntax_spans_for_text(text: &str, spans: &mut Vec<SyntaxSpan>) {
     let max = text.len();
@@ -277,9 +287,13 @@ pub(super) fn paint_row(
     st.last_bounds = Some(painter.bounds());
 
     let perf_enabled = st.paint_perf_enabled;
+    let cache_base_entries = text_cache_max_entries;
+    let text_cache_max_entries = frame_cache_max_entries(st, text_cache_max_entries);
     let row_started = perf_enabled.then(Instant::now);
 
     if perf_enabled {
+        st.paint_perf_frame.cache_base_entries = cache_base_entries as u64;
+        st.paint_perf_frame.cache_effective_entries = text_cache_max_entries as u64;
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
@@ -1741,6 +1755,32 @@ fn syntax_row_cache_chunk_is_ready(
 }
 
 #[cfg(feature = "syntax")]
+pub(super) fn syntax_prefetch_visible_line_window(
+    st: &CodeEditorState,
+    frame: WindowedRowsPaintFrame,
+) -> Option<(usize, usize)> {
+    let line_count = st.buffer.line_count();
+    let row_count = st.display_map.row_count();
+    if line_count == 0 || row_count == 0 {
+        return None;
+    }
+
+    let last_display_row = row_count.saturating_sub(1);
+    let visible_start = frame.visible_start.min(last_display_row);
+    let visible_end = frame.visible_end.min(last_display_row);
+    let start_line = st
+        .display_map
+        .display_row_line(visible_start)
+        .min(line_count.saturating_sub(1));
+    let end_line = st
+        .display_map
+        .display_row_line(visible_end)
+        .min(line_count.saturating_sub(1));
+
+    Some((start_line.min(end_line), start_line.max(end_line)))
+}
+
+#[cfg(feature = "syntax")]
 fn push_unique_row(rows: &mut Vec<usize>, row: usize) {
     if !rows.contains(&row) {
         rows.push(row);
@@ -3035,6 +3075,7 @@ pub(super) fn schedule_syntax_prefetch_for_frame(
     max_entries: usize,
     window: fret_core::AppWindowId,
 ) {
+    let max_entries = frame_cache_max_entries(st, max_entries);
     drain_syntax_prefetch_ready(st, max_entries);
 
     let Some(runtime) = st.syntax_prefetch_runtime.as_ref().cloned() else {
@@ -3047,18 +3088,18 @@ pub(super) fn schedule_syntax_prefetch_for_frame(
     ensure_syntax_row_cache_fresh(st);
 
     let line_count = st.buffer.line_count();
-    if line_count == 0 {
+    let Some((visible_start_line, visible_end_line)) =
+        syntax_prefetch_visible_line_window(st, frame)
+    else {
         return;
-    }
+    };
 
-    let visible_start = frame.visible_start.min(line_count.saturating_sub(1));
-    let visible_end = frame.visible_end.min(line_count.saturating_sub(1));
-    let direction = runtime.note_visible_start(visible_start);
-    let mut candidate_rows = vec![visible_start, visible_end];
+    let direction = runtime.note_visible_start(frame.visible_start);
+    let mut candidate_rows = vec![visible_start_line, visible_end_line];
     let lookahead_row = if direction < 0 {
-        visible_start.saturating_sub(SYNTAX_PREFETCH_AHEAD_ROWS)
+        visible_start_line.saturating_sub(SYNTAX_PREFETCH_AHEAD_ROWS)
     } else {
-        visible_end
+        visible_end_line
             .saturating_add(SYNTAX_PREFETCH_AHEAD_ROWS)
             .min(line_count.saturating_sub(1))
     };
@@ -3226,6 +3267,7 @@ pub(super) fn schedule_row_rich_prefetch_for_frame(
     window: fret_core::AppWindowId,
     theme: fret_ui::Theme,
 ) {
+    let max_entries = frame_cache_max_entries(st, max_entries);
     let theme_revision = theme.revision();
     drain_row_rich_prefetch_ready(st, max_entries, theme_revision);
 

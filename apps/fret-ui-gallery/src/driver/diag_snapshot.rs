@@ -72,11 +72,14 @@ fn code_editor_paint_perf_json(
         };
     }
 
-    insert_u64!("schema_version", 7);
+    insert_u64!("schema_version", 8);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
     insert_u64!("visible_rows", frame.visible_rows);
+    insert_u64!("cache_base_entries", frame.cache_base_entries);
+    insert_u64!("cache_frame_min_entries", frame.cache_frame_min_entries);
+    insert_u64!("cache_effective_entries", frame.cache_effective_entries);
     insert_u64!("rows_painted", frame.rows_painted);
     insert_u64!("rows_drew_rich", frame.rows_drew_rich);
     insert_u64!("rows_scene_replayed", frame.rows_scene_replayed);
