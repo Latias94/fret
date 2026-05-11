@@ -341,6 +341,9 @@ It covers:
 - modal prevent-default outcomes keeping the overlay open while blocking underlay activation,
 - non-modal prevent-default outcomes keeping the overlay open while preserving click-through
   underlay focus/activation,
+- pure focus-outside outcomes for popover, non-modal dropdown-menu, and non-modal context-menu,
+- focus-outside `preventDefault` outcomes that keep the overlay open, preserve the externally
+  focused target, and assert edge-triggered dismiss-call counts,
 - open-state closure and dismiss-call counts as mechanism metrics alongside focus restoration.
 
 The select outside-press fixture uses the trigger pointer-open path. The first draft exposed a
@@ -352,6 +355,14 @@ The prevent-default matrix exposed a second select defect: the modal barrier ins
 pointer-up dismissal hook with an accumulating `add` API, so a long-lived open select invoked the
 dismiss handler once per rendered frame. The barrier now installs a single pointer-up handler for
 that owned behavior.
+
+The focus-outside extension did not expose a runtime defect. It closed a coverage gap by making
+pure focus transfers explicit instead of relying on outside-click cases that also exercise pointer
+routing and underlay activation.
+
+Context-menu now also has a focused submenu restore gate matching the existing dropdown-menu gate:
+ArrowRight opens a submenu and transfers focus into it, while ArrowLeft restores focus to the
+submenu trigger.
 
 The first run exposed a real harness oracle defect. `UiPredicateV1::FocusIs` used the normal
 barrier-filtered selector path, so it could not match a trigger outside a still-present pointer/modal

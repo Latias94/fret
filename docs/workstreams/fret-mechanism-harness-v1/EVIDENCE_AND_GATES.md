@@ -112,6 +112,7 @@ cargo test --profile dev-fast -p fret-ui-shadcn --lib popover_outside_press_can_
 cargo test --profile dev-fast -p fret-ui-shadcn --lib select_modal_barrier_dismiss_can_be_prevented_via_dismiss_handler -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_modal_outside_press_can_be_prevented_via_dismiss_handler -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay -- --nocapture
+cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture
 cargo test --profile dev-fast -p fret-ui-kit --lib close_auto_focus_decision_maps_reasons -- --nocapture
 cargo test --profile dev-fast -p fret-ui-kit --lib mouse_open_guard_pointer_up_decision_is_reusable_within_tick -- --nocapture
 ```
@@ -146,7 +147,7 @@ python -m json.tool crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_rou
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json | Out-Null
 python tools/check_workstream_catalog.py
 python tools/check_diag_scripts_registry.py
-cargo fmt -p fret-mechanism-harness -p fret-ui --check
+cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-shadcn --check
 ```
 
 ## Evidence Anchors
@@ -213,6 +214,7 @@ cargo fmt -p fret-mechanism-harness -p fret-ui --check
   `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
   `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
   `ecosystem/fret-ui-shadcn/src/select.rs`
+- Shadcn submenu restore focused test: `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 - Combobox reason policy focused tests:
   `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
 - Select mouse-open pointer-up guard focused tests:

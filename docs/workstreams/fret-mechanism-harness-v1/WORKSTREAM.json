@@ -37,7 +37,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, roving focus interaction fixtures, focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/combobox/select/dropdown-menu/context-menu Escape and outside-press policy outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, and the UI Gallery checkbox underflow diagnostics gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, roving focus interaction fixtures, focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, and the UI Gallery checkbox underflow diagnostics gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -51,6 +51,7 @@
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_interaction_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture"
     ]
   },
@@ -230,6 +231,10 @@
     {
       "name": "shadcn-context-menu-click-through-prevent-default-focused-gate",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay -- --nocapture"
+    },
+    {
+      "name": "shadcn-context-menu-submenu-keyboard-restore-focused-gate",
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture"
     },
     {
       "name": "combobox-close-auto-focus-reason-policy-focused-gate",

@@ -9995,6 +9995,152 @@ mod tests {
     }
 
     #[test]
+    fn context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus() {
+        use std::time::Duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_entries = || {
+            vec![ContextMenuEntry::Item(
+                ContextMenuItem::new("More").submenu(vec![
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
+                ]),
+            )]
+        };
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let effects = app.flush_effects();
+        let focus_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after <= Duration::from_millis(250) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(focus_timer) = focus_timer else {
+            panic!("expected submenu focus timer effect");
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer { token: focus_timer },
+        );
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        assert_eq!(
+            ui.focus(),
+            Some(sub_alpha.id),
+            "expected keyboard-open to transfer focus into the submenu"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowLeft,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            build_entries(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more_after_close = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More submenu trigger after close");
+        assert_eq!(
+            ui.focus(),
+            Some(more_after_close.id),
+            "ArrowLeft should restore focus to the submenu trigger"
+        );
+    }
+
+    #[test]
     fn context_menu_submenu_opens_on_arrow_right_without_pointer_move() {
         let window = AppWindowId::default();
         let mut app = App::new();

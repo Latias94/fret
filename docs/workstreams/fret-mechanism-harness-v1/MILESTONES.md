@@ -175,3 +175,18 @@ Status: complete
   The select primitive now installs a single owned pointer-up handler for that barrier behavior.
 - Focused gates for popover outside-press interception, select modal prevent-default, dropdown-menu
   modal prevent-default, and context-menu click-through prevent-default passed.
+
+## M15: Recipe Focus-Outside and Submenu Restore Slice
+
+Status: complete
+
+- The shadcn focus-restore recipe fixture now covers pure focus-outside outcomes for popover,
+  non-modal dropdown-menu, and non-modal context-menu.
+- The matrix distinguishes default focus-outside close that preserves the externally focused
+  underlay from `preventDefault` keep-open behavior, and asserts `dismiss.calls` so repeated
+  handler invocation would fail the shared harness.
+- A focused context-menu submenu gate now matches the existing dropdown-menu gate: keyboard
+  ArrowRight opens the submenu, focus transfers to the first submenu item, and ArrowLeft restores
+  focus to the submenu trigger.
+- No runtime defect was found in this slice; the gap was missing fixture/focused coverage for
+  already-correct policy paths.

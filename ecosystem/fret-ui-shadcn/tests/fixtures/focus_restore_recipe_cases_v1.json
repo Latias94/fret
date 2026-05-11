@@ -385,6 +385,79 @@
       }
     },
     {
+      "id": "popover-focus-outside-closes-and-preserves-underlay-focus",
+      "scenario": { "kind": "popover_focus_outside_preserves_underlay_focus" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix DismissableLayer focusOutside dismisses popover while close-auto-focus can be prevented",
+        "note": "A focus transfer outside the non-modal popover should close it without stealing focus back from the underlay."
+      }
+    },
+    {
+      "id": "popover-focus-outside-prevent-default-keeps-open-and-preserves-underlay-focus",
+      "scenario": { "kind": "popover_focus_outside_prevent_default_preserves_underlay_focus" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix DismissableLayer onFocusOutside preventDefault keeps a popover open",
+        "note": "Preventing focus-outside dismissal should be edge-triggered and preserve the externally focused target."
+      }
+    },
+    {
       "id": "select-outside-click-prevent-default-keeps-open-and-blocks-underlay",
       "scenario": { "kind": "select_outside_press_prevent_default_blocks_underlay" },
       "oracle": {
@@ -495,6 +568,83 @@
       }
     },
     {
+      "id": "dropdown-menu-non-modal-focus-outside-closes-and-preserves-underlay-focus",
+      "scenario": {
+        "kind": "dropdown_menu_non_modal_focus_outside_preserves_underlay_focus"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Menu focusOutside dismisses non-modal menus while close-auto-focus can be prevented",
+        "note": "A pure focus transfer outside a non-modal dropdown should close it without restoring trigger focus over the underlay."
+      }
+    },
+    {
+      "id": "dropdown-menu-non-modal-focus-outside-prevent-default-keeps-open-and-preserves-underlay-focus",
+      "scenario": {
+        "kind": "dropdown_menu_non_modal_focus_outside_prevent_default_preserves_underlay_focus"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Menu onFocusOutside preventDefault keeps the menu open",
+        "note": "Preventing focus-outside dismissal should be edge-triggered and preserve the externally focused target."
+      }
+    },
+    {
       "id": "context-menu-outside-click-prevent-default-keeps-open-and-focuses-underlay",
       "scenario": { "kind": "context_menu_outside_press_prevent_default_focuses_underlay" },
       "oracle": {
@@ -532,6 +682,79 @@
       "evidence": {
         "upstream_ref": "Radix context menu non-modal outside press can be prevented without blocking the click-through target",
         "note": "Preventing context-menu dismissal keeps the menu open while the underlay still receives focus/activation."
+      }
+    },
+    {
+      "id": "context-menu-focus-outside-closes-and-preserves-underlay-focus",
+      "scenario": { "kind": "context_menu_focus_outside_preserves_underlay_focus" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Menu focusOutside dismisses context menus while close-auto-focus can be prevented",
+        "note": "A pure focus transfer outside a non-modal context menu should close it without restoring trigger focus over the underlay."
+      }
+    },
+    {
+      "id": "context-menu-focus-outside-prevent-default-keeps-open-and-preserves-underlay-focus",
+      "scenario": { "kind": "context_menu_focus_outside_prevent_default_preserves_underlay_focus" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "underlay" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "underlay.activated",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "dismiss.calls",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Menu onFocusOutside preventDefault keeps the context menu open",
+        "note": "Preventing focus-outside dismissal should be edge-triggered and preserve the externally focused target."
       }
     }
   ]
