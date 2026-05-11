@@ -83,6 +83,16 @@ Hot-path editor changes should include:
 Do not reseed thresholds solely because a new implementation is faster or slower. Reseed only after
 the target behavior and stressor scope are explicit.
 
+For paint attribution probes, set `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1` so
+`app_snapshot.code_editor.torture.paint_perf` is emitted by
+`apps/fret-ui-gallery/src/driver/diag_snapshot.rs`.
+
+Latest resize probe with paint attribution enabled:
+
+- `target/fret-diag-resize-probes-gate-1778534548/summary.json`
+- `target/fret-diag-resize-probes-gate-1778534548/attempt-1/1778534561410/bundle.json`
+- `code_editor.paint_perf` p95 total `655us`, content `458us`, text `33us`, fast_path `282us`
+
 ## Evidence Anchors
 
 - ADR split: `docs/adr/0185-code-editor-ecosystem-v1.md`
@@ -122,6 +132,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md`
 - First editor test module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`
+- Syntax test module split:
+  `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`
 - Feature payload store module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`
 - Diagnostics snapshot module split:

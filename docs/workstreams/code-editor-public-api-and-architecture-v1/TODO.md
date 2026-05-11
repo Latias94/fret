@@ -53,6 +53,8 @@ Last updated: 2026-05-12
   - [x] Add an anchored text-assist overlay proof on `code_editor_torture`.
 - [x] Add a diagnostics bundle assertion for feature payload stability.
 - [ ] Split monolithic editor tests into feature-owned test modules or fixture-driven runners.
+  - [x] Move shared scroll-audit/test-telemetry helpers into `ecosystem/fret-code-editor/src/editor/tests/support.rs`.
+  - [x] Split at least one more feature-owned behavior cluster out of `tests/mod.rs` (`syntax-rust` cache regression tests into `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`).
   - [x] Extract feature payload API tests into
         `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`.
 - [ ] Split large internal owners only when the public API or test ownership benefits:
