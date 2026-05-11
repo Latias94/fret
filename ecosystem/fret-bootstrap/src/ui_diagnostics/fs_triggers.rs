@@ -66,8 +66,14 @@ pub(super) fn best_effort_update_script_result_last_bundle_artifact(
     service.write_script_result(result.clone());
 
     if !cfg!(target_arch = "wasm32") {
+        let run_script_result_path = service
+            .cfg
+            .out_dir
+            .join(script_run_id.to_string())
+            .join("script.result.json");
         let bundle_script_result_path = dumped_dir.join("script.result.json");
         if let Ok(serialized) = serde_json::to_vec_pretty(&result) {
+            let _ = std::fs::write(&run_script_result_path, &serialized);
             let _ = std::fs::write(&bundle_script_result_path, serialized);
             let _ = touch_file(&service.cfg.script_result_trigger_path);
         }

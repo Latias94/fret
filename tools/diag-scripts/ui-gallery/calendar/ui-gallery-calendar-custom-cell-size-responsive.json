@@ -82,6 +82,7 @@
       }
     },
     { "type": "capture_screenshot", "label": "ui-gallery-calendar-custom-cell-size-responsive-sm" },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-calendar-custom-cell-size-responsive-sm.layout" },
 
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
     { "type": "wait_frames", "n": 15 },
@@ -143,6 +144,7 @@
       }
     },
     { "type": "capture_screenshot", "label": "ui-gallery-calendar-custom-cell-size-responsive-lg" },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-calendar-custom-cell-size-responsive-lg.layout" },
     { "type": "capture_bundle", "label": "ui-gallery-calendar-custom-cell-size-responsive" }
   ]
 }

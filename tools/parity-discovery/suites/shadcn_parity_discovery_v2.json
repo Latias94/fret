@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "id": "shadcn-parity-discovery-v2",
+  "generated_date": "2026-05-11",
+  "reports": [
+    {
+      "id": "context_menu_demo_open",
+      "mapping": "tools/parity-discovery/fixtures/context_menu_demo_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/context_menu_demo_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-context-menu-post-width-fix"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json"
+      ]
+    },
+    {
+      "id": "navigation_menu_docs_demo_components_open",
+      "mapping": "tools/parity-discovery/fixtures/navigation_menu_docs_demo_components_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/navigation_menu_docs_demo_components_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+      ]
+    },
+    {
+      "id": "hover_card_demo_open",
+      "mapping": "tools/parity-discovery/fixtures/hover_card_demo_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/hover_card_demo_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-hover-card-post-width-fix-2"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json"
+      ]
+    },
+    {
+      "id": "sheet_demo_vp375x240_open",
+      "mapping": "tools/parity-discovery/fixtures/sheet_demo_vp375x240_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/sheet_demo_vp375x240_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json"
+      ]
+    },
+    {
+      "id": "tooltip_demo_open",
+      "mapping": "tools/parity-discovery/fixtures/tooltip_demo_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/tooltip_demo_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json"
+      ]
+    },
+    {
+      "id": "dialog_demo_open",
+      "mapping": "tools/parity-discovery/fixtures/dialog_demo_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/dialog_demo_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-dialog-docs-demo-open-layout-post-fix"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json"
+      ]
+    },
+    {
+      "id": "menubar_demo_open",
+      "mapping": "tools/parity-discovery/fixtures/menubar_demo_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/menubar_demo_open_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+      ]
+    },
+    {
+      "id": "input_otp_demo",
+      "mapping": "tools/parity-discovery/fixtures/input_otp_demo_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/input_otp_demo_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+      ]
+    },
+    {
+      "id": "table_demo",
+      "mapping": "tools/parity-discovery/fixtures/table_demo_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/table_demo_mismatch_report_v2.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout"
+      ],
+      "upstream_dom_snapshots": [
+        "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+      ]
+    }
+  ]
+}

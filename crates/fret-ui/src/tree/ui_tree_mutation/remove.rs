@@ -371,7 +371,7 @@ impl<H: UiHost> UiTree<H> {
                 if self.subtree_layout_dirty_aggregation_enabled() && subtree_layout_dirty_count > 0
                 {
                     let delta = -(subtree_layout_dirty_count.min(i32::MAX as u32) as i32);
-                    self.apply_subtree_layout_dirty_delta_to_node_and_ancestors(parent, delta);
+                    self.apply_subtree_layout_dirty_child_delta_to_ancestors(Some(parent), delta);
                 }
             }
 

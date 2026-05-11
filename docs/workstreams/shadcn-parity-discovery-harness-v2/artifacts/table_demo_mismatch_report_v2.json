@@ -1,0 +1,777 @@
+{
+  "schema_version": 1,
+  "component": "table",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/table_demo_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.table.demo.light.vp1440x900",
+      "snapshot": "table-demo",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "table-demo",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "upstream.table.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 1,
+    "status_counts": {
+      "pass_known": 1,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 1
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 3,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 126,
+    "bundle_semantics_test_id_count": 126,
+    "measured_test_id_count": 126,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_body_row_geometry",
+      "label": "Table demo body row geometry",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "medium",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "root_keeps_demo_height_with_caption_and_footer",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-table-demo",
+        "ui-gallery-table-demo-row-inv001",
+        "ui-gallery-table-demo-row-inv002",
+        "ui-gallery-table-demo-row-inv007"
+      ],
+      "upstream_facts": [
+        "The upstream Table root is caption-bottom text-sm and measures 371.5px tall in the demo snapshot.",
+        "The demo body rows measure 37px tall, with each next row starting 37px below the previous body row."
+      ],
+      "fret_facts": [
+        "The UI Gallery table demo exposes a stable root selector and stable body row selectors.",
+        "The comparison avoids table width because the docs preview lane intentionally differs from the upstream full-width web viewport."
+      ],
+      "checks": [
+        {
+          "id": "root_keeps_demo_height_with_caption_and_footer",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The demo table root should keep the upstream total height including header, body, footer, and caption.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx",
+            "ecosystem/fret-ui-shadcn/src/table.rs",
+            "tools/diag-scripts/ui-gallery/table/ui-gallery-table-demo-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The total table height catches row, footer, and caption spacing drift without relying on preview-lane width."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-table-demo",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 371.5",
+                  "eps_px": 1.0,
+                  "observed_px": 372.0,
+                  "bounds": {
+                    "x": 367.0,
+                    "y": 436.667,
+                    "w": 726.0,
+                    "h": 372.0
+                  },
+                  "raw_bounds": {
+                    "x": 367.0,
+                    "y": 436.667,
+                    "w": 726.0,
+                    "h": 372.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902010",
+                  "kind_hint": "generic",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.table.demo.root",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 371.5",
+                  "eps_px": 1.0,
+                  "observed_px": 371.5,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 1440.0,
+                    "h": 371.5
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "snapshot_name": "table-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.table.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0",
+                  "tag": "table",
+                  "attrs": {},
+                  "class_name": "w-full caption-bottom text-sm"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 371.5,
+                "fret_logical_observed_px": 372.0,
+                "logical_delta_px": 0.5,
+                "fret_raw_observed_px": 372.0,
+                "raw_delta_px": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_rows_keep_upstream_row_height",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Body invoice rows should stay on the upstream 37px row-height lane.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/table/demo.rs"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Body row height is the reusable signal for table cell padding, line-height, and row border drift."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-table-demo-row-inv001",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 37",
+                  "eps_px": 1.0,
+                  "observed_px": 36.667,
+                  "bounds": {
+                    "x": 367.0,
+                    "y": 478.0,
+                    "w": 726.0,
+                    "h": 36.667
+                  },
+                  "raw_bounds": {
+                    "x": 367.0,
+                    "y": 478.0,
+                    "w": 726.0,
+                    "h": 36.667
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902047",
+                  "kind_hint": "button",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-table-demo-row-inv007",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 37",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 367.0,
+                    "y": 700.0,
+                    "w": 726.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 367.0,
+                    "y": 700.0,
+                    "w": 726.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902219",
+                  "kind_hint": "button",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.table.demo.row_inv001",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 37",
+                  "eps_px": 1.0,
+                  "observed_px": 37.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 1440.0,
+                    "h": 37.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "snapshot_name": "table-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.table.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.2.0",
+                  "tag": "tr",
+                  "attrs": {},
+                  "class_name": "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.table.demo.row_inv007",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 37",
+                  "eps_px": 1.0,
+                  "observed_px": 37.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 262.0,
+                    "w": 1440.0,
+                    "h": 37.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "snapshot_name": "table-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.table.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.2.6",
+                  "tag": "tr",
+                  "attrs": {},
+                  "class_name": "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 37.0,
+                "fret_logical_observed_px": 36.667,
+                "logical_delta_px": -0.333,
+                "fret_raw_observed_px": 36.667,
+                "raw_delta_px": -0.333
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 37.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": -1.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": -1.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_rows_keep_upstream_vertical_cadence",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The second body row should start 37px below the first body row, and the last body row should start 222px below the first body row.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx",
+            "tools/diag-scripts/ui-gallery/table/ui-gallery-table-demo-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Vertical cadence catches accumulated fractional row-height drift across the table body."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-table-demo-row-inv002",
+                  "b": "ui-gallery-table-demo-row-inv001",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 37",
+                  "eps_px": 1.0,
+                  "observed_px": 37.333,
+                  "a_bounds": {
+                    "x": 367.0,
+                    "y": 515.333,
+                    "w": 726.0,
+                    "h": 37.333
+                  },
+                  "b_bounds": {
+                    "x": 367.0,
+                    "y": 478.0,
+                    "w": 726.0,
+                    "h": 36.667
+                  },
+                  "a_raw_bounds": {
+                    "x": 367.0,
+                    "y": 515.333,
+                    "w": 726.0,
+                    "h": 37.333
+                  },
+                  "b_raw_bounds": {
+                    "x": 367.0,
+                    "y": 478.0,
+                    "w": 726.0,
+                    "h": 36.667
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "12884902085",
+                  "b_node": "12884902047",
+                  "evidence_sources": [
+                    "bundle_schema2_semantics"
+                  ],
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json"
+                  ],
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-table-demo-row-inv007",
+                  "b": "ui-gallery-table-demo-row-inv001",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 222",
+                  "eps_px": 1.0,
+                  "observed_px": 222.0,
+                  "a_bounds": {
+                    "x": 367.0,
+                    "y": 700.0,
+                    "w": 726.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 367.0,
+                    "y": 478.0,
+                    "w": 726.0,
+                    "h": 36.667
+                  },
+                  "a_raw_bounds": {
+                    "x": 367.0,
+                    "y": 700.0,
+                    "w": 726.0,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 367.0,
+                    "y": 478.0,
+                    "w": 726.0,
+                    "h": 36.667
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "12884902219",
+                  "b_node": "12884902047",
+                  "evidence_sources": [
+                    "bundle_schema2_semantics"
+                  ],
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-table-demo-layout/sessions/1778494087822-119804/1778494093489-ui-gallery-table-demo.layout/bundle.schema2.json"
+                  ],
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.table.demo.row_inv002",
+                  "b": "upstream.table.demo.row_inv001",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 37",
+                  "eps_px": 1.0,
+                  "observed_px": 37.0,
+                  "a_bounds": {
+                    "x": 0.0,
+                    "y": 77.0,
+                    "w": 1440.0,
+                    "h": 37.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 1440.0,
+                    "h": 37.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "snapshot_name": "table-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.table.demo.light.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "a_path": "0.0.2.1",
+                  "b_path": "0.0.2.0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.table.demo.row_inv007",
+                  "b": "upstream.table.demo.row_inv001",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 222",
+                  "eps_px": 1.0,
+                  "observed_px": 222.0,
+                  "a_bounds": {
+                    "x": 0.0,
+                    "y": 262.0,
+                    "w": 1440.0,
+                    "h": 37.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 1440.0,
+                    "h": 37.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "snapshot_name": "table-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.table.demo.light.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+                  "a_path": "0.0.2.6",
+                  "b_path": "0.0.2.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "top",
+                "upstream_observed_px": 37.0,
+                "fret_logical_observed_px": 37.333,
+                "logical_delta_px": 0.333
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 222.0,
+                "fret_logical_observed_px": 222.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the official Table demo rendered in the UI Gallery docs page.",
+    "The upstream table fills the 1440px web viewport while the UI Gallery preview constrains the Fret table to the docs preview lane, so this fixture avoids absolute width and column-width claims.",
+    "The high-confidence parity surface is the root table height, body row height, and body row vertical cadence.",
+    "Fret predicates use bundle schema2 semantics so the fixture remains stable even when taffy sidecar selector export changes."
+  ]
+}

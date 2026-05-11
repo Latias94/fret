@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "component": "calendar",
+  "style": "new-york-v4",
+  "report": {
+    "id": "calendar_custom_cell_size_sm_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the UI Gallery Calendar custom cell size responsive example at the small viewport.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+      "This slice now uses an upstream DOM snapshot for the selected-day cell size, while the supporting text row remains source-backed gallery composition evidence."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.calendar.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx"
+      },
+      {
+        "id": "upstream.calendar.block_20",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/blocks/calendar-20.tsx"
+      },
+      {
+        "id": "upstream.calendar.demo",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/calendar-demo.tsx"
+      },
+      {
+        "id": "upstream.calendar.docs",
+        "path": "repo-ref/ui/apps/v4/content/docs/components/calendar.mdx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.calendar.page",
+        "path": "apps/fret-ui-gallery/src/ui/pages/calendar.rs"
+      },
+      {
+        "id": "fret.calendar.custom_cell_size",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs"
+      },
+      {
+        "id": "fret.calendar.diag",
+        "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json"
+      },
+      {
+        "id": "fret.calendar.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/calendar.rs"
+      },
+      {
+        "id": "fret.calendar.range_recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/calendar_range.rs"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar.custom_cell_size.light.vp375x900",
+      "snapshot": "calendar-20",
+      "theme": "light",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.calendar.custom_cell_day_selected",
+      "snapshot": "calendar-20",
+      "theme": "light",
+      "path": "0.0.0.0.0.1.1.1.1.4.0",
+      "source_ref_id": "upstream.calendar.block_20",
+      "context_id": "upstream.calendar.custom_cell_size.light.vp375x900"
+    }
+  ],
+  "parts": [
+    {
+      "id": "custom_cell_size_small",
+      "label": "Calendar custom cell size small viewport",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.calendar.source",
+          "upstream.calendar.docs"
+        ],
+        "facts": [
+          "The base shadcn calendar recipe owns the cell-size chrome and day-button shell.",
+          "The gallery lane keeps cell sizing as a call-site override instead of baking it into the base recipe."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.calendar.page",
+          "fret.calendar.custom_cell_size",
+          "fret.calendar.diag"
+        ],
+        "test_ids": [
+          "ui-gallery.calendar.custom-cell:2026-12-12",
+          "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text"
+        ],
+        "facts": [
+          "The small responsive lane sets `cell_size(Px(40.0))` at the call site.",
+          "The selected day button and its supporting text remain stable test anchors in the layout sidecar."
+        ]
+      },
+      "checks": [
+        {
+          "id": "custom_cell_selected_day_is_40px",
+          "kind": "fret_layout_sidecar",
+          "expected": "The selected custom cell should remain 40px by 40px on the small viewport.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs",
+            "apps/fret-ui-gallery/src/ui/pages/calendar.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json",
+            "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar.custom_cell_day_selected",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 40.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar.custom_cell_day_selected",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 40.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.custom-cell:2026-12-12",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 40.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.custom-cell:2026-12-12",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 40.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The small-screen custom cell size is an example-owned sizing invariant that should stay reviewable as a fixture."
+          }
+        },
+        {
+          "id": "custom_cell_supporting_text_is_legible",
+          "kind": "fret_layout_sidecar",
+          "expected": "The selected custom cell supporting text should remain a small centered label on the small viewport.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+            "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 26.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 16.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Supporting text sizing is part of the example composition and should remain in the fixture gate."
+          }
+        }
+      ]
+    }
+  ]
+}

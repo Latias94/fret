@@ -145,7 +145,7 @@
       "padding_px": 24.0,
       "timeout_frames": 1200
     },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" } },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-content-header" } },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "move_pointer",
@@ -213,9 +213,10 @@
       "timeout_frames": 240
     },
 
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-hover-card-docs-smoke.open" },
     { "type": "capture_bundle", "label": "ui-gallery-hover-card-docs-smoke" },
     { "type": "capture_screenshot", "label": "ui-gallery-hover-card-docs-smoke" },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" } },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-content-header" } },
     {
       "type": "wait_until",
       "predicate": {

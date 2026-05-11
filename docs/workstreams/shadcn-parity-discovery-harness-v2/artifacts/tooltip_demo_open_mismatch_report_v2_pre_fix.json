@@ -1,0 +1,996 @@
+{
+  "schema_version": 1,
+  "component": "tooltip",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/tooltip_demo_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "tooltip-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "",
+        "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_live_measurement": 0,
+      "mismatch": 1,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 0,
+      "mechanism_core": 1,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 1,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 1,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 1,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [
+      {
+        "part_id": "demo_arrow_geometry",
+        "check_id": "arrow_keeps_upstream_size_and_center_alignment",
+        "status": "mismatch",
+        "axis": "layout",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "promotion_target": "mechanism_harness",
+        "triage": {
+          "score": 100,
+          "level": "critical",
+          "reasons": [
+            "status:mismatch",
+            "layer:mechanism",
+            "promotion:mechanism_harness",
+            "axis:layout",
+            "confidence:high",
+            "measurement_gap_px:252"
+          ]
+        }
+      }
+    ],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 2,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 128,
+    "bundle_semantics_test_id_count": 128,
+    "measured_test_id_count": 128,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 5,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_trigger_size",
+      "label": "Tooltip demo trigger button size",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "trigger_button_keeps_upstream_demo_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-tooltip-demo-trigger"
+      ],
+      "upstream_facts": [
+        "The docs demo uses the default shadcn outline Button trigger with text \"Hover\".",
+        "The upstream trigger measures about 72px wide and 36px tall in the open DOM snapshot."
+      ],
+      "fret_facts": [
+        "The UI Gallery tooltip demo exposes a stable test id on the trigger Button.",
+        "The open-arrow diagnostics script now captures both layout sidecar evidence and bundle.schema2 fallback evidence after the tooltip has opened."
+      ],
+      "checks": [
+        {
+          "id": "trigger_button_keeps_upstream_demo_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The Fret tooltip demo trigger should stay on the same h-9 outline Button size lane as upstream.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/tooltip-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/tooltip/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The trigger button is the docs-path anchor and should stay locked before placement deltas are interpreted."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-tooltip-demo-trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 71.99",
+                  "eps_px": 1.0,
+                  "observed_px": 71.333,
+                  "bounds": {
+                    "x": 42.667,
+                    "y": 276.667,
+                    "w": 71.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 42.667,
+                    "y": 276.667,
+                    "w": 71.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(289v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-tooltip-demo-trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 42.667,
+                    "y": 276.667,
+                    "w": 71.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 42.667,
+                    "y": 276.667,
+                    "w": 71.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(289v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.tooltip.demo.trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 71.99",
+                  "eps_px": 1.0,
+                  "observed_px": 71.99,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 71.99,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-describedby": "radix-_R_lubsnpfiuplb_",
+                    "data-state": "delayed-open",
+                    "data-slot": "button",
+                    "data-variant": "outline",
+                    "data-size": "default"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.tooltip.demo.trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 71.99,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-describedby": "radix-_R_lubsnpfiuplb_",
+                    "data-state": "delayed-open",
+                    "data-slot": "button",
+                    "data-variant": "outline",
+                    "data-size": "default"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 71.99,
+                "fret_logical_observed_px": 71.333,
+                "logical_delta_px": -0.657,
+                "fret_raw_observed_px": 71.333,
+                "raw_delta_px": -0.657
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_content_chrome_size",
+      "label": "Tooltip demo open content chrome size",
+      "axis": "chrome",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "content_panel_keeps_upstream_short_label_chrome_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-tooltip-demo-panel"
+      ],
+      "upstream_facts": [
+        "The new-york-v4 TooltipContent owns rounded-md px-3 py-1.5 text-xs text-balance and bg-foreground/text-background chrome.",
+        "The short docs demo content measures about 97.5px wide and 28px tall."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes a stable open panel test id.",
+        "The parity report reads this overlay node from the sibling bundle.schema2 evidence when the taffy sidecar does not include the test id."
+      ],
+      "checks": [
+        {
+          "id": "content_panel_keeps_upstream_short_label_chrome_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The Fret tooltip open panel should match the upstream short-label content width and 28px line-box height.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx",
+            "ecosystem/fret-ui-shadcn/src/tooltip.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Tooltip chrome is a recipe-owned shadcn default and should be caught before visual drift reaches screenshots."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-tooltip-demo-panel",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 97.49",
+                  "eps_px": 1.0,
+                  "observed_px": 96.667,
+                  "bounds": {
+                    "x": 282.0,
+                    "y": 1135.333,
+                    "w": 96.667,
+                    "h": 28.0
+                  },
+                  "raw_bounds": {
+                    "x": 282.0,
+                    "y": 1135.333,
+                    "w": 96.667,
+                    "h": 28.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(813v1)",
+                  "kind_hint": "Semantics",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-tooltip-demo-panel",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 28",
+                  "eps_px": 1.0,
+                  "observed_px": 28.0,
+                  "bounds": {
+                    "x": 282.0,
+                    "y": 1135.333,
+                    "w": 96.667,
+                    "h": 28.0
+                  },
+                  "raw_bounds": {
+                    "x": 282.0,
+                    "y": 1135.333,
+                    "w": 96.667,
+                    "h": 28.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(813v1)",
+                  "kind_hint": "Semantics",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.tooltip.demo.content",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 97.49",
+                  "eps_px": 1.0,
+                  "observed_px": 97.49,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 46.0,
+                    "w": 97.49,
+                    "h": 28.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0",
+                  "tag": "div",
+                  "attrs": {
+                    "data-state": "delayed-open",
+                    "data-side": "bottom",
+                    "data-align": "center",
+                    "data-slot": "tooltip-content"
+                  },
+                  "class_name": "bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.tooltip.demo.content",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 28",
+                  "eps_px": 1.0,
+                  "observed_px": 28.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 46.0,
+                    "w": 97.49,
+                    "h": 28.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0",
+                  "tag": "div",
+                  "attrs": {
+                    "data-state": "delayed-open",
+                    "data-side": "bottom",
+                    "data-align": "center",
+                    "data-slot": "tooltip-content"
+                  },
+                  "class_name": "bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 97.49,
+                "fret_logical_observed_px": 96.667,
+                "logical_delta_px": -0.823,
+                "fret_raw_observed_px": 96.667,
+                "raw_delta_px": -0.823
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 28.0,
+                "fret_logical_observed_px": 28.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 28.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_arrow_geometry",
+      "label": "Tooltip demo arrow size and anchor alignment",
+      "axis": "layout",
+      "status": "mismatch",
+      "confidence": "high",
+      "triage": {
+        "score": 100,
+        "level": "critical",
+        "highest_check_id": "arrow_keeps_upstream_size_and_center_alignment",
+        "reasons": [
+          "status:mismatch",
+          "layer:mechanism",
+          "promotion:mechanism_harness",
+          "axis:layout",
+          "confidence:high",
+          "measurement_gap_px:252"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-tooltip-demo-trigger",
+        "ui-gallery-tooltip-demo-arrow"
+      ],
+      "upstream_facts": [
+        "The shadcn TooltipContent always renders the Radix arrow with size-2.5, rotate-45, and foreground fill.",
+        "The arrow wrapper is 10px square and stays horizontally centered on the trigger in the default center alignment."
+      ],
+      "fret_facts": [
+        "The demo enables arrow(true) and exposes a stable arrow test id.",
+        "The fixture checks center_x alignment instead of absolute side because the upstream top-edge target flips below the trigger while the UI Gallery body target can remain above it."
+      ],
+      "checks": [
+        {
+          "id": "arrow_keeps_upstream_size_and_center_alignment",
+          "kind": "fret_layout_sidecar",
+          "status": "mismatch",
+          "expected": "The arrow wrapper should stay 10px square and horizontally centered on the trigger.",
+          "observed": "fail",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "layer": "mechanism",
+          "triage": {
+            "score": 100,
+            "level": "critical",
+            "reasons": [
+              "status:mismatch",
+              "layer:mechanism",
+              "promotion:mechanism_harness",
+              "axis:layout",
+              "confidence:high",
+              "measurement_gap_px:252"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx",
+            "F:/SourceCodes/Rust/fret/repo-ref/primitives/packages/react/tooltip/src/tooltip.tsx",
+            "ecosystem/fret-ui-shadcn/src/tooltip.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "Arrow placement crosses tooltip recipe chrome and overlay placement mechanics, so it should stay in the v2 parity sweep."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "fail",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "fail",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-tooltip-demo-arrow",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 10",
+                  "eps_px": 1.0,
+                  "observed_px": 10.0,
+                  "bounds": {
+                    "x": 325.333,
+                    "y": 1156.667,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "raw_bounds": {
+                    "x": 325.333,
+                    "y": 1156.667,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(816v1)",
+                  "kind_hint": "Container",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-tooltip-demo-arrow",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 10",
+                  "eps_px": 1.0,
+                  "observed_px": 10.0,
+                  "bounds": {
+                    "x": 325.333,
+                    "y": 1156.667,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "raw_bounds": {
+                    "x": 325.333,
+                    "y": 1156.667,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(816v1)",
+                  "kind_hint": "Container",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "fail",
+                  "a": "ui-gallery-tooltip-demo-arrow",
+                  "b": "ui-gallery-tooltip-demo-trigger",
+                  "metric": "center_x",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 1.0,
+                  "observed_px": 252.0,
+                  "a_bounds": {
+                    "x": 325.333,
+                    "y": 1156.667,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 276.667,
+                    "w": 71.333,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 325.333,
+                    "y": 1156.667,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 276.667,
+                    "w": 71.333,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(816v1)",
+                  "b_node": "NodeId(289v3)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-tooltip-open-arrow-layout/sessions/1778480927008-4656/1778480934747-ui-gallery-tooltip-demo-open-arrow.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.tooltip.demo.arrow",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 10",
+                  "eps_px": 1.0,
+                  "observed_px": 10.0,
+                  "bounds": {
+                    "x": 30.74,
+                    "y": 36.0,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.1",
+                  "tag": "span",
+                  "attrs": {},
+                  "class_name": null
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.tooltip.demo.arrow",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 10",
+                  "eps_px": 1.0,
+                  "observed_px": 10.0,
+                  "bounds": {
+                    "x": 30.74,
+                    "y": 36.0,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.1",
+                  "tag": "span",
+                  "attrs": {},
+                  "class_name": null
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.tooltip.demo.arrow",
+                  "b": "upstream.tooltip.demo.trigger",
+                  "metric": "center_x",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 1.0,
+                  "observed_px": -0.255,
+                  "a_bounds": {
+                    "x": 30.74,
+                    "y": 36.0,
+                    "w": 10.0,
+                    "h": 10.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 71.99,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "snapshot_name": "tooltip-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+                  "a_path": "portal.0.1",
+                  "b_path": "0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 10.0,
+                "fret_logical_observed_px": 10.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 10.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 10.0,
+                "fret_logical_observed_px": 10.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 10.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "center_x",
+                "upstream_observed_px": -0.255,
+                "fret_logical_observed_px": 252.0,
+                "logical_delta_px": 252.255
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the official Tooltip demo opened in the UI Gallery docs page.",
+    "The upstream DOM golden places the trigger at the top edge of its target root, so Radix collision handling flips the default top-side tooltip below the trigger; the UI Gallery demo is in the page body and is not an equivalent absolute-position context.",
+    "The fixture therefore compares stable geometry facts that survive the different page context: trigger size, tooltip content chrome size, arrow size, and arrow-to-trigger horizontal alignment.",
+    "The Fret taffy sidecar currently misses the tooltip demo test ids, so this slice intentionally exercises the parity generator's sibling bundle.schema2 semantics fallback for overlay nodes."
+  ]
+}

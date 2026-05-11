@@ -1,0 +1,1629 @@
+{
+  "schema_version": 1,
+  "component": "sheet",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/sheet_demo_vp375x240_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.sheet.demo.light.open.vp375x240",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "sheet-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "vp375x240",
+        "context_id": "upstream.sheet.demo.light.open.vp375x240",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 240
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 4,
+    "status_counts": {
+      "pass_known": 4,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 1,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 1,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 4
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "component_fixture": 2,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 181,
+    "bundle_semantics_test_id_count": 181,
+    "measured_test_id_count": 181,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 7,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "mobile_effective_viewport",
+      "label": "Sheet demo mobile effective viewport",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "mobile_effective_viewport_matches_upstream_snapshot",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [],
+      "upstream_facts": [
+        "The upstream mobile snapshot was extracted at 375x240 CSS px."
+      ],
+      "fret_facts": [
+        "The native diagnostics script must prove the effective layout root is 375x240 before comparing mobile sheet geometry.",
+        "On the current Windows native runner, requesting a 375x220 surface produces the required 375x240 effective layout root."
+      ],
+      "checks": [
+        {
+          "id": "mobile_effective_viewport_matches_upstream_snapshot",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The Fret sidecar root should match the 375x240 viewport used by the upstream DOM snapshot.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "high",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Viewport drift must be caught as runner evidence before component or mechanism geometry is compared."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "root_metric",
+                "status": "pass",
+                "target": "layout_root",
+                "metric": "width",
+                "comparison": "eq",
+                "expected": "== 375.333",
+                "eps_px": 2.0,
+                "observed_px": 375.328,
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 375.328,
+                  "h": 240.0
+                },
+                "raw_bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 375.328,
+                  "h": 240.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                "duplicate_count": 3
+              },
+              {
+                "kind": "root_metric",
+                "status": "pass",
+                "target": "layout_root",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 240",
+                "eps_px": 1.0,
+                "observed_px": 240.0,
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 375.328,
+                  "h": 240.0
+                },
+                "raw_bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 375.328,
+                  "h": 240.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                "duplicate_count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "right_sheet_shell_surface",
+      "label": "Sheet demo right-side mobile shell surface",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "right_sheet_panel_matches_mobile_shell",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-sheet-demo-panel"
+      ],
+      "upstream_facts": [
+        "The default shadcn SheetContent side is right.",
+        "The right-side sheet owns inset-y-0 right-0 h-full w-3/4, with sm:max-w-sm applying only at the sm breakpoint.",
+        "At 375.333px wide, the upstream open panel is 281.5px wide and spans the full 240px viewport height."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes a stable test id on the open SheetContent panel.",
+        "The diagnostics script captures a layout sidecar after the slide-in motion settles."
+      ],
+      "checks": [
+        {
+          "id": "right_sheet_panel_matches_mobile_shell",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The right-side SheetContent panel should measure 281.5px wide, 240px tall, and start at x ~= 93.833 in the 375x240 mobile viewport.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "layer": "mechanism",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx",
+            "ecosystem/fret-ui-shadcn/src/sheet.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "Right sheet shell sizing crosses overlay placement, viewport width fractions, and side-specific absolute layout."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-panel",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 93.833",
+                  "eps_px": 2.0,
+                  "observed_px": 94.0,
+                  "bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "raw_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(466v1)",
+                  "kind_hint": "Container",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-panel",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 281.5",
+                  "eps_px": 1.0,
+                  "observed_px": 281.333,
+                  "bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "raw_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(466v1)",
+                  "kind_hint": "Container",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-panel",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 240",
+                  "eps_px": 1.0,
+                  "observed_px": 240.0,
+                  "bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "raw_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(466v1)",
+                  "kind_hint": "Container",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.content",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 93.833",
+                  "eps_px": 2.0,
+                  "observed_px": 93.833,
+                  "bounds": {
+                    "x": 93.833,
+                    "y": 0.0,
+                    "w": 281.5,
+                    "h": 240.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "dialog",
+                    "aria-labelledby": "radix-_R_lubsnpfiuplbH1_",
+                    "aria-describedby": "radix-_R_lubsnpfiuplbH2_",
+                    "data-state": "open",
+                    "data-slot": "sheet-content"
+                  },
+                  "class_name": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.content",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 281.5",
+                  "eps_px": 1.0,
+                  "observed_px": 281.5,
+                  "bounds": {
+                    "x": 93.833,
+                    "y": 0.0,
+                    "w": 281.5,
+                    "h": 240.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "dialog",
+                    "aria-labelledby": "radix-_R_lubsnpfiuplbH1_",
+                    "aria-describedby": "radix-_R_lubsnpfiuplbH2_",
+                    "data-state": "open",
+                    "data-slot": "sheet-content"
+                  },
+                  "class_name": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.content",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 240",
+                  "eps_px": 1.0,
+                  "observed_px": 240.0,
+                  "bounds": {
+                    "x": 93.833,
+                    "y": 0.0,
+                    "w": 281.5,
+                    "h": 240.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "dialog",
+                    "aria-labelledby": "radix-_R_lubsnpfiuplbH1_",
+                    "aria-describedby": "radix-_R_lubsnpfiuplbH2_",
+                    "data-state": "open",
+                    "data-slot": "sheet-content"
+                  },
+                  "class_name": "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "x",
+                "upstream_observed_px": 93.833,
+                "fret_logical_observed_px": 94.0,
+                "logical_delta_px": 0.167
+              },
+              {
+                "metric": "width",
+                "upstream_observed_px": 281.5,
+                "fret_logical_observed_px": 281.333,
+                "logical_delta_px": -0.167,
+                "fret_raw_observed_px": 281.333,
+                "raw_delta_px": -0.167
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 240.0,
+                "fret_logical_observed_px": 240.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 240.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_field_inputs_surface",
+      "label": "Sheet demo mobile field input widths and offsets",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "field_inputs_keep_mobile_body_width_and_vertical_offsets",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-sheet-demo-panel",
+        "ui-gallery-sheet-demo-body",
+        "ui-gallery-sheet-demo-name-input",
+        "ui-gallery-sheet-demo-username-input",
+        "ui-gallery-sheet-demo-save"
+      ],
+      "upstream_facts": [
+        "The docs demo uses a flex-1 grid body with px-4 and gap-6.",
+        "Inputs fill the sheet content lane inside the 16px horizontal body padding."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes stable test ids for the docs body and both profile inputs.",
+        "Body and input geometry are compared relative to the panel so shell position drift does not hide body layout drift."
+      ],
+      "checks": [
+        {
+          "id": "field_inputs_keep_mobile_body_width_and_vertical_offsets",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The profile inputs should fill the upstream px-4 body lane and keep the docs-path vertical offsets relative to the sheet panel.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/sheet-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-path body composition is the reusable regression surface for Sheet demo field layout."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 6,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-sheet-demo-body",
+                  "b": "ui-gallery-sheet-demo-panel",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 118",
+                  "eps_px": 2.0,
+                  "observed_px": 118.0,
+                  "a_bounds": {
+                    "x": 95.333,
+                    "y": 118.0,
+                    "w": 280.667,
+                    "h": 148.0
+                  },
+                  "b_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 95.333,
+                    "y": 118.0,
+                    "w": 280.667,
+                    "h": 148.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(474v1)",
+                  "b_node": "NodeId(466v1)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-body",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 148",
+                  "eps_px": 2.0,
+                  "observed_px": 148.0,
+                  "bounds": {
+                    "x": 95.333,
+                    "y": 118.0,
+                    "w": 280.667,
+                    "h": 148.0
+                  },
+                  "raw_bounds": {
+                    "x": 95.333,
+                    "y": 118.0,
+                    "w": 280.667,
+                    "h": 148.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(474v1)",
+                  "kind_hint": "Container",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-sheet-demo-name-input",
+                  "b": "ui-gallery-sheet-demo-panel",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 144",
+                  "eps_px": 2.0,
+                  "observed_px": 144.0,
+                  "a_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(483v1)",
+                  "b_node": "NodeId(466v1)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-name-input",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 248.833",
+                  "eps_px": 1.0,
+                  "observed_px": 248.667,
+                  "bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(483v1)",
+                  "kind_hint": "TextInput",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-sheet-demo-save",
+                  "b": "ui-gallery-sheet-demo-name-input",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 154",
+                  "eps_px": 2.0,
+                  "observed_px": 154.0,
+                  "a_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(494v1)",
+                  "b_node": "NodeId(483v1)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-sheet-demo-username-input",
+                  "b": "ui-gallery-sheet-demo-name-input",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 86",
+                  "eps_px": 2.0,
+                  "observed_px": 86.0,
+                  "a_bounds": {
+                    "x": 111.333,
+                    "y": 230.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 111.333,
+                    "y": 230.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 111.333,
+                    "y": 144.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(490v1)",
+                  "b_node": "NodeId(483v1)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json"
+              ],
+              "predicate_count": 6,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.sheet.demo.body",
+                  "b": "upstream.sheet.demo.content",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 118",
+                  "eps_px": 2.0,
+                  "observed_px": 118.0,
+                  "a_bounds": {
+                    "x": 94.5,
+                    "y": 118.0,
+                    "w": 280.833,
+                    "h": 148.0
+                  },
+                  "b_bounds": {
+                    "x": 93.833,
+                    "y": 0.0,
+                    "w": 281.5,
+                    "h": 240.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "a_path": "portal.1.1",
+                  "b_path": "portal.1"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.body",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 148",
+                  "eps_px": 2.0,
+                  "observed_px": 148.0,
+                  "bounds": {
+                    "x": 94.5,
+                    "y": 118.0,
+                    "w": 280.833,
+                    "h": 148.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1.1",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "grid flex-1 auto-rows-min gap-6 px-4"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.sheet.demo.name_input",
+                  "b": "upstream.sheet.demo.content",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 144",
+                  "eps_px": 2.0,
+                  "observed_px": 144.0,
+                  "a_bounds": {
+                    "x": 110.5,
+                    "y": 144.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 93.833,
+                    "y": 0.0,
+                    "w": 281.5,
+                    "h": 240.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "a_path": "portal.1.1.0.1",
+                  "b_path": "portal.1"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.name_input",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 248.833",
+                  "eps_px": 1.0,
+                  "observed_px": 248.833,
+                  "bounds": {
+                    "x": 110.5,
+                    "y": 144.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1.1.0.1",
+                  "tag": "input",
+                  "attrs": {
+                    "data-slot": "input"
+                  },
+                  "class_name": "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.sheet.demo.save_button",
+                  "b": "upstream.sheet.demo.name_input",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 154",
+                  "eps_px": 2.0,
+                  "observed_px": 154.0,
+                  "a_bounds": {
+                    "x": 110.5,
+                    "y": 298.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 110.5,
+                    "y": 144.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "a_path": "portal.1.2.0",
+                  "b_path": "portal.1.1.0.1"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.sheet.demo.username_input",
+                  "b": "upstream.sheet.demo.name_input",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 86",
+                  "eps_px": 2.0,
+                  "observed_px": 86.0,
+                  "a_bounds": {
+                    "x": 110.5,
+                    "y": 230.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 110.5,
+                    "y": 144.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "a_path": "portal.1.1.1.1",
+                  "b_path": "portal.1.1.0.1"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "top",
+                "upstream_observed_px": 118.0,
+                "fret_logical_observed_px": 118.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 148.0,
+                "fret_logical_observed_px": 148.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 148.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 144.0,
+                "fret_logical_observed_px": 144.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "width",
+                "upstream_observed_px": 248.833,
+                "fret_logical_observed_px": 248.667,
+                "logical_delta_px": -0.166,
+                "fret_raw_observed_px": 248.667,
+                "raw_delta_px": -0.166
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 154.0,
+                "fret_logical_observed_px": 154.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 86.0,
+                "fret_logical_observed_px": 86.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_footer_buttons_surface",
+      "label": "Sheet demo mobile footer button stack",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "footer_buttons_keep_mobile_stack_width_and_gap",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-sheet-demo-panel",
+        "ui-gallery-sheet-demo-save",
+        "ui-gallery-sheet-demo-close"
+      ],
+      "upstream_facts": [
+        "SheetFooter owns mt-auto flex flex-col gap-2 p-4.",
+        "The default docs demo footer buttons stretch to the same px-4 content lane as the body inputs."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes stable test ids for the sheet panel and both footer buttons.",
+        "Footer buttons may be clipped by the viewport, but their layout bounds remain deterministic in the sidecar.",
+        "The save button top offset is checked relative to the panel so a collapsed body flex item cannot pass by width alone."
+      ],
+      "checks": [
+        {
+          "id": "footer_buttons_keep_mobile_stack_width_and_gap",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The footer buttons should stay 248.833px wide, 36px tall, and separated by an 8px vertical gap in the mobile sheet.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The SheetFooter vertical stack is recipe-owned and should stay locked once proven against the mobile docs demo."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-sheet-demo-save",
+                  "b": "ui-gallery-sheet-demo-panel",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 298",
+                  "eps_px": 2.0,
+                  "observed_px": 298.0,
+                  "a_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 94.0,
+                    "y": 0.0,
+                    "w": 281.333,
+                    "h": 240.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(494v1)",
+                  "b_node": "NodeId(466v1)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-save",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 248.833",
+                  "eps_px": 1.0,
+                  "observed_px": 248.667,
+                  "bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(494v1)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-sheet-demo-save",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(494v1)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-sheet-demo-close",
+                  "b": "ui-gallery-sheet-demo-save",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 44",
+                  "eps_px": 1.0,
+                  "observed_px": 44.0,
+                  "a_bounds": {
+                    "x": 111.333,
+                    "y": 342.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 111.333,
+                    "y": 342.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 111.333,
+                    "y": 298.0,
+                    "w": 248.667,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(498v1)",
+                  "b_node": "NodeId(494v1)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-sheet-vp375x240-post-fix-2/sessions/1778480231651-151488/1778480239588-ui-gallery-sheet-demo-vp375x240-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.sheet.demo.save_button",
+                  "b": "upstream.sheet.demo.content",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 298",
+                  "eps_px": 2.0,
+                  "observed_px": 298.0,
+                  "a_bounds": {
+                    "x": 110.5,
+                    "y": 298.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 93.833,
+                    "y": 0.0,
+                    "w": 281.5,
+                    "h": 240.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "a_path": "portal.1.2.0",
+                  "b_path": "portal.1"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.save_button",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 248.833",
+                  "eps_px": 1.0,
+                  "observed_px": 248.833,
+                  "bounds": {
+                    "x": 110.5,
+                    "y": 298.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1.2.0",
+                  "tag": "button",
+                  "attrs": {
+                    "data-slot": "button",
+                    "data-variant": "default",
+                    "data-size": "default"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.sheet.demo.save_button",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 110.5,
+                    "y": 298.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "viewport": {
+                    "w": 375,
+                    "h": 240
+                  },
+                  "path": "portal.1.2.0",
+                  "tag": "button",
+                  "attrs": {
+                    "data-slot": "button",
+                    "data-variant": "default",
+                    "data-size": "default"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.sheet.demo.close_button",
+                  "b": "upstream.sheet.demo.save_button",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 44",
+                  "eps_px": 1.0,
+                  "observed_px": 44.0,
+                  "a_bounds": {
+                    "x": 110.5,
+                    "y": 342.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 110.5,
+                    "y": 298.0,
+                    "w": 248.833,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "snapshot_name": "sheet-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "vp375x240",
+                  "context_id": "upstream.sheet.demo.light.open.vp375x240",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+                  "a_path": "portal.1.2.1",
+                  "b_path": "portal.1.2.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "top",
+                "upstream_observed_px": 298.0,
+                "fret_logical_observed_px": 298.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "width",
+                "upstream_observed_px": 248.833,
+                "fret_logical_observed_px": 248.667,
+                "logical_delta_px": -0.166,
+                "fret_raw_observed_px": 248.667,
+                "raw_delta_px": -0.166
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 44.0,
+                "fret_logical_observed_px": 44.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the official Sheet demo opened in the constrained 375x240 mobile viewport used by the upstream shadcn DOM golden.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+    "The slice separates the sheet shell from inner docs-path fields and footer buttons so shell sizing drift does not hide recipe or gallery-composition drift."
+  ]
+}

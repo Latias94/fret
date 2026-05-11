@@ -1874,6 +1874,17 @@ fn write_regression_summary_for_suite(
     }
 }
 
+fn dedup_paths_preserve_order(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::with_capacity(paths.len());
+    for path in paths {
+        if seen.insert(path.clone()) {
+            out.push(path);
+        }
+    }
+    out
+}
+
 fn maybe_expand_suite_manifest_input(
     workspace_root: &Path,
     input: &Path,
@@ -1943,9 +1954,7 @@ fn maybe_expand_suite_manifest_input(
         }
         out.push(resolved);
     }
-    out.sort();
-    out.dedup();
-    Ok(Some(out))
+    Ok(Some(dedup_paths_preserve_order(out)))
 }
 
 fn resolve_builtin_suite_scripts(
@@ -2297,8 +2306,7 @@ fn resolve_suite_run_inputs(
 
     if !suite_script_inputs.is_empty() {
         scripts.extend(expand_script_inputs(workspace_root, suite_script_inputs)?);
-        scripts.sort();
-        scripts.dedup();
+        scripts = dedup_paths_preserve_order(scripts);
     }
 
     let mut expanded_suite_manifest_inputs: Vec<PathBuf> = Vec::new();
@@ -2310,8 +2318,7 @@ fn resolve_suite_run_inputs(
         }
     }
     let mut scripts = expanded_suite_manifest_inputs;
-    scripts.sort();
-    scripts.dedup();
+    scripts = dedup_paths_preserve_order(scripts);
 
     if scripts.is_empty() {
         return Err("suite produced no scripts".to_string());
@@ -4476,5 +4483,78 @@ mod tests {
             resolved.resolved_suite_prelude_scripts,
             vec![root.join(prelude_path)]
         );
+    }
+
+    #[test]
+    fn resolve_suite_run_inputs_preserves_suite_manifest_order() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-suite-manifest-order-{}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+
+        let script_root = root.join("tools").join("diag-scripts");
+        let suite_dir = script_root.join("suites").join("order-preserve");
+        std::fs::create_dir_all(&suite_dir).expect("create suite dir");
+
+        let script_b = script_root.join("b.json");
+        let script_a = script_root.join("a.json");
+        let script_c = script_root.join("c.json");
+        for script in [&script_a, &script_b, &script_c] {
+            std::fs::write(script, br#"{"schema_version":2,"steps":[]}"#).expect("write script");
+        }
+
+        let manifest = suite_dir.join("suite.json");
+        std::fs::write(
+            &manifest,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": "diag_script_suite_manifest",
+                "scripts": [
+                    "tools/diag-scripts/c.json",
+                    "tools/diag-scripts/a.json",
+                    "tools/diag-scripts/b.json",
+                    "tools/diag-scripts/a.json"
+                ]
+            }))
+            .expect("serialize manifest"),
+        )
+        .expect("write manifest");
+
+        let expected = vec![script_c.clone(), script_a.clone(), script_b.clone()];
+
+        let by_name = resolve_suite_run_inputs(
+            &root,
+            &root.join("out-by-name"),
+            &["order-preserve".to_string()],
+            &[],
+            &[],
+            &[],
+            false,
+            Vec::new(),
+            false,
+        )
+        .expect("resolve suite by name");
+        assert_eq!(by_name.scripts, expected);
+
+        let by_manifest_path = resolve_suite_run_inputs(
+            &root,
+            &root.join("out-by-manifest-path"),
+            &["tools/diag-scripts/suites/order-preserve/suite.json".to_string()],
+            &[],
+            &[],
+            &[],
+            false,
+            Vec::new(),
+            false,
+        )
+        .expect("resolve suite by manifest path");
+        assert_eq!(by_manifest_path.scripts, vec![script_c, script_a, script_b]);
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

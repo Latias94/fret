@@ -25,6 +25,7 @@
         "theme": "light",
         "mode": "open",
         "variant": "",
+        "context_id": "upstream.combobox_responsive.light.open.vp1440x900",
         "viewport": {
           "width_px": 1440,
           "height_px": 900
@@ -314,6 +315,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -351,6 +353,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -545,6 +548,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -581,6 +585,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -790,6 +795,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -831,6 +837,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
                   "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
                   "a_path": "portal.0.0",
@@ -1028,6 +1035,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900
@@ -1071,6 +1079,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "",
+                  "context_id": null,
                   "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
                   "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
                   "a_path": "portal.0.0.2",

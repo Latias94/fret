@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "component": "navigation-menu",
+  "style": "new-york-v4",
+  "report": {
+    "id": "navigation_menu_docs_demo_components_open_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice uses the UI Gallery Navigation Menu docs-demo after hovering Home, then Components.",
+      "The upstream shadcn open snapshot is measured from the checked-in new-york-v4 components-open DOM golden.",
+      "The fixture intentionally starts with column item width parity because the open shell width is already close while item sizing visibly drifts."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.navigation_menu.components_open_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+      },
+      {
+        "id": "upstream.navigation_menu.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx"
+      },
+      {
+        "id": "upstream.navigation_menu.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/navigation-menu-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.navigation_menu.docs_demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs"
+      },
+      {
+        "id": "fret.navigation_menu.hover_switch_diag",
+        "path": "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.navigation_menu.components_alert_dialog_link",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "path": "0.0.0.1.2.0.0.0",
+      "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "source_ref_id": "upstream.navigation_menu.components_open_dom_snapshot"
+    },
+    {
+      "id": "upstream.navigation_menu.components_hover_card_link",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "path": "0.0.0.1.2.0.1.0",
+      "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "source_ref_id": "upstream.navigation_menu.components_open_dom_snapshot"
+    },
+    {
+      "id": "upstream.navigation_menu.components_progress_link",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "path": "0.0.0.1.2.0.2.0",
+      "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "source_ref_id": "upstream.navigation_menu.components_open_dom_snapshot"
+    },
+    {
+      "id": "upstream.navigation_menu.components_scroll_area_link",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "path": "0.0.0.1.2.0.3.0",
+      "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "source_ref_id": "upstream.navigation_menu.components_open_dom_snapshot"
+    },
+    {
+      "id": "upstream.navigation_menu.components_tabs_link",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "path": "0.0.0.1.2.0.4.0",
+      "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "source_ref_id": "upstream.navigation_menu.components_open_dom_snapshot"
+    },
+    {
+      "id": "upstream.navigation_menu.components_tooltip_link",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "path": "0.0.0.1.2.0.5.0",
+      "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "source_ref_id": "upstream.navigation_menu.components_open_dom_snapshot"
+    }
+  ],
+  "parts": [
+    {
+      "id": "components_menu_item_grid_widths",
+      "label": "Navigation Menu components-open item grid widths",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.navigation_menu.source",
+          "upstream.navigation_menu.demo"
+        ],
+        "facts": [
+          "The official new-york-v4 components menu renders a w-[600px] grid with gap-2 and md:grid-cols-2.",
+          "Each components menu link occupies one grid column, measuring 296px wide in the upstream DOM golden.",
+          "The item width is an example-local layout fact, not intrinsic NavigationMenuLink chrome."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.navigation_menu.docs_demo",
+          "fret.navigation_menu.hover_switch_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-navigation-menu-docs-demo-link-alert-dialog",
+          "ui-gallery-navigation-menu-docs-demo-link-hover-card",
+          "ui-gallery-navigation-menu-docs-demo-link-progress",
+          "ui-gallery-navigation-menu-docs-demo-link-scroll-area",
+          "ui-gallery-navigation-menu-docs-demo-link-tabs",
+          "ui-gallery-navigation-menu-docs-demo-link-tooltip"
+        ],
+        "facts": [
+          "The UI Gallery docs-demo exposes stable test ids for each components-open menu link.",
+          "The hover-switch diagnostics script now captures a layout sidecar while the Components menu is open."
+        ]
+      },
+      "checks": [
+        {
+          "id": "alert_dialog_column_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Alert Dialog link should occupy one 296px upstream grid column.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.navigation_menu.components_alert_dialog_link",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-navigation-menu-docs-demo-link-alert-dialog",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          }
+        },
+        {
+          "id": "hover_card_column_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Hover Card link should occupy one 296px upstream grid column.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.navigation_menu.components_hover_card_link",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-navigation-menu-docs-demo-link-hover-card",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          }
+        },
+        {
+          "id": "progress_column_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Progress link should occupy one 296px upstream grid column.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.navigation_menu.components_progress_link",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-navigation-menu-docs-demo-link-progress",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          }
+        },
+        {
+          "id": "scroll_area_column_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Scroll-area link should occupy one 296px upstream grid column.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.navigation_menu.components_scroll_area_link",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-navigation-menu-docs-demo-link-scroll-area",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          }
+        },
+        {
+          "id": "tabs_column_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Tabs link should occupy one 296px upstream grid column.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.navigation_menu.components_tabs_link",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-navigation-menu-docs-demo-link-tabs",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          }
+        },
+        {
+          "id": "tooltip_column_width",
+          "kind": "fret_layout_sidecar",
+          "expected": "Tooltip link should occupy one 296px upstream grid column.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.navigation_menu.components_tooltip_link",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-navigation-menu-docs-demo-link-tooltip",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 296.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "meta": {
     "name": "ui-gallery-calendar-mixed-responsive-popover-vs-panel",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "env_defaults": { "FRET_UI_GALLERY_FIXED_TODAY": "2026-05-15" }
+    "env_defaults": { "FRET_UI_GALLERY_FIXED_TODAY": "2022-05-15" }
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -41,7 +41,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery.calendar.responsive.panel.month:2026-05-01"
+        "id": "ui-gallery.calendar.responsive.panel.month:2022-01-01"
       },
       "delta_y": -200.0,
       "require_fully_within_container": true,
@@ -56,7 +56,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery.calendar.responsive.panel.month:2026-06-01"
+          "id": "ui-gallery.calendar.responsive.panel.month:2022-02-01"
         }
       },
       "timeout_frames": 600
@@ -65,8 +65,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2022-01-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2022-02-01" },
         "eps_px": 1.0
       }
     },
@@ -74,12 +74,13 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_non_overlapping",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2022-01-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2022-02-01" },
         "eps_px": 1.0
       }
     },
     { "type": "capture_screenshot", "label": "ui-gallery-calendar-mixed-responsive-panel" },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-calendar-mixed-responsive-panel.layout" },
 
     {
       "type": "wait_until",
@@ -110,7 +111,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery.calendar.responsive.popover.month:2026-05-01"
+          "id": "ui-gallery.calendar.responsive.popover.month:2022-01-01"
         }
       },
       "timeout_frames": 600
@@ -121,7 +122,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery.calendar.responsive.popover.month:2026-06-01"
+          "id": "ui-gallery.calendar.responsive.popover.month:2022-02-01"
         }
       },
       "timeout_frames": 600
@@ -130,8 +131,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_overlapping_y",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2022-01-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2022-02-01" },
         "eps_px": 1.0
       }
     },
@@ -139,12 +140,13 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_non_overlapping",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2022-01-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2022-02-01" },
         "eps_px": 1.0
       }
     },
     { "type": "capture_screenshot", "label": "ui-gallery-calendar-mixed-responsive-popover" },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-calendar-mixed-responsive-popover.layout" },
 
     { "type": "capture_bundle", "label": "ui-gallery-calendar-mixed-responsive-popover-vs-panel" }
   ]

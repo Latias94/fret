@@ -23,8 +23,6 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, OverlayController, Space};
 use serde::Deserialize;
 use std::cell::Cell;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -392,12 +390,15 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
             },
             cols: 1,
             rows: None,
+            template_columns: None,
+            template_rows: None,
             gap: gap.into(),
             column_gap: None,
             row_gap: None,
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
+            justify_items: None,
         },
         move |_cx| vec![tile, intro, install, typography],
     )
@@ -883,12 +884,15 @@ fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
             },
             cols,
             rows: None,
+            template_columns: None,
+            template_rows: None,
             gap: gap.into(),
             column_gap: None,
             row_gap: None,
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
+            justify_items: None,
         },
         move |cx| {
             vec![

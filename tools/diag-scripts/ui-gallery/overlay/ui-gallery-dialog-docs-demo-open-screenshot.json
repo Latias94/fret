@@ -68,6 +68,10 @@
       "timeout_frames": 600
     },
     {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-dialog-docs-demo-open-desktop.layout"
+    },
+    {
       "type": "capture_screenshot",
       "label": "ui-gallery-dialog-docs-demo-open-desktop"
     },

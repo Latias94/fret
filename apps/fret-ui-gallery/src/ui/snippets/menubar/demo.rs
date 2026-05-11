@@ -25,6 +25,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let state_now = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
     let file = shadcn::MenubarTrigger::new("File")
+        .test_id("ui-gallery-menubar-demo-file")
         .into_menu()
         .entries_parts(
             shadcn::MenubarContent::new(),
@@ -32,29 +33,36 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::MenubarGroup::new([
                     shadcn::MenubarItem::new("New Tab")
                         .action(CommandId::new("ui_gallery.menubar.demo.new_tab"))
+                        .test_id("ui-gallery-menubar-demo-new-tab")
                         .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx))
                         .into(),
                     shadcn::MenubarItem::new("New Window")
                         .action(CommandId::new("ui_gallery.menubar.demo.new_window"))
+                        .test_id("ui-gallery-menubar-demo-new-window")
                         .trailing(shadcn::MenubarShortcut::new("⌘N").into_element(cx))
                         .into(),
                     shadcn::MenubarItem::new("New Incognito Window")
                         .disabled(true)
+                        .test_id("ui-gallery-menubar-demo-new-incognito-window")
                         .into(),
                 ])
                 .into(),
                 shadcn::MenubarSeparator::new().into(),
                 shadcn::MenubarGroup::new([shadcn::MenubarSub::new(
-                    shadcn::MenubarSubTrigger::new("Share"),
+                    shadcn::MenubarSubTrigger::new("Share")
+                        .refine(|item| item.test_id("ui-gallery-menubar-demo-share")),
                     shadcn::MenubarSubContent::new([shadcn::MenubarGroup::new([
                         shadcn::MenubarItem::new("Email link")
                             .action(CommandId::new("ui_gallery.menubar.demo.share.email_link"))
+                            .test_id("ui-gallery-menubar-demo-share-email-link")
                             .into(),
                         shadcn::MenubarItem::new("Messages")
                             .action(CommandId::new("ui_gallery.menubar.demo.share.messages"))
+                            .test_id("ui-gallery-menubar-demo-share-messages")
                             .into(),
                         shadcn::MenubarItem::new("Notes")
                             .action(CommandId::new("ui_gallery.menubar.demo.share.notes"))
+                            .test_id("ui-gallery-menubar-demo-share-notes")
                             .into(),
                     ])
                     .into()]),
@@ -64,6 +72,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::MenubarSeparator::new().into(),
                 shadcn::MenubarGroup::new([shadcn::MenubarItem::new("Print...")
                     .action(CommandId::new("ui_gallery.menubar.demo.print"))
+                    .test_id("ui-gallery-menubar-demo-print")
                     .trailing(shadcn::MenubarShortcut::new("⌘P").into_element(cx))
                     .into()])
                 .into(),
@@ -219,5 +228,6 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Menubar::new([file, edit, view, profiles])
         .refine_layout(width)
         .into_element(cx)
+        .test_id("ui-gallery-menubar-demo-root")
 }
 // endregion: example

@@ -1,0 +1,491 @@
+{
+  "schema_version": 1,
+  "component": "calendar",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar.custom_cell_size.light.vp375x900",
+      "snapshot": "calendar-20",
+      "theme": "light",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "calendar-20",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "upstream.calendar.custom_cell_size.light.vp375x900",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0000000596046448,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 1,
+    "status_counts": {
+      "pass_known": 1,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 0,
+      "gallery_composition": 2,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 0,
+      "app_demo": 2,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 1
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 2,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "measured_test_id_count": 1306,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "custom_cell_size_small",
+      "label": "Calendar custom cell size small viewport",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "custom_cell_selected_day_is_40px",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery.calendar.custom-cell:2026-12-12",
+        "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text"
+      ],
+      "upstream_facts": [
+        "The base shadcn calendar recipe owns the cell-size chrome and day-button shell.",
+        "The gallery lane keeps cell sizing as a call-site override instead of baking it into the base recipe."
+      ],
+      "fret_facts": [
+        "The small responsive lane sets `cell_size(Px(40.0))` at the call site.",
+        "The selected day button and its supporting text remain stable test anchors in the layout sidecar."
+      ],
+      "checks": [
+        {
+          "id": "custom_cell_selected_day_is_40px",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The selected custom cell should remain 40px by 40px on the small viewport.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs",
+            "apps/fret-ui-gallery/src/ui/pages/calendar.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json",
+            "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The small-screen custom cell size is an example-owned sizing invariant that should stay reviewable as a fixture."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.custom-cell:2026-12-12",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 40",
+                  "eps_px": 1.0,
+                  "observed_px": 40.0,
+                  "bounds": {
+                    "x": 296.0,
+                    "y": 6206.667,
+                    "w": 40.0,
+                    "h": 40.0
+                  },
+                  "raw_bounds": {
+                    "x": 296.0,
+                    "y": 6206.667,
+                    "w": 40.0,
+                    "h": 40.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(3140v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.custom-cell:2026-12-12",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 40",
+                  "eps_px": 1.0,
+                  "observed_px": 40.0,
+                  "bounds": {
+                    "x": 296.0,
+                    "y": 6206.667,
+                    "w": 40.0,
+                    "h": 40.0
+                  },
+                  "raw_bounds": {
+                    "x": 296.0,
+                    "y": 6206.667,
+                    "w": 40.0,
+                    "h": 40.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(3140v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar.custom_cell_day_selected",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 40",
+                  "eps_px": 1.0,
+                  "observed_px": 40.0,
+                  "bounds": {
+                    "x": 184.667,
+                    "y": 155.865,
+                    "w": 40.0,
+                    "h": 40.0
+                  },
+                  "device_pixel_ratio": 2.0000000596046448,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json",
+                  "snapshot_name": "calendar-20",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar.custom_cell_size.light.vp375x900",
+                  "viewport": {
+                    "w": 375,
+                    "h": 900
+                  },
+                  "path": "0.0.0.0.0.1.1.1.1.4.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Thursday, June 12th, 2025, selected",
+                    "data-day": "2025/6/12",
+                    "data-slot": "button"
+                  },
+                  "class_name": "items-center justify-center whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 rdp-day rdp-day_button"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar.custom_cell_day_selected",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 40",
+                  "eps_px": 1.0,
+                  "observed_px": 40.0,
+                  "bounds": {
+                    "x": 184.667,
+                    "y": 155.865,
+                    "w": 40.0,
+                    "h": 40.0
+                  },
+                  "device_pixel_ratio": 2.0000000596046448,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json",
+                  "snapshot_name": "calendar-20",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar.custom_cell_size.light.vp375x900",
+                  "viewport": {
+                    "w": 375,
+                    "h": 900
+                  },
+                  "path": "0.0.0.0.0.1.1.1.1.4.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Thursday, June 12th, 2025, selected",
+                    "data-day": "2025/6/12",
+                    "data-slot": "button"
+                  },
+                  "class_name": "items-center justify-center whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 rdp-day rdp-day_button"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 40.0,
+                "fret_logical_observed_px": 40.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 40.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 40.0,
+                "fret_logical_observed_px": 40.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 40.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "custom_cell_supporting_text_is_legible",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The selected custom cell supporting text should remain a small centered label on the small viewport.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+            "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Supporting text sizing is part of the example composition and should remain in the fixture gate."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text",
+                "metric": "width",
+                "comparison": "eq",
+                "expected": "== 26",
+                "eps_px": 1.0,
+                "observed_px": 26.0,
+                "bounds": {
+                  "x": 303.333,
+                  "y": 6230.667,
+                  "w": 26.0,
+                  "h": 16.0
+                },
+                "raw_bounds": {
+                  "x": 303.333,
+                  "y": 6230.667,
+                  "w": 26.0,
+                  "h": 16.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(3144v1)",
+                "kind_hint": "Text",
+                "sidecar_path": "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json",
+                "duplicate_count": 1
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 16",
+                "eps_px": 1.0,
+                "observed_px": 16.0,
+                "bounds": {
+                  "x": 303.333,
+                  "y": 6230.667,
+                  "w": 26.0,
+                  "h": 16.0
+                },
+                "raw_bounds": {
+                  "x": 303.333,
+                  "y": 6230.667,
+                  "w": 26.0,
+                  "h": 16.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(3144v1)",
+                "kind_hint": "Text",
+                "sidecar_path": "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout/layout.taffy.v1.json",
+                "duplicate_count": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the UI Gallery Calendar custom cell size responsive example at the small viewport.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+    "This slice now uses an upstream DOM snapshot for the selected-day cell size, while the supporting text row remains source-backed gallery composition evidence."
+  ]
+}

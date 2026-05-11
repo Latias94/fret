@@ -376,17 +376,47 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         delta: i32,
     ) {
+        self.apply_subtree_layout_dirty_delta_walk(Some(node), delta, true);
+    }
+
+    #[track_caller]
+    pub(in crate::tree) fn apply_subtree_layout_dirty_child_delta_to_ancestors(
+        &mut self,
+        start: Option<NodeId>,
+        delta: i32,
+    ) {
+        self.apply_subtree_layout_dirty_delta_walk(start, delta, false);
+    }
+
+    #[track_caller]
+    fn apply_subtree_layout_dirty_delta_to_ancestors(&mut self, start: Option<NodeId>, delta: i32) {
+        self.apply_subtree_layout_dirty_delta_walk(start, delta, false);
+    }
+
+    #[track_caller]
+    fn apply_subtree_layout_dirty_delta_walk(
+        &mut self,
+        start: Option<NodeId>,
+        delta: i32,
+        include_start_self: bool,
+    ) {
         if delta == 0 || !self.subtree_layout_dirty_aggregation_enabled() {
             return;
         }
 
         let mut walked_nodes: u32 = 0;
-        let mut current = Some(node);
+        let mut current = start;
+        let mut first = true;
         while let Some(id) = current {
             let (parent, element, stored, underflow) = {
                 let Some(n) = self.nodes.get_mut(id) else {
                     break;
                 };
+
+                if !(first && include_start_self) && n.layout_dirty_children_suppressed {
+                    break;
+                }
+
                 let underflow = apply_i32_delta_to_u32(&mut n.subtree_layout_dirty_count, delta);
                 (n.parent, n.element, n.subtree_layout_dirty_count, underflow)
             };
@@ -418,9 +448,10 @@ impl<H: UiHost> UiTree<H> {
             }
             walked_nodes = walked_nodes.saturating_add(1);
             current = parent;
+            first = false;
         }
 
-        if self.debug_enabled {
+        if self.debug_enabled && walked_nodes > 0 {
             self.debug_stats.layout_subtree_dirty_agg_updates = self
                 .debug_stats
                 .layout_subtree_dirty_agg_updates
@@ -434,13 +465,6 @@ impl<H: UiHost> UiTree<H> {
                 .layout_subtree_dirty_agg_max_parent_walk
                 .max(walked_nodes);
         }
-    }
-
-    fn apply_subtree_layout_dirty_delta_to_ancestors(&mut self, start: Option<NodeId>, delta: i32) {
-        let Some(node) = start else {
-            return;
-        };
-        self.apply_subtree_layout_dirty_delta_to_node_and_ancestors(node, delta);
     }
 
     pub(in crate::tree) fn validate_subtree_layout_dirty_counts_if_enabled(&mut self) {

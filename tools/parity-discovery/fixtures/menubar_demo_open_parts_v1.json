@@ -1,0 +1,424 @@
+{
+  "schema_version": 1,
+  "component": "menubar",
+  "style": "new-york-v4",
+  "report": {
+    "id": "menubar_demo_open_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the official Menubar demo opened in the UI Gallery docs page.",
+      "The upstream demo root spans the full 1440px web viewport while the UI Gallery preview constrains the Fret root to its docs preview lane, so this fixture avoids root width parity and locks height/relative geometry instead.",
+      "Native text metrics can make the short trigger labels a few pixels narrower than the web golden; trigger width is therefore not a parity claim in this slice.",
+      "The high-confidence regression surfaces are the shadcn h-9 Menubar root height, trigger vertical centering, and open File menu row sizing/offsets."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.menubar.demo.open_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+      },
+      {
+        "id": "upstream.menubar.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx"
+      },
+      {
+        "id": "upstream.menubar.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/menubar-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.menubar.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/menubar.rs"
+      },
+      {
+        "id": "fret.menubar.demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs"
+      },
+      {
+        "id": "fret.menubar.open_diag",
+        "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.menubar.demo.light.open.vp1440x900",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.menubar.demo.root",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "0",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.menubar.demo.file_trigger",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "0.0",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.menubar.demo.new_tab",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.0",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.menubar.demo.new_window",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.1",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.menubar.demo.new_incognito_window",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.2",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.menubar.demo.share",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.4",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.menubar.demo.print",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.6",
+      "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.menubar.demo.open_dom_snapshot"
+    }
+  ],
+  "parts": [
+    {
+      "id": "demo_root_shell",
+      "label": "Menubar demo root shell",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.menubar.source",
+          "upstream.menubar.demo",
+          "upstream.menubar.demo.open_dom_snapshot"
+        ],
+        "facts": [
+          "The new-york-v4 Menubar root owns `flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs`.",
+          "The upstream open DOM snapshot measures the Menubar root at 36px tall.",
+          "The File trigger is 28px tall and starts 4px below the root top."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.menubar.recipe",
+          "fret.menubar.demo",
+          "fret.menubar.open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-menubar-demo-root",
+          "ui-gallery-menubar-demo-file"
+        ],
+        "facts": [
+          "The UI Gallery Menubar demo exposes stable test ids on the Menubar root and File trigger.",
+          "The comparison intentionally ignores root width because the Fret docs preview constrains this demo to 288px while upstream fills the web viewport."
+        ]
+      },
+      "checks": [
+        {
+          "id": "root_keeps_upstream_h9_height",
+          "kind": "fret_layout_sidecar",
+          "expected": "The Menubar root should keep the upstream h-9 border-box height of 36px.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.menubar.demo.root",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-menubar-demo-root",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Menubar root height is a shadcn recipe default and should not drift with auto-height chrome."
+          }
+        },
+        {
+          "id": "file_trigger_keeps_upstream_vertical_centering",
+          "kind": "fret_layout_sidecar",
+          "expected": "The File trigger should stay 28px tall and start 4px below the Menubar root top.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.menubar.demo.file_trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 28.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.menubar.demo.file_trigger",
+              "b": "upstream.menubar.demo.root",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 4.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-menubar-demo-file",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 28.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-menubar-demo-file",
+              "b": "ui-gallery-menubar-demo-root",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 4.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The trigger vertical lane proves the fixed root shell and items-center behavior together."
+          }
+        }
+      ]
+    },
+    {
+      "id": "file_menu_rows",
+      "label": "Menubar File menu open row geometry",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.menubar.source",
+          "upstream.menubar.demo",
+          "upstream.menubar.demo.open_dom_snapshot"
+        ],
+        "facts": [
+          "The new-york-v4 MenubarContent owns min-w-[12rem], border, p-1, and overflow-hidden.",
+          "The File menu rows are 32px tall, about 182.667px wide inside the 192px content shell, and the separators create 41px jumps around the Share and Print rows."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.menubar.recipe",
+          "fret.menubar.demo",
+          "fret.menubar.open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-menubar-demo-new-tab",
+          "ui-gallery-menubar-demo-new-window",
+          "ui-gallery-menubar-demo-new-incognito-window",
+          "ui-gallery-menubar-demo-share",
+          "ui-gallery-menubar-demo-print"
+        ],
+        "facts": [
+          "The UI Gallery Menubar demo exposes stable test ids on the open File menu rows.",
+          "This slice compares row sizes and offsets instead of absolute overlay position because the UI Gallery preview and upstream web root do not share the same page origin."
+        ]
+      },
+      "checks": [
+        {
+          "id": "file_menu_items_keep_upstream_row_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "The File menu rows should stay on the upstream 32px row-height lane and approximately 182.667px inner row width.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.menubar.demo.new_tab",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.menubar.demo.new_tab",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 182.667,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-menubar-demo-new-tab",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-menubar-demo-new-tab",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 182.667,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Menu row size is the reusable geometry signal for Menubar content chrome drift."
+          }
+        },
+        {
+          "id": "file_menu_items_keep_upstream_vertical_offsets",
+          "kind": "fret_layout_sidecar",
+          "expected": "The open File menu rows should preserve upstream vertical offsets: New Window 32px, Share 105px, and Print 146px below New Tab.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/menubar-demo.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.menubar.demo.new_window",
+              "b": "upstream.menubar.demo.new_tab",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.menubar.demo.share",
+              "b": "upstream.menubar.demo.new_tab",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 105.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.menubar.demo.print",
+              "b": "upstream.menubar.demo.new_tab",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 146.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-menubar-demo-new-window",
+              "b": "ui-gallery-menubar-demo-new-tab",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-menubar-demo-share",
+              "b": "ui-gallery-menubar-demo-new-tab",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 105.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-menubar-demo-print",
+              "b": "ui-gallery-menubar-demo-new-tab",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 146.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Vertical row offsets catch row-height, separator, and submenu-trigger padding regressions in one small geometry surface."
+          }
+        }
+      ]
+    }
+  ]
+}

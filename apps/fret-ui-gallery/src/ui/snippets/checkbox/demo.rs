@@ -62,6 +62,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element(cx),
             shadcn::FieldLabel::new("Enable notifications")
                 .for_control("ui-gallery-checkbox-demo-with-title")
+                .test_id("ui-gallery-checkbox-demo-with-title-label")
                 .wrap([shadcn::Field::new([
                     shadcn::Checkbox::new(with_title)
                         .control_id("ui-gallery-checkbox-demo-with-title")

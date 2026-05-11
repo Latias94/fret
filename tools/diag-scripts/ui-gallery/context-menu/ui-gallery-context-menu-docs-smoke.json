@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-context-menu-docs-smoke",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
   },
   "steps": [
     {
@@ -68,6 +68,15 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-context-menu-docs-smoke.open"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-context-menu-docs-smoke.open"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-context-menu-docs-smoke.open" },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-back" } },
     {
       "type": "wait_until",

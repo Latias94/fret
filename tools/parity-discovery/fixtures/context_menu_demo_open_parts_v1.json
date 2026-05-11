@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "component": "context-menu",
+  "style": "new-york-v4",
+  "report": {
+    "id": "context_menu_demo_open_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice uses the UI Gallery context-menu docs-demo open state with a captured layout sidecar.",
+      "The upstream shadcn open snapshot is measured from the checked-in golden DOM evidence.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px; scale_factor is retained only as diagnostics metadata."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.context_menu.demo.open_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json"
+      },
+      {
+        "id": "upstream.context_menu.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx"
+      },
+      {
+        "id": "upstream.context_menu.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/context-menu-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.context_menu.demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs"
+      },
+      {
+        "id": "fret.context_menu.docs_smoke",
+        "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-docs-smoke.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.context_menu.demo.light.open.vp1440x900",
+      "snapshot": "context-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.context_menu.demo.content",
+      "snapshot": "context-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0",
+      "source_ref_id": "upstream.context_menu.demo.open_dom_snapshot"
+    }
+  ],
+  "parts": [
+    {
+      "id": "demo_content_size",
+      "label": "Context Menu demo open content size",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.context_menu.source",
+          "upstream.context_menu.demo"
+        ],
+        "facts": [
+          "The docs-path demo passes className=\"w-52\" on ContextMenuContent.",
+          "The open content panel should stay on the upstream w-52 width lane while retaining the open-panel height."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.context_menu.demo",
+          "fret.context_menu.docs_smoke"
+        ],
+        "test_ids": [
+          "ui-gallery-context-menu-demo-panel"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes a stable open-panel test id for the context-menu docs smoke.",
+          "The docs-smoke script now captures the open layout sidecar before dismissing the menu."
+        ]
+      },
+      "checks": [
+        {
+          "id": "demo_content_matches_w_52_open_panel",
+          "kind": "fret_layout_sidecar",
+          "expected": "Context Menu open content should measure 208 logical px wide with the upstream open-panel height.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs",
+            "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-docs-smoke.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-context-menu-sidecar/**/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.context_menu.demo.content",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 208.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.context_menu.demo.content",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 315.3333435058594,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-context-menu-demo-panel",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 208.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-context-menu-demo-panel",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 315.3333435058594,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-path demo composition is the reusable regression surface for the context-menu open width lane."
+          }
+        }
+      ]
+    }
+  ]
+}

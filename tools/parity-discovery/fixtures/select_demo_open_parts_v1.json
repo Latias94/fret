@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "component": "select-demo",
+  "style": "new-york-v4",
+  "report": {
+    "id": "select_demo_open_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-10",
+    "limitations": [
+      "This slice measures the docs-path Select open demo against Fret UI Gallery evidence.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+      "This slice models the trigger and open viewport geometry; it does not score scroll-button chrome as a separate part."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.select.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx"
+      },
+      {
+        "id": "upstream.select.demo",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/select-demo.tsx"
+      },
+      {
+        "id": "upstream.select.docs",
+        "path": "repo-ref/ui/apps/v4/content/docs/components/select.mdx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.gallery.select_demo_snippet",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/select/demo.rs"
+      },
+      {
+        "id": "fret.gallery.select_page",
+        "path": "apps/fret-ui-gallery/src/ui/pages/select.rs"
+      },
+      {
+        "id": "fret.gallery.render_flow",
+        "path": "apps/fret-ui-gallery/src/driver/render_flow.rs"
+      },
+      {
+        "id": "fret.diag.select_demo_open",
+        "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json"
+      },
+      {
+        "id": "fret.ui.scroll_extent",
+        "path": "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs"
+      },
+      {
+        "id": "fret.shadcn.select_web_vs_fret",
+        "path": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.select_demo.light.open.vp1440x900",
+      "snapshot": "select-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "default",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.select_demo.trigger",
+      "snapshot": "select-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "default",
+      "path": "0",
+      "source_ref_id": "upstream.select.demo"
+    },
+    {
+      "id": "upstream.select_demo.viewport",
+      "snapshot": "select-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "default",
+      "path": "portal.1.0.2",
+      "source_ref_id": "upstream.select.demo"
+    }
+  ],
+  "parts": [
+    {
+      "id": "select_trigger_size",
+      "label": "Select demo trigger size",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.select.source",
+          "upstream.select.demo"
+        ],
+        "facts": [
+          "The docs-path demo uses a 180px-wide trigger.",
+          "The trigger is 36px tall and displays the placeholder text."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.select_demo_snippet",
+          "fret.diag.select_demo_open"
+        ],
+        "test_ids": [
+          "ui-gallery-select-shadcn-demo-trigger"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes a stable trigger selector.",
+          "The capture uses the same compact 180px lane as the upstream example."
+        ]
+      },
+      "checks": [
+        {
+          "id": "select_demo_trigger_matches_180x36",
+          "kind": "fret_layout_sidecar",
+          "expected": "The docs-path Select trigger should remain 180px by 36px.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/select-demo.tsx",
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/select/demo.rs",
+            "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+            "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.select_demo.trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 180.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.select_demo.trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-select-shadcn-demo-trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 180.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-select-shadcn-demo-trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "This is a recipe-owned trigger sizing invariant for the docs-path demo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "select_open_viewport_geometry",
+      "label": "Select demo open viewport geometry",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.select.source",
+          "upstream.select.demo",
+          "upstream.select.docs"
+        ],
+        "facts": [
+          "The open demo renders a fixed portal wrapper and a listbox content subtree.",
+          "Radix Select uses viewport.scrollHeight for item-aligned sizing, and that scrollHeight includes viewport padding such as shadcn's p-1."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.gallery.select_demo_snippet",
+          "fret.gallery.select_page",
+          "fret.gallery.render_flow",
+          "fret.diag.select_demo_open",
+          "fret.ui.scroll_extent",
+          "fret.shadcn.select_web_vs_fret"
+        ],
+        "test_ids": [
+          "select-scroll-viewport"
+        ],
+        "facts": [
+          "The discovery seed exposed a Select open geometry mismatch and promoted it to a same-context web-vs-fret gate.",
+          "The confirmed root cause was the scroll overflow observer shrinking a single-child padded container from 196px to the 192px descendant frontier, dropping the bottom padding from the ScrollHandle content extent."
+        ]
+      },
+      "checks": [
+        {
+          "id": "select_demo_open_option_metrics_preserve_viewport_padding",
+          "kind": "existing_gate",
+          "expected": "Same-context web-vs-fret Select open option metrics should preserve the upstream viewport bottom padding after item-aligned initial scroll.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json",
+            "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
+            "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs"
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "The mismatch crossed scroll extent mechanics and Select item-aligned layout; it is now locked by a fret-ui mechanism unit test plus the shadcn web-vs-fret Select fixture gate."
+          }
+        }
+      ]
+    }
+  ]
+}

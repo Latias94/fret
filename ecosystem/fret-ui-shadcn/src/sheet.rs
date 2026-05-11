@@ -1867,7 +1867,7 @@ impl SheetFooter {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default().mt_auto(),
+            LayoutRefinement::default().mt_auto().w_full().min_w_0(),
         );
         let children = self.children;
         shadcn_layout::container_vstack(
@@ -1876,7 +1876,8 @@ impl SheetFooter {
             shadcn_layout::VStackProps::default()
                 .gap(Space::N2)
                 .justify_start()
-                .items_stretch(),
+                .items_stretch()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
             children,
         )
     }
@@ -1951,7 +1952,6 @@ impl SheetTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
-            .letter_spacing_em(-0.02)
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)

@@ -761,6 +761,23 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
         .entry("component.alert_dialog.description_line_height".to_string())
         .or_insert(20.0);
 
+    // new-york-v4 `SheetTitle` defaults:
+    // - Title is rendered as an `h2`, so it inherits the browser default 1.5rem block line-height
+    //   while the component source only adds `font-semibold`.
+    // - Description uses `text-sm` with Tailwind default leading (20px).
+    metrics
+        .entry("component.sheet.title_px".to_string())
+        .or_insert(16.0);
+    metrics
+        .entry("component.sheet.title_line_height".to_string())
+        .or_insert(24.0);
+    metrics
+        .entry("component.sheet.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.sheet.description_line_height".to_string())
+        .or_insert(20.0);
+
     // new-york-v4 `Empty` defaults:
     // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
     // - Description uses `text-sm/relaxed` (14px, 22.75px line-height).

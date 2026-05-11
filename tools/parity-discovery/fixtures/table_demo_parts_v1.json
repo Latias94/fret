@@ -1,0 +1,285 @@
+{
+  "schema_version": 1,
+  "component": "table",
+  "style": "new-york-v4",
+  "report": {
+    "id": "table_demo_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the official Table demo rendered in the UI Gallery docs page.",
+      "The upstream table fills the 1440px web viewport while the UI Gallery preview constrains the Fret table to the docs preview lane, so this fixture avoids absolute width and column-width claims.",
+      "The high-confidence parity surface is the root table height, body row height, and body row vertical cadence.",
+      "Fret predicates use bundle schema2 semantics so the fixture remains stable even when taffy sidecar selector export changes."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.table.demo_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+      },
+      {
+        "id": "upstream.table.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx"
+      },
+      {
+        "id": "upstream.table.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.table.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/table.rs"
+      },
+      {
+        "id": "fret.table.demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/table/demo.rs"
+      },
+      {
+        "id": "fret.table.demo_diag",
+        "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-demo-layout.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.table.demo.light.vp1440x900",
+      "snapshot": "table-demo",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.table.demo.root",
+      "snapshot": "table-demo",
+      "theme": "light",
+      "path": "0.0",
+      "context_id": "upstream.table.demo.light.vp1440x900",
+      "source_ref_id": "upstream.table.demo_dom_snapshot"
+    },
+    {
+      "id": "upstream.table.demo.row_inv001",
+      "snapshot": "table-demo",
+      "theme": "light",
+      "path": "0.0.2.0",
+      "context_id": "upstream.table.demo.light.vp1440x900",
+      "source_ref_id": "upstream.table.demo_dom_snapshot"
+    },
+    {
+      "id": "upstream.table.demo.row_inv002",
+      "snapshot": "table-demo",
+      "theme": "light",
+      "path": "0.0.2.1",
+      "context_id": "upstream.table.demo.light.vp1440x900",
+      "source_ref_id": "upstream.table.demo_dom_snapshot"
+    },
+    {
+      "id": "upstream.table.demo.row_inv007",
+      "snapshot": "table-demo",
+      "theme": "light",
+      "path": "0.0.2.6",
+      "context_id": "upstream.table.demo.light.vp1440x900",
+      "source_ref_id": "upstream.table.demo_dom_snapshot"
+    }
+  ],
+  "parts": [
+    {
+      "id": "demo_body_row_geometry",
+      "label": "Table demo body row geometry",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.table.source",
+          "upstream.table.demo",
+          "upstream.table.demo_dom_snapshot"
+        ],
+        "facts": [
+          "The upstream Table root is caption-bottom text-sm and measures 371.5px tall in the demo snapshot.",
+          "The demo body rows measure 37px tall, with each next row starting 37px below the previous body row."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.table.recipe",
+          "fret.table.demo",
+          "fret.table.demo_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-table-demo",
+          "ui-gallery-table-demo-row-inv001",
+          "ui-gallery-table-demo-row-inv002",
+          "ui-gallery-table-demo-row-inv007"
+        ],
+        "facts": [
+          "The UI Gallery table demo exposes a stable root selector and stable body row selectors.",
+          "The comparison avoids table width because the docs preview lane intentionally differs from the upstream full-width web viewport."
+        ]
+      },
+      "checks": [
+        {
+          "id": "root_keeps_demo_height_with_caption_and_footer",
+          "kind": "fret_layout_sidecar",
+          "expected": "The demo table root should keep the upstream total height including header, body, footer, and caption.",
+          "observed": "unknown",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx",
+            "ecosystem/fret-ui-shadcn/src/table.rs",
+            "tools/diag-scripts/ui-gallery/table/ui-gallery-table-demo-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.table.demo.root",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 371.5,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-table-demo",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 371.5,
+              "eps_px": 1.0,
+              "evidence_source": "bundle_schema2_semantics"
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The total table height catches row, footer, and caption spacing drift without relying on preview-lane width."
+          }
+        },
+        {
+          "id": "body_rows_keep_upstream_row_height",
+          "kind": "fret_layout_sidecar",
+          "expected": "Body invoice rows should stay on the upstream 37px row-height lane.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/table/demo.rs"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.table.demo.row_inv001",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 37.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.table.demo.row_inv007",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 37.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-table-demo-row-inv001",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 37.0,
+              "eps_px": 1.0,
+              "evidence_source": "bundle_schema2_semantics"
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-table-demo-row-inv007",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 37.0,
+              "eps_px": 1.0,
+              "evidence_source": "bundle_schema2_semantics"
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Body row height is the reusable signal for table cell padding, line-height, and row border drift."
+          }
+        },
+        {
+          "id": "body_rows_keep_upstream_vertical_cadence",
+          "kind": "fret_layout_sidecar",
+          "expected": "The second body row should start 37px below the first body row, and the last body row should start 222px below the first body row.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/table-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx",
+            "tools/diag-scripts/ui-gallery/table/ui-gallery-table-demo-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.table.demo.row_inv002",
+              "b": "upstream.table.demo.row_inv001",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 37.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.table.demo.row_inv007",
+              "b": "upstream.table.demo.row_inv001",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 222.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-table-demo-row-inv002",
+              "b": "ui-gallery-table-demo-row-inv001",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 37.0,
+              "eps_px": 1.0,
+              "evidence_source": "bundle_schema2_semantics"
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-table-demo-row-inv007",
+              "b": "ui-gallery-table-demo-row-inv001",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 222.0,
+              "eps_px": 1.0,
+              "evidence_source": "bundle_schema2_semantics"
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Vertical cadence catches accumulated fractional row-height drift across the table body."
+          }
+        }
+      ]
+    }
+  ]
+}

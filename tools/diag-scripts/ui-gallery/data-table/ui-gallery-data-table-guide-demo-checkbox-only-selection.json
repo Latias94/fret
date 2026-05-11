@@ -49,6 +49,14 @@
       "timeout_frames": 600
     },
     {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-data-table-select-row-1" },
+      "delta_y": -240.0,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
@@ -112,4 +120,3 @@
     }
   ]
 }
-

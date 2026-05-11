@@ -164,6 +164,7 @@ impl<H: UiHost> UiTree<H> {
             let mut mark_dirty_for_contained_layout = false;
             let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
             let mut self_delta: i32 = 0;
+            let mut applied_layout_dirty_delta: i32 = 0;
             let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
                 let next_parent = n.parent;
@@ -218,7 +219,13 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if agg_enabled {
-                    let apply_delta = pending_layout_dirty_delta.saturating_add(self_delta);
+                    let child_delta = if n.layout_dirty_children_suppressed {
+                        0
+                    } else {
+                        pending_layout_dirty_delta
+                    };
+                    let apply_delta = child_delta.saturating_add(self_delta);
+                    applied_layout_dirty_delta = apply_delta;
                     if apply_delta != 0 {
                         let underflow =
                             super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
@@ -260,7 +267,7 @@ impl<H: UiHost> UiTree<H> {
                 pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
                     0
                 } else {
-                    pending_layout_dirty_delta.saturating_add(self_delta)
+                    applied_layout_dirty_delta
                 };
             }
 
@@ -431,6 +438,7 @@ impl<H: UiHost> UiTree<H> {
             let mut mark_dirty = false;
             let mut mark_dirty_for_contained_layout = false;
             let mut self_delta: i32 = 0;
+            let mut applied_layout_dirty_delta: i32 = 0;
             let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
                 let next_parent = n.parent;
@@ -482,7 +490,13 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if agg_enabled {
-                    let apply_delta = pending_layout_dirty_delta.saturating_add(self_delta);
+                    let child_delta = if n.layout_dirty_children_suppressed {
+                        0
+                    } else {
+                        pending_layout_dirty_delta
+                    };
+                    let apply_delta = child_delta.saturating_add(self_delta);
+                    applied_layout_dirty_delta = apply_delta;
                     if apply_delta != 0 {
                         let underflow =
                             super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
@@ -531,7 +545,7 @@ impl<H: UiHost> UiTree<H> {
                 pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
                     0
                 } else {
-                    pending_layout_dirty_delta.saturating_add(self_delta)
+                    applied_layout_dirty_delta
                 };
             }
             if !invalidation_active && (!agg_enabled || pending_layout_dirty_delta == 0) {

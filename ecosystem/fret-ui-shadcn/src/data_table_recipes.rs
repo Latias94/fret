@@ -1324,6 +1324,7 @@ impl<TData> DataTableToolbar<TData> {
                         .a11y_label("Global filter")
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.filter_placeholder.clone())
+                        .test_id("data-table-toolbar-global-filter-input")
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });
@@ -1333,6 +1334,7 @@ impl<TData> DataTableToolbar<TData> {
                         .a11y_label(self.column_filter_a11y_label.clone())
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.column_filter_placeholder.clone())
+                        .test_id("data-table-toolbar-column-filter-input")
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });

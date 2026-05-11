@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "component": "calendar",
+  "style": "new-york-v4",
+  "report": {
+    "id": "calendar_responsive_mixed_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the UI Gallery Calendar responsive mixed semantics example.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+      "The panel lane remains source-backed Fret-only; the popover lane now compares against the upstream date-picker-with-range DOM snapshot so shell and month-row drift can be separated."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.calendar.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx"
+      },
+      {
+        "id": "upstream.calendar.demo",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/calendar-demo.tsx"
+      },
+      {
+        "id": "upstream.calendar.docs",
+        "path": "repo-ref/ui/apps/v4/content/docs/components/calendar.mdx"
+      },
+      {
+        "id": "upstream.calendar.date_picker_with_range",
+        "path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.calendar.page",
+        "path": "apps/fret-ui-gallery/src/ui/pages/calendar.rs"
+      },
+      {
+        "id": "fret.calendar.responsive_mixed",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/calendar/responsive_mixed_semantics.rs"
+      },
+      {
+        "id": "fret.calendar.diag",
+        "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json"
+      },
+      {
+        "id": "fret.calendar.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/calendar.rs"
+      },
+      {
+        "id": "fret.calendar.range_recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/calendar_range.rs"
+      },
+      {
+        "id": "fret.popover.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/popover.rs"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+      "snapshot": "date-picker-with-range",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+      "snapshot": "date-picker-with-range",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.0.0.1",
+      "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+      "source_ref_id": "upstream.calendar.date_picker_with_range"
+    },
+    {
+      "id": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+      "snapshot": "date-picker-with-range",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.0.0.2",
+      "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+      "source_ref_id": "upstream.calendar.date_picker_with_range"
+    }
+  ],
+  "parts": [
+    {
+      "id": "responsive_panel_month_stack",
+      "label": "Calendar responsive panel month stack",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.calendar.source",
+          "upstream.calendar.docs"
+        ],
+        "facts": [
+          "The base shadcn calendar owns month grid sizing and spacing through the calendar recipe.",
+          "The panel lane is a Fret gallery composition that intentionally keeps the two-month range in a vertical stack."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.calendar.page",
+          "fret.calendar.responsive_mixed",
+          "fret.calendar.diag"
+        ],
+        "test_ids": [
+          "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+          "ui-gallery.calendar.responsive.panel.month:2022-02-01"
+        ],
+        "facts": [
+          "The responsive panel uses `number_of_months(2)` and a stable `ui-gallery.calendar.responsive.panel` prefix.",
+          "The sidecar captures both month containers in the non-overlay panel state."
+        ]
+      },
+      "checks": [
+        {
+          "id": "panel_months_stack_with_expected_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "Panel months should remain 224px wide, keep their source-backed heights, and stack vertically with 16px spacing.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/responsive_mixed_semantics.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json",
+            "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json"
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 308.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 308.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+              "b": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+              "b": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": -324.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The panel layout is gallery composition evidence that should stay reviewable as a fixture."
+          }
+        }
+      ]
+    },
+    {
+      "id": "responsive_popover_month_row",
+      "label": "Calendar responsive popover month row",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.calendar.source",
+          "upstream.calendar.docs",
+          "upstream.calendar.date_picker_with_range"
+        ],
+        "facts": [
+          "The base shadcn calendar owns month grid sizing and spacing through the calendar recipe.",
+          "The upstream date-picker-with-range example renders the two-month popover row that this lane should match.",
+          "The popover lane stresses overlay shell sizing while the inner calendar months should keep the same source-backed dimensions."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.calendar.page",
+          "fret.calendar.responsive_mixed",
+          "fret.calendar.diag",
+          "fret.popover.recipe"
+        ],
+        "test_ids": [
+          "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+          "ui-gallery.calendar.responsive.popover.month:2022-02-01"
+        ],
+        "facts": [
+          "The responsive popover uses `number_of_months(2)` inside `PopoverContent` with a stable `ui-gallery.calendar.responsive.popover` prefix.",
+          "The sidecar captures the opened overlay state and can distinguish calendar-grid drift from overlay-shell drift."
+        ]
+      },
+      "checks": [
+        {
+          "id": "popover_months_row_with_expected_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "Popover months should remain 224px wide, keep their source-backed heights, and lay out as a row with 16px spacing.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/responsive_mixed_semantics.rs",
+            "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+            "ecosystem/fret-ui-shadcn/src/popover.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json",
+            "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 307.198,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 307.198,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+              "b": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": -240.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+              "b": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 307.198,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 224.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 307.198,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+              "b": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": -240.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+              "b": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The overlay row now matches placement and only the month height differs from upstream, so keep this as a recipe fixture until the calendar metrics are aligned."
+          }
+        }
+      ]
+    }
+  ]
+}

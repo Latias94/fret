@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("hijri.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::Px;
 use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
@@ -34,7 +33,6 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     shadcn::CalendarHijri::new(month, selected)
         .test_id_prefix("ui-gallery.calendar.hijri")
-        .cell_size(Px(38.0))
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx)
         .test_id("ui-gallery-calendar-hijri-calendar")

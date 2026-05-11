@@ -20,6 +20,8 @@ Individual report commands are kept for targeted debugging:
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-sweep-v1/button-group-select-after-select-padding/sessions/1778337694097-135816 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/input_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/select_demo_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json
 ```
@@ -31,15 +33,20 @@ python -m json.tool tools/parity-discovery/fixtures/button_group_parts_v1.json >
 python -m json.tool tools/parity-discovery/suites/shadcn_parity_discovery_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/input_parts_v1.json > $null
+python -m json.tool tools/parity-discovery/fixtures/select_demo_open_parts_v1.json > $null
+python -m json.tool tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json > $null
 python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/WORKSTREAM.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json > $null
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json > $null
@@ -260,18 +267,141 @@ M4c report triage scoring:
 - Generated reports now include derived `triage` metadata on every check and part.
 - Report summaries include `triage_level_counts` and `top_findings`, so future sweeps can sort
   non-passing rows by status, layer, promotion target, axis, confidence, and measured pixel gap.
-- `tools/parity-discovery/suites/shadcn_parity_discovery_v1.json` regenerates the current five
+- `tools/parity-discovery/suites/shadcn_parity_discovery_v1.json` regenerates the current ten
   report artifacts and writes
   `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json`.
-- Re-running the current five reports with post-fix evidence keeps all current component reports
+- Re-running the current ten reports with post-fix evidence keeps all current component reports
   at zero mismatches. `button_group_mismatch_report_v1.json` now uses the post-fix
   ButtonGroup Select evidence directory and the checked-in ButtonGroup upstream DOM snapshots, so
   stale seed sidecars no longer create false top findings.
+
+## M5 Select Padding Preservation
+
+Select open-state evidence now includes a confirmed mechanism fix for the bottom padding loss on
+single-child padded scroll containers:
+
+- Code changes:
+  `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+- Cause:
+  the scroll overflow observer previously trusted a single-child descendant frontier even when it
+  shaved a small padded container from `196px` down to `192px`, which dropped the Select viewport
+  bottom padding from the content extent.
+- Mechanism gate:
+
+```powershell
+$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo nextest run -p fret-ui scroll_observed_overflow_preserves_single_child_container_padding --status-level fail
+```
+
+- Web-vs-fret gate:
+
+```powershell
+$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement web_vs_fret_select_cases_match_web_fixtures --status-level fail
+```
+
+- Discovery evidence:
+  `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json`
+  now records the Select row as a promoted mechanism gate rather than an open mismatch.
+- Suite evidence:
+  `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json`
+  now regenerates with `31 pass_known`, `0 mismatch`, and `0 top findings`.
+- Diag capture:
+  the launcher-replayed attempt with `cargo run -p fret-ui-gallery` still exited before readiness,
+  but the same script succeeded when pointed at the prebuilt binary:
+
+```powershell
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json --dir target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin --session-auto --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery.exe
+```
+
+- Successful session:
+  `target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992`
+- Successful sidecar:
+  `target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json`
+- Retained evidence for this slice now includes the mechanism unit gate, the web-vs-fret fixture
+  gate, and the binary-backed diag sidecar.
+
+## M6 Calendar Responsive Coverage
+
+Calendar now has three discovery reports in the suite:
+
+- `calendar_custom_cell_size_sm_mismatch_report_v1.json`: 1 part, 1 pass, 0 mismatch.
+- `calendar_custom_cell_size_lg_mismatch_report_v1.json`: 1 part, 1 pass, 0 mismatch.
+- `calendar_responsive_mixed_mismatch_report_v1.json`: 2 parts, 2 pass, 0 mismatch.
+
+The calendar slice is useful because it separates example-owned sizing from overlay shell geometry:
+
+- the custom cell size reports lock the responsive day-button size and supporting text in the
+  gallery composition lane, with the small selected-day size backed by the viewport-specific
+  `calendar-20.vp375x900` upstream DOM snapshot and the large selected-day size backed by
+  `calendar-18`,
+- the mixed responsive report keeps the panel month stack and popover month row in the same
+  source-backed surface and now checks the popover row against the upstream
+  date-picker-with-range DOM snapshot after the calendar recipe gap normalization.
+
+Validation run on 2026-05-11:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v1.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json
+python -m json.tool tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json > $null
+python -m json.tool tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json > $null
+python -m json.tool tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json > $null
+python -m json.tool goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json > $null
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json > $null
+```
+
+- Successful suite evidence:
+  `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json`
+  now regenerates with `31 pass_known`, `0 mismatch`, and `0 top findings`.
+  The suite now includes the two custom-cell variants and the panel/popover mixed semantics lane.
 
 ## Second Sweep Audit Validation
 
 The second proactive sweep audit is recorded in
 `docs/workstreams/shadcn-parity-discovery-harness-v1/SECOND_SWEEP_AUDIT_2026-05-10.md`.
+
+## Resolved Calendar Gap
+
+Calendar now has strong sidecar coverage and the large custom-cell lane is upstream-DOM backed via
+`goldens/shadcn-web/v4/new-york-v4/calendar-18.json`, and the small custom-cell selected-day size
+is upstream-DOM backed via
+`docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json`.
+The popover / mixed Calendar lane is now upstream-backed for the desktop open state via
+`goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json`.
+
+The remaining recipe drift was removed by normalizing the body gap between the weekday row and the
+days grid in `calendar_range.rs` and `calendar_multiple.rs`:
+
+- upstream month height is `307.198px`,
+- Fret month height is `308px`,
+- the `1px` epsilon now covers the subpixel difference,
+- the panel lane passes after fixture normalization.
+
+This leaves the last calendar drift classified as recipe-layer rather than mechanism-layer.
+
+## M7 Calendar Hijri Layout Gate
+
+The docs-path `calendar-hijri` example is covered by a dedicated reusable regression gate:
+
+```powershell
+$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web
+```
+
+This gate failed before the fix with Hijri day-grid y drift and now passes after keeping
+`Space::N2` in `calendar_hijri.rs`. Hijri stays separate from the range/multiple calendar lane
+because its upstream docs-path spacing differs from the Gregorian multi-month examples.
+
+## M8 Calendar Hijri Discovery Coverage
+
+The docs-path `calendar-hijri` example is now also seeded into the parity-discovery suite:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json
+```
+
+This report is driven by roots-dump evidence and root-relative geometry predicates, so the calendar
+page shell offset does not contaminate the internal nav / selected-day alignment checks.
 
 It maps the goal requirements to concrete evidence and records three non-user-reported findings:
 

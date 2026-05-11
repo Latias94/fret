@@ -61,7 +61,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let row = row.test_id("ui-gallery-hover-card-demo-row");
 
     let content = shadcn::HoverCardContent::build(cx, |_cx| [row])
-        .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))
+        .refine_layout(LayoutRefinement::default().w_px(Px(320.0)).max_w(Px(320.0)))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-demo-content");
 

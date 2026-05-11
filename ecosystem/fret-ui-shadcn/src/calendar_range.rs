@@ -811,7 +811,7 @@ impl CalendarRange {
                             };
 
                             let body = ui::v_stack(move |_cx| vec![weekday_row, days])
-                                .gap(Space::N2)
+                                .gap(Space::N0)
                                 .into_element(cx);
 
                             vec![header, body]
@@ -940,7 +940,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                 .collect::<Vec<_>>()
         })
         .gap(Space::N4)
-        .items_start()
+        .items_stretch()
         .w_px(MetricRef::Px(months_span))
         .into_element(cx)
     } else {
@@ -1331,11 +1331,12 @@ fn calendar_range_month_view<H: UiHost>(
     };
 
     let body = ui::v_stack(move |_cx| vec![weekday_row, days])
-        .gap(Space::N2)
+        .gap(Space::N0)
         .into_element(cx);
 
     ui::v_stack(move |_cx| vec![month_caption, body])
         .gap(Space::N4)
+        .layout(LayoutRefinement::default().self_stretch())
         .into_element(cx)
 }
 

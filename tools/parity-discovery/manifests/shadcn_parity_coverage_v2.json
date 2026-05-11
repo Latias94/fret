@@ -1,0 +1,632 @@
+{
+  "schema_version": 1,
+  "manifest_id": "shadcn-parity-coverage-v2",
+  "generated_date": "2026-05-11",
+  "source_baseline": "tools/parity-discovery/suites/shadcn_parity_discovery_v1.json",
+  "purpose": "Prioritized sweep order for the next coverage-driven shadcn parity pass. Locked rows stay as regression gates. Gap rows are the next discovery targets for fixtures and diagnostics scripts.",
+  "layer_order": [
+    "runner",
+    "mechanism",
+    "policy",
+    "recipe",
+    "app_demo"
+  ],
+  "viewport_classes": [
+    {
+      "id": "desktop_1440x900",
+      "label": "desktop open",
+      "width_px": 1440,
+      "height_px": 900,
+      "device_pixel_ratio": 2,
+      "effective_root_required": false
+    },
+    {
+      "id": "mobile_effective_375x240",
+      "label": "effective mobile shell",
+      "width_px": 375,
+      "height_px": 240,
+      "device_pixel_ratio": 2,
+      "effective_root_required": true
+    },
+    {
+      "id": "tall_mobile_375x900",
+      "label": "tall mobile docs path",
+      "width_px": 375,
+      "height_px": 900,
+      "device_pixel_ratio": 2,
+      "effective_root_required": false
+    },
+    {
+      "id": "tablet_1024x768",
+      "label": "mid desktop / tablet",
+      "width_px": 1024,
+      "height_px": 768,
+      "device_pixel_ratio": 1.5,
+      "effective_root_required": false
+    }
+  ],
+  "coverage_targets": [
+    {
+      "rank": 1,
+      "priority": "P0",
+      "id": "select.open.desktop",
+      "component": "select",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "The open select path already exposed padding loss once; keep it locked so future chrome drift is caught early.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/select.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/select-demo.tsx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/select.rs",
+        "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 2,
+      "priority": "P0",
+      "id": "combobox.open.mobile",
+      "component": "combobox",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "mobile_effective_375x240",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Responsive combobox already found shell-sizing drift and now needs a permanent mobile viewport lock.",
+      "upstream_refs": [
+        "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/combobox.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/combobox.rs",
+        "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 3,
+      "priority": "P0",
+      "id": "combobox.open.desktop",
+      "component": "combobox",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Desktop combobox shell sizing was the companion half of the same overlay sizing discovery loop.",
+      "upstream_refs": [
+        "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/combobox.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/combobox.rs",
+        "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 4,
+      "priority": "P0",
+      "id": "popover.command.desktop",
+      "component": "popover",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "The command palette shell needs a fixed size-hint contract so the opening frame cannot regress again.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/popover.mdx"
+      ],
+      "fret_refs": [
+        "ecosystem/fret-ui-shadcn/src/popover.rs",
+        "ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/mechanism_harness.rs"
+      ]
+    },
+    {
+      "rank": 5,
+      "priority": "P0",
+      "id": "drawer.bottom_sheet.mobile",
+      "component": "drawer",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "mobile_effective_375x240",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "The bottom-sheet height rule already exposed a real mechanism bug and should stay under a permanent mobile lock.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/drawer-dialog.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/drawer.mdx"
+      ],
+      "fret_refs": [
+        "ecosystem/fret-ui-shadcn/src/drawer.rs",
+        "ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json",
+        "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-responsive-dialog-smoke.json"
+      ]
+    },
+    {
+      "rank": 6,
+      "priority": "P0",
+      "id": "calendar.hijri.desktop",
+      "component": "calendar-hijri",
+      "state": "static month",
+      "trigger": "none",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Hijri now has stable roots-dump evidence and should stay locked while later calendar work expands coverage.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/date-picker-with-range.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/calendar.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+        "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 7,
+      "priority": "P0",
+      "id": "button-group.docs-demo.desktop",
+      "component": "button-group",
+      "state": "docs demo input/select geometry",
+      "trigger": "none",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Button Group was a v1 lock for grouped control chrome, joined borders, input fill behavior, select trigger sizing, and the search-input lane that originally exposed gallery drift.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/button-group.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/button_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/button_group/input.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+        "tools/parity-discovery/fixtures/button_group_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 8,
+      "priority": "P0",
+      "id": "dropdown-menu.submenu.mobile",
+      "component": "dropdown-menu",
+      "state": "submenu open",
+      "trigger": "click",
+      "viewport_class": "mobile_effective_375x240",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Dropdown Menu submenu geometry was a v1 lock for menu item chrome, submenu arrow/trigger alignment, and runner-visible overlay evidence.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx",
+        "repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/submenu.rs",
+        "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+        "tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 9,
+      "priority": "P0",
+      "id": "input.docs-demo.desktop",
+      "component": "input",
+      "state": "docs demo static",
+      "trigger": "none",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Input was a v1 lock for base input height, label/example composition, and app-demo container sizing before expanding into Input OTP and Input Group surfaces.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/input.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/input.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/input/demo.rs",
+        "tools/parity-discovery/fixtures/input_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 10,
+      "priority": "P0",
+      "id": "calendar.custom-cell-size-sm.mobile",
+      "component": "calendar",
+      "state": "custom cell size small",
+      "trigger": "none",
+      "viewport_class": "tall_mobile_375x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "app_demo",
+      "promotion_target": "regression_gate",
+      "why": "The small custom-cell Calendar lane was a v1 lock for docs-path responsive calendar sizing and stable day-cell geometry.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/calendar.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/calendar.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs",
+        "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+        "tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 11,
+      "priority": "P0",
+      "id": "calendar.custom-cell-size-lg.desktop",
+      "component": "calendar",
+      "state": "custom cell size large",
+      "trigger": "none",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "app_demo",
+      "promotion_target": "regression_gate",
+      "why": "The large custom-cell Calendar lane was a v1 lock for day-cell scaling, calendar root sizing, and app-demo composition around custom calendar geometry.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/calendar.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/calendar-18.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/calendar.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/calendar/custom_cell_size.rs",
+        "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
+        "tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 12,
+      "priority": "P0",
+      "id": "calendar.responsive-mixed.desktop",
+      "component": "calendar",
+      "state": "responsive popover vs panel",
+      "trigger": "open",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v1",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "The mixed responsive Calendar lane was a v1 lock for popover-vs-panel layout semantics and date-range docs-path composition.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/calendar.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/calendar.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/calendar/responsive_mixed_semantics.rs",
+        "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json",
+        "tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json"
+      ]
+    },
+    {
+      "rank": 13,
+      "priority": "P1",
+      "id": "context-menu.docs-demo.desktop",
+      "component": "context-menu",
+      "state": "docs demo open",
+      "trigger": "right_click",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Context menus are high-risk for overlay routing, submenu corridors, and keyboard/dismiss semantics, and the first v2 slice is now fixed and locked as a regression anchor.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/context-menu-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/context-menu.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/context_menu.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs",
+        "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-docs-smoke.json",
+        "tools/parity-discovery/fixtures/context_menu_demo_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/context_menu_demo_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 14,
+      "priority": "P1",
+      "id": "navigation-menu.docs-demo.desktop",
+      "component": "navigation-menu",
+      "state": "hover switch / escape",
+      "trigger": "hover",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Navigation menu is a dense hover/keyboard surface and tends to expose placement and focus-routing bugs; the v2 docs-demo components-open fixture now locks the column-width drift that the discovery sweep found.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/navigation-menu-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+        "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+        "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-docs-layout-smoke.json",
+        "tools/parity-discovery/fixtures/navigation_menu_docs_demo_components_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/navigation_menu_docs_demo_components_open_mismatch_report_v2_pre_fix.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/navigation_menu_docs_demo_components_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 15,
+      "priority": "P1",
+      "id": "hover-card.docs-demo.desktop",
+      "component": "hover-card",
+      "state": "hover",
+      "trigger": "pointer_hover",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Hover cards couple delayed open/close behavior with portal placement, and the v2 slice now locks the docs-demo open geometry while proving bundle-schema2 semantics fallback for missing sidecar selectors.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/hover-card-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/hover-card.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/hover_card.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/hover_card/demo.rs",
+        "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json",
+        "tools/parity-discovery/fixtures/hover_card_demo_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/hover_card_demo_open_mismatch_report_v2_pre_fix.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/hover_card_demo_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 16,
+      "priority": "P1",
+      "id": "tooltip.docs-demo.desktop",
+      "component": "tooltip",
+      "state": "hover",
+      "trigger": "pointer_hover",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Tooltip is small but sensitive to placement, animation, hover intent, and cross-overlay geometry evidence; the v2 slice now locks trigger size, content chrome size, and arrow alignment while proving predicate-level evidence-source selection.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/tooltip-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/tooltip.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/tooltip.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/tooltip/demo.rs",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json",
+        "tools/parity-discovery/fixtures/tooltip_demo_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/tooltip_demo_open_mismatch_report_v2_pre_fix.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/tooltip_demo_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 17,
+      "priority": "P1",
+      "id": "dialog.docs-demo.desktop",
+      "component": "dialog",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "app_demo",
+      "promotion_target": "regression_gate",
+      "why": "Dialog is a baseline modal overlay surface, and the v2 slice now locks the docs-demo content/body/footer geometry after discovering and fixing an app-demo composition drift from FieldSet/Field to upstream Label/Input stacks.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/dialog-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/dialog.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/dialog.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-focus-trap-tab-cycle.json",
+        "tools/parity-discovery/fixtures/dialog_demo_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/dialog_demo_open_mismatch_report_v2_pre_fix.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/dialog_demo_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 18,
+      "priority": "P1",
+      "id": "sheet.docs-demo.mobile",
+      "component": "sheet",
+      "state": "open",
+      "trigger": "click",
+      "viewport_class": "mobile_effective_375x240",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "mechanism",
+      "promotion_target": "regression_gate",
+      "why": "Sheet is the first v2 mobile/responsive slice and now locks effective viewport, right-side shell geometry, docs body height/field offsets, and footer button width/top/gap.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/sheet-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/sheet.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/sheet.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs",
+        "ecosystem/fret-ui-shadcn/src/sheet.rs",
+        "ecosystem/fret-ui-shadcn/src/shadcn_themes.rs",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-narrow-open-screenshot.json",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-docs-demo-open-screenshot.json",
+        "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json",
+        "tools/parity-discovery/fixtures/sheet_demo_vp375x240_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/sheet_demo_vp375x240_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 19,
+      "priority": "P1",
+      "id": "menubar.docs-demo.desktop",
+      "component": "menubar",
+      "state": "docs demo open",
+      "trigger": "click",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Menubar couples root chrome, fixed trigger lanes, roving focus, open menu rows, and scale-factor-sensitive border-box geometry; the v2 slice found and fixed h-9 root and trigger alignment drift without a user-provided screenshot.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/menubar-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/menubar.mdx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/menubar.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs",
+        "ecosystem/fret-ui-shadcn/src/menubar.rs",
+        "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json",
+        "tools/parity-discovery/fixtures/menubar_demo_open_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/menubar_demo_open_mismatch_report_v2_pre_fix.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/menubar_demo_open_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 20,
+      "priority": "P1",
+      "id": "input-otp.docs-demo.desktop",
+      "component": "input-otp",
+      "state": "docs demo static",
+      "trigger": "none",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Input OTP combines a hidden text input with projected slot chrome, separator geometry, and focus hit areas; the v2 slice now locks the docs-demo 36px slot lane and 76px cross-group separator offset while documenting that Fret evidence must use bundle schema2 semantics for these stable test ids.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-otp.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-otp-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/input-otp.mdx",
+        "goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/input_otp.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/input_otp/demo.rs",
+        "ecosystem/fret-ui-shadcn/src/input_otp.rs",
+        "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-demo-layout.json",
+        "tools/parity-discovery/fixtures/input_otp_demo_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/input_otp_demo_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 21,
+      "priority": "P1",
+      "id": "table.docs-demo.desktop",
+      "component": "table",
+      "state": "docs demo static",
+      "trigger": "none",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "The base Table is the leaf table surface before DataTable policy; the v2 slice locks total demo height, body row height, and accumulated row cadence while intentionally avoiding preview-lane column-width claims.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx",
+        "repo-ref/ui/apps/v4/content/docs/components/table.mdx",
+        "goldens/shadcn-web/v4/new-york-v4/table-demo.json"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/table.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/table/demo.rs",
+        "ecosystem/fret-ui-shadcn/src/table.rs",
+        "tools/diag-scripts/ui-gallery/table/ui-gallery-table-demo-layout.json",
+        "tools/parity-discovery/fixtures/table_demo_parts_v1.json",
+        "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/table_demo_mismatch_report_v2.json"
+      ]
+    },
+    {
+      "rank": 22,
+      "priority": "P1",
+      "id": "data-table.policy.desktop",
+      "component": "data-table",
+      "state": "docs path policy interactions",
+      "trigger": "click, shift-click, meta-click, menu toggle",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "policy",
+      "promotion_target": "diag_suite_gate",
+      "why": "DataTable is the policy-heavy table surface for column visibility, row actions overlays, checkbox-only selection, list-like pointer selection, and smoke coverage. The v2 slice found no component policy defect, but it hardened scroll-before-click scripts and fixed a diagnostics runner stale last_bundle_dir issue that made reuse-launch suites lint the wrong artifact.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/data-table.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/blocks/dashboard-01/components/data-table.tsx"
+      ],
+      "fret_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/data_table.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs",
+        "ecosystem/fret-ui-shadcn/src/data_table.rs",
+        "ecosystem/fret-ui-kit/src/declarative/table.rs",
+        "tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
+        "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+        "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
+        "ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs",
+        "target/fret-diag/shadcn-parity-discovery-harness-v2-data-table-policy-suite-run-dir-fix/sessions/1778496500156-72456/suite.summary.json"
+      ]
+    }
+  ]
+}

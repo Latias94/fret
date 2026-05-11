@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "shadcn-parity-discovery-v1",
-  "generated_date": "2026-05-10",
+  "generated_date": "2026-05-11",
   "reports": [
     {
       "id": "button_group",
@@ -35,6 +35,62 @@
       ],
       "upstream_dom_snapshots": [
         "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+      ]
+    },
+    {
+      "id": "select_demo_open",
+      "mapping": "tools/parity-discovery/fixtures/select_demo_open_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992"
+      ],
+      "upstream_dom_snapshots": [
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json"
+      ]
+    },
+    {
+      "id": "calendar_custom_cell_size_sm",
+      "mapping": "tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout"
+      ],
+      "upstream_dom_snapshots": [
+        "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json"
+      ]
+    },
+    {
+      "id": "calendar_custom_cell_size_lg",
+      "mapping": "tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438865863-ui-gallery-calendar-custom-cell-size-responsive-lg.layout"
+      ],
+      "upstream_dom_snapshots": [
+        "goldens/shadcn-web/v4/new-york-v4/calendar-18.json"
+      ]
+    },
+    {
+      "id": "calendar_responsive_mixed",
+      "mapping": "tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout",
+        "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout"
+      ],
+      "upstream_dom_snapshots": [
+        "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json"
+      ]
+    },
+    {
+      "id": "calendar_hijri",
+      "mapping": "tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json",
+      "fret_layout_sidecar_dirs": [
+        "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484"
+      ],
+      "upstream_dom_snapshots": [
+        "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
       ]
     },
     {

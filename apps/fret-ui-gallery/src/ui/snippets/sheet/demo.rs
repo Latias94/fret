@@ -14,27 +14,33 @@ fn profile_fields<H: UiHost>(
                  label: &'static str,
                  input_test_id: &'static str,
                  model: Model<String>| {
-        shadcn::Field::new(ui::children![
-            cx;
-            shadcn::FieldLabel::new(label),
-            shadcn::Input::new(model)
-                .test_id(input_test_id)
-                .refine_layout(LayoutRefinement::default().w_full())
-        ])
+        ui::v_flex(move |cx| {
+            ui::children![
+                cx;
+                shadcn::Label::new(label),
+                shadcn::Input::new(model)
+                    .test_id(input_test_id)
+                    .refine_layout(LayoutRefinement::default().w_full())
+            ]
+        })
+        .gap(Space::N3)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx)
     };
 
-    shadcn::FieldSet::new(ui::children![
-        cx;
-        field(cx, "Name", "ui-gallery-sheet-demo-name-input", name),
-        field(
-            cx,
-            "Username",
-            "ui-gallery-sheet-demo-username-input",
-            username,
-        )
-    ])
-    .refine_layout(LayoutRefinement::default().w_full())
+    ui::v_flex(move |cx| {
+        vec![
+            field(cx, "Name", "ui-gallery-sheet-demo-name-input", name),
+            field(
+                cx,
+                "Username",
+                "ui-gallery-sheet-demo-username-input",
+                username,
+            ),
+        ]
+    })
+    .gap(Space::N6)
+    .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
 }
 
@@ -62,10 +68,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         LayoutRefinement::default()
                             .w_full()
                             .min_w_0()
-                            .min_h_0()
                             .flex_1(),
                     );
                     cx.container(props, move |_cx| vec![fields])
+                        .test_id("ui-gallery-sheet-demo-body")
                 };
 
                 shadcn::SheetContent::new([]).with_children(cx, |cx| {
@@ -78,7 +84,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 )
                                 .into_element(cx),
                             ]
-                        }),
+                        })
+                        .test_id("ui-gallery-sheet-demo-header"),
                         fields,
                         shadcn::SheetFooter::new([]).with_children(cx, |cx| {
                             vec![

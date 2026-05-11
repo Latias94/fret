@@ -1,0 +1,580 @@
+{
+  "schema_version": 1,
+  "component": "sheet",
+  "style": "new-york-v4",
+  "report": {
+    "id": "sheet_demo_vp375x240_open_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the official Sheet demo opened in the constrained 375x240 mobile viewport used by the upstream shadcn DOM golden.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+      "The slice separates the sheet shell from inner docs-path fields and footer buttons so shell sizing drift does not hide recipe or gallery-composition drift."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.sheet.demo.open_vp375x240_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json"
+      },
+      {
+        "id": "upstream.sheet.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx"
+      },
+      {
+        "id": "upstream.sheet.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/sheet-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.sheet.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/sheet.rs"
+      },
+      {
+        "id": "fret.sheet.demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs"
+      },
+      {
+        "id": "fret.sheet.vp375x240_open_diag",
+        "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.sheet.demo.light.open.vp375x240",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.sheet.demo.trigger",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "0",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo"
+    },
+    {
+      "id": "upstream.sheet.demo.content",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "portal.1",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo.open_vp375x240_dom_snapshot"
+    },
+    {
+      "id": "upstream.sheet.demo.name_input",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "portal.1.1.0.1",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo"
+    },
+    {
+      "id": "upstream.sheet.demo.body",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "portal.1.1",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo"
+    },
+    {
+      "id": "upstream.sheet.demo.username_input",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "portal.1.1.1.1",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo"
+    },
+    {
+      "id": "upstream.sheet.demo.save_button",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "portal.1.2.0",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo"
+    },
+    {
+      "id": "upstream.sheet.demo.close_button",
+      "snapshot": "sheet-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "path": "portal.1.2.1",
+      "context_id": "upstream.sheet.demo.light.open.vp375x240",
+      "source_ref_id": "upstream.sheet.demo"
+    }
+  ],
+  "parts": [
+    {
+      "id": "mobile_effective_viewport",
+      "label": "Sheet demo mobile effective viewport",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.sheet.demo.open_vp375x240_dom_snapshot"
+        ],
+        "facts": [
+          "The upstream mobile snapshot was extracted at 375x240 CSS px."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.sheet.vp375x240_open_diag"
+        ],
+        "test_ids": [],
+        "facts": [
+          "The native diagnostics script must prove the effective layout root is 375x240 before comparing mobile sheet geometry.",
+          "On the current Windows native runner, requesting a 375x220 surface produces the required 375x240 effective layout root."
+        ]
+      },
+      "checks": [
+        {
+          "id": "mobile_effective_viewport_matches_upstream_snapshot",
+          "kind": "fret_layout_sidecar",
+          "expected": "The Fret sidecar root should match the 375x240 viewport used by the upstream DOM snapshot.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "evidence_refs": [
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "predicates": [
+            {
+              "kind": "root_metric",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 375.333,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "root_metric",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 240.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Viewport drift must be caught as runner evidence before component or mechanism geometry is compared."
+          }
+        }
+      ]
+    },
+    {
+      "id": "right_sheet_shell_surface",
+      "label": "Sheet demo right-side mobile shell surface",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.sheet.source",
+          "upstream.sheet.demo"
+        ],
+        "facts": [
+          "The default shadcn SheetContent side is right.",
+          "The right-side sheet owns inset-y-0 right-0 h-full w-3/4, with sm:max-w-sm applying only at the sm breakpoint.",
+          "At 375.333px wide, the upstream open panel is 281.5px wide and spans the full 240px viewport height."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.sheet.recipe",
+          "fret.sheet.demo",
+          "fret.sheet.vp375x240_open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-sheet-demo-panel"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes a stable test id on the open SheetContent panel.",
+          "The diagnostics script captures a layout sidecar after the slide-in motion settles."
+        ]
+      },
+      "checks": [
+        {
+          "id": "right_sheet_panel_matches_mobile_shell",
+          "kind": "fret_layout_sidecar",
+          "expected": "The right-side SheetContent panel should measure 281.5px wide, 240px tall, and start at x ~= 93.833 in the 375x240 mobile viewport.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "layer": "mechanism",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx",
+            "ecosystem/fret-ui-shadcn/src/sheet.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.content",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 93.833,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.content",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 281.5,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.content",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 240.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-panel",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 93.833,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-panel",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 281.5,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-panel",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 240.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "Right sheet shell sizing crosses overlay placement, viewport width fractions, and side-specific absolute layout."
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_field_inputs_surface",
+      "label": "Sheet demo mobile field input widths and offsets",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.sheet.demo",
+          "upstream.sheet.source"
+        ],
+        "facts": [
+          "The docs demo uses a flex-1 grid body with px-4 and gap-6.",
+          "Inputs fill the sheet content lane inside the 16px horizontal body padding."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.sheet.demo",
+          "fret.sheet.recipe",
+          "fret.sheet.vp375x240_open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-sheet-demo-panel",
+          "ui-gallery-sheet-demo-body",
+          "ui-gallery-sheet-demo-name-input",
+          "ui-gallery-sheet-demo-username-input",
+          "ui-gallery-sheet-demo-save"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes stable test ids for the docs body and both profile inputs.",
+          "Body and input geometry are compared relative to the panel so shell position drift does not hide body layout drift."
+        ]
+      },
+      "checks": [
+        {
+          "id": "field_inputs_keep_mobile_body_width_and_vertical_offsets",
+          "kind": "fret_layout_sidecar",
+          "expected": "The profile inputs should fill the upstream px-4 body lane and keep the docs-path vertical offsets relative to the sheet panel.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/sheet-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.sheet.demo.body",
+              "b": "upstream.sheet.demo.content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 118.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.body",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 148.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.sheet.demo.name_input",
+              "b": "upstream.sheet.demo.content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 144.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.name_input",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 248.833,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.sheet.demo.save_button",
+              "b": "upstream.sheet.demo.name_input",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 154.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.sheet.demo.username_input",
+              "b": "upstream.sheet.demo.name_input",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 86.0,
+              "eps_px": 2.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-sheet-demo-body",
+              "b": "ui-gallery-sheet-demo-panel",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 118.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-body",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 148.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-sheet-demo-name-input",
+              "b": "ui-gallery-sheet-demo-panel",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 144.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-name-input",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 248.833,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-sheet-demo-save",
+              "b": "ui-gallery-sheet-demo-name-input",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 154.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-sheet-demo-username-input",
+              "b": "ui-gallery-sheet-demo-name-input",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 86.0,
+              "eps_px": 2.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-path body composition is the reusable regression surface for Sheet demo field layout."
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_footer_buttons_surface",
+      "label": "Sheet demo mobile footer button stack",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.sheet.source",
+          "upstream.sheet.demo"
+        ],
+        "facts": [
+          "SheetFooter owns mt-auto flex flex-col gap-2 p-4.",
+          "The default docs demo footer buttons stretch to the same px-4 content lane as the body inputs."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.sheet.recipe",
+          "fret.sheet.demo",
+          "fret.sheet.vp375x240_open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-sheet-demo-panel",
+          "ui-gallery-sheet-demo-save",
+          "ui-gallery-sheet-demo-close"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes stable test ids for the sheet panel and both footer buttons.",
+          "Footer buttons may be clipped by the viewport, but their layout bounds remain deterministic in the sidecar.",
+          "The save button top offset is checked relative to the panel so a collapsed body flex item cannot pass by width alone."
+        ]
+      },
+      "checks": [
+        {
+          "id": "footer_buttons_keep_mobile_stack_width_and_gap",
+          "kind": "fret_layout_sidecar",
+          "expected": "The footer buttons should stay 248.833px wide, 36px tall, and separated by an 8px vertical gap in the mobile sheet.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.sheet.demo.save_button",
+              "b": "upstream.sheet.demo.content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 298.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.save_button",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 248.833,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.sheet.demo.save_button",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.sheet.demo.close_button",
+              "b": "upstream.sheet.demo.save_button",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 44.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-sheet-demo-save",
+              "b": "ui-gallery-sheet-demo-panel",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 298.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-save",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 248.833,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-sheet-demo-save",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-sheet-demo-close",
+              "b": "ui-gallery-sheet-demo-save",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 44.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The SheetFooter vertical stack is recipe-owned and should stay locked once proven against the mobile docs demo."
+          }
+        }
+      ]
+    }
+  ]
+}

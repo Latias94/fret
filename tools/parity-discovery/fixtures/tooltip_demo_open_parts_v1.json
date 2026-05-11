@@ -1,0 +1,391 @@
+{
+  "schema_version": 1,
+  "component": "tooltip",
+  "style": "new-york-v4",
+  "report": {
+    "id": "tooltip_demo_open_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the official Tooltip demo opened in the UI Gallery docs page.",
+      "The upstream DOM golden places the trigger at the top edge of its target root, so Radix collision handling flips the default top-side tooltip below the trigger; the UI Gallery demo is in the page body and is not an equivalent absolute-position context.",
+      "The fixture therefore compares stable geometry facts that survive the different page context: trigger size, tooltip content chrome size, arrow size, and arrow-to-trigger horizontal alignment.",
+      "The Fret taffy sidecar currently misses the tooltip demo test ids, so this slice intentionally exercises the parity generator's sibling bundle.schema2 semantics fallback for overlay nodes."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.tooltip.demo.open_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json"
+      },
+      {
+        "id": "upstream.tooltip.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx"
+      },
+      {
+        "id": "upstream.tooltip.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/tooltip-demo.tsx"
+      },
+      {
+        "id": "upstream.radix.tooltip.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/primitives/packages/react/tooltip/src/tooltip.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.tooltip.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/tooltip.rs"
+      },
+      {
+        "id": "fret.tooltip.demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/tooltip/demo.rs"
+      },
+      {
+        "id": "fret.tooltip.open_arrow_diag",
+        "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.tooltip.demo.trigger",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "0",
+      "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.tooltip.demo"
+    },
+    {
+      "id": "upstream.tooltip.demo.content",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0",
+      "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.tooltip.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.tooltip.demo.text",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.0",
+      "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.tooltip.demo"
+    },
+    {
+      "id": "upstream.tooltip.demo.arrow",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.1",
+      "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.tooltip.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.tooltip.demo.arrow_svg",
+      "snapshot": "tooltip-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.0.1.0",
+      "context_id": "upstream.tooltip.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.tooltip.demo.open_dom_snapshot"
+    }
+  ],
+  "parts": [
+    {
+      "id": "demo_trigger_size",
+      "label": "Tooltip demo trigger button size",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.tooltip.demo",
+          "upstream.tooltip.source"
+        ],
+        "facts": [
+          "The docs demo uses the default shadcn outline Button trigger with text \"Hover\".",
+          "The upstream trigger measures about 72px wide and 36px tall in the open DOM snapshot."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.tooltip.demo",
+          "fret.tooltip.open_arrow_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-tooltip-demo-trigger"
+        ],
+        "facts": [
+          "The UI Gallery tooltip demo exposes a stable test id on the trigger Button.",
+          "The open-arrow diagnostics script now captures both layout sidecar evidence and bundle.schema2 fallback evidence after the tooltip has opened."
+        ]
+      },
+      "checks": [
+        {
+          "id": "trigger_button_keeps_upstream_demo_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "The Fret tooltip demo trigger should stay on the same h-9 outline Button size lane as upstream.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/tooltip-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/tooltip/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.tooltip.demo.trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 71.99,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.tooltip.demo.trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-tooltip-demo-trigger",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 71.99,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-tooltip-demo-trigger",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The trigger button is the docs-path anchor and should stay locked before placement deltas are interpreted."
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_content_chrome_size",
+      "label": "Tooltip demo open content chrome size",
+      "axis": "chrome",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.tooltip.source",
+          "upstream.tooltip.demo"
+        ],
+        "facts": [
+          "The new-york-v4 TooltipContent owns rounded-md px-3 py-1.5 text-xs text-balance and bg-foreground/text-background chrome.",
+          "The short docs demo content measures about 97.5px wide and 28px tall."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.tooltip.recipe",
+          "fret.tooltip.demo",
+          "fret.tooltip.open_arrow_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-tooltip-demo-panel"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes a stable open panel test id.",
+          "The parity report reads this overlay node from the sibling bundle.schema2 evidence when the taffy sidecar does not include the test id."
+        ]
+      },
+      "checks": [
+        {
+          "id": "content_panel_keeps_upstream_short_label_chrome_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "The Fret tooltip open panel should match the upstream short-label content width and 28px line-box height.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx",
+            "ecosystem/fret-ui-shadcn/src/tooltip.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.tooltip.demo.content",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 97.49,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.tooltip.demo.content",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 28.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-tooltip-demo-panel",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 97.49,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-tooltip-demo-panel",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 28.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Tooltip chrome is a recipe-owned shadcn default and should be caught before visual drift reaches screenshots."
+          }
+        }
+      ]
+    },
+    {
+      "id": "demo_arrow_geometry",
+      "label": "Tooltip demo arrow size and anchor alignment",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.tooltip.source",
+          "upstream.radix.tooltip.source",
+          "upstream.tooltip.demo"
+        ],
+        "facts": [
+          "The shadcn TooltipContent always renders the Radix arrow with size-2.5, rotate-45, and foreground fill.",
+          "The arrow wrapper is 10px square and stays horizontally centered on the trigger in the default center alignment."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.tooltip.recipe",
+          "fret.tooltip.demo",
+          "fret.tooltip.open_arrow_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-tooltip-demo-trigger",
+          "ui-gallery-tooltip-demo-arrow"
+        ],
+        "facts": [
+          "The demo enables arrow(true) and exposes a stable arrow test id.",
+          "The fixture checks center_x alignment instead of absolute side because the upstream top-edge target flips below the trigger while the UI Gallery body target can remain above it."
+        ]
+      },
+      "checks": [
+        {
+          "id": "arrow_keeps_upstream_size_and_center_alignment",
+          "kind": "fret_layout_sidecar",
+          "expected": "The arrow wrapper should stay 10px square and horizontally centered on the trigger.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "layer": "mechanism",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx",
+            "F:/SourceCodes/Rust/fret/repo-ref/primitives/packages/react/tooltip/src/tooltip.tsx",
+            "ecosystem/fret-ui-shadcn/src/tooltip.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.tooltip.demo.arrow",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 10.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.tooltip.demo.arrow",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 10.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.tooltip.demo.arrow",
+              "b": "upstream.tooltip.demo.trigger",
+              "metric": "center_x",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-tooltip-demo-arrow",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 10.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-tooltip-demo-arrow",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 10.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-tooltip-demo-arrow",
+              "b": "ui-gallery-tooltip-demo-trigger",
+              "evidence_source": "bundle_schema2_semantics",
+              "metric": "center_x",
+              "comparison": "eq",
+              "value_px": 0.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "Arrow placement crosses tooltip recipe chrome and overlay placement mechanics, so it should stay in the v2 parity sweep."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -459,7 +459,9 @@ fn trust_scroll_overflow_nonleaf_axis(
     if child_count != 1 {
         return Px(own.max(child_frontier));
     }
-    if pinned_to_content_extent && child_frontier + 0.5 < own {
+    if pinned_to_content_extent
+        && own > child_frontier + SCROLL_OVERFLOW_NONLEAF_OVERSHOOT_TOLERANCE
+    {
         return Px(child_frontier);
     }
     if own <= child_frontier + SCROLL_OVERFLOW_NONLEAF_OVERSHOOT_TOLERANCE {
@@ -3466,6 +3468,39 @@ mod tests {
 
         assert_eq!(observed.loose.height, Px(300.0));
         assert_eq!(observed.trusted.height, Px(300.0));
+        assert!(telemetry.deep_scan_enabled);
+    }
+
+    #[test]
+    fn scroll_observed_overflow_preserves_single_child_container_padding() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+        let padded_container = ids.insert(());
+        let child = ids.insert(());
+
+        let mut tree = TestOverflowTree::default();
+        tree.children.insert(barrier_root, vec![padded_container]);
+        tree.children.insert(padded_container, vec![child]);
+
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(padded_container, rect_xywh(0.0, 0.0, 100.0, 196.0));
+        tree.bounds.insert(child, rect_xywh(0.0, 4.0, 100.0, 188.0));
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let (observed, telemetry) = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(196.0)),
+            true,
+            true,
+        );
+
+        assert_eq!(observed.loose.height, Px(196.0));
+        assert_eq!(observed.trusted.height, Px(196.0));
         assert!(telemetry.deep_scan_enabled);
     }
 

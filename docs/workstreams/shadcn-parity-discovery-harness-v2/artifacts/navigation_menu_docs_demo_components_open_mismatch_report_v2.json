@@ -1,0 +1,979 @@
+{
+  "schema_version": 1,
+  "component": "navigation-menu",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/navigation_menu_docs_demo_components_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+      "snapshot": "navigation-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "components",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "navigation-menu-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "components",
+        "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 1,
+    "status_counts": {
+      "pass_known": 1,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 0,
+      "gallery_composition": 6,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 6,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 0,
+      "app_demo": 6,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 6,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 1
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 6,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 126,
+    "bundle_semantics_test_id_count": 126,
+    "measured_test_id_count": 126,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 6,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "components_menu_item_grid_widths",
+      "label": "Navigation Menu components-open item grid widths",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "alert_dialog_column_width",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-navigation-menu-docs-demo-link-alert-dialog",
+        "ui-gallery-navigation-menu-docs-demo-link-hover-card",
+        "ui-gallery-navigation-menu-docs-demo-link-progress",
+        "ui-gallery-navigation-menu-docs-demo-link-scroll-area",
+        "ui-gallery-navigation-menu-docs-demo-link-tabs",
+        "ui-gallery-navigation-menu-docs-demo-link-tooltip"
+      ],
+      "upstream_facts": [
+        "The official new-york-v4 components menu renders a w-[600px] grid with gap-2 and md:grid-cols-2.",
+        "Each components menu link occupies one grid column, measuring 296px wide in the upstream DOM golden.",
+        "The item width is an example-local layout fact, not intrinsic NavigationMenuLink chrome."
+      ],
+      "fret_facts": [
+        "The UI Gallery docs-demo exposes stable test ids for each components-open menu link.",
+        "The hover-switch diagnostics script now captures a layout sidecar while the Components menu is open."
+      ],
+      "checks": [
+        {
+          "id": "alert_dialog_column_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Alert Dialog link should occupy one 296px upstream grid column.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-navigation-menu-docs-demo-link-alert-dialog",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 406.667,
+                    "y": 490.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "raw_bounds": {
+                    "x": 406.667,
+                    "y": 490.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(435v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.navigation_menu.components_alert_dialog_link",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 98.927,
+                    "y": 50.667,
+                    "w": 296.0,
+                    "h": 72.5
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+                  "snapshot_name": "navigation-menu-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "components",
+                  "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1.2.0.0.0",
+                  "tag": "a",
+                  "attrs": {
+                    "data-slot": "navigation-menu-link"
+                  },
+                  "class_name": "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 296.0,
+                "fret_logical_observed_px": 296.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 296.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "hover_card_column_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Hover Card link should occupy one 296px upstream grid column.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-navigation-menu-docs-demo-link-hover-card",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 710.667,
+                    "y": 490.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "raw_bounds": {
+                    "x": 710.667,
+                    "y": 490.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(455v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.navigation_menu.components_hover_card_link",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 402.927,
+                    "y": 50.667,
+                    "w": 296.0,
+                    "h": 72.5
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+                  "snapshot_name": "navigation-menu-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "components",
+                  "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1.2.0.1.0",
+                  "tag": "a",
+                  "attrs": {
+                    "data-slot": "navigation-menu-link"
+                  },
+                  "class_name": "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 296.0,
+                "fret_logical_observed_px": 296.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 296.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "progress_column_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Progress link should occupy one 296px upstream grid column.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-navigation-menu-docs-demo-link-progress",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 406.667,
+                    "y": 566.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "raw_bounds": {
+                    "x": 406.667,
+                    "y": 566.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(441v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.navigation_menu.components_progress_link",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 98.927,
+                    "y": 131.167,
+                    "w": 296.0,
+                    "h": 72.5
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+                  "snapshot_name": "navigation-menu-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "components",
+                  "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1.2.0.2.0",
+                  "tag": "a",
+                  "attrs": {
+                    "data-slot": "navigation-menu-link"
+                  },
+                  "class_name": "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 296.0,
+                "fret_logical_observed_px": 296.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 296.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "scroll_area_column_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Scroll-area link should occupy one 296px upstream grid column.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-navigation-menu-docs-demo-link-scroll-area",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 710.667,
+                    "y": 566.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "raw_bounds": {
+                    "x": 710.667,
+                    "y": 566.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(461v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.navigation_menu.components_scroll_area_link",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 402.927,
+                    "y": 131.167,
+                    "w": 296.0,
+                    "h": 53.25
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+                  "snapshot_name": "navigation-menu-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "components",
+                  "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1.2.0.3.0",
+                  "tag": "a",
+                  "attrs": {
+                    "data-slot": "navigation-menu-link"
+                  },
+                  "class_name": "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 296.0,
+                "fret_logical_observed_px": 296.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 296.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "tabs_column_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Tabs link should occupy one 296px upstream grid column.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-navigation-menu-docs-demo-link-tabs",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 406.667,
+                    "y": 642.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "raw_bounds": {
+                    "x": 406.667,
+                    "y": 642.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(447v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.navigation_menu.components_tabs_link",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 98.927,
+                    "y": 211.667,
+                    "w": 296.0,
+                    "h": 72.5
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+                  "snapshot_name": "navigation-menu-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "components",
+                  "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1.2.0.4.0",
+                  "tag": "a",
+                  "attrs": {
+                    "data-slot": "navigation-menu-link"
+                  },
+                  "class_name": "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 296.0,
+                "fret_logical_observed_px": 296.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 296.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "tooltip_column_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Tooltip link should occupy one 296px upstream grid column.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs",
+            "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-demo two-column composition is the reusable regression surface for Navigation Menu components-open parity."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-navigation-menu-docs-demo-link-tooltip",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 710.667,
+                    "y": 642.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "raw_bounds": {
+                    "x": 710.667,
+                    "y": 642.0,
+                    "w": 296.0,
+                    "h": 68.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(467v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-navigation-menu-post-column-fix/sessions/1778470458800-182164/1778470465080-ui-gallery-navigation-menu-hover-switch-and-escape.open-components/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.navigation_menu.components_tooltip_link",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 296",
+                  "eps_px": 1.0,
+                  "observed_px": 296.0,
+                  "bounds": {
+                    "x": 402.927,
+                    "y": 211.667,
+                    "w": 296.0,
+                    "h": 72.5
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json",
+                  "snapshot_name": "navigation-menu-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "components",
+                  "context_id": "upstream.navigation_menu.demo.light.components_open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1.2.0.5.0",
+                  "tag": "a",
+                  "attrs": {
+                    "data-slot": "navigation-menu-link"
+                  },
+                  "class_name": "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 296.0,
+                "fret_logical_observed_px": 296.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 296.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice uses the UI Gallery Navigation Menu docs-demo after hovering Home, then Components.",
+    "The upstream shadcn open snapshot is measured from the checked-in new-york-v4 components-open DOM golden.",
+    "The fixture intentionally starts with column item width parity because the open shell width is already close while item sizing visibly drifts."
+  ]
+}

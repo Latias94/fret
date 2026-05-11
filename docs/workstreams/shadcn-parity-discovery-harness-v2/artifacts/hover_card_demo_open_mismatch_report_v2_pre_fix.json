@@ -1,0 +1,372 @@
+{
+  "schema_version": 1,
+  "component": "hover-card",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/hover_card_demo_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.hover_card.demo.light.open.vp1440x900",
+      "snapshot": "hover-card-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "hover-card-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "",
+        "context_id": "upstream.hover_card.demo.light.open.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 1,
+    "status_counts": {
+      "pass_known": 0,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 1
+    },
+    "owner_counts": {
+      "component_recipe": 0,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 1
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 0,
+      "app_demo": 1,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 1
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0,
+      "none": 0
+    },
+    "top_findings": [
+      {
+        "part_id": "demo_content_size",
+        "check_id": "demo_content_matches_w_80_open_panel",
+        "status": "blocked",
+        "axis": "layout",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "promotion_target": "component_fixture",
+        "triage": {
+          "score": 68,
+          "level": "medium",
+          "reasons": [
+            "status:blocked",
+            "layer:app_demo",
+            "promotion:component_fixture",
+            "axis:layout",
+            "confidence:high",
+            "required evidence is missing"
+          ]
+        }
+      }
+    ],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 1,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "measured_test_id_count": 148,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_content_size",
+      "label": "Hover Card demo open content size",
+      "axis": "layout",
+      "status": "blocked",
+      "confidence": "high",
+      "triage": {
+        "score": 68,
+        "level": "medium",
+        "highest_check_id": "demo_content_matches_w_80_open_panel",
+        "reasons": [
+          "status:blocked",
+          "layer:app_demo",
+          "promotion:component_fixture",
+          "axis:layout",
+          "confidence:high",
+          "required evidence is missing"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-hover-card-demo-content"
+      ],
+      "upstream_facts": [
+        "The docs-path demo passes className=\"w-80\" on HoverCardContent.",
+        "The open content panel should stay on the upstream w-80 width lane while retaining the open-panel height."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes a stable open-content test id for the hover-card docs smoke.",
+        "The docs-smoke script now captures the open layout sidecar before dismissing the hover card."
+      ],
+      "checks": [
+        {
+          "id": "demo_content_matches_w_80_open_panel",
+          "kind": "fret_layout_sidecar",
+          "status": "blocked",
+          "expected": "Hover Card open content should measure 320 logical px wide with the upstream open-panel height.",
+          "observed": "missing",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 68,
+            "level": "medium",
+            "reasons": [
+              "status:blocked",
+              "layer:app_demo",
+              "promotion:component_fixture",
+              "axis:layout",
+              "confidence:high",
+              "required evidence is missing"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json",
+            "apps/fret-ui-gallery/src/ui/snippets/hover_card/demo.rs",
+            "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json",
+            "target/fret-diag/shadcn-parity-discovery-harness-v2-hover-card-layout/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-path demo composition is the reusable regression surface for the hover-card open width lane."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "missing",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "missing",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-hover-card-layout/sessions/1778472044615-164432/1778472053582-ui-gallery-hover-card-docs-smoke.open/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "missing",
+                  "target": "ui-gallery-hover-card-demo-content",
+                  "metric": "width",
+                  "reason": "missing_test_id"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "missing",
+                  "target": "ui-gallery-hover-card-demo-content",
+                  "metric": "height",
+                  "reason": "missing_test_id"
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.hover_card.demo.content",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 320",
+                  "eps_px": 1.0,
+                  "observed_px": 320.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 320.0,
+                    "h": 117.333
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json",
+                  "snapshot_name": "hover-card-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.hover_card.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0",
+                  "tag": "div",
+                  "attrs": {
+                    "data-state": "open",
+                    "data-side": "bottom",
+                    "data-align": "center",
+                    "data-slot": "hover-card-content"
+                  },
+                  "class_name": "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 origin-(--radix-hover-card-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden w-80"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.hover_card.demo.content",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 117.333",
+                  "eps_px": 1.0,
+                  "observed_px": 117.333,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 40.0,
+                    "w": 320.0,
+                    "h": 117.333
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json",
+                  "snapshot_name": "hover-card-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.hover_card.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0",
+                  "tag": "div",
+                  "attrs": {
+                    "data-state": "open",
+                    "data-side": "bottom",
+                    "data-align": "center",
+                    "data-slot": "hover-card-content"
+                  },
+                  "class_name": "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 origin-(--radix-hover-card-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden w-80"
+                }
+              ]
+            },
+            "comparisons": []
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice uses the UI Gallery hover-card docs-demo open state with a captured layout sidecar.",
+    "The upstream shadcn open snapshot is measured from the checked-in golden DOM evidence.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px; scale_factor is retained only as diagnostics metadata."
+  ]
+}

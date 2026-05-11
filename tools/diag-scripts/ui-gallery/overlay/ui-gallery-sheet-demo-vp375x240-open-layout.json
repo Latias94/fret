@@ -1,0 +1,107 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-sheet-demo-vp375x240-open-layout",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "sheet", "responsive", "vp375x240"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "sheet",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-sheet-demo"
+    },
+    "target_hints": [
+      "Starts directly on the Sheet page with only the Demo section mounted in an effective 375x240 viewport.",
+      "On the current Windows native runner, requesting 375x220 is expected to produce an effective 375x240 layout root.",
+      "Opens the default right-side Sheet demo.",
+      "Captures layout sidecar, screenshot, and bundle evidence for the mobile sheet shell and docs-path content geometry."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 375.0, "height_px": 220.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 375.0,
+        "height_px": 240.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-sheet" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo" },
+      "delta_y": -520.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "activate", "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo-panel" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo-name-input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo-save" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-sheet-demo-panel" },
+      "stable_frames": 4,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-sheet-demo-vp375x240-open.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sheet-demo-vp375x240-open" },
+    { "type": "capture_bundle", "label": "ui-gallery-sheet-demo-vp375x240-open" }
+  ]
+}

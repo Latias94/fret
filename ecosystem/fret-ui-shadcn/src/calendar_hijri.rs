@@ -169,6 +169,7 @@ fn hijri_day_cell<H: UiHost>(
     theme: &ThemeSnapshot,
     date: Date,
     in_month: bool,
+    test_id_prefix: Option<Arc<str>>,
     selected: bool,
     disabled: bool,
     size: Px,
@@ -205,6 +206,14 @@ fn hijri_day_cell<H: UiHost>(
     let solar = fret_ui_headless::calendar_solar_hijri::solar_hijri_from_gregorian(date);
     let day_text: Arc<str> = Arc::from(to_persian_digits(solar.day));
     let date_label = solar_hijri_day_aria_label(date, selected);
+    let test_id = test_id_prefix.map(|prefix| {
+        let base = format!("{}:{date}", prefix.as_ref());
+        if in_month {
+            Arc::<str>::from(base)
+        } else {
+            Arc::<str>::from(format!("{base}:outside"))
+        }
+    });
 
     let text_sm_px = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
@@ -266,6 +275,7 @@ fn hijri_day_cell<H: UiHost>(
             focus_ring,
             a11y: PressableA11y {
                 label: Some(Arc::clone(&date_label)),
+                test_id: test_id.clone(),
                 ..Default::default()
             },
             ..Default::default()
@@ -442,6 +452,8 @@ impl CalendarHijri {
                         let theme_header = theme.clone();
                         let theme_weekdays = theme.clone();
                         let theme_days = theme.clone();
+                        let test_id_prefix_for_header = test_id_prefix.clone();
+                        let test_id_prefix_for_days = test_id_prefix.clone();
 
                         let header = ui::h_row(move |cx| {
                             let nav_enabled = !disable_navigation;
@@ -465,7 +477,7 @@ impl CalendarHijri {
                                     });
                                 },
                             );
-                            let prev = if let Some(prefix) = test_id_prefix.as_ref() {
+                            let prev = if let Some(prefix) = test_id_prefix_for_header.as_ref() {
                                 prev.test_id(Arc::<str>::from(format!("{prefix}.nav-prev")))
                             } else {
                                 prev
@@ -486,7 +498,7 @@ impl CalendarHijri {
                                     });
                                 },
                             );
-                            let next = if let Some(prefix) = test_id_prefix.as_ref() {
+                            let next = if let Some(prefix) = test_id_prefix_for_header.as_ref() {
                                 next.test_id(Arc::<str>::from(format!("{prefix}.nav-next")))
                             } else {
                                 next
@@ -606,6 +618,7 @@ impl CalendarHijri {
                                         &theme_days,
                                         day.date,
                                         day.in_month,
+                                        test_id_prefix_for_days.clone(),
                                         is_selected,
                                         false,
                                         day_size,
@@ -673,6 +686,30 @@ fn calendar_hidden_cell<H: UiHost>(
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+    use time::Month;
+
+    fn find_pressable_by_test_id<'a>(
+        node: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        if let ElementKind::Pressable(props) = &node.kind
+            && props.a11y.test_id.as_deref() == Some(test_id)
+        {
+            return Some(node);
+        }
+
+        for child in &node.children {
+            if let Some(found) = find_pressable_by_test_id(child, test_id) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
     #[test]
     fn weekday_short_uses_single_letter_abbreviations() {
         assert_eq!(&*solar_hijri_weekday_short(Weekday::Saturday), "ش");
@@ -690,5 +727,32 @@ mod tests {
         let as_str = labels.iter().map(|s| &**s).collect::<Vec<_>>();
         // Visual RTL order: left-to-right render begins with the last weekday (Friday).
         assert_eq!(as_str, vec!["ج", "پ", "چ", "س", "د", "ی", "ش"]);
+    }
+
+    #[test]
+    fn calendar_hijri_day_cells_render_stable_test_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(320.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let selected_date = Date::from_calendar_date(2025, Month::June, 12).unwrap();
+            let month = SolarHijriMonth::from_gregorian(selected_date);
+            let month = cx.app.models_mut().insert(month);
+            let selected = cx.app.models_mut().insert(Some(selected_date));
+
+            let el = CalendarHijri::new(month, selected)
+                .test_id_prefix("calendar.hijri.test")
+                .show_outside_days(true)
+                .into_element(cx);
+
+            assert!(
+                find_pressable_by_test_id(&el, "calendar.hijri.test:2025-06-12").is_some(),
+                "expected selected Hijri day cell to expose a stable Gregorian-date test id"
+            );
+        });
     }
 }

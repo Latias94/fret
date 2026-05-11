@@ -1,0 +1,1333 @@
+{
+  "schema_version": 1,
+  "component": "calendar-hijri",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar_hijri.light.vp1440x900",
+      "snapshot": "calendar-hijri",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "calendar-hijri",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "upstream.calendar_hijri.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 3,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "measured_test_id_count": 1390,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "hijri_header_alignment",
+      "label": "Hijri header alignment",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "hijri_prev_nav_matches_root_relative_web_geometry",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery.calendar.hijri.nav-prev",
+        "ui-gallery.calendar.hijri.nav-next"
+      ],
+      "upstream_facts": [
+        "The upstream Hijri calendar keeps its nav buttons locked to the calendar root.",
+        "The docs-path example should preserve the same root-relative nav geometry on the UI Gallery surface."
+      ],
+      "fret_facts": [
+        "The UI Gallery Hijri snippet exposes stable nav test ids and a stable calendar root for root-relative geometry checks.",
+        "The captured layout sidecar stores the calendar root separately from the page shell."
+      ],
+      "checks": [
+        {
+          "id": "hijri_prev_nav_matches_root_relative_web_geometry",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The previous-month button should keep the upstream root-relative position and remain a 32px square.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+            "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+            "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The Hijri header geometry should stay reviewable as a reusable fixture-level gate."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.hijri.nav-prev",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1325v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.hijri.nav-prev",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1325v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.hijri.nav-prev",
+                  "b": "ui-gallery-calendar-hijri-calendar",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 205",
+                  "eps_px": 1.0,
+                  "observed_px": 205.333,
+                  "a_bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(1325v1)",
+                  "b_node": "NodeId(1315v1)",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.hijri.nav-prev",
+                  "b": "ui-gallery-calendar-hijri-calendar",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 13",
+                  "eps_px": 1.0,
+                  "observed_px": 13.333,
+                  "a_bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 248.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(1325v1)",
+                  "b_node": "NodeId(1315v1)",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar_hijri.nav_prev",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 205.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Go to the Previous Month"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 has-[>svg]:px-3 size-(--cell-size) aria-disabled:opacity-50 p-0 select-none rdp-button_previous"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar_hijri.nav_prev",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 205.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Go to the Previous Month"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 has-[>svg]:px-3 size-(--cell-size) aria-disabled:opacity-50 p-0 select-none rdp-button_previous"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar_hijri.nav_prev",
+                  "b": "upstream.calendar_hijri.root",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 205",
+                  "eps_px": 1.0,
+                  "observed_px": 205.0,
+                  "a_bounds": {
+                    "x": 205.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 250.0,
+                    "h": 333.188
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "a_path": "0.0.0.0",
+                  "b_path": "0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar_hijri.nav_prev",
+                  "b": "upstream.calendar_hijri.root",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 13",
+                  "eps_px": 1.0,
+                  "observed_px": 13.0,
+                  "a_bounds": {
+                    "x": 205.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 250.0,
+                    "h": 333.188
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "a_path": "0.0.0.0",
+                  "b_path": "0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "x",
+                "upstream_observed_px": 205.0,
+                "fret_logical_observed_px": 205.333,
+                "logical_delta_px": 0.333
+              },
+              {
+                "metric": "y",
+                "upstream_observed_px": 13.0,
+                "fret_logical_observed_px": 13.333,
+                "logical_delta_px": 0.333
+              }
+            ]
+          }
+        },
+        {
+          "id": "hijri_next_nav_matches_root_relative_web_geometry",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The next-month button should keep the upstream root-relative position and remain a 32px square.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+            "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+            "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The Hijri header geometry should stay reviewable as a reusable fixture-level gate."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.hijri.nav-next",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1320v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.hijri.nav-next",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1320v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.hijri.nav-next",
+                  "b": "ui-gallery-calendar-hijri-calendar",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 13",
+                  "eps_px": 1.0,
+                  "observed_px": 13.333,
+                  "a_bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(1320v1)",
+                  "b_node": "NodeId(1315v1)",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.hijri.nav-next",
+                  "b": "ui-gallery-calendar-hijri-calendar",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 13",
+                  "eps_px": 1.0,
+                  "observed_px": 13.333,
+                  "a_bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 56.0,
+                    "y": 1322.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(1320v1)",
+                  "b_node": "NodeId(1315v1)",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar_hijri.nav_next",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 13.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Go to the Next Month"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 has-[>svg]:px-3 size-(--cell-size) aria-disabled:opacity-50 p-0 select-none rdp-button_next"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar_hijri.nav_next",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 13.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0.1",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Go to the Next Month"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 has-[>svg]:px-3 size-(--cell-size) aria-disabled:opacity-50 p-0 select-none rdp-button_next"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar_hijri.nav_next",
+                  "b": "upstream.calendar_hijri.root",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 13",
+                  "eps_px": 1.0,
+                  "observed_px": 13.0,
+                  "a_bounds": {
+                    "x": 13.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 250.0,
+                    "h": 333.188
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "a_path": "0.0.0.1",
+                  "b_path": "0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar_hijri.nav_next",
+                  "b": "upstream.calendar_hijri.root",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 13",
+                  "eps_px": 1.0,
+                  "observed_px": 13.0,
+                  "a_bounds": {
+                    "x": 13.0,
+                    "y": 13.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 250.0,
+                    "h": 333.188
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "a_path": "0.0.0.1",
+                  "b_path": "0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "x",
+                "upstream_observed_px": 13.0,
+                "fret_logical_observed_px": 13.333,
+                "logical_delta_px": 0.333
+              },
+              {
+                "metric": "y",
+                "upstream_observed_px": 13.0,
+                "fret_logical_observed_px": 13.333,
+                "logical_delta_px": 0.333
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "hijri_selected_day_alignment",
+      "label": "Hijri selected day alignment",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "hijri_selected_day_matches_root_relative_web_geometry",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery.calendar.hijri:2025-06-12"
+      ],
+      "upstream_facts": [
+        "The upstream Hijri calendar keeps the selected day anchored to a stable 32px cell inside the calendar root.",
+        "The docs-path example should keep the selected-day geometry aligned with the upstream calendar grid."
+      ],
+      "fret_facts": [
+        "The UI Gallery Hijri snippet exposes a stable selected-day test id, so the parity harness can measure the selected date directly instead of inferring it from text.",
+        "The selected day sits inside the same captured calendar root as the header, which makes root-relative geometry checks deterministic."
+      ],
+      "checks": [
+        {
+          "id": "hijri_selected_day_matches_root_relative_web_geometry",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The selected day should keep the upstream root-relative position and remain a 32px square.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+            "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+            "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The Hijri selected-day geometry should stay reviewable as a reusable fixture-level gate."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.hijri:2025-06-12",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1428v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.hijri:2025-06-12",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1428v1)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.hijri:2025-06-12",
+                  "b": "ui-gallery-calendar-hijri-calendar",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 45",
+                  "eps_px": 1.0,
+                  "observed_px": 45.333,
+                  "a_bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(1428v1)",
+                  "b_node": "NodeId(1315v1)",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.hijri:2025-06-12",
+                  "b": "ui-gallery-calendar-hijri-calendar",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 208.188",
+                  "eps_px": 3.5,
+                  "observed_px": 205.333,
+                  "a_bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 88.0,
+                    "y": 1514.0,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 1308.667,
+                    "w": 250.0,
+                    "h": 338.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(1428v1)",
+                  "b_node": "NodeId(1315v1)",
+                  "sidecar_path": "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
+              ],
+              "predicate_count": 4,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar_hijri.selected_day",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 45.0,
+                    "y": 208.188,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.1.1.1.3.5.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "پنج‌شنبه ۲۲-ام خرداد ۱۴۰۴, selected"
+                  },
+                  "class_name": "items-center justify-center whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 rdp-day rdp-day_button"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar_hijri.selected_day",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 45.0,
+                    "y": 208.188,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.1.1.1.3.5.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "پنج‌شنبه ۲۲-ام خرداد ۱۴۰۴, selected"
+                  },
+                  "class_name": "items-center justify-center whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 rdp-day rdp-day_button"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar_hijri.selected_day",
+                  "b": "upstream.calendar_hijri.root",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== 45",
+                  "eps_px": 1.0,
+                  "observed_px": 45.0,
+                  "a_bounds": {
+                    "x": 45.0,
+                    "y": 208.188,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 250.0,
+                    "h": 333.188
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "a_path": "0.0.1.1.1.3.5.0",
+                  "b_path": "0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar_hijri.selected_day",
+                  "b": "upstream.calendar_hijri.root",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 208.188",
+                  "eps_px": 3.5,
+                  "observed_px": 208.188,
+                  "a_bounds": {
+                    "x": 45.0,
+                    "y": 208.188,
+                    "w": 32.0,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 250.0,
+                    "h": 333.188
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "snapshot_name": "calendar-hijri",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.calendar_hijri.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+                  "a_path": "0.0.1.1.1.3.5.0",
+                  "b_path": "0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "x",
+                "upstream_observed_px": 45.0,
+                "fret_logical_observed_px": 45.333,
+                "logical_delta_px": 0.333
+              },
+              {
+                "metric": "y",
+                "upstream_observed_px": 208.188,
+                "fret_logical_observed_px": 205.333,
+                "logical_delta_px": -2.855
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the UI Gallery Calendar Hijri example against the upstream calendar-hijri DOM snapshot.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+    "Root-relative predicates keep the gallery page shell offset out of the comparison so the calendar's internal alignment can be compared directly."
+  ]
+}

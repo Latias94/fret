@@ -1531,12 +1531,15 @@ impl Menubar {
                 .as_ref()
                 .map(|m| m.resolve(&theme))
                 .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
+            let scale_factor = cx
+                .environment_scale_factor(fret_ui::Invalidation::Layout)
+                .max(1.0);
             let border_width = self
                 .chrome
                 .border_width
                 .as_ref()
                 .map(|m| m.resolve(&theme))
-                .unwrap_or(Px(1.0));
+                .unwrap_or(Px(1.0 / scale_factor));
             let border = self
                 .chrome
                 .border_color
@@ -1560,7 +1563,9 @@ impl Menubar {
                 .map(|c| c.resolve(&theme))
                 .unwrap_or_else(|| theme.color_token("background"));
             let shadow = decl_style::shadow_xs(&theme, radius);
-            let layout = decl_style::layout_style(&theme, self.layout.clone());
+            let mut layout = LayoutStyle::default();
+            layout.size.height = Length::Px(Px(36.0));
+            decl_style::apply_layout_refinement(&theme, self.layout.clone(), &mut layout);
 
             let disabled = self.disabled;
             let modal = self.modal;
@@ -1950,7 +1955,7 @@ impl MenubarMenuEntries {
                 );
 
                 let mut trigger_layout = LayoutStyle::default();
-                trigger_layout.size.height = Length::Auto;
+                trigger_layout.size.height = Length::Px(Px(28.0));
                 trigger_layout.size.width = Length::Auto;
 
                 menubar_trigger_row::sync_trigger_row_state(
@@ -4467,6 +4472,26 @@ mod tests {
     }
 
     #[test]
+    fn menubar_root_shell_matches_shadcn_h9_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let root = menu_bar_bounds(snap);
+
+        assert_eq!(root.size.height, Px(36.0));
+    }
+
+    #[test]
     fn menubar_row_attaches_inherited_foreground_without_wrapper() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4644,6 +4669,14 @@ mod tests {
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(label))
             .map(|n| n.bounds)
             .unwrap_or_else(|| panic!("missing menu trigger {label:?}"))
+    }
+
+    fn menu_bar_bounds(snap: &fret_core::SemanticsSnapshot) -> Rect {
+        snap.nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuBar)
+            .map(|n| n.bounds)
+            .expect("missing menubar root")
     }
 
     fn menu_trigger_expanded(snap: &fret_core::SemanticsSnapshot, label: &str) -> bool {

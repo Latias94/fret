@@ -118,6 +118,14 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-navigation-menu-hover-switch-and-escape.open-components"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-navigation-menu-hover-switch-and-escape.open-components"
+    },
 
     { "type": "press_key", "key": "escape" },
     {

@@ -17,9 +17,97 @@ layout sidecars.
 For Fret sidecars, `root_metric` can also gate the captured layout root before component nodes are
 compared; use this for responsive/native runs where the requested OS window size may differ from the
 effective layout viewport.
+If a sibling `bundle.schema2.json` is present beside a layout sidecar, the generator also reads the
+semantics table and uses stable `test_id` nodes as fallback evidence when the layout sidecar misses
+a selector. You can also pass bundle evidence explicitly with `--fret-bundle-schema2` and
+`--fret-bundle-schema2-dir`.
+
+Coverage manifests live in `tools/parity-discovery/manifests/`. The v2 manifest defines the next
+coverage-driven sweep order for the highest-risk shadcn surfaces and keeps the existing v1 lock
+rows available as regression anchors.
 
 ## Current Seeds
 
+- Context Menu:
+  - Fixture: `tools/parity-discovery/fixtures/context_menu_demo_open_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/context_menu_demo_open_mismatch_report_v2_pre_fix.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/context_menu_demo_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-docs-smoke.json`
+- Navigation Menu:
+  - Fixture: `tools/parity-discovery/fixtures/navigation_menu_docs_demo_components_open_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/navigation_menu_docs_demo_components_open_mismatch_report_v2_pre_fix.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/navigation_menu_docs_demo_components_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.components.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-hover-switch-and-escape.json`
+- Hover Card:
+  - Fixture: `tools/parity-discovery/fixtures/hover_card_demo_open_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/hover_card_demo_open_mismatch_report_v2_pre_fix.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/hover_card_demo_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/hover-card-demo.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json`
+- Sheet mobile:
+  - Fixture: `tools/parity-discovery/fixtures/sheet_demo_vp375x240_open_parts_v1.json`
+  - Report:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/sheet_demo_vp375x240_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/sheet-demo.vp375x240.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-demo-vp375x240-open-layout.json`
+- Tooltip:
+  - Fixture: `tools/parity-discovery/fixtures/tooltip_demo_open_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/tooltip_demo_open_mismatch_report_v2_pre_fix.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/tooltip_demo_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/tooltip-demo.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-demo-open-arrow.json`
+  - Harness note:
+    cross-overlay/root delta predicates can request `evidence_source: "bundle_schema2_semantics"`
+    when the layout sidecar has local taffy coordinates but bundle semantics has global window
+    coordinates.
+- Dialog:
+  - Fixture: `tools/parity-discovery/fixtures/dialog_demo_open_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/dialog_demo_open_mismatch_report_v2_pre_fix.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/dialog_demo_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json`
+  - Harness note:
+    the slice locks docs-demo content/body/footer geometry while tolerating the remaining native
+    text-metric delta; the pre-fix artifact proves the old FieldSet/Field composition failed by
+    8-21px and the post-fix report closes it back to `pass_known`.
+- Menubar:
+  - Fixture: `tools/parity-discovery/fixtures/menubar_demo_open_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/menubar_demo_open_mismatch_report_v2_pre_fix.json`
+    and
+    `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/menubar_demo_open_mismatch_report_v2.json`
+  - Upstream DOM evidence:
+    `F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json`
+  - Harness note:
+    the slice locks the `h-9` root shell, trigger vertical lane, and File menu row geometry. The
+    pre-fix artifact proves auto-height root chrome and logical-pixel border layout drifted from
+    upstream; the post-fix report closes the recipe lane back to `pass_known`.
 - Button Group:
   - Fixture: `tools/parity-discovery/fixtures/button_group_parts_v1.json`
   - Report: `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json`
@@ -41,6 +129,33 @@ effective layout viewport.
     `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json`
   - Capture script:
     `tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-input-layout.json`
+- Select demo open:
+  - Fixture: `tools/parity-discovery/fixtures/select_demo_open_parts_v1.json`
+  - Report: `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json`
+  - Upstream DOM evidence:
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json`
+  - Capture script:
+    `tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json`
+- Calendar:
+  - Fixtures:
+    `tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json`
+    `tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json`
+    `tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json`
+    `tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json`
+  - Reports:
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json`
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json`
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json`
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json`
+  - Upstream DOM evidence:
+    `docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json`
+    `goldens/shadcn-web/v4/new-york-v4/calendar-18.json`
+    `goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json`
+    `goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json`
+  - Capture scripts:
+    `tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json`
+    `tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json`
+    `tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json`
 - Combobox Responsive:
   - Fixtures:
     `tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json`
@@ -61,7 +176,13 @@ effective layout viewport.
 
 ## Commands
 
-Generate the full current suite and cross-component summary:
+Generate the current v2 suite and cross-component summary:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
+```
+
+Generate the v1 regression suite and cross-component summary:
 
 ```powershell
 python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v1.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json
@@ -73,6 +194,9 @@ Generate individual reports when debugging one surface:
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-sweep-v1/button-group-select-after-select-padding/sessions/1778337694097-135816 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/input_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/select_demo_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/calendar-20.vp375x900.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-mixed-responsive-popover-vs-panel/sessions/1778449575455-175832/1778449837104-ui-gallery-calendar-mixed-responsive-panel.layout --fret-layout-sidecar-dir target/fret-diag/calendar-mixed-responsive-popover-vs-panel/sessions/1778449575455-175832/1778449837738-ui-gallery-calendar-mixed-responsive-popover.layout --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json
 ```
@@ -89,6 +213,9 @@ Required top-level fields:
 - `upstream_contexts`: optional explicit upstream measurement contexts. Each context records the
   snapshot id, theme, optional mode/variant, viewport dimensions, and optional device-pixel ratio.
 - `upstream_dom_targets`: optional DOM snapshot target ids used by `upstream_predicates`.
+  Targets may set `context_id` to reference an `upstream_contexts[].id`; use this when a report
+  contains multiple captures with the same snapshot/theme/mode/variant but different viewports or
+  DPRs.
 - `parts`: stable part mappings.
 
 Suite manifests live under `tools/parity-discovery/suites/`. A suite contains stable report ids,
@@ -125,6 +252,10 @@ Supported Fret-side predicate `kind` values:
 - `bounds_metric`: read a metric from a node selected by stable `test_id`.
 - `bounds_metric_delta`: compare the metric delta between two `test_id` nodes.
 - `root_metric`: read a metric from the sidecar `meta.root_bounds` effective layout viewport.
+
+Predicates may set `evidence_source` to `layout_sidecar`, `bundle_schema2_semantics`, or `auto`
+(the default). Use `bundle_schema2_semantics` for cross-root overlay deltas that need global
+window coordinates rather than local taffy-root coordinates.
 
 Supported `kind` values:
 
@@ -196,6 +327,8 @@ comparing against upstream DOM CSS pixels.
 Reports preserve `raw_bounds` as a compatibility alias for the sidecar rect values, plus
 `coordinate_units` and `scale_factor`, so fractional-DPI contract questions can be audited without
 rerunning diagnostics.
+When the bundle-semantics fallback supplies a Fret-side predicate, the predicate row records
+`evidence_source: bundle_schema2_semantics` and the `bundle_schema2_path` used for the measurement.
 
 ## Upstream DOM Snapshot Predicates
 
@@ -206,7 +339,11 @@ python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-
 ```
 
 `upstream_dom_targets[]` maps stable ids to a snapshot `name`, `theme`, and DOM `path` from the
-snapshot JSON. `upstream_predicates[]` then uses the same predicate shape as Fret sidecar predicates.
+snapshot JSON. When a target sets `context_id`, the loader only accepts snapshots that match the
+referenced `upstream_contexts[]` viewport and DPR metadata. `upstream_predicates[]` then uses the
+same predicate shape as Fret sidecar predicates.
+If a snapshot family matches more than one upstream context, every target in that family must set
+`context_id` explicitly so the generator cannot silently mix evidence from different viewports.
 When both Fret and upstream predicates share a metric, the report emits comparison deltas:
 
 - `logical_delta_px`: generated Fret logical px minus upstream DOM CSS px.

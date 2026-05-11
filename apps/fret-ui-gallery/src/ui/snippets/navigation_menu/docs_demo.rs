@@ -299,6 +299,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     } else {
         Px(400.0)
     };
+    let components_col_w_px = if lg_breakpoint { Px(296.0) } else { Px(246.0) };
 
     let components_specs = [
         (
@@ -364,10 +365,20 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let left = ui::v_stack(move |_cx| col_left)
                 .gap(Space::N2)
                 .items_start()
+                .layout(
+                    LayoutRefinement::default()
+                        .w_px(components_col_w_px)
+                        .min_w_0(),
+                )
                 .into_element(cx);
             let right = ui::v_stack(move |_cx| col_right)
                 .gap(Space::N2)
                 .items_start()
+                .layout(
+                    LayoutRefinement::default()
+                        .w_px(components_col_w_px)
+                        .min_w_0(),
+                )
                 .into_element(cx);
             vec![left, right]
         })

@@ -53,6 +53,11 @@ SUPPORTED_PREDICATE_KINDS = {
     "bounds_metric_delta",
     "root_metric",
 }
+SUPPORTED_EVIDENCE_SOURCES = {
+    "auto",
+    "layout_sidecar",
+    "bundle_schema2_semantics",
+}
 SUPPORTED_METRICS = {
     "x",
     "y",
@@ -185,6 +190,7 @@ class LayoutNode:
     sidecar_path: str
     root_index: int
     kind: str | None
+    source: str = "layout_sidecar"
 
 
 @dataclass(frozen=True)
@@ -194,6 +200,7 @@ class LayoutRoot:
     scale_factor: float
     coordinate_units: str
     sidecar_path: str
+    source: str = "layout_sidecar"
 
 
 @dataclass(frozen=True)
@@ -206,6 +213,7 @@ class DomNode:
     theme: str
     mode: str
     variant: str
+    context_id: str | None
     viewport: dict[str, Any]
     path: str
     tag: str
@@ -216,26 +224,62 @@ class DomNode:
 @dataclass
 class LayoutEvidence:
     nodes_by_test_id: dict[str, list[LayoutNode]]
+    bundle_nodes_by_test_id: dict[str, list[LayoutNode]]
     sidecar_paths: list[str]
+    bundle_paths: list[str]
     roots: list[LayoutRoot]
 
     @classmethod
     def empty(cls) -> "LayoutEvidence":
-        return cls(nodes_by_test_id={}, sidecar_paths=[], roots=[])
+        return cls(
+            nodes_by_test_id={},
+            bundle_nodes_by_test_id={},
+            sidecar_paths=[],
+            bundle_paths=[],
+            roots=[],
+        )
 
-    def find(self, test_id: str) -> LayoutNode | None:
+    def find(
+        self, test_id: str, evidence_source: str | None = None
+    ) -> LayoutNode | None:
+        if evidence_source == "layout_sidecar":
+            nodes = self.nodes_by_test_id.get(test_id)
+            return nodes[0] if nodes else None
+        if evidence_source == "bundle_schema2_semantics":
+            nodes = self.bundle_nodes_by_test_id.get(test_id)
+            return nodes[0] if nodes else None
         nodes = self.nodes_by_test_id.get(test_id)
         if not nodes:
-            return None
+            nodes = self.bundle_nodes_by_test_id.get(test_id)
+            if not nodes:
+                return None
         return nodes[0]
 
-    def duplicate_count(self, test_id: str) -> int:
-        return len(self.nodes_by_test_id.get(test_id, []))
+    def duplicate_count(self, test_id: str, evidence_source: str | None = None) -> int:
+        if evidence_source == "layout_sidecar":
+            return len(self.nodes_by_test_id.get(test_id, []))
+        if evidence_source == "bundle_schema2_semantics":
+            return len(self.bundle_nodes_by_test_id.get(test_id, []))
+        nodes = self.nodes_by_test_id.get(test_id)
+        if nodes:
+            return len(nodes)
+        return len(self.bundle_nodes_by_test_id.get(test_id, []))
 
-    def find_root(self) -> LayoutRoot | None:
+    def find_root(self, evidence_source: str | None = None) -> LayoutRoot | None:
         if not self.roots:
             return None
+        if evidence_source is not None and evidence_source != "auto":
+            for root in self.roots:
+                if root.source == evidence_source:
+                    return root
+            return None
+        for root in self.roots:
+            if root.source == "layout_sidecar":
+                return root
         return self.roots[0]
+
+    def test_id_count(self) -> int:
+        return len(set(self.nodes_by_test_id) | set(self.bundle_nodes_by_test_id))
 
 
 @dataclass
@@ -310,6 +354,15 @@ def _validate_predicates(check: dict[str, Any], check_path: str) -> None:
             raise FixtureError(
                 f"{predicate_path}.comparison has unsupported value {comparison!r}"
             )
+        evidence_source = predicate.get("evidence_source")
+        if evidence_source is not None:
+            evidence_source = _require_str(
+                evidence_source, f"{predicate_path}.evidence_source"
+            )
+            if evidence_source not in SUPPORTED_EVIDENCE_SOURCES:
+                raise FixtureError(
+                    f"{predicate_path}.evidence_source has unsupported value {evidence_source!r}"
+                )
         _require_float(predicate.get("eps_px", 0.0), f"{predicate_path}.eps_px")
         if kind == "bounds_metric":
             _require_str(predicate.get("target"), f"{predicate_path}.target")
@@ -360,7 +413,7 @@ def _resolve_layer(check: dict[str, Any], owner: str) -> str:
     return LAYER_BY_OWNER.get(owner, "unknown")
 
 
-def _validate_upstream_contexts(mapping: dict[str, Any]) -> None:
+def _validate_upstream_contexts(mapping: dict[str, Any]) -> list[dict[str, Any]]:
     raw_contexts = mapping.get("upstream_contexts", [])
     contexts = [
         _require_object(item, f"$.upstream_contexts[{index}]")
@@ -385,6 +438,49 @@ def _validate_upstream_contexts(mapping: dict[str, Any]) -> None:
         device_pixel_ratio = context.get("device_pixel_ratio")
         if device_pixel_ratio is not None:
             _require_float(device_pixel_ratio, f"{context_path}.device_pixel_ratio")
+    return contexts
+
+
+def _context_matches_snapshot(
+    context: dict[str, Any],
+    snapshot_name: str,
+    theme: str,
+    snapshot_mode: str,
+    snapshot_variant: str,
+    theme_data: dict[str, Any],
+) -> bool:
+    if context.get("snapshot") != snapshot_name:
+        return False
+    if context.get("theme") != theme:
+        return False
+    if (context.get("mode") or "") != snapshot_mode:
+        return False
+    if (context.get("variant") or "") != snapshot_variant:
+        return False
+
+    raw_viewport = theme_data.get("viewport")
+    if not isinstance(raw_viewport, dict):
+        return False
+    width = raw_viewport.get("w")
+    height = raw_viewport.get("h")
+    if not isinstance(width, int | float) or not isinstance(height, int | float):
+        return False
+
+    viewport = context.get("viewport")
+    if not isinstance(viewport, dict):
+        return False
+    if round(float(width), 3) != round(float(viewport.get("width_px")), 3):
+        return False
+    if round(float(height), 3) != round(float(viewport.get("height_px")), 3):
+        return False
+
+    context_dpr = context.get("device_pixel_ratio")
+    if context_dpr is not None:
+        theme_dpr = float(theme_data.get("devicePixelRatio") or 1.0)
+        if round(theme_dpr, 3) != round(float(context_dpr), 3):
+            return False
+
+    return True
 
 
 def load_mapping(path: Path) -> dict[str, Any]:
@@ -401,7 +497,8 @@ def load_mapping(path: Path) -> dict[str, Any]:
 
     _require_str(mapping.get("component"), "$.component")
     _require_str(mapping.get("style"), "$.style")
-    _validate_upstream_contexts(mapping)
+    upstream_contexts = _validate_upstream_contexts(mapping)
+    context_ids = {context["id"] for context in upstream_contexts}
 
     report = _require_object(mapping.get("report"), "$.report")
     if report.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
@@ -442,6 +539,13 @@ def load_mapping(path: Path) -> dict[str, Any]:
         variant = target.get("variant")
         if variant is not None:
             _require_str(variant, f"{target_path}.variant")
+        context_id = target.get("context_id")
+        if context_id is not None:
+            context_id = _require_str(context_id, f"{target_path}.context_id")
+            if context_id not in context_ids:
+                raise FixtureError(
+                    f"{target_path}.context_id references unknown upstream context id {context_id!r}"
+                )
         source_ref_id = target.get("source_ref_id")
         if source_ref_id is not None:
             _require_str(source_ref_id, f"{target_path}.source_ref_id")
@@ -508,8 +612,11 @@ def load_mapping(path: Path) -> dict[str, Any]:
 
 
 def _test_ids_for_node(node: dict[str, Any]) -> list[str]:
-    debug = node.get("debug") if isinstance(node.get("debug"), dict) else {}
     result: list[str] = []
+    raw_test_id = node.get("test_id")
+    if isinstance(raw_test_id, str) and raw_test_id:
+        result.append(raw_test_id)
+    debug = node.get("debug") if isinstance(node.get("debug"), dict) else {}
     raw_test_id = debug.get("test_id")
     if isinstance(raw_test_id, str) and raw_test_id:
         result.append(raw_test_id)
@@ -547,9 +654,100 @@ def _sidecar_nodes(data: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
     return nodes
 
 
-def load_layout_evidence(paths: list[Path]) -> LayoutEvidence:
+def _bundle_semantics_entries(data: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
+    tables = data.get("tables")
+    if not isinstance(tables, dict):
+        raise FixtureError("bundle schema2 is missing $.tables")
+    semantics_table = tables.get("semantics")
+    if not isinstance(semantics_table, dict):
+        raise FixtureError("bundle schema2 is missing $.tables.semantics")
+    entries = semantics_table.get("entries", [])
+    if not isinstance(entries, list):
+        raise FixtureError("$.tables.semantics.entries must be a list")
+
+    results: list[tuple[int, dict[str, Any]]] = []
+    for entry_index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        semantics = entry.get("semantics")
+        if not isinstance(semantics, dict):
+            continue
+        nodes = semantics.get("nodes", [])
+        if not isinstance(nodes, list):
+            continue
+        for node in nodes:
+            if isinstance(node, dict):
+                results.append((entry_index, node))
+    return results
+
+
+def _bundle_semantics_roots(
+    data: dict[str, Any],
+    bundle_path: str,
+    scale_factor: float,
+    coordinate_units: str,
+) -> list[LayoutRoot]:
+    tables = data.get("tables")
+    if not isinstance(tables, dict):
+        return []
+    semantics_table = tables.get("semantics")
+    if not isinstance(semantics_table, dict):
+        return []
+    entries = semantics_table.get("entries", [])
+    if not isinstance(entries, list):
+        return []
+
+    roots: list[LayoutRoot] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        semantics = entry.get("semantics")
+        if not isinstance(semantics, dict):
+            continue
+        nodes = semantics.get("nodes", [])
+        if not isinstance(nodes, list):
+            continue
+        nodes_by_id: dict[int, dict[str, Any]] = {}
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            node_id = node.get("id")
+            if isinstance(node_id, int):
+                nodes_by_id[node_id] = node
+        raw_roots = semantics.get("roots", [])
+        if not isinstance(raw_roots, list):
+            continue
+        for root in raw_roots:
+            if not isinstance(root, dict):
+                continue
+            root_id = root.get("root")
+            if not isinstance(root_id, int):
+                continue
+            node = nodes_by_id.get(root_id)
+            if node is None:
+                continue
+            rect = node.get("bounds")
+            if not isinstance(rect, dict):
+                continue
+            roots.append(
+                LayoutRoot(
+                    bounds=Bounds.from_rect(rect),
+                    raw_bounds=Bounds.from_rect(rect),
+                    scale_factor=scale_factor,
+                    coordinate_units=coordinate_units,
+                    sidecar_path=bundle_path,
+                    source="bundle_schema2_semantics",
+                )
+            )
+    return roots
+
+
+def load_layout_evidence(
+    sidecar_paths: list[Path],
+    bundle_paths: list[Path] | None = None,
+) -> LayoutEvidence:
     evidence = LayoutEvidence.empty()
-    for path in sorted(paths):
+    for path in sorted(sidecar_paths):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
@@ -568,6 +766,7 @@ def load_layout_evidence(paths: list[Path]) -> LayoutEvidence:
                     scale_factor=scale_factor,
                     coordinate_units=coordinate_units,
                     sidecar_path=sidecar_path,
+                    source="layout_sidecar",
                 )
             )
         for root_index, node in _sidecar_nodes(data):
@@ -589,10 +788,57 @@ def load_layout_evidence(paths: list[Path]) -> LayoutEvidence:
                         kind=debug.get("instance_kind")
                         if isinstance(debug.get("instance_kind"), str)
                         else None,
+                        source="layout_sidecar",
+                    )
+                )
+
+    for path in sorted(bundle_paths or []):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise FixtureError(f"{path}: invalid bundle schema2 JSON: {exc}") from exc
+        if data.get("schema_version") != 2:
+            raise FixtureError(
+                f"{path}: bundle schema2 must declare schema_version 2, got {data.get('schema_version')!r}"
+            )
+        bundle_path = str(path).replace("\\", "/")
+        evidence.bundle_paths.append(bundle_path)
+        env = data.get("env") if isinstance(data.get("env"), dict) else {}
+        scale_factors_seen = env.get("scale_factors_seen") if isinstance(env, dict) else []
+        scale_factor = 1.0
+        if isinstance(scale_factors_seen, list) and scale_factors_seen:
+            first_scale = scale_factors_seen[0]
+            if isinstance(first_scale, int | float):
+                scale_factor = float(first_scale)
+        coordinate_units = "logical_px"
+        evidence.roots.extend(
+            _bundle_semantics_roots(data, bundle_path, scale_factor, coordinate_units)
+        )
+        for root_index, node in _bundle_semantics_entries(data):
+            rect = node.get("bounds")
+            if not isinstance(rect, dict):
+                continue
+            for test_id in _test_ids_for_node(node):
+                evidence.bundle_nodes_by_test_id.setdefault(test_id, []).append(
+                    LayoutNode(
+                        test_id=test_id,
+                        bounds=Bounds.from_rect(rect),
+                        raw_bounds=Bounds.from_rect(rect),
+                        scale_factor=scale_factor,
+                        coordinate_units=coordinate_units,
+                        node=str(node.get("id", "")),
+                        sidecar_path=bundle_path,
+                        root_index=root_index,
+                        kind=str(node.get("role"))
+                        if isinstance(node.get("role"), str)
+                        else None,
+                        source="bundle_schema2_semantics",
                     )
                 )
 
     for nodes in evidence.nodes_by_test_id.values():
+        nodes.sort(key=lambda n: (n.sidecar_path, n.root_index, n.node))
+    for nodes in evidence.bundle_nodes_by_test_id.values():
         nodes.sort(key=lambda n: (n.sidecar_path, n.root_index, n.node))
     return evidence
 
@@ -633,6 +879,7 @@ def _dom_context_from_snapshot(
     theme: str,
     snapshot_mode: str,
     snapshot_variant: str,
+    context_id: str | None,
     theme_data: dict[str, Any],
 ) -> dict[str, Any]:
     raw_viewport = theme_data.get("viewport")
@@ -650,6 +897,7 @@ def _dom_context_from_snapshot(
         "theme": theme,
         "mode": snapshot_mode,
         "variant": snapshot_variant,
+        **({"context_id": context_id} if context_id is not None else {}),
         "viewport": viewport,
         "device_pixel_ratio": float(theme_data.get("devicePixelRatio") or 1.0),
         "snapshot_path": snapshot_path,
@@ -657,7 +905,9 @@ def _dom_context_from_snapshot(
 
 
 def load_dom_evidence(
-    paths: list[Path], targets: list[dict[str, Any]]
+    paths: list[Path],
+    targets: list[dict[str, Any]],
+    contexts: list[dict[str, Any]],
 ) -> DomEvidence:
     evidence = DomEvidence.empty()
     targets_by_snapshot: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
@@ -694,24 +944,75 @@ def load_dom_evidence(
         for theme, raw_theme_data in themes.items():
             if not isinstance(raw_theme_data, dict):
                 continue
-            wanted_targets = targets_by_snapshot.get(
-                (snapshot_name, theme, snapshot_mode, snapshot_variant), []
-            )
-            if not wanted_targets:
-                continue
-            evidence.contexts.append(
-                _dom_context_from_snapshot(
-                    snapshot_path,
+            matched_contexts = [
+                context
+                for context in contexts
+                if _context_matches_snapshot(
+                    context,
                     snapshot_name,
                     theme,
                     snapshot_mode,
                     snapshot_variant,
                     raw_theme_data,
                 )
+            ]
+            wanted_targets = targets_by_snapshot.get(
+                (snapshot_name, theme, snapshot_mode, snapshot_variant), []
             )
+            if not wanted_targets:
+                continue
+            matched_context_ids = {context["id"] for context in matched_contexts}
+            if len(matched_contexts) > 1:
+                ambiguous_targets = [
+                    target
+                    for target in wanted_targets
+                    if target.get("context_id") is None
+                ]
+                if ambiguous_targets:
+                    raise FixtureError(
+                        f"{path}: ambiguous upstream DOM match for {snapshot_name!r} "
+                        f"theme={theme!r} mode={snapshot_mode!r} variant={snapshot_variant!r}; "
+                        "add context_id to each upstream_dom_target for this snapshot family"
+                    )
+            matched_targets = []
+            for target in wanted_targets:
+                target_context_id = target.get("context_id")
+                if target_context_id is not None and target_context_id not in matched_context_ids:
+                    raise FixtureError(
+                        f"{path}: upstream_dom_target {target['id']!r} references "
+                        f"context_id {target_context_id!r} but no matching upstream_context was found"
+                    )
+                matched_targets.append(target)
+            if not matched_targets:
+                continue
+            if matched_contexts:
+                for context in matched_contexts:
+                    evidence.contexts.append(
+                        _dom_context_from_snapshot(
+                            snapshot_path,
+                            snapshot_name,
+                            theme,
+                            snapshot_mode,
+                            snapshot_variant,
+                            context["id"],
+                            raw_theme_data,
+                        )
+                    )
+            else:
+                evidence.contexts.append(
+                    _dom_context_from_snapshot(
+                        snapshot_path,
+                        snapshot_name,
+                        theme,
+                        snapshot_mode,
+                        snapshot_variant,
+                        None,
+                        raw_theme_data,
+                    )
+                )
             nodes_by_path = _snapshot_dom_nodes(raw_theme_data)
             device_pixel_ratio = float(raw_theme_data.get("devicePixelRatio") or 1.0)
-            for target in wanted_targets:
+            for target in matched_targets:
                 node = nodes_by_path.get(target["path"])
                 if node is None:
                     continue
@@ -729,6 +1030,7 @@ def load_dom_evidence(
                     theme=theme,
                     mode=snapshot_mode,
                     variant=snapshot_variant,
+                    context_id=target.get("context_id"),
                     viewport=raw_theme_data.get("viewport")
                     if isinstance(raw_theme_data.get("viewport"), dict)
                     else {},
@@ -764,14 +1066,22 @@ def evaluate_predicate(
     kind = predicate["kind"]
     metric = predicate["metric"]
     comparison = predicate["comparison"]
+    evidence_source = predicate.get("evidence_source")
+    if evidence_source == "auto":
+        evidence_source = None
     if kind == "root_metric":
-        root = evidence.find_root()
+        root = evidence.find_root(evidence_source)
         if root is None:
             return {
                 "kind": kind,
                 "status": "missing",
                 "metric": metric,
                 "reason": "missing_root_bounds",
+                **(
+                    {"requested_evidence_source": evidence_source}
+                    if evidence_source is not None
+                    else {}
+                ),
             }
         observed = root.bounds.metric(metric)
         passed, expected = _comparison_passes(observed, comparison, predicate)
@@ -788,12 +1098,22 @@ def evaluate_predicate(
             "raw_bounds": root.raw_bounds.to_json(),
             "scale_factor": root.scale_factor,
             "coordinate_units": root.coordinate_units,
-            "sidecar_path": root.sidecar_path,
+            "evidence_source": root.source,
+            **(
+                {"requested_evidence_source": evidence_source}
+                if evidence_source is not None
+                else {}
+            ),
+            **(
+                {"sidecar_path": root.sidecar_path}
+                if root.source == "layout_sidecar"
+                else {"bundle_schema2_path": root.sidecar_path}
+            ),
             "duplicate_count": len(evidence.roots),
         }
     if kind == "bounds_metric":
         target = predicate["target"]
-        node = evidence.find(target)
+        node = evidence.find(target, evidence_source)
         if node is None:
             return {
                 "kind": kind,
@@ -801,6 +1121,11 @@ def evaluate_predicate(
                 "target": target,
                 "metric": metric,
                 "reason": "missing_test_id",
+                **(
+                    {"requested_evidence_source": evidence_source}
+                    if evidence_source is not None
+                    else {}
+                ),
             }
         observed = node.bounds.metric(metric)
         passed, expected = _comparison_passes(observed, comparison, predicate)
@@ -819,14 +1144,24 @@ def evaluate_predicate(
             "coordinate_units": node.coordinate_units,
             "node": node.node,
             "kind_hint": node.kind,
-            "sidecar_path": node.sidecar_path,
-            "duplicate_count": evidence.duplicate_count(target),
+            "evidence_source": node.source,
+            **(
+                {"requested_evidence_source": evidence_source}
+                if evidence_source is not None
+                else {}
+            ),
+            **(
+                {"sidecar_path": node.sidecar_path}
+                if node.source == "layout_sidecar"
+                else {"bundle_schema2_path": node.sidecar_path}
+            ),
+            "duplicate_count": evidence.duplicate_count(target, evidence_source),
         }
     if kind == "bounds_metric_delta":
         a_id = predicate["a"]
         b_id = predicate["b"]
-        a_node = evidence.find(a_id)
-        b_node = evidence.find(b_id)
+        a_node = evidence.find(a_id, evidence_source)
+        b_node = evidence.find(b_id, evidence_source)
         if a_node is None or b_node is None:
             return {
                 "kind": kind,
@@ -835,6 +1170,11 @@ def evaluate_predicate(
                 "b": b_id,
                 "metric": metric,
                 "reason": "missing_test_id",
+                **(
+                    {"requested_evidence_source": evidence_source}
+                    if evidence_source is not None
+                    else {}
+                ),
             }
         observed = a_node.bounds.metric(metric) - b_node.bounds.metric(metric)
         passed, expected = _comparison_passes(observed, comparison, predicate)
@@ -856,9 +1196,20 @@ def evaluate_predicate(
             "coordinate_units": sorted({a_node.coordinate_units, b_node.coordinate_units}),
             "a_node": a_node.node,
             "b_node": b_node.node,
-            "sidecar_path": a_node.sidecar_path,
-            "a_duplicate_count": evidence.duplicate_count(a_id),
-            "b_duplicate_count": evidence.duplicate_count(b_id),
+            "evidence_sources": sorted({a_node.source, b_node.source}),
+            **(
+                {"requested_evidence_source": evidence_source}
+                if evidence_source is not None
+                else {}
+            ),
+            "evidence_paths": sorted({a_node.sidecar_path, b_node.sidecar_path}),
+            **(
+                {"sidecar_path": a_node.sidecar_path}
+                if a_node.source == "layout_sidecar" and b_node.source == "layout_sidecar"
+                else {}
+            ),
+            "a_duplicate_count": evidence.duplicate_count(a_id, evidence_source),
+            "b_duplicate_count": evidence.duplicate_count(b_id, evidence_source),
         }
     raise FixtureError(f"unsupported predicate kind {kind!r}")
 
@@ -898,6 +1249,7 @@ def evaluate_dom_predicate(
             "theme": node.theme,
             "mode": node.mode,
             "variant": node.variant,
+            "context_id": node.context_id,
             "viewport": node.viewport,
             "path": node.path,
             "tag": node.tag,
@@ -940,6 +1292,7 @@ def evaluate_dom_predicate(
             "theme": a_node.theme,
             "mode": a_node.mode,
             "variant": a_node.variant,
+            "context_id": a_node.context_id,
             "a_snapshot_path": a_node.snapshot_path,
             "b_snapshot_path": b_node.snapshot_path,
             "a_path": a_node.path,
@@ -962,11 +1315,11 @@ def evaluate_fret_measurement(
     predicates = check.get("predicates")
     if not predicates:
         return None
-    if not evidence.sidecar_paths:
+    if not evidence.sidecar_paths and not evidence.bundle_paths:
         return {
             "source": "fret_layout_sidecar",
             "status": "missing",
-            "reason": "no_layout_sidecars_provided",
+            "reason": "no_layout_evidence_provided",
             "predicate_count": len(predicates),
             "predicates": [],
         }
@@ -975,9 +1328,14 @@ def evaluate_fret_measurement(
         evaluate_predicate(predicate, evidence) for predicate in predicates
     ]
     return {
-        "source": "fret_layout_sidecar",
+        "source": (
+            "fret_layout_sidecar"
+            if not evidence.bundle_paths
+            else "fret_layout_sidecar+bundle_schema2_semantics"
+        ),
         "status": _measurement_status(predicate_results),
         "sidecar_paths": evidence.sidecar_paths,
+        **({"bundle_schema2_paths": evidence.bundle_paths} if evidence.bundle_paths else {}),
         "predicate_count": len(predicate_results),
         "predicates": predicate_results,
     }
@@ -1087,7 +1445,7 @@ def combine_measurements(
     else:
         status = fret["status"]
     return {
-        "source": "fret_layout_sidecar+upstream_dom_snapshot",
+        "source": f"{fret['source']}+{upstream['source']}",
         "status": status,
         "fret": fret,
         "upstream_dom": upstream,
@@ -1394,6 +1752,8 @@ def generate_report(
         "source_mapping": str(mapping_path).replace("\\", "/"),
         "upstream_contexts": mapping.get("upstream_contexts", []),
         "evidence_contexts": {
+            "fret_layout_sidecar": layout_evidence.sidecar_paths,
+            "fret_bundle_schema2": layout_evidence.bundle_paths,
             "upstream_dom": dom_evidence.contexts,
         },
         "summary": {
@@ -1407,7 +1767,10 @@ def generate_report(
             "top_findings": top_findings,
             "promotion_target_counts": promotion_counts,
             "layout_sidecar_count": len(layout_evidence.sidecar_paths),
-            "measured_test_id_count": len(layout_evidence.nodes_by_test_id),
+            "bundle_schema2_count": len(layout_evidence.bundle_paths),
+            "layout_test_id_count": len(layout_evidence.nodes_by_test_id),
+            "bundle_semantics_test_id_count": len(layout_evidence.bundle_nodes_by_test_id),
+            "measured_test_id_count": layout_evidence.test_id_count(),
             "upstream_dom_snapshot_count": len(dom_evidence.snapshot_paths),
             "upstream_dom_target_count": len(dom_evidence.nodes_by_target_id),
             "upstream_context_count": len(mapping.get("upstream_contexts", [])),
@@ -1453,6 +1816,13 @@ def load_suite(path: Path) -> dict[str, Any]:
             f"{report_path}.fret_layout_sidecar_dirs",
         )
         _require_path_list(
+            report.get("fret_bundle_schema2"), f"{report_path}.fret_bundle_schema2"
+        )
+        _require_path_list(
+            report.get("fret_bundle_schema2_dirs"),
+            f"{report_path}.fret_bundle_schema2_dirs",
+        )
+        _require_path_list(
             report.get("upstream_dom_snapshots"),
             f"{report_path}.upstream_dom_snapshots",
         )
@@ -1481,6 +1851,21 @@ def collect_sidecar_paths(paths: list[Path], dirs: list[Path]) -> list[Path]:
     return _resolve_existing_paths(all_paths, "layout sidecar")
 
 
+def collect_bundle_schema2_paths(
+    paths: list[Path], dirs: list[Path], sidecar_paths: list[Path]
+) -> list[Path]:
+    all_paths = list(paths)
+    for directory in dirs:
+        if not directory.exists():
+            raise FixtureError(f"bundle schema2 directory does not exist: {directory}")
+        all_paths.extend(directory.rglob("bundle.schema2.json"))
+    for sidecar_path in sidecar_paths:
+        candidate = sidecar_path.parent / "bundle.schema2.json"
+        if candidate.exists():
+            all_paths.append(candidate)
+    return _resolve_existing_paths(all_paths, "bundle schema2")
+
+
 def collect_dom_snapshot_paths(paths: list[Path], dirs: list[Path]) -> list[Path]:
     all_paths = list(paths)
     for directory in dirs:
@@ -1494,17 +1879,30 @@ def generate_report_from_spec(report_spec: dict[str, Any]) -> dict[str, Any]:
     mapping_path = Path(report_spec["mapping"])
     output_path = Path(report_spec["output"])
     mapping = load_mapping(mapping_path)
+    layout_sidecar_paths = collect_sidecar_paths(
+        _require_path_list(
+            report_spec.get("fret_layout_sidecars"),
+            "$.reports[].fret_layout_sidecars",
+        ),
+        _require_path_list(
+            report_spec.get("fret_layout_sidecar_dirs"),
+            "$.reports[].fret_layout_sidecar_dirs",
+        ),
+    )
+    bundle_schema2_paths = collect_bundle_schema2_paths(
+        _require_path_list(
+            report_spec.get("fret_bundle_schema2"),
+            "$.reports[].fret_bundle_schema2",
+        ),
+        _require_path_list(
+            report_spec.get("fret_bundle_schema2_dirs"),
+            "$.reports[].fret_bundle_schema2_dirs",
+        ),
+        layout_sidecar_paths,
+    )
     layout_evidence = load_layout_evidence(
-        collect_sidecar_paths(
-            _require_path_list(
-                report_spec.get("fret_layout_sidecars"),
-                "$.reports[].fret_layout_sidecars",
-            ),
-            _require_path_list(
-                report_spec.get("fret_layout_sidecar_dirs"),
-                "$.reports[].fret_layout_sidecar_dirs",
-            ),
-        )
+        layout_sidecar_paths,
+        bundle_schema2_paths,
     )
     dom_evidence = load_dom_evidence(
         collect_dom_snapshot_paths(
@@ -1518,6 +1916,7 @@ def generate_report_from_spec(report_spec: dict[str, Any]) -> dict[str, Any]:
             ),
         ),
         mapping.get("upstream_dom_targets", []),
+        mapping.get("upstream_contexts", []),
     )
     report = generate_report(mapping, mapping_path, layout_evidence, dom_evidence)
     write_report(report, output_path)
@@ -1635,6 +2034,20 @@ def parse_args() -> argparse.Namespace:
         help="Directory to search recursively for layout.taffy.v1.json sidecars.",
     )
     parser.add_argument(
+        "--fret-bundle-schema2",
+        action="append",
+        type=Path,
+        default=[],
+        help="Path to a bundle.schema2.json file. May be repeated.",
+    )
+    parser.add_argument(
+        "--fret-bundle-schema2-dir",
+        action="append",
+        type=Path,
+        default=[],
+        help="Directory to search recursively for bundle.schema2.json files.",
+    )
+    parser.add_argument(
         "--upstream-dom-snapshot",
         action="append",
         type=Path,
@@ -1655,6 +2068,16 @@ def resolve_sidecar_paths(args: argparse.Namespace) -> list[Path]:
     return collect_sidecar_paths(
         list(args.fret_layout_sidecar),
         list(args.fret_layout_sidecar_dir),
+    )
+
+
+def resolve_bundle_schema2_paths(
+    args: argparse.Namespace, sidecar_paths: list[Path]
+) -> list[Path]:
+    return collect_bundle_schema2_paths(
+        list(args.fret_bundle_schema2),
+        list(args.fret_bundle_schema2_dir),
+        sidecar_paths,
     )
 
 
@@ -1690,9 +2113,17 @@ def main() -> int:
             raise FixtureError("--mapping and --output are required unless --suite is used")
 
         mapping = load_mapping(args.mapping)
-        layout_evidence = load_layout_evidence(resolve_sidecar_paths(args))
+        layout_sidecar_paths = resolve_sidecar_paths(args)
+        layout_evidence = load_layout_evidence(
+            layout_sidecar_paths,
+            resolve_bundle_schema2_paths(args, layout_sidecar_paths),
+        )
         dom_targets = mapping.get("upstream_dom_targets", [])
-        dom_evidence = load_dom_evidence(resolve_dom_snapshot_paths(args), dom_targets)
+        dom_evidence = load_dom_evidence(
+            resolve_dom_snapshot_paths(args),
+            dom_targets,
+            mapping.get("upstream_contexts", []),
+        )
         report = generate_report(
             mapping, args.mapping, layout_evidence, dom_evidence
         )
@@ -1709,6 +2140,7 @@ def main() -> int:
         f"{args.output} "
         f"({report['summary']['part_count']} parts, "
         f"{report['summary']['layout_sidecar_count']} layout sidecars, "
+        f"{report['summary']['bundle_schema2_count']} bundle schema2 files, "
         f"{report['summary']['upstream_dom_snapshot_count']} upstream DOM snapshots)"
     )
     return 0

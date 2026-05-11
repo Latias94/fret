@@ -1,0 +1,974 @@
+{
+  "schema_version": 1,
+  "component": "calendar",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+      "snapshot": "date-picker-with-range",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "date-picker-with-range",
+        "theme": "light",
+        "mode": "open",
+        "variant": "",
+        "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 1,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 2,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "measured_test_id_count": 1519,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "responsive_panel_month_stack",
+      "label": "Calendar responsive panel month stack",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "panel_months_stack_with_expected_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+        "ui-gallery.calendar.responsive.panel.month:2022-02-01"
+      ],
+      "upstream_facts": [
+        "The base shadcn calendar owns month grid sizing and spacing through the calendar recipe.",
+        "The panel lane is a Fret gallery composition that intentionally keeps the two-month range in a vertical stack."
+      ],
+      "fret_facts": [
+        "The responsive panel uses `number_of_months(2)` and a stable `ui-gallery.calendar.responsive.panel` prefix.",
+        "The sidecar captures both month containers in the non-overlay panel state."
+      ],
+      "checks": [
+        {
+          "id": "panel_months_stack_with_expected_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Panel months should remain 224px wide, keep their source-backed heights, and stack vertically with 16px spacing.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/responsive_mixed_semantics.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json",
+            "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The panel layout is gallery composition evidence that should stay reviewable as a fixture."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+              "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json"
+            ],
+            "predicate_count": 6,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+                "metric": "width",
+                "comparison": "eq",
+                "expected": "== 224",
+                "eps_px": 1.0,
+                "observed_px": 224.0,
+                "bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "raw_bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(4574v1)",
+                "kind_hint": "Container",
+                "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 308",
+                "eps_px": 1.0,
+                "observed_px": 308.0,
+                "bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "raw_bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(4574v1)",
+                "kind_hint": "Container",
+                "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+                "metric": "width",
+                "comparison": "eq",
+                "expected": "== 224",
+                "eps_px": 1.0,
+                "observed_px": 224.0,
+                "bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "raw_bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(4764v1)",
+                "kind_hint": "Container",
+                "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 308",
+                "eps_px": 1.0,
+                "observed_px": 308.0,
+                "bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "raw_bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(4764v1)",
+                "kind_hint": "Container",
+                "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+                "b": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+                "metric": "x",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "b_bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "a_raw_bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "b_raw_bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(4574v1)",
+                "b_node": "NodeId(4764v1)",
+                "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 2,
+                "b_duplicate_count": 2
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery.calendar.responsive.panel.month:2022-01-01",
+                "b": "ui-gallery.calendar.responsive.panel.month:2022-02-01",
+                "metric": "y",
+                "comparison": "eq",
+                "expected": "== -324",
+                "eps_px": 1.0,
+                "observed_px": -324.0,
+                "a_bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "b_bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "a_raw_bounds": {
+                  "x": 56.0,
+                  "y": 7211.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "b_raw_bounds": {
+                  "x": 56.0,
+                  "y": 7535.334,
+                  "w": 224.0,
+                  "h": 308.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(4574v1)",
+                "b_node": "NodeId(4764v1)",
+                "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 2,
+                "b_duplicate_count": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "responsive_popover_month_row",
+      "label": "Calendar responsive popover month row",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "popover_months_row_with_expected_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+        "ui-gallery.calendar.responsive.popover.month:2022-02-01"
+      ],
+      "upstream_facts": [
+        "The base shadcn calendar owns month grid sizing and spacing through the calendar recipe.",
+        "The upstream date-picker-with-range example renders the two-month popover row that this lane should match.",
+        "The popover lane stresses overlay shell sizing while the inner calendar months should keep the same source-backed dimensions."
+      ],
+      "fret_facts": [
+        "The responsive popover uses `number_of_months(2)` inside `PopoverContent` with a stable `ui-gallery.calendar.responsive.popover` prefix.",
+        "The sidecar captures the opened overlay state and can distinguish calendar-grid drift from overlay-shell drift."
+      ],
+      "checks": [
+        {
+          "id": "popover_months_row_with_expected_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Popover months should remain 224px wide, keep their source-backed heights, and lay out as a row with 16px spacing.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/responsive_mixed_semantics.rs",
+            "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+            "ecosystem/fret-ui-shadcn/src/popover.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json",
+            "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The overlay row now matches placement and only the month height differs from upstream, so keep this as a recipe fixture until the calendar metrics are aligned."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout/layout.taffy.v1.json",
+                "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 6,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 224",
+                  "eps_px": 1.0,
+                  "observed_px": 224.0,
+                  "bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "raw_bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(4339v3)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 307.198",
+                  "eps_px": 1.0,
+                  "observed_px": 308.0,
+                  "bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "raw_bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(4339v3)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 224",
+                  "eps_px": 1.0,
+                  "observed_px": 224.0,
+                  "bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "raw_bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(4195v3)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 307.198",
+                  "eps_px": 1.0,
+                  "observed_px": 308.0,
+                  "bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "raw_bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(4195v3)",
+                  "kind_hint": "Container",
+                  "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+                  "b": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== -240",
+                  "eps_px": 1.0,
+                  "observed_px": -240.0,
+                  "a_bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "b_bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(4339v3)",
+                  "b_node": "NodeId(4195v3)",
+                  "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery.calendar.responsive.popover.month:2022-01-01",
+                  "b": "ui-gallery.calendar.responsive.popover.month:2022-02-01",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 1.0,
+                  "observed_px": 0.0,
+                  "a_bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "b_bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 758.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 998.667,
+                    "y": 397.333,
+                    "w": 224.0,
+                    "h": 308.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(4339v3)",
+                  "b_node": "NodeId(4195v3)",
+                  "sidecar_path": "target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json"
+              ],
+              "predicate_count": 6,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 224",
+                  "eps_px": 1.0,
+                  "observed_px": 224.0,
+                  "bounds": {
+                    "x": 12.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "snapshot_name": "date-picker-with-range",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0.0.1",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "flex flex-col w-full gap-4 rdp-month"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 307.198",
+                  "eps_px": 1.0,
+                  "observed_px": 307.198,
+                  "bounds": {
+                    "x": 12.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "snapshot_name": "date-picker-with-range",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0.0.1",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "flex flex-col w-full gap-4 rdp-month"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 224",
+                  "eps_px": 1.0,
+                  "observed_px": 224.0,
+                  "bounds": {
+                    "x": 252.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "snapshot_name": "date-picker-with-range",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0.0.2",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "flex flex-col w-full gap-4 rdp-month"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 307.198",
+                  "eps_px": 1.0,
+                  "observed_px": 307.198,
+                  "bounds": {
+                    "x": 252.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "snapshot_name": "date-picker-with-range",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0.0.2",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "flex flex-col w-full gap-4 rdp-month"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+                  "b": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+                  "metric": "x",
+                  "comparison": "eq",
+                  "expected": "== -240",
+                  "eps_px": 1.0,
+                  "observed_px": -240.0,
+                  "a_bounds": {
+                    "x": 12.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "b_bounds": {
+                    "x": 252.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "snapshot_name": "date-picker-with-range",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "a_path": "portal.0.0.0.1",
+                  "b_path": "portal.0.0.0.2"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.calendar.date_picker_with_range.popover.month_jan_2022",
+                  "b": "upstream.calendar.date_picker_with_range.popover.month_feb_2022",
+                  "metric": "y",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 1.0,
+                  "observed_px": 0.0,
+                  "a_bounds": {
+                    "x": 12.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "b_bounds": {
+                    "x": 252.667,
+                    "y": 52.667,
+                    "w": 224.0,
+                    "h": 307.198
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "snapshot_name": "date-picker-with-range",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.calendar.date_picker_with_range.light.vp1440x900",
+                  "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+                  "a_path": "portal.0.0.0.1",
+                  "b_path": "portal.0.0.0.2"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 224.0,
+                "fret_logical_observed_px": 224.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 224.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 307.198,
+                "fret_logical_observed_px": 308.0,
+                "logical_delta_px": 0.802,
+                "fret_raw_observed_px": 308.0,
+                "raw_delta_px": 0.802
+              },
+              {
+                "metric": "width",
+                "upstream_observed_px": 224.0,
+                "fret_logical_observed_px": 224.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 224.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 307.198,
+                "fret_logical_observed_px": 308.0,
+                "logical_delta_px": 0.802,
+                "fret_raw_observed_px": 308.0,
+                "raw_delta_px": 0.802
+              },
+              {
+                "metric": "x",
+                "upstream_observed_px": -240.0,
+                "fret_logical_observed_px": -240.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "y",
+                "upstream_observed_px": 0.0,
+                "fret_logical_observed_px": 0.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the UI Gallery Calendar responsive mixed semantics example.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+    "The panel lane remains source-backed Fret-only; the popover lane now compares against the upstream date-picker-with-range DOM snapshot so shell and month-row drift can be separated."
+  ]
+}

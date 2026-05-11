@@ -1,0 +1,612 @@
+{
+  "schema_version": 1,
+  "suite_id": "shadcn-parity-discovery-v2",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_suite": "tools/parity-discovery/suites/shadcn_parity_discovery_v2.json",
+  "summary": {
+    "report_count": 9,
+    "part_count": 17,
+    "status_counts": {
+      "pass_known": 17,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 2,
+      "policy": 0,
+      "recipe": 15,
+      "app_demo": 12,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 17
+    },
+    "top_findings": []
+  },
+  "reports": [
+    {
+      "id": "context_menu_demo_open",
+      "component": "context-menu",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/context_menu_demo_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 1
+      },
+      "top_findings": []
+    },
+    {
+      "id": "navigation_menu_docs_demo_components_open",
+      "component": "navigation-menu",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/navigation_menu_docs_demo_components_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 6,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 1
+      },
+      "top_findings": []
+    },
+    {
+      "id": "hover_card_demo_open",
+      "component": "hover-card",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/hover_card_demo_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 1
+      },
+      "top_findings": []
+    },
+    {
+      "id": "sheet_demo_vp375x240_open",
+      "component": "sheet",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/sheet_demo_vp375x240_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 4
+      },
+      "top_findings": []
+    },
+    {
+      "id": "tooltip_demo_open",
+      "component": "tooltip",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/tooltip_demo_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 2,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 3
+      },
+      "top_findings": []
+    },
+    {
+      "id": "dialog_demo_open",
+      "component": "dialog",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/dialog_demo_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 3,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 3
+      },
+      "top_findings": []
+    },
+    {
+      "id": "menubar_demo_open",
+      "component": "menubar",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/menubar_demo_open_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 4,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 2
+      },
+      "top_findings": []
+    },
+    {
+      "id": "input_otp_demo",
+      "component": "input-otp",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/input_otp_demo_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 4,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 1
+      },
+      "top_findings": []
+    },
+    {
+      "id": "table_demo",
+      "component": "table",
+      "style": "new-york-v4",
+      "output": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/table_demo_mismatch_report_v2.json",
+      "status_counts": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 3,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 1
+      },
+      "top_findings": []
+    }
+  ]
+}

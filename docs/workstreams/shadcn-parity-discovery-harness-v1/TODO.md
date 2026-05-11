@@ -63,6 +63,33 @@ date: 2026-05-09
   semantics.
 - [x] Add a suite manifest and cross-component summary so the current discovery sweep can be
   regenerated with one command.
+- [x] Confirm and gate the Select open-state bottom-padding regression as a mechanism issue rather
+  than a raw sidecar mismatch.
+
+## M5: Calendar Upstream DOM Coverage
+
+- [x] Wire the Calendar custom-cell large viewport to upstream DOM goldens so the suite can compare
+  the responsive Calendar lane against an upstream source of truth instead of sidecar-only evidence.
+- [x] Wire the Calendar custom-cell small viewport to upstream DOM goldens.
+- [x] Wire the Calendar custom-cell popover / mixed variant to upstream DOM goldens.
+- [x] Decide to use a fixture-level context map for responsive Calendar and future multi-viewport DOM
+  families instead of relying on capture-name suffixes alone.
+
+## M6: Calendar Responsive Coverage
+
+- [x] Keep the responsive Calendar suite green after the weekday-row/day-grid spacing normalization
+  in `calendar_range.rs` and `calendar_multiple.rs`.
+- [x] Keep the suite report at `31 pass_known`, `0 mismatch`, and `0 top findings`.
+
+## M7: Calendar Hijri Layout Gate
+
+- [x] Add a dedicated web-vs-fret layout gate for the docs-path `calendar-hijri` example so the
+  Hijri weekday-row/day-grid spacing stays reviewable and reusable.
+
+## M8: Calendar Hijri Discovery Coverage
+
+- [x] Add the docs-path `calendar-hijri` example to the parity-discovery suite using roots-dump
+  evidence and root-relative predicates.
 
 ## Backlog
 

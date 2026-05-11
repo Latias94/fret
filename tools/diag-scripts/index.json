@@ -4544,6 +4544,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-demo-with-title-toggle-underflow",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [
+        "checkbox",
+        "field_label",
+        "interaction",
+        "layout_dirty",
+        "regression",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-checkbox-invalid-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
       "required_capabilities": [
@@ -5774,113 +5795,263 @@
     {
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-column-filter",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-filter.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-column-pinning-sticky-scroll",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-column-pinning-toggle",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-pinning-toggle.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-faceted-filter",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-faceted-filter.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-global-filter",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-global-filter.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-multi-sort-shift-click",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-multi-sort-shift-click.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-reset-filters",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-reset-filters.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-sort-select-scroll",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-sort-select-scroll.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured",
         "ui-gallery-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-retained-visibility-toggle",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-visibility-toggle.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-data-table-smoke",
@@ -5906,14 +6077,29 @@
     {
       "id": "ui-gallery-data-table-window-boundary-scroll-retained",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-window-boundary-scroll-retained.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured",
         "ui-gallery-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "data_table",
+        "dev_only",
+        "gallery_dev",
+        "policy",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture"
+      ]
     },
     {
       "id": "ui-gallery-date-picker-dropdowns-mobile-drawer",

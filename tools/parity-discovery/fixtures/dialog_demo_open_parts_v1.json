@@ -1,0 +1,515 @@
+{
+  "schema_version": 1,
+  "component": "dialog",
+  "style": "new-york-v4",
+  "report": {
+    "id": "dialog_demo_open_mismatch_report_v2",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the official Dialog demo opened in the UI Gallery docs page.",
+      "The upstream trigger sits in a full-width form root while the UI Gallery preview constrains the Fret trigger to its docs preview lane, so this fixture avoids trigger width parity and locks only the dialog content surface after opening.",
+      "Text metric differences between the web golden and native runner are tolerated where they do not change the docs-path composition contract.",
+      "The high-confidence regression surface is the docs demo body: upstream uses plain Label/Input stacks with grid gap-4 and gap-3, not FieldSet/Field policy spacing."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.dialog.demo.open_dom_snapshot",
+        "path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json"
+      },
+      {
+        "id": "upstream.dialog.source",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx"
+      },
+      {
+        "id": "upstream.dialog.demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/dialog-demo.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.dialog.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/dialog.rs"
+      },
+      {
+        "id": "fret.dialog.demo",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs"
+      },
+      {
+        "id": "fret.dialog.open_diag",
+        "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.dialog.demo.light.open.vp1440x900",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.dialog.demo.content",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo.open_dom_snapshot"
+    },
+    {
+      "id": "upstream.dialog.demo.header",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.0",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.title",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.0.0",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.description",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.0.1",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.body",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.1",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.name_input",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.1.0.1",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.username_input",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.1.1.1",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.footer",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.2",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.cancel_button",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.2.0",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    },
+    {
+      "id": "upstream.dialog.demo.save_button",
+      "snapshot": "dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "path": "portal.1.2.1",
+      "context_id": "upstream.dialog.demo.light.open.vp1440x900",
+      "source_ref_id": "upstream.dialog.demo"
+    }
+  ],
+  "parts": [
+    {
+      "id": "content_shell_surface",
+      "label": "Dialog demo open content shell",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.dialog.source",
+          "upstream.dialog.demo",
+          "upstream.dialog.demo.open_dom_snapshot"
+        ],
+        "facts": [
+          "The new-york-v4 DialogContent owns grid gap-4, p-6, rounded-lg border, and sm:max-w-[425px].",
+          "The official open DOM snapshot measures the demo content at 425px wide and 323.333px tall."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.dialog.recipe",
+          "fret.dialog.demo",
+          "fret.dialog.open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-dialog-demo-content",
+          "ui-gallery-dialog-demo-header",
+          "ui-gallery-dialog-demo-title",
+          "ui-gallery-dialog-demo-description"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes stable test ids on the open DialogContent, header, title, and description.",
+          "Content height is checked as a whole-surface signal because inflated demo body spacing pushes the footer and the shell bottom together."
+        ]
+      },
+      "checks": [
+        {
+          "id": "content_keeps_upstream_docs_demo_shell_size",
+          "kind": "fret_layout_sidecar",
+          "expected": "The open DialogContent should keep the upstream 425px width and 323.333px docs-demo height.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/dialog-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.dialog.demo.content",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 425.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.dialog.demo.content",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 323.333,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-dialog-demo-content",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 425.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-dialog-demo-content",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 323.333,
+              "eps_px": 3.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The whole dialog shell height catches docs-demo composition drift before a screenshot-only review."
+          }
+        },
+        {
+          "id": "header_keeps_upstream_relative_stack",
+          "kind": "fret_layout_sidecar",
+          "expected": "The header should start 24.667px below the content top and preserve the title-to-description stack within native text tolerance.",
+          "observed": "unknown",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json",
+            "ecosystem/fret-ui-shadcn/src/dialog.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.dialog.demo.header",
+              "b": "upstream.dialog.demo.content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 24.667,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.dialog.demo.description",
+              "b": "upstream.dialog.demo.title",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 26.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dialog-demo-header",
+              "b": "ui-gallery-dialog-demo-content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 24.667,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dialog-demo-description",
+              "b": "ui-gallery-dialog-demo-title",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 26.0,
+              "eps_px": 3.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Header stack geometry is recipe-owned and should stay tracked while tolerating native text metric differences."
+          }
+        }
+      ]
+    },
+    {
+      "id": "profile_fields_surface",
+      "label": "Dialog demo profile fields stack",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.dialog.demo"
+        ],
+        "facts": [
+          "The upstream docs demo body is div.grid.gap-4.",
+          "Each field is a div.grid.gap-3 with a Label followed by an Input.",
+          "The name input starts 132.667px below the content top, and the username input starts 78px below the name input."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.dialog.demo",
+          "fret.dialog.open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-dialog-demo-name-input",
+          "ui-gallery-dialog-demo-username-input"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes stable test ids on both profile inputs.",
+          "The comparison uses input offsets relative to the DialogContent so absolute overlay centering does not hide body composition drift."
+        ]
+      },
+      "checks": [
+        {
+          "id": "profile_inputs_keep_upstream_docs_offsets",
+          "kind": "fret_layout_sidecar",
+          "expected": "The profile inputs should keep the upstream docs demo body offsets: name at 132.667px from content top and username 78px below name.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/dialog-demo.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.dialog.demo.name_input",
+              "b": "upstream.dialog.demo.content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 132.667,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.dialog.demo.username_input",
+              "b": "upstream.dialog.demo.name_input",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 78.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.dialog.demo.name_input",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dialog-demo-name-input",
+              "b": "ui-gallery-dialog-demo-content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 132.667,
+              "eps_px": 3.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dialog-demo-username-input",
+              "b": "ui-gallery-dialog-demo-name-input",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 78.0,
+              "eps_px": 2.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-dialog-demo-name-input",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The docs-path profile fields are the reusable regression surface for Dialog demo composition."
+          }
+        }
+      ]
+    },
+    {
+      "id": "footer_actions_surface",
+      "label": "Dialog demo footer action row",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.dialog.source",
+          "upstream.dialog.demo"
+        ],
+        "facts": [
+          "At the sm breakpoint, DialogFooter is a row with justify-end, gap-2, and the cancel button before the save button.",
+          "The footer starts 262.667px below the content top and both action buttons are 36px tall."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.dialog.recipe",
+          "fret.dialog.demo",
+          "fret.dialog.open_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-dialog-demo-cancel",
+          "ui-gallery-dialog-demo-save"
+        ],
+        "facts": [
+          "The UI Gallery demo exposes stable test ids on both footer action buttons.",
+          "The footer top offset is inferred from the action row because the pre-fix demo did not expose a footer test id."
+        ]
+      },
+      "checks": [
+        {
+          "id": "footer_actions_keep_upstream_row_offset_and_height",
+          "kind": "fret_layout_sidecar",
+          "expected": "The footer action row should start 262.667px below the content top, keep both buttons 36px tall, and place Save 86.896px to the right of Cancel.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/dialog-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/dialog-demo.tsx",
+            "ecosystem/fret-ui-shadcn/src/dialog.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.dialog.demo.save_button",
+              "b": "upstream.dialog.demo.content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 262.667,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.dialog.demo.save_button",
+              "b": "upstream.dialog.demo.cancel_button",
+              "metric": "left",
+              "comparison": "eq",
+              "value_px": 86.896,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.dialog.demo.save_button",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dialog-demo-save",
+              "b": "ui-gallery-dialog-demo-content",
+              "metric": "top",
+              "comparison": "eq",
+              "value_px": 262.667,
+              "eps_px": 3.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery-dialog-demo-save",
+              "b": "ui-gallery-dialog-demo-cancel",
+              "metric": "left",
+              "comparison": "eq",
+              "value_px": 86.896,
+              "eps_px": 8.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery-dialog-demo-save",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 36.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The footer action row is pushed by the docs body, so this catches body composition drift through the final user-visible controls."
+          }
+        }
+      ]
+    }
+  ]
+}

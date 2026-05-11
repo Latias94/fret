@@ -1359,7 +1359,7 @@ fn calendar_multi_month_view<H: UiHost>(
                 .collect::<Vec<_>>()
         })
         .gap(Space::N4)
-        .items_start()
+        .items_stretch()
         .w_px(MetricRef::Px(months_span))
         .into_element(cx)
     } else {
@@ -1737,6 +1737,7 @@ fn calendar_month_view<H: UiHost>(
 
     ui::v_stack(move |_cx| vec![month_caption, body])
         .gap(Space::N4)
+        .layout(LayoutRefinement::default().self_stretch())
         .into_element(cx)
 }
 

@@ -24,6 +24,7 @@
         "theme": "light",
         "mode": "",
         "variant": "",
+        "context_id": "upstream.input.demo.light.vp1440x900",
         "viewport": {
           "width_px": 1440,
           "height_px": 900
@@ -313,6 +314,7 @@
                   "theme": "light",
                   "mode": "",
                   "variant": "",
+                  "context_id": null,
                   "viewport": {
                     "w": 1440,
                     "h": 900

@@ -15,23 +15,35 @@ fn profile_fields<H: UiHost>(
                  label: &'static str,
                  model: Model<String>,
                  input_test_id: &'static str| {
-        shadcn::Field::new(ui::children![
-            cx;
-            shadcn::FieldLabel::new(label),
-            shadcn::Input::new(model)
-                .refine_layout(LayoutRefinement::default().w_full())
-                .test_id(input_test_id)
-        ])
+        ui::v_flex(move |cx| {
+            ui::children![
+                cx;
+                shadcn::Label::new(label),
+                shadcn::Input::new(model)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .test_id(input_test_id)
+            ]
+        })
+        .gap(Space::N3)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx)
     };
 
-    shadcn::FieldSet::new(ui::children![
-        cx;
-        field(cx, "Name", name, "ui-gallery-dialog-demo-name-input"),
-        field(cx, "Username", username, "ui-gallery-dialog-demo-username-input")
-    ])
-    .refine_layout(LayoutRefinement::default().w_full())
+    ui::v_flex(move |cx| {
+        vec![
+            field(cx, "Name", name, "ui-gallery-dialog-demo-name-input"),
+            field(
+                cx,
+                "Username",
+                username,
+                "ui-gallery-dialog-demo-username-input",
+            ),
+        ]
+    })
+    .gap(Space::N4)
+    .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
+    .test_id("ui-gallery-dialog-demo-body")
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -87,7 +99,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                                 .test_id("ui-gallery-dialog-demo-save")
                                                 .into_element(cx),
                                         ]
-                                    }),
+                                    })
+                                    .test_id("ui-gallery-dialog-demo-footer"),
                                 ]
                             })
                             .test_id("ui-gallery-dialog-demo-content")

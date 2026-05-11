@@ -1,0 +1,1093 @@
+{
+  "schema_version": 1,
+  "component": "input-otp",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/input_otp_demo_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.input_otp.demo.light.vp1440x900",
+      "snapshot": "input-otp-demo",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "input-otp-demo",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "upstream.input_otp.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 1,
+    "status_counts": {
+      "pass_known": 1,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 4,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 4,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 1
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 4,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 224,
+    "bundle_semantics_test_id_count": 224,
+    "measured_test_id_count": 224,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 6,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_slot_geometry",
+      "label": "Input OTP demo slot geometry",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "medium",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "slots_keep_upstream_h9_square_lane",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-input-otp-simple.slot.0",
+        "ui-gallery-input-otp-simple.slot.1",
+        "ui-gallery-input-otp-simple.slot.2",
+        "ui-gallery-input-otp-simple.slot.3",
+        "ui-gallery-input-otp-simple.slot.5",
+        "ui-gallery-input-otp-simple.input"
+      ],
+      "upstream_facts": [
+        "The new-york-v4 InputOTPSlot owns `h-9 w-9`, so every visible slot is 36px by 36px.",
+        "Slots inside a group are contiguous because InputOTPGroup is `flex items-center` and slot borders are shared with `border-y border-r first:border-l`.",
+        "The demo has two 3-slot groups separated by InputOTPSeparator inside a root flex container with gap-2."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes stable test ids for every projected slot and the hidden text input.",
+        "The comparison uses bundle schema2 semantics for Fret bounds because the taffy sidecar currently omits these stable test ids."
+      ],
+      "checks": [
+        {
+          "id": "slots_keep_upstream_h9_square_lane",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Input OTP demo slots should remain 36px by 36px like upstream h-9/w-9.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-otp.tsx",
+            "ecosystem/fret-ui-shadcn/src/input_otp.rs",
+            "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-demo-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Slot size is the most stable recipe-owned visual invariant for Input OTP."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-input-otp-simple.slot.0",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902010",
+                  "kind_hint": "generic",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-input-otp-simple.slot.0",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902010",
+                  "kind_hint": "generic",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-input-otp-simple.slot.5",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 679.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 679.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902032",
+                  "kind_hint": "generic",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.input_otp.demo.slot_0",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "1.0.0",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive dark:bg-input/30 border-input relative flex h-9 w-9 items-center justify-center border-y border-r text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:ring-[3px]"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.input_otp.demo.slot_0",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "1.0.0",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive dark:bg-input/30 border-input relative flex h-9 w-9 items-center justify-center border-y border-r text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:ring-[3px]"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.input_otp.demo.slot_5",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 220.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "1.2.2",
+                  "tag": "div",
+                  "attrs": {},
+                  "class_name": "data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive dark:bg-input/30 border-input relative flex h-9 w-9 items-center justify-center border-y border-r text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:ring-[3px]"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "width",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "group_slots_keep_upstream_contiguous_offsets",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Slots inside each InputOTPGroup should be contiguous: slot 1 is 36px after slot 0 and slot 2 is 72px after slot 0.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-otp.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/input_otp/demo.rs"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Contiguous group offsets catch accidental group-gap, border, or slot-sizing drift."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-input-otp-simple.slot.1",
+                  "b": "ui-gallery-input-otp-simple.slot.0",
+                  "metric": "left",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "a_bounds": {
+                    "x": 495.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 495.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "12884902017",
+                  "b_node": "12884902010",
+                  "evidence_sources": [
+                    "bundle_schema2_semantics"
+                  ],
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+                  ],
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-input-otp-simple.slot.2",
+                  "b": "ui-gallery-input-otp-simple.slot.0",
+                  "metric": "left",
+                  "comparison": "eq",
+                  "expected": "== 72",
+                  "eps_px": 1.0,
+                  "observed_px": 72.0,
+                  "a_bounds": {
+                    "x": 531.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 531.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "12884902020",
+                  "b_node": "12884902010",
+                  "evidence_sources": [
+                    "bundle_schema2_semantics"
+                  ],
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+                  ],
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.input_otp.demo.slot_1",
+                  "b": "upstream.input_otp.demo.slot_0",
+                  "metric": "left",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "a_bounds": {
+                    "x": 36.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "a_path": "1.0.1",
+                  "b_path": "1.0.0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.input_otp.demo.slot_2",
+                  "b": "upstream.input_otp.demo.slot_0",
+                  "metric": "left",
+                  "comparison": "eq",
+                  "expected": "== 72",
+                  "eps_px": 1.0,
+                  "observed_px": 72.0,
+                  "a_bounds": {
+                    "x": 72.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "a_path": "1.0.2",
+                  "b_path": "1.0.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "left",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "left",
+                "upstream_observed_px": 72.0,
+                "fret_logical_observed_px": 72.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "separator_gap_keeps_upstream_cross_group_offset",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The first slot in the second group should start 76px after the third slot in the first group, preserving the separator and root gap lane.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-otp.tsx",
+            "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-demo-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The cross-group offset is the smallest reusable signal for separator width and root gap drift."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-input-otp-simple.slot.3",
+                  "b": "ui-gallery-input-otp-simple.slot.2",
+                  "metric": "left",
+                  "comparison": "eq",
+                  "expected": "== 76",
+                  "eps_px": 1.0,
+                  "observed_px": 76.0,
+                  "a_bounds": {
+                    "x": 607.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 531.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 607.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 531.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "12884902026",
+                  "b_node": "12884902020",
+                  "evidence_sources": [
+                    "bundle_schema2_semantics"
+                  ],
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+                  ],
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.input_otp.demo.slot_3",
+                  "b": "upstream.input_otp.demo.slot_2",
+                  "metric": "left",
+                  "comparison": "eq",
+                  "expected": "== 76",
+                  "eps_px": 1.0,
+                  "observed_px": 76.0,
+                  "a_bounds": {
+                    "x": 148.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 72.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "a_path": "1.2.0",
+                  "b_path": "1.0.2"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "left",
+                "upstream_observed_px": 76.0,
+                "fret_logical_observed_px": 76.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "hidden_input_height_matches_visible_slot_lane",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The hidden Input OTP text field should keep the upstream 36px height and align to the first visible slot top.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+            "ecosystem/fret-ui-shadcn/src/input_otp.rs",
+            "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-demo-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The hidden input alignment guards click/focus hit geometry without asserting upstream viewport-wide input width."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-input-otp-simple.input",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902036",
+                  "kind_hint": "text_field",
+                  "evidence_source": "bundle_schema2_semantics",
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-input-otp-simple.slot.0",
+                  "b": "ui-gallery-input-otp-simple.input",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 1.0,
+                  "observed_px": 0.0,
+                  "a_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 459.667,
+                    "y": 419.333,
+                    "w": 320.0,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "12884902010",
+                  "b_node": "12884902036",
+                  "evidence_sources": [
+                    "bundle_schema2_semantics"
+                  ],
+                  "requested_evidence_source": "bundle_schema2_semantics",
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-input-otp-demo-layout/sessions/1778493012437-151896/1778493018878-ui-gallery-input-otp-demo.layout/bundle.schema2.json"
+                  ],
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.input_otp.demo.input",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 1440.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "1.3.0",
+                  "tag": "input",
+                  "attrs": {},
+                  "class_name": "disabled:cursor-not-allowed"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.input_otp.demo.slot_0",
+                  "b": "upstream.input_otp.demo.input",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 0",
+                  "eps_px": 1.0,
+                  "observed_px": 0.0,
+                  "a_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 1440.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "snapshot_name": "input-otp-demo",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": "upstream.input_otp.demo.light.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/input-otp-demo.json",
+                  "a_path": "1.0.0",
+                  "b_path": "1.3.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 0.0,
+                "fret_logical_observed_px": 0.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the official Input OTP demo rendered in the UI Gallery docs page.",
+    "Upstream input-otp renders a hidden input that spans the full web viewport, while the Fret UI Gallery demo intentionally applies a caller-owned max-w-xs refinement to keep the projected slots in the docs preview lane.",
+    "The high-confidence parity surface is therefore slot/group/separator relative geometry: 36px slots, contiguous slots inside a group, and the 76px cross-group offset created by the separator plus flex gaps.",
+    "Fret layout sidecar nodes for this slice do not carry the stable OTP test ids, so the fixture intentionally reads Fret bounds from bundle schema2 semantics."
+  ]
+}

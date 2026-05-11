@@ -26,6 +26,7 @@
         "theme": "light",
         "mode": "open",
         "variant": "submenu",
+        "context_id": "upstream.dropdown_menu.demo.light.open.submenu.vp375x240",
         "viewport": {
           "width_px": 375,
           "height_px": 240
@@ -288,6 +289,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "submenu",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240

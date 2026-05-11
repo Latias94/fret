@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 359
+- Dedicated directories: 360
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2022,6 +2022,7 @@ Rule:
 - `docs/workstreams/shadcn-extras/` — first 2026-02-09, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/shadcn-motion-parity-audit-v1/` — first 2026-03-03, latest 2026-03-04, 5 markdown docs
 - `docs/workstreams/shadcn-parity-discovery-harness-v1/` — first 2026-05-09, latest 2026-05-09, 4 markdown docs (active discovery lane for mapping upstream shadcn facts to Fret evidence and classifying parity drift before manual screenshot reports)
+- `docs/workstreams/shadcn-parity-discovery-harness-v2/` — first 2026-05-11, latest 2026-05-11, 4 markdown docs (active coverage-driven follow-on for prioritized shadcn component/state/viewport sweeps and promotion of confirmed parity findings)
 - `docs/workstreams/shadcn-parity-harness-v1/` — first 2026-05-09, latest 2026-05-09, 1 markdown docs (active seed lane for Button Group UI Gallery parity fixes, stable selectors, render-flow assertions, and diagnostics evidence)
 - `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/` — first 2026-04-01, latest 2026-04-01, 3 markdown docs
 - `docs/workstreams/shadcn-part-surface-alignment-v1/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs

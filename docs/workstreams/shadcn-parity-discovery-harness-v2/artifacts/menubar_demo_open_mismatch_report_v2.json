@@ -1,0 +1,1142 @@
+{
+  "schema_version": 1,
+  "component": "menubar",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-11",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/menubar_demo_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.menubar.demo.light.open.vp1440x900",
+      "snapshot": "menubar-demo",
+      "theme": "light",
+      "mode": "open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "menubar-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "",
+        "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 4,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 4,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 4,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 120,
+    "bundle_semantics_test_id_count": 120,
+    "measured_test_id_count": 120,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 7,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "demo_root_shell",
+      "label": "Menubar demo root shell",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "root_keeps_upstream_h9_height",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-menubar-demo-root",
+        "ui-gallery-menubar-demo-file"
+      ],
+      "upstream_facts": [
+        "The new-york-v4 Menubar root owns `flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs`.",
+        "The upstream open DOM snapshot measures the Menubar root at 36px tall.",
+        "The File trigger is 28px tall and starts 4px below the root top."
+      ],
+      "fret_facts": [
+        "The UI Gallery Menubar demo exposes stable test ids on the Menubar root and File trigger.",
+        "The comparison intentionally ignores root width because the Fret docs preview constrains this demo to 288px while upstream fills the web viewport."
+      ],
+      "checks": [
+        {
+          "id": "root_keeps_upstream_h9_height",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The Menubar root should keep the upstream h-9 border-box height of 36px.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Menubar root height is a shadcn recipe default and should not drift with auto-height chrome."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-menubar-demo-root",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 42.667,
+                    "y": 244.667,
+                    "w": 288.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 42.667,
+                    "y": 244.667,
+                    "w": 288.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(169v3)",
+                  "kind_hint": "Semantics",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+              ],
+              "predicate_count": 1,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.menubar.demo.root",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 1440.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "menubar",
+                    "data-orientation": "horizontal",
+                    "data-slot": "menubar"
+                  },
+                  "class_name": "bg-background flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "file_trigger_keeps_upstream_vertical_centering",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The File trigger should stay 28px tall and start 4px below the Menubar root top.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The trigger vertical lane proves the fixed root shell and items-center behavior together."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-menubar-demo-file",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 28",
+                  "eps_px": 1.0,
+                  "observed_px": 28.0,
+                  "bounds": {
+                    "x": 47.333,
+                    "y": 249.333,
+                    "w": 36.667,
+                    "h": 28.0
+                  },
+                  "raw_bounds": {
+                    "x": 47.333,
+                    "y": 249.333,
+                    "w": 36.667,
+                    "h": 28.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(192v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-menubar-demo-file",
+                  "b": "ui-gallery-menubar-demo-root",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 4",
+                  "eps_px": 1.0,
+                  "observed_px": 4.667,
+                  "a_bounds": {
+                    "x": 47.333,
+                    "y": 249.333,
+                    "w": 36.667,
+                    "h": 28.0
+                  },
+                  "b_bounds": {
+                    "x": 42.667,
+                    "y": 244.667,
+                    "w": 288.0,
+                    "h": 36.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 47.333,
+                    "y": 249.333,
+                    "w": 36.667,
+                    "h": 28.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 42.667,
+                    "y": 244.667,
+                    "w": 288.0,
+                    "h": 36.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(192v3)",
+                  "b_node": "NodeId(169v3)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.menubar.demo.file_trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 28",
+                  "eps_px": 1.0,
+                  "observed_px": 28.0,
+                  "bounds": {
+                    "x": 4.667,
+                    "y": 4.0,
+                    "w": 39.458,
+                    "h": 28.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0",
+                  "tag": "button",
+                  "attrs": {
+                    "role": "menuitem",
+                    "aria-expanded": "true",
+                    "aria-controls": "radix-_R_2lubsnpfiuplbH2_",
+                    "data-state": "open",
+                    "data-orientation": "horizontal",
+                    "data-slot": "menubar-trigger"
+                  },
+                  "class_name": "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.menubar.demo.file_trigger",
+                  "b": "upstream.menubar.demo.root",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 4",
+                  "eps_px": 1.0,
+                  "observed_px": 4.0,
+                  "a_bounds": {
+                    "x": 4.667,
+                    "y": 4.0,
+                    "w": 39.458,
+                    "h": 28.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 1440.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "a_path": "0.0",
+                  "b_path": "0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 28.0,
+                "fret_logical_observed_px": 28.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 28.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 4.0,
+                "fret_logical_observed_px": 4.667,
+                "logical_delta_px": 0.667
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "file_menu_rows",
+      "label": "Menubar File menu open row geometry",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "file_menu_items_keep_upstream_row_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-menubar-demo-new-tab",
+        "ui-gallery-menubar-demo-new-window",
+        "ui-gallery-menubar-demo-new-incognito-window",
+        "ui-gallery-menubar-demo-share",
+        "ui-gallery-menubar-demo-print"
+      ],
+      "upstream_facts": [
+        "The new-york-v4 MenubarContent owns min-w-[12rem], border, p-1, and overflow-hidden.",
+        "The File menu rows are 32px tall, about 182.667px wide inside the 192px content shell, and the separators create 41px jumps around the Share and Print rows."
+      ],
+      "fret_facts": [
+        "The UI Gallery Menubar demo exposes stable test ids on the open File menu rows.",
+        "This slice compares row sizes and offsets instead of absolute overlay position because the UI Gallery preview and upstream web root do not share the same page origin."
+      ],
+      "checks": [
+        {
+          "id": "file_menu_items_keep_upstream_row_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The File menu rows should stay on the upstream 32px row-height lane and approximately 182.667px inner row width.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-demo-open-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Menu row size is the reusable geometry signal for Menubar content chrome drift."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-menubar-demo-new-tab",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(391v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-menubar-demo-new-tab",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 182.667",
+                  "eps_px": 1.0,
+                  "observed_px": 182.667,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "raw_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(391v3)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.menubar.demo.new_tab",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "bounds": {
+                    "x": 5.167,
+                    "y": 44.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "menuitem",
+                    "data-orientation": "vertical",
+                    "data-slot": "menubar-item",
+                    "data-variant": "default"
+                  },
+                  "class_name": "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.menubar.demo.new_tab",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 182.667",
+                  "eps_px": 1.0,
+                  "observed_px": 182.667,
+                  "bounds": {
+                    "x": 5.167,
+                    "y": 44.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "portal.0.0",
+                  "tag": "div",
+                  "attrs": {
+                    "role": "menuitem",
+                    "data-orientation": "vertical",
+                    "data-slot": "menubar-item",
+                    "data-variant": "default"
+                  },
+                  "class_name": "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "height",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 32.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "width",
+                "upstream_observed_px": 182.667,
+                "fret_logical_observed_px": 182.667,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 182.667,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "file_menu_items_keep_upstream_vertical_offsets",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The open File menu rows should preserve upstream vertical offsets: New Window 32px, Share 105px, and Print 146px below New Tab.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/examples/menubar-demo.tsx",
+            "ecosystem/fret-ui-shadcn/src/menubar.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Vertical row offsets catch row-height, separator, and submenu-trigger padding regressions in one small geometry surface."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-menubar-demo-new-window",
+                  "b": "ui-gallery-menubar-demo-new-tab",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "a_bounds": {
+                    "x": 0.0,
+                    "y": 32.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 0.0,
+                    "y": 32.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(412v3)",
+                  "b_node": "NodeId(391v3)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-menubar-demo-share",
+                  "b": "ui-gallery-menubar-demo-new-tab",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 105",
+                  "eps_px": 1.0,
+                  "observed_px": 105.333,
+                  "a_bounds": {
+                    "x": 0.0,
+                    "y": 105.333,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 0.0,
+                    "y": 105.333,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(422v3)",
+                  "b_node": "NodeId(391v3)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "ui-gallery-menubar-demo-print",
+                  "b": "ui-gallery-menubar-demo-new-tab",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 146",
+                  "eps_px": 1.0,
+                  "observed_px": 146.0,
+                  "a_bounds": {
+                    "x": 0.0,
+                    "y": 146.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "a_raw_bounds": {
+                    "x": 0.0,
+                    "y": 146.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_raw_bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "scale_factors": [
+                    1.5
+                  ],
+                  "coordinate_units": [
+                    "logical_px"
+                  ],
+                  "a_node": "NodeId(429v3)",
+                  "b_node": "NodeId(391v3)",
+                  "evidence_sources": [
+                    "layout_sidecar"
+                  ],
+                  "evidence_paths": [
+                    "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json"
+                  ],
+                  "sidecar_path": "target/fret-diag/shadcn-parity-discovery-harness-v2-menubar-demo-open-layout-post-fix-3/sessions/1778487579461-183428/1778487726606-ui-gallery-menubar-demo-open.layout/layout.taffy.v1.json",
+                  "a_duplicate_count": 1,
+                  "b_duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json"
+              ],
+              "predicate_count": 3,
+              "predicates": [
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.menubar.demo.new_window",
+                  "b": "upstream.menubar.demo.new_tab",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 32",
+                  "eps_px": 1.0,
+                  "observed_px": 32.0,
+                  "a_bounds": {
+                    "x": 5.167,
+                    "y": 76.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 5.167,
+                    "y": 44.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "a_path": "portal.0.1",
+                  "b_path": "portal.0.0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.menubar.demo.share",
+                  "b": "upstream.menubar.demo.new_tab",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 105",
+                  "eps_px": 1.0,
+                  "observed_px": 105.0,
+                  "a_bounds": {
+                    "x": 5.167,
+                    "y": 149.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 5.167,
+                    "y": 44.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "a_path": "portal.0.4",
+                  "b_path": "portal.0.0"
+                },
+                {
+                  "kind": "bounds_metric_delta",
+                  "status": "pass",
+                  "a": "upstream.menubar.demo.print",
+                  "b": "upstream.menubar.demo.new_tab",
+                  "metric": "top",
+                  "comparison": "eq",
+                  "expected": "== 146",
+                  "eps_px": 1.0,
+                  "observed_px": 146.0,
+                  "a_bounds": {
+                    "x": 5.167,
+                    "y": 190.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "b_bounds": {
+                    "x": 5.167,
+                    "y": 44.667,
+                    "w": 182.667,
+                    "h": 32.0
+                  },
+                  "device_pixel_ratios": [
+                    2.0
+                  ],
+                  "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "snapshot_name": "menubar-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "",
+                  "context_id": "upstream.menubar.demo.light.open.vp1440x900",
+                  "a_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "b_snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json",
+                  "a_path": "portal.0.6",
+                  "b_path": "portal.0.0"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "top",
+                "upstream_observed_px": 32.0,
+                "fret_logical_observed_px": 32.0,
+                "logical_delta_px": 0.0
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 105.0,
+                "fret_logical_observed_px": 105.333,
+                "logical_delta_px": 0.333
+              },
+              {
+                "metric": "top",
+                "upstream_observed_px": 146.0,
+                "fret_logical_observed_px": 146.0,
+                "logical_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the official Menubar demo opened in the UI Gallery docs page.",
+    "The upstream demo root spans the full 1440px web viewport while the UI Gallery preview constrains the Fret root to its docs preview lane, so this fixture avoids root width parity and locks height/relative geometry instead.",
+    "Native text metrics can make the short trigger labels a few pixels narrower than the web golden; trigger width is therefore not a parity claim in this slice.",
+    "The high-confidence regression surfaces are the shadcn h-9 Menubar root height, trigger vertical centering, and open File menu row sizing/offsets."
+  ]
+}

@@ -1,5 +1,5 @@
 use super::super::super::super::*;
-use fret::AppComponentCx;
+use fret::{AppComponentCx, app::AppRenderActionsExt};
 
 pub(in crate::ui) fn preview_data_table_torture(
     cx: &mut AppComponentCx<'_>,
@@ -88,6 +88,8 @@ pub(in crate::ui) fn preview_data_table_torture(
         state_value.pagination.page_index = 0;
         state_value
     });
+    let reset_state = state.clone();
+    let reset_page_size = data.len();
 
     let sorting: Vec<SortSpec> = cx
         .app
@@ -254,6 +256,21 @@ pub(in crate::ui) fn preview_data_table_torture(
                         .label(status_filter_text.clone())
                         .test_id("ui-gallery-data-table-torture-status-filter"),
                 ),
+                shadcn::Button::new("Reset harness")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-data-table-torture-reset-state")
+                    .on_activate(cx.actions().listen({
+                        let reset_state = reset_state.clone();
+                        move |host, _action_cx| {
+                            let _ = host.models_mut().update(&reset_state, |st| {
+                                *st = fret_ui_headless::table::TableState::default();
+                                st.pagination.page_size = reset_page_size;
+                                st.pagination.page_index = 0;
+                            });
+                        }
+                    }))
+                    .into_element(cx),
                 toolbar.into_element(cx),
             ]
         })

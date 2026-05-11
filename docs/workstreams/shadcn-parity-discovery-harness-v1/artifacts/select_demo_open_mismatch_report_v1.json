@@ -1,0 +1,462 @@
+{
+  "schema_version": 1,
+  "component": "select-demo",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-10",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/select_demo_open_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.select_demo.light.open.vp1440x900",
+      "snapshot": "select-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "default",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "select-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "default",
+        "context_id": "upstream.select_demo.light.open.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 0,
+      "mechanism_core": 1,
+      "diagnostics_surface": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 0,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 0,
+      "component_fixture": 1,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "measured_test_id_count": 171,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1
+  },
+  "parts": [
+    {
+      "id": "select_trigger_size",
+      "label": "Select demo trigger size",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "select_demo_trigger_matches_180x36",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-select-shadcn-demo-trigger"
+      ],
+      "upstream_facts": [
+        "The docs-path demo uses a 180px-wide trigger.",
+        "The trigger is 36px tall and displays the placeholder text."
+      ],
+      "fret_facts": [
+        "The UI Gallery demo exposes a stable trigger selector.",
+        "The capture uses the same compact 180px lane as the upstream example."
+      ],
+      "checks": [
+        {
+          "id": "select_demo_trigger_matches_180x36",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The docs-path Select trigger should remain 180px by 36px.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/examples/select-demo.tsx",
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx",
+            "apps/fret-ui-gallery/src/ui/snippets/select/demo.rs",
+            "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+            "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "This is a recipe-owned trigger sizing invariant for the docs-path demo."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-select-shadcn-demo-trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 180",
+                  "eps_px": 1.0,
+                  "observed_px": 180.0,
+                  "bounds": {
+                    "x": 214.667,
+                    "y": 260.667,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 214.667,
+                    "y": 260.667,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(92v3)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-select-shadcn-demo-trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 214.667,
+                    "y": 260.667,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 214.667,
+                    "y": 260.667,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(92v3)",
+                  "kind_hint": "Pressable",
+                  "sidecar_path": "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json",
+                  "duplicate_count": 1
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.select_demo.trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 180",
+                  "eps_px": 1.0,
+                  "observed_px": 180.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json",
+                  "snapshot_name": "select-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "default",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "button",
+                  "attrs": {
+                    "role": "combobox",
+                    "aria-expanded": "true",
+                    "aria-controls": "radix-_R_lubsnpfiuplb_",
+                    "data-state": "open",
+                    "data-slot": "select-trigger",
+                    "data-size": "default",
+                    "data-placeholder": ""
+                  },
+                  "class_name": "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 w-[180px]"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.select_demo.trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json",
+                  "snapshot_name": "select-demo",
+                  "theme": "light",
+                  "mode": "open",
+                  "variant": "default",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0",
+                  "tag": "button",
+                  "attrs": {
+                    "role": "combobox",
+                    "aria-expanded": "true",
+                    "aria-controls": "radix-_R_lubsnpfiuplb_",
+                    "data-state": "open",
+                    "data-slot": "select-trigger",
+                    "data-size": "default",
+                    "data-placeholder": ""
+                  },
+                  "class_name": "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 w-[180px]"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 180.0,
+                "fret_logical_observed_px": 180.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 180.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "select_open_viewport_geometry",
+      "label": "Select demo open viewport geometry",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "select_demo_open_option_metrics_preserve_viewport_padding",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "select-scroll-viewport"
+      ],
+      "upstream_facts": [
+        "The open demo renders a fixed portal wrapper and a listbox content subtree.",
+        "Radix Select uses viewport.scrollHeight for item-aligned sizing, and that scrollHeight includes viewport padding such as shadcn's p-1."
+      ],
+      "fret_facts": [
+        "The discovery seed exposed a Select open geometry mismatch and promoted it to a same-context web-vs-fret gate.",
+        "The confirmed root cause was the scroll overflow observer shrinking a single-child padded container from 196px to the 192px descendant frontier, dropping the bottom padding from the ScrollHandle content extent."
+      ],
+      "checks": [
+        {
+          "id": "select_demo_open_option_metrics_preserve_viewport_padding",
+          "kind": "existing_gate",
+          "status": "pass_known",
+          "expected": "Same-context web-vs-fret Select open option metrics should preserve the upstream viewport bottom padding after item-aligned initial scroll.",
+          "observed": "pass",
+          "observed_source": "fixture",
+          "confidence": "high",
+          "owner": "mechanism_core",
+          "layer": "mechanism",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json",
+            "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
+            "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs"
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "The mismatch crossed scroll extent mechanics and Select item-aligned layout; it is now locked by a fret-ui mechanism unit test plus the shadcn web-vs-fret Select fixture gate."
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This slice measures the docs-path Select open demo against Fret UI Gallery evidence.",
+    "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+    "This slice models the trigger and open viewport geometry; it does not score scroll-button chrome as a separate part."
+  ]
+}

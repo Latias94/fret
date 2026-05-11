@@ -3,6 +3,17 @@ use std::path::{Path, PathBuf};
 use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
 use serde::Deserialize;
 
+fn dedup_paths_preserve_order(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::with_capacity(paths.len());
+    for path in paths {
+        if seen.insert(path.clone()) {
+            out.push(path);
+        }
+    }
+    out
+}
+
 pub(crate) struct SuiteRegistry {
     promoted: PromotedScriptRegistry,
 }
@@ -152,9 +163,7 @@ impl SuiteResolver {
                 out.push(resolved);
             }
 
-            out.sort();
-            out.dedup();
-            return Ok(out);
+            return Ok(dedup_paths_preserve_order(out));
         }
 
         let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
@@ -166,6 +175,18 @@ impl SuiteResolver {
         workspace_root: &Path,
         suite: &str,
     ) -> Result<Option<Vec<PathBuf>>, String> {
+        let suite_dir_has_manifest = ["suite.json", "_suite.json"].into_iter().any(|name| {
+            workspace_root
+                .join("tools")
+                .join("diag-scripts")
+                .join("suites")
+                .join(suite)
+                .join(name)
+                .is_file()
+        });
+        if suite_dir_has_manifest {
+            return Ok(Some(Self::scripts_from_suite_dir(workspace_root, suite)?));
+        }
         if let Some(registry) = self.registry.as_ref()
             && let Some(scripts) = registry.resolve_promoted_suite_scripts(workspace_root, suite)
         {

@@ -3,7 +3,7 @@
   "slug": "shadcn-parity-discovery-harness-v1",
   "title": "Shadcn Parity Discovery Harness v1",
   "status": "active",
-  "updated": "2026-05-10",
+  "updated": "2026-05-11",
   "scope_kind": "execution",
   "problem": "Build a proactive shadcn parity discovery loop that maps upstream shadcn facts to Fret UI Gallery evidence and classifies drift before users have to report screenshots by hand.",
   "authoritative_docs": [
@@ -29,12 +29,17 @@
     }
   ],
   "repro": {
-    "summary": "Generate deterministic Button Group, Dropdown Menu, Input, and Combobox Responsive parity discovery reports from mapping fixtures, Fret layout sidecars, upstream shadcn DOM snapshots, and runner viewport-contract evidence where available.",
+    "summary": "Generate deterministic Button Group, Dropdown Menu, Input, Select, Calendar, Calendar Hijri, and Combobox Responsive parity discovery reports from mapping fixtures, Fret layout sidecars, upstream shadcn DOM snapshots, and runner viewport-contract evidence where available, plus a targeted Hijri web-vs-fret layout gate for the docs-path example.",
     "commands": [
       "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v1.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-sweep-v1/button-group-select-after-select-padding/sessions/1778337694097-135816 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324862209-126448 --upstream-dom-snapshot F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/input_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/select_demo_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438865863-ui-gallery-calendar-custom-cell-size-responsive-lg.layout --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout --fret-layout-sidecar-dir target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-mobile-effective-vp375x240 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json"
     ]
@@ -57,6 +62,26 @@
       "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/input_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-parity-discovery-harness-v1-m3/sessions/1778324505209-27984 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json"
     },
     {
+      "name": "select-report-generation",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/select_demo_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json"
+    },
+    {
+      "name": "calendar-custom-cell-size-sm-report-generation",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438863332-ui-gallery-calendar-custom-cell-size-responsive-sm.layout --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json"
+    },
+    {
+      "name": "calendar-custom-cell-size-lg-report-generation",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-custom-cell-size-responsive/sessions/1778438847930-90664/1778438865863-ui-gallery-calendar-custom-cell-size-responsive-lg.layout --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json"
+    },
+    {
+      "name": "calendar-responsive-mixed-report-generation",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457043904-ui-gallery-calendar-mixed-responsive-panel.layout --fret-layout-sidecar-dir target/fret-diag/calendar-mixed-responsive-popover-vs-panel-fixed-weeks-2/sessions/1778456787039-166856/1778457044494-ui-gallery-calendar-mixed-responsive-popover.layout --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json"
+    },
+    {
+      "name": "calendar-hijri-report-generation",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484 --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json"
+    },
+    {
       "name": "combobox-responsive-desktop-report-generation",
       "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json --fret-layout-sidecar-dir target/fret-diag/combobox-responsive-post-shell-sizing-desktop-final --upstream-dom-snapshot goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json --output docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json"
     },
@@ -67,6 +92,10 @@
     {
       "name": "runner-effective-viewport-contract-script",
       "command": "python -m json.tool tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json > $null; $env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo test -p fret-bootstrap --lib --features ui-app-driver,diagnostics window_inner_size_predicate_reads_effective_window_bounds -- --nocapture"
+    },
+    {
+      "name": "calendar-hijri-web-vs-fret-layout",
+      "command": "$env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web"
     },
     {
       "name": "parity-discovery-tool-compile",
@@ -82,7 +111,7 @@
     },
     {
       "name": "json-validation",
-      "command": "python -m json.tool tools/parity-discovery/suites/shadcn_parity_discovery_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/button_group_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/input_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/WORKSTREAM.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json > $null"
+      "command": "python -m json.tool tools/parity-discovery/suites/shadcn_parity_discovery_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/button_group_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/dropdown_menu_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/input_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/select_demo_open_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_open_parts_v1.json > $null; python -m json.tool tools/parity-discovery/fixtures/combobox_responsive_vp375x240_open_parts_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/WORKSTREAM.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json > $null; python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json > $null"
     },
     {
       "name": "workstream-catalog",
@@ -101,10 +130,27 @@
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json",
+    "ecosystem/fret-ui-shadcn/src/calendar_hijri.rs",
+    "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+    "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+    "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+    "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+    "tools/parity-discovery/fixtures/select_demo_open_parts_v1.json",
+    "tools/parity-discovery/fixtures/calendar_custom_cell_size_sm_parts_v1.json",
+    "tools/parity-discovery/fixtures/calendar_custom_cell_size_lg_parts_v1.json",
+    "tools/parity-discovery/fixtures/calendar_responsive_mixed_parts_v1.json",
+    "tools/parity-discovery/fixtures/calendar_hijri_parts_v1.json",
     "repo-ref/ui/apps/v4/goldens/shadcn-web/v4/new-york-v4/_tmp_extract/dropdown-menu-demo.submenu.open.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/button_group_mismatch_report_v1.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/dropdown_menu_mismatch_report_v1.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/select_demo_open_mismatch_report_v1.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_sm_mismatch_report_v1.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_custom_cell_size_lg_mismatch_report_v1.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_responsive_mixed_mismatch_report_v1.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/calendar_hijri_mismatch_report_v1.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_open_mismatch_report_v1.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/combobox_responsive_vp375x240_open_mismatch_report_v1.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/shadcn_parity_suite_report_v1.json",
@@ -112,6 +158,7 @@
     "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
     "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-dropdown-menu-layout.json",
     "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-input-layout.json",
+    "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
     "tools/diag-scripts/ui-gallery/window/ui-gallery-window-inner-size-effective-vp375x240.json",

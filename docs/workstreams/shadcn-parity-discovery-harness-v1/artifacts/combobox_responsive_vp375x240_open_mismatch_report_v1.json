@@ -26,6 +26,7 @@
         "theme": "light",
         "mode": "open",
         "variant": "vp375x240",
+        "context_id": "upstream.combobox_responsive.light.open.vp375x240",
         "viewport": {
           "width_px": 375,
           "height_px": 240
@@ -429,6 +430,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -466,6 +468,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -662,6 +665,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -698,6 +702,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -917,6 +922,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
                   "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
                   "a_path": "portal.1.1",
@@ -943,6 +949,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -1145,6 +1152,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -1186,6 +1194,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
                   "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
                   "a_path": "portal.1.1.0",
@@ -1384,6 +1393,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "viewport": {
                     "w": 375,
                     "h": 240
@@ -1427,6 +1437,7 @@
                   "theme": "light",
                   "mode": "open",
                   "variant": "vp375x240",
+                  "context_id": null,
                   "a_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
                   "b_snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
                   "a_path": "portal.1.1.0.2",

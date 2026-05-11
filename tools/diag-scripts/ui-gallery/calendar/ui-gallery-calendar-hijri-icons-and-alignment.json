@@ -3,7 +3,10 @@
   "meta": {
     "name": "UI Gallery: Hijri calendar uses SVG chevrons and centered weekday labels",
     "tags": ["ui-gallery", "calendar", "hijri", "shadcn"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_FIXED_TODAY": "2025-06-12"
+    }
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -62,16 +65,32 @@
       "timeout_frames": 600,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.hijri-nav-prev" }
+        "target": { "kind": "test_id", "id": "ui-gallery.calendar.hijri.nav-prev" }
       }
     },
     {
       "type": "wait_bounds_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery.calendar.hijri-nav-prev" },
+      "target": { "kind": "test_id", "id": "ui-gallery.calendar.hijri.nav-prev" },
       "stable_frames": 4,
       "max_move_px": 0.5,
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery.calendar.hijri:2025-06-12" }
+      }
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery.calendar.hijri:2025-06-12" },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-calendar-hijri-icons-and-alignment.layout" },
     { "type": "capture_bundle", "label": "ui-gallery-calendar-hijri-icons-and-alignment" },
     {
       "type": "capture_screenshot",

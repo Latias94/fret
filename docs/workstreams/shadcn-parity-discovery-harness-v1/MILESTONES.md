@@ -57,7 +57,7 @@ Status: complete
 
 ## M4: Multi-component Discovery
 
-Status: active
+Status: complete
 
 - Add at least three components total.
 - Include layout/chrome, overlay/interaction, and responsive/container-sensitive cases.
@@ -80,3 +80,39 @@ Status: active
   ButtonGroup SelectTrigger chrome sizing, Popover command shell sizing, and Drawer 80vh shell
   sizing. The audit maps each finding to root cause ownership and a promotion target.
 - Decide whether to promote `tools/parity-discovery/` into a crate.
+
+## M5: Calendar Upstream DOM Coverage
+
+Status: complete
+
+- Wire the Calendar custom-cell large viewport to upstream DOM goldens so the suite can compare
+  the responsive Calendar lane against an upstream source of truth instead of sidecar-only evidence.
+- Wire the Calendar custom-cell small viewport to upstream DOM goldens.
+- Wire the Calendar custom-cell popover / mixed variant to upstream DOM goldens.
+- Decide to use a fixture-level context map for responsive Calendar and future multi-viewport DOM
+  families instead of relying on capture-name suffixes alone.
+
+## M6: Calendar Responsive Coverage
+
+Status: complete
+
+- Calendar custom-cell small and large viewport discovery reports pass.
+- The mixed responsive Calendar report passes after the weekday-row/day-grid spacing normalization
+  in `calendar_range.rs` and `calendar_multiple.rs`.
+- The suite regenerates with `31 pass_known`, `0 mismatch`, and `0 top findings`.
+- The resolved calendar gap stays classified as a recipe-layer issue rather than a mechanism-layer
+  issue.
+
+## M7: Calendar Hijri Layout Gate
+
+Status: complete
+
+- The docs-path `calendar-hijri` example now has a dedicated web-vs-fret layout gate, and it
+  passed after restoring the Hijri weekday-row/day-grid gap to `Space::N2`.
+
+## M8: Calendar Hijri Discovery Coverage
+
+Status: complete
+
+- The docs-path `calendar-hijri` example is now also part of the parity-discovery suite via
+  roots-dump evidence and root-relative geometry predicates.

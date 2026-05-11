@@ -1,0 +1,432 @@
+{
+  "schema_version": 1,
+  "component": "calendar-hijri",
+  "style": "new-york-v4",
+  "report": {
+    "id": "calendar_hijri_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-11",
+    "limitations": [
+      "This slice measures the UI Gallery Calendar Hijri example against the upstream calendar-hijri DOM snapshot.",
+      "Fret layout sidecar abs_rect values are logical px and compare directly against upstream DOM CSS px.",
+      "Root-relative predicates keep the gallery page shell offset out of the comparison so the calendar's internal alignment can be compared directly."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "upstream.calendar_hijri.source",
+        "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx"
+      },
+      {
+        "id": "upstream.calendar_hijri.block",
+        "path": "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json"
+      },
+      {
+        "id": "upstream.calendar_hijri.docs",
+        "path": "repo-ref/ui/apps/v4/content/docs/components/calendar.mdx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.calendar_hijri.page",
+        "path": "apps/fret-ui-gallery/src/ui/pages/calendar.rs"
+      },
+      {
+        "id": "fret.calendar_hijri.snippet",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs"
+      },
+      {
+        "id": "fret.calendar_hijri.diag",
+        "path": "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json"
+      },
+      {
+        "id": "fret.calendar_hijri.recipe",
+        "path": "ecosystem/fret-ui-shadcn/src/calendar_hijri.rs"
+      }
+    ]
+  },
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar_hijri.light.vp1440x900",
+      "snapshot": "calendar-hijri",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "upstream.calendar_hijri.root",
+      "snapshot": "calendar-hijri",
+      "theme": "light",
+      "path": "0",
+      "context_id": "upstream.calendar_hijri.light.vp1440x900",
+      "source_ref_id": "upstream.calendar_hijri.block"
+    },
+    {
+      "id": "upstream.calendar_hijri.nav_prev",
+      "snapshot": "calendar-hijri",
+      "theme": "light",
+      "path": "0.0.0.0",
+      "context_id": "upstream.calendar_hijri.light.vp1440x900",
+      "source_ref_id": "upstream.calendar_hijri.block"
+    },
+    {
+      "id": "upstream.calendar_hijri.nav_next",
+      "snapshot": "calendar-hijri",
+      "theme": "light",
+      "path": "0.0.0.1",
+      "context_id": "upstream.calendar_hijri.light.vp1440x900",
+      "source_ref_id": "upstream.calendar_hijri.block"
+    },
+    {
+      "id": "upstream.calendar_hijri.selected_day",
+      "snapshot": "calendar-hijri",
+      "theme": "light",
+      "path": "0.0.1.1.1.3.5.0",
+      "context_id": "upstream.calendar_hijri.light.vp1440x900",
+      "source_ref_id": "upstream.calendar_hijri.block"
+    }
+  ],
+  "parts": [
+    {
+      "id": "hijri_header_alignment",
+      "label": "Hijri header alignment",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.calendar_hijri.source",
+          "upstream.calendar_hijri.docs"
+        ],
+        "facts": [
+          "The upstream Hijri calendar keeps its nav buttons locked to the calendar root.",
+          "The docs-path example should preserve the same root-relative nav geometry on the UI Gallery surface."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.calendar_hijri.page",
+          "fret.calendar_hijri.snippet",
+          "fret.calendar_hijri.diag",
+          "fret.calendar_hijri.recipe"
+        ],
+        "test_ids": [
+          "ui-gallery.calendar.hijri.nav-prev",
+          "ui-gallery.calendar.hijri.nav-next"
+        ],
+        "facts": [
+          "The UI Gallery Hijri snippet exposes stable nav test ids and a stable calendar root for root-relative geometry checks.",
+          "The captured layout sidecar stores the calendar root separately from the page shell."
+        ]
+      },
+      "checks": [
+        {
+          "id": "hijri_prev_nav_matches_root_relative_web_geometry",
+          "kind": "fret_layout_sidecar",
+          "expected": "The previous-month button should keep the upstream root-relative position and remain a 32px square.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+            "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+            "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar_hijri.nav_prev",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar_hijri.nav_prev",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar_hijri.nav_prev",
+              "b": "upstream.calendar_hijri.root",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 205.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar_hijri.nav_prev",
+              "b": "upstream.calendar_hijri.root",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 13.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.hijri.nav-prev",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.hijri.nav-prev",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.hijri.nav-prev",
+              "b": "ui-gallery-calendar-hijri-calendar",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 205.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.hijri.nav-prev",
+              "b": "ui-gallery-calendar-hijri-calendar",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 13.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The Hijri header geometry should stay reviewable as a reusable fixture-level gate."
+          }
+        },
+        {
+          "id": "hijri_next_nav_matches_root_relative_web_geometry",
+          "kind": "fret_layout_sidecar",
+          "expected": "The next-month button should keep the upstream root-relative position and remain a 32px square.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+            "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+            "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar_hijri.nav_next",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar_hijri.nav_next",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar_hijri.nav_next",
+              "b": "upstream.calendar_hijri.root",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 13.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar_hijri.nav_next",
+              "b": "upstream.calendar_hijri.root",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 13.0,
+              "eps_px": 1.0
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.hijri.nav-next",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.hijri.nav-next",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.hijri.nav-next",
+              "b": "ui-gallery-calendar-hijri-calendar",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 13.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.hijri.nav-next",
+              "b": "ui-gallery-calendar-hijri-calendar",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 13.0,
+              "eps_px": 1.0
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The Hijri header geometry should stay reviewable as a reusable fixture-level gate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hijri_selected_day_alignment",
+      "label": "Hijri selected day alignment",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "upstream.calendar_hijri.source",
+          "upstream.calendar_hijri.docs"
+        ],
+        "facts": [
+          "The upstream Hijri calendar keeps the selected day anchored to a stable 32px cell inside the calendar root.",
+          "The docs-path example should keep the selected-day geometry aligned with the upstream calendar grid."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.calendar_hijri.page",
+          "fret.calendar_hijri.snippet",
+          "fret.calendar_hijri.diag",
+          "fret.calendar_hijri.recipe"
+        ],
+        "test_ids": [
+          "ui-gallery.calendar.hijri:2025-06-12"
+        ],
+        "facts": [
+          "The UI Gallery Hijri snippet exposes a stable selected-day test id, so the parity harness can measure the selected date directly instead of inferring it from text.",
+          "The selected day sits inside the same captured calendar root as the header, which makes root-relative geometry checks deterministic."
+        ]
+      },
+      "checks": [
+        {
+          "id": "hijri_selected_day_matches_root_relative_web_geometry",
+          "kind": "fret_layout_sidecar",
+          "expected": "The selected day should keep the upstream root-relative position and remain a 32px square.",
+          "observed": "unknown",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/ui/snippets/calendar/hijri.rs",
+            "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-hijri-icons-and-alignment.json",
+            "goldens/shadcn-web/v4/new-york-v4/calendar-hijri.json",
+            "target/fret-diag/calendar-hijri-stable-day-id/sessions/1778462223997-181484/1778462230793-ui-gallery-calendar-hijri-icons-and-alignment.layout/layout.taffy.v1.json"
+          ],
+          "upstream_predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar_hijri.selected_day",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "upstream.calendar_hijri.selected_day",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar_hijri.selected_day",
+              "b": "upstream.calendar_hijri.root",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 45.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "upstream.calendar_hijri.selected_day",
+              "b": "upstream.calendar_hijri.root",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 208.188,
+              "eps_px": 3.5
+            }
+          ],
+          "predicates": [
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.hijri:2025-06-12",
+              "metric": "width",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric",
+              "target": "ui-gallery.calendar.hijri:2025-06-12",
+              "metric": "height",
+              "comparison": "eq",
+              "value_px": 32.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.hijri:2025-06-12",
+              "b": "ui-gallery-calendar-hijri-calendar",
+              "metric": "x",
+              "comparison": "eq",
+              "value_px": 45.0,
+              "eps_px": 1.0
+            },
+            {
+              "kind": "bounds_metric_delta",
+              "a": "ui-gallery.calendar.hijri:2025-06-12",
+              "b": "ui-gallery-calendar-hijri-calendar",
+              "metric": "y",
+              "comparison": "eq",
+              "value_px": 208.188,
+              "eps_px": 3.5
+            }
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The Hijri selected-day geometry should stay reviewable as a reusable fixture-level gate."
+          }
+        }
+      ]
+    }
+  ]
+}
