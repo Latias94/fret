@@ -124,6 +124,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`
 - Feature payload store module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`
+- Diagnostics snapshot module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
