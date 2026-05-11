@@ -8,6 +8,7 @@
 mod editor;
 
 pub use editor::{
-    CodeEditor, CodeEditorCacheStats, CodeEditorHandle, CodeEditorInteractionOptions,
-    CodeEditorPaintPerfFrame, CodeEditorTorture, PreeditState, Selection,
+    CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats, CodeEditorHandle,
+    CodeEditorInteractionOptions, CodeEditorMemorySnapshotV1, CodeEditorPaintPerfFrame,
+    CodeEditorTorture, CodeFontFeaturePolicy, CodeFontFeaturePreset, PreeditState, Selection,
 };

@@ -21,6 +21,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -67,12 +71,17 @@
       "command": "cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast"
     },
     {
+      "name": "code editor public surface test",
+      "command": "cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast"
+    },
+    {
       "name": "layering",
       "command": "python tools/check_layering.py"
     }
   ],
   "evidence": [
     "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
     "docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md",

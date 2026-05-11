@@ -16,13 +16,18 @@ Exit criteria:
 
 ## M1 - Public Surface Classification
 
+Status: In progress
+
 Exit criteria:
 
 - Every public item in `fret-code-editor`, `fret-code-editor-buffer`, and
-  `fret-code-editor-view` is classified as stable, experimental, or internal-by-accident.
-- `CodeEditorHandle` has a method-by-method owner table.
+  `fret-code-editor-view` is classified as stable, experimental, or internal-by-accident. (Initial
+  pass complete: `PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md`.)
+- `CodeEditorHandle` has a method-by-method owner table. (Initial pass complete:
+  `PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md`.)
 - First proposed removals/renames/moves include migration notes.
-- Focused compile/tests cover unchanged current examples.
+- Focused compile/tests cover unchanged current examples. (Initial public-signature re-export test:
+  `ecosystem/fret-code-editor/tests/public_surface.rs`.)
 
 ## M2 - Target Extension Package
 

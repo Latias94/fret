@@ -8,13 +8,15 @@ Last updated: 2026-05-12
 - [x] Create the narrow follow-on lane and first-open state file.
 - [x] Capture a baseline public-surface audit for `fret-code-editor`.
 - [x] Update the workstream catalog for the new dedicated directory.
-- [ ] Classify current public exports as stable, experimental, or internal-by-accident.
-- [ ] Audit every `CodeEditorHandle` method and group it by owner:
+- [x] Classify current public exports as stable, experimental, or internal-by-accident.
+- [x] Audit every `CodeEditorHandle` method and group it by owner:
   - model mutation,
   - view configuration,
   - interaction policy,
   - diagnostics/perf readout,
   - debug-only hook.
+- [x] Re-export `fret-code-editor` public-signature types that were only reachable through the
+      private `editor` module.
 - [ ] Decide whether `Selection` remains in `fret-code-editor` or moves toward buffer/view model
       ownership.
 - [ ] Add a public surface diff note before any API rename, move, or deletion.
