@@ -227,6 +227,7 @@ mod focus_barrier_transition;
 mod focus_repair;
 mod focus_scope;
 mod focus_scope_layered;
+mod focus_scope_stale_parent_harness;
 mod focus_traversal_availability;
 mod focus_traversal_prepaint_cache;
 mod gc_liveness;

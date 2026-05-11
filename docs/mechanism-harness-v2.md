@@ -394,6 +394,21 @@ previously only implied by narrower tests:
 The first runs did not expose runtime defects. They closed fixture-level gaps before recipe-level
 typeahead, submenu, and nested overlay parity work depends on those mechanisms.
 
+## Phase 2.13 Retained Tree Stale-Parent Coverage
+
+The tree-level stale-parent focus scope fixture suite now covers the retained-tree parent-pointer
+mutation path that previously existed only as a focused Rust test.
+
+It exercises:
+
+- child reachability through the dispatch snapshot after the parent pointers are cleared,
+- pointer activation outside the trapped scope,
+- focus staying inside the trapped scope after the pointer click path.
+
+The first draft exposed a harness schema constraint rather than a runtime defect: `domains` must use
+the fixed mechanism enum and cannot accept a free-form `dispatch` tag. After aligning the fixture
+to the allowed domain set, the suite passed.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -445,6 +460,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-ui mechanism_harness_roving_focus_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_focus_scope_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_nested_focus_scope_interaction_matches_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_focus_scope_stale_parent_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles`
 - `cargo check -p fret-bootstrap`

@@ -65,8 +65,9 @@ date: 2026-05-12
   selection.
 - [x] Add nested focus scope fixture coverage for inner/outer trapped scope traversal and pointer
   focus containment.
-- [ ] Add stale-parent, submenu fixture suites, and recipe-level typeahead parity beyond the current
-  mechanism matrices.
+- [x] Add stale-parent focus scope fixture coverage for retained-tree parent-pointer robustness.
+- [ ] Add submenu fixture suites and recipe-level typeahead parity beyond the current mechanism
+  matrices.
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.focus-scope-stale-parent-interaction.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["focus"],
+  "cases": [
+    {
+      "id": "pointer-trap-holds-under-stale-parent-pointers",
+      "scenario": {
+        "kind": "focus_scope_stale_parent",
+        "trap_focus": true,
+        "initial": "inside_a",
+        "stale_parent_pointers": true,
+        "steps": [
+          { "kind": "pointer_click", "target": "after" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "stale_parent.child_reachable",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "focus.in_scope",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "scope.after.activated",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "FocusScope trap robustness under stale parent pointers in the retained tree path.",
+        "note": "The stale parent mutation should not break child reachability or pointer-activation handling."
+      }
+    }
+  ]
+}

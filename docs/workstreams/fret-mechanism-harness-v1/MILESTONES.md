@@ -222,3 +222,14 @@ Status: complete
   scope, and outside pointer activation that preserves focus inside the trapped inner scope.
 - No runtime defect was found in this slice; the gap was missing fixture-level coverage for
   already-correct nested focus scope behavior.
+
+## M19: Stale Parent Focus Scope Interaction Slice
+
+Status: complete
+
+- A dedicated stale-parent focus scope fixture suite now covers the retained-tree parent-pointer
+  robustness path using the real `UiTree` tree internals.
+- The matrix asserts child reachability under stale parent pointers, pointer activation outside the
+  scope, and focus remaining inside the trapped scope after the click path.
+- No runtime defect was found in this slice; the gap was missing fixture-level coverage for
+  already-correct stale-parent focus scope behavior.
