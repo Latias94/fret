@@ -12,6 +12,8 @@ mod aux_scripts;
 pub(crate) use aux_scripts::run_suite_aux_script_must_pass;
 #[path = "diag_perf/baseline_rows.rs"]
 mod baseline_rows;
+#[path = "diag_perf/code_editor_rows.rs"]
+mod code_editor_rows;
 #[path = "diag_perf/hints.rs"]
 mod hints;
 #[path = "diag_perf/outputs.rs"]

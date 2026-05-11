@@ -12732,3 +12732,44 @@ Decision:
 - Keep the current row-scene replay boundary. If a future near-threshold or failing editor stressor proves
   store/capture churn is the measured limiter, prototype a component-level `fret-code-editor` row payload boundary
   first; defer a general `CanvasPainter` op cache until more than one component has the same measured problem.
+
+## 2026-05-12 (diag perf editor row-scene replay JSON fields)
+
+Question:
+- Can `diag perf --json` expose the editor row-scene replay/store signal directly in both single-run rows and repeat
+  run/summary rows, so perf-gate triage does not need a separate `diag stats` pass just to see replay hit rate?
+
+Change:
+- Added `top_code_editor_rows_painted`, `top_code_editor_rows_scene_replayed`,
+  `top_code_editor_rows_scene_stored`, `top_code_editor_row_scene_ops_stored`, and
+  `top_code_editor_row_scene_replay_hit_rate_pct` to:
+  - single-run `diag perf --json` `rows[]`,
+  - repeat-run `rows[].runs[]`,
+  - repeat summary `rows[].stats{}`.
+- Centralized the top-frame replay-hit-rate calculation in `diag_perf/code_editor_rows.rs` so single and repeat rows
+  cannot drift.
+
+Validation:
+- `cargo fmt -p fret-diag --check`.
+- `cargo nextest run -p fret-diag --lib --no-fail-fast` - 805 tests passed.
+- `cargo build -p fretboard --release`.
+
+Evidence:
+- Single-run smoke:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json --dir target/fret-diag/codex-perf-json-editor-replay-fields-v2 --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`.
+  - Bundle: `target/fret-diag/codex-perf-json-editor-replay-fields-v2/1778539959465/bundle.schema2.json`.
+  - `rows[0]` reports `top_code_editor_rows_painted=262`, `top_code_editor_rows_scene_replayed=261`,
+    `top_code_editor_rows_scene_stored=1`, `top_code_editor_row_scene_ops_stored=1`, and
+    `top_code_editor_row_scene_replay_hit_rate_pct=99`.
+- Repeat smoke:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json --dir target/fret-diag/codex-perf-json-editor-replay-fields-repeat-v2 --repeat 2 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`.
+  - Worst bundle: `target/fret-diag/codex-perf-json-editor-replay-fields-repeat-v2/1778540015580/bundle.schema2.json`.
+  - Each `runs[]` row reports `top_code_editor_rows_painted=289`, `top_code_editor_rows_scene_replayed=288`,
+    `top_code_editor_rows_scene_stored=1`, `top_code_editor_row_scene_ops_stored=1`, and replay hit rate `99`.
+  - `stats.top_code_editor_rows_scene_replayed` reports min/p50/p95/max `288/288/288/288`, and
+    `stats.top_code_editor_row_scene_replay_hit_rate_pct` reports min/p50/p95/max `99/99/99/99`.
+
+Decision:
+- Keep using the editor component row-scene counters as the near-term replay contract surface. This makes future
+  editor paint perf rows self-contained enough to decide whether the limiter is row replay/store, Canvas paint-widget
+  work, or renderer payload before proposing another rewrite.

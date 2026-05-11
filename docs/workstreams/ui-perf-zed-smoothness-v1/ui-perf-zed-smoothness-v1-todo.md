@@ -411,7 +411,13 @@ Conventions:
       - invalidation keys include font stack, scale factor, wrap width bucket, theme/style, and selection/preedit
         geometry dependencies.
       - replayed ops preserve hit-testing / selection rect correctness (or explicitly opt-out).
-    - [ ] Add a “canvas replay hit rate” counter to `fretboard-dev diag perf --json` output for the editor probes.
+    - [x] Add a “canvas replay hit rate” counter to `fretboard-dev diag perf --json` output for the editor probes.
+      - Fields:
+        `top_code_editor_rows_painted`, `top_code_editor_rows_scene_replayed`,
+        `top_code_editor_rows_scene_stored`, `top_code_editor_row_scene_ops_stored`, and
+        `top_code_editor_row_scene_replay_hit_rate_pct`.
+      - Coverage: single-run `rows[]`, repeat `runs[]`, and repeat `stats{}` JSON output.
+      - Evidence: perf log entry `2026-05-12` (`diag perf editor row-scene replay JSON fields`).
     - [ ] Tighten the `ui-code-editor-resize-probes` baseline once replay is real and stable.
   - Acceptance (initial):
     - `ui-code-editor-resize-probes` stays PASS (no regressions in P0 `ui-resize-probes`).
