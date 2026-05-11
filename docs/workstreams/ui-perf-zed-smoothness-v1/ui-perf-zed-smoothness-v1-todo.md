@@ -397,10 +397,16 @@ Conventions:
       - Evidence: perf log entry `2026-05-12` (`code editor row-scene stored-op signal`); gallery-dev typical
         autoscroll smoke bundle `target/fret-diag/codex-row-scene-ops-smoke-gallery-dev/1778538679777/bundle.schema2.json`
         reports frames `180`, sum/p50/p95/max `row_scene_ops_stored=90/0/1/1`.
-    - [ ] Decide the replay boundary:
+    - [x] Decide the replay boundary:
       - Option A (component-level): `fret-code-editor` caches per-row paint ops and replays when inputs unchanged.
       - Option B (mechanism-level): add a general `CanvasPainter` op cache (keyed, bounded, frame-aware) that any
         component can use.
+      - Decision (2026-05-12): do not start Option B from the current evidence. Keep the current row-scene replay
+        boundary, and if a future near-threshold/failing editor stressor proves store/capture churn is the limiter,
+        prototype Option A first as an editor-owned row payload boundary.
+      - Evidence: complex wheel repeat=3 paint-detail run
+        `target/fret-diag/perf-complex-editor-row-store-ops-v1/1778539097606/bundle.schema2.json` reports
+        `row_scene_ops_stored` p50/p95/max `2/10/12`, p95 replay rows `288`, and worst top total `2601us`.
     - [ ] Ensure replay is correctness-safe:
       - invalidation keys include font stack, scale factor, wrap width bucket, theme/style, and selection/preedit
         geometry dependencies.

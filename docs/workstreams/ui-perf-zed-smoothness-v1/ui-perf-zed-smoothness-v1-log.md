@@ -12701,3 +12701,34 @@ Decision:
 - Do not start a broad `CanvasPainter` op-cache rewrite from this smoke: the current typical run stores at most one
   row op per frame while replaying the visible rows, so the next replay-boundary decision still needs a near-threshold
   or failing stressor where row-scene store/capture is the measured limiter.
+
+## 2026-05-12 (complex wheel row-scene store-op boundary check)
+
+Question:
+- Under the higher-pressure editor complex wheel scenario, does the new stored-op signal show hundreds of row-scene
+  ops rebuilt per frame, or is row-scene replay already the dominant steady-state behavior?
+
+Command:
+`target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-row-store-ops-v1 --timeout-ms 240000 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target\release\fret-ui-gallery.exe`.
+
+Evidence:
+- Repeat=3 passed by exit status. Worst bundle:
+  `target/fret-diag/perf-complex-editor-row-store-ops-v1/1778539097606/bundle.schema2.json`.
+- Perf row p50/p95/max top total is `1820/2601/2601us`; p50/p95/max top paint is `1365/2283/2283us`.
+- Worst bundle `diag stats --json --top 5 --sort time`:
+  - `code_editor_paint_perf.frames=34`.
+  - `row_scene_ops_stored` sum/p50/p95/max is `72/2/10/12`.
+  - `rows_scene_stored` p95/max is `10/12`.
+  - `rows_scene_replayed` p95 is `288`.
+  - code-editor paint p95 `us_total=952`, `us_row_scene_fast_path=258`,
+    `us_row_scene_replay_ops=48`, and `us_row_scene_replay_touch=51`.
+  - Top frame total/paint is `2601/2283us`, renderer text prepare is `597us`, renderer payload is
+    `341` text ops and `213376` instance bytes, and the top-frame editor store signal is
+    `rows_scene_stored=2`, `row_scene_ops_stored=2`.
+
+Decision:
+- Do not start a mechanism-level `CanvasPainter` op cache from this evidence. The stressor replays roughly the full
+  visible editor window and only stores a small number of row ops per frame.
+- Keep the current row-scene replay boundary. If a future near-threshold or failing editor stressor proves
+  store/capture churn is the measured limiter, prototype a component-level `fret-code-editor` row payload boundary
+  first; defer a general `CanvasPainter` op cache until more than one component has the same measured problem.
