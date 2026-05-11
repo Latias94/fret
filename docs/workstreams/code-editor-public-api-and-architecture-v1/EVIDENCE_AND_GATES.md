@@ -160,6 +160,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_A11Y_MODULE_SPLIT_2026-05-12.md`
 - Input edit transaction split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md`
+- Input clipboard split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
@@ -173,6 +175,7 @@ Latest resize probe with paint attribution enabled:
 - Paint hot path: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
 - Input hot path: `ecosystem/fret-code-editor/src/editor/input/mod.rs`
 - Input edit transaction owner: `ecosystem/fret-code-editor/src/editor/input/edit.rs`
+- Input clipboard effect owner: `ecosystem/fret-code-editor/src/editor/input/clipboard.rs`
 - A11y projection boundary: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`
 - A11y text-window owner: `ecosystem/fret-code-editor/src/editor/a11y/window.rs`
 - A11y offset-mapping owner: `ecosystem/fret-code-editor/src/editor/a11y/mapping.rs`

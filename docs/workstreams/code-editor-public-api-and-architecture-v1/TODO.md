@@ -70,7 +70,7 @@ Last updated: 2026-05-12
     - [x] edit transactions / IME delete-surrounding / undo-redo / row-geom cache shift,
     - [ ] keyboard and command dispatch,
     - [ ] caret navigation and pointer selection,
-    - [ ] clipboard effects,
+    - [x] clipboard effects,
   - [ ] paint,
   - [ ] syntax,
   - [ ] diagnostics/decorations.

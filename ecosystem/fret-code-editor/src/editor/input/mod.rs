@@ -3,8 +3,10 @@
 use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 
+mod clipboard;
 mod edit;
 
+pub(super) use clipboard::{copy_selection, cut_selection, request_paste};
 pub(super) use edit::{
     apply_and_record_edit, apply_ime_delete_surrounding, insert_text, insert_text_with_kind, redo,
     undo,
@@ -316,36 +318,6 @@ pub(super) fn move_caret_home_end(
             focus: target,
         };
     }
-}
-
-pub(super) fn copy_selection(
-    host: &mut dyn UiActionHost,
-    action_cx: ActionCx,
-    st: &CodeEditorState,
-) {
-    let range = st.selection.normalized();
-    if range.is_empty() {
-        return;
-    }
-    let start = range.start.min(st.buffer.len_bytes());
-    let end = range.end.min(st.buffer.len_bytes());
-    let Some(text) = st.buffer.slice_to_string(start..end) else {
-        return;
-    };
-    let token = host.next_clipboard_token();
-    host.push_effect(Effect::ClipboardWriteText {
-        window: action_cx.window,
-        token,
-        text,
-    });
-}
-
-pub(super) fn request_paste(host: &mut dyn UiActionHost, action_cx: ActionCx) {
-    let token = host.next_clipboard_token();
-    host.push_effect(Effect::ClipboardReadText {
-        window: action_cx.window,
-        token,
-    });
 }
 
 pub(super) fn delete_word_backward(st: &mut CodeEditorState) {
@@ -681,32 +653,4 @@ fn clamp_byte_out_of_folds(st: &CodeEditorState, byte: usize, snap: FoldSnap) ->
     }
 
     byte
-}
-
-pub(super) fn cut_selection(
-    host: &mut dyn UiActionHost,
-    action_cx: ActionCx,
-    st: &mut CodeEditorState,
-) -> bool {
-    let range = st.selection.normalized();
-    if range.is_empty() {
-        return false;
-    }
-    copy_selection(host, action_cx, st);
-    let start = range.start.min(st.buffer.len_bytes());
-    let end = range.end.min(st.buffer.len_bytes());
-    let out = apply_and_record_edit(
-        st,
-        UndoGroupKind::Cut,
-        Edit::Delete { range: start..end },
-        Selection {
-            anchor: start,
-            focus: start,
-        },
-    )
-    .is_some();
-    if out {
-        st.caret_preferred_x = None;
-    }
-    out
 }
