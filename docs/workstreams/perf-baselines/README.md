@@ -103,12 +103,15 @@ python tools/perf/diag_perf_baseline_select.py `
 Selection priority:
 
 1. Fewer validation failures.
-2. Lower suite p90 sum (`rows[].measured_p90.top_total_time_us`).
-3. Lower threshold sum (`rows[].thresholds.max_top_total_us`).
+2. No threshold loosening compared with an existing `--baseline-out` file.
+3. Lower suite p90 sum (`rows[].measured_p90.top_total_time_us`).
+4. Lower threshold sum (`rows[].thresholds.max_top_total_us`).
 
 The selector validates each candidate using the same repeat count as the generated baseline unless
 `--validate-repeat` is passed. The selected candidate must have `fail_total=0`; otherwise the selector exits without
-copying to `--baseline-out` unless `--allow-failures` is explicitly passed for an investigation artifact. The selector
+copying to `--baseline-out` unless `--allow-failures` is explicitly passed for an investigation artifact. When
+`--baseline-out` already exists, the selected candidate also must not increase/remove existing hard thresholds unless
+`--allow-threshold-loosening` is explicitly passed for an intentional machine-profile or contract reset. The selector
 writes `selection-summary.json` in `--work-dir`.
 
 For mixed suites whose scripts declare different launch-time `meta.env_defaults`, pass
@@ -143,6 +146,8 @@ Before committing a new or replaced baseline:
   use `renderer` or `all` only when those micro timings are the contract. Use `ui-renderer-payload` when the suite
   should gate CPU/UI time plus renderer payload size/counts without gating noisy renderer micro-timings.
 - Confirm validation passes with `failures=[]`.
+- Confirm a replacement baseline does not loosen existing hard thresholds unless the perf log explains why
+  `--allow-threshold-loosening` was intentionally used.
 - Record the exact commands, selected candidate, validation result, and worst bundles in the perf log.
 - Update `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` if the suite, baseline path, or gate
   command changes.

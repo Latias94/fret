@@ -12380,3 +12380,33 @@ Decision:
 - The remaining row scene replay/cache behavior is still healthy enough that this slice does not justify a
   `WindowedRowsSurface` display-list rewrite. Revisit that only with a future near-threshold/failing stressor where
   row op replay/capture, not overlay derivation, is the measured limiter.
+
+## 2026-05-11 (baseline selector threshold-loosening guard)
+
+Question:
+- After the frame-overlay cache, can the selector promote a tighter complex editor wheel baseline without silently
+  weakening the existing Windows RTX 4090 contract?
+
+Observation:
+- A post-optimization selector attempt with an added `top_total_time_us` slack rule selected a candidate that validated
+  `3/3`, but it would have widened `max_top_total_us` from `6033us` to `6912us`.
+- That is the wrong contract direction for this slice: the optimization reduced row overlay work and total paint detail
+  cost, but it did not prove that the checked-in tail threshold should become looser.
+
+Change:
+- `tools/perf/diag_perf_baseline_select.py` now compares candidates against an existing `--baseline-out` file by
+  default and treats hard-threshold increases/removals as selection failures.
+- If a future machine-profile reset or intentional contract reset needs looser numbers, the command must pass
+  `--allow-threshold-loosening` and the perf log must explain why.
+- Added unit coverage for max-threshold increases, min-threshold decreases, threshold removal, row removal, and
+  previously ungated `null` thresholds.
+
+Validation:
+- `python -m unittest discover -s tools/perf -p 'test_*.py'` - 3 tests passed.
+- `python tools/perf/diag_perf_baseline_select.py --help` - exposes `--allow-threshold-loosening`.
+- `git diff --check` - passed.
+
+Decision:
+- Do not promote the looser complex editor wheel candidate.
+- Keep the checked-in policy3 v1 baseline as the formal contract until a no-loosening selector run validates a stricter
+  replacement or a future perf log entry explicitly justifies a contract reset.

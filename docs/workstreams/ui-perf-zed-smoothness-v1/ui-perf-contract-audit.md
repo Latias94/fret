@@ -27,7 +27,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Full formal gates are green after the helper changes. | `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`: Windows `ui-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=3`. `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`: `ui-code-editor-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=2`. | Covered for both resize gates. |
 | Zed/GPUI and egui comparison remains explicit. | `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md` plus the contract matrix reference pressure column. | Covered as a design map; still needs updates when new gaps close. |
 | Churn reduction is evidence-led. | Perf log entries show measured view-cache harness virtualization, code editor resize attribution, and decisions not to start broad root-solve quantization or `WindowedRowsSurface` rewrites without evidence. | Covered for recent work. |
-| Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, and review checklist. | Covered. |
+| Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, no-silent-threshold-loosening guard, and review checklist. | Covered. |
 | Completion criteria are unambiguous. | This audit maps requirements to evidence and gaps. | Covered, with open gaps below. |
 
 ## Current Evidence Snapshot
@@ -173,6 +173,13 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     selected candidate-2 with `selected_fail_total=1`; the miss was one `top_total_time_us=4389us` paint-tail
     sample against a `3365us` top threshold while frame p95 total was `2176us`. Keep the checked-in v1 baseline until
     a policy change is intentional.
+- Baseline selector threshold-loosening guard:
+  - A later post-optimization selector attempt selected a candidate that validated `3/3`, but would have widened the
+    complex editor wheel `max_top_total_us` threshold from `6033us` to `6912us`; it was not promoted.
+  - `tools/perf/diag_perf_baseline_select.py` now compares candidates against an existing `--baseline-out` file and
+    rejects threshold increases/removals unless `--allow-threshold-loosening` is explicitly passed.
+  - Validation: `python -m unittest discover -s tools/perf -p 'test_*.py'`;
+    `python tools/perf/diag_perf_baseline_select.py --help`; `git diff --check`.
 
 ## Open Gaps
 

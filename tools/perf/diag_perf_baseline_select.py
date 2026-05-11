@@ -15,9 +15,12 @@ This mirrors the intent of `tools/perf/diag_perf_baseline_select.sh`:
     renderer micro-timings.
   - Pick a winner with priority:
       1) fewer validation failures
-      2) lower suite p90 sum (rows[].measured_p90.top_total_time_us)
-      3) lower sum of max_top_total_us thresholds
+      2) no threshold loosening compared with the existing --baseline-out file
+      3) lower suite p90 sum (rows[].measured_p90.top_total_time_us)
+      4) lower sum of max_top_total_us thresholds
   - The selected candidate must have zero validation failures unless --allow-failures is passed.
+  - The selected candidate must not loosen existing numeric thresholds unless
+    --allow-threshold-loosening is passed.
 
 Example:
   python tools/perf/diag_perf_baseline_select.py \
@@ -149,6 +152,95 @@ def _baseline_metrics(path: Path) -> BaselineMetrics:
     )
 
 
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _threshold_loosening_report(old_path: Path, new_path: Path) -> list[dict[str, Any]]:
+    if not old_path.is_file():
+        return []
+
+    old_doc = _load_json(old_path)
+    new_doc = _load_json(new_path)
+    old_rows = {
+        str((row or {}).get("script") or ""): row
+        for row in (old_doc.get("rows", []) or [])
+        if isinstance(row, dict)
+    }
+    new_rows = {
+        str((row or {}).get("script") or ""): row
+        for row in (new_doc.get("rows", []) or [])
+        if isinstance(row, dict)
+    }
+
+    loosening: list[dict[str, Any]] = []
+    for script, old_row in old_rows.items():
+        new_row = new_rows.get(script)
+        if new_row is None:
+            loosening.append(
+                {
+                    "script": script,
+                    "threshold": "*",
+                    "old_value": "present",
+                    "new_value": "missing",
+                    "reason": "row_removed",
+                }
+            )
+            continue
+
+        old_thresholds = (old_row or {}).get("thresholds") or {}
+        new_thresholds = (new_row or {}).get("thresholds") or {}
+        for threshold_name, old_value in old_thresholds.items():
+            if old_value is None:
+                continue
+            if not _is_number(old_value):
+                continue
+
+            new_present = threshold_name in new_thresholds
+            new_value = new_thresholds.get(threshold_name)
+            if not new_present or new_value is None:
+                loosening.append(
+                    {
+                        "script": script,
+                        "threshold": threshold_name,
+                        "old_value": old_value,
+                        "new_value": None,
+                        "reason": "threshold_removed",
+                    }
+                )
+                continue
+            if not _is_number(new_value):
+                loosening.append(
+                    {
+                        "script": script,
+                        "threshold": threshold_name,
+                        "old_value": old_value,
+                        "new_value": new_value,
+                        "reason": "threshold_non_numeric",
+                    }
+                )
+                continue
+
+            if threshold_name.startswith("min_"):
+                is_looser = float(new_value) < float(old_value)
+                reason = "min_decreased"
+            else:
+                is_looser = float(new_value) > float(old_value)
+                reason = "max_increased"
+            if is_looser:
+                loosening.append(
+                    {
+                        "script": script,
+                        "threshold": threshold_name,
+                        "old_value": old_value,
+                        "new_value": new_value,
+                        "reason": reason,
+                    }
+                )
+
+    return loosening
+
+
 def _rewrite_checked_in_out_path(path: Path, out_path_value: str) -> None:
     doc = _load_json(path)
     if not isinstance(doc, dict):
@@ -247,6 +339,15 @@ def main() -> int:
         default=False,
         help="Copy the best candidate even if validation failures remain.",
     )
+    ap.add_argument(
+        "--allow-threshold-loosening",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow the selected candidate to loosen thresholds compared with an existing "
+            "--baseline-out file. Without this, threshold increases/removals fail selection."
+        ),
+    )
 
     args = ap.parse_args()
 
@@ -286,7 +387,8 @@ def main() -> int:
     print(f"[select] prelude: {prelude_scripts}")
 
     candidate_results: list[dict[str, Any]] = []
-    best: tuple[int, int, int, str] | None = None
+    compare_existing_thresholds = baseline_out.is_file() and not bool(args.allow_threshold_loosening)
+    best: tuple[int, int, int, int, str] | None = None
 
     def diag_cmd_common(out_dir: Path) -> list[str]:
         cmd = [
@@ -375,6 +477,8 @@ def main() -> int:
                     "name": candidate_name,
                     "baseline": str(candidate_baseline),
                     "fail_total": 10_000,
+                    "threshold_loosening_count": 10_000 if compare_existing_thresholds else 0,
+                    "threshold_loosening": [],
                     "suite_p90_total_time_us_sum": 2**31 - 1,
                     "threshold_sum_max_top_total_us": 2**31 - 1,
                     "validate_runs": [],
@@ -420,9 +524,16 @@ def main() -> int:
         metrics = _baseline_metrics(candidate_baseline)
         p90_sum = int(metrics.p90_sum_top_total_us)
         thr_sum = int(metrics.threshold_sum_max_top_total_us)
+        threshold_loosening = (
+            _threshold_loosening_report(baseline_out, candidate_baseline)
+            if compare_existing_thresholds
+            else []
+        )
+        threshold_loosening_count = len(threshold_loosening)
 
         print(
             f"[candidate] name={candidate_name} fail_total={fail_total} "
+            f"threshold_loosening_count={threshold_loosening_count} "
             f"suite_p90_total_time_us_sum={p90_sum} threshold_sum={thr_sum}"
         )
 
@@ -431,13 +542,21 @@ def main() -> int:
                 "name": candidate_name,
                 "baseline": str(candidate_baseline),
                 "fail_total": int(fail_total),
+                "threshold_loosening_count": int(threshold_loosening_count),
+                "threshold_loosening": threshold_loosening[:50],
                 "suite_p90_total_time_us_sum": int(p90_sum),
                 "threshold_sum_max_top_total_us": int(thr_sum),
                 "validate_runs": validate_runs,
             }
         )
 
-        key = (int(fail_total), int(p90_sum), int(thr_sum), str(candidate_baseline))
+        key = (
+            int(fail_total),
+            int(threshold_loosening_count),
+            int(p90_sum),
+            int(thr_sum),
+            str(candidate_baseline),
+        )
         if best is None or key < best:
             best = key
 
@@ -445,7 +564,7 @@ def main() -> int:
         print("error: no candidate selected", file=sys.stderr)
         return 3
 
-    selected_baseline_path = Path(best[3])
+    selected_baseline_path = Path(best[4])
     if int(best[0]) != 0 and not bool(args.allow_failures):
         summary = {
             "schema_version": 1,
@@ -456,8 +575,10 @@ def main() -> int:
             "ui_threshold_mode": str(args.ui_threshold_mode or ""),
             "validate_repeat": int(validate_repeat),
             "allow_failures": False,
+            "allow_threshold_loosening": bool(args.allow_threshold_loosening),
             "selected_candidate": str(selected_baseline_path),
             "selected_fail_total": int(best[0]),
+            "selected_threshold_loosening_count": int(best[1]),
             "candidates": candidate_results,
         }
         summary_path = work_dir_path / "selection-summary.json"
@@ -471,6 +592,40 @@ def main() -> int:
             file=sys.stderr,
         )
         return 4
+
+    selected_threshold_loosening = (
+        _threshold_loosening_report(baseline_out, selected_baseline_path)
+        if compare_existing_thresholds
+        else []
+    )
+    if selected_threshold_loosening and not bool(args.allow_threshold_loosening):
+        summary = {
+            "schema_version": 1,
+            "kind": "perf_baseline_selection",
+            "suite": suite,
+            "baseline_out": str(baseline_out),
+            "threshold_surface": str(args.threshold_surface),
+            "ui_threshold_mode": str(args.ui_threshold_mode or ""),
+            "validate_repeat": int(validate_repeat),
+            "allow_failures": bool(args.allow_failures),
+            "allow_threshold_loosening": False,
+            "selected_candidate": str(selected_baseline_path),
+            "selected_fail_total": int(best[0]),
+            "selected_threshold_loosening_count": len(selected_threshold_loosening),
+            "selected_threshold_loosening": selected_threshold_loosening[:50],
+            "candidates": candidate_results,
+        }
+        summary_path = work_dir_path / "selection-summary.json"
+        summary_path.write_text(
+            json.dumps(summary, indent=2, sort_keys=False) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            f"error: selected candidate loosens existing thresholds "
+            f"(count={len(selected_threshold_loosening)}). See: {summary_path}",
+            file=sys.stderr,
+        )
+        return 5
 
     shutil.copyfile(selected_baseline_path, baseline_out)
     _rewrite_checked_in_out_path(baseline_out, str(args.baseline_out))
@@ -491,11 +646,13 @@ def main() -> int:
         "ui_threshold_mode": str(args.ui_threshold_mode or ""),
         "validate_repeat": int(validate_repeat),
         "allow_failures": bool(args.allow_failures),
+        "allow_threshold_loosening": bool(args.allow_threshold_loosening),
         "best_candidate": {
             "path": str(selected_baseline_path),
             "fail_total": int(best[0]),
-            "suite_p90_total_time_us_sum": int(best[1]),
-            "threshold_sum_max_top_total_us": int(best[2]),
+            "threshold_loosening_count": int(best[1]),
+            "suite_p90_total_time_us_sum": int(best[2]),
+            "threshold_sum_max_top_total_us": int(best[3]),
         },
         "candidates": candidate_results,
     }
