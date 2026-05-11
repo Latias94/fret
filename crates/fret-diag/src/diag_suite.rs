@@ -2685,6 +2685,10 @@ fn build_suite_editor_text_default_post_run_checks(
     defaults.check_ui_gallery_code_editor_torture_marker_present =
         diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(src)
             && !user_checks.check_ui_gallery_code_editor_torture_marker_present;
+    defaults.check_ui_gallery_code_editor_torture_feature_payloads_stable =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_feature_payloads_stable_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_code_editor_torture_feature_payloads_stable;
     defaults.check_ui_gallery_code_editor_torture_undo_redo =
         diag_policy::ui_gallery_script_requires_code_editor_torture_undo_redo_gate(src)
             && !user_checks.check_ui_gallery_code_editor_torture_undo_redo;
@@ -2802,6 +2806,8 @@ fn apply_suite_editor_text_default_post_run_checks(
 ) {
     checks.check_ui_gallery_code_editor_torture_marker_present |=
         defaults.check_ui_gallery_code_editor_torture_marker_present;
+    checks.check_ui_gallery_code_editor_torture_feature_payloads_stable |=
+        defaults.check_ui_gallery_code_editor_torture_feature_payloads_stable;
     checks.check_ui_gallery_code_editor_torture_undo_redo |=
         defaults.check_ui_gallery_code_editor_torture_undo_redo;
     checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low |=
@@ -2949,6 +2955,7 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
         || checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
         || checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance
         || checks.check_ui_gallery_code_editor_torture_marker_present
+        || checks.check_ui_gallery_code_editor_torture_feature_payloads_stable
         || checks.check_ui_gallery_code_editor_torture_undo_redo
         || checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low
         || checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits
@@ -3032,6 +3039,7 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
         || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_feature_payloads_stable_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(src)
@@ -3950,6 +3958,19 @@ mod tests {
         assert!(defaults.check_ui_gallery_code_editor_torture_marker_present);
         assert!(defaults.check_ui_gallery_code_editor_torture_undo_redo);
         assert!(!defaults.check_ui_gallery_markdown_editor_source_word_boundary);
+    }
+
+    #[test]
+    fn build_suite_editor_text_default_post_run_checks_sets_feature_payloads_stable_flag() {
+        let defaults = build_suite_editor_text_default_post_run_checks(
+            std::path::Path::new(
+                "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+            ),
+            &SuiteChecks::default(),
+        );
+
+        assert!(defaults.check_ui_gallery_code_editor_torture_feature_payloads_stable);
+        assert!(!defaults.check_ui_gallery_code_editor_torture_marker_present);
     }
 
     #[test]

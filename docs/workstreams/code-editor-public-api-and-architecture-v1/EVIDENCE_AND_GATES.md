@@ -40,6 +40,19 @@ cargo check -p fret-ui-gallery
 python tools/check_layering.py
 ```
 
+## Feature Payload Bundle Gate
+
+Run this after capturing a UI Gallery code-editor torture bundle with feature payloads:
+
+```powershell
+cargo run -p fretboard -- diag stats <bundle.schema2.json> --warmup-frames 5 --check-ui-gallery-code-editor-torture-feature-payloads-stable
+```
+
+The command writes
+`check.ui_gallery_code_editor_torture_feature_payloads_stable.json` next to the bundle. It requires
+stable non-zero diagnostics, diagnostic line summaries, range decorations, gutter markers, semantic
+tokens, schema fields, buffer revision, and display-map epoch after warmup.
+
 ## Perf Gates
 
 Use the existing editor perf contract workstream as the first source of truth:
@@ -91,6 +104,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md`
 - UI Gallery feature payload fixture:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md`
+- Feature payload bundle assertion:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`

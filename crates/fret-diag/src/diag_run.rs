@@ -1208,6 +1208,7 @@ pub(crate) struct RunChecks {
         bool,
     pub check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed:
         bool,
+    pub check_ui_gallery_code_editor_torture_feature_payloads_stable: bool,
     pub check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: bool,
     pub check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
     pub check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped:
@@ -1326,6 +1327,7 @@ impl Default for RunChecks {
                 false,
             check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed:
                 false,
+            check_ui_gallery_code_editor_torture_feature_payloads_stable: false,
             check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: false,
             check_ui_gallery_code_editor_torture_folds_placeholder_present: false,
             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped:

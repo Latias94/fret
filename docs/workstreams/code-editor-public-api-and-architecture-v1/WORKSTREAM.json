@@ -73,6 +73,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -151,6 +155,10 @@
       "command": "cargo check -p fret-ui-gallery"
     },
     {
+      "name": "feature payload bundle stats gate",
+      "command": "cargo run -p fretboard -- diag stats <bundle.schema2.json> --warmup-frames 5 --check-ui-gallery-code-editor-torture-feature-payloads-stable"
+    },
+    {
       "name": "layering",
       "command": "python tools/check_layering.py"
     }
@@ -169,6 +177,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
     "docs/code-editor.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/0011-overlays-and-multi-root.md",

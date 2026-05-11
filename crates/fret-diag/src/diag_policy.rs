@@ -239,6 +239,19 @@ pub(crate) fn ui_gallery_script_requires_code_editor_torture_marker_present_gate
     )
 }
 
+pub(crate) fn ui_gallery_script_requires_code_editor_torture_feature_payloads_stable_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json"
+    )
+}
+
 pub(crate) fn ui_gallery_script_requires_code_editor_torture_undo_redo_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;

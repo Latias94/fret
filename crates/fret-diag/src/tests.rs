@@ -42,6 +42,7 @@ use crate::stats::{
     check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json,
     check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json,
     check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+    check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json,
@@ -5938,6 +5939,117 @@ fn ui_gallery_code_editor_undo_redo_gate_fails_without_redo() {
     )
     .unwrap_err();
     assert!(err.contains("undo/redo gate failed"));
+}
+
+#[test]
+fn ui_gallery_code_editor_feature_payloads_gate_passes_on_stable_nonzero_payloads() {
+    let feature_payloads = json!({
+        "schema_version": 1,
+        "epoch": 7,
+        "buffer_revision": 1,
+        "display_map_epoch": 3,
+        "diagnostic_spans_count": 1,
+        "diagnostic_line_summaries_count": 1,
+        "range_decorations_count": 1,
+        "gutter_markers_count": 2,
+        "semantic_tokens_count": 3
+    });
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "app_snapshot": {
+                            "kind": "fret_ui_gallery",
+                            "code_editor": { "torture": {
+                                "feature_payloads": feature_payloads.clone()
+                            }}
+                        }
+                    },
+                    {
+                        "tick_id": 2,
+                        "frame_id": 2,
+                        "app_snapshot": {
+                            "kind": "fret_ui_gallery",
+                            "code_editor": { "torture": {
+                                "feature_payloads": feature_payloads.clone()
+                            }}
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("ui_gallery_code_editor_feature_payloads_gate_passes");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json(
+        &bundle,
+        &bundle_path,
+        0,
+    )
+    .unwrap();
+
+    let evidence = read_json_value(
+        &out_dir.join("check.ui_gallery_code_editor_torture_feature_payloads_stable.json"),
+    )
+    .unwrap();
+    assert_eq!(
+        evidence
+            .get("feature_payload_snapshots")
+            .and_then(|v| v.as_u64()),
+        Some(2)
+    );
+}
+
+#[test]
+fn ui_gallery_code_editor_feature_payloads_gate_fails_on_missing_payload_family() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "app_snapshot": {
+                            "kind": "fret_ui_gallery",
+                            "code_editor": { "torture": {
+                                "feature_payloads": {
+                                    "schema_version": 1,
+                                    "epoch": 7,
+                                    "buffer_revision": 1,
+                                    "display_map_epoch": 3,
+                                    "diagnostic_spans_count": 1,
+                                    "diagnostic_line_summaries_count": 1,
+                                    "range_decorations_count": 1,
+                                    "gutter_markers_count": 1,
+                                    "semantic_tokens_count": 0
+                                }
+                            }}
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("ui_gallery_code_editor_feature_payloads_gate_fails");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err = check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json(
+        &bundle,
+        &bundle_path,
+        0,
+    )
+    .unwrap_err();
+    assert!(err.contains("feature payload gate failed"));
 }
 
 #[test]

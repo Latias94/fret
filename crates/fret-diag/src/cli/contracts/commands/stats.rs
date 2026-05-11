@@ -67,6 +67,9 @@ pub(crate) struct StatsChecksArgs {
     #[arg(long = "check-drag-cache-root-paint-only", value_name = "TEST_ID")]
     pub check_drag_cache_root_paint_only: Option<String>,
 
+    #[arg(long = "check-ui-gallery-code-editor-torture-feature-payloads-stable")]
+    pub check_ui_gallery_code_editor_torture_feature_payloads_stable: bool,
+
     #[arg(long = "check-hover-layout", conflicts_with = "check_hover_layout_max")]
     pub check_hover_layout: bool,
 
