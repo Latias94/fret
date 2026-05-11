@@ -35,7 +35,7 @@ Last updated: 2026-05-12
   - [x] Diagnostics v1 uses `TextBuffer` UTF-8 byte ranges; line summaries use logical line indexes.
   - [ ] Display-row projection remains open until wrapped-row gutter behavior needs it.
 - [x] Define semantic-token inputs separately from paint colors.
-- [ ] Define command/keymap/undo grouping boundaries for editor actions.
+- [x] Define command/keymap/undo grouping boundaries for editor actions.
 - [ ] Define how hover/completion/code-action overlays compose with Fret overlay/focus policy
       without putting overlay policy into `fret-code-editor`.
 

@@ -102,10 +102,13 @@ is widened.
 
 Target direction:
 
-- Commands should be named and route through Fret's command/action infrastructure.
-- Keymap policy should not be hard-coded into paint or buffer code.
-- Undo grouping should remain model-level enough to support app-owned histories and editor-local
-  histories.
+- Baseline text editing intent should use ADR 0044 `text.*` command ids where semantics match.
+- Editor-only behaviors should use `editor.*` ids and must be discoverable through command metadata
+  when they are menu/palette/keymap facing.
+- Keymap policy should route through Fret's command/action infrastructure; widget-local `KeyDown`
+  handling is a compatibility fallback, not the long-term extension surface.
+- Undo grouping should remain model-level enough to support app-owned document histories and
+  editor-local histories.
 - Read-only and disabled states should gate edits, command availability, IME/preedit, and a11y
   consistently.
 
