@@ -58,7 +58,8 @@ Last updated: 2026-05-12
 - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,
-  - [ ] state/handle,
+  - [x] state schema,
+  - [ ] state methods/handle boundary,
   - [ ] input,
   - [ ] paint,
   - [ ] syntax,
