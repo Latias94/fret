@@ -70,7 +70,8 @@ Exit criteria:
   `M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`; diagnostics/perf snapshot split landed in
   `M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`; state schema split landed in
   `M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md`; state methods split landed in
-  `M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md`.)
+  `M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md`; state initializer split landed in
+  `M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
 
 ## M4 - Feature Surface Proof

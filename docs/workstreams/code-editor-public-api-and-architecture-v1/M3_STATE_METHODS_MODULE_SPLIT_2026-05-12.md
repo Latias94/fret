@@ -30,8 +30,13 @@ The state module now owns:
 ## Non-Goals
 
 This slice does not change `CodeEditorHandle` methods, public API shape, input behavior, paint
-behavior, cache semantics, diagnostics schemas, or performance thresholds. Handle construction and
-public command/query APIs remain in `editor/mod.rs`.
+behavior, cache semantics, diagnostics schemas, or performance thresholds. Public command/query APIs
+remain in `editor/mod.rs`.
+
+## Follow-Up
+
+The default state initializer moved from `CodeEditorHandle::new` to `CodeEditorState::new` in
+`M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md`. The public handle wrapper remains in `editor/mod.rs`.
 
 ## Evidence
 
