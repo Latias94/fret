@@ -33,6 +33,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 ## Current Evidence Snapshot
 
 - Recent commits:
+  - `e9b6ebf2d4 perf(code-editor): fix soft-wrap syntax prefetch mapping`
   - `c47df6f34c perf(baselines): promote code editor payload contract`
   - `ece88ce0e6 feat(diag): support renderer payload perf baselines`
   - `5b2038cf7d feat(diag): gate renderer payload perf metrics`
@@ -161,6 +162,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     Selected candidate-1 measured p50/p90/max top total=`2257/4617/4617us`, frame-p95 total=`1730/2968/2968us`,
     hard thresholds top(total/layout/solve)=`6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`,
     pointer dispatch/hit-test=`489/14us`, and payload thresholds instance/text_ops=`258663/406`.
+  - Follow-up semantic fix `e9b6ebf2d4` maps soft-wrap syntax prefetch through `DisplayMap::display_row_line(...)`
+    before chunking. The worst paint-detail sample in
+    `target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json` drops
+    `top_total_time_us` from `5681us` to `3580us`, with `syntax_evict_delta=0` and `row_rich_miss_delta=0`; the
+    checked-in baseline still passes with max total `3238us` and max paint `3046us`.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
