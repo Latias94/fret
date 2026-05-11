@@ -79,7 +79,9 @@ Exit criteria:
   `M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md`; clipboard effects moved into
   `M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`; keyboard dispatch moved into
   `M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md`; navigation, pointer selection, and final input boundary
-  cleanup landed in `M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md`.)
+  cleanup landed in `M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md`; the first syntax owner
+  slice moved prefetch runtime types into
+  `M3_SYNTAX_PREFETCH_RUNTIME_SPLIT_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
 
 ## M4 - Feature Surface Proof

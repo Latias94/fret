@@ -1,8 +1,6 @@
 //! Implementation details for the Fret code editor surface.
 
 use std::cell::{Cell, RefCell};
-#[cfg(feature = "syntax")]
-use std::collections::HashSet;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
@@ -57,6 +55,7 @@ mod handle;
 mod input;
 mod paint;
 mod state;
+mod syntax;
 #[cfg(test)]
 mod tests;
 
@@ -80,6 +79,8 @@ use geom::{
 };
 pub use handle::CodeEditorHandle;
 use state::*;
+#[cfg(feature = "syntax")]
+use syntax::{SyntaxPrefetchChunk, SyntaxPrefetchKey, SyntaxPrefetchRuntime, SyntaxSpan};
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
 const CODE_EDITOR_ROW_CACHE_MIN_ENTRIES: usize = 256;
@@ -486,107 +487,6 @@ struct UndoGroup {
     before_selection: Selection,
     tx: TextBufferTransaction,
     coalesce_key: CoalesceKey,
-}
-
-#[cfg(feature = "syntax")]
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct SyntaxSpan {
-    /// Range within the row text (UTF-8 byte indices).
-    range: Range<usize>,
-    highlight: &'static str,
-}
-
-#[cfg(feature = "syntax")]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct SyntaxPrefetchKey {
-    doc: DocId,
-    rev: fret_code_editor_buffer::Revision,
-    language: Arc<str>,
-    chunk_start: usize,
-    chunk_end: usize,
-}
-
-#[cfg(feature = "syntax")]
-#[derive(Debug, Clone)]
-struct SyntaxPrefetchChunk {
-    key: SyntaxPrefetchKey,
-    rows: Arc<[(usize, Arc<[SyntaxSpan]>)]>,
-}
-
-#[cfg(feature = "syntax")]
-#[derive(Debug, Default)]
-struct SyntaxPrefetchRuntimeState {
-    pending: HashSet<SyntaxPrefetchKey>,
-    ready: VecDeque<SyntaxPrefetchChunk>,
-    last_visible_start: Option<usize>,
-}
-
-#[cfg(feature = "syntax")]
-#[derive(Clone)]
-struct SyntaxPrefetchRuntime {
-    shared: Arc<Mutex<SyntaxPrefetchRuntimeState>>,
-    dispatcher: DispatcherHandle,
-}
-
-#[cfg(feature = "syntax")]
-impl std::fmt::Debug for SyntaxPrefetchRuntime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SyntaxPrefetchRuntime")
-            .field("shared", &self.shared)
-            .finish_non_exhaustive()
-    }
-}
-
-#[cfg(feature = "syntax")]
-impl SyntaxPrefetchRuntime {
-    fn new(dispatcher: DispatcherHandle) -> Self {
-        Self {
-            shared: Arc::new(Mutex::new(SyntaxPrefetchRuntimeState::default())),
-            dispatcher,
-        }
-    }
-
-    fn clear(&self) {
-        let mut state = self.lock_state();
-        state.pending.clear();
-        state.ready.clear();
-        state.last_visible_start = None;
-    }
-
-    fn lock_state(&self) -> std::sync::MutexGuard<'_, SyntaxPrefetchRuntimeState> {
-        self.shared
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
-
-    fn note_visible_start(&self, visible_start: usize) -> i8 {
-        let mut state = self.lock_state();
-        let direction = match state.last_visible_start {
-            Some(prev) if visible_start < prev => -1,
-            Some(prev) if visible_start > prev => 1,
-            _ => 1,
-        };
-        state.last_visible_start = Some(visible_start);
-        direction
-    }
-
-    fn drain_ready(&self) -> Vec<SyntaxPrefetchChunk> {
-        let mut state = self.lock_state();
-        state.ready.drain(..).collect()
-    }
-
-    fn try_mark_pending(&self, key: SyntaxPrefetchKey) -> bool {
-        const MAX_PENDING: usize = 12;
-
-        let mut state = self.lock_state();
-        if state.pending.contains(&key) || state.ready.iter().any(|chunk| chunk.key == key) {
-            return false;
-        }
-        if state.pending.len() >= MAX_PENDING {
-            return false;
-        }
-        state.pending.insert(key)
-    }
 }
 
 #[cfg(feature = "syntax")]

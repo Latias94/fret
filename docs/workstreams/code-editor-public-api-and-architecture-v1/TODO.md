@@ -73,6 +73,8 @@ Last updated: 2026-05-12
     - [x] clipboard effects,
   - [ ] paint,
   - [ ] syntax,
+    - [x] syntax prefetch runtime types,
+    - [ ] syntax cache invalidation/population/materialization,
   - [ ] diagnostics/decorations.
 
 ## P2 - Performance and Diagnostics
