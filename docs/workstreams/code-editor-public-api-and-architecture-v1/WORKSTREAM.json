@@ -81,6 +81,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -163,6 +167,10 @@
       "command": "cargo check -p fret-ui-gallery"
     },
     {
+      "name": "ui gallery code editor overlay hook gate",
+      "command": "cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_assist_overlay_hook_stays_within_window --no-fail-fast"
+    },
+    {
       "name": "feature payload bundle stats gate",
       "command": "cargo run -p fretboard -- diag stats <bundle.schema2.json> --warmup-frames 5 --check-ui-gallery-code-editor-torture-feature-payloads-stable"
     },
@@ -187,6 +195,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md",
     "docs/code-editor.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/0011-overlays-and-multi-root.md",
@@ -203,6 +212,8 @@
     "ecosystem/fret-code-editor-view/src/gutter.rs",
     "ecosystem/fret-code-editor-view/src/decorations.rs",
     "ecosystem/fret-code-editor-view/src/semantic_tokens.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs",
+    "apps/fret-ui-gallery/src/driver/render_flow.rs",
     "ecosystem/fret-ui-kit/src/overlay_controller.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs"

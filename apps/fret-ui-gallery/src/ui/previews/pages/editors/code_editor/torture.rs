@@ -1,6 +1,10 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
 use fret::AppComponentCx;
+use fret_ui_editor::controls::{
+    InputOwnedTextAssistKeyOptions, TextAssistField, TextAssistFieldOptions,
+    TextAssistFieldSurface, TextAssistItem, TextFieldOptions,
+};
 
 fn first_range(text: &str, needle: &str) -> Option<std::ops::Range<usize>> {
     let start = text.find(needle)?;
@@ -53,6 +57,91 @@ fn apply_torture_feature_payload_fixture(handle: &code_editor::CodeEditorHandle)
     let _ = handle.set_range_decorations(vec![decoration]);
     let _ = handle.set_gutter_markers(vec![line_marker, row_marker]);
     let _ = handle.set_semantic_tokens(tokens);
+}
+
+fn build_torture_overlay_feature_hook(cx: &mut AppComponentCx<'_>) -> AnyElement {
+    let query = cx.local_model(String::new);
+    let dismissed_query = cx.local_model(String::new);
+    let active_item_id = cx.local_model(|| Some(Arc::<str>::from("feature-overlay-hook")));
+    let items: Arc<[TextAssistItem]> = vec![
+        TextAssistItem::new("feature-overlay-hook", "Feature overlay hook"),
+        TextAssistItem::new("feature-payloads", "Feature payloads"),
+        TextAssistItem::new("fixture-diagnostics", "Fixture diagnostics"),
+        TextAssistItem::new("focus-routing", "Focus routing"),
+        TextAssistItem::new("folds-inlays", "Folds and inlays"),
+    ]
+    .into();
+
+    let open_query = query.clone();
+    let open_dismissed_query = dismissed_query.clone();
+    let open_active_item_id = active_item_id.clone();
+    let open_assist: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&open_query, |value| {
+            value.clear();
+            value.push('f');
+        });
+        let _ = host
+            .models_mut()
+            .update(&open_dismissed_query, |value| value.clear());
+        let _ = host.models_mut().update(&open_active_item_id, |value| {
+            *value = Some(Arc::<str>::from("feature-overlay-hook"));
+        });
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    });
+
+    let field_options = TextFieldOptions {
+        placeholder: Some(Arc::<str>::from("Filter editor assists")),
+        id_source: Some(Arc::<str>::from("ui-gallery-code-editor-torture-assist")),
+        a11y_label: Some(Arc::<str>::from("Code editor assist query")),
+        test_id: Some(Arc::<str>::from(
+            "ui-gallery-code-editor-torture-assist-field",
+        )),
+        clear_button: true,
+        clear_test_id: Some(Arc::<str>::from(
+            "ui-gallery-code-editor-torture-assist-clear",
+        )),
+        ..Default::default()
+    };
+
+    // Keep the overlay proof in the app/recipe layer so the editor crate stays policy-free.
+    let assist = TextAssistField::new(query, dismissed_query, active_item_id, items)
+        .options(TextAssistFieldOptions {
+            field: field_options,
+            surface: TextAssistFieldSurface::AnchoredOverlay,
+            list_label: Arc::<str>::from("Code editor assist suggestions"),
+            empty_label: Arc::<str>::from("No assists"),
+            key_options: InputOwnedTextAssistKeyOptions {
+                wrap_navigation: true,
+                ..Default::default()
+            },
+            list_test_id: Some(Arc::<str>::from(
+                "ui-gallery-code-editor-torture-assist-list",
+            )),
+            item_test_id_prefix: Some(Arc::<str>::from("ui-gallery-code-editor-torture-assist")),
+            empty_test_id: Some(Arc::<str>::from(
+                "ui-gallery-code-editor-torture-assist-empty",
+            )),
+            max_list_height: Some(Px(148.0)),
+        })
+        .into_element(cx);
+
+    ui::h_row(move |cx| {
+        vec![
+            cx.text("Assist:"),
+            shadcn::Button::new("Open actions")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-code-editor-torture-assist-open")
+                .on_activate(open_assist.clone())
+                .into_element(cx),
+            assist,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx)
 }
 
 pub(in crate::ui) fn preview_code_editor_torture(
@@ -241,6 +330,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                             }),
                         ]
                     }).gap(Space::N2).items_center().into_element(cx),
+                build_torture_overlay_feature_hook(cx),
                 doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                         let reset_handle = header_handle_controls.clone();
                         let preedit_handle = header_handle_controls.clone();

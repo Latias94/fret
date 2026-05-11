@@ -53,6 +53,18 @@ The command writes
 stable non-zero diagnostics, diagnostic line summaries, range decorations, gutter markers, semantic
 tokens, schema fields, buffer revision, and display-map epoch after warmup.
 
+## Overlay Hook Render-Flow Gate
+
+Run this after changing the `code_editor_torture` overlay proof or the editor assist recipe wiring:
+
+```powershell
+cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_assist_overlay_hook_stays_within_window --no-fail-fast
+```
+
+The gate opens the code-editor torture page, clicks the assist trigger, and asserts that the
+recipe-owned anchored listbox and its first feature-hook row enter the semantics tree with in-window
+geometry.
+
 ## Perf Gates
 
 Use the existing editor perf contract workstream as the first source of truth:
@@ -106,6 +118,8 @@ the target behavior and stressor scope are explicit.
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md`
 - Feature payload bundle assertion:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md`
+- Overlay feature hook proof:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md`
 - First editor test module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
@@ -121,6 +135,9 @@ the target behavior and stressor scope are explicit.
 - A11y projection: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`
 - Overlay infrastructure: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
 - Existing editor anchored overlay recipe: `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs`
+- UI Gallery overlay proof:
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs`
+- UI Gallery overlay render-flow gate: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 
 ## Known Caveats
 

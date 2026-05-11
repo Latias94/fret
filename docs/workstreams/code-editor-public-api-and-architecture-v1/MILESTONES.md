@@ -71,14 +71,18 @@ Exit criteria:
 
 ## M4 - Feature Surface Proof
 
+Status: Complete (2026-05-12)
+
 Exit criteria:
 
 - A realistic editor proof combines syntax, diagnostics/decorations, gutter markers, folds/inlays,
   soft wrap, selection, and at least one overlay-style feature hook. (First fixture proof landed in
   `M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md`; the bundle assertion landed in
-  `M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md`; overlay-style hook remains open.)
+  `M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md`; the anchored overlay hook landed in
+  `M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md`.)
 - Diagnostics snapshots expose enough state to explain regressions.
-- The proof has one scripted repro and one public `diag stats` gate.
+- The proof has one scripted repro and one public `diag stats` gate. (The overlay hook is covered by
+  a render-flow gate; the feature payload bundle remains the public `diag stats` contract.)
 
 ## M5 - Performance Contract Closure
 

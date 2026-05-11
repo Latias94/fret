@@ -199,7 +199,8 @@ Then open the editor pages in the gallery navigation.
 ## Current Gaps
 
 - Concrete app-facing completion/hover/code-action structs are not stable yet.
-- The combined proof for diagnostics, gutter markers, syntax, folds, inlays, soft wrap, selection,
-  and an overlay-style feature hook is still pending.
+- The current overlay proof is a UI Gallery anchored text-assist hook that keeps overlay lifecycle
+  policy in the ecosystem/app layer; stable editor-owned hover/completion/code-action request
+  structs are still future work.
 - Linux performance is not validated by the current editor workstream; keep Windows/macOS/wasm
   evidence labeled by environment.

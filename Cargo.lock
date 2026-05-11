@@ -3044,6 +3044,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-ai",
  "fret-ui-assets",
+ "fret-ui-editor",
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-magic",

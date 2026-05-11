@@ -49,7 +49,8 @@ Last updated: 2026-05-12
 - [x] Land the widget-facing feature payload store with public setters/readouts, buffer-revision
       clearing, display-map gutter validation, and row scene cache epoch wiring.
 - [x] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
-      inlays, soft wrap, and selection.
+      inlays, soft wrap, selection, and an ecosystem-owned overlay-style hook.
+  - [x] Add an anchored text-assist overlay proof on `code_editor_torture`.
 - [x] Add a diagnostics bundle assertion for feature payload stability.
 - [ ] Split monolithic editor tests into feature-owned test modules or fixture-driven runners.
   - [x] Extract feature payload API tests into
