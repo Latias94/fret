@@ -12551,3 +12551,56 @@ Decision:
   not the current limiter.
 - Do not loosen the checked-in complex wheel contract and do not start a broad display-list rewrite from this evidence
   alone.
+
+## 2026-05-11 23:59 (scene replay text-blob side-index semantics)
+
+Question:
+- Does cached scene replay preserve the same renderer resource side indexes as direct `Scene::push` recording, or are
+  replayed text ops missing from `Scene::text_blob_ids()`?
+
+Discovery:
+- `SceneRecording::push` tracks `SceneOp::Text` ids in draw-op order, and `TextSystem::prepare_for_scene` uses
+  `scene.text_blob_ids()` to collect glyph keys for atlas pinning.
+- `SceneRecording::replay_ops` only copied ops and updated the fingerprint. Replayed text could still be present in the
+  op stream, but it was absent from the text-blob side index used by renderer text prepare.
+- This differs from the GPUI/Zed reference shape: `Scene::replay` routes primitives back through `insert_primitive`,
+  rebuilding the side collections instead of memcpying only the operation stream.
+
+Change:
+- `SceneRecording::replay_ops` now records replayed `TextBlobId`s in `text_blob_ids`.
+- Added `SceneRecording::replay_ops_with_text_blob_ids` plus translated/transformed variants for hot cache paths that
+  already precompute the text index. Debug builds assert that the provided index exactly matches the replayed ops.
+- `CanvasHostedResources` exposes its precomputed text ids, and the code editor row-scene cache uses the indexed replay
+  path after touching hosted resources.
+
+Validation:
+- `cargo fmt -p fret-core -p fret-ui -p fret-code-editor --check`.
+- `cargo nextest run -p fret-core replay_ops_tracks_text_blob_ids_in_op_order replay_ops_translated_with_text_blob_ids_tracks_precomputed_index`.
+- `cargo check -p fret-ui`.
+- `cargo check -p fret-code-editor --features syntax-rust`.
+- `cargo nextest run -p fret-ui --lib hosted_resources_from_scene_ops_collects_resource_ids`.
+- `cargo build -p fretboard --release`.
+- `cargo build -p fret-ui-gallery --release --features gallery-dev` (passed with existing warnings in `fret-runtime`
+  and unrelated `fret-ui` warning sites).
+
+Evidence:
+- Paint-detail complex wheel repeat=3:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-scene-replay-text-index-v1 --timeout-ms 240000 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`.
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-scene-replay-text-index-v1/1778515050738/bundle.schema2.json`.
+  - Worst top total `3408us`, paint `2834us`, renderer payload text ops / instance bytes `338/214544`.
+  - `diag stats` on that bundle reports code-editor p95 `us_total=1000`, `us_row_content_resolve=724`,
+    `us_row_scene_fast_path=451`, `us_row_scene_replay_touch=65`, and `us_row_scene_replay_ops=77`.
+  - Renderer text prepare is now visible as the larger remaining cost: renderer p95/max text `1287/1302us`,
+    with text atlas upload bytes and evicted pages still `0`.
+- Formal baseline check without paint-detail instrumentation:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-scene-replay-text-index-baseline-check-v1 --timeout-ms 240000 --repeat 3 --warmup-frames 5 --sort time --top 5 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`.
+  - Passed the current Windows RTX 4090 v1 contract by exit status.
+  - Worst top total `2859us`; frame p95 total `2827us`; payload text ops / instance bytes `254/192368`.
+
+Decision:
+- Keep the replay side-index fix: it is a correctness/contract repair, not an optional optimization.
+- Do not remove code editor hosted-resource touch yet; it still owns Canvas cache lifetime for text/path/svg resources,
+  while `Scene::text_blob_ids()` owns renderer text atlas pinning.
+- The next measured slice should inspect renderer text prepare / glyph pinning and possible text-index compaction. Row
+  scene capture/store remains too small to justify a broad row display-list rewrite from this evidence.

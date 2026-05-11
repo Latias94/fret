@@ -2137,9 +2137,11 @@ fn try_replay_row_scene_cache_fast_syntax(
                         );
                     }
                     let replay_started = st.paint_perf_enabled.then(Instant::now);
-                    painter
-                        .scene()
-                        .replay_ops_translated(cached.ops.as_slice(), replay_delta);
+                    painter.scene().replay_ops_translated_with_text_blob_ids(
+                        cached.ops.as_slice(),
+                        replay_delta,
+                        cached.hosted_resources.text_blob_ids(),
+                    );
                     if let Some(started) = replay_started {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_replay_ops,
@@ -2252,9 +2254,11 @@ fn try_replay_row_scene_cache(
                         );
                     }
                     let replay_started = st.paint_perf_enabled.then(Instant::now);
-                    painter
-                        .scene()
-                        .replay_ops_translated(cached.ops.as_slice(), replay_delta);
+                    painter.scene().replay_ops_translated_with_text_blob_ids(
+                        cached.ops.as_slice(),
+                        replay_delta,
+                        cached.hosted_resources.text_blob_ids(),
+                    );
                     if let Some(started) = replay_started {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_replay_ops,

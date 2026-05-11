@@ -105,3 +105,10 @@ Budgets are guidance for representative probes. The committed gate is the script
   adds the high-stress editor wheel tail contract. It isolates setup with `reset_diagnostics`, but it still passes
   without proving that a row display-list rewrite is needed. The latest follow-up reduced row overlay work by caching
   frame-local selection/caret overlay state; keep the checked-in baseline until a deliberate tail policy re-seed passes.
+- Scene replay now preserves `Scene::text_blob_ids()` for replayed text ops, and code-editor row-scene replay uses a
+  precomputed text-index replay API. The complex wheel repeat=3 paint-detail evidence
+  `target/fret-diag/perf-complex-editor-scene-replay-text-index-v1/1778515050738/bundle.schema2.json` keeps row-scene
+  replay/touch small (`p95 replay_touch=65us`, `replay_ops=77us`) while exposing the now-correct renderer text prepare
+  cost (`p95/max=1287/1302us`, no atlas upload/eviction). Keep the next editor-paint investigation focused on renderer
+  text prepare / glyph pinning or text-index compaction unless a future contract actually shows row-scene capture/store
+  as the limiter.

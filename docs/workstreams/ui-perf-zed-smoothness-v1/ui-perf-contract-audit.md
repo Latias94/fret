@@ -183,6 +183,18 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `us_row_content_resolve=636`, `us_row_scene_fast_path=347`, `us_row_text=88`, and `us_text_draw=147`.
     Keep the next optimization focused on measured fast-replay/content/Canvas/renderer cost unless a new stressor
     shows row-scene capture/store as the limiter.
+  - Follow-up replay semantics fix: `SceneRecording::replay_ops` now maintains `Scene::text_blob_ids()` for replayed
+    text ops, and code-editor row-scene replay uses the new precomputed-index replay API. This matches the GPUI/Zed
+    direction where replay rebuilds side collections via the normal scene insertion path. Paint-detail repeat=3
+    evidence in
+    `target/fret-diag/perf-complex-editor-scene-replay-text-index-v1/1778515050738/bundle.schema2.json` reports
+    code-editor p95 `us_row_scene_replay_touch=65`, `us_row_scene_replay_ops=77`, and
+    `us_row_scene_fast_path=451`; the newly correct renderer text prepare cost is now visible as p95/max
+    `1287/1302us` with text atlas upload/eviction still `0`. The non-instrumented repeat=3 baseline check in
+    `target/fret-diag/perf-complex-editor-scene-replay-text-index-baseline-check-v1/1778515146987/bundle.json` passed
+    the checked-in v1 contract with worst top total `2859us` and payload `254/192368`.
+    Next attribution should inspect renderer text prepare / glyph pinning and possible text-index compaction; do not
+    treat the larger text-prepare number as a regression caused by row-scene replay.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.

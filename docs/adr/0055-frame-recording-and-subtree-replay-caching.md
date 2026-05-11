@@ -20,6 +20,9 @@ Implementation status:
 - Observability: per-window hit/miss/op counters are exposed via `UiDebugFrameStats` and shown in the demo HUD.
 - Recording ingestion: `UiTree::ingest_paint_cache_source(&mut Scene)` swaps the previous frame's `Scene.ops` into the
   cache buffer before the scene is cleared, avoiding per-frame copying.
+- Replay preserves frame-level resource side indexes: `SceneRecording::replay_ops` updates `Scene::text_blob_ids()` for
+  replayed text ops, and hot cache-hit paths may use explicit precomputed-index replay APIs when they already store the
+  relevant text ids.
 - Implemented (P0): renderer-side encoding reuse keyed by a stable `SceneRecording::fingerprint()` (+ `ops_len()` and
   render-target generation) to skip CPU encoding when the recorded scene is identical.
 
@@ -125,6 +128,9 @@ Caching must be **strictly subordinate** to invalidation:
   - cached `SceneOp` ranges may reference external handles such as `TextBlobId`,
   - therefore widgets must not release/replace those handles in `layout()` (which can run even when `paint()` is replayed),
   - releases should happen in `paint()` (when repainting) and/or `cleanup_resources()`.
+- Replay must update any frame-level side indexes derived from the paint stream. For example, replayed `SceneOp::Text`
+  entries must be present in `Scene::text_blob_ids()` so renderer text prepare can pin glyphs for replayed text just as
+  it does for directly pushed text.
 
 Model observation (ADR 0051) is a first-class part of the closed loop:
 

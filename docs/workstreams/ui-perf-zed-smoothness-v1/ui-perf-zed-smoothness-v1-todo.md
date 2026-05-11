@@ -1319,6 +1319,23 @@ Perf acceptance:
     path plus Canvas paint-widget and renderer payload, not at row-scene capture/store or syntax materialization. Do
     not start a broad row display-list rewrite until a near-threshold or failing stressor shows replay/capture/store
     as the measured limiter.
+- [x] Fix `Scene::replay` text-blob side-index semantics before deeper row-scene rewrites.
+  - Discovery: `SceneRecording::push` recorded `SceneOp::Text` ids in `Scene::text_blob_ids()`, but
+    `SceneRecording::replay_ops` only copied ops/fingerprint. Replayed row text therefore skipped the renderer text
+    prepare side index, even though the text ops remained in the op stream.
+  - Implementation: replay now maintains `text_blob_ids`; hot paths can call
+    `replay_ops_with_text_blob_ids` / translated / transformed variants with a precomputed text index. Debug builds
+    assert that the provided ids match the replayed ops. Code editor row-scene replay uses
+    `CanvasHostedResources::text_blob_ids()` to avoid rescanning cached row ops.
+  - Gate: `cargo nextest run -p fret-core replay_ops_tracks_text_blob_ids_in_op_order replay_ops_translated_with_text_blob_ids_tracks_precomputed_index`;
+    `cargo check -p fret-ui`; `cargo check -p fret-code-editor --features syntax-rust`;
+    `cargo nextest run -p fret-ui --lib hosted_resources_from_scene_ops_collects_resource_ids`.
+  - Evidence: perf log entry `2026-05-11 23:59`. Complex wheel repeat=3 with paint detail reports worst total
+    `3408us`, p95 `us_row_scene_replay_touch=65`, `us_row_scene_replay_ops=77`, and renderer text prepare p95/max
+    `1287/1302us` with atlas upload/eviction still `0`. The formal baseline repeat=3 without paint detail passes the
+    current Windows v1 contract with worst top total `2859us` and payload text ops / instance bytes `254/192368`.
+  - Decision: keep hosted-resource touch for Canvas resource lifetime; treat renderer text prepare / glyph pinning as
+    the next evidence target rather than row-scene capture/store or broad display-list replacement.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.
