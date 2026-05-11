@@ -398,6 +398,7 @@ pub(super) fn paint_row(
             .preedit_replace_range
             .as_ref()
             .is_some_and(|r| !r.is_empty());
+    let overlay = st.paint_frame_overlay;
 
     let row_content_resolve_started = perf_enabled.then(Instant::now);
     if let Some(preedit) = st.preedit.clone() {
@@ -477,10 +478,10 @@ pub(super) fn paint_row(
                 }
             }
         } else {
-            let caret = st.selection.caret().min(st.buffer.len_bytes());
-            let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
-            if caret_pt.row == row {
-                let caret_local = caret.saturating_sub(row_range.start);
+            if let Some(caret_overlay) = overlay.caret
+                && caret_overlay.row == row
+            {
+                let caret_local = caret_overlay.byte.saturating_sub(row_range.start);
                 let mut caret_in_line = caret_local.min(line.len());
                 if let Some(folds) = row_folds.as_ref() {
                     caret_in_line = folds
@@ -1237,7 +1238,7 @@ pub(super) fn paint_row(
     };
 
     let row_overlay_started = perf_enabled.then(Instant::now);
-    let sel = st.selection.normalized();
+    let sel = overlay.selection_range();
     let mut drew_selection = false;
     if !sel.is_empty() {
         let global_start = sel.start.max(row_range.start).min(row_range.end);
@@ -1392,52 +1393,50 @@ pub(super) fn paint_row(
         }
 
         // Draw caret using caret stops so that caret geometry matches hit-testing and IME anchoring.
-        if st.selection.is_caret() {
-            let caret = st.selection.caret().min(st.buffer.len_bytes());
-            let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
-            if caret_pt.row == row {
-                let mut local = caret.saturating_sub(row_range.start);
-                if let Some(folds) = &row_folds {
-                    local = folds.buffer_local_to_display_local(local);
-                }
-                if let Some(preedit) = &st.preedit
-                    && (row_preedit.is_some() || row_preedit_range.is_some())
-                {
-                    local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
-                }
-                let x0 = caret_x_for_index(caret_stops, local);
-                let (caret_top, caret_h) = if let (Some(top), Some(h)) =
-                    (caret_rect_top, caret_rect_height)
-                    && h.0 > 0.0
-                {
-                    (top, Px(h.0.min(row_h.0)))
-                } else {
-                    (Px(0.0), row_h)
-                };
-                let caret_rect = Rect::new(
-                    fret_core::Point::new(
-                        Px(rect.origin.x.0 + x0.0),
-                        Px(rect.origin.y.0 + caret_top.0),
-                    ),
-                    Size::new(Px(1.0), caret_h),
-                );
-                painter.scene().push(SceneOp::Quad {
-                    order: DrawOrder(3),
-                    rect: caret_rect,
-                    background: fret_core::Paint::Solid(caret_color).into(),
-
-                    border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                    corner_radii: Corners::all(Px(0.0)),
-                });
+        if let Some(caret_overlay) = overlay.caret
+            && caret_overlay.row == row
+        {
+            let mut local = caret_overlay.byte.saturating_sub(row_range.start);
+            if let Some(folds) = &row_folds {
+                local = folds.buffer_local_to_display_local(local);
             }
+            if let Some(preedit) = &st.preedit
+                && (row_preedit.is_some() || row_preedit_range.is_some())
+            {
+                local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+            }
+            let x0 = caret_x_for_index(caret_stops, local);
+            let (caret_top, caret_h) = if let (Some(top), Some(h)) =
+                (caret_rect_top, caret_rect_height)
+                && h.0 > 0.0
+            {
+                (top, Px(h.0.min(row_h.0)))
+            } else {
+                (Px(0.0), row_h)
+            };
+            let caret_rect = Rect::new(
+                fret_core::Point::new(
+                    Px(rect.origin.x.0 + x0.0),
+                    Px(rect.origin.y.0 + caret_top.0),
+                ),
+                Size::new(Px(1.0), caret_h),
+            );
+            painter.scene().push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect: caret_rect,
+                background: fret_core::Paint::Solid(caret_color).into(),
+
+                border: Edges::all(Px(0.0)),
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+                corner_radii: Corners::all(Px(0.0)),
+            });
         }
     } else {
         // Fallback to the MVP monospace heuristic if caret stops are unavailable.
         if !drew_selection && !sel.is_empty() {
-            let start_pt = st.display_map.byte_to_display_point(&st.buffer, sel.start);
-            let end_pt = st.display_map.byte_to_display_point(&st.buffer, sel.end);
+            let start_pt = overlay.selection_start_point;
+            let end_pt = overlay.selection_end_point;
             if row >= start_pt.row && row <= end_pt.row {
                 let line_cols = line.chars().count();
                 let start_col = if row == start_pt.row { start_pt.col } else { 0 };
@@ -1467,85 +1466,82 @@ pub(super) fn paint_row(
             }
         }
 
-        if st.selection.is_caret() {
-            let caret = st.selection.caret().min(st.buffer.len_bytes());
-            let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
-            if caret_pt.row == row {
-                let caret_rect = if let Some(blob) = row_blob {
-                    let mut local = caret.saturating_sub(row_range.start);
-                    if let Some(folds) = &row_folds {
-                        local = folds.buffer_local_to_display_local(local);
-                    }
-                    local = local.min(line.len());
-                    if let Some(preedit) = &st.preedit
-                        && (row_preedit.is_some() || row_preedit_range.is_some())
-                    {
-                        local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
-                    }
-                    let max_len = if let Some(preedit) = &st.preedit
-                        && (row_preedit.is_some() || row_preedit_range.is_some())
-                    {
-                        if row_preedit.is_some() {
-                            line.len().saturating_add(preedit.text.len())
-                        } else {
-                            line.len()
-                        }
+        if let Some(caret_overlay) = overlay.caret
+            && caret_overlay.row == row
+        {
+            let caret_rect = if let Some(blob) = row_blob {
+                let mut local = caret_overlay.byte.saturating_sub(row_range.start);
+                if let Some(folds) = &row_folds {
+                    local = folds.buffer_local_to_display_local(local);
+                }
+                local = local.min(line.len());
+                if let Some(preedit) = &st.preedit
+                    && (row_preedit.is_some() || row_preedit_range.is_some())
+                {
+                    local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+                }
+                let max_len = if let Some(preedit) = &st.preedit
+                    && (row_preedit.is_some() || row_preedit_range.is_some())
+                {
+                    if row_preedit.is_some() {
+                        line.len().saturating_add(preedit.text.len())
                     } else {
                         line.len()
-                    };
-                    local = local.min(max_len);
-
-                    let (services, _) = painter.services_and_scene();
-                    let started = perf_enabled.then(Instant::now);
-                    let x0 = services.text().caret_x(blob, local);
-                    if let Some(started) = started {
-                        add_paint_perf_elapsed(
-                            &mut st.paint_perf_frame.us_caret_x,
-                            &mut st.paint_perf_frame.ns_caret_x,
-                            started,
-                        );
                     }
-
-                    let (caret_top, caret_h) = if let (Some(top), Some(h)) =
-                        (caret_rect_top, caret_rect_height)
-                        && h.0 > 0.0
-                    {
-                        (top, Px(h.0.min(row_h.0)))
-                    } else {
-                        (Px(0.0), row_h)
-                    };
-                    Rect::new(
-                        fret_core::Point::new(
-                            Px(rect.origin.x.0 + x0.0),
-                            Px(rect.origin.y.0 + caret_top.0),
-                        ),
-                        Size::new(Px(1.0), caret_h),
-                    )
                 } else {
-                    let mut col = caret_pt.col;
-                    if let Some(preedit) = &st.preedit {
-                        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
-                    }
-                    let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
-                    Rect::new(
-                        fret_core::Point::new(x, rect.origin.y),
-                        Size::new(Px(1.0), row_h),
-                    )
+                    line.len()
                 };
-                painter.scene().push(SceneOp::Quad {
-                    order: DrawOrder(3),
-                    rect: caret_rect,
-                    background: fret_core::Paint::Solid(caret_color).into(),
+                local = local.min(max_len);
 
-                    border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-                if perf_enabled {
-                    st.paint_perf_frame.quads_caret =
-                        st.paint_perf_frame.quads_caret.saturating_add(1);
+                let (services, _) = painter.services_and_scene();
+                let started = perf_enabled.then(Instant::now);
+                let x0 = services.text().caret_x(blob, local);
+                if let Some(started) = started {
+                    add_paint_perf_elapsed(
+                        &mut st.paint_perf_frame.us_caret_x,
+                        &mut st.paint_perf_frame.ns_caret_x,
+                        started,
+                    );
                 }
+
+                let (caret_top, caret_h) = if let (Some(top), Some(h)) =
+                    (caret_rect_top, caret_rect_height)
+                    && h.0 > 0.0
+                {
+                    (top, Px(h.0.min(row_h.0)))
+                } else {
+                    (Px(0.0), row_h)
+                };
+                Rect::new(
+                    fret_core::Point::new(
+                        Px(rect.origin.x.0 + x0.0),
+                        Px(rect.origin.y.0 + caret_top.0),
+                    ),
+                    Size::new(Px(1.0), caret_h),
+                )
+            } else {
+                let mut col = caret_overlay.col;
+                if let Some(preedit) = &st.preedit {
+                    col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+                }
+                let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
+                Rect::new(
+                    fret_core::Point::new(x, rect.origin.y),
+                    Size::new(Px(1.0), row_h),
+                )
+            };
+            painter.scene().push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect: caret_rect,
+                background: fret_core::Paint::Solid(caret_color).into(),
+
+                border: Edges::all(Px(0.0)),
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+                corner_radii: Corners::all(Px(0.0)),
+            });
+            if perf_enabled {
+                st.paint_perf_frame.quads_caret = st.paint_perf_frame.quads_caret.saturating_add(1);
             }
         }
     }

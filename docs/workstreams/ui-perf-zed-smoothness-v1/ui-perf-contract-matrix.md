@@ -103,4 +103,5 @@ Budgets are guidance for representative probes. The committed gate is the script
   autoscroll contract; do not use either one alone to justify a `WindowedRowsSurface` display-list rewrite.
 - `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
   adds the high-stress editor wheel tail contract. It isolates setup with `reset_diagnostics`, but it still passes
-  without proving that a row display-list rewrite is needed.
+  without proving that a row display-list rewrite is needed. The latest follow-up reduced row overlay work by caching
+  frame-local selection/caret overlay state; keep the checked-in baseline until a deliberate tail policy re-seed passes.

@@ -194,13 +194,18 @@ Current contract split (2026-05-11):
   broad-only member list.
 - Keep `ui-resize-probes`, `ui-code-editor-resize-probes`,
   `ui-gallery-code-editor-torture-autoscroll-steady`,
-  `ui-gallery-code-editor-torture-autoscroll-typical`, `ui-gallery-view-cache-toggle-perf-steady`, and
-  `ui-gallery-virtual-list-torture-steady`, `ui-gallery-hover-layout-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
-  and `ui-gallery-material3-tabs-switch-perf-steady` as the current editor-grade hard contracts for resize, view-cache,
-  virtualization, hover structural stability, keyboard/menu flow, tabs switching, and editor steady/typical
+  `ui-gallery-code-editor-torture-autoscroll-typical`,
+  `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady`,
+  `ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`,
+  `ui-gallery-hover-layout-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`, and
+  `ui-gallery-material3-tabs-switch-perf-steady` as the current editor-grade hard contracts for resize, view-cache,
+  virtualization, hover structural stability, keyboard/menu flow, tabs switching, and editor steady/typical/high-stress
   paint/payload pressure.
 - The typical autoscroll payload contract is a passing baseline, not proof that a `WindowedRowsSurface` display-list
   rewrite is required. Start that rewrite only from a future near-threshold or failing editor paint stressor.
+- The complex editor wheel frame-overlay cache proves a narrower GPUI/Zed-style direction first: move stable derived
+  overlay state to the frame boundary before row paint. Its latest paint-detail probe reduced row overlay work without
+  changing the checked-in baseline; keep the display-list rewrite gated on future row-op evidence.
 
 ---
 

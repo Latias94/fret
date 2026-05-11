@@ -160,15 +160,29 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     Selected candidate-2 measured p50/p90/max top total=`2424/5027/5027us`, frame-p95 total=`2250/2784/2784us`,
     hard thresholds top(total/layout/solve)=`6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`, and
     payload thresholds instance/text_ops=`258663/406`.
+- Complex editor wheel frame-overlay cache:
+  - Before bundle:
+    `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
+  - After bundle:
+    `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/1778495502010/bundle.schema2.json`.
+  - Paint-detail `ns_total` p50/p95/max improved from `1041.1/1345.3/1371.3us` to `488.8/730.8/832.4us`.
+  - `ns_row_overlay` p50/p95/max improved from `523.1/556.0/763.8us` to `6.9/8.2/9.6us`, with
+    `ns_frame_overlay_prepare` p50/p95/max=`7.9/9.2/16.7us`.
+  - An initial post-optimization re-seed attempt was not promoted:
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy4-overlay-cache/selection-summary.json`
+    selected candidate-2 with `selected_fail_total=1`; the miss was one `top_total_time_us=4389us` paint-tail
+    sample against a `3365us` top threshold while frame p95 total was `2176us`. Keep the checked-in v1 baseline until
+    a policy change is intentional.
 
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its
    membership is intentionally narrowed. Its former broad-only members are now covered by dedicated Windows contracts;
    do not try to re-promote the broad suite by loosening thresholds.
-2. The autoscroll typical v2 and complex wheel v1 contracts cover stricter editor paint/payload surfaces, but both
-   pass. Keep the `WindowedRowsSurface` display-list rewrite gated on a future near-threshold or failing stressor,
-   not on these passing baselines alone.
+2. The autoscroll typical v2 and complex wheel v1 contracts cover stricter editor paint/payload surfaces, and the
+   complex wheel overlay hotspot now has a narrower frame-derived-state fix. Keep the `WindowedRowsSurface`
+   display-list rewrite gated on a future near-threshold or failing stressor where row op replay/capture is the
+   measured limiter, not on these passing baselines alone.
 3. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
 
 ## Audit Conclusion

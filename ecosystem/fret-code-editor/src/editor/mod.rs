@@ -9,7 +9,7 @@ use std::rc::Rc;
 #[cfg(feature = "syntax")]
 use std::sync::Mutex;
 use std::sync::{Arc, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
@@ -1140,6 +1140,7 @@ pub struct CodeEditorPaintPerfFrame {
     pub us_row_content_resolve: u64,
     pub us_row_geom_resolve: u64,
     pub us_row_overlay: u64,
+    pub us_frame_overlay_prepare: u64,
 
     pub ns_total: u64,
     pub ns_row_text: u64,
@@ -1172,6 +1173,7 @@ pub struct CodeEditorPaintPerfFrame {
     pub ns_row_content_resolve: u64,
     pub ns_row_geom_resolve: u64,
     pub ns_row_overlay: u64,
+    pub ns_frame_overlay_prepare: u64,
 }
 
 fn paint_perf_enabled_from_env() -> bool {
@@ -1180,6 +1182,28 @@ fn paint_perf_enabled_from_env() -> bool {
         std::env::var_os("FRET_CODE_EDITOR_DIAG_PAINT_PERF")
             .is_some_and(|v| !v.is_empty() && v != "0")
     })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PaintFrameCaretOverlay {
+    byte: usize,
+    row: usize,
+    col: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct PaintFrameOverlayState {
+    selection_start: usize,
+    selection_end: usize,
+    selection_start_point: DisplayPoint,
+    selection_end_point: DisplayPoint,
+    caret: Option<PaintFrameCaretOverlay>,
+}
+
+impl PaintFrameOverlayState {
+    fn selection_range(self) -> Range<usize> {
+        self.selection_start..self.selection_end
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1250,6 +1274,7 @@ struct CodeEditorState {
     paint_perf_enabled: bool,
     paint_perf_frame_seq: u64,
     paint_perf_frame: CodeEditorPaintPerfFrame,
+    paint_frame_overlay: PaintFrameOverlayState,
     #[cfg(feature = "syntax")]
     language: Option<Arc<str>>,
     #[cfg(feature = "syntax")]
@@ -1563,23 +1588,62 @@ impl CodeEditorState {
         self.clear_row_rich_prefetch_runtime();
     }
 
-    fn paint_perf_begin_frame(&mut self, frame: WindowedRowsPaintFrame) {
-        if !self.paint_perf_enabled {
-            return;
+    fn begin_paint_frame(&mut self, frame: WindowedRowsPaintFrame) {
+        if self.paint_perf_enabled {
+            self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
+            let visible_rows = frame
+                .visible_end
+                .saturating_sub(frame.visible_start)
+                .saturating_add(1) as u64;
+            self.paint_perf_frame = CodeEditorPaintPerfFrame {
+                frame_seq: self.paint_perf_frame_seq,
+                visible_start: frame.visible_start as u64,
+                visible_end: frame.visible_end as u64,
+                visible_rows,
+                ..CodeEditorPaintPerfFrame::default()
+            };
         }
 
-        self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
-        let visible_rows = frame
-            .visible_end
-            .saturating_sub(frame.visible_start)
-            .saturating_add(1) as u64;
-        self.paint_perf_frame = CodeEditorPaintPerfFrame {
-            frame_seq: self.paint_perf_frame_seq,
-            visible_start: frame.visible_start as u64,
-            visible_end: frame.visible_end as u64,
-            visible_rows,
-            ..CodeEditorPaintPerfFrame::default()
+        let started = self.paint_perf_enabled.then(Instant::now);
+        let len = self.buffer.len_bytes();
+        let selection = self.selection.normalized();
+        let selection_start = selection.start.min(len);
+        let selection_end = selection.end.min(len);
+        let (selection_start_point, selection_end_point) = if selection_start < selection_end {
+            (
+                self.display_map
+                    .byte_to_display_point(&self.buffer, selection_start),
+                self.display_map
+                    .byte_to_display_point(&self.buffer, selection_end),
+            )
+        } else {
+            (DisplayPoint::default(), DisplayPoint::default())
         };
+        let caret = if self.selection.is_caret() {
+            let byte = self.selection.caret().min(len);
+            let point = self.display_map.byte_to_display_point(&self.buffer, byte);
+            Some(PaintFrameCaretOverlay {
+                byte,
+                row: point.row,
+                col: point.col,
+            })
+        } else {
+            None
+        };
+        self.paint_frame_overlay = PaintFrameOverlayState {
+            selection_start,
+            selection_end,
+            selection_start_point,
+            selection_end_point,
+            caret,
+        };
+        if let Some(started) = started {
+            let elapsed = started.elapsed();
+            self.paint_perf_frame.us_frame_overlay_prepare =
+                u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX);
+            self.paint_perf_frame.ns_frame_overlay_prepare =
+                u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
+        }
     }
 
     fn set_preedit(&mut self, preedit: Option<PreeditState>) {
@@ -1740,6 +1804,7 @@ impl CodeEditorHandle {
                 paint_perf_enabled: paint_perf_enabled_from_env(),
                 paint_perf_frame_seq: 0,
                 paint_perf_frame: CodeEditorPaintPerfFrame::default(),
+                paint_frame_overlay: PaintFrameOverlayState::default(),
                 #[cfg(feature = "syntax")]
                 language: None,
                 #[cfg(feature = "syntax")]
@@ -2722,13 +2787,13 @@ impl CodeEditor {
             };
             #[cfg(not(feature = "syntax"))]
             let row_rich_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
-            let paint_perf_hook = paint_perf_enabled_from_env().then(|| {
+            let paint_frame_hook = {
                 let editor_state = editor_state.clone();
                 let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
-                    editor_state.borrow_mut().paint_perf_begin_frame(frame);
+                    editor_state.borrow_mut().begin_paint_frame(frame);
                 });
                 hook
-            });
+            };
 
             let torture_hook = torture.map(|torture| {
                 let scroll_handle = scroll_handle.clone();
@@ -2942,9 +3007,7 @@ impl CodeEditor {
 
             surface_props.on_paint_frame = {
                 let mut hooks: Vec<OnWindowedRowsPaintFrame> = Vec::new();
-                if let Some(hook) = paint_perf_hook {
-                    hooks.push(hook);
-                }
+                hooks.push(paint_frame_hook);
                 if let Some(hook) = syntax_prefetch_hook {
                     hooks.push(hook);
                 }

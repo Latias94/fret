@@ -251,11 +251,23 @@ Conventions:
     `max_renderer_instance_bytes=262416`, `max_renderer_encode_scene_text_ops=406`. This covers the missing
     typical-frame paint/payload surface, but it is still a passing contract; only start a `WindowedRowsSurface`
     display-list rewrite from a future near-threshold or failing stressor.
+  - [x] Cache code-editor frame overlay state before row paint.
+    - Change: `begin_paint_frame` now prepares normalized selection bytes/display points plus caret byte/row/col once
+      per `WindowedRowsSurface` frame, and `paint_row` consumes that snapshot for preedit injection, fallback
+      selection geometry, and caret overlay painting.
+    - Evidence: perf log entry `2026-05-11` (`complex editor wheel frame overlay cache`); paint-detail
+      `ns_row_overlay` p95 drops from `556.0us` to `8.2us`, while frame overlay preparation is `9.2us` p95.
+    - Decision: this follows the GPUI/Zed prepaint-derived-state direction and fixes duplicated display-map work. It
+      does not by itself justify a row display-list rewrite because row scene replay remains high and renderer payload
+      is still bounded.
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
       - record per-row display lists (ops) and replay with a transform/translation,
       - reduce quads/text ops count (batching or fewer per-row background ops),
       - avoid per-frame allocations in the hot loop (scratch vec reuse, pre-sized buffers).
+    - Current blocker: latest complex wheel evidence points at overlay derived-state churn, not failed row scene
+      replay. Start this only from a future near-threshold or failing stressor where row op replay/capture is the
+      measured limiter.
   - [ ] Re-evaluate text blob cache behavior for editor rows under resize jitter.
     - Confirm whether the hitch is dominated by fingerprint comparison, text prepare, atlas upload, or pure CPU list building.
     - If dominated by fingerprint compare, consider pointer-fast-pathing for more content variants (and/or richer cache keys).

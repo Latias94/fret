@@ -12295,3 +12295,88 @@ Decision:
 - Treat policy3 as the canonical Windows RTX 4090 complex editor wheel v1 baseline.
 - The remaining tail is paint-widget dominant and renderer payload remains bounded, so this still does not justify a
   renderer pass-organization rewrite or `WindowedRowsSurface` rewrite by itself.
+
+## 2026-05-11 (complex editor wheel frame overlay cache)
+
+Question:
+- The complex editor wheel v1 contract passes, but the paint-detail probe shows `row_overlay` is a large fraction of
+  code-editor Canvas work. Is this evidence for a `WindowedRowsSurface` display-list rewrite, or duplicated
+  frame-stable overlay derivation inside the row loop?
+
+Reference direction:
+- GPUI carries request-layout and prepaint state into paint (`repo-ref/zed/crates/gpui/src/element.rs`) and its Canvas
+  element returns prepaint data directly to paint (`repo-ref/zed/crates/gpui/src/elements/canvas.rs`).
+- Zed's editor prepares visible row layouts and a `PositionMap` before the hot paint/event geometry paths
+  (`repo-ref/zed/crates/editor/src/element.rs`, `line_layouts` and `PositionMap`).
+- Fret should follow that direction here: prepare stable overlay state once per `WindowedRowsSurface` frame, then keep
+  row paint as a consumer of already-derived geometry/points.
+
+Change:
+- Added `PaintFrameOverlayState` to `CodeEditorState`.
+  - It stores normalized selection bytes, selection display points for fallback geometry, and caret byte/row/col.
+  - `begin_paint_frame` now runs for every `WindowedRowsSurface` paint frame, not only when
+    `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, because row paint needs this semantic snapshot for correctness.
+- `paint_row` now consumes that frame overlay snapshot for:
+  - non-composed preedit caret injection,
+  - fallback selection geometry,
+  - caret overlay painting with or without shaped caret stops.
+- `CodeEditorPaintPerfFrame` and gallery diagnostics now expose `us_frame_overlay_prepare` /
+  `ns_frame_overlay_prepare`; paint perf schema is now version 7.
+
+Validation:
+- Build requirement learned during the probe: use a `gallery-dev` or `gallery-full` release build for this dev-only
+  page; the default release gallery has only the smaller page set and the script times out looking for
+  `ui-gallery-nav-code-editor-torture`.
+- Focused gates:
+  - `cargo fmt -p fret-code-editor -p fret-ui-gallery`
+  - `cargo nextest run -p fret-code-editor` - 95 tests passed.
+  - `cargo check -p fret-ui-gallery --tests` - passed.
+  - `cargo check -p fret-demo --tests` - passed.
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev` - passed.
+  - `git diff --check` - passed.
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+    - passed.
+- Paint-detail probe command:
+  `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final --timeout-ms 240000 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 5 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - Passed.
+  - Worst bundle:
+    `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/1778495502010/bundle.schema2.json`.
+  - Repeat summary:
+    `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/regression.summary.json`.
+
+Paint-detail attribution:
+- Before:
+  `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
+  - `ns_total` p50/p95/max=`1041.1/1345.3/1371.3us`.
+  - `ns_row_overlay` p50/p95/max=`523.1/556.0/763.8us`.
+  - `ns_frame_overlay_prepare` p50/p95/max=`0.0/0.0/0.0us`.
+- After:
+  `target/fret-diag/perf-complex-editor-wheel-overlay-cache-v3-final/1778495502010/bundle.schema2.json`.
+  - `ns_total` p50/p95/max=`488.8/730.8/832.4us`.
+  - `ns_row_overlay` p50/p95/max=`6.9/8.2/9.6us`.
+  - `ns_frame_overlay_prepare` p50/p95/max=`7.9/9.2/16.7us`.
+- Repeat-level top time also improved:
+  - before repeat summary total/paint/layout p50/p95/max=`2705/3099/3099us`, `2393/2748/2748us`,
+    `311/465/465us`.
+  - after repeat summary total/paint/layout p50/p95/max=`1874/2111/2111us`, `1540/1812/1812us`,
+    `296/296/296us`.
+
+Baseline decision:
+- Do not promote the attempted post-optimization re-seed yet.
+- Initial post-optimization selector attempt:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --ui-threshold-mode top_and_frame_p95 --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy4-overlay-cache --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`.
+- Summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy4-overlay-cache/selection-summary.json`.
+  - candidate-1 failed `3/3` validations.
+  - candidate-2 passed `2/3` validations but selected with `selected_fail_total=1`.
+  - The remaining miss was a single `top_total_time_us=4389us` paint-tail sample against candidate-2's
+    `3365us` top threshold; frame p95 total in that failed run was `2176us`.
+- Keep the checked-in policy3 v1 baseline as the formal contract for now. The optimization is real, but tightening
+  `top_total_time_us` needs an intentional policy decision for tail noise rather than a mechanical overwrite.
+
+Decision:
+- This was the correct first optimization before any row display-list rewrite: it removes duplicated display-map work
+  from row paint and follows the GPUI/Zed frame/prepaint-derived-state model.
+- The remaining row scene replay/cache behavior is still healthy enough that this slice does not justify a
+  `WindowedRowsSurface` display-list rewrite. Revisit that only with a future near-threshold/failing stressor where
+  row op replay/capture, not overlay derivation, is the measured limiter.

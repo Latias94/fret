@@ -65,14 +65,14 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(84);
+    let mut out = serde_json::Map::with_capacity(88);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
         };
     }
 
-    insert_u64!("schema_version", 6);
+    insert_u64!("schema_version", 7);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -110,6 +110,10 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_row_content_resolve", frame.us_row_content_resolve);
     insert_u64!("us_row_geom_resolve", frame.us_row_geom_resolve);
     insert_u64!("us_row_overlay", frame.us_row_overlay);
+    insert_u64!(
+        "us_frame_overlay_prepare",
+        frame.us_frame_overlay_prepare
+    );
     insert_u64!("syntax_rows_stored", frame.syntax_rows_stored);
     insert_u64!("us_syntax_slice", frame.us_syntax_slice);
     insert_u64!("us_syntax_highlight", frame.us_syntax_highlight);
@@ -142,6 +146,10 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_row_content_resolve", frame.ns_row_content_resolve);
     insert_u64!("ns_row_geom_resolve", frame.ns_row_geom_resolve);
     insert_u64!("ns_row_overlay", frame.ns_row_overlay);
+    insert_u64!(
+        "ns_frame_overlay_prepare",
+        frame.ns_frame_overlay_prepare
+    );
     insert_u64!("ns_syntax_slice", frame.ns_syntax_slice);
     insert_u64!("ns_syntax_highlight", frame.ns_syntax_highlight);
     insert_u64!("ns_syntax_distribute", frame.ns_syntax_distribute);
