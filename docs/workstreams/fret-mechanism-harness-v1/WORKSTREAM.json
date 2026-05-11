@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "slug": "fret-mechanism-harness-v1",
+  "title": "Fret Mechanism Harness v1",
+  "status": "active",
+  "updated": "2026-05-11",
+  "scope_kind": "execution",
+  "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery diagnostics gates into an end-to-end defect-finding loop.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/COVERAGE_MAP.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-11.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the first mechanism harness slice: scalar-metric harness self-test, layout primitives, layout dirty invalidation fixtures, and the UI Gallery checkbox underflow diagnostics gate.",
+    "commands": [
+      "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture"
+    ]
+  },
+  "gates": [
+    {
+      "name": "mechanism-harness-scalar-metric",
+      "command": "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture"
+    },
+    {
+      "name": "layout-dirty-invalidation-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "layout-primitives-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture"
+    },
+    {
+      "name": "checkbox-underflow-focused-rust-test",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib subtree_layout_dirty -- --nocapture"
+    },
+    {
+      "name": "checkbox-underflow-diag",
+      "command": "target/debug/fretboard-dev.exe diag run ui-gallery-checkbox-demo-with-title-toggle-underflow --dir target/fret-diag/mechanism-harness-v1-checkbox-underflow --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diag-script-registry",
+      "command": "python tools/check_diag_scripts_registry.py"
+    }
+  ],
+  "evidence": [
+    "docs/mechanism-harness-v2.md",
+    "crates/fret-mechanism-harness/src/observe.rs",
+    "crates/fret-mechanism-harness/src/oracle.rs",
+    "crates/fret-ui/src/tree/tests/fixtures/layout_dirty_invalidation_v1.json",
+    "crates/fret-ui/src/tree/tests/layout_dirty_invalidation_harness.rs",
+    "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
+    "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json",
+    "tools/diag-scripts/suites/diag-hardening-smoke/suite.json",
+    "docs/workstreams/fret-mechanism-harness-v1/COVERAGE_MAP.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-11.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0051-model-observation-and-ui-invalidation-propagation.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the core mechanism domains have fixture-driven synthetic coverage plus at least one runtime diagnostics gate for their highest-risk invariants. Split follow-ons only when a domain becomes large enough to own its own fixture matrix."
+  }
+}

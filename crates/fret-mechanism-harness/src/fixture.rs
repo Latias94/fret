@@ -6,6 +6,7 @@ use crate::MechanismPredicate;
 #[serde(rename_all = "snake_case")]
 pub enum MechanismDomain {
     Layout,
+    Invalidation,
     HitTest,
     Semantics,
     Overlay,

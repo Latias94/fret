@@ -106,6 +106,30 @@ Use this pattern for future shell-sizing cases:
   be reproduced without launching UI Gallery;
 - keep full diagnostics scripts for viewport, portal, screenshot, or multi-frame overlay evidence.
 
+## Phase 2.3 Layout Dirty Invalidation Coverage
+
+The first invalidation fixture suite is
+`crates/fret-ui/src/tree/tests/fixtures/layout_dirty_invalidation_v1.json`, run by
+`mechanism_harness_layout_dirty_invalidation_matches_oracles`.
+
+This slice extends the observation model with scalar mechanism metrics. Geometry predicates are not
+enough for invalidation: the interesting facts are counts, flags, existence after removal, and debug
+repair counters. The new `MechanismPredicate::MechanismMetric` keeps those facts inside the same
+fixture/oracle runner without turning diagnostics into an in-process test harness.
+
+It covers:
+
+- child dirty transitions hidden behind `layout_dirty_children_suppressed`,
+- suppressed parents that still count their own dirty flag,
+- dirty child removal under suppressed parents,
+- hidden dirty subtree removal while visible dirty siblings remain counted,
+- underflow repair rebuilding aggregate counts upward after simulated count drift.
+
+The runtime counterpart is the UI Gallery checkbox script
+`tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json`,
+which locks the path that first exposed the suppressed-boundary underflow as a component-looking
+layout problem.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -150,6 +174,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-mechanism-harness`
 - `cargo nextest run -p fret-diag-protocol`
 - `cargo nextest run -p fret-ui mechanism_harness_layout_primitives_match_oracles`
+- `cargo nextest run -p fret-ui mechanism_harness_layout_dirty_invalidation_matches_oracles`
 - `cargo nextest run -p fret-ui mechanism_harness_hit_test_routing_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo check -p fret-bootstrap`

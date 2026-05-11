@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.layout-dirty-invalidation.v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["layout", "invalidation"],
+  "cases": [
+    {
+      "id": "suppressed-parent-child-dirty-does-not-aggregate",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["gate"] },
+          { "id": "gate", "children": ["child"] },
+          { "id": "child" }
+        ],
+        "steps": [
+          { "op": "clear_all_invalidations" },
+          { "op": "set_children_suppressed", "node": "gate", "suppressed": true },
+          { "op": "set_layout_dirty", "node": "child", "dirty": true },
+          { "op": "set_layout_dirty", "node": "gate", "dirty": true },
+          { "op": "set_layout_dirty", "node": "child", "dirty": false }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.child.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.gate.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.root.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "A suppressed parent must count its own dirty flag but must not aggregate child dirty transitions."
+      }
+    },
+    {
+      "id": "remove-dirty-child-under-suppressed-parent-does-not-repair",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["gate"] },
+          { "id": "gate", "children": ["child"] },
+          { "id": "child" }
+        ],
+        "steps": [
+          { "op": "clear_all_invalidations" },
+          { "op": "set_layout_dirty", "node": "child", "dirty": true },
+          { "op": "set_children_suppressed", "node": "gate", "suppressed": true },
+          { "op": "remove_subtree", "node": "child" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.child.exists",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.gate.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.root.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "debug.layout_subtree_dirty_agg_rebuild_nodes",
+            "comparison": "eq",
+            "value": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "Removing dirty work hidden behind a suppressed boundary must not subtract from ancestors or trigger underflow repair."
+      }
+    },
+    {
+      "id": "remove-hidden-dirty-subtree-keeps-visible-sibling-count",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["gate", "visible_sibling"] },
+          { "id": "gate", "children": ["hidden_child"] },
+          { "id": "hidden_child" },
+          { "id": "visible_sibling" }
+        ],
+        "steps": [
+          { "op": "clear_all_invalidations" },
+          { "op": "set_children_suppressed", "node": "gate", "suppressed": true },
+          { "op": "set_layout_dirty", "node": "hidden_child", "dirty": true },
+          { "op": "set_layout_dirty", "node": "visible_sibling", "dirty": true },
+          { "op": "remove_subtree", "node": "hidden_child" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.hidden_child.exists",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.gate.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.visible_sibling.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.root.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "debug.layout_subtree_dirty_agg_rebuild_nodes",
+            "comparison": "eq",
+            "value": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "A visible dirty sibling remains counted when hidden dirty work is removed from a suppressed subtree."
+      }
+    },
+    {
+      "id": "underflow-repair-rebuilds-visible-dirty-count",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["a", "b"] },
+          { "id": "a" },
+          { "id": "b" }
+        ],
+        "steps": [
+          { "op": "clear_all_invalidations" },
+          { "op": "set_layout_dirty", "node": "b", "dirty": true },
+          { "op": "set_subtree_dirty_count", "node": "a", "count": 0 },
+          { "op": "set_subtree_dirty_count", "node": "root", "count": 0 },
+          { "op": "set_layout_invalidation_flag", "node": "a", "layout": false },
+          {
+            "op": "note_layout_invalidation_transition",
+            "node": "a",
+            "from": true,
+            "to": false
+          }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.a.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.b.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "node.root.subtree_layout_dirty_count",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "The repair path should rebuild aggregate counts upward when a stale decrement would otherwise underflow."
+      }
+    }
+  ]
+}

@@ -26,6 +26,8 @@ pub struct ObservedTree {
     pub hit_tests: Vec<ObservedHitTestSample>,
     #[serde(default)]
     pub overlays: Vec<ObservedOverlay>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub metrics: Vec<ObservedMechanismMetric>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focus_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -41,6 +43,7 @@ impl ObservedTree {
             nodes: Vec::new(),
             hit_tests: Vec::new(),
             overlays: Vec::new(),
+            metrics: Vec::new(),
             focus_node_id: None,
             barrier_root_node_id: None,
         }
@@ -86,6 +89,7 @@ impl ObservedTree {
             nodes: Vec::with_capacity(snapshot.nodes.len()),
             hit_tests: Vec::new(),
             overlays: Vec::new(),
+            metrics: Vec::new(),
             focus_node_id: snapshot.focus.map(|id| id.data().as_ffi()),
             barrier_root_node_id: snapshot.barrier_root.map(|id| id.data().as_ffi()),
         };
@@ -182,6 +186,23 @@ impl ObservedTree {
 
     pub fn push_hit_test_sample(&mut self, sample: ObservedHitTestSample) {
         self.hit_tests.push(sample);
+    }
+
+    pub fn set_metric(&mut self, id: impl Into<String>, value: f32) {
+        let id = id.into();
+        if let Some(metric) = self.metrics.iter_mut().find(|metric| metric.id == id) {
+            metric.value = value;
+        } else {
+            self.metrics.push(ObservedMechanismMetric { id, value });
+        }
+    }
+
+    pub fn metric_value(&self, id: &str) -> Result<f32, QueryError> {
+        self.metrics
+            .iter()
+            .find(|metric| metric.id == id)
+            .map(|metric| metric.value)
+            .ok_or_else(|| QueryError::NoMetric { id: id.to_string() })
     }
 
     pub fn select<'a>(&'a self, selector: &UiSelectorV1) -> Vec<&'a ObservedNode> {
@@ -466,6 +487,12 @@ pub struct ObservedOverlay {
     pub bounds: Option<Rect>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservedMechanismMetric {
+    pub id: String,
+    pub value: f32,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum QueryError {
     #[error("selector did not match any observed node: {selector}")]
@@ -474,6 +501,8 @@ pub enum QueryError {
     NoOverlay { id: String },
     #[error("observed overlay did not include bounds: {id}")]
     OverlayMissingBounds { id: String },
+    #[error("observed mechanism metric did not exist: {id}")]
+    NoMetric { id: String },
 }
 
 pub fn role_label(role: SemanticsRole) -> &'static str {

@@ -14,8 +14,8 @@ pub use fixture::{
     MechanismSuiteLoadError,
 };
 pub use observe::{
-    BoundsSpace, ObservedHitTestSample, ObservedNode, ObservedOverlay, ObservedRoot, ObservedTree,
-    QueryError, role_label,
+    BoundsSpace, ObservedHitTestSample, ObservedMechanismMetric, ObservedNode, ObservedOverlay,
+    ObservedRoot, ObservedTree, QueryError, role_label,
 };
 pub use oracle::{
     MechanismPredicate, OracleEvalError, PredicateFailure, PredicatePass, evaluate_predicate,
@@ -234,6 +234,37 @@ mod tests {
                     id: "modal-root".to_string(),
                     root_z_index: None,
                 },
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn mechanism_metrics_can_assert_non_geometry_facts() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ));
+        tree.set_metric("node.root.subtree_layout_dirty_count", 1.0);
+        tree.set_metric("node.child.exists", 0.0);
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::MechanismMetric {
+                metric_id: "node.root.subtree_layout_dirty_count".to_string(),
+                comparison: UiComparisonV1::Eq,
+                value: 1.0,
+                eps: 0.0,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::MechanismMetric {
+                metric_id: "node.child.exists".to_string(),
+                comparison: UiComparisonV1::Eq,
+                value: 0.0,
+                eps: 0.0,
             },
         )
         .unwrap();

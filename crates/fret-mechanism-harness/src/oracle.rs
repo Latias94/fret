@@ -87,6 +87,13 @@ pub enum MechanismPredicate {
         #[serde(default)]
         eps_px: f32,
     },
+    MechanismMetric {
+        metric_id: String,
+        comparison: UiComparisonV1,
+        value: f32,
+        #[serde(default)]
+        eps: f32,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -301,6 +308,19 @@ pub fn evaluate_predicate(
             pass_compare(have, *comparison, *value_px, eps_px.max(0.0), || {
                 format!(
                     "overlay_bounds_metric mismatch overlay_id={overlay_id:?} metric={metric:?} comparison={comparison:?} expected={value_px} actual={have}"
+                )
+            })
+        }
+        MechanismPredicate::MechanismMetric {
+            metric_id,
+            comparison,
+            value,
+            eps,
+        } => {
+            let have = tree.metric_value(metric_id).map_err(fail)?;
+            pass_compare(have, *comparison, *value, eps.max(0.0), || {
+                format!(
+                    "mechanism_metric mismatch metric_id={metric_id:?} comparison={comparison:?} expected={value} actual={have}"
                 )
             })
         }
