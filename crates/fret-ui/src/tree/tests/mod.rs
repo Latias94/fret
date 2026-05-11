@@ -247,6 +247,7 @@ mod pointer_move_layers;
 mod pointer_occlusion;
 mod prepaint;
 mod prevent_default;
+mod scroll_handle_invalidation_harness;
 mod scroll_into_view;
 mod scroll_invalidation;
 mod semantics_focus_shortcuts;

@@ -20,3 +20,13 @@ date: 2026-05-11
   retained contained relayout, scroll/direct-child dirty frontier coverage, detached dirty-cache-root
   pruning, and view-cache layout-dirty expansion attribution.
 - [x] Run focused gates for the view-cache/root-boundary slice and record the results.
+- [x] Add a dedicated scroll-handle invalidation fixture suite for windowed-paint cache-root dirtying,
+  virtual-list window escape, revision-only baseline handling, and detached stale binding filtering.
+- [x] Run focused gates for the scroll-handle window-update slice and record the results.
+- [x] Promote environment-triggered cache-root invalidation into a fixture-driven declarative
+  cache-hit harness using the real `WindowMetricsService` entry point.
+- [x] Fix the confirmed environment sync defect exposed by the harness.
+- [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
+  and selectors are identified.
+- [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
+  demo page exists.

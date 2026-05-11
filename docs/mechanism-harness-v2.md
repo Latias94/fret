@@ -135,6 +135,60 @@ The runtime counterpart is the UI Gallery checkbox script
 which locks the path that first exposed the suppressed-boundary underflow as a component-looking
 layout problem.
 
+## Phase 2.4 Scroll-Handle Window-Update Coverage
+
+The scroll-handle invalidation fixture suite is
+`crates/fret-ui/src/tree/tests/fixtures/scroll_handle_invalidation_v1.json`, run by
+`mechanism_harness_scroll_handle_invalidation_matches_oracles`.
+
+This suite covers the mechanism chain that decides whether a scroll-handle change can stay as a
+hit-test/transform update or must dirty a cache root so the visible window can be rebuilt. The
+important observation is cache-root dirty/reuse state, not only invalidation-walk detail.
+
+It covers:
+
+- windowed scroll paint dirtying the nearest cache root when an external offset change moves the
+  visible paint window,
+- revision-only bumps after runtime-owned internal offset updates staying reusable for generic
+  windowed scroll paint,
+- virtual-list visible windows escaping the cached overscan window and dirtying the cache root,
+- virtual-list revision-only bumps still forcing a window update when the visible range has escaped,
+- detached same-frame stale scroll-handle bindings being filtered through live layer-tree
+  membership before they can dirty cache roots.
+
+The runtime counterparts are the focused `view_cache_scroll` tests, the retained virtual-list host
+test `retained_virtual_list_host_updates_window_without_rerendering_view_cache_root`, and scroll
+registry classification tests in `crates/fret-ui/src/declarative/frame.rs`.
+
+## Phase 2.5 Environment View-Cache Invalidation Coverage
+
+The environment view-cache invalidation fixture suite is
+`crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json`, run by
+`mechanism_harness_environment_view_cache_invalidation_matches_oracles`.
+
+This suite intentionally drives `WindowMetricsService`, which is the source used by real desktop and
+web runners. That is different from directly mutating `ElementRuntime`; the latter can make tests
+green while missing the platform-to-declarative commit path.
+
+It covers:
+
+- viewport-size changes from render bounds,
+- reduced motion,
+- color scheme,
+- contrast preference,
+- forced colors mode,
+- text scale factor,
+- reduced transparency,
+- accent color,
+- safe-area insets,
+- occlusion insets.
+
+For each case, the dependent cache root must rerender exactly once after the environment change,
+while a sibling plain cache root stays reused. The first fixture run exposed a real mechanism bug:
+`render_root` synchronized only scale factor, safe-area, and occlusion from `WindowMetricsService`.
+It now commits all known platform environment values into `ElementRuntime` before declarative
+rendering, so environment dependency fingerprints can invalidate cache roots correctly.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust

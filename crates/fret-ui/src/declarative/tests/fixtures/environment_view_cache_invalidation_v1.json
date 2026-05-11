@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.environment-view-cache-invalidation.v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["invalidation", "layout"],
+  "cases": [
+    {
+      "id": "viewport-size-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "viewport_width",
+        "invalidation": "layout",
+        "source": "render_bounds",
+        "initial": { "width": 240.0, "height": 120.0 },
+        "changed": { "width": 320.0, "height": 120.0 }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "prefers-reduced-motion-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "prefers_reduced_motion",
+        "invalidation": "paint",
+        "source": "window_metrics",
+        "initial": { "bool": false },
+        "changed": { "bool": true }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "color-scheme-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "color_scheme",
+        "invalidation": "paint",
+        "source": "window_metrics",
+        "initial": { "enum": "light" },
+        "changed": { "enum": "dark" }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "contrast-preference-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "contrast_preference",
+        "invalidation": "paint",
+        "source": "window_metrics",
+        "initial": { "enum": "no_preference" },
+        "changed": { "enum": "more" }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "forced-colors-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "forced_colors_mode",
+        "invalidation": "paint",
+        "source": "window_metrics",
+        "initial": { "enum": "none" },
+        "changed": { "enum": "active" }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "text-scale-factor-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "text_scale_factor",
+        "invalidation": "layout",
+        "source": "window_metrics",
+        "initial": { "float": 1.0 },
+        "changed": { "float": 1.25 }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "prefers-reduced-transparency-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "prefers_reduced_transparency",
+        "invalidation": "paint",
+        "source": "window_metrics",
+        "initial": { "bool": false },
+        "changed": { "bool": true }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "accent-color-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "accent_color",
+        "invalidation": "paint",
+        "source": "window_metrics",
+        "initial": { "color": "#336699" },
+        "changed": { "color": "#cc6633" }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "safe-area-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "safe_area_insets",
+        "invalidation": "layout",
+        "source": "window_metrics",
+        "initial": { "edges": 0.0 },
+        "changed": { "edges": 12.0 }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    },
+    {
+      "id": "occlusion-change-rerenders-dependent-cache-only",
+      "scenario": {
+        "kind": "environment_view_cache",
+        "query": "occlusion_insets",
+        "invalidation": "layout",
+        "source": "window_metrics",
+        "initial": { "edges": 0.0 },
+        "changed": { "edges": 48.0 }
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.env_cache", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "renders.plain_cache", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.env_unique_values", "comparison": "eq", "value": 2.0 }
+        ]
+      }
+    }
+  ]
+}

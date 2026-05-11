@@ -1,0 +1,401 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.scroll-handle-invalidation.v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["layout", "invalidation"],
+  "cases": [
+    {
+      "id": "windowed-scroll-offset-change-dirties-cache-root",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["cache_root"] },
+          { "id": "cache_root", "children": ["scroll"] },
+          { "id": "scroll" }
+        ],
+        "handles": [{ "id": "main", "kind": "scroll" }],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
+          {
+            "op": "register_scroll_surface",
+            "node": "scroll",
+            "element_id": 10,
+            "handle": "main",
+            "surface": { "kind": "scroll", "windowed_paint": true }
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          { "op": "set_debug_baseline" },
+          { "op": "set_scroll_offset", "handle": "main", "x": 0.0, "y": 250.0 },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "capture_metrics", "label": "after_scroll" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.cache_root.should_reuse_view_cache",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.scroll.hit_test_dirty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.debug.scroll_handle_changes_since_baseline.offset_changed_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.cache_root.dirty_cache_root",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "Windowed scroll paint depends on the current scroll offset; an external offset change must dirty the nearest reusable cache root."
+      }
+    },
+    {
+      "id": "windowed-scroll-revision-only-after-internal-offset-stays-reusable",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["cache_root"] },
+          { "id": "cache_root", "children": ["scroll"] },
+          { "id": "scroll" }
+        ],
+        "handles": [{ "id": "main", "kind": "scroll" }],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
+          {
+            "op": "register_scroll_surface",
+            "node": "scroll",
+            "element_id": 11,
+            "handle": "main",
+            "surface": { "kind": "scroll", "windowed_paint": true }
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          {
+            "op": "set_scroll_offset",
+            "handle": "main",
+            "x": 0.0,
+            "y": 250.0,
+            "mode": "internal"
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          { "op": "set_debug_baseline" },
+          { "op": "bump_scroll_revision", "handle": "main" },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "capture_metrics", "label": "after_revision_bump" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.node.cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.node.cache_root.should_reuse_view_cache",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.debug.scroll_handle_changes_since_baseline.layout_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.debug.scroll_handle_changes_since_baseline.offset_changed_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.debug.invalidation_walks_since_baseline.detail.scroll_handle_layout_count",
+            "comparison": "eq",
+            "value": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "A revision-only bump after a runtime-owned internal offset update must not be reclassified as a new offset window update for normal windowed scroll paint."
+      }
+    },
+    {
+      "id": "virtual-list-window-escape-dirties-cache-root",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["cache_root"] },
+          { "id": "cache_root", "children": ["list"] },
+          { "id": "list" }
+        ],
+        "handles": [{ "id": "main", "kind": "virtual_list" }],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
+          {
+            "op": "register_scroll_surface",
+            "node": "list",
+            "element_id": 12,
+            "handle": "main",
+            "surface": {
+              "kind": "virtual_list",
+              "len": 100,
+              "overscan": 2,
+              "viewport": 100.0,
+              "estimate_row_height": 10.0
+            }
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          { "op": "set_debug_baseline" },
+          { "op": "set_scroll_offset", "handle": "main", "x": 0.0, "y": 250.0 },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "capture_metrics", "label": "after_escape" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_escape.node.cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_escape.node.cache_root.should_reuse_view_cache",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_escape.node.cache_root.dirty_cache_root",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "A non-retained virtual list whose visible range escapes the cached render window must dirty the cache root instead of silently reusing stale rows."
+      }
+    },
+    {
+      "id": "virtual-list-revision-only-after-internal-offset-still-window-updates",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["cache_root"] },
+          { "id": "cache_root", "children": ["list"] },
+          { "id": "list" }
+        ],
+        "handles": [{ "id": "main", "kind": "virtual_list" }],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
+          {
+            "op": "register_scroll_surface",
+            "node": "list",
+            "element_id": 13,
+            "handle": "main",
+            "surface": {
+              "kind": "virtual_list",
+              "len": 100,
+              "overscan": 2,
+              "viewport": 100.0,
+              "estimate_row_height": 10.0
+            }
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          {
+            "op": "set_scroll_offset",
+            "handle": "main",
+            "x": 0.0,
+            "y": 250.0,
+            "mode": "internal"
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          { "op": "set_debug_baseline" },
+          { "op": "bump_scroll_revision", "handle": "main" },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "capture_metrics", "label": "after_revision_bump" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.node.cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.node.cache_root.should_reuse_view_cache",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.debug.scroll_handle_changes_since_baseline.layout_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.debug.scroll_handle_changes_since_baseline.offset_changed_count",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_revision_bump.node.cache_root.dirty_cache_root",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "Virtual lists are stricter than generic windowed scroll paint: even a revision-only bump must trigger a window update when the visible range escaped the cached overscan window."
+      }
+    },
+    {
+      "id": "detached-stale-scroll-binding-is-filtered",
+      "scenario": {
+        "kind": "tree",
+        "root": "root",
+        "nodes": [
+          { "id": "root", "children": ["live_cache_root"] },
+          { "id": "live_cache_root", "children": ["live_scroll"] },
+          { "id": "live_scroll" },
+          { "id": "stale_cache_root", "children": ["stale_scroll"] },
+          { "id": "stale_scroll" }
+        ],
+        "handles": [{ "id": "main", "kind": "scroll" }],
+        "steps": [
+          {
+            "op": "set_view_cache_flags",
+            "node": "live_cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          {
+            "op": "set_view_cache_flags",
+            "node": "stale_cache_root",
+            "enabled": true,
+            "contained_layout": true,
+            "layout_definite": true
+          },
+          { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
+          {
+            "op": "register_scroll_surface",
+            "node": "stale_scroll",
+            "element_id": 14,
+            "handle": "main",
+            "surface": { "kind": "scroll", "windowed_paint": true }
+          },
+          {
+            "op": "register_scroll_surface",
+            "node": "live_scroll",
+            "element_id": 15,
+            "handle": "main",
+            "surface": { "kind": "scroll", "windowed_paint": true }
+          },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "clear_all_invalidations" },
+          { "op": "set_debug_baseline" },
+          { "op": "set_scroll_offset", "handle": "main", "x": 0.0, "y": 250.0 },
+          { "op": "invalidate_scroll_handles" },
+          { "op": "capture_metrics", "label": "after_scroll" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.live_cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.stale_cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.stale_scroll.hit_test_dirty",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.debug.scroll_handle_changes_since_baseline.bound_nodes_total",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "Same-frame stale scroll-handle bindings must be filtered through live layer-tree membership before invalidation reaches cache roots."
+      }
+    }
+  ]
+}

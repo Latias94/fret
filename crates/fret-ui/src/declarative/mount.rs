@@ -423,6 +423,30 @@ where
             let scale_factor = svc.scale_factor(window).unwrap_or(1.0);
             window_state.record_committed_scale_factor(scale_factor);
 
+            if svc.prefers_reduced_motion_is_known(window) {
+                window_state
+                    .set_committed_prefers_reduced_motion(svc.prefers_reduced_motion(window));
+            }
+            if svc.text_scale_factor_is_known(window) {
+                window_state.set_committed_text_scale_factor(svc.text_scale_factor(window));
+            }
+            if svc.prefers_reduced_transparency_is_known(window) {
+                window_state.set_committed_prefers_reduced_transparency(
+                    svc.prefers_reduced_transparency(window),
+                );
+            }
+            if svc.accent_color_is_known(window) {
+                window_state.set_committed_accent_color(svc.accent_color(window));
+            }
+            if svc.color_scheme_is_known(window) {
+                window_state.set_committed_color_scheme(svc.color_scheme(window));
+            }
+            if svc.contrast_preference_is_known(window) {
+                window_state.set_committed_contrast_preference(svc.contrast_preference(window));
+            }
+            if svc.forced_colors_mode_is_known(window) {
+                window_state.set_committed_forced_colors_mode(svc.forced_colors_mode(window));
+            }
             if svc.safe_area_insets_is_known(window) {
                 window_state.record_committed_safe_area_insets(svc.safe_area_insets(window));
             }

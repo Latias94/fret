@@ -50,3 +50,26 @@ Status: complete
   layout consumes it.
 - Focused gates for `view_cache`, scroll-contained frontier behavior, and layout request build-root
   attribution passed.
+
+## M5: Scroll-Handle Window-Update Slice
+
+Status: complete
+
+- A dedicated scroll-handle invalidation fixture suite now covers scroll registry change
+  classification outcomes that affect cache-root reuse.
+- The fixture matrix covers generic windowed scroll paint, virtual-list window escape,
+  revision-only baseline handling after internal offset updates, and detached stale binding
+  filtering.
+- Focused gates for `view_cache_scroll`, retained virtual-list host reconcile, and scroll registry
+  classification passed.
+
+## M6: Environment View-Cache Invalidation Slice
+
+Status: complete
+
+- A dedicated environment view-cache fixture suite now drives the real `WindowMetricsService`
+  entry point instead of direct `ElementRuntime` mutation.
+- The first run exposed a confirmed mechanism defect: several platform environment keys were not
+  committed into `ElementRuntime` before declarative rendering.
+- `render_root` now synchronizes the missing environment keys, and the fixture plus focused
+  environment gates pass.
