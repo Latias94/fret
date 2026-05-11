@@ -201,3 +201,14 @@ Status: complete
   wrapper preservation, and `roving.typeahead.calls` so duplicate handler invocation becomes visible.
 - No runtime defect was found in this slice; the gap was missing fixture-level coverage for
   already-correct typeahead behavior.
+
+## M17: Combobox Active-Descendant Interaction Slice
+
+Status: complete
+
+- A dedicated combobox active-descendant fixture suite now covers query-driven active descendant
+  updates under a real declarative text-input path.
+- The runner asserts the active descendant semantics relation, the filtered visible option count,
+  the query length metric, and the selected active item id.
+- No runtime defect was found in this slice; the gap was missing fixture-level coverage for
+  already-correct active-descendant interaction behavior.

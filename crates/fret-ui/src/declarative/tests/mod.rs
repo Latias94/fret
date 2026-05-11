@@ -192,6 +192,7 @@ fn paint_frame(
 
 mod anchored;
 mod canvas;
+mod combobox_active_descendant_interaction_harness;
 mod command_hooks;
 mod core;
 mod element_state_gc;

@@ -61,8 +61,10 @@ date: 2026-05-12
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
   test ids for underlay, overlay, and observer/capture state.
-- [ ] Add active-descendant interaction, nested focus scope, stale-parent, submenu fixture suites,
-  and recipe-level typeahead parity beyond the current mechanism matrices.
+- [x] Add active-descendant interaction fixture coverage for combobox query-driven active descendant
+  selection.
+- [ ] Add nested focus scope, stale-parent, submenu fixture suites, and recipe-level typeahead
+  parity beyond the current mechanism matrices.
 - [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [ ] Add UI Gallery overlay/focus diagnostics once stable demo pages expose focus state and barrier

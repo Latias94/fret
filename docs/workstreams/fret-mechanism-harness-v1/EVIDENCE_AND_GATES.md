@@ -19,6 +19,7 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusi
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles -- --nocapture
@@ -73,6 +74,7 @@ cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
 ```powershell
 cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_controls_element_is_exposed -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_active_descendant_element_is_exposed -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib declarative_attach_semantics_can_override_state_and_relations -- --nocapture
@@ -140,6 +142,7 @@ python -m json.tool crates/fret-ui/src/tree/tests/fixtures/layout_dirty_invalida
 python -m json.tool crates/fret-ui/src/tree/tests/fixtures/scroll_handle_invalidation_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json | Out-Null
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/combobox_active_descendant_interaction_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json | Out-Null
 python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/focus_scope_interaction_v1.json | Out-Null
 python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/focus_restore_recipe_cases_v1.json | Out-Null
@@ -177,6 +180,10 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
 - Semantics relation runner:
   `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+- Combobox active-descendant interaction fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/combobox_active_descendant_interaction_v1.json`
+- Combobox active-descendant interaction runner:
+  `crates/fret-ui/src/declarative/tests/combobox_active_descendant_interaction_harness.rs`
 - Roving focus/typeahead interaction fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/roving_focus_interaction_v1.json`
 - Roving focus/typeahead interaction runner:

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.combobox-active-descendant-interaction.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["semantics", "focus"],
+  "cases": [
+    {
+      "id": "text-filter-updates-active-descendant-to-matching-option",
+      "scenario": {
+        "kind": "combobox_text_filter_active_descendant",
+        "query": "nu",
+        "expected_item": "combobox-active-item-nuxt"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "combobox-active-input" },
+            "relation": "active_descendant",
+            "target": { "kind": "test_id", "id": "combobox-active-item-nuxt" }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "combobox.query.len",
+            "comparison": "eq",
+            "value": 2.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "combobox.visible.count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "combobox.active.index",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA combobox active descendant follows the filtered highlighted option",
+        "note": "Typing a prefix should move the active descendant to the matching option that the listbox exposes."
+      }
+    }
+  ]
+}
