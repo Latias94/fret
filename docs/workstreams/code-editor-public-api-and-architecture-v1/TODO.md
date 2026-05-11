@@ -25,8 +25,8 @@ Last updated: 2026-05-12
 
 ## P0 - Extension Model
 
-- [ ] Specify the diagnostics/decorations/gutter data contracts as the first feature extension
-      package.
+- [x] Specify the first diagnostics data contract as a view-layer buffer-range model.
+- [ ] Extend the first diagnostics contract into decorations/gutter data contracts.
 - [ ] Decide the coordinate vocabulary for feature payloads: buffer byte range, display point,
       logical line, or display row.
 - [ ] Define semantic-token inputs separately from paint colors.

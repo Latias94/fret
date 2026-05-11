@@ -13,10 +13,15 @@ use std::ops::Range;
 use std::sync::Arc;
 
 pub mod code_wrap_policy;
+mod diagnostics;
 mod folds;
 mod inlays;
 pub mod row_spans;
 
+pub use diagnostics::{
+    DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan, DiagnosticSpanError,
+    normalized_diagnostic_spans, validate_diagnostic_spans,
+};
 pub use folds::{
     FoldSpan, FoldSpanError, apply_fold_spans, folded_byte_to_col, folded_col_count,
     folded_col_to_byte, validate_fold_spans,

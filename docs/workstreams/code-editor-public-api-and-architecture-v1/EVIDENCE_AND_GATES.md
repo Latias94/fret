@@ -30,6 +30,7 @@ cargo fmt -p fret-code-editor --check
 cargo check -p fret-code-editor --features syntax-rust
 cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast
 cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast
+cargo nextest run -p fret-code-editor-view --lib --no-fail-fast
 python tools/check_layering.py
 ```
 
@@ -61,6 +62,8 @@ the target behavior and stressor scope are explicit.
 - Current alignment: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
 - Public surface classification:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md`
+- Diagnostic span contract:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Surface root: `ecosystem/fret-code-editor/src/lib.rs`

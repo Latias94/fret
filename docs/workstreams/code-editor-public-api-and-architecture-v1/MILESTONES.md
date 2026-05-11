@@ -31,10 +31,14 @@ Exit criteria:
 
 ## M2 - Target Extension Package
 
+Status: In progress
+
 Exit criteria:
 
 - Diagnostics, decorations, gutter markers, and semantic tokens have target data contracts.
-- Coordinate ownership is explicit and shared with `DisplayMap`.
+  (Diagnostic range contract started in `M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md`.)
+- Coordinate ownership is explicit and shared with `DisplayMap`. (Diagnostic v1 uses
+  `TextBuffer` UTF-8 byte ranges.)
 - At least one UI Gallery/example surface can exercise the target package.
 - A no-buffer-mutation gate exists for pure decoration toggles.
 
