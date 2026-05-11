@@ -65,10 +65,10 @@ Last updated: 2026-05-12
   - [x] state initializer,
   - [x] handle module,
   - [x] handle method boundary,
+  - [x] a11y,
   - [ ] input,
   - [ ] paint,
   - [ ] syntax,
-  - [ ] a11y,
   - [ ] diagnostics/decorations.
 
 ## P2 - Performance and Diagnostics

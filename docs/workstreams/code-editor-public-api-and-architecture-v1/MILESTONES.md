@@ -73,7 +73,8 @@ Exit criteria:
   `M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md`; state initializer split landed in
   `M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md`; handle module split landed in
   `M3_HANDLE_MODULE_SPLIT_2026-05-12.md`; handle method boundary split landed in
-  `M3_HANDLE_METHOD_BOUNDARY_SPLIT_2026-05-12.md`.)
+  `M3_HANDLE_METHOD_BOUNDARY_SPLIT_2026-05-12.md`; a11y window/mapping split landed in
+  `M3_A11Y_MODULE_SPLIT_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
 
 ## M4 - Feature Surface Proof
