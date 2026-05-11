@@ -61,6 +61,8 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
     let mut measured_max_renderer_encoder_finish_us: u64 = 0;
     let mut measured_max_renderer_prepare_text_us: u64 = 0;
     let mut measured_max_renderer_prepare_svg_us: u64 = 0;
+    let mut measured_max_renderer_instance_bytes: u64 = 0;
+    let mut measured_max_renderer_encode_scene_text_ops: u64 = 0;
 
     let mut worst_bundle: Option<(u64, PathBuf)> = None;
 
@@ -81,6 +83,9 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
         let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
         let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
+        let top_renderer_instance_bytes = top.map(|r| r.renderer_instance_bytes).unwrap_or(0);
+        let top_renderer_encode_scene_text_ops =
+            top.map(|r| r.renderer_encode_scene_text_ops).unwrap_or(0);
 
         let pointer_move_dispatch = report.pointer_move_max_dispatch_time_us;
         let pointer_move_hit_test = report.pointer_move_max_hit_test_time_us;
@@ -125,6 +130,10 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
             measured_max_renderer_prepare_text_us.max(renderer_prepare_text_us);
         measured_max_renderer_prepare_svg_us =
             measured_max_renderer_prepare_svg_us.max(renderer_prepare_svg_us);
+        measured_max_renderer_instance_bytes =
+            measured_max_renderer_instance_bytes.max(top_renderer_instance_bytes);
+        measured_max_renderer_encode_scene_text_ops =
+            measured_max_renderer_encode_scene_text_ops.max(top_renderer_encode_scene_text_ops);
 
         if top_total > worst_bundle.as_ref().map(|(t, _)| *t).unwrap_or(0) {
             worst_bundle = Some((top_total, bundle_path));
@@ -148,6 +157,8 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         "max_renderer_encoder_finish_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encoder_finish_us, perf_baseline_headroom_pct)),
         "max_renderer_prepare_text_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_text_us, perf_baseline_headroom_pct)),
         "max_renderer_prepare_svg_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_svg_us, perf_baseline_headroom_pct)),
+        "max_renderer_instance_bytes": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_instance_bytes, perf_baseline_headroom_pct)),
+        "max_renderer_encode_scene_text_ops": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_text_ops, perf_baseline_headroom_pct)),
     });
 
     let measured_max = serde_json::json!({
@@ -165,6 +176,8 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         "renderer_encoder_finish_us": measured_max_renderer_encoder_finish_us,
         "renderer_prepare_text_us": measured_max_renderer_prepare_text_us,
         "renderer_prepare_svg_us": measured_max_renderer_prepare_svg_us,
+        "renderer_instance_bytes": measured_max_renderer_instance_bytes,
+        "renderer_encode_scene_text_ops": measured_max_renderer_encode_scene_text_ops,
     });
 
     let row = serde_json::json!({

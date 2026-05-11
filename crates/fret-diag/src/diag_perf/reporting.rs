@@ -148,6 +148,7 @@ pub(super) fn push_perf_json_repeat_summary_row(
     let mut top_renderer_uniform_bytes: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_instance_bytes: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_vertex_bytes: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_renderer_encode_scene_text_ops: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_svg_raster_cache_misses: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_svg_raster_budget_evictions: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_svg_rasters_live: Vec<u64> = Vec::with_capacity(repeat);
@@ -218,6 +219,8 @@ pub(super) fn push_perf_json_repeat_summary_row(
         top_renderer_uniform_bytes.push(json_u64(run, "top_renderer_uniform_bytes"));
         top_renderer_instance_bytes.push(json_u64(run, "top_renderer_instance_bytes"));
         top_renderer_vertex_bytes.push(json_u64(run, "top_renderer_vertex_bytes"));
+        top_renderer_encode_scene_text_ops
+            .push(json_u64(run, "top_renderer_encode_scene_text_ops"));
         top_renderer_svg_raster_cache_misses
             .push(json_u64(run, "top_renderer_svg_raster_cache_misses"));
         top_renderer_svg_raster_budget_evictions
@@ -302,6 +305,7 @@ pub(super) fn push_perf_json_repeat_summary_row(
             "top_renderer_uniform_bytes": summarize_times_us(&top_renderer_uniform_bytes),
             "top_renderer_instance_bytes": summarize_times_us(&top_renderer_instance_bytes),
             "top_renderer_vertex_bytes": summarize_times_us(&top_renderer_vertex_bytes),
+            "top_renderer_encode_scene_text_ops": summarize_times_us(&top_renderer_encode_scene_text_ops),
             "top_renderer_svg_raster_cache_misses": summarize_times_us(&top_renderer_svg_raster_cache_misses),
             "top_renderer_svg_raster_budget_evictions": summarize_times_us(&top_renderer_svg_raster_budget_evictions),
             "top_renderer_svg_rasters_live": summarize_times_us(&top_renderer_svg_rasters_live),

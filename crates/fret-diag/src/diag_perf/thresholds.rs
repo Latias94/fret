@@ -8,6 +8,8 @@ pub(super) struct RendererMetricEvidence<'a> {
     pub encoder_finish: Option<&'a (u64, PathBuf, u64)>,
     pub prepare_text: Option<&'a (u64, PathBuf, u64)>,
     pub prepare_svg: Option<&'a (u64, PathBuf, u64)>,
+    pub instance_bytes: Option<&'a (u64, PathBuf, u64)>,
+    pub encode_scene_text_ops: Option<&'a (u64, PathBuf, u64)>,
 }
 
 #[derive(Clone, Copy)]
@@ -38,6 +40,8 @@ impl<'a> RendererMetricEvidence<'a> {
                 Some(BundleStatsSort::RendererPrepareText),
             ),
             "renderer_prepare_svg_us" => (self.prepare_svg, None),
+            "renderer_instance_bytes" => (self.instance_bytes, None),
+            "renderer_encode_scene_text_ops" => (self.encode_scene_text_ops, None),
             _ => return None,
         };
         entry.map(|(_us, bundle, run_index)| MetricEvidence {
@@ -195,6 +199,8 @@ pub(super) struct SingleRunThresholdInputs<'a> {
     pub max_renderer_encoder_finish_us: u64,
     pub max_renderer_prepare_text_us: u64,
     pub max_renderer_prepare_svg_us: u64,
+    pub max_renderer_instance_bytes: u64,
+    pub max_renderer_encode_scene_text_ops: u64,
 
     pub bundle_path: &'a Path,
 
@@ -256,6 +262,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         max_renderer_encoder_finish_us,
         max_renderer_prepare_text_us,
         max_renderer_prepare_svg_us,
+        max_renderer_instance_bytes,
+        max_renderer_encode_scene_text_ops,
         bundle_path,
         thr_total,
         src_total,
@@ -305,6 +313,15 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         cli_thresholds.max_renderer_prepare_svg_us,
         baseline_thresholds.max_renderer_prepare_svg_us,
     );
+    let (thr_renderer_instance_bytes, src_renderer_instance_bytes) = resolve_threshold(
+        cli_thresholds.max_renderer_instance_bytes,
+        baseline_thresholds.max_renderer_instance_bytes,
+    );
+    let (thr_renderer_encode_scene_text_ops, src_renderer_encode_scene_text_ops) =
+        resolve_threshold(
+            cli_thresholds.max_renderer_encode_scene_text_ops,
+            baseline_thresholds.max_renderer_encode_scene_text_ops,
+        );
 
     let run = serde_json::json!({
         "run_index": 0,
@@ -319,6 +336,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
         "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
         "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+        "top_renderer_instance_bytes": max_renderer_instance_bytes,
+        "top_renderer_encode_scene_text_ops": max_renderer_encode_scene_text_ops,
         "top_tick_id": top_tick,
         "top_frame_id": top_frame,
         "bundle": bundle_path.display().to_string(),
@@ -339,6 +358,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
             "renderer_prepare_text_us": max_renderer_prepare_text_us,
             "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
+            "renderer_instance_bytes": max_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": max_renderer_encode_scene_text_ops,
         },
         "worst_run": {
             "top_total_time_us": top_total,
@@ -367,6 +388,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
             "renderer_prepare_text_us": max_renderer_prepare_text_us,
             "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
+            "renderer_instance_bytes": max_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": max_renderer_encode_scene_text_ops,
         },
         "p50": {
             "top_total_time_us": top_total,
@@ -381,6 +404,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
             "renderer_prepare_text_us": max_renderer_prepare_text_us,
             "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
+            "renderer_instance_bytes": max_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": max_renderer_encode_scene_text_ops,
         },
         "p95": {
             "top_total_time_us": top_total,
@@ -395,6 +420,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
             "renderer_prepare_text_us": max_renderer_prepare_text_us,
             "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
+            "renderer_instance_bytes": max_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": max_renderer_encode_scene_text_ops,
         },
         "thresholds": {
             "max_top_total_us": thr_total,
@@ -414,6 +441,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "max_renderer_encoder_finish_us": thr_renderer_encoder_finish,
             "max_renderer_prepare_text_us": thr_renderer_prepare_text,
             "max_renderer_prepare_svg_us": thr_renderer_prepare_svg,
+            "max_renderer_instance_bytes": thr_renderer_instance_bytes,
+            "max_renderer_encode_scene_text_ops": thr_renderer_encode_scene_text_ops,
         },
         "threshold_sources": {
             "max_top_total_us": src_total,
@@ -433,6 +462,8 @@ pub(super) fn push_single_run_threshold_row_and_failures(
             "max_renderer_encoder_finish_us": src_renderer_encoder_finish,
             "max_renderer_prepare_text_us": src_renderer_prepare_text,
             "max_renderer_prepare_svg_us": src_renderer_prepare_svg,
+            "max_renderer_instance_bytes": src_renderer_instance_bytes,
+            "max_renderer_encode_scene_text_ops": src_renderer_encode_scene_text_ops,
         },
     });
 
@@ -485,6 +516,12 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         max_renderer_prepare_svg_us,
         max_renderer_prepare_svg_us,
         max_renderer_prepare_svg_us,
+        max_renderer_instance_bytes,
+        max_renderer_instance_bytes,
+        max_renderer_instance_bytes,
+        max_renderer_encode_scene_text_ops,
+        max_renderer_encode_scene_text_ops,
+        max_renderer_encode_scene_text_ops,
         Some(bundle_path),
         Some(0),
         None,
@@ -574,6 +611,12 @@ pub(super) struct RepeatThresholdInputs<'a> {
     pub observed_renderer_prepare_svg_us: u64,
     pub max_renderer_prepare_svg_us: u64,
     pub p95_renderer_prepare_svg_us: u64,
+    pub observed_renderer_instance_bytes: u64,
+    pub max_renderer_instance_bytes: u64,
+    pub p95_renderer_instance_bytes: u64,
+    pub observed_renderer_encode_scene_text_ops: u64,
+    pub max_renderer_encode_scene_text_ops: u64,
+    pub p95_renderer_encode_scene_text_ops: u64,
 
     pub script_worst: &'a Option<(u64, PathBuf, u64)>,
     pub script_worst_layout: &'a Option<(u64, PathBuf, u64)>,
@@ -672,6 +715,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
         observed_renderer_prepare_svg_us,
         max_renderer_prepare_svg_us,
         p95_renderer_prepare_svg_us,
+        observed_renderer_instance_bytes,
+        max_renderer_instance_bytes,
+        p95_renderer_instance_bytes,
+        observed_renderer_encode_scene_text_ops,
+        max_renderer_encode_scene_text_ops,
+        p95_renderer_encode_scene_text_ops,
         script_worst,
         script_worst_layout,
         script_worst_solve,
@@ -723,6 +772,15 @@ pub(super) fn push_repeat_threshold_row_and_failures(
         cli_thresholds.max_renderer_prepare_svg_us,
         baseline_thresholds.max_renderer_prepare_svg_us,
     );
+    let (thr_renderer_instance_bytes, src_renderer_instance_bytes) = resolve_threshold(
+        cli_thresholds.max_renderer_instance_bytes,
+        baseline_thresholds.max_renderer_instance_bytes,
+    );
+    let (thr_renderer_encode_scene_text_ops, src_renderer_encode_scene_text_ops) =
+        resolve_threshold(
+            cli_thresholds.max_renderer_encode_scene_text_ops,
+            baseline_thresholds.max_renderer_encode_scene_text_ops,
+        );
 
     let row = serde_json::json!({
         "script": script_key,
@@ -743,6 +801,8 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "renderer_encoder_finish_us": observed_renderer_encoder_finish_us,
             "renderer_prepare_text_us": observed_renderer_prepare_text_us,
             "renderer_prepare_svg_us": observed_renderer_prepare_svg_us,
+            "renderer_instance_bytes": observed_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": observed_renderer_encode_scene_text_ops,
         },
         "worst_run": script_worst.as_ref().map(|(us, bundle, run_index)| serde_json::json!({
             "top_total_time_us": us,
@@ -772,6 +832,8 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
             "renderer_prepare_text_us": max_renderer_prepare_text_us,
             "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
+            "renderer_instance_bytes": max_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": max_renderer_encode_scene_text_ops,
         },
         "p50": {
             "top_total_time_us": percentile_nearest_rank_sorted(sorted_total, 0.50),
@@ -802,6 +864,8 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "renderer_encoder_finish_us": p95_renderer_encoder_finish_us,
             "renderer_prepare_text_us": p95_renderer_prepare_text_us,
             "renderer_prepare_svg_us": p95_renderer_prepare_svg_us,
+            "renderer_instance_bytes": p95_renderer_instance_bytes,
+            "renderer_encode_scene_text_ops": p95_renderer_encode_scene_text_ops,
         },
         "thresholds": {
             "max_top_total_us": thr_total,
@@ -821,6 +885,8 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "max_renderer_encoder_finish_us": thr_renderer_encoder_finish,
             "max_renderer_prepare_text_us": thr_renderer_prepare_text,
             "max_renderer_prepare_svg_us": thr_renderer_prepare_svg,
+            "max_renderer_instance_bytes": thr_renderer_instance_bytes,
+            "max_renderer_encode_scene_text_ops": thr_renderer_encode_scene_text_ops,
         },
         "threshold_sources": {
             "max_top_total_us": src_total,
@@ -840,6 +906,8 @@ pub(super) fn push_repeat_threshold_row_and_failures(
             "max_renderer_encoder_finish_us": src_renderer_encoder_finish,
             "max_renderer_prepare_text_us": src_renderer_prepare_text,
             "max_renderer_prepare_svg_us": src_renderer_prepare_svg,
+            "max_renderer_instance_bytes": src_renderer_instance_bytes,
+            "max_renderer_encode_scene_text_ops": src_renderer_encode_scene_text_ops,
         },
     });
 
@@ -892,6 +960,12 @@ pub(super) fn push_repeat_threshold_row_and_failures(
         observed_renderer_prepare_svg_us,
         max_renderer_prepare_svg_us,
         p95_renderer_prepare_svg_us,
+        observed_renderer_instance_bytes,
+        max_renderer_instance_bytes,
+        p95_renderer_instance_bytes,
+        observed_renderer_encode_scene_text_ops,
+        max_renderer_encode_scene_text_ops,
+        p95_renderer_encode_scene_text_ops,
         script_worst
             .as_ref()
             .map(|(_us, bundle, _run)| bundle.as_path()),
@@ -923,6 +997,8 @@ mod tests {
             encoder_finish: None,
             prepare_text: None,
             prepare_svg: None,
+            instance_bytes: None,
+            encode_scene_text_ops: None,
         };
         let runs_json = vec![
             serde_json::json!({
@@ -977,6 +1053,8 @@ mod tests {
             encoder_finish: None,
             prepare_text: None,
             prepare_svg: None,
+            instance_bytes: None,
+            encode_scene_text_ops: None,
         };
         let runs_json = vec![
             serde_json::json!({

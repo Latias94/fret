@@ -2070,6 +2070,8 @@ pub(super) struct PerfThresholds {
     pub(super) max_renderer_encoder_finish_us: Option<u64>,
     pub(super) max_renderer_prepare_text_us: Option<u64>,
     pub(super) max_renderer_prepare_svg_us: Option<u64>,
+    pub(super) max_renderer_instance_bytes: Option<u64>,
+    pub(super) max_renderer_encode_scene_text_ops: Option<u64>,
 }
 
 impl PerfThresholds {
@@ -2095,6 +2097,8 @@ impl PerfThresholds {
             || self.max_renderer_encoder_finish_us.is_some()
             || self.max_renderer_prepare_text_us.is_some()
             || self.max_renderer_prepare_svg_us.is_some()
+            || self.max_renderer_instance_bytes.is_some()
+            || self.max_renderer_encode_scene_text_ops.is_some()
     }
 }
 
@@ -2235,6 +2239,12 @@ pub(super) fn read_perf_baseline_file(
                 .and_then(|v| v.as_u64()),
             max_renderer_prepare_svg_us: t
                 .and_then(|m| m.get("max_renderer_prepare_svg_us"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_instance_bytes: t
+                .and_then(|m| m.get("max_renderer_instance_bytes"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_encode_scene_text_ops: t
+                .and_then(|m| m.get("max_renderer_encode_scene_text_ops"))
                 .and_then(|v| v.as_u64()),
         };
 
@@ -2459,6 +2469,12 @@ pub(super) fn scan_perf_threshold_failures(
     observed_renderer_prepare_svg_us: u64,
     max_renderer_prepare_svg_us: u64,
     p95_renderer_prepare_svg_us: u64,
+    observed_renderer_instance_bytes: u64,
+    max_renderer_instance_bytes: u64,
+    p95_renderer_instance_bytes: u64,
+    observed_renderer_encode_scene_text_ops: u64,
+    max_renderer_encode_scene_text_ops: u64,
+    p95_renderer_encode_scene_text_ops: u64,
     evidence_bundle_total: Option<&Path>,
     evidence_run_index_total: Option<u64>,
     evidence_bundle_layout: Option<&Path>,
@@ -2541,6 +2557,15 @@ pub(super) fn scan_perf_threshold_failures(
         cli.max_renderer_prepare_svg_us,
         baseline.max_renderer_prepare_svg_us,
     );
+    let (threshold_renderer_instance_bytes, source_renderer_instance_bytes) = resolve_threshold(
+        cli.max_renderer_instance_bytes,
+        baseline.max_renderer_instance_bytes,
+    );
+    let (threshold_renderer_encode_scene_text_ops, source_renderer_encode_scene_text_ops) =
+        resolve_threshold(
+            cli.max_renderer_encode_scene_text_ops,
+            baseline.max_renderer_encode_scene_text_ops,
+        );
 
     if let Some(threshold_us) = threshold_total
         && observed_total_time_us > threshold_us
@@ -2812,6 +2837,42 @@ pub(super) fn scan_perf_threshold_failures(
             "actual_max_us": max_renderer_prepare_svg_us,
             "actual_p95_us": p95_renderer_prepare_svg_us,
             "outlier_suspected": p95_renderer_prepare_svg_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold) = threshold_renderer_instance_bytes
+        && observed_renderer_instance_bytes > threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_instance_bytes",
+            "threshold": threshold,
+            "threshold_source": source_renderer_instance_bytes,
+            "actual": observed_renderer_instance_bytes,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max": max_renderer_instance_bytes,
+            "actual_p95": p95_renderer_instance_bytes,
+            "outlier_suspected": p95_renderer_instance_bytes <= threshold,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold) = threshold_renderer_encode_scene_text_ops
+        && observed_renderer_encode_scene_text_ops > threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_encode_scene_text_ops",
+            "threshold": threshold,
+            "threshold_source": source_renderer_encode_scene_text_ops,
+            "actual": observed_renderer_encode_scene_text_ops,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max": max_renderer_encode_scene_text_ops,
+            "actual_p95": p95_renderer_encode_scene_text_ops,
+            "outlier_suspected": p95_renderer_encode_scene_text_ops <= threshold,
             "script": script,
             "sort": sort.as_str(),
             "evidence_bundle": evidence_bundle.clone(),

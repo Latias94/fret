@@ -20,8 +20,13 @@ Related:
 - Representative scripts should report `p50`, `p95`, and `max` in evidence notes.
 - New `diag perf --perf-baseline-out` files record row-level `measured_p50`, `measured_p90`, `measured_p95`, and
   `measured_max`.
+- New renderer-aware baselines should also carry payload contract fields:
+  `renderer_instance_bytes` and `renderer_encode_scene_text_ops` in `measured_*`, `threshold_seed`, and `thresholds`
+  when `threshold_surface` includes `renderer` or `all`.
 - Existing checked-in baselines created before `measured_p50` was added remain valid. Do not synthesize p50 into old
   files; add it only by intentionally re-seeding a baseline on the target machine.
+- Existing checked-in baselines created before renderer payload fields were added remain valid as time-only contracts.
+  Re-seed them intentionally before treating payload thresholds as active.
 - Use environment-specific baselines. `diag_resize_probes_gate.py` and `.sh` choose the checked-in Windows RTX 4090 or
   macOS baseline by host platform; pass `--baseline` explicitly for another machine profile.
 - Resize gate helpers apply the default font prewarm and reset-diagnostics prelude hooks. Use
@@ -80,3 +85,6 @@ Budgets are guidance for representative probes. The committed gate is the script
 - Code editor resize now has a Windows p50-carrying v2 baseline. Its formal gate passed by majority, but one attempt
   exceeded `top_total_time_us` due to a paint-dominant tail (`paint=11625us`, layout/solve below threshold). Treat that
   as evidence for the next editor paint stressor rather than a reason to widen layout thresholds.
+- `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json` predates renderer payload fields. Re-seed
+  it as a payload-aware v3 contract after the new `fret-diag` payload surface lands; do not synthesize payload values
+  into the v2 baseline.

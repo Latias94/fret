@@ -655,6 +655,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         max_renderer_encoder_finish_us: None,
         max_renderer_prepare_text_us: None,
         max_renderer_prepare_svg_us: None,
+        max_renderer_instance_bytes: None,
+        max_renderer_encode_scene_text_ops: None,
     };
     let perf_baseline = perf_baseline_path
         .clone()
@@ -1091,6 +1093,10 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
                 let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                 let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
+                let top_renderer_instance_bytes =
+                    top.map(|r| r.renderer_instance_bytes).unwrap_or(0);
+                let top_renderer_encode_scene_text_ops =
+                    top.map(|r| r.renderer_encode_scene_text_ops).unwrap_or(0);
                 let pointer_move_frames_present = report.pointer_move_frames_present;
                 let pointer_move_frames_considered = report.pointer_move_frames_considered as u64;
                 let pointer_move_max_dispatch_time_us = report.pointer_move_max_dispatch_time_us;
@@ -1288,6 +1294,20 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             tuning_renderer_prepare_svg.min_slack_us,
                             tuning_renderer_prepare_svg.quantum_us,
                         );
+                    let measured_max_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                        top_renderer_instance_bytes,
+                        top_renderer_encode_scene_text_ops,
+                    );
+                    let thr_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                        apply_perf_baseline_headroom(
+                            top_renderer_instance_bytes,
+                            perf_baseline_headroom_pct,
+                        ),
+                        apply_perf_baseline_headroom(
+                            top_renderer_encode_scene_text_ops,
+                            perf_baseline_headroom_pct,
+                        ),
+                    );
 
                     baseline_rows::push_perf_baseline_row_single(
                         &mut perf_baseline_rows,
@@ -1314,6 +1334,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             report.max_renderer_prepare_text_us,
                             report.max_renderer_prepare_svg_us,
                         ),
+                        measured_max_renderer_payload,
                         seed_total,
                         seed_layout,
                         seed_solve,
@@ -1336,6 +1357,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             seed_renderer_prepare_text_value,
                             seed_renderer_prepare_svg_value,
                         ),
+                        measured_max_renderer_payload,
                         thr_total,
                         thr_layout,
                         thr_solve,
@@ -1354,6 +1376,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             thr_renderer_prepare_text_us,
                             thr_renderer_prepare_svg_us,
                         ),
+                        thr_renderer_payload,
                     );
                 }
                 if wants_perf_thresholds {
@@ -1447,6 +1470,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             max_renderer_encoder_finish_us: report.max_renderer_encoder_finish_us,
                             max_renderer_prepare_text_us: report.max_renderer_prepare_text_us,
                             max_renderer_prepare_svg_us: report.max_renderer_prepare_svg_us,
+                            max_renderer_instance_bytes: top_renderer_instance_bytes,
+                            max_renderer_encode_scene_text_ops: top_renderer_encode_scene_text_ops,
                             bundle_path: bundle_path.as_path(),
                             thr_total,
                             src_total,
@@ -1519,6 +1544,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         let mut runs_renderer_encoder_finish_us: Vec<u64> = Vec::with_capacity(repeat);
         let mut runs_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
         let mut runs_renderer_prepare_svg_us: Vec<u64> = Vec::with_capacity(repeat);
+        let mut runs_renderer_instance_bytes: Vec<u64> = Vec::with_capacity(repeat);
+        let mut runs_renderer_encode_scene_text_ops: Vec<u64> = Vec::with_capacity(repeat);
         let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
         let mut script_worst: Option<(u64, PathBuf, u64)> = None;
         let mut script_worst_layout: Option<(u64, PathBuf, u64)> = None;
@@ -1529,6 +1556,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         let mut script_worst_renderer_encoder_finish: Option<(u64, PathBuf, u64)> = None;
         let mut script_worst_renderer_prepare_text: Option<(u64, PathBuf, u64)> = None;
         let mut script_worst_renderer_prepare_svg: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_instance_bytes: Option<(u64, PathBuf, u64)> = None;
+        let mut script_worst_renderer_encode_scene_text_ops: Option<(u64, PathBuf, u64)> = None;
 
         for run_index in 0..repeat {
             if !reuse_process {
@@ -1759,6 +1788,9 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             runs_renderer_encoder_finish_us.push(report.max_renderer_encoder_finish_us);
             runs_renderer_prepare_text_us.push(report.max_renderer_prepare_text_us);
             runs_renderer_prepare_svg_us.push(report.max_renderer_prepare_svg_us);
+            runs_renderer_instance_bytes.push(top.map(|r| r.renderer_instance_bytes).unwrap_or(0));
+            runs_renderer_encode_scene_text_ops
+                .push(top.map(|r| r.renderer_encode_scene_text_ops).unwrap_or(0));
             match &script_worst_renderer_encode_scene {
                 Some((prev_us, _, _)) if *prev_us >= report.max_renderer_encode_scene_us => {}
                 _ => {
@@ -1814,6 +1846,29 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 _ => {
                     script_worst_renderer_prepare_svg = Some((
                         report.max_renderer_prepare_svg_us,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            let top_renderer_instance_bytes = top.map(|r| r.renderer_instance_bytes).unwrap_or(0);
+            let top_renderer_encode_scene_text_ops =
+                top.map(|r| r.renderer_encode_scene_text_ops).unwrap_or(0);
+            match &script_worst_renderer_instance_bytes {
+                Some((prev_us, _, _)) if *prev_us >= top_renderer_instance_bytes => {}
+                _ => {
+                    script_worst_renderer_instance_bytes = Some((
+                        top_renderer_instance_bytes,
+                        bundle_path.clone(),
+                        run_index as u64,
+                    ))
+                }
+            }
+            match &script_worst_renderer_encode_scene_text_ops {
+                Some((prev_us, _, _)) if *prev_us >= top_renderer_encode_scene_text_ops => {}
+                _ => {
+                    script_worst_renderer_encode_scene_text_ops = Some((
+                        top_renderer_encode_scene_text_ops,
                         bundle_path.clone(),
                         run_index as u64,
                     ))
@@ -1974,6 +2029,12 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 *runs_renderer_prepare_text_us.iter().max().unwrap_or(&0);
             let max_renderer_prepare_svg_us =
                 *runs_renderer_prepare_svg_us.iter().max().unwrap_or(&0);
+            let max_renderer_instance_bytes =
+                *runs_renderer_instance_bytes.iter().max().unwrap_or(&0);
+            let max_renderer_encode_scene_text_ops = *runs_renderer_encode_scene_text_ops
+                .iter()
+                .max()
+                .unwrap_or(&0);
 
             let mut sorted_renderer_encode_scene_us = runs_renderer_encode_scene_us.clone();
             sorted_renderer_encode_scene_us.sort_unstable();
@@ -2028,6 +2089,52 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 percentile_nearest_rank_sorted(&sorted_renderer_prepare_svg_us, 0.90);
             let p95_renderer_prepare_svg_us =
                 percentile_nearest_rank_sorted(&sorted_renderer_prepare_svg_us, 0.95);
+
+            let mut sorted_renderer_instance_bytes = runs_renderer_instance_bytes.clone();
+            sorted_renderer_instance_bytes.sort_unstable();
+            let p50_renderer_instance_bytes =
+                percentile_nearest_rank_sorted(&sorted_renderer_instance_bytes, 0.50);
+            let p90_renderer_instance_bytes =
+                percentile_nearest_rank_sorted(&sorted_renderer_instance_bytes, 0.90);
+            let p95_renderer_instance_bytes =
+                percentile_nearest_rank_sorted(&sorted_renderer_instance_bytes, 0.95);
+
+            let mut sorted_renderer_encode_scene_text_ops =
+                runs_renderer_encode_scene_text_ops.clone();
+            sorted_renderer_encode_scene_text_ops.sort_unstable();
+            let p50_renderer_encode_scene_text_ops =
+                percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_text_ops, 0.50);
+            let p90_renderer_encode_scene_text_ops =
+                percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_text_ops, 0.90);
+            let p95_renderer_encode_scene_text_ops =
+                percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_text_ops, 0.95);
+            let measured_max_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                max_renderer_instance_bytes,
+                max_renderer_encode_scene_text_ops,
+            );
+            let measured_p50_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                p50_renderer_instance_bytes,
+                p50_renderer_encode_scene_text_ops,
+            );
+            let measured_p90_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                p90_renderer_instance_bytes,
+                p90_renderer_encode_scene_text_ops,
+            );
+            let measured_p95_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                p95_renderer_instance_bytes,
+                p95_renderer_encode_scene_text_ops,
+            );
+            let seed_renderer_payload_value = measured_max_renderer_payload;
+            let thr_renderer_payload = baseline_rows::RendererPayloadMetrics::new(
+                apply_perf_baseline_headroom(
+                    max_renderer_instance_bytes,
+                    perf_baseline_headroom_pct,
+                ),
+                apply_perf_baseline_headroom(
+                    max_renderer_encode_scene_text_ops,
+                    perf_baseline_headroom_pct,
+                ),
+            );
             let pointer_move_frames_present = runs_json.iter().any(|run| {
                 run.get("pointer_move_frames_present")
                     .and_then(|v| v.as_bool())
@@ -2290,6 +2397,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         max_renderer_prepare_text_us,
                         max_renderer_prepare_svg_us,
                     ),
+                    measured_max_renderer_payload,
                     baseline_rows::TopTimesUs::new(p50_total, p50_layout, p50_solve),
                     baseline_rows::TopTimesUs::new(
                         p50_frame_p95_total,
@@ -2304,6 +2412,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         p50_renderer_prepare_text_us,
                         p50_renderer_prepare_svg_us,
                     ),
+                    measured_p50_renderer_payload,
                     baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
                     baseline_rows::TopTimesUs::new(
                         p90_frame_p95_total,
@@ -2318,6 +2427,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         p90_renderer_prepare_text_us,
                         p90_renderer_prepare_svg_us,
                     ),
+                    measured_p90_renderer_payload,
                     baseline_rows::TopTimesUs::new(p95_total, p95_layout, p95_solve),
                     baseline_rows::TopTimesUs::new(
                         p95_frame_p95_total,
@@ -2332,6 +2442,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         p95_renderer_prepare_text_us,
                         p95_renderer_prepare_svg_us,
                     ),
+                    measured_p95_renderer_payload,
                     seed_total,
                     seed_layout,
                     seed_solve,
@@ -2360,6 +2471,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         seed_renderer_prepare_text_value,
                         seed_renderer_prepare_svg_value,
                     ),
+                    seed_renderer_payload_value,
                     wants_frame_p95_thresholds,
                     thr_total,
                     thr_layout,
@@ -2382,6 +2494,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         thr_renderer_prepare_text_us,
                         thr_renderer_prepare_svg_us,
                     ),
+                    thr_renderer_payload,
                 );
             }
 
@@ -2504,6 +2617,16 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     PerfThresholdAggregate::P90 => p90_renderer_prepare_svg_us,
                     PerfThresholdAggregate::P95 => p95_renderer_prepare_svg_us,
                 };
+                let observed_renderer_instance_bytes = match perf_threshold_agg {
+                    PerfThresholdAggregate::Max => max_renderer_instance_bytes,
+                    PerfThresholdAggregate::P90 => p90_renderer_instance_bytes,
+                    PerfThresholdAggregate::P95 => p95_renderer_instance_bytes,
+                };
+                let observed_renderer_encode_scene_text_ops = match perf_threshold_agg {
+                    PerfThresholdAggregate::Max => max_renderer_encode_scene_text_ops,
+                    PerfThresholdAggregate::P90 => p90_renderer_encode_scene_text_ops,
+                    PerfThresholdAggregate::P95 => p95_renderer_encode_scene_text_ops,
+                };
                 thresholds::push_repeat_threshold_row_and_failures(
                     &mut perf_threshold_rows,
                     &mut perf_threshold_failures,
@@ -2523,6 +2646,9 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                             encoder_finish: script_worst_renderer_encoder_finish.as_ref(),
                             prepare_text: script_worst_renderer_prepare_text.as_ref(),
                             prepare_svg: script_worst_renderer_prepare_svg.as_ref(),
+                            instance_bytes: script_worst_renderer_instance_bytes.as_ref(),
+                            encode_scene_text_ops: script_worst_renderer_encode_scene_text_ops
+                                .as_ref(),
                         },
                         observed_total,
                         max_total,
@@ -2578,6 +2704,12 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         observed_renderer_prepare_svg_us,
                         max_renderer_prepare_svg_us,
                         p95_renderer_prepare_svg_us,
+                        observed_renderer_instance_bytes,
+                        max_renderer_instance_bytes,
+                        p95_renderer_instance_bytes,
+                        observed_renderer_encode_scene_text_ops,
+                        max_renderer_encode_scene_text_ops,
+                        p95_renderer_encode_scene_text_ops,
                         script_worst: &script_worst,
                         script_worst_layout: &script_worst_layout,
                         script_worst_solve: &script_worst_solve,

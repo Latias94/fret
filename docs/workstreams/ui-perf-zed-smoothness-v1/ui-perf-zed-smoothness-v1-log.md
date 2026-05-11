@@ -11946,3 +11946,32 @@ Decision:
   boundary for these scripts.
 - Broad `ui-gallery-steady` remains maintenance/evidence-only until a narrower split is promoted with cleaner
   thresholds.
+
+## 2026-05-11 (renderer payload perf contract surface)
+
+Question:
+- Can the code-editor paint/autoscroll contract guard renderer payload growth, not only wall-clock renderer timing?
+
+Change:
+- Extended `fret-diag` perf output and baseline plumbing so `renderer_instance_bytes` and
+  `renderer_encode_scene_text_ops` flow through:
+  - single-run and repeat perf JSON rows,
+  - repeat summary JSON,
+  - `diag perf --perf-baseline-out`,
+  - `perf-baseline-from-bundles`,
+  - baseline parsing,
+  - threshold rows and threshold failure emission.
+- Kept payload baseline seeding fixed to measured `max`. These are deterministic payload/capacity counters, not
+  percentile-only wall-clock timings.
+
+Validation:
+- `cargo check -p fret-diag --all-targets`
+- `cargo test -p fret-diag --lib`
+
+Decision:
+- The tooling is now ready for a time + payload editor paint contract.
+- Do not patch the existing
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json` baseline
+  by hand: it predates payload fields and has no measured payload evidence.
+- Next action is to re-seed that autoscroll baseline from a fresh repeat=7 run, producing a payload-aware v3 baseline
+  with `max_renderer_instance_bytes` and `max_renderer_encode_scene_text_ops` thresholds.

@@ -18,6 +18,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | --- | --- | --- |
 | Representative editor-grade scripts are listed. | `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` maps steady gallery, resize, code editor resize, view-cache resize torture, pointer move/hit-test, and renderer/effects churn. | Partially covered: the matrix exists, but view-cache post-virtualization is not yet promoted to a dedicated baseline. |
 | Baseline rows can record `p50/p95/max`. | `crates/fret-diag/src/diag_perf/baseline_rows.rs` writes `measured_p50`; smoke output `target/fret-diag/codex-p50-baseline-smoke/baseline.json` included `measured_p50`. | Tooling covered for new baselines. |
+| Renderer payload metrics can become hard contract fields. | `crates/fret-diag/src/diag_perf/stats_rows.rs`, `runs_rows.rs`, `reporting.rs`, `baseline_rows.rs`, `thresholds.rs`, `crates/fret-diag/src/compare.rs`, and `crates/fret-diag/src/diag_perf_baseline.rs` now propagate `renderer_instance_bytes` and `renderer_encode_scene_text_ops` through perf JSON, baseline JSON, baseline parsing, threshold rows, and threshold failures. | Tooling covered for new baselines; checked-in baselines that predate these fields still need intentional re-seeding before payload thresholds are active. |
 | Checked-in baselines actually contain `p50`. | Scan on 2026-05-09 after the Windows resize/code-editor v2 promotions: 60 perf baseline files, 299 rows, 3 rows with `measured_p50`. | Partially covered. `ui-resize-probes.windows-rtx4090.v2.json` and `ui-code-editor-resize-probes.windows-rtx4090.v2.json` are covered; other checked-in baselines need intentional re-seeding if p50 must be checked in. |
 | Gates use the correct machine baseline. | `tools/perf/diag_resize_probes_gate.py` and `.sh` choose Windows RTX 4090 or macOS baseline by host platform. | Covered for resize helpers; other gate helpers remain explicit-baseline by design. |
 | Gates use normalization hooks. | Resize gate helpers and baseline selectors now apply `tooling-suite-prewarm-fonts.json` and `tooling-suite-prelude-reset-diagnostics.json` by default. | Covered for the updated helpers/selectors. |
@@ -80,6 +81,12 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3c/selection-summary.json`:
     candidate-1 still failed across multiple scripts (`hover-layout`, `dropdown`, `overlay`, `view-cache-toggle`,
     `virtual-list`, `window-resize`), showing the suite is still too broad for a stable single Windows baseline.
+- Renderer payload contract surface:
+  - `renderer_instance_bytes` and `renderer_encode_scene_text_ops` now flow through perf JSON rows, repeat summaries,
+    baseline rows, `perf-baseline-from-bundles`, baseline parsing, threshold rows, and threshold failures.
+  - Validation: `cargo check -p fret-diag --all-targets`; `cargo test -p fret-diag --lib`.
+  - The checked-in `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json` baseline predates payload
+    fields; re-seed it with a fresh repeat run instead of synthesizing payload thresholds from old JSON.
 
 ## Open Gaps
 
@@ -89,7 +96,9 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 2. Decide whether the post-virtualization view-cache resize torture scripts should remain evidence-only or become a
    dedicated baseline suite.
 3. Add a stricter editor paint stressor before considering a `WindowedRowsSurface` display-list rewrite.
-4. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
+4. Re-seed `ui-gallery-code-editor-torture-autoscroll-steady` as the first payload-aware editor paint contract once a
+   fresh repeat=7 run is captured; do not patch payload fields into the v2 baseline by hand.
+5. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
 
 ## Audit Conclusion
 
