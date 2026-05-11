@@ -92,9 +92,16 @@ Exit criteria:
 
 ## M5 - Performance Contract Closure
 
+Status: Complete for the current non-Linux editor contract surface (2026-05-12)
+
 Exit criteria:
 
 - Feature-heavy editor stressors have p50/p95/max and renderer payload baselines.
+  (`M5_PERF_CONTRACT_CLOSURE_2026-05-12.md` maps resize, autoscroll steady, autoscroll typical,
+  and complex wheel to checked-in baselines or formal evidence surfaces.)
 - Changes to editor paint/layout/rendering can be reviewed against existing complex wheel,
   autoscroll, resize, and payload contracts.
+  (`M5_PERF_CONTRACT_CLOSURE_2026-05-12.md` records the gate rule for future hot-path changes.)
 - No broad renderer/windowed-surface rewrite is started without failing or near-threshold evidence.
+  (Current row-scene replay/store evidence keeps broad renderer, CanvasPainter, and
+  WindowedRowsSurface rewrites blocked until a future stressor proves the limiter.)

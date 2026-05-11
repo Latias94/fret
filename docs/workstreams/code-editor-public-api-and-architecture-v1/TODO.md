@@ -73,10 +73,16 @@ Last updated: 2026-05-12
 
 ## P2 - Performance and Diagnostics
 
-- [ ] Require p50/p95/max and renderer payload evidence for any hot-path editor change.
+- [x] Require p50/p95/max and renderer payload evidence for any hot-path editor change.
+  - [x] Close the lane-level rule in
+        `M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`; future hot-path editor changes must use
+        existing editor perf contracts or add/reseed a scoped contract with p50/p95/max and
+        relevant payload fields.
 - [x] Add feature-payload counters once diagnostics/decorations are implemented.
-- [ ] Compare feature-heavy editor stressors against the existing complex wheel and autoscroll
+- [x] Compare feature-heavy editor stressors against the existing complex wheel and autoscroll
       contracts.
+  - [x] Record resize, autoscroll steady, autoscroll typical, complex wheel, and row-scene
+        replay/store contract roles in `M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`.
 - [ ] Add Linux evidence when a Linux runner/profile is available; do not infer it from Windows
       RTX 4090 baselines.
 

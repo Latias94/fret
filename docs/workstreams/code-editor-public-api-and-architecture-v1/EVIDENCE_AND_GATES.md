@@ -80,6 +80,12 @@ Hot-path editor changes should include:
 - paint/detail attribution when the change touches text, row scenes, Canvas replay, or syntax
   materialization.
 
+The lane-level M5 closure is recorded in
+`docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`.
+It maps the current resize, autoscroll steady, autoscroll typical, complex wheel, and row-scene
+replay/store surfaces to the perf workstream evidence and blocks broad renderer/windowed-surface
+rewrites without failing or near-threshold evidence.
+
 Do not reseed thresholds solely because a new implementation is faster or slower. Reseed only after
 the target behavior and stressor scope are explicit.
 
@@ -130,6 +136,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md`
 - Overlay feature hook proof:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md`
+- Performance contract closure:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`
 - First editor test module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`
 - Syntax test module split:

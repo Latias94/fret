@@ -109,6 +109,10 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
     },
@@ -226,6 +230,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md",
     "docs/code-editor.md",
     "docs/adr/0185-code-editor-ecosystem-v1.md",
     "docs/adr/0011-overlays-and-multi-root.md",
