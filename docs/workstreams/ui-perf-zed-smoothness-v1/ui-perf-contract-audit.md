@@ -155,11 +155,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - The checked-in
     `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
     baseline adds the high-stress editor wheel tail + typical-frame contract after setup reset. Selector evidence:
-    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`.
-  - Candidate-1 validated `3/3` with `fail_total=0`; candidate-2 was faster but failed 2 validations due to tighter
-    total/layout thresholds. Selected candidate-1 measured p50/p95/max top total=`2703/4325/4325us`, top
-    layout=`352/595/595us`, frame-p95 thresholds total/layout/solve=`3456/704/0us`, and payload max
-    instance/text_ops=`215440/338`.
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
+  - Candidate-1 and candidate-2 both validated `3/3` with `fail_total=0`; candidate-2 won on lower suite p90.
+    Selected candidate-2 measured p50/p90/max top total=`2424/5027/5027us`, frame-p95 total=`2250/2784/2784us`,
+    hard thresholds top(total/layout/solve)=`6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`, and
+    payload thresholds instance/text_ops=`258663/406`.
 
 ## Open Gaps
 

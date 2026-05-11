@@ -1005,11 +1005,12 @@ Perf acceptance:
   - Seed policy:
     `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json`.
   - Selector summary:
-    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`.
-  - Result: candidate-1 selected with `fail_total=0`; candidate-2 failed two validations because its total/layout
-    thresholds were too tight for the observed wheel tail.
-  - Contract: `threshold_surface=ui-renderer-payload`; measured p50/p95/max top total=`2703/4325/4325us`, top
-    layout=`352/595/595us`; payload thresholds instance/text_ops=`258528/406`.
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
+  - Result: candidate-1 and candidate-2 both validated `3/3` with `fail_total=0`; candidate-2 selected on lower
+    suite p90.
+  - Contract: `threshold_surface=ui-renderer-payload`, `ui_threshold_mode=top_and_frame_p95`; measured p50/p90/max
+    top total=`2424/5027/5027us`, frame-p95 total=`2250/2784/2784us`; thresholds top(total/layout/solve)=
+    `6033/848/0us`, frame-p95(total/layout/solve)=`3808/592/0us`, payload instance/text_ops=`258663/406`.
   - Evidence: perf log entry `2026-05-11`.
 - [x] Make perf baseline UI threshold mode explicit.
   - Seed policy now chooses `top`, `frame_p95`, or `top_and_frame_p95`.

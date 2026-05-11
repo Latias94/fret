@@ -12263,3 +12263,35 @@ Decision:
 - Treat explicit UI threshold mode as a baseline contract fix, not as a renderer optimization.
 - Do not loosen the complex wheel top threshold from one direct tail outlier. Re-run the selector intentionally if the
   tail miss repeats and use that selector result as the source of truth.
+
+## 2026-05-11 (complex editor wheel explicit-mode re-seed)
+
+Question:
+- After making `ui_threshold_mode=top_and_frame_p95` explicit, does the complex editor wheel baseline need an
+  intentional re-seed instead of a hand-tuned threshold bump?
+
+Change:
+- Increased the complex wheel seed policy's `frame_p95_total_time_us` minimum slack from `512us` to `1024us`.
+- Re-seeded
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+  through the selector with `--ui-threshold-mode top_and_frame_p95`.
+
+Validation:
+- Selector command:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --ui-threshold-mode top_and_frame_p95 --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3 --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+- Selector summary:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
+  - candidate-1 validated `3/3` with `fail_total=0`.
+  - candidate-2 validated `3/3` with `fail_total=0`.
+  - candidate-2 selected on lower suite p90 (`5027` vs `5600`) and lower threshold sum (`6033` vs `6720`).
+- Selected baseline:
+  - measured p50/p90/max top total=`2424/5027/5027us`
+  - measured p50/p90/max frame-p95 total=`2250/2784/2784us`
+  - hard thresholds top(total/layout/solve)=`6033/848/0us`
+  - hard thresholds frame-p95(total/layout/solve)=`3808/592/0us`
+  - payload thresholds instance/text_ops=`258663/406`
+
+Decision:
+- Treat policy3 as the canonical Windows RTX 4090 complex editor wheel v1 baseline.
+- The remaining tail is paint-widget dominant and renderer payload remains bounded, so this still does not justify a
+  renderer pass-organization rewrite or `WindowedRowsSurface` rewrite by itself.

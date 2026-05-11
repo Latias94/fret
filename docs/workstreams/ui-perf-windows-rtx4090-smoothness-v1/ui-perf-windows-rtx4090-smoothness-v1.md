@@ -996,6 +996,14 @@ Explicit UI threshold mode cutover (2026-05-11):
 - Keep the selector summary
   `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`
   as the source of truth unless a fresh selector run proves the tail baseline should be intentionally re-seeded.
+- Fresh selector run:
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy3/selection-summary.json`.
+  Both candidates validated `3/3`; candidate-2 won on lower suite p90 (`5027` vs `5600`) and threshold sum
+  (`6033` vs `6720`).
+- The policy3 baseline keeps the contract editor-grade: top total/layout thresholds are `6033/848us`, frame-p95
+  total/layout thresholds are `3808/592us`, and renderer payload thresholds are `258663/406`. Validation worst runs
+  remained paint-widget dominant (`top_paint_time_us=5904us` in the worst top run), with renderer encode/upload not
+  explaining the tail.
 
 Renderer-aware baseline (2026-05-10):
 
