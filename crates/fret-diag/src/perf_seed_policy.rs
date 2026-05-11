@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::compare::normalize_repo_relative_path;
+use crate::compare::{PerfBaselineUiThresholdMode, normalize_repo_relative_path};
 use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,6 +158,7 @@ impl RuleSourceKind {
 #[derive(Debug, Clone)]
 pub(crate) struct ResolvedPerfBaselineSeedPolicy {
     pub(crate) default_seed: PerfBaselineSeed,
+    pub(crate) ui_threshold_mode: PerfBaselineUiThresholdMode,
     // Final per-(script, metric) override map (only for scripts in the current invocation).
     overrides: HashMap<(String, PerfSeedMetric), ResolvedPerfRule>,
     // Audit-friendly expanded rules (only for scripts in the current invocation).
@@ -179,6 +180,10 @@ impl ResolvedPerfBaselineSeedPolicy {
             .unwrap_or_default()
     }
 
+    pub(crate) fn ui_threshold_mode(&self) -> PerfBaselineUiThresholdMode {
+        self.ui_threshold_mode
+    }
+
     pub(crate) fn threshold_seed_policy_json(&self) -> Value {
         Value::Object(
             [
@@ -186,6 +191,10 @@ impl ResolvedPerfBaselineSeedPolicy {
                 (
                     "default_seed".to_string(),
                     Value::String(self.default_seed.as_str().to_string()),
+                ),
+                (
+                    "ui_threshold_mode".to_string(),
+                    Value::String(self.ui_threshold_mode.as_str().to_string()),
                 ),
                 ("rules".to_string(), Value::Array(self.audit_rules.clone())),
             ]
@@ -208,6 +217,7 @@ struct SeedRuleSpec {
 #[derive(Debug, Clone)]
 struct SeedPresetFile {
     default_seed: Option<PerfBaselineSeed>,
+    ui_threshold_mode: Option<PerfBaselineUiThresholdMode>,
     rules: Vec<(String, PerfSeedMetric, PerfBaselineSeed, u64, u64)>,
 }
 
@@ -326,8 +336,10 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
     scripts: &[PathBuf],
     preset_paths: &[PathBuf],
     cli_seed_specs: &[String],
+    cli_ui_threshold_mode: Option<PerfBaselineUiThresholdMode>,
 ) -> Result<ResolvedPerfBaselineSeedPolicy, String> {
     let mut default_seed = PerfBaselineSeed::Max;
+    let mut ui_threshold_mode = PerfBaselineUiThresholdMode::default();
 
     let scripts_by_key: BTreeMap<String, PathBuf> = scripts
         .iter()
@@ -373,6 +385,9 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
         if let Some(seed) = preset.default_seed {
             default_seed = seed;
         }
+        if let Some(mode) = preset.ui_threshold_mode {
+            ui_threshold_mode = mode;
+        }
         for (scope, metric, seed, min_slack_us, quantum_us) in preset.rules {
             let source = if scope_is_suite_like(&scope, suite_name) {
                 RuleSourceKind::PresetSuite
@@ -405,6 +420,10 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
                 RuleSourceKind::Cli
             },
         });
+    }
+
+    if let Some(mode) = cli_ui_threshold_mode {
+        ui_threshold_mode = mode;
     }
 
     // Apply layered overrides (last match wins).
@@ -463,6 +482,7 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
 
     Ok(ResolvedPerfBaselineSeedPolicy {
         default_seed,
+        ui_threshold_mode,
         overrides,
         audit_rules,
     })
@@ -518,6 +538,11 @@ fn read_seed_preset(workspace_root: &Path, path: &Path) -> Result<SeedPresetFile
         .and_then(|v| v.as_str())
         .map(|s| s.parse::<PerfBaselineSeed>())
         .transpose()?;
+    let ui_threshold_mode = root
+        .get("ui_threshold_mode")
+        .and_then(|v| v.as_str())
+        .map(|s| s.parse::<PerfBaselineUiThresholdMode>())
+        .transpose()?;
 
     let rules = root
         .get("rules")
@@ -565,6 +590,7 @@ fn read_seed_preset(workspace_root: &Path, path: &Path) -> Result<SeedPresetFile
 
     Ok(SeedPresetFile {
         default_seed,
+        ui_threshold_mode,
         rules: out,
     })
 }
@@ -674,6 +700,7 @@ mod tests {
             &scripts,
             std::slice::from_ref(&preset_path),
             &[],
+            None,
         )
         .unwrap();
 
@@ -715,6 +742,7 @@ mod tests {
             &scripts,
             &[preset_path],
             &[String::from("this-suite@top_total_time_us=p95")],
+            None,
         )
         .unwrap();
 
@@ -736,6 +764,7 @@ mod tests {
             &scripts,
             &[],
             &[],
+            None,
         )
         .unwrap();
         let key = "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json";
@@ -786,6 +815,7 @@ mod tests {
             &scripts,
             std::slice::from_ref(&preset_path),
             &[],
+            None,
         )
         .unwrap();
 
@@ -801,6 +831,59 @@ mod tests {
         assert_eq!(
             policy.seed_for(script_key, PerfSeedMetric::PointerMoveHitTestTimeUs),
             PerfBaselineSeed::Max
+        );
+    }
+
+    #[test]
+    fn seed_policy_preset_and_cli_can_set_ui_threshold_mode() {
+        let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test-ui-mode");
+        let script_path = workspace_root.join("tools/diag-scripts/ui-gallery/typical-probe.json");
+        let scripts = vec![script_path];
+
+        let preset_path = workspace_root.join("preset.json");
+        std::fs::create_dir_all(&workspace_root).unwrap();
+        std::fs::write(
+            &preset_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "perf_baseline_seed_policy",
+  "default_seed": "max",
+  "ui_threshold_mode": "frame_p95",
+  "rules": []
+}"#,
+        )
+        .unwrap();
+
+        let policy = resolve_perf_baseline_seed_policy(
+            &workspace_root,
+            None,
+            &scripts,
+            std::slice::from_ref(&preset_path),
+            &[],
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            policy.ui_threshold_mode(),
+            PerfBaselineUiThresholdMode::FrameP95
+        );
+        assert_eq!(
+            policy.threshold_seed_policy_json()["ui_threshold_mode"],
+            "frame_p95"
+        );
+
+        let policy = resolve_perf_baseline_seed_policy(
+            &workspace_root,
+            None,
+            &scripts,
+            &[preset_path],
+            &[],
+            Some(PerfBaselineUiThresholdMode::TopAndFrameP95),
+        )
+        .unwrap();
+        assert_eq!(
+            policy.ui_threshold_mode(),
+            PerfBaselineUiThresholdMode::TopAndFrameP95
         );
     }
 
@@ -839,6 +922,7 @@ mod tests {
             &scripts,
             std::slice::from_ref(&preset_path),
             &[],
+            None,
         )
         .unwrap();
 

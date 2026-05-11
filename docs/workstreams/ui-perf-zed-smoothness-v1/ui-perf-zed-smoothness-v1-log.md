@@ -12226,3 +12226,40 @@ Decision:
 - Treat this as the high-stress editor wheel tail contract for soft-wrap/decorations/inline-preedit/folds/inlays.
 - It strengthens the evidence surface, but it still passes; do not use it alone to justify a `WindowedRowsSurface`
   display-list rewrite.
+
+## 2026-05-11 (explicit UI threshold mode for perf baselines)
+
+Question:
+- Can perf baseline tooling distinguish tail and typical-frame UI contracts without relying on suite names such as
+  `typical`?
+
+Change:
+- Added explicit UI threshold modes to `fret-diag` baseline generation and seed policy:
+  - `top`: write tail `max_top_*` thresholds.
+  - `frame_p95`: write typical-frame `max_frame_p95_*` thresholds.
+  - `top_and_frame_p95`: write both for probes that intentionally protect rare tail and typical smoothness.
+- `diag perf --perf-baseline-ui-threshold-mode <MODE>` can override preset policy, and
+  `tools/perf/diag_perf_baseline_select.py --ui-threshold-mode <MODE>` forwards that override for selector runs.
+- Removed the old `suite_name.contains("typical")` contract inference.
+- Updated the typical code-editor autoscroll and complex typical seed policies to `frame_p95`; updated the complex
+  editor wheel policy and checked-in baseline to `top_and_frame_p95`.
+
+Validation:
+- `cargo fmt -p fret-diag`
+- `cargo nextest run -p fret-diag seed_policy_preset_and_cli_can_set_ui_threshold_mode frame_p95_ui_threshold_mode_omits_top_thresholds top_and_frame_p95_ui_threshold_mode_records_both_thresholds perf_contract_captures_threshold_and_suite_args`
+  - 4 tests passed.
+- `cargo nextest run -p fret-diag`
+  - 795 tests passed.
+- `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - Passed; legacy baselines remain classified as expected.
+- JSON parse smoke covered the updated seed policies and complex editor wheel baseline.
+- Direct complex wheel gate smoke after adding frame-p95 thresholds missed only the existing top-tail total threshold:
+  `top_total_time_us actual=5291us` vs `threshold=5190us`, while bundle p50/p95 total stayed `1821/2353us` and the
+  worst frame was paint-dominant. Evidence:
+  `target/fret-diag-gate-complex-editor-wheel-explicit-ui-mode/check.perf_thresholds.json` and
+  `target/fret-diag-gate-complex-editor-wheel-explicit-ui-mode/1778487945237/bundle.schema2.json`.
+
+Decision:
+- Treat explicit UI threshold mode as a baseline contract fix, not as a renderer optimization.
+- Do not loosen the complex wheel top threshold from one direct tail outlier. Re-run the selector intentionally if the
+  tail miss repeats and use that selector result as the source of truth.

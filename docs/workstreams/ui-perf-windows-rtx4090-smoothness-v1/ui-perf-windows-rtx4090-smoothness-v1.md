@@ -26,6 +26,8 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json`
   (typical scroll perf, `frame_p95_*`, `--perf-threshold-agg p90`)
+- `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+  (high-stress editor wheel, `top_*` + `frame_p95_*`, renderer payload)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json` (typical perf, `frame_p95_*`)
 
@@ -34,6 +36,7 @@ Seed policy (how thresholds were derived):
 - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
 - `docs/workstreams/perf-baselines/policies/ui-gallery-complex-typical.v1.json`
 - `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json`
+- `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json`
 
 ## P0 runbook (fast gate check)
 
@@ -675,13 +678,13 @@ Preferred workflow:
 
 - Use `fretboard-dev diag perf ... --json` and review `p50`/`p95` for the top metrics.
 - Use `diag stats --json` for within-bundle `p50` / `p95` (typical), `avg.*`, and `budget_pct.*`.
-- If you want a **typical-perf gate**, create a dedicated baseline seeded from percentiles and then
+- If you want a **typical-perf gate**, create a dedicated baseline with `ui_threshold_mode=frame_p95` and then
   gate using `--perf-threshold-agg p95`.
 
 Example (local typical baseline; does not change the canonical baselines):
 
 - Create a p95-seeded baseline:
-  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-baseline-out .fret/perf.baseline.p95.json --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json --perf-baseline-seed this-suite@top_total_time_us=p95 --launch -- target/release/fret-ui-gallery.exe`
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-baseline-out .fret/perf.baseline.p95.json --perf-baseline-ui-threshold-mode frame_p95 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json --perf-baseline-seed this-suite@frame_p95_total_time_us=p95 --launch -- target/release/fret-ui-gallery.exe`
 - Gate typical perf (p95 aggregate):
   - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-threshold-agg p95 --perf-baseline .fret/perf.baseline.p95.json --launch -- target/release/fret-ui-gallery.exe`
 
@@ -966,9 +969,9 @@ Code-editor script setup note (2026-05-10):
 
 Code-editor autoscroll typical baseline (2026-05-11):
 
-- Use the suite name `ui-gallery-code-editor-torture-autoscroll-typical`, not the raw script path, when generating this
-  baseline. The perf tooling only writes `frame_p95_*` thresholds for typical suites; a raw script path falls back to
-  `top_*` thresholds and turns the typical contract into a tail-spike contract.
+- Use a seed policy whose `ui_threshold_mode` is `frame_p95` when generating this baseline. The perf tooling no longer
+  infers typical-frame contracts from the suite name; a raw script path and a named suite behave the same when the
+  policy is explicit.
 - Seed policy:
   `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-autoscroll-typical.v1.json`.
 - Baseline:
@@ -980,6 +983,19 @@ Code-editor autoscroll typical baseline (2026-05-11):
 - Result: gate passed with `failures=[]`; `observed_aggregate=p90`, `frame_p95_total_time_us=2291` vs threshold
   `2768`, `frame_p95_layout_time_us=77` vs threshold `352`. The raw CLI line still reports p95/max totals
   `3794/3794us` because that is run-level tail information, not the checked typical threshold.
+
+Explicit UI threshold mode cutover (2026-05-11):
+
+- Perf baseline generation now resolves UI threshold intent from `ui_threshold_mode` instead of suite/script names.
+  `top` writes `max_top_*`, `frame_p95` writes `max_frame_p95_*`, and `top_and_frame_p95` writes both.
+- The complex editor wheel policy uses `top_and_frame_p95` because it should protect rare wheel tail spikes and
+  typical-frame editor paint/payload at the same time.
+- A direct repeat=7 gate rerun after adding frame-p95 thresholds missed only the existing top-tail total threshold
+  (`5291us` actual vs `5190us` threshold). The same bundle had p50/p95 total `1821/2353us` and paint-dominant worst
+  frame cost, so this is tail-jitter evidence, not a reason by itself to start a renderer/display-list rewrite.
+- Keep the selector summary
+  `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`
+  as the source of truth unless a fresh selector run proves the tail baseline should be intentionally re-seeded.
 
 Renderer-aware baseline (2026-05-10):
 

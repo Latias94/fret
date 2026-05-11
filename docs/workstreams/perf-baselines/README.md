@@ -26,6 +26,11 @@ Related:
   - `renderer`: renderer micro-timing thresholds plus renderer payload thresholds.
   - `all`: UI thresholds, renderer micro-timing thresholds, and renderer payload thresholds. Use this only for suites
     that intentionally gate renderer micro timings.
+- For repeated runs, the resolved seed policy declares `ui_threshold_mode`:
+  - `top` gates `max_top_*` and is the default tail / worst-frame contract.
+  - `frame_p95` gates `max_frame_p95_*` for typical-frame contracts.
+  - `top_and_frame_p95` gates both when the probe intentionally protects tail and typical smoothness.
+  Do not rely on script or suite names to choose this mode.
 - Existing baselines created before `measured_p50` was added remain valid. Do not synthesize `measured_p50` into old
   JSON files. Add it only by intentionally re-seeding on the target machine profile.
 - Baselines are environment-specific. Do not use a macOS baseline to judge Windows, or a high-end Windows baseline to

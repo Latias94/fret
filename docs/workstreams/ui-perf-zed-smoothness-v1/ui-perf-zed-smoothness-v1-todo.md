@@ -1011,6 +1011,11 @@ Perf acceptance:
   - Contract: `threshold_surface=ui-renderer-payload`; measured p50/p95/max top total=`2703/4325/4325us`, top
     layout=`352/595/595us`; payload thresholds instance/text_ops=`258528/406`.
   - Evidence: perf log entry `2026-05-11`.
+- [x] Make perf baseline UI threshold mode explicit.
+  - Seed policy now chooses `top`, `frame_p95`, or `top_and_frame_p95`.
+  - The tooling no longer infers typical-frame contracts from suite names; use `frame_p95` for typical contracts and
+    `top_and_frame_p95` when a probe intentionally protects tail and typical smoothness together.
+  - Evidence: perf log entry `2026-05-11` (`explicit UI threshold mode for perf baselines`).
 - [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
   - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
   - Commit: `c7ea64bb5`

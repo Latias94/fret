@@ -19,6 +19,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Representative editor-grade scripts are listed. | `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` maps steady gallery, resize, code editor resize, code editor autoscroll, complex code editor wheel, view-cache resize torture, pointer move/hit-test, and renderer/effects churn. | Covered: the matrix now classifies the view-cache resize torture scripts under `ui-resize-probes` and adds the complex editor wheel stressor as a dedicated contract surface. |
 | Baseline rows can record `p50/p95/max`. | `crates/fret-diag/src/diag_perf/baseline_rows.rs` writes `measured_p50`; smoke output `target/fret-diag/codex-p50-baseline-smoke/baseline.json` included `measured_p50`. | Tooling covered for new baselines. |
 | Renderer payload metrics can become hard contract fields. | `crates/fret-diag/src/diag_perf/stats_rows.rs`, `runs_rows.rs`, `reporting.rs`, `baseline_rows.rs`, `thresholds.rs`, `crates/fret-diag/src/compare.rs`, and `crates/fret-diag/src/diag_perf_baseline.rs` now propagate `renderer_instance_bytes` and `renderer_encode_scene_text_ops` through perf JSON, baseline JSON, baseline parsing, threshold rows, and threshold failures. The code-editor autoscroll v4 and complex wheel v1 baselines are checked-in `ui-renderer-payload` contracts. | Covered for the editor paint contracts; older baselines that predate these fields remain valid time-only contracts until intentionally re-seeded. |
+| UI threshold mode is explicit. | `crates/fret-diag/src/perf_seed_policy.rs`, `crates/fret-diag/src/diag_perf.rs`, `crates/fret-diag/src/diag_perf/baseline_rows.rs`, and `tools/perf/diag_perf_baseline_select.py` now carry `ui_threshold_mode` (`top`, `frame_p95`, or `top_and_frame_p95`) through policy, CLI overrides, selector summaries, and baseline rows. | Covered for new baselines; old baselines remain valid, but new typical-frame contracts must not rely on suite-name inference. |
 | Checked-in baselines actually contain `p50`. | Scan on 2026-05-11 after the Windows resize/code-editor v2 promotions, autoscroll steady v4 promotion, autoscroll typical v2 promotion, complex wheel v1 promotion, view-cache toggle v1 promotion, virtual-list v1 promotion, menubar keyboard nav v1 promotion, Material 3 tabs v1 promotion, and hover-layout v1 promotion: 79 baseline files, 315 max-bearing perf rows, 19 rows with `measured_p50`. | Partially covered. `ui-resize-probes.windows-rtx4090.v2.json`, `ui-code-editor-resize-probes.windows-rtx4090.v2.json`, `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`, `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`, `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`, `ui-gallery-view-cache-toggle-perf-steady.windows-rtx4090.v1.json`, `ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json`, `ui-gallery-menubar-keyboard-nav-steady.windows-rtx4090.v1.json`, `ui-gallery-material3-tabs-switch-perf-steady.windows-rtx4090.v1.json`, and `ui-gallery-hover-layout-torture-steady.windows-rtx4090.v1.json` are covered; other checked-in baselines need intentional re-seeding if p50 must be checked in. |
 | Gates use the correct machine baseline. | `tools/perf/diag_resize_probes_gate.py` and `.sh` choose Windows RTX 4090 or macOS baseline by host platform. | Covered for resize helpers; other gate helpers remain explicit-baseline by design. |
 | Gates use normalization hooks. | Resize gate helpers and baseline selectors now apply `tooling-suite-prewarm-fonts.json` and `tooling-suite-prelude-reset-diagnostics.json` by default. | Covered for the updated helpers/selectors. |
@@ -134,6 +135,8 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 - Renderer payload contract surface:
   - `renderer_instance_bytes` and `renderer_encode_scene_text_ops` now flow through perf JSON rows, repeat summaries,
     baseline rows, `perf-baseline-from-bundles`, baseline parsing, threshold rows, and threshold failures.
+  - `ui_threshold_mode` now explicitly selects `top`, `frame_p95`, or `top_and_frame_p95`, removing the old
+    suite-name-derived typical contract inference.
   - Validation: `cargo fmt -p fret-diag --check`; `cargo nextest run -p fret-diag`;
     `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`.
   - The checked-in `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json` baseline is now the
@@ -151,11 +154,12 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `max_renderer_instance_bytes=262416`, `max_renderer_encode_scene_text_ops=406`.
   - The checked-in
     `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
-    baseline adds the high-stress editor wheel tail contract after setup reset. Selector evidence:
+    baseline adds the high-stress editor wheel tail + typical-frame contract after setup reset. Selector evidence:
     `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`.
   - Candidate-1 validated `3/3` with `fail_total=0`; candidate-2 was faster but failed 2 validations due to tighter
     total/layout thresholds. Selected candidate-1 measured p50/p95/max top total=`2703/4325/4325us`, top
-    layout=`352/595/595us`, and payload max instance/text_ops=`215440/338`.
+    layout=`352/595/595us`, frame-p95 thresholds total/layout/solve=`3456/704/0us`, and payload max
+    instance/text_ops=`215440/338`.
 
 ## Open Gaps
 
@@ -171,8 +175,8 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 
 The goal is not complete. The Windows `ui-resize-probes` and `ui-code-editor-resize-probes` contracts now have
 checked-in `measured_p50` evidence and green formal repeat=7 gates, the code-editor autoscroll steady, autoscroll
-typical, and complex wheel contracts now have payload-aware baselines, and `ui-gallery-view-cache-toggle-perf-steady`,
-`ui-gallery-virtual-list-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
+typical, and complex wheel contracts now have payload-aware baselines with explicit UI threshold modes, and
+`ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
 v1 contracts. The next work should only start a `WindowedRowsSurface` display-list rewrite from a near-threshold or
 failing editor paint stressor, and keep non-Windows machine profiles explicit rather than inferring them from the

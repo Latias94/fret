@@ -392,6 +392,8 @@ mod tests {
             "p95",
             "--perf-baseline-threshold-surface",
             "renderer",
+            "--perf-baseline-ui-threshold-mode",
+            "frame-p95",
             "--max-frame-p95-total-us",
             "18000",
             "--check-perf-hints",
@@ -438,6 +440,10 @@ mod tests {
         assert_eq!(
             args.perf_baseline_threshold_surface,
             crate::PerfBaselineThresholdSurface::Renderer
+        );
+        assert_eq!(
+            args.perf_baseline_ui_threshold_mode,
+            Some(crate::PerfBaselineUiThresholdMode::FrameP95)
         );
         assert_eq!(args.max_frame_p95_total_us, Some(18_000));
         assert!(args.check_perf_hints);

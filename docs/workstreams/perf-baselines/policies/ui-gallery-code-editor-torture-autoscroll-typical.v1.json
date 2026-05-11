@@ -2,6 +2,7 @@
   "schema_version": 1,
   "kind": "perf_baseline_seed_policy",
   "default_seed": "max",
+  "ui_threshold_mode": "frame_p95",
   "rules": [
     {
       "scope": "ui-gallery-code-editor-torture-autoscroll-typical",

@@ -140,7 +140,7 @@ def _baseline_metrics(path: Path) -> BaselineMetrics:
         p90_sum += p90
 
         thresholds = (row or {}).get("thresholds") or {}
-        thr = int(thresholds.get("max_top_total_us") or 0)
+        thr = int(thresholds.get("max_top_total_us") or thresholds.get("max_frame_p95_total_us") or 0)
         thr_sum += thr
 
     return BaselineMetrics(
@@ -187,6 +187,16 @@ def main() -> int:
             "Use 'ui' for resize/layout contracts; 'ui-renderer-payload' when UI thresholds plus renderer payload "
             "metrics should be gated; 'renderer-payload' for payload-only gates; 'renderer' or 'all' for "
             "renderer-focused gates."
+        ),
+    )
+    ap.add_argument(
+        "--ui-threshold-mode",
+        default="",
+        choices=["", "top", "frame_p95", "frame-p95", "top_and_frame_p95", "top-and-frame-p95"],
+        help=(
+            "Forwarded to `diag perf --perf-baseline-ui-threshold-mode` when set. "
+            "Use frame_p95 for typical-frame contracts, top for tail contracts, and "
+            "top_and_frame_p95 when a contract intentionally gates both."
         ),
     )
     ap.add_argument("--work-dir", default="")
@@ -338,6 +348,8 @@ def main() -> int:
             "--perf-baseline-threshold-surface",
             str(args.threshold_surface),
         ]
+        if str(args.ui_threshold_mode).strip():
+            cmd += ["--perf-baseline-ui-threshold-mode", str(args.ui_threshold_mode)]
         for preset in preset_paths:
             cmd += ["--perf-baseline-seed-preset", str(preset)]
         cmd = diag_cmd_with_env_and_launch(cmd)
@@ -441,6 +453,7 @@ def main() -> int:
             "suite": suite,
             "baseline_out": str(baseline_out),
             "threshold_surface": str(args.threshold_surface),
+            "ui_threshold_mode": str(args.ui_threshold_mode or ""),
             "validate_repeat": int(validate_repeat),
             "allow_failures": False,
             "selected_candidate": str(selected_baseline_path),
@@ -475,6 +488,7 @@ def main() -> int:
             "default_suite_hooks": not bool(args.no_default_suite_hooks),
         },
         "threshold_surface": str(args.threshold_surface),
+        "ui_threshold_mode": str(args.ui_threshold_mode or ""),
         "validate_repeat": int(validate_repeat),
         "allow_failures": bool(args.allow_failures),
         "best_candidate": {

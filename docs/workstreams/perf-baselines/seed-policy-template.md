@@ -69,6 +69,7 @@ Preset files are versioned policy artifacts (commit into `docs/workstreams/perf-
   "schema_version": 1,
   "kind": "perf_baseline_seed_policy",
   "default_seed": "max",
+  "ui_threshold_mode": "top",
   "rules": [
     {
       "scope": "ui-gallery-steady",
@@ -97,6 +98,12 @@ Requirements:
 - `schema_version` must be `1`.
 - `kind` must be `perf_baseline_seed_policy`.
 - `default_seed` is optional (`max|p90|p95`), and overrides built-in default seed when present.
+- `ui_threshold_mode` is optional and defaults to `top`:
+  - `top`: gate `max_top_*` values. Use this for tail / worst-frame contracts.
+  - `frame_p95`: gate `max_frame_p95_*` values. Use this for typical-frame contracts, usually with
+    `--perf-threshold-agg p90` or `p95`.
+  - `top_and_frame_p95`: gate both top and frame-p95 values when a probe intentionally protects tail and typical
+    smoothness together.
 - `rules` is required (can be empty).
 - Each rule requires `scope`, `metric`, `seed`.
 - Each rule may also declare:

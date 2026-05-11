@@ -20,6 +20,10 @@
 - [x] Promote a dedicated code-editor autoscroll typical gate:
   `ui-gallery-code-editor-torture-autoscroll-typical` + `--perf-threshold-agg p90`, with UI-only `frame_p95_*`
   thresholds. Keep the steady v2 gate responsible for renderer all-surface tail checks.
+- [x] Make UI threshold mode explicit in perf baseline policy.
+  - `ui_threshold_mode=top` gates tail `max_top_*`, `frame_p95` gates typical-frame `max_frame_p95_*`, and
+    `top_and_frame_p95` gates both for the complex editor wheel contract.
+  - Do not infer typical-frame contracts from suite names.
 - [x] For any remaining outliers: capture one bundle with `--trace` and one with `FRET_LAYOUT_NODE_PROFILE=1`.
   - Trace bundle: `target/fret-diag/perf-code-editor-hosted-resources-trace-v1/1778449929019/bundle.schema2.json`
     (the run directory also includes `trace.chrome.json`; p50/p95/max total `1603/1722/1722us`).

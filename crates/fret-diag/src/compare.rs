@@ -2445,6 +2445,66 @@ impl std::str::FromStr for PerfBaselineThresholdSurface {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PerfBaselineUiThresholdMode {
+    Top,
+    FrameP95,
+    TopAndFrameP95,
+}
+
+impl PerfBaselineUiThresholdMode {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            PerfBaselineUiThresholdMode::Top => "top",
+            PerfBaselineUiThresholdMode::FrameP95 => "frame_p95",
+            PerfBaselineUiThresholdMode::TopAndFrameP95 => "top_and_frame_p95",
+        }
+    }
+
+    pub(super) fn includes_top(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineUiThresholdMode::Top | PerfBaselineUiThresholdMode::TopAndFrameP95
+        )
+    }
+
+    pub(super) fn includes_frame_p95(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineUiThresholdMode::FrameP95 | PerfBaselineUiThresholdMode::TopAndFrameP95
+        )
+    }
+}
+
+impl Default for PerfBaselineUiThresholdMode {
+    fn default() -> Self {
+        Self::Top
+    }
+}
+
+impl std::fmt::Display for PerfBaselineUiThresholdMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for PerfBaselineUiThresholdMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_ascii_lowercase().replace('-', "_").as_str() {
+            "top" | "max" | "tail" => Ok(PerfBaselineUiThresholdMode::Top),
+            "frame_p95" | "framep95" | "typical" => Ok(PerfBaselineUiThresholdMode::FrameP95),
+            "top_and_frame_p95" | "top_frame_p95" | "both" => {
+                Ok(PerfBaselineUiThresholdMode::TopAndFrameP95)
+            }
+            _ => Err(format!(
+                "invalid UI threshold mode (expected top|frame_p95|top_and_frame_p95): {s:?}"
+            )),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn scan_perf_threshold_failures(
     script: &str,

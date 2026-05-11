@@ -468,6 +468,7 @@ pub(crate) struct PerfCmdContext {
     pub perf_baseline_seed_preset_paths: Vec<PathBuf>,
     pub perf_baseline_seed_specs: Vec<String>,
     pub perf_baseline_threshold_surface: PerfBaselineThresholdSurface,
+    pub perf_baseline_ui_threshold_mode: Option<PerfBaselineUiThresholdMode>,
     pub perf_repeat: u64,
     pub perf_threshold_agg: PerfThresholdAggregate,
     pub poll_ms: u64,
@@ -527,6 +528,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         perf_baseline_seed_preset_paths,
         perf_baseline_seed_specs,
         perf_baseline_threshold_surface,
+        perf_baseline_ui_threshold_mode,
         perf_repeat,
         perf_threshold_agg,
         poll_ms,
@@ -674,6 +676,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             &scripts,
             &perf_baseline_seed_preset_paths,
             &perf_baseline_seed_specs,
+            perf_baseline_ui_threshold_mode,
         )?)
     } else {
         None
@@ -2275,9 +2278,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     tuning_solve.min_slack_us,
                     tuning_solve.quantum_us,
                 );
-                let wants_frame_p95_thresholds = suite_name
-                    .as_deref()
-                    .is_some_and(|name| name.contains("typical"));
+                let ui_threshold_mode = policy.ui_threshold_mode();
+                let wants_frame_p95_thresholds = ui_threshold_mode.includes_frame_p95();
                 let thr_frame_p95_total = wants_frame_p95_thresholds.then(|| {
                     apply_perf_baseline_headroom_with_slack_and_quantum(
                         seed_frame_p95_total_value,
@@ -2472,7 +2474,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         seed_renderer_prepare_svg_value,
                     ),
                     seed_renderer_payload_value,
-                    wants_frame_p95_thresholds,
+                    ui_threshold_mode,
                     thr_total,
                     thr_layout,
                     thr_solve,

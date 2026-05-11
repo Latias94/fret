@@ -2692,6 +2692,7 @@ fn parse_perf_command(
             perf_baseline_seed_preset_paths: args.perf_baseline_seed_preset_paths,
             perf_baseline_seed_specs: args.perf_baseline_seed_specs,
             perf_baseline_threshold_surface: args.perf_baseline_threshold_surface,
+            perf_baseline_ui_threshold_mode: args.perf_baseline_ui_threshold_mode,
             perf_repeat: args.repeat,
             perf_threshold_agg: args
                 .perf_threshold_agg

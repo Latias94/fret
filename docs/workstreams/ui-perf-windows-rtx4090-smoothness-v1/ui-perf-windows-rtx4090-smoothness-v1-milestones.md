@@ -41,6 +41,8 @@ Exit criteria:
 
 - Typical perf (p50/p95) is reported as a first-class review surface (not just max), including `diag stats --json` and perf threshold reports.
 - Baseline seeding policy and headroom rationale are documented for Windows smoothness.
+- UI threshold intent is explicit in seed policy (`top`, `frame_p95`, or `top_and_frame_p95`) instead of inferred from
+  suite names.
 
 ## M4 — Regression-proof guardrails
 

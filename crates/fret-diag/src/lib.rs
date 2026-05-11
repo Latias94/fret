@@ -118,12 +118,12 @@ pub(crate) use paths::{
 
 use artifact_store::{RunArtifactStore, run_id_artifact_dir};
 use compare::{
-    CompareOptions, CompareReport, PerfBaselineThresholdSurface, PerfThresholdAggregate,
-    PerfThresholds, RenderdocDumpAttempt, apply_perf_baseline_floor, apply_perf_baseline_headroom,
-    apply_perf_baseline_headroom_with_slack_and_quantum, cargo_run_inject_feature, compare_bundles,
-    ensure_env_var, find_latest_export_dir, maybe_launch_demo,
-    maybe_launch_demo_without_diagnostics, normalize_repo_relative_path, read_latest_pointer,
-    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
+    CompareOptions, CompareReport, PerfBaselineThresholdSurface, PerfBaselineUiThresholdMode,
+    PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt, apply_perf_baseline_floor,
+    apply_perf_baseline_headroom, apply_perf_baseline_headroom_with_slack_and_quantum,
+    cargo_run_inject_feature, compare_bundles, ensure_env_var, find_latest_export_dir,
+    maybe_launch_demo, maybe_launch_demo_without_diagnostics, normalize_repo_relative_path,
+    read_latest_pointer, read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
     scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
