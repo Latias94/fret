@@ -4733,6 +4733,7 @@
       ],
       "tags": [],
       "target_hints": [
+        "This steady script waits for font stabilization; keep font bootstrap enabled when launching it standalone.",
         "This is a non-accessibility CPU/renderer steady-scroll baseline. Keep platform accessibility disabled here; use a dedicated a11y perf probe when measuring AccessKit activation cost."
       ]
     },

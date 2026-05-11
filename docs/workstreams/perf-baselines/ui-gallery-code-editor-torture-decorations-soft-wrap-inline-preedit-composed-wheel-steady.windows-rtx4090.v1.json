@@ -1,0 +1,214 @@
+{
+  "generated_unix_ms": 1778485490205,
+  "headroom_pct": 20,
+  "kind": "perf_baseline",
+  "out_path": "docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json",
+  "repeat": 7,
+  "rows": [
+    {
+      "measured_max": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 447,
+        "frame_p95_total_time_us": 2869,
+        "pointer_move_max_dispatch_time_us": 507,
+        "pointer_move_max_hit_test_time_us": 14,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "renderer_encode_scene_text_ops": 338,
+        "renderer_encode_scene_us": 986,
+        "renderer_encoder_finish_us": 309,
+        "renderer_instance_bytes": 215440,
+        "renderer_prepare_svg_us": 13,
+        "renderer_prepare_text_us": 541,
+        "renderer_record_passes_us": 89,
+        "renderer_upload_us": 136,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 595,
+        "top_total_time_us": 4325
+      },
+      "measured_p50": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 365,
+        "frame_p95_total_time_us": 2595,
+        "renderer_encode_scene_text_ops": 338,
+        "renderer_encode_scene_us": 431,
+        "renderer_encoder_finish_us": 177,
+        "renderer_instance_bytes": 215328,
+        "renderer_prepare_svg_us": 9,
+        "renderer_prepare_text_us": 216,
+        "renderer_record_passes_us": 63,
+        "renderer_upload_us": 95,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 352,
+        "top_total_time_us": 2703
+      },
+      "measured_p90": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 447,
+        "frame_p95_total_time_us": 2869,
+        "renderer_encode_scene_text_ops": 338,
+        "renderer_encode_scene_us": 986,
+        "renderer_encoder_finish_us": 309,
+        "renderer_instance_bytes": 215440,
+        "renderer_prepare_svg_us": 13,
+        "renderer_prepare_text_us": 541,
+        "renderer_record_passes_us": 89,
+        "renderer_upload_us": 136,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 595,
+        "top_total_time_us": 4325
+      },
+      "measured_p95": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 447,
+        "frame_p95_total_time_us": 2869,
+        "renderer_encode_scene_text_ops": 338,
+        "renderer_encode_scene_us": 986,
+        "renderer_encoder_finish_us": 309,
+        "renderer_instance_bytes": 215440,
+        "renderer_prepare_svg_us": 13,
+        "renderer_prepare_text_us": 541,
+        "renderer_record_passes_us": 89,
+        "renderer_upload_us": 136,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 595,
+        "top_total_time_us": 4325
+      },
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+      "threshold_seed": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "renderer_encode_scene_text_ops": 338,
+        "renderer_encode_scene_us": null,
+        "renderer_encoder_finish_us": null,
+        "renderer_instance_bytes": 215440,
+        "renderer_prepare_svg_us": null,
+        "renderer_prepare_text_us": null,
+        "renderer_record_passes_us": null,
+        "renderer_upload_us": null,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 595,
+        "top_total_time_us": 4325
+      },
+      "threshold_seed_source": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "renderer_encode_scene_text_ops": "max",
+        "renderer_encode_scene_us": null,
+        "renderer_encoder_finish_us": null,
+        "renderer_instance_bytes": "max",
+        "renderer_prepare_svg_us": null,
+        "renderer_prepare_text_us": null,
+        "renderer_record_passes_us": null,
+        "renderer_upload_us": null,
+        "top_layout_engine_solve_time_us": "max",
+        "top_layout_time_us": "max",
+        "top_total_time_us": "max"
+      },
+      "thresholds": {
+        "max_frame_p95_layout_us": null,
+        "max_frame_p95_solve_us": null,
+        "max_frame_p95_total_us": null,
+        "max_pointer_move_dispatch_us": 609,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 17,
+        "max_renderer_encode_scene_text_ops": 406,
+        "max_renderer_encode_scene_us": null,
+        "max_renderer_encoder_finish_us": null,
+        "max_renderer_instance_bytes": 258528,
+        "max_renderer_prepare_svg_us": null,
+        "max_renderer_prepare_text_us": null,
+        "max_renderer_record_passes_us": null,
+        "max_renderer_upload_us": null,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 1120,
+        "max_top_solve_us": 0,
+        "max_top_total_us": 5190,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "threshold_seed_policy": {
+    "default_seed": "max",
+    "rules": [
+      {
+        "metric": "frame_p95_layout_engine_solve_time_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "p95",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 128,
+          "quantum_us": 16
+        }
+      },
+      {
+        "metric": "frame_p95_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "p90",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 256,
+          "quantum_us": 16
+        }
+      },
+      {
+        "metric": "frame_p95_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "p90",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 512,
+          "quantum_us": 16
+        }
+      },
+      {
+        "metric": "renderer_encoder_finish_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "max",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 48,
+          "quantum_us": 8
+        }
+      },
+      {
+        "metric": "renderer_prepare_text_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "max",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 128,
+          "quantum_us": 16
+        }
+      },
+      {
+        "metric": "renderer_record_passes_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "max",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 16,
+          "quantum_us": 8
+        }
+      },
+      {
+        "metric": "top_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+        "seed": "max",
+        "source": "preset",
+        "tuning": {
+          "min_slack_us": 512,
+          "quantum_us": 16
+        }
+      }
+    ],
+    "schema_version": 1
+  },
+  "threshold_surface": "ui-renderer-payload",
+  "warmup_frames": 5
+}

@@ -12181,3 +12181,48 @@ Decision:
 - Treat the underflow as a dirty aggregation correctness bug, not as evidence for a renderer/display-list rewrite.
 - Continue editor performance work from passing payload-aware baselines plus future high-stress evidence; keep any
   `WindowedRowsSurface` rewrite gated on a failing or near-threshold paint/payload contract.
+
+## 2026-05-11 (complex editor wheel steady baseline v1)
+
+Question:
+- After the dirty aggregation repair, can the complex editor wheel path become a formal contract that isolates
+  wheel-phase editor paint/payload instead of mixing setup, toggles, font warmup, and navigation costs?
+
+Change:
+- Added `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`.
+  - It opens the code editor torture page, enables soft wrap / preedit decorations / composed preedit / folds /
+    inlays, waits for font stabilization, injects preedit, then calls `reset_diagnostics` before wheel actions.
+- Added seed policy
+  `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json`.
+  - The first 20% policy was too tight on sub-ms `top_layout_time_us`; the final policy keeps the UI + renderer
+    payload surface but adds an explicit 512us minimum slack for `top_layout_time_us`.
+- Added checked-in Windows baseline
+  `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`.
+
+Validation:
+- Smoke script:
+  `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --dir target/fret-diag-complex-editor-wheel-steady-smoke --session-auto --timeout-ms 240000 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch target/release/fret-ui-gallery.exe`
+  - Passed, no dirty aggregation underflow in the log.
+  - Smoke stats on
+    `target/fret-diag-complex-editor-wheel-steady-smoke/sessions/1778484657175-160976/1778484681044-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady/bundle.schema2.json`:
+    p50/p95 total=`3228/3631us`, layout=`114/512us`, paint=`2795/3362us`.
+- Selector:
+  `python tools/perf/diag_perf_baseline_select.py --suite tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --baseline-out docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui-renderer-payload --work-dir target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2 --launch-bin target/release/fret-ui-gallery.exe --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+  - Selected candidate-1 with `fail_total=0`.
+  - Candidate-2 failed 2 validations because its p90/threshold sum was faster but too tight for the observed wheel
+    tail.
+  - Selection summary:
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`.
+
+Checked-in baseline:
+- `threshold_surface=ui-renderer-payload`
+- measured p50/p95/max top total=`2703/4325/4325us`
+- measured p50/p95/max top layout=`352/595/595us`
+- measured p50/p95/max top solve=`0/0/0us`
+- measured max payload instance/text_ops=`215440/338`
+- hard thresholds total/layout/solve/payload(instance,text_ops)=`5190/1120/0/258528/406`
+
+Decision:
+- Treat this as the high-stress editor wheel tail contract for soft-wrap/decorations/inline-preedit/folds/inlays.
+- It strengthens the evidence surface, but it still passes; do not use it alone to justify a `WindowedRowsSurface`
+  display-list rewrite.

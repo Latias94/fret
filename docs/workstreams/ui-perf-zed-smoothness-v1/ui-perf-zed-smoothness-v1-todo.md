@@ -997,6 +997,20 @@ Perf acceptance:
   - Contract: `threshold_surface=ui-renderer-payload`; measured p50/p95/max top total=`2563/3603/3603us`;
     hard frame p95 thresholds total/layout/solve=`3360/368/0us`; payload thresholds instance/text_ops=`262416/406`.
   - Evidence: perf log entry `2026-05-11`.
+- [x] Promote complex code-editor wheel Windows baseline after dirty aggregation repair.
+  - Script:
+    `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`.
+  - Baseline:
+    `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`.
+  - Seed policy:
+    `docs/workstreams/perf-baselines/policies/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.v1.json`.
+  - Selector summary:
+    `target/fret-diag-baseline-select-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady-windows-rtx4090-v1-policy2/selection-summary.json`.
+  - Result: candidate-1 selected with `fail_total=0`; candidate-2 failed two validations because its total/layout
+    thresholds were too tight for the observed wheel tail.
+  - Contract: `threshold_surface=ui-renderer-payload`; measured p50/p95/max top total=`2703/4325/4325us`, top
+    layout=`352/595/595us`; payload thresholds instance/text_ops=`258528/406`.
+  - Evidence: perf log entry `2026-05-11`.
 - [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
   - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
   - Commit: `c7ea64bb5`
