@@ -59,6 +59,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`.
   - [x] Extract geometry helper/keying tests into
         `ecosystem/fret-code-editor/src/editor/tests/geometry.rs`.
+  - [x] Extract row-text cache and paint-frame cache-floor tests into
+        `ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,
