@@ -12906,3 +12906,21 @@ Evidence:
 Decision:
 - Keep the checked-in Windows v2 code-editor resize baseline unchanged. This is the contract path
   the current editor surface should continue to respect after warning cleanup.
+
+## 2026-05-13 01:14:00 +08:00 (imui hello smoke correctness recheck)
+
+Question:
+- Does `imui_hello_demo` render visible text on Windows after the text-mask vertex-buffer fix?
+
+Validation:
+- `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-screenshot-recheck FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/local-debug/imui-hello-demo-screenshot.json --dir target/fret-diag/imui-hello-demo-screenshot-recheck --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin imui_hello_demo`
+- `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`
+- `cargo nextest run -p fret-imui imui_default_mount_paints_text_on_top_of_control_chrome`
+
+Evidence:
+- Screenshot: `target/fret-diag/imui-hello-demo-screenshot-recheck/sessions/1778605632348-99852/screenshots/1778606081730-imui-hello-demo/window-4294967297-tick-41-frame-40.png`
+- The new screenshot shows visible text again (`Count: 0`, `Increment`, `Enabled: false`, `Enabled`).
+
+Decision:
+- Keep the old `windows-smoke-text*` blank captures as pre-fix evidence only.
+- Treat the remaining goal gap as the explicit Linux runner/profile baseline, not as an IMUI smoke correctness issue.
