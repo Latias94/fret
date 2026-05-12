@@ -36,6 +36,10 @@
       "path": "docs/workstreams/editor-ecosystem-fearless-refactor-v1/OWNERSHIP_AUDIT.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/editor-ecosystem-fearless-refactor-v1/EER_THEME_122_SHARED_PALETTE_AUDIT_2026-05-12.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md"
     },
@@ -86,6 +90,7 @@
     "docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_COMPONENT_SYSTEM.md",
     "docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_INTERACTION_CONTRACT.md",
     "docs/workstreams/editor-ecosystem-fearless-refactor-v1/OWNERSHIP_AUDIT.md",
+    "docs/workstreams/editor-ecosystem-fearless-refactor-v1/EER_THEME_122_SHARED_PALETTE_AUDIT_2026-05-12.md",
     "docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md",
     "ecosystem/fret-ui-editor/src/lib.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",

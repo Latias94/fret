@@ -1781,7 +1781,7 @@ Rule:
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
-- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/` — first 2026-03-09, latest 2026-05-12, 11 markdown docs (active editor ecosystem orchestration lane; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/` — first 2026-03-09, latest 2026-05-12, 12 markdown docs (active editor ecosystem orchestration lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-05, 7 markdown docs
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/environment-queries-v1/` — first 2026-02-09, latest 2026-03-12, 6 markdown docs

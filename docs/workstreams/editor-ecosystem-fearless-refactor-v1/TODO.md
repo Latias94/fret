@@ -396,7 +396,11 @@ Interaction contract:
       legacy `component.text_field.*` read fallback for app compatibility. Remaining work is now
       narrower: audit the residual shared palette writes (`card`, `muted`, `border`,
       `foreground`, `muted-foreground`, `accent`, `ring`) and only keep the ones that still back
-      real non-editor-owned seams.
+      real non-editor-owned seams. Current audit:
+      `EER_THEME_122_SHARED_PALETTE_AUDIT_2026-05-12.md` shows that the residual shared writes
+      still back real direct generic readers in checkbox, slider, and color-edit popup chrome, so
+      they should not be deleted in one batch. The next cleanup should move those visible seams to
+      editor-owned token families first, then shrink the shared-write whitelist.
 - [x] `EER-THEME-123` Decide whether `workspace.tab.*` also needs adapter-side seeding or should
       remain fallback-first for v1.
       Decision: keep `workspace.tab.*` fallback-first for v1. `fret-ui-shadcn` continues seeding
