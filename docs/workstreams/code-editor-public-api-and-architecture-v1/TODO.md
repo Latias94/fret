@@ -71,6 +71,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/pointer_helpers.rs`.
   - [x] Extract pointer selection tests into
         `ecosystem/fret-code-editor/src/editor/tests/pointer_selection.rs`.
+  - [x] Extract word navigation tests into
+        `ecosystem/fret-code-editor/src/editor/tests/word_navigation.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,
