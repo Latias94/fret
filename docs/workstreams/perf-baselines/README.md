@@ -43,6 +43,8 @@ Use stable suffixes in baseline filenames:
 - `windows-rtx4090`: primary Windows GPU workstation profile.
 - `macos-m4` / `macos-m4pro`: Apple Silicon local profiles.
 - `windows-local`, `web-local`: broader smoke profiles where hardware-specific precision is not intended.
+- `linux-local`: reserved for future Linux contract profiles; do not infer Linux coverage from the Windows or
+  macOS baselines. Add a checked-in Linux baseline and owner profile only when a real Linux runner exists.
 
 If a new machine profile becomes a contract target, add a new baseline file rather than overwriting an unrelated
 profile.

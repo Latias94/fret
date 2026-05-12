@@ -48,6 +48,13 @@ Conventions:
       no-code-change evidence in the perf log.
     - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
 
+- [ ] Linux editor-grade perf evidence.
+  - Status: blocked until a Linux runner/profile exists.
+  - Goal: add a checked-in Linux baseline for the editor-grade probes that already close on Windows/macOS, and keep
+    Linux evidence labeled separately from Windows/macOS contracts until then.
+  - Evidence anchors: `docs/code-editor.md`; `docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`;
+    `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`.
+
 - Representative daily smoke set (local, not CI yet):
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json`
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`

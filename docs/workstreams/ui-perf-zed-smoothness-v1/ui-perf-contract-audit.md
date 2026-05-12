@@ -235,7 +235,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    complex wheel overlay hotspot now has a narrower frame-derived-state fix. Keep the `WindowedRowsSurface`
    display-list rewrite gated on a future near-threshold or failing stressor where row op replay/capture is the
    measured limiter, not on these passing baselines alone.
-3. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
+3. Keep Linux and any other non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
 
 ## Audit Conclusion
 

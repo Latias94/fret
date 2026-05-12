@@ -76,8 +76,8 @@ Budgets are guidance for representative probes. The committed gate is the script
 - The broad `ui-gallery-steady` and `ui-gallery-complex-*` baselines are legacy evidence surfaces. Keep them for drift
   detection, but do not treat them as the representative p50/p95/max contract; the dedicated single-script baselines
   in the matrix are the real contract surface.
-- Non-Windows/macOS resize gate runs still need an explicit `--baseline` until we add checked-in baselines for those
-  machine profiles.
+- Linux and other non-Windows/macOS resize gate runs still need an explicit `--baseline` until we add checked-in
+  baselines for those machine profiles.
 - Old baseline JSON files may not contain `measured_p50`. That is expected until each baseline is intentionally
   re-seeded.
 - Windows `ui-resize-probes` v2 is now checked in with `threshold_surface=ui`, 30% headroom, and row-level
