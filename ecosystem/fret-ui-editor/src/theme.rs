@@ -138,9 +138,13 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::DENSITY_HIT_THICKNESS, 20.0);
     metric(&mut cfg, EditorTokenKeys::DENSITY_ICON_SIZE, 14.0);
 
-    // Checkbox metrics (used by TransformEdit link toggles and inspector rows).
+    // Checkbox metrics and colors (used by TransformEdit link toggles and inspector rows).
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_SIZE, 16.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_RADIUS, 4.0);
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_BG, "#141b24");
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_CHECKED_BG, "#355a86");
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_CHECKED_FG, "#edf3fa");
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_RING, "#7faee8");
 
     // Vec edit responsiveness (stack axes vertically in narrow inspectors).
     metric(&mut cfg, EditorTokenKeys::VEC_AUTO_STACK_BELOW, 420.0);
@@ -206,6 +210,7 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, "selection.background", "#315b8b");
     color(&mut cfg, EditorTokenKeys::POPUP_BG, "#131b25");
     color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#46596c");
+    color(&mut cfg, EditorTokenKeys::POPUP_SHADOW_COLOR, "#171d26");
     metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 8.0);
     metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_OFFSET_Y, 6.0);
     metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_BLUR, 16.0);
@@ -236,9 +241,13 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BORDER, "#c76f77");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BG, "#2a171c");
 
-    // Slider metrics (normalized floats like roughness/metallic).
+    // Slider metrics and colors (normalized floats like roughness/metallic).
     metric(&mut cfg, EditorTokenKeys::SLIDER_TRACK_HEIGHT, 4.0);
     metric(&mut cfg, EditorTokenKeys::SLIDER_THUMB_DIAMETER, 12.0);
+    color(&mut cfg, EditorTokenKeys::SLIDER_TRACK_BG, "#171d26");
+    color(&mut cfg, EditorTokenKeys::SLIDER_FILL_BG, "#355a86");
+    color(&mut cfg, EditorTokenKeys::SLIDER_THUMB_BG, "#141b24");
+    color(&mut cfg, EditorTokenKeys::SLIDER_THUMB_BORDER, "#3b4758");
 
     cfg
 }
@@ -280,10 +289,18 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 8.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_SIZE, 14.0);
     metric(&mut cfg, EditorTokenKeys::CHECKBOX_RADIUS, 2.0);
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_BG, "#1a1c20");
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_CHECKED_BG, "#4c88c7");
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_CHECKED_FG, "#e6e8eb");
+    color(&mut cfg, EditorTokenKeys::CHECKBOX_RING, "#6ea8e0");
     metric(&mut cfg, EditorTokenKeys::VEC_AUTO_STACK_BELOW, 400.0);
     metric(&mut cfg, EditorTokenKeys::VEC_AXIS_MIN_WIDTH, 132.0);
     metric(&mut cfg, EditorTokenKeys::SLIDER_TRACK_HEIGHT, 3.0);
     metric(&mut cfg, EditorTokenKeys::SLIDER_THUMB_DIAMETER, 10.0);
+    color(&mut cfg, EditorTokenKeys::SLIDER_TRACK_BG, "#2a2d33");
+    color(&mut cfg, EditorTokenKeys::SLIDER_FILL_BG, "#4c88c7");
+    color(&mut cfg, EditorTokenKeys::SLIDER_THUMB_BG, "#1a1c20");
+    color(&mut cfg, EditorTokenKeys::SLIDER_THUMB_BORDER, "#4b5563");
 
     metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_PADDING_X, 5.0);
     metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_PADDING_Y, 3.0);
@@ -324,6 +341,7 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, "selection.background", "#315b8b");
     color(&mut cfg, EditorTokenKeys::POPUP_BG, "#24292f");
     color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#687686");
+    color(&mut cfg, EditorTokenKeys::POPUP_SHADOW_COLOR, "#2a2d33");
     metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 4.0);
     metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_OFFSET_Y, 4.0);
     metric(&mut cfg, EditorTokenKeys::POPUP_SHADOW_BLUR, 12.0);
@@ -438,6 +456,38 @@ mod tests {
             Some(Px(12.0))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_TRACK_BG),
+            Some(Color::from_srgb_hex_rgb(0x17_1d_26))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_FILL_BG),
+            Some(Color::from_srgb_hex_rgb(0x35_5a_86))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_THUMB_BG),
+            Some(Color::from_srgb_hex_rgb(0x14_1b_24))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_THUMB_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x3b_47_58))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_BG),
+            Some(Color::from_srgb_hex_rgb(0x14_1b_24))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_CHECKED_BG),
+            Some(Color::from_srgb_hex_rgb(0x35_5a_86))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_CHECKED_FG),
+            Some(Color::from_srgb_hex_rgb(0xed_f3_fa))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_RING),
+            Some(Color::from_srgb_hex_rgb(0x7f_ae_e8))
+        );
+        assert_eq!(
             theme.color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             Some(Color::from_srgb_hex_rgb(0x14_1b_24))
         );
@@ -462,6 +512,10 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::POPUP_BORDER),
             Some(Color::from_srgb_hex_rgb(0x46_59_6c))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_SHADOW_COLOR),
+            Some(Color::from_srgb_hex_rgb(0x17_1d_26))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::POPUP_RADIUS),
@@ -552,6 +606,10 @@ mod tests {
             Some(Color::from_srgb_hex_rgb(0x68_76_86))
         );
         assert_eq!(
+            theme.color_by_key(EditorTokenKeys::POPUP_SHADOW_COLOR),
+            Some(Color::from_srgb_hex_rgb(0x2a_2d_33))
+        );
+        assert_eq!(
             theme.metric_by_key(EditorTokenKeys::POPUP_RADIUS),
             Some(Px(4.0))
         );
@@ -606,6 +664,38 @@ mod tests {
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::TEXT_FIELD_RADIUS),
             Some(Px(2.0))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_TRACK_BG),
+            Some(Color::from_srgb_hex_rgb(0x2a_2d_33))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_FILL_BG),
+            Some(Color::from_srgb_hex_rgb(0x4c_88_c7))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_THUMB_BG),
+            Some(Color::from_srgb_hex_rgb(0x1a_1c_20))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::SLIDER_THUMB_BORDER),
+            Some(Color::from_srgb_hex_rgb(0x4b_55_63))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_BG),
+            Some(Color::from_srgb_hex_rgb(0x1a_1c_20))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_CHECKED_BG),
+            Some(Color::from_srgb_hex_rgb(0x4c_88_c7))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_CHECKED_FG),
+            Some(Color::from_srgb_hex_rgb(0xe6_e8_eb))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::CHECKBOX_RING),
+            Some(Color::from_srgb_hex_rgb(0x6e_a8_e0))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::TEXT_FIELD_BG),

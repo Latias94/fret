@@ -16,6 +16,7 @@ use fret_ui_kit::primitives::{popper, tooltip as radix_tooltip};
 use super::super::model::{format_hex, hsv_numeric_text, rgb_numeric_text};
 use super::super::{ColorEditAlphaPreview, ColorEditTooltipOptions};
 use super::preview::{color_preview_stack, preview_color_for_alpha_visibility};
+use crate::primitives::colors::{editor_foreground, editor_popup_background, editor_popup_border};
 
 pub(in crate::controls::color_edit) fn request_color_tooltip_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -119,15 +120,11 @@ fn color_tooltip_panel<H: UiHost>(
 ) -> AnyElement {
     let lines = color_tooltip_lines(color, show_alpha);
     let preview_color = preview_color_for_alpha_visibility(color, show_alpha);
-    let (bg, fg, border, radius) = {
-        let theme = Theme::global(&*cx.app);
-        (
-            theme.color_token("popover"),
-            theme.color_token("popover-foreground"),
-            theme.color_token("border"),
-            Px(5.0),
-        )
-    };
+    let theme = Theme::global(&*cx.app);
+    let bg = editor_popup_background(theme);
+    let fg = editor_foreground(theme);
+    let border = editor_popup_border(theme);
+    let radius = Px(5.0);
 
     let panel = cx.container(
         ContainerProps {

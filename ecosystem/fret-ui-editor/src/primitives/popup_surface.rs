@@ -30,7 +30,9 @@ pub(crate) fn resolve_editor_popup_surface_chrome(
         .unwrap_or(DEFAULT_EDITOR_POPUP_RADIUS);
     let shadow = is_overlay_surface.then(|| ShadowStyle {
         primary: ShadowLayerStyle {
-            color: theme.color_token("muted"),
+            color: theme
+                .color_by_key(EditorTokenKeys::POPUP_SHADOW_COLOR)
+                .unwrap_or_else(|| theme.color_token("muted")),
             offset_x: Px(0.0),
             offset_y: theme
                 .metric_by_key(EditorTokenKeys::POPUP_SHADOW_OFFSET_Y)
@@ -125,6 +127,25 @@ mod tests {
         assert_eq!(shadow.primary.offset_y, Px(3.0));
         assert_eq!(shadow.primary.blur, Px(9.0));
         assert_eq!(shadow.primary.spread, Px(-2.0));
+    }
+
+    #[test]
+    fn popup_surface_respects_editor_shadow_color_token() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors.insert(
+                EditorTokenKeys::POPUP_SHADOW_COLOR.to_string(),
+                "#010203".to_string(),
+            );
+            cfg.colors
+                .insert("muted".to_string(), "#ff0000".to_string());
+            theme.apply_config_patch(&cfg);
+        });
+
+        let chrome = resolve_editor_popup_surface_chrome(Theme::global(&app), true);
+        let shadow = chrome.shadow.expect("overlay popup should keep shadow");
+        assert_eq!(shadow.primary.color, Color::from_srgb_hex_rgb(0x01_02_03));
     }
 
     #[test]

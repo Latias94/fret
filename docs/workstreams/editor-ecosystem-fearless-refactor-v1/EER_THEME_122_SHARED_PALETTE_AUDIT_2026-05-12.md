@@ -19,7 +19,7 @@ mutating shared app palette keys now that many visible editor seams have editor-
 - `editor.text_field.*` now owns text-field chrome and the preset no longer writes
   `component.text_field.*`.
 - `editor.property.*` owns panel, group, header, and property-row frame colors and metrics.
-- `editor.popup.*` owns popup surface background, border, radius, and shadow metrics.
+- `editor.popup.*` owns popup surface background, border, radius, shadow metrics, and shadow color.
 - `editor.chrome.*` owns muted foreground, accent, and ring intent for shared editor chrome.
 - `primitives::colors` centralizes panel/header/popup fallback order so composite surfaces do not
   each carry their own generic-token ladder.
@@ -27,15 +27,20 @@ mutating shared app palette keys now that many visible editor seams have editor-
 However, removing all shared palette writes from the preset is not correct yet. Several real editor
 surfaces still read generic palette keys directly:
 
-- `controls/checkbox.rs` still uses generic `primary`, `primary-foreground`, and background/input
-  fallbacks for checked and focused state.
-- `controls/slider.rs` still uses generic `muted`, `primary`, and `background` for track, fill, and
-  thumb colors.
-- `controls/color_edit/popup/*` still uses generic `border`, `primary`, `foreground`, `popover`,
-  and `popover-foreground` across picker, preview, swatch, and tooltip chrome.
-- `primitives/chrome.rs` still keeps generic fallbacks such as `input`, `ring`,
-  `foreground`, and `selection.background` after editor-owned text-field keys.
-- `primitives/popup_surface.rs` still uses generic `muted` for the shadow color.
+- `controls/checkbox.rs` now has editor-owned `editor.checkbox.*` colors for unchecked, checked,
+  and ring state, with legacy `component.checkbox.*` / `component.input.*` / generic palette
+  fallbacks still retained for compatibility.
+- `controls/slider.rs` now has editor-owned `editor.slider.*` colors for track, fill, thumb, and
+  thumb border, with legacy `component.slider.*` / generic palette fallbacks still retained for
+  compatibility.
+- `controls/color_edit/popup/*` now routes picker, preview, swatch, and tooltip chrome through
+  editor-owned popup / chrome helpers instead of reading `border`, `primary`, `foreground`,
+  `popover`, or `popover-foreground` directly.
+- `primitives/chrome.rs` still keeps generic fallbacks such as `input`, `foreground`, and
+  `selection.background` after editor-owned text-field keys; text-area focus and preedit ring now
+  route through the editor focus-ring helper before host palette fallback.
+- `primitives/popup_surface.rs` now uses `editor.popup.shadow.color` before the generic `muted`
+  compatibility fallback.
 
 That means the shared writes in `editor_theme_patch_v1` and `imgui_like_dense_patch_v1` are still
 serving two different jobs:
@@ -59,14 +64,10 @@ keys. Those are compatibility read fallbacks only.
 
 ## Narrow Follow-Up Slices
 
-1. Add editor-owned checkbox color tokens and update `controls/checkbox.rs` to prefer them before
-   generic `primary` / `primary-foreground`.
-2. Add editor-owned slider color tokens and update `controls/slider.rs` to prefer them before
-   generic `muted` / `primary` / `background`.
-3. Route color-edit popup picker, preview, swatch, and tooltip chrome through editor-owned popup or
-   color token families before removing `popover`, `border`, `foreground`, or `primary` preset
-   writes.
-4. After those seams move, split the preset into an editor-owned patch plus an optional proof/demo
+1. Checkbox, slider, color-edit popup, popup-shadow, and text-area ring seams landed; next audit
+   whether the remaining shared palette writes can shrink further once the primitive chrome helpers
+   stop needing their current compatibility fallbacks.
+2. After that seam moves, split the preset into an editor-owned patch plus an optional proof/demo
    host-palette patch, or shrink the shared palette writes directly if no proof surface still needs
    the app-wide colors.
 

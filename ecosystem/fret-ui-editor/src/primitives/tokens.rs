@@ -64,6 +64,10 @@ impl EditorTokenKeys {
 
     pub const CHECKBOX_SIZE: &'static str = "editor.checkbox.size";
     pub const CHECKBOX_RADIUS: &'static str = "editor.checkbox.radius";
+    pub const CHECKBOX_BG: &'static str = "editor.checkbox.bg";
+    pub const CHECKBOX_CHECKED_BG: &'static str = "editor.checkbox.checked_bg";
+    pub const CHECKBOX_CHECKED_FG: &'static str = "editor.checkbox.checked_fg";
+    pub const CHECKBOX_RING: &'static str = "editor.checkbox.ring";
 
     pub const ENUM_SELECT_MAX_LIST_HEIGHT: &'static str = "editor.enum_select.max_list_height";
     pub const POPUP_BG: &'static str = "editor.popup.bg";
@@ -72,6 +76,7 @@ impl EditorTokenKeys {
     pub const POPUP_SHADOW_OFFSET_Y: &'static str = "editor.popup.shadow_offset_y";
     pub const POPUP_SHADOW_BLUR: &'static str = "editor.popup.shadow.blur";
     pub const POPUP_SHADOW_SPREAD: &'static str = "editor.popup.shadow.spread";
+    pub const POPUP_SHADOW_COLOR: &'static str = "editor.popup.shadow.color";
 
     pub const AXIS_X_COLOR: &'static str = "editor.axis.x_color";
     pub const AXIS_Y_COLOR: &'static str = "editor.axis.y_color";
@@ -86,4 +91,8 @@ impl EditorTokenKeys {
 
     pub const SLIDER_TRACK_HEIGHT: &'static str = "editor.slider.track_height";
     pub const SLIDER_THUMB_DIAMETER: &'static str = "editor.slider.thumb_diameter";
+    pub const SLIDER_TRACK_BG: &'static str = "editor.slider.track_bg";
+    pub const SLIDER_FILL_BG: &'static str = "editor.slider.fill_bg";
+    pub const SLIDER_THUMB_BG: &'static str = "editor.slider.thumb_bg";
+    pub const SLIDER_THUMB_BORDER: &'static str = "editor.slider.thumb_border";
 }

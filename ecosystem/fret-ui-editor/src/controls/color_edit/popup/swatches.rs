@@ -9,6 +9,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::primitives::colors::{editor_border, editor_focus_ring};
 use crate::primitives::input_group::derived_test_id;
 
 use super::super::drag_drop::{
@@ -197,16 +198,9 @@ fn preset_swatch<H: UiHost>(
             host.request_redraw(action_cx.window);
         });
 
-    let (idle_border_color, ring) = {
-        let theme = Theme::global(&*cx.app);
-        let ring = theme
-            .color_by_key("ring")
-            .unwrap_or_else(|| theme.color_token("primary"));
-        let border_color = theme
-            .color_by_key("border")
-            .unwrap_or_else(|| theme.color_token("border"));
-        (border_color, ring)
-    };
+    let theme = Theme::global(&*cx.app);
+    let idle_border_color = editor_border(theme);
+    let ring = editor_focus_ring(theme);
     let drag_drop_store_for_render = drag_drop_store.clone();
     let on_palette_slot_drop_for_render = on_palette_slot_drop.clone();
 
