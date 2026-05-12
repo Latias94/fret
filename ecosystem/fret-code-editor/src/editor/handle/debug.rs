@@ -99,21 +99,21 @@ impl CodeEditorHandle {
         );
     }
 
-    pub fn allow_decorations_under_inline_preedit(&self) -> bool {
+    pub fn debug_allow_decorations_under_inline_preedit(&self) -> bool {
         self.state.borrow().allow_decorations_under_inline_preedit
     }
 
-    pub fn set_allow_decorations_under_inline_preedit(&self, allowed: bool) {
+    pub fn debug_set_allow_decorations_under_inline_preedit(&self, allowed: bool) {
         self.state
             .borrow_mut()
             .set_allow_decorations_under_inline_preedit(allowed);
     }
 
-    pub fn compose_inline_preedit(&self) -> bool {
+    pub fn debug_compose_inline_preedit(&self) -> bool {
         self.state.borrow().compose_inline_preedit
     }
 
-    pub fn set_compose_inline_preedit(&self, enabled: bool) {
+    pub fn debug_set_compose_inline_preedit(&self, enabled: bool) {
         self.state.borrow_mut().set_compose_inline_preedit(enabled);
     }
 

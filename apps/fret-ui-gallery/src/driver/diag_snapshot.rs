@@ -337,8 +337,8 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let feature_payloads = handle.feature_payload_snapshot();
                                 let preedit_active = handle.preedit_active();
                                 let allow_decorations_under_inline_preedit =
-                                    handle.allow_decorations_under_inline_preedit();
-                                let compose_inline_preedit = handle.compose_inline_preedit();
+                                    handle.debug_allow_decorations_under_inline_preedit();
+                                let compose_inline_preedit = handle.debug_compose_inline_preedit();
                                 let interaction = handle.interaction();
                                 let buffer_revision = handle.buffer_revision().0;
                                 let fold_placeholder_present = handle

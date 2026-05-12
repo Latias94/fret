@@ -108,7 +108,7 @@ fn platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_
     let text = "a😀bcdefghij";
     let handle = CodeEditorHandle::new(text);
     handle.set_soft_wrap_cols(Some(6));
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
 
     let caret = text.find('b').expect("expected 'b' in text");
     handle.set_caret(caret);
@@ -234,8 +234,8 @@ fn platform_text_input_bounds_and_index_roundtrip_under_inline_preedit_composed_
     let text = "ab_cd_efghij😀kl";
     let handle = CodeEditorHandle::new(text);
     handle.set_soft_wrap_cols(Some(6));
-    handle.set_compose_inline_preedit(true);
-    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
+    handle.debug_set_allow_decorations_under_inline_preedit(true);
     handle.set_code_wrap_policy(Some(
         fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
             fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,

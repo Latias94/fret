@@ -337,7 +337,7 @@ fn platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line() 
     // platform-facing composed window are clamped to the anchor logical line in the view model.
     // This keeps IME replacement deterministic while we stage multi-line composition support.
     let handle = CodeEditorHandle::new("ab\ncd");
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
     handle.set_caret(0);
 
     let mut st = handle.state.borrow_mut();

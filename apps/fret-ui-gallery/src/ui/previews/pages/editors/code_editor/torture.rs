@@ -288,14 +288,14 @@ pub(in crate::ui) fn preview_code_editor_torture(
     let allow_decorations_under_preedit =
         cx.slot_state(|| Rc::new(Cell::new(false)), |v| v.clone());
     let allow_decorations_under_preedit_enabled = allow_decorations_under_preedit.get();
-    if handle.allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
-        handle.set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
+    if handle.debug_allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
+        handle.debug_set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
     }
 
     let compose_inline_preedit = cx.slot_state(|| Rc::new(Cell::new(false)), |v| v.clone());
     let compose_inline_preedit_enabled = compose_inline_preedit.get();
-    if handle.compose_inline_preedit() != compose_inline_preedit_enabled {
-        handle.set_compose_inline_preedit(compose_inline_preedit_enabled);
+    if handle.debug_compose_inline_preedit() != compose_inline_preedit_enabled {
+        handle.debug_set_compose_inline_preedit(compose_inline_preedit_enabled);
     }
 
     let header_handle = handle.clone();
@@ -407,7 +407,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .on_activate(Arc::new(move |host, action_cx, _reason| {
                                     allow_decorations_under_preedit_off.set(false);
                                     header_handle_controls_off
-                                        .set_allow_decorations_under_inline_preedit(false);
+                                        .debug_set_allow_decorations_under_inline_preedit(false);
                                     host.notify(action_cx);
                                     host.request_redraw(action_cx.window);
                                 }))
@@ -421,7 +421,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .on_activate(Arc::new(move |host, action_cx, _reason| {
                                     allow_decorations_under_preedit_on.set(true);
                                     header_handle_controls_on
-                                        .set_allow_decorations_under_inline_preedit(true);
+                                        .debug_set_allow_decorations_under_inline_preedit(true);
                                     host.notify(action_cx);
                                     host.request_redraw(action_cx.window);
                                 }))
@@ -440,7 +440,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                     let header_handle_controls = header_handle_controls.clone();
                                     Arc::new(move |host, action_cx, _reason| {
                                         compose_inline_preedit.set(false);
-                                        header_handle_controls.set_compose_inline_preedit(false);
+                                        header_handle_controls.debug_set_compose_inline_preedit(false);
                                         host.notify(action_cx);
                                         host.request_redraw(action_cx.window);
                                     })
@@ -455,7 +455,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                     let header_handle_controls = header_handle_controls.clone();
                                     Arc::new(move |host, action_cx, _reason| {
                                         compose_inline_preedit.set(true);
-                                        header_handle_controls.set_compose_inline_preedit(true);
+                                        header_handle_controls.debug_set_compose_inline_preedit(true);
                                         host.notify(action_cx);
                                         host.request_redraw(action_cx.window);
                                     })

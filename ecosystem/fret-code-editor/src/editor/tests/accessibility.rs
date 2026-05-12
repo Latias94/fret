@@ -88,7 +88,7 @@ fn a11y_composed_window_is_bounded_for_large_documents() {
     assert!(text.len() > 200_000);
 
     let handle = CodeEditorHandle::new(text.clone());
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
     handle.set_caret(text.len() / 2);
 
     let mut st = handle.state.borrow_mut();
@@ -284,8 +284,8 @@ fn a11y_current_window_mapping_accounts_for_preedit_injection() {
 fn a11y_window_includes_decorations_when_composed() {
     let handle = CodeEditorHandle::new("abcdef");
     handle.set_soft_wrap_cols(Some(4));
-    handle.set_allow_decorations_under_inline_preedit(true);
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_allow_decorations_under_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
 
     handle.set_line_folds(
         0,
@@ -320,7 +320,7 @@ fn a11y_window_includes_decorations_when_composed() {
 #[test]
 fn a11y_window_composed_selection_preserves_direction_for_preedit_cursor() {
     let handle = CodeEditorHandle::new("hello");
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
     handle.set_caret("hello".len());
     handle.set_preedit_debug("yo", Some((2, 0)));
 
@@ -341,7 +341,7 @@ fn a11y_window_composed_selection_preserves_direction_for_preedit_cursor() {
 #[test]
 fn a11y_window_composed_mapping_clamps_inside_utf8_scalars() {
     let handle = CodeEditorHandle::new("a😀b");
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
     handle.set_caret(0);
 
     let mut st = handle.state.borrow_mut();
@@ -356,7 +356,7 @@ fn a11y_window_composed_mapping_clamps_inside_utf8_scalars() {
 #[test]
 fn a11y_window_composed_newline_offsets_map_to_line_end() {
     let handle = CodeEditorHandle::new("ab\ncd");
-    handle.set_compose_inline_preedit(true);
+    handle.debug_set_compose_inline_preedit(true);
     handle.set_caret(0);
 
     let mut st = handle.state.borrow_mut();
