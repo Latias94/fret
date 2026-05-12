@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json"
+  ]
+}

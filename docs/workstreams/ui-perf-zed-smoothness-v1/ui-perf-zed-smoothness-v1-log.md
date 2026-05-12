@@ -13091,3 +13091,44 @@ Decision:
   p50/p95/max performance contract.
 - Keep `first_frame_smoke_demo` separate: it intentionally paints only a full-window quad and
   should not be interpreted as evidence for text rendering.
+
+## 2026-05-13 06:04:36 +08:00 (hit-test torture suite recovery)
+
+Question:
+- Can the pointer-move / hit-test torture workload run again through the current UI Gallery
+  structure as a named perf suite?
+
+Change:
+- Restored the `hit_test_torture` page under
+  `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs`.
+- Reconnected `PAGE_HIT_TEST_TORTURE` in `apps/fret-ui-gallery/src/ui/content.rs`.
+- Added `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` and
+  registered the via-nav script under `perf-ui-gallery-hit-test-torture-steady`.
+
+Validation:
+- `cargo check -p fret-ui-gallery --features gallery-full`
+- `cargo nextest run -p fret-diag perf_seed_policy::tests::perf_suite_membership_name_covers_overlay_single_script_follow_ons perf_seed_policy::tests::perf_suite_membership_name_accepts_registry_backed_perf_suites --no-fail-fast`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+- `target/debug/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort hit_test --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+
+Evidence:
+- Passing bundle:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json`
+- Result row: `pointer_move_max_hit_test_time_us=17`,
+  `pointer_move_snapshots_with_global_changes=0`, bounds-tree queries/hits=`3/3`, and
+  `top_layout_engine_solve_time_us=0`.
+- Exploratory stricter dispatch gate:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/check.perf_thresholds.json`
+  failed only `pointer_move_max_dispatch_time_us` (`1010us > 800us`) while hit-test stayed
+  `17us`.
+- `diag stats --sort dispatch` on the r6 bundle shows the hit-test portion is still small while
+  the same frames also contain runtime snapshot work (`focus_repair` around `2.3-2.8ms`,
+  `command_availability` around `4.3-4.6ms`). The dispatch tail needs a dedicated follow-up
+  attribution pass before assigning cause.
+
+Decision:
+- Keep `perf-ui-gallery-hit-test-torture-steady` as a named hit-test/global-change contract smoke.
+- Do not use `FRET_DIAG_SEMANTICS=0` for the via-nav setup, because the script needs stable
+  `test_id` selectors to navigate and find `ui-gallery-hit-test-torture-root`.
+- Treat the current `~1.0-1.1ms` pointer dispatch tail as a separate attribution follow-up, not as
+  a reason to weaken the hit-test recovery gate.

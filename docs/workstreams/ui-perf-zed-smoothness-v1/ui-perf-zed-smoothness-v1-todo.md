@@ -697,9 +697,10 @@ Correctness acceptance:
     - `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
     - `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
 - [x] Find (or construct) a workload where `top_hit_test_time_us` is a meaningful slice of the frame budget.
-  - Page: `apps/fret-ui-gallery/src/ui.rs` (`hit_test_torture`)
+  - Page: `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` (`hit_test_torture`)
   - Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
-  - Harness-only mode (to remove gallery chrome noise): `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+  - Named suite: `perf-ui-gallery-hit-test-torture-steady`
+  - Current via-nav script keeps gallery chrome in setup but resets diagnostics before the measured sweep.
   - Evidence + metrics: see `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entries after commit `811101c3`.
 - [x] Record baseline numbers for the two “realistic move sweep” probes:
   - Data table sweep: `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`

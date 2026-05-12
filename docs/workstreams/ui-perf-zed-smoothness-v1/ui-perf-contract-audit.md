@@ -27,6 +27,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Full formal gates are green after the helper changes. | `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`: Windows `ui-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=3`. `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`: `ui-code-editor-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=2`. | Covered for both resize gates. |
 | Zed/GPUI and egui comparison remains explicit. | `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md` plus the contract matrix reference pressure column. | Covered as a design map; still needs updates when new gaps close. |
 | Churn reduction is evidence-led. | Perf log entries show measured view-cache harness virtualization, code editor resize attribution, and decisions not to start broad root-solve quantization or `WindowedRowsSurface` rewrites without evidence. | Covered for recent work. |
+| Pointer-move hit-test torture remains runnable as a contract surface. | `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` restores the `ui-gallery-hit-test-torture-root` surface; `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` promotes the via-nav script; `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json` passed `--max-pointer-move-hit-test-us 100` and `--max-pointer-move-global-changes 0`. | Covered as a hit-test gate smoke; dispatch tail optimization remains separate. |
 | Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, no-silent-threshold-loosening guard, and review checklist. | Covered. |
 | Completion criteria are unambiguous. | This audit maps requirements to evidence and gaps. | Covered, with open gaps below. |
 
@@ -138,6 +139,22 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Semantic hover gate:
     `cargo run -q -p fretboard-dev -- diag stats target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/candidate-2-baseline/1778476920836/bundle.schema2.json --check-hover-layout-max 0`
     passed; `hover.decl_inv(layout/hit/paint)=0/0/0`.
+- Hit-test torture named suite recovery:
+  - Restored page implementation:
+    `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs`.
+  - Suite manifest:
+    `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json`.
+  - Gate smoke:
+    `target/debug/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort hit_test --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+  - Result:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json`
+    passed the hit-test/global-change gate with `pointer_move_max_hit_test_time_us=17`,
+    `pointer_move_snapshots_with_global_changes=0`, and bounds-tree queries/hits=`3/3`.
+  - Separate finding:
+    an exploratory `--max-pointer-move-dispatch-us 800` run failed at `1010us`. The same bundle
+    also shows non-trivial runtime snapshot work (`focus_repair` and `command_availability`), but
+    the dispatch tail still needs dedicated attribution before assigning cause. Keep dispatch-tail
+    optimization as a follow-up instead of weakening the hit-test recovery gate.
 - Renderer payload contract surface:
   - `renderer_instance_bytes` and `renderer_encode_scene_text_ops` now flow through perf JSON rows, repeat summaries,
     baseline rows, `perf-baseline-from-bundles`, baseline parsing, threshold rows, and threshold failures.
