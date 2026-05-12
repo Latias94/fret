@@ -35,6 +35,7 @@ struct SuiteRunProfile {
     components_gallery_file_tree_suite: bool,
     components_gallery_table_suite: bool,
     components_gallery_table_keep_alive_suite: bool,
+    imui_hello_semantic_smoke_suite: bool,
 }
 
 impl SuiteRunProfile {
@@ -67,6 +68,7 @@ impl SuiteRunProfile {
             components_gallery_table_keep_alive_suite: is_suite(
                 "components-gallery-table-keep-alive",
             ),
+            imui_hello_semantic_smoke_suite: is_suite("imui-hello-semantic-smoke"),
         }
     }
 
@@ -138,6 +140,7 @@ impl SuiteRunProfile {
             || self.vlist_window_boundary_suite()
             || self.ui_gallery_vlist_no_window_shifts_small_scroll_suite
             || self.components_gallery_suite()
+            || self.imui_hello_semantic_smoke_suite
             || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script)
     }
 
@@ -158,6 +161,8 @@ impl SuiteRunProfile {
             Some("ui-gallery-canvas-cull-root")
         } else if self.ui_gallery_chart_torture_suite {
             Some("ui-gallery-chart-torture-root")
+        } else if self.imui_hello_semantic_smoke_suite {
+            Some("imui-hello-demo.count-text")
         } else {
             None
         }
@@ -3883,6 +3888,8 @@ mod tests {
         ]);
         let components_profile =
             SuiteRunProfile::from_suite_args(&["components-gallery-table-keep-alive".to_string()]);
+        let imui_profile =
+            SuiteRunProfile::from_suite_args(&["imui-hello-semantic-smoke".to_string()]);
 
         assert!(profile.ui_gallery_vlist_no_window_shifts_small_scroll_suite);
         assert_eq!(profile.resolve_warmup_frames(0), 32);
@@ -3894,6 +3901,28 @@ mod tests {
         assert_eq!(
             components_profile.components_gallery_root_test_id(),
             Some("components-gallery-table-root")
+        );
+        assert_eq!(
+            imui_profile.default_pixels_changed_test_id(),
+            Some("imui-hello-demo.count-text")
+        );
+        assert!(imui_profile.wants_post_run_checks_for_script(None, false, false));
+    }
+
+    #[test]
+    fn build_suite_core_default_post_run_checks_sets_imui_hello_text_pixels_gate() {
+        let profile = SuiteRunProfile::from_suite_args(&["imui-hello-semantic-smoke".to_string()]);
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("imui-hello-demo-semantic-smoke.json"),
+            profile,
+            None,
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(
+            defaults.check_pixels_changed_test_id.as_deref(),
+            Some("imui-hello-demo.count-text")
         );
     }
 

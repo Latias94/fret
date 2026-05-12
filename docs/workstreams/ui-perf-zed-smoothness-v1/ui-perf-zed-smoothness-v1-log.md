@@ -13055,3 +13055,39 @@ Decision:
 - Keep the semantic smoke and pixel-change check together for the IMUI hello text lane. This is a
   correctness guard for glyph/text visibility, not a perf threshold; it prevents a future renderer
   text/glyph regression from passing solely because the semantics tree still contains labels.
+
+## 2026-05-13 05:03:35 +08:00 (IMUI hello suite-level text pixel gate)
+
+Question:
+- Can the IMUI hello text smoke be run as a named suite that automatically proves GPU text pixels
+  changed, without requiring callers to remember `--check-pixels-changed`?
+
+Change:
+- Added `tools/diag-scripts/suites/imui-hello-semantic-smoke/suite.json`.
+- Added a `fret-diag` suite profile for `imui-hello-semantic-smoke` that requests post-run checks
+  and defaults `check_pixels_changed_test_id` to `imui-hello-demo.count-text`.
+
+Validation:
+- `cargo fmt -p fret-diag`
+- `python -m json.tool tools/diag-scripts/suites/imui-hello-semantic-smoke/suite.json`
+- `cargo nextest run -p fret-diag diag_suite::tests::suite_run_profile_exposes_named_suite_defaults diag_suite::tests::build_suite_core_default_post_run_checks_sets_imui_hello_text_pixels_gate --no-fail-fast`
+- `cargo build -p fret-demo --bin imui_hello_demo`
+- `cargo build -p fretboard-dev`
+- `FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1 target/debug/fretboard-dev.exe diag suite imui-hello-semantic-smoke --dir target/fret-diag/imui-hello-semantic-smoke-suite-r2 --session-auto --timeout-ms 180000 --launch -- target/debug/imui_hello_demo.exe`
+
+Evidence:
+- Suite summary:
+  `target/fret-diag/imui-hello-semantic-smoke-suite-r2/sessions/1778619813105-103420/suite.summary.json`
+  passed with `status=passed`, `wants_screenshots=true`, and one passed script row.
+- Pixel check:
+  `target/fret-diag/imui-hello-semantic-smoke-suite-r2/sessions/1778619813105-103420/check.pixels_changed.json`
+  was produced by the suite default gate and resolved `imui-hello-demo.count-text`.
+- The count text screenshot region hash changed from `0x878210d4ffe36972` at `Count: 0` to
+  `0xd1384d303356d837` at `Count: 1`.
+
+Decision:
+- Use `diag suite imui-hello-semantic-smoke` as the promoted small Windows/native IMUI text
+  correctness gate. It is intentionally a correctness/glyph-visibility guard, not an editor-grade
+  p50/p95/max performance contract.
+- Keep `first_frame_smoke_demo` separate: it intentionally paints only a full-window quad and
+  should not be interpreted as evidence for text rendering.

@@ -215,18 +215,31 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - The recheck now shows visible text again (`Count: 0`, `Increment`, `Enabled: false`, `Enabled`), so the earlier blank Windows smoke is confirmed as pre-fix evidence rather than a WSL-specific symptom.
 - IMUI hello semantic smoke gate:
   - Script: `tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json`
+  - Suite: `tools/diag-scripts/suites/imui-hello-semantic-smoke/suite.json`
   - Command:
     `FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json --dir target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1 --session-auto --timeout-ms 180000 --check-pixels-changed imui-hello-demo.count-text --launch -- target/debug/imui_hello_demo.exe`
+  - Suite command:
+    `FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1 target/debug/fretboard-dev.exe diag suite imui-hello-semantic-smoke --dir target/fret-diag/imui-hello-semantic-smoke-suite-r2 --session-auto --timeout-ms 180000 --launch -- target/debug/imui_hello_demo.exe`
   - Result:
     `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/script.result.json`
     passed at `step_index=20`.
+  - Suite result:
+    `target/fret-diag/imui-hello-semantic-smoke-suite-r2/sessions/1778619813105-103420/suite.summary.json`
+    passed with `status=passed`, `wants_screenshots=true`, and one passed script row.
   - Pixel check:
     `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/check.pixels_changed.json`
     resolved `imui-hello-demo.count-text` before/after count-change screenshots and saw the region hash change from
     `0x878210d4ffe36972` to `0xd1384d303356d837`.
+  - Suite pixel check:
+    `target/fret-diag/imui-hello-semantic-smoke-suite-r2/sessions/1778619813105-103420/check.pixels_changed.json`
+    was produced without passing `--check-pixels-changed` explicitly. The `imui-hello-semantic-smoke` suite profile
+    supplies the default `imui-hello-demo.count-text` check and saw the same before/after hash change from
+    `0x878210d4ffe36972` to `0xd1384d303356d837`.
   - The script now machine-checks `Count: 0`, `Increment`, `Enabled: false`, unchecked checkbox state, then clicks
     `Increment` and captures a before/after screenshot pair for the count text region before clicking `Enabled` and
     waiting for checked state and `Enabled: true`.
+  - Do not use `first_frame_smoke_demo` as text evidence: it intentionally paints only a full-window quad for runner
+    bootstrap / first-present validation, so no text there is expected.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.

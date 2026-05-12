@@ -1832,6 +1832,28 @@
       ]
     },
     {
+      "id": "imui-hello-demo-semantic-smoke",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-hello-semantic-smoke"
+      ],
+      "tags": [
+        "hello",
+        "imui",
+        "screenshot",
+        "semantic-smoke",
+        "ui_editor"
+      ],
+      "target_hints": [
+        "Asserts the tiny imui_hello_demo smoke surface renders its text/control semantics without relying on app test IDs.",
+        "Captures screenshot evidence after the text and interaction assertions pass."
+      ]
+    },
+    {
       "id": "imui-interaction-showcase-inspector-response-gate",
       "path": "tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-inspector-response-gate.json",
       "required_capabilities": [
@@ -2542,6 +2564,16 @@
         "responsive",
         "todo_demo"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "tooling-suite-prelude-clipboard-unavailable",
+      "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-clipboard-unavailable.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "_prelude"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
