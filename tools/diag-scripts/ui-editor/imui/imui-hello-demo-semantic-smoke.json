@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-hello-demo-semantic-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["imui", "hello", "semantic-smoke", "screenshot", "ui_editor"],
+    "target_hints": [
+      "Asserts the tiny imui_hello_demo smoke surface renders its text/control semantics without relying on app test IDs.",
+      "Captures screenshot evidence after the text and interaction assertions pass."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 520.0, "height_px": 240.0 },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "Count: 0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "button", "name": "Increment" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "Enabled: false" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "role_and_name", "role": "checkbox", "name": "Enabled" },
+        "checked": false
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "role_and_name", "role": "button", "name": "Increment" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "Count: 1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "role_and_name", "role": "checkbox", "name": "Enabled" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "role_and_name", "role": "checkbox", "name": "Enabled" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "Enabled: true" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-hello-demo-semantic-smoke"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-hello-demo-semantic-smoke"
+    }
+  ]
+}

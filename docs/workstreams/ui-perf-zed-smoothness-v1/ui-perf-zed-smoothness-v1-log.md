@@ -12990,3 +12990,35 @@ Decision:
 - Keep perf investigation helpers on `fretboard-dev`, because the perf/diag surface is workspace-dev
   tooling rather than the public scaffold CLI. This smoke is a launch-path check only; it is not a
   formal repeat=7 contract validation.
+
+## 2026-05-13 04:23:41 +08:00 (IMUI hello semantic smoke promotion)
+
+Question:
+- Can the `imui_hello_demo` smoke fail automatically when text/control semantics or the smallest
+  IMUI interactions regress, instead of relying on manual PNG inspection?
+
+Change:
+- Promoted the old local-debug screenshot script to
+  `tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json`.
+- The script now asserts `Count: 0`, `Increment`, `Enabled: false`, unchecked checkbox state,
+  clicks `Increment`, waits for `Count: 1`, clicks `Enabled`, waits for checked state and
+  `Enabled: true`, then captures bundle and screenshot evidence.
+
+Validation:
+- `python -m json.tool tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json`
+- `cargo check -p fret-diag-protocol`
+- `cargo build -p fret-demo --bin imui_hello_demo`
+- `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-semantic-smoke-r3 FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json --dir target/fret-diag/imui-hello-demo-semantic-smoke-r3 --session-auto --timeout-ms 180000 --launch -- target/debug/imui_hello_demo.exe`
+
+Evidence:
+- Result: `target/fret-diag/imui-hello-demo-semantic-smoke-r3/sessions/1778617439258-104240/script.result.json`
+  passed at `step_index=15`.
+- Bundle: `target/fret-diag/imui-hello-demo-semantic-smoke-r3/sessions/1778617439258-104240/1778617441040-imui-hello-demo-semantic-smoke/bundle.schema2.json`
+- Screenshot: `target/fret-diag/imui-hello-demo-semantic-smoke-r3/sessions/1778617439258-104240/screenshots/1778617441060-imui-hello-demo-semantic-smoke/window-4294967297-tick-46-frame-45.png`
+
+Decision:
+- Keep this as the small IMUI text/control semantic smoke gate. It is still not an editor-grade perf
+  contract, but it closes the weak "manual screenshot only" evidence loop for the Windows text smoke.
+- Do not use `first_frame_smoke_demo` as text evidence: that target intentionally paints only a
+  full-window quad for runner bootstrap / first-present validation, so a no-text screenshot there is
+  expected.

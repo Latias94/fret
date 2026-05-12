@@ -36,6 +36,11 @@ measurable and reversible:
 - Screenshot evidence:
   `target/fret-diag/imui-hello-demo-screenshot-recheck/sessions/1778605632348-99852/screenshots/1778606081730-imui-hello-demo/window-4294967297-tick-41-frame-40.png`
 - Visible text is present again (`Count: 0`, `Increment`, `Enabled: false`, `Enabled`), so the earlier blank Windows smoke was pre-fix evidence rather than a WSL-specific symptom.
+- Current machine-checkable IMUI hello smoke:
+  `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-semantic-smoke-r3 FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json --dir target/fret-diag/imui-hello-demo-semantic-smoke-r3 --session-auto --timeout-ms 180000 --launch -- target/debug/imui_hello_demo.exe`
+- Result:
+  `target/fret-diag/imui-hello-demo-semantic-smoke-r3/sessions/1778617439258-104240/script.result.json` passed at
+  `step_index=15` after asserting text/control semantics and the `Increment` / `Enabled` interactions.
 - WSL code-editor resize smoke gate retry on current head:
   `CARGO_TARGET_DIR=/home/frankorz/fret-target python3 tools/perf/diag_code_editor_resize_jitter_smoke_gate.py --repeat 1 --warmup-frames 1 --timeout-ms 600000 --launch-bin /home/frankorz/fret-target/release/fret-ui-gallery --out-dir /home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-recheck-current-20260513-t600`
   still times out with `Connection reset by peer` and `timeout waiting for script result`; it is not checked-in Linux contract evidence.

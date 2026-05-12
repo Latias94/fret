@@ -213,6 +213,16 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Screenshot evidence:
     `target/fret-diag/imui-hello-demo-screenshot-recheck/sessions/1778605632348-99852/screenshots/1778606081730-imui-hello-demo/window-4294967297-tick-41-frame-40.png`
   - The recheck now shows visible text again (`Count: 0`, `Increment`, `Enabled: false`, `Enabled`), so the earlier blank Windows smoke is confirmed as pre-fix evidence rather than a WSL-specific symptom.
+- IMUI hello semantic smoke gate:
+  - Script: `tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json`
+  - Command:
+    `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-semantic-smoke-r3 FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json --dir target/fret-diag/imui-hello-demo-semantic-smoke-r3 --session-auto --timeout-ms 180000 --launch -- target/debug/imui_hello_demo.exe`
+  - Result:
+    `target/fret-diag/imui-hello-demo-semantic-smoke-r3/sessions/1778617439258-104240/script.result.json`
+    passed at `step_index=15`.
+  - The script now machine-checks `Count: 0`, `Increment`, `Enabled: false`, unchecked checkbox state, then clicks
+    `Increment` and `Enabled` and waits for `Count: 1`, checked state, and `Enabled: true` before capturing bundle and
+    screenshot evidence.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
