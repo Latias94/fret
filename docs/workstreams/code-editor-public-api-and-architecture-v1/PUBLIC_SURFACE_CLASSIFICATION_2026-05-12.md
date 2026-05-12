@@ -324,10 +324,10 @@ Debug/staging:
 - `set_preedit_debug`
 - `debug_platform_set_marked_text_for_selection`
 - `debug_platform_cancel_marked_text`
-- `allow_decorations_under_inline_preedit`
-- `set_allow_decorations_under_inline_preedit`
-- `compose_inline_preedit`
-- `set_compose_inline_preedit`
+- `debug_allow_decorations_under_inline_preedit`
+- `debug_set_allow_decorations_under_inline_preedit`
+- `debug_compose_inline_preedit`
+- `debug_set_compose_inline_preedit`
 
 ## Next Cleanup Candidates
 
