@@ -12944,3 +12944,19 @@ Evidence:
 Decision:
 - Do not treat this WSL retry as checked-in Linux contract evidence.
 - Keep the formal Linux runner/profile gap open until a stable Linux editor-grade baseline can be produced on a real Linux target.
+
+## 2026-05-13 02:35:08 +08:00 (linux-local baseline export: code-editor resize smoke)
+
+Question:
+- Does the offline `linux-local` export close the Linux editor-grade contract gap?
+
+Evidence:
+- `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.linux-local.v1.json`
+- Source bundle recorded in that baseline:
+  `//home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-gl-20260513/1778609195209-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`
+- The exported row uses `threshold_surface=ui`, `repeat=1`, and only `measured_max` values.
+
+Decision:
+- Keep this as smoke evidence only.
+- Do not treat the new `linux-local` file as checked-in Linux editor-grade contract coverage.
+- The formal Linux runner/profile gap remains open until a repeatable Linux gate can validate a real contract baseline.

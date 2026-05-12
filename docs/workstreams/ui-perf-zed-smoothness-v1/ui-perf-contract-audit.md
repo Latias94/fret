@@ -47,6 +47,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - `380db5d44d perf(ui): profile flex-wrap layout patch`
   - `a58277f72 feat(diag): surface hotspot and scratch growth signals`
   - `0ebcebd04 docs(perf): record code-editor hotspot evidence`
+- Linux smoke export:
+  - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.linux-local.v1.json` is a smoke-level
+    `linux-local` export from the successful Linux GL bundle. It records `threshold_surface=ui`,
+    `repeat=1`, and max-only values, so it is useful evidence but not a checked-in Linux
+    editor-grade contract.
 - Short resize gate smoke:
   - Summary: `target/fret-diag/codex-resize-gate-default-hooks-smoke/summary.json`
   - Result: PASS, `failures=0`
@@ -240,7 +245,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    complex wheel overlay hotspot now has a narrower frame-derived-state fix. Keep the `WindowedRowsSurface`
    display-list rewrite gated on a future near-threshold or failing stressor where row op replay/capture is the
    measured limiter, not on these passing baselines alone.
-3. Keep Linux and any other non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
+3. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.

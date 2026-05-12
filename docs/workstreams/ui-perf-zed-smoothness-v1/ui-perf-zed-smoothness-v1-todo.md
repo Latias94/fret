@@ -49,7 +49,10 @@ Conventions:
     - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
 
 - [ ] Linux editor-grade perf evidence.
-  - Status: blocked until a Linux runner/profile exists.
+  - Status: blocked for formal contract closure until a real Linux runner/profile exists.
+    A smoke-only `linux-local` export exists at
+    `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.linux-local.v1.json`, but it is
+    repeat=1/max-only evidence and not a contract baseline.
   - Goal: add a checked-in Linux baseline for the editor-grade probes that already close on Windows/macOS, and keep
     Linux evidence labeled separately from Windows/macOS contracts until then.
   - Evidence anchors: `docs/code-editor.md`; `docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`;

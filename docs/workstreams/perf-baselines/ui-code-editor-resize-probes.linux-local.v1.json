@@ -1,0 +1,56 @@
+{
+  "generated_unix_ms": 1778610908734,
+  "headroom_pct": 20,
+  "kind": "perf_baseline",
+  "out_path": "/mnt/f/SourceCodes/Rust/fret/docs/workstreams/perf-baselines/ui-code-editor-resize-probes.linux-local.v1.json",
+  "repeat": 1,
+  "rows": [
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 0,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "renderer_encode_scene_text_ops": 341,
+        "renderer_encode_scene_us": 482,
+        "renderer_encoder_finish_us": 89,
+        "renderer_instance_bytes": 185568,
+        "renderer_prepare_svg_us": 19,
+        "renderer_prepare_text_us": 575,
+        "renderer_record_passes_us": 38,
+        "renderer_upload_us": 73,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 640,
+        "top_layout_time_us": 1219,
+        "top_total_time_us": 2577
+      },
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 0,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 0,
+        "max_renderer_encode_scene_text_ops": null,
+        "max_renderer_encode_scene_us": null,
+        "max_renderer_encoder_finish_us": null,
+        "max_renderer_instance_bytes": null,
+        "max_renderer_prepare_svg_us": null,
+        "max_renderer_prepare_text_us": null,
+        "max_renderer_record_passes_us": null,
+        "max_renderer_upload_us": null,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 1463,
+        "max_top_solve_us": 768,
+        "max_top_total_us": 3093,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      },
+      "worst_bundle": {
+        "bundle": "//home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-gl-20260513/1778609195209-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json",
+        "top_total_time_us": 2577
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "threshold_surface": "ui",
+  "warmup_frames": 1
+}
