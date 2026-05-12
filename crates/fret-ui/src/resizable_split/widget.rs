@@ -215,10 +215,10 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                 );
                 0.5
             }
-            Err(err) => {
+            Err(_err) => {
                 #[cfg(debug_assertions)]
                 tracing::warn!(
-                    ?err,
+                    err = ?_err,
                     model_id = ?self.fraction.id(),
                     "resizable_split: failed to read fraction model"
                 );
@@ -345,10 +345,10 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                 );
                 0.5
             }
-            Err(err) => {
+            Err(_err) => {
                 #[cfg(debug_assertions)]
                 tracing::warn!(
-                    ?err,
+                    err = ?_err,
                     model_id = ?self.fraction.id(),
                     "resizable_split: failed to read fraction model"
                 );

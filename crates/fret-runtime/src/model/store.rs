@@ -784,7 +784,7 @@ impl ModelStore {
     fn end_lease_shared<T: Any>(
         &self,
         lease: &mut ModelLease<T>,
-        changed_at: Option<&'static Location<'static>>,
+        _changed_at: Option<&'static Location<'static>>,
     ) {
         let Some(value) = lease.value.take() else {
             return;
@@ -806,7 +806,7 @@ impl ModelStore {
                     entry.revision = entry.revision.saturating_add(1);
                     #[cfg(debug_assertions)]
                     {
-                        entry.last_changed_at = changed_at;
+                        entry.last_changed_at = _changed_at;
                         entry.last_changed_type = Some(std::any::type_name::<T>());
                     }
                     // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
@@ -843,7 +843,7 @@ impl ModelStore {
     fn end_lease_any_shared(
         &self,
         lease: &mut ModelLeaseAny,
-        changed_at: Option<&'static Location<'static>>,
+        _changed_at: Option<&'static Location<'static>>,
     ) {
         let Some(value) = lease.value.take() else {
             return;
@@ -865,7 +865,7 @@ impl ModelStore {
                     entry.revision = entry.revision.saturating_add(1);
                     #[cfg(debug_assertions)]
                     {
-                        entry.last_changed_at = changed_at;
+                        entry.last_changed_at = _changed_at;
                         entry.last_changed_type = Some(entry.created_type);
                     }
                     // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
@@ -902,7 +902,7 @@ impl ModelStore {
     pub fn notify_with_changed_at<T: Any>(
         &mut self,
         model: &Model<T>,
-        changed_at: &'static Location<'static>,
+        _changed_at: &'static Location<'static>,
     ) -> Result<(), ModelUpdateError> {
         let id = model.id();
 
@@ -924,7 +924,7 @@ impl ModelStore {
             entry.revision = entry.revision.saturating_add(1);
             #[cfg(debug_assertions)]
             {
-                entry.last_changed_at = Some(changed_at);
+                entry.last_changed_at = Some(_changed_at);
                 entry.last_changed_type = Some(std::any::type_name::<T>());
             }
         }

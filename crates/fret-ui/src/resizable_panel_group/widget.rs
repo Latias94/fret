@@ -115,10 +115,10 @@ impl BoundResizablePanelGroup {
                 );
                 Vec::new()
             }
-            Err(err) => {
+            Err(_err) => {
                 #[cfg(debug_assertions)]
                 tracing::warn!(
-                    ?err,
+                    err = ?_err,
                     model_id = ?self.model.id(),
                     children_len,
                     "resizable_panel_group: failed to read fractions model"

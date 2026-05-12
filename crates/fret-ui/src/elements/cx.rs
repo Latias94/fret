@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
+#[cfg(debug_assertions)]
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
@@ -72,6 +73,7 @@ pub struct ElementContext<'a, H: UiHost> {
     pub window: AppWindowId,
     pub frame_id: FrameId,
     pub bounds: Rect,
+    #[cfg(debug_assertions)]
     render_pass_id: u64,
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
@@ -96,8 +98,10 @@ impl<'a, H: UiHost> ElementContextAccess<'a, H> for ElementContext<'a, H> {
 
 type CallsiteCounters = SmallVec<[(u64, u32); 16]>;
 
+#[cfg(debug_assertions)]
 static NEXT_RENDER_PASS_ID: AtomicU64 = AtomicU64::new(1);
 
+#[cfg(debug_assertions)]
 fn next_render_pass_id() -> u64 {
     NEXT_RENDER_PASS_ID.fetch_add(1, Ordering::Relaxed)
 }
@@ -195,6 +199,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             window,
             frame_id,
             bounds,
+            #[cfg(debug_assertions)]
             render_pass_id: next_render_pass_id(),
             window_state,
             stack: vec![root],
@@ -242,6 +247,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             window,
             frame_id,
             bounds,
+            #[cfg(debug_assertions)]
             render_pass_id: next_render_pass_id(),
             window_state,
             stack: vec![root],
