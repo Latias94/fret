@@ -12839,3 +12839,27 @@ Evidence:
 Decision:
 - Keep the startup contract explicit: a no-op renderer font-rescan apply must still publish the
   runtime catalog snapshot when desktop async startup seeded an empty runtime catalog.
+
+## 2026-05-12 18:42:52 +08:00 (post-surface-recovery smoke: code-editor resize)
+
+Question:
+- Do the current font-catalog and surface-reconfiguration resource-semantics fixes keep the existing
+  Windows `ui-code-editor-resize-probes` contract path runnable without re-seeding thresholds?
+
+Validation:
+- Rebuilt Windows release gallery:
+  `cargo build -p fret-ui-gallery --release --features gallery-dev`
+- Ran a short code-editor resize smoke:
+  `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 1 --repeat 1 --launch-bin target/release/fret-ui-gallery.exe --out-dir target/fret-diag-code-editor-resize-probes-post-surface-recovery-smoke-20260512`
+
+Evidence:
+- Summary:
+  `target/fret-diag-code-editor-resize-probes-post-surface-recovery-smoke-20260512/summary.json`
+- Threshold check:
+  `target/fret-diag-code-editor-resize-probes-post-surface-recovery-smoke-20260512/check.perf_thresholds.json`
+- Result: PASS, `pass_attempts=1`, `fail_attempts=0`; baseline selected
+  `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`.
+
+Decision:
+- Keep the checked-in Windows v2 code-editor resize baseline unchanged. This smoke only verifies
+  the post-resource-semantics path remains runnable; it is not a formal repeat=7 re-seed.
