@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "slug": "ui-perf-zed-smoothness-v1",
+  "title": "UI Performance Zed Smoothness v1",
+  "status": "active",
+  "updated": "2026-05-12",
+  "scope_kind": "execution",
+  "problem": "Establish and maintain Fret's editor-grade UI performance and architecture closure against Zed/GPUI and egui by keeping real editor scenarios such as scroll, input, resize, text, rendering, caching, and view reuse under repeatable p50/p95/max and renderer payload contracts. Core contracts, resource semantics, and redundant code cleanup should be fixed before broad optimization, and fearless refactors should proceed only when measured evidence proves the hot path.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-execution-plan.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/ui-perf-gpui-gap-v1.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/ui-perf-resize-path-v1.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/perf-baselines/README.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start with the contract matrix, then run the resize and code-editor resize gates on the target machine profile before attributing a narrower editor paint or renderer payload hotspot.",
+    "commands": [
+      "python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7",
+      "python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7",
+      "cargo run -p fretboard --release -- diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json --repeat 15 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe"
+    ]
+  },
+  "gates": [
+    {
+      "name": "perf-baseline-matrix-audit",
+      "command": "python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict"
+    },
+    {
+      "name": "resize-probes-gate",
+      "command": "python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7"
+    },
+    {
+      "name": "code-editor-resize-probes-gate",
+      "command": "python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
+    "docs/workstreams/perf-baselines/README.md",
+    "tools/perf/audit_perf_baselines.py",
+    "tools/perf/diag_resize_probes_gate.py",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+    "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
+    "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json",
+    "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0076-declarative-layout-performance-hardening.md",
+    "docs/adr/0095-renderer-perf-snapshot-and-stress-harness.md",
+    "docs/adr/0143-text-layout-cache-boundary-and-glyph-residency.md",
+    "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for broad editor-grade performance contract maintenance and evidence. Split narrow follow-ons for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when this lane's audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
+  }
+}
