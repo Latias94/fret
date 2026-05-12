@@ -4,6 +4,7 @@
   "scripts": [
     "tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json",
     "tools/diag-scripts/ui-gallery-combobox-auto-highlight-first-match.json",
+    "tools/diag-scripts/ui-gallery-combobox-clear-button.json",
     "tools/diag-scripts/ui-gallery-combobox-dismiss-outside-press.json",
     "tools/diag-scripts/ui-gallery-combobox-escape-dismiss-focus-restore.json",
     "tools/diag-scripts/ui-gallery-combobox-flip-tight-window.json",
@@ -14,6 +15,7 @@
     "tools/diag-scripts/ui-gallery-combobox-long-list-scroll-select-last.json",
     "tools/diag-scripts/ui-gallery-combobox-multiple-chips.json",
     "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
+    "tools/diag-scripts/ui-gallery-combobox-popup-trigger-bottom-room.json",
     "tools/diag-scripts/ui-gallery-combobox-popup-trigger.json",
     "tools/diag-scripts/ui-gallery-combobox-roving-skips-disabled.json",
     "tools/diag-scripts/ui-gallery-combobox-typeahead-commit-banana.json"

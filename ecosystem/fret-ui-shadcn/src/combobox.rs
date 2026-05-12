@@ -2598,7 +2598,11 @@ fn combobox_with_patch<H: UiHost>(
                     (props, chrome_props, move |cx| {
                         let row = cx.flex(
                             FlexProps {
-                                layout: LayoutStyle::default(),
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout
+                                },
                                 direction: fret_core::Axis::Horizontal,
                                 gap: trigger_gap.into(),
                                 padding: Edges::all(Px(0.0)).into(),
@@ -2810,41 +2814,10 @@ fn combobox_with_patch<H: UiHost>(
 	                let mut groups = Some(groups);
 
 	                    let list = if search_enabled {
-                    // Clamp the list height to the best-available main-axis space around the
-                    // trigger. This models the Radix popper "available height" variables used by
-                    // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
-                    // from overflowing tight windows.
-                    let window_margin = theme
-                        .metric_by_key("component.popover.window_margin")
-                        .unwrap_or(Px(0.0));
-                    let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
-                        cx,
-                        fret_ui::Invalidation::Layout,
-                        window_margin,
-                    );
-                    let direction = crate::direction::use_direction(cx, None);
-                    let placement = combobox_content_placement(
-                        direction,
-                        content_side,
-                        content_align,
-                        content_side_offset,
-                        content_align_offset,
-                    );
-                    let available_main = radix_popover::popover_popper_vars(
-                        outer,
-                        anchor,
-                        desired_w,
-                        placement,
-                    )
-                    .available_height;
-                    // CommandPalette includes a fixed-height search row above the list.
-                    let header_estimate = Px(48.0);
-                    let max_list_h = Px(
-                        theme_max_list_h
-                            .0
-                            .max(0.0)
-                            .min((available_main.0 - header_estimate.0).max(0.0)),
-                    );
+                    // shadcn/cmdk keeps the combobox list on its natural `max-h` track even in
+                    // tight viewports; the popover may extend slightly past the viewport instead
+                    // of shrinking the command list.
+                    let max_list_h = Px(theme_max_list_h.0.max(0.0));
                     let popover_surface = ChromeRefinement::default()
                         .rounded(Radius::Md)
                         .border_width(Px(1.0))
@@ -3954,6 +3927,68 @@ mod tests {
                     .is_some_and(|id| id == "combobox-show-trigger-trigger-icon")
             }),
             "expected trigger icon to be visible when show_trigger=true"
+        );
+    }
+
+    #[test]
+    fn combobox_trigger_places_chevron_at_inline_end() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "combobox-trigger-chevron-inline-end",
+            |cx| {
+                vec![
+                    Combobox::new(model.clone(), open.clone())
+                        .a11y_label("Combobox")
+                        .test_id_prefix("combobox-chevron")
+                        .items([ComboboxItem::new("alpha", "Alpha")])
+                        .into_element_parts(cx, |_cx| {
+                            vec![ComboboxPart::trigger(
+                                ComboboxTrigger::new().width_px(Px(300.0)),
+                            )]
+                        }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("combobox-chevron-trigger"))
+            .expect("trigger semantics node");
+        let icon = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("combobox-chevron-trigger-icon"))
+            .expect("trigger icon semantics node");
+
+        let trigger_right = trigger.bounds.origin.x.0 + trigger.bounds.size.width.0;
+        let icon_right = icon.bounds.origin.x.0 + icon.bounds.size.width.0;
+        assert!(
+            icon_right >= trigger_right - 24.0,
+            "expected chevron near inline end: trigger_right={trigger_right}, icon_right={icon_right}"
         );
     }
 

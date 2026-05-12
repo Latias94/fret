@@ -2530,6 +2530,7 @@ impl CommandPalette {
         }
 
         cx.scope(|cx| {
+            let palette_root_id = cx.root_id();
             let theme = Theme::global(&*cx.app).snapshot();
             let input_wrapper_h_fallback = self.input_wrapper_h.resolve(&theme);
             let input_h_fallback = self.input_h.resolve(&theme);
@@ -2617,7 +2618,7 @@ impl CommandPalette {
             .model();
 
             let auto_highlight = self.auto_highlight;
-            let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
+            let cur_active_raw = cx.watch_model(&active).layout().cloned().unwrap_or(None);
             let cur_active = cur_active_raw.clone().map(cmdk_trimmed_arc);
             let next_active = if auto_highlight {
                 cur_active
@@ -3482,7 +3483,10 @@ impl CommandPalette {
                 },
             );
 
-            cx.key_on_key_down_for(input_id, key_handler);
+            // Capture navigation keys before the text input's own caret handling can consume
+            // them. cmdk-style palettes need Arrow/Home/End/Page keys to move the active row
+            // while focus stays in the input.
+            cx.key_on_key_down_capture_for(input_id, key_handler);
 
             if disabled {
                 input = cx.opacity(0.5, move |_cx| vec![input]);
@@ -3561,10 +3565,12 @@ impl CommandPalette {
                 list
             };
 
-            Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
+            let mut command = Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
                 .refine_style(self.chrome)
                 .refine_layout(self.layout)
-                .into_element(cx)
+                .into_element(cx);
+            command.id = palette_root_id;
+            command
         })
     }
 }

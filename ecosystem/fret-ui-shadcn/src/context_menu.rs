@@ -4883,6 +4883,13 @@ impl ContextMenu {
                         let Some(geometry) = geometry else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
+                        crate::menu_submenu_diagnostics::record_submenu_placement(
+                            cx,
+                            Some(overlay_root_name_for_trace.as_ref()),
+                            &submenu_for_panel,
+                            outer,
+                            geometry,
+                        );
 
                         if let Some(submenu_entries) =
                             submenu_entries_for_panel_cell.borrow_mut().take()

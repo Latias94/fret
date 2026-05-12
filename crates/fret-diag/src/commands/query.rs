@@ -972,6 +972,7 @@ fn overlay_entry_matches_query(
             overlay_root_name,
             anchor_test_id,
             content_test_id,
+            side_offset_px,
             preferred_side,
             chosen_side,
             align,
@@ -996,6 +997,12 @@ fn overlay_entry_matches_query(
                 && want != *chosen_side
             {
                 return false;
+            }
+            if let Some(want) = q.side_offset_px {
+                let eps = q.side_offset_eps_px.unwrap_or(0.001).max(0.0);
+                if (*side_offset_px - want).abs() > eps {
+                    return false;
+                }
             }
             if let Some(want) = q.flipped {
                 let flipped = *preferred_side != *chosen_side;
@@ -1136,6 +1143,26 @@ fn cmd_query_overlay_placement_trace(
                 };
                 i += 1;
             }
+            "--side-offset-px" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --side-offset-px".to_string());
+                };
+                q.side_offset_px = Some(v.parse::<f32>().map_err(|_| {
+                    "invalid value for --side-offset-px (expected f32)".to_string()
+                })?);
+                i += 1;
+            }
+            "--side-offset-eps-px" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --side-offset-eps-px".to_string());
+                };
+                q.side_offset_eps_px = Some(v.parse::<f32>().map_err(|_| {
+                    "invalid value for --side-offset-eps-px (expected f32)".to_string()
+                })?);
+                i += 1;
+            }
             "--align" => {
                 i += 1;
                 let Some(v) = rest.get(i).cloned() else {
@@ -1251,18 +1278,20 @@ hint: overlay placement evidence is only captured when scripts require `diag.ove
                 content_test_id,
                 preferred_side,
                 chosen_side,
+                side_offset_px,
                 final_rect,
                 shift_delta,
                 ..
             } => {
                 println!(
-                    "anchored_panel step={} frame={} anchor_test_id={:?} content_test_id={:?} preferred={:?} chosen={:?} final=({:.1},{:.1},{:.1},{:.1}) shift=({:.1},{:.1})",
+                    "anchored_panel step={} frame={} anchor_test_id={:?} content_test_id={:?} preferred={:?} chosen={:?} side_offset={:.1} final=({:.1},{:.1},{:.1},{:.1}) shift=({:.1},{:.1})",
                     step_index,
                     frame_id,
                     anchor_test_id,
                     content_test_id,
                     preferred_side,
                     chosen_side,
+                    side_offset_px,
                     final_rect.x_px,
                     final_rect.y_px,
                     final_rect.w_px,
@@ -2059,8 +2088,10 @@ mod tests {
 
     fn write_script_result_with_overlay_trace(dir: &Path) -> PathBuf {
         use fret_diag_protocol::{
-            UiOverlayPlacementTraceEntryV1, UiOverlaySideV1, UiRectV1, UiScriptEvidenceV1,
-            UiScriptResultV1, UiScriptStageV1,
+            UiEdgesV1, UiLayoutDirectionV1, UiOverlayAlignV1, UiOverlayOffsetV1,
+            UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1,
+            UiOverlayStickyModeV1, UiRectV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+            UiSizeV1,
         };
 
         let rect = UiRectV1 {
@@ -2099,6 +2130,60 @@ mod tests {
                     anchor: rect,
                     placed: rect,
                     side: Some(UiOverlaySideV1::Bottom),
+                },
+                UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                    step_index: 30,
+                    note: None,
+                    frame_id: 300,
+                    overlay_root_name: Some("root".to_string()),
+                    anchor_element: None,
+                    anchor_test_id: Some("anchor-c".to_string()),
+                    content_element: None,
+                    content_test_id: Some("panel-c".to_string()),
+                    outer_input: rect,
+                    outer_collision: rect,
+                    anchor: rect,
+                    desired: UiSizeV1 {
+                        w_px: 120.0,
+                        h_px: 80.0,
+                    },
+                    side_offset_px: 6.0,
+                    preferred_side: UiOverlaySideV1::Bottom,
+                    align: UiOverlayAlignV1::Start,
+                    direction: UiLayoutDirectionV1::Ltr,
+                    sticky: UiOverlayStickyModeV1::Partial,
+                    offset: UiOverlayOffsetV1 {
+                        main_axis_px: 0.0,
+                        cross_axis_px: 0.0,
+                        alignment_axis_px: None,
+                    },
+                    shift: UiOverlayShiftV1 {
+                        main_axis: true,
+                        cross_axis: true,
+                    },
+                    collision_padding: UiEdgesV1 {
+                        top_px: 0.0,
+                        right_px: 0.0,
+                        bottom_px: 0.0,
+                        left_px: 0.0,
+                    },
+                    collision_boundary: None,
+                    gap_px: 6.0,
+                    preferred_rect: rect,
+                    flipped_rect: rect,
+                    preferred_fits_without_main_clamp: false,
+                    flipped_fits_without_main_clamp: true,
+                    preferred_available_main_px: 10.0,
+                    flipped_available_main_px: 200.0,
+                    chosen_side: UiOverlaySideV1::Top,
+                    chosen_rect: rect,
+                    rect_after_shift: rect,
+                    shift_delta: fret_diag_protocol::UiPointV1 {
+                        x_px: 0.0,
+                        y_px: 0.0,
+                    },
+                    final_rect: rect,
+                    arrow: None,
                 },
             ],
             ..UiScriptEvidenceV1::default()
@@ -2211,6 +2296,49 @@ mod tests {
             .cloned()
             .unwrap_or_default();
         assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn query_overlay_placement_trace_filters_anchored_panel_side_offset() {
+        let out_dir = make_temp_dir("fret-diag-query-overlay-side-offset");
+        let script_result = write_script_result_with_overlay_trace(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_overlay_placement_trace(
+            &[
+                script_result.display().to_string(),
+                "--anchor-test-id".to_string(),
+                "anchor-c".to_string(),
+                "--content-test-id".to_string(),
+                "panel-c".to_string(),
+                "--side-offset-px".to_string(),
+                "6.1".to_string(),
+                "--side-offset-eps-px".to_string(),
+                "0.25".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].get("kind").and_then(|v| v.as_str()),
+            Some("anchored_panel")
+        );
+        assert_eq!(
+            results[0].get("side_offset_px").and_then(|v| v.as_f64()),
+            Some(6.0)
+        );
     }
 
     #[test]

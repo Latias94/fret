@@ -1717,6 +1717,7 @@ pub(super) fn overlay_placement_trace_entry_matches_query(
             overlay_root_name,
             anchor_test_id,
             content_test_id,
+            side_offset_px,
             preferred_side,
             chosen_side,
             align,
@@ -1755,6 +1756,12 @@ pub(super) fn overlay_placement_trace_entry_matches_query(
                 && *chosen_side != q
             {
                 return false;
+            }
+            if let Some(q) = query.side_offset_px {
+                let eps = query.side_offset_eps_px.unwrap_or(0.001).max(0.0);
+                if (*side_offset_px - q).abs() > eps {
+                    return false;
+                }
             }
             if let Some(flipped) = query.flipped {
                 let actual = *chosen_side != *preferred_side;

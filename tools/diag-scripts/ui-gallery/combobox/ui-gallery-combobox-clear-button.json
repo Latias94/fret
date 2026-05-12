@@ -45,10 +45,13 @@
     { "type": "wait_frames", "n": 30 },
 
     {
-      "type": "ensure_visible",
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-combobox-clear-trigger" },
-      "within_window": true,
-      "padding_px": 12.0,
+      "delta_y": -200.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
       "timeout_frames": 1200
     },
     {
@@ -64,6 +67,36 @@
     {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-combobox-clear-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-clear-listbox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-clear-item-next" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-clear-listbox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-clear-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",

@@ -456,6 +456,79 @@ fn tab_focus_next_is_suppressed_during_ime_composition() {
     );
 }
 
+#[cfg(feature = "diagnostics")]
+#[test]
+fn ime_reserved_tab_reports_reserved_for_ime_when_text_widget_consumes() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(KeymapService {
+        keymap: Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![BindingV1 {
+                command: Some("focus.next".into()),
+                platform: None,
+                when: None,
+                keys: KeySpecV1 {
+                    mods: vec![],
+                    key: "Tab".into(),
+                },
+            }],
+        })
+        .expect("valid keymap"),
+    });
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text_input = ui.create_node(crate::text_input::TextInput::new());
+    ui.add_child(root, text_input);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.set_focus(Some(text_input));
+
+    let _ = app.take_effects();
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "toukyou".into(),
+            cursor: Some((0, 0)),
+        }),
+    );
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let store = app
+        .global::<fret_runtime::WindowShortcutRoutingDiagnosticsStore>()
+        .expect("expected shortcut routing diagnostics");
+    let decisions = store.snapshot_since(window, 0, 10);
+    let last = decisions.last().expect("expected a routing decision");
+
+    assert_eq!(last.phase, fret_runtime::ShortcutRoutingPhase::PostDispatch);
+    assert!(last.deferred);
+    assert!(last.focus_is_text_input);
+    assert!(last.ime_composing);
+    assert_eq!(last.key, KeyCode::Tab);
+    assert_eq!(
+        last.outcome,
+        fret_runtime::ShortcutRoutingOutcome::ReservedForIme
+    );
+}
+
 #[test]
 fn tab_focus_next_is_suppressed_when_preedit_empty_but_cursor_present() {
     let mut app = crate::test_host::TestHost::new();

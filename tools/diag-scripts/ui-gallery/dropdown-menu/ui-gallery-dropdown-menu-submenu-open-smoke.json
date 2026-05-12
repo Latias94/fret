@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-dropdown-menu-submenu-open-smoke",
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": ["diag.script_v2", "diag.overlay_placement_trace"],
     "tags": ["ui_gallery", "shadcn", "dropdown_menu", "submenu", "mouse", "regression_pack"],
     "env_defaults": {
       "FRET_UI_GALLERY_START_PAGE": "dropdown_menu"
@@ -69,6 +69,15 @@
       "timeout_frames": 600
     },
     {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-dropdown-menu-submenu-invite-users",
+        "chosen_side": "right"
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "move_pointer",
       "target": {
         "kind": "test_id",
@@ -86,6 +95,19 @@
         }
       },
       "timeout_frames": 600
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-dropdown-menu-submenu-more-options",
+        "chosen_side": "right"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-dropdown-menu-submenu-open-smoke.layout"
     },
     {
       "type": "capture_bundle",

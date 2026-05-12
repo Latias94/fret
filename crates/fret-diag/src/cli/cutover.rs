@@ -1888,6 +1888,14 @@ fn parse_query_command(
                 rest.push("--flipped".to_string());
                 rest.push(if flipped { "true" } else { "false" }.to_string());
             }
+            if let Some(side_offset_px) = trace.side_offset_px {
+                rest.push("--side-offset-px".to_string());
+                rest.push(side_offset_px.to_string());
+            }
+            if let Some(side_offset_eps_px) = trace.side_offset_eps_px {
+                rest.push("--side-offset-eps-px".to_string());
+                rest.push(side_offset_eps_px.to_string());
+            }
             if let Some(align) = trace.align {
                 rest.push("--align".to_string());
                 rest.push(align);

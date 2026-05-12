@@ -1,5 +1,7 @@
 use super::*;
 
+const SCROLL_INTO_VIEW_VISIBILITY_EPS_PX: f32 = 0.5;
+
 fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
     let ax0 = a.origin.x.0;
     let ay0 = a.origin.y.0;
@@ -27,6 +29,21 @@ fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
             height: Px(iy1 - iy0),
         },
     })
+}
+
+fn rect_fully_contains_with_epsilon(outer: Rect, inner: Rect, eps_px: f32) -> bool {
+    let eps = eps_px.max(0.0);
+    let ox0 = outer.origin.x.0;
+    let oy0 = outer.origin.y.0;
+    let ox1 = ox0 + outer.size.width.0.max(0.0);
+    let oy1 = oy0 + outer.size.height.0.max(0.0);
+
+    let ix0 = inner.origin.x.0;
+    let iy0 = inner.origin.y.0;
+    let ix1 = ix0 + inner.size.width.0.max(0.0);
+    let iy1 = iy0 + inner.size.height.0.max(0.0);
+
+    ix0 + eps >= ox0 && iy0 + eps >= oy0 && ix1 <= ox1 + eps && iy1 <= oy1 + eps
 }
 
 pub(super) fn handle_scroll_into_view_step(
@@ -135,7 +152,11 @@ pub(super) fn handle_scroll_into_view_step(
     // cannot satisfy the padded inset at a scroll boundary (leading to `stuck_no_progress`).
     let visible_ok = target_bounds.is_some_and(|bounds| {
         if require_fully_within_window {
-            rect_fully_contains(window_bounds, bounds)
+            rect_fully_contains_with_epsilon(
+                window_bounds,
+                bounds,
+                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+            )
         } else {
             rect_intersection(bounds, window_bounds).is_some()
         }
@@ -144,7 +165,11 @@ pub(super) fn handle_scroll_into_view_step(
         container_bounds
             .zip(target_bounds)
             .is_some_and(|(container_bounds, target_bounds)| {
-                rect_fully_contains(container_bounds, target_bounds)
+                rect_fully_contains_with_epsilon(
+                    container_bounds,
+                    target_bounds,
+                    SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+                )
             })
     } else {
         true
@@ -418,4 +443,30 @@ pub(super) fn handle_scroll_into_view_step(
     }
 
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::Size;
+
+    fn rect(x: f32, y: f32, width: f32, height: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(width), Px(height)))
+    }
+
+    #[test]
+    fn scroll_visibility_tolerates_subpixel_full_containment_edges() {
+        let outer = rect(0.0, 0.0, 100.0, 100.0);
+
+        assert!(rect_fully_contains_with_epsilon(
+            outer,
+            rect(10.0, 10.0, 90.25, 90.25),
+            0.5
+        ));
+        assert!(!rect_fully_contains_with_epsilon(
+            outer,
+            rect(10.0, 10.0, 90.75, 90.75),
+            0.5,
+        ));
+    }
 }

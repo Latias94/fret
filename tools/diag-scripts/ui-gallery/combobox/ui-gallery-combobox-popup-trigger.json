@@ -2,8 +2,17 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-combobox-popup-trigger",
-    "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "shadcn", "combobox", "popup", "trigger"]
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.overlay_placement_trace",
+      "diag.screenshot_png"
+    ],
+    "tags": ["ui_gallery", "shadcn", "combobox", "popup", "trigger"],
+    "target_hints": [
+      "Navigates to the Combobox popup-trigger example.",
+      "Keeps the trigger near the viewport bottom so collision solving must flip the popup to top.",
+      "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
+    ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -55,6 +64,28 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-combobox-popup-trigger",
+        "content_test_id": "ui-gallery-combobox-popup-listbox",
+        "chosen_side": "top",
+        "flipped": true,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-combobox-popup-trigger-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-combobox-popup-trigger-open"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-combobox-popup-trigger-open" },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" } },
     {
       "type": "wait_until",

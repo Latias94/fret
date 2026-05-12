@@ -3539,6 +3539,12 @@ pub struct UiOverlayPlacementTraceQueryV1 {
     pub preferred_side: Option<UiOverlaySideV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chosen_side: Option<UiOverlaySideV1>,
+    /// Exact anchored-panel side offset in physical px. Pair with `side_offset_eps_px` when the
+    /// source is renderer- or scale-factor-derived.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub side_offset_px: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub side_offset_eps_px: Option<f32>,
     /// For `kind=anchored_panel`, whether the solver flipped away from `preferred_side`.
     /// Equivalent to `chosen_side != preferred_side` when both are available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4526,5 +4532,33 @@ mod tests {
             }
             _ => panic!("expected wait_semantics_scroll_stable"),
         }
+    }
+
+    #[test]
+    fn overlay_placement_trace_query_serializes_side_offset_gate() {
+        let value = serde_json::to_value(UiOverlayPlacementTraceQueryV1 {
+            kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+            anchor_test_id: Some("trigger".to_string()),
+            content_test_id: Some("content".to_string()),
+            side_offset_px: Some(6.0),
+            side_offset_eps_px: Some(0.25),
+            ..UiOverlayPlacementTraceQueryV1::default()
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "anchored_panel",
+                "anchor_test_id": "trigger",
+                "content_test_id": "content",
+                "side_offset_px": 6.0,
+                "side_offset_eps_px": 0.25
+            })
+        );
+
+        let roundtrip: UiOverlayPlacementTraceQueryV1 = serde_json::from_value(value).unwrap();
+        assert_eq!(roundtrip.side_offset_px, Some(6.0));
+        assert_eq!(roundtrip.side_offset_eps_px, Some(0.25));
     }
 }

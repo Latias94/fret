@@ -2611,17 +2611,26 @@ fn render_dropdown_submenu_panel_tree<H: UiHost>(
             if let Some(child_geometry) = open_child_submenu
                 .map(|(_, geometry)| geometry)
                 .or(last_geometry)
-                && let Some(child_entries) =
-                    nested_submenu_entries_for_panel_cell.borrow_mut().take()
             {
-                children.push(render_dropdown_submenu_panel_tree(
+                crate::menu_submenu_diagnostics::record_submenu_placement(
                     cx,
-                    child_entries,
-                    child_open_value,
+                    Some(style.overlay_root_name_for_controls.as_ref()),
+                    &child_submenu_models,
+                    outer,
                     child_geometry,
-                    child_submenu_models,
-                    style,
-                ));
+                );
+                if let Some(child_entries) =
+                    nested_submenu_entries_for_panel_cell.borrow_mut().take()
+                {
+                    children.push(render_dropdown_submenu_panel_tree(
+                        cx,
+                        child_entries,
+                        child_open_value,
+                        child_geometry,
+                        child_submenu_models,
+                        style,
+                    ));
+                }
             }
         }
     }
@@ -5089,6 +5098,13 @@ impl DropdownMenu {
                         let Some(geometry) = geometry else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
+                        crate::menu_submenu_diagnostics::record_submenu_placement(
+                            cx,
+                            Some(overlay_root_name_for_controls_for_submenu.as_ref()),
+                            &submenu_for_panel,
+                            outer,
+                            geometry,
+                        );
 
                         if let Some(submenu_entries) =
                             submenu_entries_for_panel_cell.borrow_mut().take()

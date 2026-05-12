@@ -48,7 +48,12 @@ fn wheel_event(position: Point, delta_x: f32, delta_y: f32, pointer_type: Pointe
     })
 }
 
-fn pinch_event(position: Point, delta: f32, modifiers: Modifiers, pointer_type: PointerType) -> Event {
+fn pinch_event(
+    position: Point,
+    delta: f32,
+    modifiers: Modifiers,
+    pointer_type: PointerType,
+) -> Event {
     let pointer_id = PointerId(0);
 
     Event::Pointer(PointerEvent::PinchGesture {
@@ -649,20 +654,6 @@ fn rect_inset(rect: Rect, insets: UiPaddingInsetsV1) -> Rect {
             height: Px(h),
         },
     }
-}
-
-fn rect_fully_contains(outer: Rect, inner: Rect) -> bool {
-    let ox0 = outer.origin.x.0;
-    let oy0 = outer.origin.y.0;
-    let ox1 = ox0 + outer.size.width.0;
-    let oy1 = oy0 + outer.size.height.0;
-
-    let ix0 = inner.origin.x.0;
-    let iy0 = inner.origin.y.0;
-    let ix1 = ix0 + inner.size.width.0;
-    let iy1 = iy0 + inner.size.height.0;
-
-    ix0 >= ox0 && iy0 >= oy0 && ix1 <= ox1 && iy1 <= oy1
 }
 
 fn parse_key_code(key: &str) -> Option<KeyCode> {

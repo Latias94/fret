@@ -448,7 +448,11 @@ fn combobox_chips_with_patch<H: UiHost>(
 	                let selected_values_for_trigger = _selected_values.clone();
 	                let value_label_map_for_trigger = value_label_map.clone();
 	                let test_id_prefix_for_trigger = test_id_prefix.clone();
-	                let trigger_test_id_for_trigger = trigger_test_id.clone();
+	                let trigger_test_id_for_trigger = trigger_test_id.clone().or_else(|| {
+	                    test_id_prefix
+	                        .as_ref()
+	                        .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+	                });
 	                let placeholder_for_trigger = placeholder.clone();
 	                let a11y_label_for_trigger = a11y_label.clone();
 	                let chip_show_remove_for_trigger = chip_show_remove;
@@ -1061,6 +1065,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect};
 
     #[test]
     fn combobox_chips_parts_patch_maps_search_placeholder_and_chip_remove() {
@@ -1172,5 +1177,67 @@ mod tests {
         );
         assert_eq!(chips.groups[0].items.len(), 1);
         assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
+    }
+
+    #[test]
+    fn combobox_chips_test_id_prefix_derives_trigger_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "combobox-chips-derived-trigger-id",
+            |cx| {
+                ComboboxChips::new(values, open)
+                    .test_id_prefix("chips")
+                    .into_element_parts(cx, |_cx| {
+                        vec![
+                            ComboboxChipsInput::new()
+                                .placeholder("Select frameworks")
+                                .into(),
+                            ComboboxTrigger::new().into(),
+                            ComboboxContent::new([ComboboxContentPart::list(
+                                crate::combobox::ComboboxList::new().items([
+                                    ComboboxItem::new("react", "React"),
+                                    ComboboxItem::new("svelte", "Svelte"),
+                                ]),
+                            )])
+                            .into(),
+                        ]
+                    })
+            },
+        );
+
+        let trigger = find_pressable_with_test_id(&el, "chips-trigger");
+        assert!(
+            trigger.is_some(),
+            "expected derived combobox chips trigger test id"
+        );
+    }
+
+    fn find_pressable_with_test_id<'a>(
+        node: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a PressableProps> {
+        match &node.kind {
+            fret_ui::element::ElementKind::Pressable(props) => props
+                .a11y
+                .test_id
+                .as_deref()
+                .is_some_and(|id| id == test_id)
+                .then_some(props),
+            _ => node
+                .children
+                .iter()
+                .find_map(|c| find_pressable_with_test_id(c, test_id)),
+        }
     }
 }

@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-combobox-popup-trigger-bottom-room",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.overlay_placement_trace",
+      "diag.screenshot_png"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "Popup"
+    },
+    "tags": ["ui_gallery", "shadcn", "combobox", "popup", "trigger", "bottom_room"],
+    "target_hints": [
+      "Starts on the Combobox Popup section in a taller viewport.",
+      "Keeps enough space below the trigger so collision solving should preserve bottom placement.",
+      "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 1080.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-listbox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-combobox-popup-trigger",
+        "content_test_id": "ui-gallery-combobox-popup-listbox",
+        "preferred_side": "bottom",
+        "chosen_side": "bottom",
+        "flipped": false,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-combobox-popup-trigger-bottom-room-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-combobox-popup-trigger-bottom-room-open"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-combobox-popup-trigger-bottom-room-open" }
+  ]
+}

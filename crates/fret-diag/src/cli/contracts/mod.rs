@@ -2120,6 +2120,10 @@ mod tests {
             "top",
             "--flipped",
             "true",
+            "--side-offset-px",
+            "6",
+            "--side-offset-eps-px",
+            "0.25",
             "--align",
             "center",
             "--sticky",
@@ -2146,6 +2150,8 @@ mod tests {
         assert_eq!(trace.preferred_side.as_deref(), Some("bottom"));
         assert_eq!(trace.chosen_side.as_deref(), Some("top"));
         assert_eq!(trace.flipped, Some(true));
+        assert_eq!(trace.side_offset_px, Some(6.0));
+        assert_eq!(trace.side_offset_eps_px, Some(0.25));
         assert_eq!(trace.align.as_deref(), Some("center"));
         assert_eq!(trace.sticky.as_deref(), Some("always"));
         assert!(trace.output.json);

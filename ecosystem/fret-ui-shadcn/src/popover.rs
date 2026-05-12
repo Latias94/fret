@@ -9,8 +9,9 @@ use fret_core::{Edges, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextW
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, HoverRegionProps, InteractivityGateProps, LayoutStyle,
-    Length, OpacityProps, Overflow, SemanticsDecoration, StackProps, VisualTransformProps,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, HoverRegionProps,
+    InteractivityGateProps, LayoutStyle, Length, OpacityProps, Overflow, PressableProps, RowProps,
+    ScrollProps, SemanticFlexProps, SemanticsDecoration, StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -34,62 +35,271 @@ use crate::overlay_motion;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use fret_ui_kit::typography::scope_description_text;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 struct SizeHintPx {
-    fixed_width: Option<Px>,
-    fixed_height: Option<Px>,
+    width: Option<Px>,
+    height: Option<Px>,
     max_height: Option<Px>,
 }
 
 fn size_hint_px(element: &AnyElement) -> SizeHintPx {
-    fn visit(node: &AnyElement, hint: &mut SizeHintPx) {
-        let layout = match &node.kind {
-            ElementKind::Container(ContainerProps { layout, .. }) => Some(layout),
-            ElementKind::HoverRegion(HoverRegionProps { layout }) => Some(layout),
-            ElementKind::Stack(StackProps { layout }) => Some(layout),
-            ElementKind::Scroll(fret_ui::element::ScrollProps { layout, .. }) => Some(layout),
+    fn px_from_length(length: Length) -> Option<Px> {
+        match length {
+            Length::Px(px) => Some(px),
             _ => None,
-        };
-        if let Some(layout) = layout {
-            if let Length::Px(w) = layout.size.width {
-                hint.fixed_width = Some(
-                    hint.fixed_width
-                        .map(|cur| if w.0 > cur.0 { w } else { cur })
-                        .unwrap_or(w),
-                );
-            }
-            if let Length::Px(h) = layout.size.height {
-                hint.fixed_height = Some(
-                    hint.fixed_height
-                        .map(|cur| if h.0 > cur.0 { h } else { cur })
-                        .unwrap_or(h),
-                );
-            }
-            if let Some(Length::Px(max_h)) = layout.size.max_height {
-                hint.max_height = Some(
-                    hint.max_height
-                        .map(|cur| if max_h.0 > cur.0 { max_h } else { cur })
-                        .unwrap_or(max_h),
-                );
-            }
-        }
-
-        for child in &node.children {
-            visit(child, hint);
         }
     }
 
-    let mut hint = SizeHintPx {
-        fixed_width: None,
-        fixed_height: None,
-        max_height: None,
-    };
-    visit(element, &mut hint);
-    hint
+    fn spacing_px(length: fret_ui::element::SpacingLength) -> Px {
+        match length {
+            fret_ui::element::SpacingLength::Px(px) => px,
+            _ => Px(0.0),
+        }
+    }
+
+    fn max_px(current: Option<Px>, next: Px) -> Option<Px> {
+        Some(match current {
+            Some(cur) if cur.0 >= next.0 => cur,
+            _ => next,
+        })
+    }
+
+    fn add_px(current: Option<Px>, next: Px) -> Option<Px> {
+        Some(Px(current.unwrap_or(Px(0.0)).0 + next.0))
+    }
+
+    fn apply_layout_hints(mut hint: SizeHintPx, layout: &LayoutStyle) -> SizeHintPx {
+        if let Some(width) = px_from_length(layout.size.width) {
+            hint.width = Some(width);
+        }
+        if let Some(height) = px_from_length(layout.size.height) {
+            hint.height = Some(height);
+        }
+        if let Some(min_w) = layout.size.min_width.and_then(px_from_length) {
+            hint.width = Some(Px(hint.width.unwrap_or(Px(0.0)).0.max(min_w.0)));
+        }
+        if let Some(min_h) = layout.size.min_height.and_then(px_from_length) {
+            hint.height = Some(Px(hint.height.unwrap_or(Px(0.0)).0.max(min_h.0)));
+        }
+        if let Some(max_w) = layout.size.max_width.and_then(px_from_length) {
+            hint.width = Some(match hint.width {
+                Some(cur) => Px(cur.0.min(max_w.0)),
+                None => max_w,
+            });
+        }
+        if let Some(max_h) = layout.size.max_height.and_then(px_from_length) {
+            hint.max_height = Some(max_px(hint.max_height, max_h).unwrap_or(max_h));
+            hint.height = Some(match hint.height {
+                Some(cur) => Px(cur.0.min(max_h.0)),
+                None => max_h,
+            });
+        }
+        hint
+    }
+
+    fn combine_stack(children: impl IntoIterator<Item = SizeHintPx>) -> SizeHintPx {
+        let mut hint = SizeHintPx::default();
+        for child in children {
+            if let Some(width) = child.width {
+                hint.width = Some(max_px(hint.width, width).unwrap_or(width));
+            }
+            if let Some(height) = child.height.or(child.max_height) {
+                hint.height = Some(max_px(hint.height, height).unwrap_or(height));
+            }
+            if let Some(max_h) = child.max_height {
+                hint.max_height = Some(max_px(hint.max_height, max_h).unwrap_or(max_h));
+            }
+        }
+        hint
+    }
+
+    fn combine_vertical(
+        children: impl IntoIterator<Item = SizeHintPx>,
+        gap: Px,
+        padding: fret_ui::element::SpacingEdges,
+    ) -> SizeHintPx {
+        let mut hint = SizeHintPx::default();
+        let pad_top = spacing_px(padding.top);
+        let pad_bottom = spacing_px(padding.bottom);
+        let pad_left = spacing_px(padding.left);
+        let pad_right = spacing_px(padding.right);
+        let mut count = 0u32;
+
+        for child in children {
+            if let Some(width) = child.width {
+                hint.width = Some(max_px(hint.width, width).unwrap_or(width));
+            }
+            let child_height = child.height.or(child.max_height);
+            if let Some(height) = child_height {
+                hint.height = Some(add_px(hint.height, height).unwrap_or(height));
+            }
+            if let Some(max_h) = child.max_height {
+                hint.max_height = Some(max_px(hint.max_height, max_h).unwrap_or(max_h));
+            }
+            count = count.saturating_add(1);
+        }
+
+        if count > 1 {
+            hint.height = Some(
+                add_px(hint.height, Px(gap.0 * (count.saturating_sub(1) as f32)))
+                    .unwrap_or(Px(0.0)),
+            );
+        }
+
+        if pad_top.0 != 0.0 {
+            hint.height = Some(add_px(hint.height, pad_top).unwrap_or(pad_top));
+        }
+        if pad_bottom.0 != 0.0 {
+            hint.height = Some(add_px(hint.height, pad_bottom).unwrap_or(pad_bottom));
+        }
+        if pad_left.0 != 0.0 {
+            hint.width = Some(add_px(hint.width, pad_left).unwrap_or(pad_left));
+        }
+        if pad_right.0 != 0.0 {
+            hint.width = Some(add_px(hint.width, pad_right).unwrap_or(pad_right));
+        }
+
+        hint
+    }
+
+    fn combine_horizontal(
+        children: impl IntoIterator<Item = SizeHintPx>,
+        gap: Px,
+        padding: fret_ui::element::SpacingEdges,
+    ) -> SizeHintPx {
+        let mut hint = SizeHintPx::default();
+        let pad_top = spacing_px(padding.top);
+        let pad_bottom = spacing_px(padding.bottom);
+        let pad_left = spacing_px(padding.left);
+        let pad_right = spacing_px(padding.right);
+        let mut count = 0u32;
+
+        for child in children {
+            if let Some(height) = child.height.or(child.max_height) {
+                hint.height = Some(max_px(hint.height, height).unwrap_or(height));
+            }
+            if let Some(width) = child.width {
+                hint.width = Some(add_px(hint.width, width).unwrap_or(width));
+            }
+            if let Some(max_h) = child.max_height {
+                hint.max_height = Some(max_px(hint.max_height, max_h).unwrap_or(max_h));
+            }
+            count = count.saturating_add(1);
+        }
+
+        if count > 1 {
+            hint.width = Some(
+                add_px(hint.width, Px(gap.0 * (count.saturating_sub(1) as f32))).unwrap_or(Px(0.0)),
+            );
+        }
+
+        if pad_left.0 != 0.0 {
+            hint.width = Some(add_px(hint.width, pad_left).unwrap_or(pad_left));
+        }
+        if pad_right.0 != 0.0 {
+            hint.width = Some(add_px(hint.width, pad_right).unwrap_or(pad_right));
+        }
+        if pad_top.0 != 0.0 {
+            hint.height = Some(add_px(hint.height, pad_top).unwrap_or(pad_top));
+        }
+        if pad_bottom.0 != 0.0 {
+            hint.height = Some(add_px(hint.height, pad_bottom).unwrap_or(pad_bottom));
+        }
+
+        hint
+    }
+
+    fn estimate(node: &AnyElement) -> SizeHintPx {
+        let mut hint = match &node.kind {
+            ElementKind::Flex(FlexProps {
+                layout,
+                direction,
+                gap,
+                padding,
+                ..
+            }) => {
+                let children = node.children.iter().map(estimate);
+                let hint = if *direction == fret_core::Axis::Vertical {
+                    combine_vertical(children, spacing_px(*gap), *padding)
+                } else {
+                    combine_horizontal(children, spacing_px(*gap), *padding)
+                };
+                apply_layout_hints(hint, layout)
+            }
+            ElementKind::Row(RowProps {
+                layout,
+                gap,
+                padding,
+                ..
+            }) => apply_layout_hints(
+                combine_horizontal(
+                    node.children.iter().map(estimate),
+                    spacing_px(*gap),
+                    *padding,
+                ),
+                layout,
+            ),
+            ElementKind::Column(ColumnProps {
+                layout,
+                gap,
+                padding,
+                ..
+            }) => apply_layout_hints(
+                combine_vertical(
+                    node.children.iter().map(estimate),
+                    spacing_px(*gap),
+                    *padding,
+                ),
+                layout,
+            ),
+            ElementKind::SemanticFlex(SemanticFlexProps { flex, .. })
+            | ElementKind::RovingFlex(fret_ui::element::RovingFlexProps { flex, .. }) => {
+                let children = node.children.iter().map(estimate);
+                let hint = if flex.direction == fret_core::Axis::Vertical {
+                    combine_vertical(children, spacing_px(flex.gap), flex.padding)
+                } else {
+                    combine_horizontal(children, spacing_px(flex.gap), flex.padding)
+                };
+                apply_layout_hints(hint, &flex.layout)
+            }
+            ElementKind::Scroll(ScrollProps { layout, axis, .. }) => {
+                let children_hint = combine_stack(node.children.iter().map(estimate));
+                let mut hint = apply_layout_hints(children_hint, layout);
+                if *axis == fret_ui::element::ScrollAxis::Y {
+                    hint.height = Some(match (hint.height, hint.max_height) {
+                        (Some(height), Some(max_h)) if height.0 > max_h.0 => max_h,
+                        (Some(height), _) => height,
+                        (None, Some(max_h)) => max_h,
+                        (None, None) => Px(0.0),
+                    });
+                }
+                hint
+            }
+            ElementKind::Container(ContainerProps { layout, .. })
+            | ElementKind::HoverRegion(HoverRegionProps { layout })
+            | ElementKind::Stack(StackProps { layout })
+            | ElementKind::Pressable(PressableProps { layout, .. })
+            | ElementKind::InteractivityGate(InteractivityGateProps { layout, .. })
+            | ElementKind::Opacity(OpacityProps { layout, .. })
+            | ElementKind::VisualTransform(VisualTransformProps { layout, .. }) => {
+                apply_layout_hints(combine_stack(node.children.iter().map(estimate)), layout)
+            }
+            _ => combine_stack(node.children.iter().map(estimate)),
+        };
+
+        if hint.height.is_none() {
+            if let Some(max_h) = hint.max_height {
+                hint.height = Some(max_h);
+            }
+        }
+        hint
+    }
+
+    estimate(element)
 }
 
 fn has_height_constraint_px(hint: SizeHintPx) -> bool {
-    hint.fixed_height.is_some() || hint.max_height.is_some()
+    hint.max_height.is_some()
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -886,21 +1096,8 @@ impl Popover {
                         let last_content_size =
                             cx.last_bounds_for_element(measure_id).map(|r| r.size);
                         let estimated = Size::new(Px(288.0), Px(160.0));
-                        let hint_width = hint.fixed_width;
-                        let hint_height = match (hint.fixed_height, hint.max_height) {
-                            // If both a fixed height and a max height exist in the subtree, treat the
-                            // fixed height as "header chrome" and the max height as "scrolling body"
-                            // (cmdk/combobox-style panels). Bias towards *overestimating* so collision
-                            // solving doesn't ignore tall panels.
-                            (Some(fixed), Some(max)) => Some(if fixed.0 <= max.0 {
-                                Px(fixed.0 + max.0)
-                            } else {
-                                fixed
-                            }),
-                            (Some(fixed), None) => Some(fixed),
-                            (None, Some(max)) => Some(max),
-                            (None, None) => None,
-                        };
+                        let hint_width = hint.width;
+                        let hint_height = hint.height;
                         let mut width = last_content_size
                             .map(|s| s.width)
                             .unwrap_or(estimated.width);
@@ -2033,7 +2230,7 @@ mod tests {
             });
 
             let hint = size_hint_px(&element);
-            assert_eq!(hint.fixed_height, Some(Px(36.0)));
+            assert_eq!(hint.height, Some(Px(36.0)));
             assert_eq!(hint.max_height, Some(Px(168.0)));
         });
     }
@@ -2075,9 +2272,77 @@ mod tests {
                 .into_element(cx);
 
             let hint = size_hint_px(&content);
-            assert_eq!(hint.fixed_width, Some(Px(200.0)));
-            assert_eq!(hint.fixed_height, Some(Px(36.0)));
+            assert_eq!(hint.width, Some(Px(200.0)));
+            assert_eq!(hint.height, Some(Px(204.0)));
             assert_eq!(hint.max_height, Some(Px(168.0)));
+        });
+    }
+
+    #[test]
+    fn popover_size_hint_keeps_combobox_placement_on_bottom_when_it_fits() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::facade::themes::apply_shadcn_new_york(
+            &mut app,
+            crate::facade::themes::ShadcnBaseColor::Neutral,
+            crate::facade::themes::ShadcnColorScheme::Light,
+        );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1080.0), Px(700.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let query = cx.app.models_mut().insert(String::new());
+            let input = CommandInput::new(query).into_element(cx);
+            let list = CommandList::new([
+                CommandItem::new("Next.js"),
+                CommandItem::new("SvelteKit"),
+                CommandItem::new("Nuxt.js"),
+                CommandItem::new("Remix"),
+                CommandItem::new("Astro"),
+            ])
+            .refine_scroll_layout(LayoutRefinement::default().max_h(Px(280.0)))
+            .into_element(cx);
+            let command = Command::new([input, list]).into_element(cx);
+            let content = PopoverContent::new([command])
+                .refine_style(
+                    ChromeRefinement::default()
+                        .p(Space::N0)
+                        .border_width(Px(0.0)),
+                )
+                .refine_layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0())
+                .into_element(cx);
+
+            let hint = size_hint_px(&content);
+            let desired = Size::new(
+                hint.width.unwrap_or(Px(288.0)),
+                hint.height.unwrap_or(Px(160.0)),
+            );
+            let anchor = Rect::new(
+                Point::new(Px(395.0), Px(452.67)),
+                CoreSize::new(Px(260.0), Px(36.0)),
+            );
+            let placement = popper::PopperContentPlacement::new(
+                LayoutDirection::Ltr,
+                Side::Bottom,
+                Align::Center,
+                Px(6.0),
+            );
+            let (_layout, trace) = popper::popper_layout_sized_with_trace(
+                bounds,
+                anchor,
+                desired,
+                placement.side_offset,
+                placement.side,
+                placement.align,
+                placement.options(),
+            );
+
+            assert_eq!(hint.width, Some(Px(200.0)));
+            assert_eq!(hint.height, Some(Px(204.0)));
+            assert_eq!(trace.chosen_side, Side::Bottom);
+            assert!(trace.preferred_fits_without_main_clamp);
         });
     }
 

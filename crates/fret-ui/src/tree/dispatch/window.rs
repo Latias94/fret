@@ -2821,6 +2821,12 @@ impl<H: UiHost> UiTree<H> {
             } = event
         {
             let focus_is_text_input = self.focus_is_text_input(app);
+            let ime_reserved = self.ime_composing
+                && Self::should_defer_keydown_shortcut_matching_to_text_input(
+                    *key,
+                    *modifiers,
+                    focus_is_text_input,
+                );
             let key_contexts = if !self.pending_shortcut.keystrokes.is_empty() {
                 self.pending_shortcut.key_contexts.clone()
             } else {
@@ -2847,7 +2853,11 @@ impl<H: UiHost> UiTree<H> {
                                 .len()
                                 .min(u32::MAX as usize)
                                 as u32,
-                            outcome: fret_runtime::ShortcutRoutingOutcome::ConsumedByWidget,
+                            outcome: if ime_reserved {
+                                fret_runtime::ShortcutRoutingOutcome::ReservedForIme
+                            } else {
+                                fret_runtime::ShortcutRoutingOutcome::ConsumedByWidget
+                            },
                             command: None,
                             command_enabled: None,
                             key_contexts,

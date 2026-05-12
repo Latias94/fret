@@ -76,5 +76,23 @@ date: 2026-05-12
 - [x] Add default-compatible Drawer modal underlay block/focus-restore activation-status coverage.
 - [x] Add default-compatible Combobox outside-press dismiss/focus-restore runtime coverage with
   observable selected/query state probes.
+- [x] Repair Combobox UI Gallery screenshot and interaction gates so offscreen triggers are scrolled
+  into view before click, and make the neutral-dark open screenshot script independently runnable.
+- [x] Fix the Combobox trigger chevron layout regression exposed by screenshot review and lock it
+  with a focused geometry test.
 - [ ] Add default-compatible non-modal click-through activation-status coverage once public pages
   expose stable underlay/status probes.
+- [ ] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
+  component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
+- [x] Add runtime placement traces to the primary Combobox screenshot gates so list placement is
+  tracked by both visual evidence and structured overlay-placement data.
+- [x] Harden the Combobox popup-trigger UI Gallery gate with structured collision flip and
+  shadcn `sideOffset=6` assertions.
+- [x] Add a companion Combobox popup-trigger bottom-room fixture so the button-trigger/content
+  variant is covered for preferred-bottom placement as well as collision flip.
+- [x] Add DropdownMenu nested submenu runtime placement traces so submenu side/anchor placement is
+  observable from UI Gallery diagnostics.
+- [x] Add ContextMenu submenu safe-corridor runtime placement traces and repair stale/offscreen
+  script selectors.
+- [ ] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
+  bridge once a stable public gallery path is selected.

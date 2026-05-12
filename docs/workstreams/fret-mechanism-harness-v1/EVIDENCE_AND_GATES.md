@@ -130,6 +130,79 @@ cargo test --profile dev-fast -p fret-ui-kit --lib mouse_open_guard_pointer_up_d
 cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
 ```
 
+## Shadcn Combobox Placement and Visual Gates
+
+```powershell
+cargo test -p fret-ui-shadcn --test web_vs_fret_overlay_placement web_vs_fret_combobox_cases_match_web_fixtures -- --nocapture
+cargo test -p fret-ui-shadcn --lib combobox_trigger_places_chevron_at_inline_end -- --nocapture
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-open-neutral-dark-screenshot.json --dir target/fret-diag-mechanism-harness-runtime --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-narrow-open-screenshot.json --dir target/fret-diag-mechanism-harness-runtime --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+```
+
+Current evidence anchors:
+
+- Normal-width open screenshot after the chevron fix:
+  `target/fret-diag-mechanism-harness-runtime/sessions/1778558055240-49296/screenshots/1778558059695-ui-gallery-combobox-basic-neutral-dark-open/window-4294967297-tick-101-frame-101.png`
+- Normal-width open placement trace after the Popover size-hint fix:
+  `target/fret-diag-combobox-check2/sessions/1778566847049-70708/1778566849917/script.result.json`
+  - Trace: `desired.h_px=204.0`, `chosen_side=bottom`,
+    `preferred_fits_without_main_clamp=true`.
+- Normal-width open screenshot after the placement trace gate:
+  `target/fret-diag-combobox-check2/sessions/1778566847049-70708/screenshots/1778566853802-ui-gallery-combobox-basic-neutral-dark-open/window-4294967297-tick-96-frame-96.png`
+- Narrow-width open screenshot:
+  `target/fret-diag-mechanism-harness-runtime/sessions/1778557035697-61384/screenshots/1778557037892-ui-gallery-combobox-demo-open-narrow/window-4294967297-tick-59-frame-59.png`
+- Screenshot script hardening:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-open-neutral-dark-screenshot.json`
+- Combobox placement fixture suite:
+  `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_combobox_cases_v1.json`
+
+## Shadcn DropdownMenu Submenu Placement Gate
+
+```powershell
+cargo test -p fret-ui-shadcn --lib submenu_geometry_side_tracks_floating_position -- --nocapture
+cargo test -p fret-ui-shadcn --lib dropdown_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture
+cargo check -p fret-ui-shadcn
+cargo build -p fret-ui-gallery
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json --dir target/fret-diag-dropdown-submenu-trace2 --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+```
+
+Current evidence anchors:
+
+- Runtime submenu placement trace after adding DropdownMenu submenu diagnostics:
+  `target/fret-diag-dropdown-submenu-trace2/sessions/1778568285442-34920/1778568287793/script.result.json`
+  - Trace: `ui-gallery-dropdown-menu-submenu-invite-users` side `right`,
+    `ui-gallery-dropdown-menu-submenu-more-options` side `right`.
+- Layout sidecar:
+  `target/fret-diag-dropdown-submenu-trace2/sessions/1778568285442-34920/1778568290949-ui-gallery-dropdown-menu-submenu-open-smoke.layout/layout.taffy.v1.json`
+- Gate script:
+  `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json`
+- Suite membership:
+  `tools/diag-scripts/suites/ui-gallery/suite.json` and
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+
+## Shadcn ContextMenu Submenu Placement Gate
+
+```powershell
+cargo test -p fret-ui-shadcn --lib submenu_geometry_side_tracks_floating_position -- --nocapture
+cargo test -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture
+cargo build -p fret-ui-gallery
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-safe-corridor-sweep.json --dir target/fret-diag-context-menu-submenu-trace --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+```
+
+Current evidence anchors:
+
+- Runtime submenu placement trace after adding the shared submenu diagnostics bridge to ContextMenu:
+  `target/fret-diag-context-menu-submenu-trace/sessions/1778571251704-73756/1778571253975/script.result.json`
+  - Trace: root content `chosen_side=right`; submenu anchor
+    `ui-gallery-context-menu-submenu-more-tools` side `right`.
+- Layout sidecar:
+  `target/fret-diag-context-menu-submenu-trace/sessions/1778571251704-73756/1778571256920-ui-gallery-context-menu-submenu-safe-corridor-sweep.layout/layout.taffy.v1.json`
+- Gate script:
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-safe-corridor-sweep.json`
+- Suite membership:
+  `tools/diag-scripts/suites/ui-gallery/suite.json` and
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+
 ## Runtime Diagnostics Gate
 
 ```powershell
@@ -256,6 +329,24 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+- Combobox popup-trigger placement gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json`
+  - asserts collision flip to top and `side_offset_px=6`
+  - evidence:
+    `target/fret-diag-combobox-popup-position-side-offset/sessions/1778576696581-76876/1778576699867/script.result.json`
+  - layout sidecar:
+    `target/fret-diag-combobox-popup-position-side-offset/sessions/1778576696581-76876/1778576702191-ui-gallery-combobox-popup-trigger-open.layout/layout.taffy.v1.json`
+  - screenshot:
+    `target/fret-diag-combobox-popup-position-side-offset/sessions/1778576696581-76876/screenshots/1778576702321-ui-gallery-combobox-popup-trigger-open/window-4294967297-tick-83-frame-83.png`
+- Companion Combobox popup-trigger bottom-room gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json`
+  - asserts preferred-bottom placement with `chosen_side=bottom`, `flipped=false`, and `side_offset_px=6`
+  - evidence:
+    `target/fret-diag-combobox-popup-bottom-room/sessions/1778578242074-69792/1778578244187/script.result.json`
+  - layout sidecar:
+    `target/fret-diag-combobox-popup-bottom-room/sessions/1778578242074-69792/1778578245269-ui-gallery-combobox-popup-trigger-bottom-room-open.layout/layout.taffy.v1.json`
+  - screenshot:
+    `target/fret-diag-combobox-popup-bottom-room/sessions/1778578242074-69792/screenshots/1778578245323-ui-gallery-combobox-popup-trigger-bottom-room-open/window-4294967297-tick-62-frame-62.png`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

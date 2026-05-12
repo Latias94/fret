@@ -5171,6 +5171,23 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-clear-button",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-clear-button.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox"
+      ],
+      "tags": [
+        "clear",
+        "combobox",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-combobox-custom-items-detail-filter-react",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-custom-items-detail-filter-react.json",
       "required_capabilities": [
@@ -5358,6 +5375,8 @@
       "id": "ui-gallery-combobox-popup-trigger",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json",
       "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -5370,7 +5389,36 @@
         "trigger",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Navigates to the Combobox popup-trigger example.",
+        "Keeps the trigger near the viewport bottom so collision solving must flip the popup to top.",
+        "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-popup-trigger-bottom-room",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox"
+      ],
+      "tags": [
+        "bottom_room",
+        "combobox",
+        "popup",
+        "shadcn",
+        "trigger",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Popup section in a taller viewport.",
+        "Keeps enough space below the trigger so collision solving should preserve bottom placement.",
+        "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
+      ]
     },
     {
       "id": "ui-gallery-combobox-roving-skips-disabled",
@@ -5737,6 +5785,20 @@
         "Right-clicks the RTL trigger.",
         "Captures a screenshot to validate inline-start/end padding and submenu chevron mirroring."
       ]
+    },
+    {
+      "id": "ui-gallery-context-menu-submenu-safe-corridor-sweep",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-safe-corridor-sweep.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-control-chrome-button-group-text-w-fit",
@@ -6506,6 +6568,7 @@
       "id": "ui-gallery-dropdown-menu-submenu-open-smoke",
       "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
       "required_capabilities": [
+        "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
       "suite_memberships": [

@@ -203,6 +203,12 @@ pub(crate) struct QueryOverlayPlacementTraceArgs {
     )]
     pub flipped: Option<bool>,
 
+    #[arg(long = "side-offset-px", value_name = "PX")]
+    pub side_offset_px: Option<f32>,
+
+    #[arg(long = "side-offset-eps-px", value_name = "PX")]
+    pub side_offset_eps_px: Option<f32>,
+
     #[arg(
         long = "align",
         value_name = "ALIGN",
