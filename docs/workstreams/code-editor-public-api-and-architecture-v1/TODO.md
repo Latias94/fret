@@ -75,6 +75,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/word_navigation.rs`.
   - [x] Extract caret navigation tests into
         `ecosystem/fret-code-editor/src/editor/tests/caret_navigation.rs`.
+  - [x] Extract keyboard command/interaction tests into
+        `ecosystem/fret-code-editor/src/editor/tests/keyboard_commands.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,

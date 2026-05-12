@@ -110,6 +110,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_KEYBOARD_COMMANDS_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md"
     },
     {
@@ -318,6 +322,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_POINTER_SELECTION_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_WORD_NAVIGATION_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_CARET_NAVIGATION_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_KEYBOARD_COMMANDS_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md",
@@ -362,6 +367,7 @@
     "ecosystem/fret-code-editor/src/editor/tests/pointer_selection.rs",
     "ecosystem/fret-code-editor/src/editor/tests/word_navigation.rs",
     "ecosystem/fret-code-editor/src/editor/tests/caret_navigation.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/keyboard_commands.rs",
     "ecosystem/fret-code-editor/src/editor/feature_payloads.rs",
     "ecosystem/fret-code-editor/src/editor/handle/feature_payloads.rs",
     "ecosystem/fret-code-editor/src/editor/state.rs",

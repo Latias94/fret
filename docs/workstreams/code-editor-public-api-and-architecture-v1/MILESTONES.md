@@ -75,7 +75,8 @@ Exit criteria:
     tests moved in `M3_TEST_POINTER_HELPERS_MODULE_SPLIT_2026-05-12.md`; pointer selection tests
     moved in `M3_TEST_POINTER_SELECTION_MODULE_SPLIT_2026-05-12.md`; word navigation tests moved in
     `M3_TEST_WORD_NAVIGATION_MODULE_SPLIT_2026-05-12.md`; caret navigation tests moved in
-    `M3_TEST_CARET_NAVIGATION_MODULE_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
+    `M3_TEST_CARET_NAVIGATION_MODULE_SPLIT_2026-05-12.md`; keyboard command/interaction tests moved
+    in `M3_TEST_KEYBOARD_COMMANDS_MODULE_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
     `M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`; diagnostics/perf snapshot split landed in
     `M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`; state schema split landed in
     `M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md`; state methods split landed in
