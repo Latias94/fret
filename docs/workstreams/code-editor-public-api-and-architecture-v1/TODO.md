@@ -85,6 +85,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/row_geom_cache.rs`.
   - [x] Extract state lifecycle tests into
         `ecosystem/fret-code-editor/src/editor/tests/state_lifecycle.rs`.
+  - [x] Extract editor scroll window test into
+        `ecosystem/fret-code-editor/src/editor/tests/scroll_window.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,

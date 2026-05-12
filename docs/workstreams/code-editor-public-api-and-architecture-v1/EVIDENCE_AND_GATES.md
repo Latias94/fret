@@ -168,6 +168,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md`
 - State lifecycle test module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_STATE_LIFECYCLE_MODULE_SPLIT_2026-05-12.md`
+- Scroll window test module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_SCROLL_WINDOW_MODULE_SPLIT_2026-05-12.md`
 - Syntax test module split:
   `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`
 - Feature payload store module split:
