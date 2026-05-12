@@ -82,6 +82,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ACCESSIBILITY_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md"
     },
     {
@@ -283,6 +287,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_GEOMETRY_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ACCESSIBILITY_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md",
@@ -320,6 +325,7 @@
     "ecosystem/fret-code-editor-view/src/lib.rs",
     "ecosystem/fret-code-editor/src/editor/tests/geometry.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/accessibility.rs",
     "ecosystem/fret-code-editor/src/editor/feature_payloads.rs",
     "ecosystem/fret-code-editor/src/editor/handle/feature_payloads.rs",
     "ecosystem/fret-code-editor/src/editor/state.rs",
