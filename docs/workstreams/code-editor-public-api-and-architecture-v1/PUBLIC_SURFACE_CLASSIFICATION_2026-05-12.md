@@ -276,7 +276,8 @@ Debug/staging:
    decorations instead of one setter per feature family.
 2. Decide whether fold/inlay APIs should move to a general `EditorDecorationSet` or remain direct
    v1 methods until diagnostics/gutter are implemented.
-3. Decide whether debug/diag helpers stay on `CodeEditorHandle` or move to a diagnostics adapter.
+3. Introduce a dedicated debug/harness or diagnostics adapter for gallery and test-only controls
+   before shrinking the remaining `CodeEditorHandle` helper surface.
 4. Decide whether `fret-code-editor` should re-export common buffer/view input types such as
    `TextBuffer`, `FoldSpan`, `InlaySpan`, and `CodeWrapPolicy`, or require app authors to depend on
    the lower-layer crates explicitly.
