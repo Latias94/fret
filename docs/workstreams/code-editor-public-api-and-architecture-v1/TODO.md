@@ -73,6 +73,7 @@ Last updated: 2026-05-12
     - [x] clipboard effects,
   - [ ] paint,
     - [x] row-scene cache freshness / replay / store,
+    - [x] row-text cache materialization / freshness / store,
   - [x] syntax,
     - [x] syntax prefetch runtime types,
     - [x] syntax cache invalidation/population/materialization,

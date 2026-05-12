@@ -40,6 +40,12 @@ windowed-row behavior.
 `paint/mod.rs` still owns row text/rich cache helpers, row materialization, and the main row painting
 orchestration. Broader paint cleanup remains open.
 
+## Follow-up
+
+Row-text cache ownership later moved to
+`M3_PAINT_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md`. Row-rich cache/prefetch and row-level paint
+orchestration remain in `paint/mod.rs`.
+
 ## Evidence
 
 - Row-scene owner: `ecosystem/fret-code-editor/src/editor/paint/scene.rs`
