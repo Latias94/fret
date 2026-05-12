@@ -12960,3 +12960,33 @@ Decision:
 - Keep this as smoke evidence only.
 - Do not treat the new `linux-local` file as checked-in Linux editor-grade contract coverage.
 - The formal Linux runner/profile gap remains open until a repeatable Linux gate can validate a real contract baseline.
+
+## 2026-05-13 03:57:35 +08:00 (perf helper CLI migration smoke)
+
+Question:
+- Do the perf helper scripts still launch the diagnostics CLI after moving their internal command
+  from the public `fretboard` package to the workspace-dev `fretboard-dev` package?
+
+Validation:
+- Static checks:
+  - `python -m py_compile tools/perf/diag_code_editor_resize_jitter_smoke_gate.py tools/perf/diag_external_texture_imports_gate.py tools/perf/diag_extras_marquee_gate.py tools/perf/diag_liquid_glass_backdrop_warp_gate.py tools/perf/diag_liquid_glass_backdrop_warp_v2_gate.py tools/perf/diag_perf_baseline_select.py tools/perf/diag_resize_probes_gate.py tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py tools/perf/diag_vlist_boundary_gate.py tools/perf/test_diag_perf_baseline_select.py`
+  - `bash -n tools/perf/diag_extras_marquee_gate.sh tools/perf/diag_perf_baseline_select.sh tools/perf/diag_resize_probes_gate.sh tools/perf/diag_vlist_boundary_gate.sh`
+  - PowerShell parser check for `tools/perf/diag_drop_shadow_v1_gate.ps1` and
+    `tools/perf/diag_extras_marquee_gate.ps1`
+  - `python -m unittest discover -s tools/perf -p 'test_*.py'`
+  - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  - `python tools/check_workstream_catalog.py`
+- Runtime smoke:
+  - `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 1 --repeat 1 --out-dir target/fret-diag/post-fretboard-dev-helper-smoke`
+
+Evidence:
+- Summary: `target/fret-diag/post-fretboard-dev-helper-smoke/summary.json`
+- Result: PASS, `pass_attempts=1`, `fail_attempts=0`, baseline selected
+  `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`.
+- The helper command recorded in the smoke output uses
+  `cargo run -q -p fretboard-dev -- diag perf ui-resize-probes ...`.
+
+Decision:
+- Keep perf investigation helpers on `fretboard-dev`, because the perf/diag surface is workspace-dev
+  tooling rather than the public scaffold CLI. This smoke is a launch-path check only; it is not a
+  formal repeat=7 contract validation.
