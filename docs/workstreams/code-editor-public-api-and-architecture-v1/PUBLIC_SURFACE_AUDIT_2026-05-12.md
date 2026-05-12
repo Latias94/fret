@@ -49,34 +49,65 @@ rg -n "0185|code editor ecosystem v1|fret-code-editor" docs/adr docs/workstreams
 
 ## Current Public Surface Snapshot
 
-`ecosystem/fret-code-editor/src/lib.rs` exports only:
+`ecosystem/fret-code-editor/src/lib.rs` now exports a broader but still intentionally curated
+surface:
 
-- `CodeEditor`
-- `CodeEditorCacheStats`
-- `CodeEditorHandle`
-- `CodeEditorInteractionOptions`
-- `CodeEditorPaintPerfFrame`
-- `CodeEditorTorture`
-- `PreeditState`
-- `Selection`
+- core editor surface types:
+  - `CodeEditor`
+  - `CodeEditorHandle`
+  - `CodeEditorInteractionOptions`
+  - `CodeEditorCacheStats`
+  - `CodeEditorMemorySnapshotV1`
+  - `CodeEditorCacheSizeSnapshotV1`
+  - `CodeEditorPaintPerfFrame`
+  - `CodeEditorFeaturePayloadSnapshotV1`
+  - `CodeEditorTorture`
+  - `PreeditState`
+- buffer / view contracts re-exported for app-facing signatures:
+  - `DocId`
+  - `DocUri`
+  - `Revision`
+  - `Selection`
+  - `Edit`
+  - `AppliedEdit`
+  - `TextBuffer`
+  - `TextBufferTx`
+  - `TextBufferTransaction`
+  - `LineDelta`
+  - `BufferDelta`
+  - `EditError`
+  - `DisplayMap`
+  - `DisplayPoint`
+  - `CodeWrapPolicy`
+  - `CodeWrapPreset`
+- feature payload / extension contracts:
+  - diagnostics, decorations, gutter markers, semantic tokens, assist payloads, and validation
+    helpers from `fret-code-editor-view`
 
-This is intentionally narrow, but it also means most editor subsystem concepts are either private
-implementation detail or exposed through `CodeEditorHandle` methods.
+This is still intentionally curated, but the public surface is now broad enough that the next work
+should be about classification and ownership, not about discovering whether the editor has a real
+surface at all.
 
 ## Crate Audit Snapshot
 
 `tools/audit_crate.py --crate fret-code-editor` reported:
 
 - top files:
-  - `src/editor/tests/mod.rs` - 4633 lines
-  - `src/editor/mod.rs` - 3983 lines
-  - `src/editor/paint/mod.rs` - 3952 lines
-  - `src/editor/input/mod.rs` - 1074 lines
-  - `src/editor/a11y/mod.rs` - 648 lines
+  - `src/editor/mod.rs` - 2108 lines
+  - `src/editor/paint/mod.rs` - 1893 lines
+  - `src/editor/tests/pointer_selection.rs` - 830 lines
+  - `src/editor/paint/rich.rs` - 766 lines
+  - `src/editor/syntax.rs` - 752 lines
+  - `src/editor/state.rs` - 696 lines
   - `src/editor/geom/mod.rs` - 633 lines
+  - `src/editor/input/edit.rs` - 521 lines
+  - `src/editor/tests/syntax.rs` - 519 lines
+  - `src/editor/paint/scene.rs` - 467 lines
+  - `src/editor/tests/accessibility.rs` - 462 lines
+  - `src/editor/tests/platform_text_input.rs` - 385 lines
 - public surface quick scan:
   - `pub mod`: 0
-  - `pub use`: 1
+  - `pub use`: 4
 - direct workspace dependencies:
   - `fret-code-editor-buffer`
   - `fret-code-editor-view`
@@ -89,6 +120,27 @@ implementation detail or exposed through `CodeEditorHandle` methods.
 
 Interpretation: the crate has a clean facade at the root, but the integration module is still large
 enough that ownership boundaries are easy to blur during feature work.
+
+## Verification Pass
+
+These gates were re-run after the audit snapshot:
+
+- `cargo nextest run -p fret-code-editor-buffer --lib --no-fail-fast`
+  - result: 12/12 tests passed
+- `cargo nextest run -p fret-code-editor-view --lib --no-fail-fast`
+  - result: 92/92 tests passed
+- `cargo check -p fret-code-editor-buffer`
+  - result: passed
+- `cargo check -p fret-code-editor-view`
+  - result: passed
+- `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast`
+  - result: 114/114 tests passed
+- `cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast`
+  - result: 1/1 test passed
+- `python tools/check_layering.py`
+  - result: passed
+- `rg --files docs/workstreams/perf-baselines | rg "linux|Linux"`
+  - result: no hits
 
 ## Strong Existing Architecture
 
