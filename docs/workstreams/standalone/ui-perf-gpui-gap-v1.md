@@ -46,9 +46,15 @@ Protocol:
 
 Recommended default gate set (global sanity):
 
-- `ui-gallery-steady` (canonical baseline)
 - `ui-resize-probes` (attempts=3)
 - `ui-code-editor-resize-probes` (attempts=3)
+- the dedicated single-script gallery contracts in
+  `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+
+`ui-gallery-steady` is no longer the canonical formal gate by itself. Keep it as drift evidence or
+redefine it as a suite-of-contracts before promoting it again; the current matrix uses narrower
+contracts for resize, overlays, virtual lists, menu navigation, material tabs, and code-editor paint
+payloads.
 
 Evidence template (copy/paste into the perf log):
 
@@ -87,6 +93,20 @@ Recent editor-class wins (evidence lives in the perf log):
 - Code editor resize drag smoothness: `top_total_time_us ~42ms → ~16ms` by making `CodeEditorHandle::set_language(...)`
   idempotent (avoid per-frame syntax/rich cache resets), guided by in-bundle Canvas phase attribution (commits
   `f664ead2d`, `1778ba563`).
+- Current Windows editor contract refresh (2026-05-11):
+  - `ui-code-editor-resize-probes.windows-rtx4090.v2.json` carries p50/p95/max resize evidence and passed the formal
+    repeat=7 helper gate.
+  - `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json` and
+    `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json` are payload-aware
+    `ui-renderer-payload` contracts with `renderer_instance_bytes` and `renderer_encode_scene_text_ops`.
+  - `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+    is the high-stress editor wheel contract covering folds, inlays, soft wrap, inline preedit, and decorations.
+  - The latest attribution says broad `WindowedRowsSurface` display-list work is not justified yet: row-scene
+    capture/store is not the limiter on the passing baselines; remaining pressure is Canvas/text prepare/renderer
+    payload unless a future near-threshold stressor proves otherwise.
+- Current renderer text-prepare win (2026-05-11): pre-deduplicated glyph pin keys reduced complex-wheel renderer text
+  prepare p95/max from `1287/1302us` to `660/722us`, with the non-instrumented baseline check still passing the
+  checked-in v1 contract.
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.

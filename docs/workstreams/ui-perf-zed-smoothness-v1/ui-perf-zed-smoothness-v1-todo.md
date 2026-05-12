@@ -86,6 +86,9 @@ Conventions:
   - egui adds the pass/repaint/cache accounting counter-reference; keep it updated when a Fret optimization changes
     frame cause accounting, extra-pass behavior, cache eviction, scene diff/replay, or multi-viewport repaint coupling.
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
+  - Latest: refreshed the GPUI gap map on 2026-05-12 so it no longer treats broad `ui-gallery-steady` as the canonical
+    formal gate and now points at the dedicated resize/code-editor/payload contracts plus the current no-display-list
+    rewrite decision.
 
 - [ ] Dev tooling: keep the “perf investigation loop” crisp for contributors (skills + checklists + attribution playbooks).
   - Workstream: `docs/workstreams/standalone/perf-devtools-skills-v1.md`
