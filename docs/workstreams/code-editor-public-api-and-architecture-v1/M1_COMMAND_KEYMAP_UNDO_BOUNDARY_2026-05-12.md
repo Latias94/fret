@@ -11,8 +11,9 @@ The code editor already has two paths:
 
 - direct `KeyDown` handling for baseline navigation, selection, insertion, deletion, copy, and
   paste fallback,
-- focused command handling for `edit.undo`, `edit.redo`, `text.select_all`, `text.copy`,
-  `text.cut`, `text.paste`, `text.move_word_left`, `text.move_word_right`,
+- focused command handling for `text.undo`, `text.redo`, `edit.undo`, `edit.redo`,
+  `text.select_all`, `text.copy`, `text.cut`, `text.paste`, `text.move_word_left`,
+  `text.move_word_right`,
   `text.select_word_left`, and `text.select_word_right`.
 
 The editor also keeps a local `UndoHistory<CodeEditorTx>` and records buffer transactions with
@@ -81,7 +82,8 @@ breaking callers.
 1. Add focused command coverage for the remaining ADR 0044 baseline commands currently handled only
    by direct `KeyDown`.
 2. Decide whether the code editor should also accept `text.undo` / `text.redo` as local-history
-   aliases while preserving `edit.undo` / `edit.redo` for window/document routing.
+   aliases while preserving `edit.undo` / `edit.redo` for window/document routing. Completed in
+   `M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md`.
 3. Extend command availability beyond `select_all` for undo, redo, cut, paste, copy, and movement
    commands. Completed in `M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md`.
 4. Define the first `editor.*` command only when a real editor-only behavior is implemented.

@@ -9,8 +9,8 @@ Extend the code editor focused command availability surface beyond `select_all`.
 
 The editor now reports availability for the commands it already handles:
 
-- `edit.undo`
-- `edit.redo`
+- `text.undo` / `edit.undo`
+- `text.redo` / `edit.redo`
 - `text.select_all` / `edit.select_all`
 - `text.copy` / `edit.copy`
 - `text.cut` / `edit.cut`

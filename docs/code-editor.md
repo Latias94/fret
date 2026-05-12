@@ -85,6 +85,10 @@ for explicit document replacement. Workspace/document persistence remains app-ow
 needs global document undo/redo, keep that history above the editor and bridge through explicit
 transactions; do not treat the editor-local history as a framework-global undo stack.
 
+Focused command routing accepts `text.undo` / `text.redo` for editor-local history. The existing
+`edit.undo` / `edit.redo` ids remain accepted by the editor route during the transition, but app
+authors should still keep document/workspace undo ownership outside `CodeEditorHandle`.
+
 ## Syntax and Boundaries
 
 Syntax highlighting is optional and feature-gated. Apply language settings from app state and avoid

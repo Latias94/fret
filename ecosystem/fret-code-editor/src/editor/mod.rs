@@ -1519,90 +1519,13 @@ impl CodeEditor {
                               action_cx: ActionCx,
                               command| {
                             let mut st = cmd_state.borrow_mut();
-                            if !st.interaction.enabled || !st.interaction.focusable {
+                            let result =
+                                input::handle_command(host, action_cx, &mut st, command.as_str());
+                            if !result.handled {
                                 return false;
                             }
-                            let mut did = false;
-                            match command.as_str() {
-                                "edit.undo" => {
-                                    if !st.interaction.editable {
-                                        return true;
-                                    }
-                                    did = input::undo(&mut st);
-                                }
-                                "edit.redo" => {
-                                    if !st.interaction.editable {
-                                        return true;
-                                    }
-                                    did = input::redo(&mut st);
-                                }
-                                "text.select_all" | "edit.select_all" => {
-                                    if !st.interaction.selectable {
-                                        return true;
-                                    }
-                                    let end = st.buffer.len_bytes();
-                                    st.selection = Selection {
-                                        anchor: 0,
-                                        focus: end,
-                                    };
-                                    st.set_preedit(None);
-                                    st.undo_group = None;
-                                    did = true;
-                                }
-                                "text.copy" | "edit.copy" => {
-                                    if !st.interaction.selectable {
-                                        return true;
-                                    }
-                                    input::copy_selection(host, action_cx, &st);
-                                    did = true;
-                                }
-                                "text.cut" | "edit.cut" => {
-                                    if !st.interaction.editable {
-                                        return true;
-                                    }
-                                    if input::cut_selection(host, action_cx, &mut st) {
-                                        did = true;
-                                    }
-                                }
-                                "text.paste" | "edit.paste" => {
-                                    if !st.interaction.editable {
-                                        return true;
-                                    }
-                                    input::request_paste(host, action_cx);
-                                    did = true;
-                                }
-                                "text.move_word_left" => {
-                                    if !st.interaction.selectable {
-                                        return true;
-                                    }
-                                    st.set_preedit(None);
-                                    did = input::move_word(&mut st, -1, false);
-                                }
-                                "text.move_word_right" => {
-                                    if !st.interaction.selectable {
-                                        return true;
-                                    }
-                                    st.set_preedit(None);
-                                    did = input::move_word(&mut st, 1, false);
-                                }
-                                "text.select_word_left" => {
-                                    if !st.interaction.selectable {
-                                        return true;
-                                    }
-                                    st.set_preedit(None);
-                                    did = input::move_word(&mut st, -1, true);
-                                }
-                                "text.select_word_right" => {
-                                    if !st.interaction.selectable {
-                                        return true;
-                                    }
-                                    st.set_preedit(None);
-                                    did = input::move_word(&mut st, 1, true);
-                                }
-                                _ => return false,
-                            }
 
-                            if did {
+                            if result.did {
                                 input::scroll_caret_into_view(&st, row_h, &cmd_scroll);
                                 // IME cursor positioning is driven by `TextInputRegionProps.ime_cursor_area`
                                 // and the per-frame `WindowTextInputSnapshot` published by the UI tree.

@@ -42,6 +42,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md"
     },
     {
@@ -307,6 +311,10 @@
       "command": "cargo nextest run -p fret-code-editor command_availability --lib --features syntax --no-fail-fast"
     },
     {
+      "name": "code editor text undo redo alias tests",
+      "command": "cargo nextest run -p fret-code-editor text_undo_redo --lib --features syntax --no-fail-fast"
+    },
+    {
       "name": "code editor focused tests",
       "command": "cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast"
     },
@@ -341,6 +349,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_KEYMAP_UNDO_BOUNDARY_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md",
