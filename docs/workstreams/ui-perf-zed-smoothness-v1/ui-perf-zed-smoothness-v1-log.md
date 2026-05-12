@@ -12924,3 +12924,23 @@ Evidence:
 Decision:
 - Keep the old `windows-smoke-text*` blank captures as pre-fix evidence only.
 - Treat the remaining goal gap as the explicit Linux runner/profile baseline, not as an IMUI smoke correctness issue.
+
+## 2026-05-13 02:14:00 +08:00 (WSL Linux code-editor smoke gate retry)
+
+Question:
+- Does the current WSL Linux code-editor resize smoke gate complete after rebuilding the current release binary?
+
+Validation:
+- Rebuilt the Linux release gallery on current head:
+  `CARGO_TARGET_DIR=/home/frankorz/fret-target cargo +1.92 build -p fret-ui-gallery --release --features gallery-dev`
+- Retried the Linux smoke gate with a longer timeout:
+  `CARGO_TARGET_DIR=/home/frankorz/fret-target python3 tools/perf/diag_code_editor_resize_jitter_smoke_gate.py --repeat 1 --warmup-frames 1 --timeout-ms 600000 --launch-bin /home/frankorz/fret-target/release/fret-ui-gallery --out-dir /home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-recheck-current-20260513-t600`
+
+Evidence:
+- `target` summary equivalent in WSL: `/home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-recheck-current-20260513-t600/gate.summary.json`
+- `stderr.log` shows `Connection reset by peer (os error 104)` and `timeout waiting for script result`
+- `script.result.json` stayed at `stage=running`, `step_index=5` until timeout
+
+Decision:
+- Do not treat this WSL retry as checked-in Linux contract evidence.
+- Keep the formal Linux runner/profile gap open until a stable Linux editor-grade baseline can be produced on a real Linux target.

@@ -241,6 +241,9 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    display-list rewrite gated on a future near-threshold or failing stressor where row op replay/capture is the
    measured limiter, not on these passing baselines alone.
 3. Keep Linux and any other non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
+4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
+   `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
+   checked-in Linux editor-grade baseline from this run.
 
 ## Audit Conclusion
 

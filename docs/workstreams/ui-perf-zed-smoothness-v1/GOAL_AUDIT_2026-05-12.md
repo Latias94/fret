@@ -36,13 +36,17 @@ measurable and reversible:
 - Screenshot evidence:
   `target/fret-diag/imui-hello-demo-screenshot-recheck/sessions/1778605632348-99852/screenshots/1778606081730-imui-hello-demo/window-4294967297-tick-41-frame-40.png`
 - Visible text is present again (`Count: 0`, `Increment`, `Enabled: false`, `Enabled`), so the earlier blank Windows smoke was pre-fix evidence rather than a WSL-specific symptom.
+- WSL code-editor resize smoke gate retry on current head:
+  `CARGO_TARGET_DIR=/home/frankorz/fret-target python3 tools/perf/diag_code_editor_resize_jitter_smoke_gate.py --repeat 1 --warmup-frames 1 --timeout-ms 600000 --launch-bin /home/frankorz/fret-target/release/fret-ui-gallery --out-dir /home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-recheck-current-20260513-t600`
+  still times out with `Connection reset by peer` and `timeout waiting for script result`; it is not checked-in Linux contract evidence.
 
 ## Current Gaps
 
 1. Real Linux runner/profile evidence is still missing.
 2. A checked-in Linux baseline for the editor-grade probes is still missing.
 3. The current WSL smoke runs are useful evidence, but they do not close the Linux contract.
-4. The code-editor public-API TODO still leaves the top-level `paint` owner boundary open, but the
+4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a checked-in Linux editor-grade baseline from this run.
+5. The code-editor public-API TODO still leaves the top-level `paint` owner boundary open, but the
    implementation is already split into `geom_cache`, `rich`, `scene`, and `text`. Treat this as a
    low-priority cleanup candidate, not as evidence for a broad renderer rewrite.
 
