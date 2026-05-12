@@ -171,6 +171,7 @@ Near-stable diagnostics/perf:
 - `CodeEditorCacheSizeSnapshotV1`
 - `CodeEditorMemorySnapshotV1`
 - `CodeEditorPaintPerfFrame`
+- `CodeEditorFeaturePayloadSnapshotV1`
 
 Rationale: these are already consumed by diagnostics and perf workstreams. They are versioned or
 diagnostics-oriented, but still need root export and compatibility discipline because they are
@@ -187,6 +188,14 @@ Experimental:
 - `CodeFontFeaturePreset`
 - `CodeFontFeaturePolicy`
 - `CodeEditorTorture`
+- Root re-exports of feature payload input contracts from `fret-code-editor-view`:
+  - `DiagnosticLineSummary`
+  - `DiagnosticSeverity`
+  - `DiagnosticSourceKind`
+  - `DiagnosticSpan`
+  - `GutterMarker`
+  - `RangeDecoration`
+  - `SemanticToken`
 - Assist request and payload contracts:
   - `EditorAssistKind`
   - `EditorAssistTrigger`
@@ -205,6 +214,10 @@ still tied to ADR 0188 and text shaping work. `CodeEditorTorture` is a harness f
 model. Assist request and payload structs are the first public data contract for completion,
 hover, and code actions; they intentionally remain experimental until a second producer/UI recipe
 proves the shape.
+
+Root re-exports should follow the stability bucket of their owner crates. The `fret-code-editor`
+facade can teach common embedding paths, but it should not become the canonical owner of
+buffer/view model semantics.
 
 Internal-by-accident candidates:
 
@@ -243,14 +256,25 @@ State readout:
 - `buffer_revision`
 - `selection`
 - `preedit_active`
-- `allow_decorations_under_inline_preedit`
-- `compose_inline_preedit`
 - `region_id`
 - `text_boundary_mode`
 - `text_boundary_mode_override`
 - `can_undo`
 - `can_redo`
 - `with_buffer`
+
+Feature payload extension:
+
+- `feature_payload_snapshot`
+- `diagnostic_line_summaries`
+- `set_diagnostic_spans`
+- `clear_diagnostic_spans`
+- `set_range_decorations`
+- `clear_range_decorations`
+- `set_gutter_markers`
+- `clear_gutter_markers`
+- `set_semantic_tokens`
+- `clear_semantic_tokens`
 
 Diagnostics/perf:
 
@@ -267,7 +291,9 @@ Debug/staging:
 - `set_preedit_debug`
 - `debug_platform_set_marked_text_for_selection`
 - `debug_platform_cancel_marked_text`
+- `allow_decorations_under_inline_preedit`
 - `set_allow_decorations_under_inline_preedit`
+- `compose_inline_preedit`
 - `set_compose_inline_preedit`
 
 ## Next Cleanup Candidates
@@ -278,6 +304,7 @@ Debug/staging:
    v1 methods until diagnostics/gutter are implemented.
 3. Introduce a dedicated debug/harness or diagnostics adapter for gallery and test-only controls
    before shrinking the remaining `CodeEditorHandle` helper surface.
-4. Decide whether `fret-code-editor` should re-export common buffer/view input types such as
-   `TextBuffer`, `FoldSpan`, `InlaySpan`, and `CodeWrapPolicy`, or require app authors to depend on
-   the lower-layer crates explicitly.
+4. Decide which currently re-exported buffer/view types are stable teaching surface versus
+   compatibility convenience. The root facade now re-exports common inputs such as `TextBuffer`,
+   `FoldSpan`, `InlaySpan`, and `CodeWrapPolicy`, but the canonical semantics remain owned by
+   `fret-code-editor-buffer` and `fret-code-editor-view`.
