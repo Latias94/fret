@@ -12807,3 +12807,35 @@ Decision:
 - Keep `ui-code-editor-resize-probes` as the current no-code-change regression sentinel for the editor resize path.
 - Do not start a `WindowedRowsSurface` or renderer display-list rewrite from this passing sample alone; the gate is
   still below threshold and the measured limiter remains layout/paint churn rather than a failing row-scene contract.
+
+## 2026-05-12 18:15:08 +08:00 (Linux smoke gate: font catalog no-op apply)
+
+Question:
+- Is the Linux `ui-gallery-code-editor-window-resize-drag-jitter-steady` smoke still blocked by
+  `FontCatalogPopulated` when system-font rescan apply is a no-op?
+
+Change:
+- Publish the completed renderer catalog snapshot into runtime even when
+  `apply_system_font_rescan_result()` returns false.
+- When system fonts are disabled, reconcile the runtime catalog with the current renderer
+  environment instead of leaving diagnostics waiting on an impossible background rescan.
+- Add a `wait_until_timeout` diagnostic event so the timeout path records
+  `TextFontStackKey`, stable-frame count, `font_catalog_populated`, and `system_font_rescan_idle`.
+
+Validation:
+- `cargo check -p fret-render-text -p fret-launch -p fret-bootstrap`
+- `cargo nextest run -p fret-render-text -p fret-launch -p fret-bootstrap`
+- `cargo nextest run -p fret-launch --lib --no-fail-fast`
+- `cargo fmt --check -p fret-render -p fret-render-text -p fret-launch -p fret-bootstrap`
+- WSL release build:
+  `CARGO_TARGET_DIR=/home/frankorz/fret-target cargo +1.92 build -p fret-ui-gallery --release --features gallery-dev`
+- Linux smoke gate:
+  `CARGO_TARGET_DIR=/home/frankorz/fret-target python3 tools/perf/diag_code_editor_resize_jitter_smoke_gate.py --repeat 1 --warmup-frames 1 --timeout-ms 180000 --launch-bin /home/frankorz/fret-target/release/fret-ui-gallery --out-dir /home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-font-catalog-fix-v1`
+
+Evidence:
+- Smoke result: `PASS: /mnt/f/SourceCodes/Rust/fret/tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+- Target out-dir: `/home/frankorz/fret-diag-code-editor-resize-jitter-smoke-linux-font-catalog-fix-v1`
+
+Decision:
+- Keep the startup contract explicit: a no-op renderer font-rescan apply must still publish the
+  runtime catalog snapshot when desktop async startup seeded an empty runtime catalog.

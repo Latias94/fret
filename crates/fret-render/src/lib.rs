@@ -70,6 +70,9 @@ pub use fret_render_wgpu::{
     viewport_overlay, write_rgba8_texture_region,
 };
 
+#[cfg(feature = "backend-wgpu")]
+pub use fret_render_wgpu::FontCatalogEntryMetadata;
+
 #[cfg(not(any(feature = "backend-wgpu")))]
 compile_error!("fret-render requires at least one backend feature enabled (e.g. `backend-wgpu`).");
 

@@ -178,6 +178,30 @@ pub struct SystemFontRescanResult {
     pub(crate) environment_fingerprint: u64,
 }
 
+impl SystemFontRescanResult {
+    /// Family names enumerated while building this rescan result.
+    ///
+    /// Runners may publish this snapshot even when applying the result is a no-op, because desktop
+    /// async startup can intentionally seed an empty runtime catalog before the background scan
+    /// completes.
+    pub fn all_font_names(&self) -> &[String] {
+        &self.all_font_names
+    }
+
+    /// Picker-facing catalog entries enumerated while building this rescan result.
+    ///
+    /// This lets the runner reconcile `FontCatalog` after an async startup scan without forcing a
+    /// second main-thread catalog enumeration when the renderer environment fingerprint is
+    /// unchanged.
+    pub fn all_font_catalog_entries(&self) -> &[FontCatalogEntryMetadata] {
+        &self.all_font_catalog_entries
+    }
+
+    pub fn environment_fingerprint(&self) -> u64 {
+        self.environment_fingerprint
+    }
+}
+
 const _: () = {
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}

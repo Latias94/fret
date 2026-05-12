@@ -863,6 +863,27 @@ pub(super) fn handle_wait_until_step(
         .is_some_and(|deadline| unix_ms_now() >= deadline)
         || state.remaining_frames == 0
     {
+        let text_font_stack_key = app.global::<fret_runtime::TextFontStackKey>().map(|k| k.0);
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "wait_until_timeout".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some(format!(
+                    "predicate_window={} predicate={predicate:?} remaining_frames={} deadline_unix_ms={:?} text_font_stack_key={text_font_stack_key:?} text_font_stack_key_stable_frames={text_font_stack_key_stable_frames} font_catalog_populated={font_catalog_populated} system_font_rescan_idle={system_font_rescan_idle}",
+                    predicate_window.data().as_ffi(),
+                    state.remaining_frames,
+                    state.deadline_unix_ms,
+                )),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
         *force_dump_label = Some(format!("script-step-{step_index:04}-wait_until-timeout"));
         *stop_script = true;
         *failure_reason = Some("wait_until_timeout".to_string());
