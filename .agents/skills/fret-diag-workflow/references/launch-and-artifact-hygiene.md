@@ -7,14 +7,14 @@ Use this note when the main problem is **how to run diagnostics safely and keep 
 - Do **not** run `rg` on `bundle.json` or on `target/fret-diag/**` / `.fret/diag/**`.
 - Do **not** `cat` / `Get-Content` raw `bundle.json` files.
 - Prefer bounded tooling queries:
-  - `fretboard diag meta ...`
-  - `fretboard diag windows ...`
-  - `fretboard diag dock-graph ...`
-  - `fretboard diag dock-routing ...`
-  - `fretboard diag screenshots ...`
-  - `fretboard diag resolve latest ...`
-  - `fretboard diag query ...`
-  - `fretboard diag slice ...`
+  - `fretboard-dev diag meta ...`
+  - `fretboard-dev diag windows ...`
+  - `fretboard-dev diag dock-graph ...`
+  - `fretboard-dev diag dock-routing ...`
+  - `fretboard-dev diag screenshots ...`
+  - `fretboard-dev diag resolve latest ...`
+  - `fretboard-dev diag query ...`
+  - `fretboard-dev diag slice ...`
 - When searching the repo, use `tools/rg-safe.ps1` to exclude diag artifact directories and bundle artifacts.
 
 ## 2) Launch/session hygiene
@@ -29,9 +29,9 @@ Use this note when the main problem is **how to run diagnostics safely and keep 
 
 Useful commands:
 
-- `fretboard diag list sessions --dir <base_dir>`
-- `fretboard diag sessions clean --dir <base_dir> --keep 50`
-- `fretboard diag resolve latest --dir <base_or_session_dir>`
+- `fretboard-dev diag list sessions --dir <base_dir>`
+- `fretboard-dev diag sessions clean --dir <base_dir> --keep 50`
+- `fretboard-dev diag resolve latest --dir <base_or_session_dir>`
 
 ## 3) Artifact size hygiene
 
@@ -63,10 +63,10 @@ Keep artifacts small by default:
 
 Recommended flow:
 
-1. `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`
-2. `cargo run -p fretboard -- diag run <script.json|script_id> --pack --ai-packet --launch -- <cmd>`
-3. `cargo run -p fretboard -- diag meta <bundle_dir|bundle.schema2.json> --json`
-4. `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
+1. `cargo run -p fretboard-dev -- diag config doctor --mode launch --print-launch-policy`
+2. `cargo run -p fretboard-dev -- diag run <script.json|script_id> --pack --ai-packet --launch -- <cmd>`
+3. `cargo run -p fretboard-dev -- diag meta <bundle_dir|bundle.schema2.json> --json`
+4. `cargo run -p fretboard-dev -- diag pack <bundle_dir> --ai-only`
 5. add `--launch-write-bundle-json` only when raw `bundle.json` is truly needed
 
 ## 7) Related references

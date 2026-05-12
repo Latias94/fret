@@ -1,6 +1,6 @@
 # Web/WASM runner workflow (devtools-ws)
 
-For web apps, `fretboard diag run` (filesystem-trigger transport) is usually not applicable. Prefer the devtools WS loopback:
+For web apps, `fretboard-dev diag run` (filesystem-trigger transport) is usually not applicable. Prefer the devtools WS loopback:
 
 1. Start the WS hub (prints a token):
    - `cargo run -p fret-devtools-ws`

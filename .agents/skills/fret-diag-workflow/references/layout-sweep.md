@@ -17,11 +17,11 @@ Use screenshots only as supporting evidence (for UI review or when a rendering b
 
 Recommended (native, launches a fresh process):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`
 
 Run a single sweep script:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-layout-sweep-core.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-layout-sweep-core.json --launch -- cargo run -p fret-ui-gallery --release`
 
 ## What to read when it fails
 

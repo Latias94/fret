@@ -83,7 +83,7 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
    - **Related skills**
 2. Add a regression asset:
    - Unit/integration test (fast) and/or
-   - `fretboard diag` script (state machines) and/or
+   - `fretboard-dev diag` script (state machines) and/or
    - golden/parity harness entry (layout/style outcomes)
 
 ## Templates (copy/paste)

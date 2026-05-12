@@ -8,7 +8,7 @@ If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a 
    - Tip: use the cross-platform gate triage helper:
      `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir>`
 3. Use the worst bundle for root cause:
-   - `cargo run -p fretboard -- diag stats <bundle.json> --sort cpu_cycles --top 30`
+   - `cargo run -p fretboard-dev -- diag stats <bundle.json> --sort cpu_cycles --top 30`
    - If CPU signal is near-zero but wall time is high, re-run with `--sort time` to separate scheduling noise from real UI-thread work.
 4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
    - Add a `tools/diag-scripts/*.json` script (stable `test_id` targets), then baseline/gate it.
@@ -32,5 +32,5 @@ python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> 
 Then inspect the worst bundle:
 
 ```bash
-cargo run -p fretboard -- diag stats <bundle.json> --sort cpu_cycles --top 30
+cargo run -p fretboard-dev -- diag stats <bundle.json> --sort cpu_cycles --top 30
 ```

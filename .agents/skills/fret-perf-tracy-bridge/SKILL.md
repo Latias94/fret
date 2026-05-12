@@ -23,17 +23,17 @@ This is especially useful for:
 
 1) Run a perf suite with a baseline gate:
 
-- `cargo run -p fretboard --release -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --dir target/fret-diag --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev --release -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --dir target/fret-diag --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 2) For each failure, jump straight to the evidence bundle:
 
 - Open `target/fret-diag/check.perf_thresholds.json`
 - For each `failures[].evidence_bundle`, run:
-  - `cargo run -p fretboard --release -- diag stats <bundle.json> --sort cpu_cycles --top 30`
+  - `cargo run -p fretboard-dev --release -- diag stats <bundle.json> --sort cpu_cycles --top 30`
 
 3) Reproduce the same script under Tracy:
 
-- `cargo run -p fretboard --release -- diag repro <script.json> --with tracy --dir target/fret-diag --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev --release -- diag repro <script.json> --with tracy --dir target/fret-diag --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 Then open Tracy and look for the same span taxonomy you see in bundles (`fret.frame`, `fret.ui.layout.*`, `fret.ui.paint.*`, cache-root spans, renderer spans).
 
@@ -78,7 +78,7 @@ Then open Tracy and look for the same span taxonomy you see in bundles (`fret.fr
 ## Evidence anchors
 
 - Perf gate evidence: `target/fret-diag/check.perf_thresholds.json`
-- Bundle attribution: `cargo run -p fretboard --release -- diag stats <bundle.json>` (or `target/release/fretboard[.exe] ...` if already built)
+- Bundle attribution: `cargo run -p fretboard-dev --release -- diag stats <bundle.json>` (or `target/release/fretboard-dev[.exe] ...` if already built)
 - Tracy usage + span taxonomy:
   - `docs/tracy.md`
   - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`

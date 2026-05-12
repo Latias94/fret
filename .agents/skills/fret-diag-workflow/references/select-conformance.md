@@ -35,7 +35,7 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
 
 ## Run the suite
 
-- `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release"`
+- `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard-dev -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release"`
 
 ## Typed script template (optional)
 

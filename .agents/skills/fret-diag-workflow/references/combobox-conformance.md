@@ -34,7 +34,7 @@ Goal: keep Combobox regressions explainable and gateable with semantics-first sc
 
 Run:
 
-- `cargo run -p fretboard -- diag suite ui-gallery-combobox --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-combobox --launch -- cargo run -p fret-ui-gallery --release`
 
 Scripts worth copying from:
 
