@@ -302,3 +302,14 @@ Status: complete
   to a text pipeline whose slot 0 expects `TextGlyphInstance` instance data.
 - The render scene recorder now binds `text_glyph_instance_buffer` for mask text draws, and the
   Drawer script plus the full five-script overlay/focus suite pass.
+
+## M26: Public Combobox Outside-Press Runtime Gate Slice
+
+Status: complete
+
+- The Combobox conformance demo now exposes selected/query state probes whose `test_id` nodes carry
+  the current state label, making status assertions directly observable by diagnostics predicates.
+- The outside-press script now scrolls the conformance trigger into view before clicking it, closing
+  the gap where `exists` could match an offscreen semantics node that was not actually clickable.
+- The overlay/focus diagnostics suite now includes the public Combobox outside-press gate, and the
+  six-script suite passes against the release UI Gallery binary.

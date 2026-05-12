@@ -158,6 +158,7 @@ Suite membership:
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`
+- `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
 
@@ -253,6 +254,7 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`,
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,

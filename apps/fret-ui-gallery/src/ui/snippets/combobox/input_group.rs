@@ -20,9 +20,11 @@ fn state_row(
             LayoutRefinement::default().w_full().min_w_0(),
         )
     });
+    let label = text.clone();
     cx.container(props, move |cx| {
         [shadcn::raw::typography::muted(text).into_element(cx)]
     })
+    .a11y_label(label)
     .test_id(test_id)
 }
 

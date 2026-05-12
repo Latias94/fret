@@ -74,5 +74,7 @@ date: 2026-05-12
 - [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
 - [x] Add modal-barrier root lifecycle runtime coverage on a default-compatible page.
 - [x] Add default-compatible Drawer modal underlay block/focus-restore activation-status coverage.
+- [x] Add default-compatible Combobox outside-press dismiss/focus-restore runtime coverage with
+  observable selected/query state probes.
 - [ ] Add default-compatible non-modal click-through activation-status coverage once public pages
   expose stable underlay/status probes.

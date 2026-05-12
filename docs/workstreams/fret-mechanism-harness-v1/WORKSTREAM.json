@@ -37,7 +37,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, the UI Gallery checkbox underflow diagnostics gate, and the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, the UI Gallery checkbox underflow diagnostics gate, and the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -56,6 +56,7 @@
       "cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture",
       "cargo build -p fret-ui-gallery --release",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json --dir target/fret-diag-mechanism-harness-runtime --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe",
       "cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --dir target/fret-diag-mechanism-harness-runtime --session-auto --launch -- target/release/fret-ui-gallery.exe",
       "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture"
@@ -279,6 +280,10 @@
       "command": "target/debug/fretboard-dev.exe diag run ui-gallery-checkbox-demo-with-title-toggle-underflow --dir target/fret-diag/mechanism-harness-v1-checkbox-underflow --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-combobox-outside-press-diag",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json --dir target/fret-diag-mechanism-harness-runtime --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe"
+    },
+    {
       "name": "ui-gallery-overlay-focus-runtime-suite",
       "command": "cargo build -p fret-ui-gallery --release && cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --dir target/fret-diag-mechanism-harness-runtime --session-auto --launch -- target/release/fret-ui-gallery.exe"
     },
@@ -359,6 +364,7 @@
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json",
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
     "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json",
+    "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json",
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json",
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json",
     "crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs",
