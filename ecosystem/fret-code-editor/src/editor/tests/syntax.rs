@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "syntax-rust")]
+use crate::editor::syntax as syntax_cache;
 
 #[cfg(feature = "syntax-rust")]
 #[test]
@@ -12,7 +14,7 @@ fn rust_syntax_spans_are_materialized_for_rows() {
 
     let mut any_highlight = false;
     for row in 0..line_count {
-        let spans = paint::cached_row_syntax_spans(&mut st, row, 256);
+        let spans = syntax_cache::cached_row_syntax_spans(&mut st, row, 256);
         if !spans.is_empty() {
             any_highlight = true;
             break;
@@ -39,8 +41,8 @@ fn set_language_is_idempotent_for_same_value() {
 
     {
         let mut st = handle.state.borrow_mut();
-        let _ = paint::cached_row_syntax_spans(&mut st, 0, 256);
-        let _ = paint::cached_row_syntax_spans(&mut st, 1, 256);
+        let _ = syntax_cache::cached_row_syntax_spans(&mut st, 0, 256);
+        let _ = syntax_cache::cached_row_syntax_spans(&mut st, 1, 256);
         assert!(
             st.syntax_row_cache.contains_key(&0),
             "expected syntax cache entry for row 0"
@@ -147,8 +149,8 @@ fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {
 
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
-    let _ = paint::cached_row_syntax_spans(&mut st, 0, max_entries);
-    let _ = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let _ = syntax_cache::cached_row_syntax_spans(&mut st, 0, max_entries);
+    let _ = syntax_cache::cached_row_syntax_spans(&mut st, 150, max_entries);
     assert!(
         st.syntax_row_cache.contains_key(&150),
         "expected far-row cache entries to be populated"
@@ -192,8 +194,8 @@ fn syntax_cache_invalidation_shifts_far_rows_on_newline_insertion() {
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
 
-    let _ = paint::cached_row_syntax_spans(&mut st, 0, max_entries);
-    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let _ = syntax_cache::cached_row_syntax_spans(&mut st, 0, max_entries);
+    let spans_150 = syntax_cache::cached_row_syntax_spans(&mut st, 150, max_entries);
     assert!(
         st.syntax_row_cache.contains_key(&150),
         "expected far-row cache entries to be populated"
@@ -228,7 +230,7 @@ fn syntax_cache_invalidation_shifts_far_rows_on_newline_insertion() {
     );
 
     let hits_before = st.cache_stats.syntax_hits;
-    let spans_after = paint::cached_row_syntax_spans(&mut st, shifted_row, max_entries);
+    let spans_after = syntax_cache::cached_row_syntax_spans(&mut st, shifted_row, max_entries);
     assert!(
         st.cache_stats.syntax_hits > hits_before,
         "expected shifted far-row cache to hit"
@@ -252,8 +254,8 @@ fn syntax_cache_invalidation_shifts_far_rows_on_newline_deletion() {
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
 
-    let _ = paint::cached_row_syntax_spans(&mut st, 0, max_entries);
-    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let _ = syntax_cache::cached_row_syntax_spans(&mut st, 0, max_entries);
+    let spans_150 = syntax_cache::cached_row_syntax_spans(&mut st, 150, max_entries);
     assert!(
         st.syntax_row_cache.contains_key(&150),
         "expected far-row cache entries to be populated"
@@ -287,7 +289,7 @@ fn syntax_cache_invalidation_shifts_far_rows_on_newline_deletion() {
     );
 
     let hits_before = st.cache_stats.syntax_hits;
-    let spans_after = paint::cached_row_syntax_spans(&mut st, shifted_row, max_entries);
+    let spans_after = syntax_cache::cached_row_syntax_spans(&mut st, shifted_row, max_entries);
     assert!(
         st.cache_stats.syntax_hits > hits_before,
         "expected shifted far-row cache to hit"
@@ -309,10 +311,10 @@ fn syntax_cache_invalidation_invalidates_bounded_window_around_edit() {
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
 
-    let line_10 = paint::cached_row_syntax_spans(&mut st, 10, max_entries);
-    let line_50 = paint::cached_row_syntax_spans(&mut st, 50, max_entries);
-    let line_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
-    let line_200 = paint::cached_row_syntax_spans(&mut st, 200, max_entries);
+    let line_10 = syntax_cache::cached_row_syntax_spans(&mut st, 10, max_entries);
+    let line_50 = syntax_cache::cached_row_syntax_spans(&mut st, 50, max_entries);
+    let line_150 = syntax_cache::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let line_200 = syntax_cache::cached_row_syntax_spans(&mut st, 200, max_entries);
 
     assert!(st.syntax_row_cache.contains_key(&10));
     assert!(st.syntax_row_cache.contains_key(&50));
@@ -357,8 +359,8 @@ fn syntax_cache_invalidation_invalidates_bounded_window_around_edit() {
     );
 
     let hits_before = st.cache_stats.syntax_hits;
-    let line_10_after = paint::cached_row_syntax_spans(&mut st, 10, max_entries);
-    let line_200_after = paint::cached_row_syntax_spans(&mut st, 200, max_entries);
+    let line_10_after = syntax_cache::cached_row_syntax_spans(&mut st, 10, max_entries);
+    let line_200_after = syntax_cache::cached_row_syntax_spans(&mut st, 200, max_entries);
     assert!(
         st.cache_stats.syntax_hits >= hits_before + 2,
         "expected preserved far-row cache to hit"
@@ -383,7 +385,7 @@ fn syntax_cache_invalidation_shifts_far_rows_on_multiple_newline_insertion() {
 
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
-    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let spans_150 = syntax_cache::cached_row_syntax_spans(&mut st, 150, max_entries);
 
     input::apply_and_record_edit(
         &mut st,
@@ -412,6 +414,69 @@ fn syntax_cache_invalidation_shifts_far_rows_on_multiple_newline_insertion() {
 
 #[cfg(feature = "syntax-rust")]
 #[test]
+fn syntax_prefetch_key_distinguishes_documents_with_same_revision() {
+    let language: Arc<str> = Arc::<str>::from("rust");
+    let key_a = crate::editor::syntax::SyntaxPrefetchKey {
+        doc: DocId::new(),
+        rev: fret_code_editor_buffer::Revision(0),
+        language: Arc::clone(&language),
+        chunk_start: 0,
+        chunk_end: 127,
+    };
+    let key_b = crate::editor::syntax::SyntaxPrefetchKey {
+        doc: DocId::new(),
+        rev: fret_code_editor_buffer::Revision(0),
+        language,
+        chunk_start: 0,
+        chunk_end: 127,
+    };
+
+    assert_ne!(key_a, key_b);
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_rows_from_highlight_spans_maps_across_rows() {
+    let row_ranges = vec![0..4, 4..8, 8..12];
+    let rows = crate::editor::syntax::syntax_rows_from_highlight_spans(
+        0,
+        10,
+        &row_ranges,
+        vec![fret_syntax::HighlightSpan {
+            range: 1..10,
+            highlight: Some("keyword"),
+        }],
+    );
+
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[0].0, 10);
+    assert_eq!(rows[1].0, 11);
+    assert_eq!(rows[2].0, 12);
+    assert_eq!(
+        rows[0].1.as_ref(),
+        &[SyntaxSpan {
+            range: 1..4,
+            highlight: "keyword",
+        }]
+    );
+    assert_eq!(
+        rows[1].1.as_ref(),
+        &[SyntaxSpan {
+            range: 0..4,
+            highlight: "keyword",
+        }]
+    );
+    assert_eq!(
+        rows[2].1.as_ref(),
+        &[SyntaxSpan {
+            range: 0..2,
+            highlight: "keyword",
+        }]
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
 fn syntax_cache_invalidation_shifts_far_rows_on_multiple_line_deletion() {
     let mut text = String::new();
     for _ in 0..200 {
@@ -424,7 +489,7 @@ fn syntax_cache_invalidation_shifts_far_rows_on_multiple_line_deletion() {
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
 
-    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let spans_150 = syntax_cache::cached_row_syntax_spans(&mut st, 150, max_entries);
     assert!(
         st.syntax_row_cache.contains_key(&150),
         "expected far-row cache entries to be populated"

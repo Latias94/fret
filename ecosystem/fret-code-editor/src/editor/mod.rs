@@ -80,7 +80,7 @@ use geom::{
 pub use handle::CodeEditorHandle;
 use state::*;
 #[cfg(feature = "syntax")]
-use syntax::{SyntaxPrefetchChunk, SyntaxPrefetchKey, SyntaxPrefetchRuntime, SyntaxSpan};
+use syntax::{SyntaxPrefetchRuntime, SyntaxSpan};
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
 const CODE_EDITOR_ROW_CACHE_MIN_ENTRIES: usize = 256;
@@ -1025,7 +1025,7 @@ impl CodeEditor {
             let syntax_prefetch_hook = {
                 let editor_state = editor_state.clone();
                 let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
-                    paint::schedule_syntax_prefetch_for_frame(
+                    self::syntax::schedule_syntax_prefetch_for_frame(
                         &mut editor_state.borrow_mut(),
                         frame,
                         text_cache_max_entries,

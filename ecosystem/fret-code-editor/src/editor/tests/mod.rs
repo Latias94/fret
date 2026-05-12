@@ -388,7 +388,7 @@ fn syntax_prefetch_visible_window_uses_display_map_lines_under_soft_wrap() {
 
     let visible_lines = {
         let st = handle.state.borrow();
-        paint::syntax_prefetch_visible_line_window(
+        crate::editor::syntax::syntax_prefetch_visible_line_window(
             &st,
             WindowedRowsPaintFrame {
                 viewport_height: Px(64.0),

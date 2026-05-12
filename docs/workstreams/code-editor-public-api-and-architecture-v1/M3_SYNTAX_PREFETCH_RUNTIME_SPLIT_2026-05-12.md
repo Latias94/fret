@@ -35,6 +35,11 @@ pending/ready queue limits, background dispatch priority, paint attribution, or 
 The broader `syntax` owner split remains open until syntax cache population, invalidation, and
 materialization have a dedicated owner outside the monolithic paint module.
 
+## Follow-up
+
+The syntax cache owner split landed in
+`docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md`.
+
 ## Evidence
 
 - Syntax runtime owner: `ecosystem/fret-code-editor/src/editor/syntax.rs`

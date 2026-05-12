@@ -1,7 +1,7 @@
 use super::*;
 
 #[cfg(feature = "syntax")]
-use crate::editor::paint::invalidate_syntax_row_cache_for_delta;
+use crate::editor::syntax::invalidate_syntax_row_cache_for_delta;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 

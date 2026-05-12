@@ -65,23 +65,25 @@ Exit criteria:
 - At least one public API cleanup lands with a surface-diff note.
 - Debug-only APIs are either clearly named as debug/staging or moved away from the default public
   path.
-- Module/test ownership improves without changing behavior. (First test split landed in
-  `M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
-  `M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`; diagnostics/perf snapshot split landed in
-  `M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`; state schema split landed in
-  `M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md`; state methods split landed in
+  - Module/test ownership improves without changing behavior. (First test split landed in
+    `M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
+    `M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`; diagnostics/perf snapshot split landed in
+    `M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`; state schema split landed in
+    `M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md`; state methods split landed in
   `M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md`; state initializer split landed in
   `M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md`; handle module split landed in
   `M3_HANDLE_MODULE_SPLIT_2026-05-12.md`; handle method boundary split landed in
   `M3_HANDLE_METHOD_BOUNDARY_SPLIT_2026-05-12.md`; a11y window/mapping split landed in
   `M3_A11Y_MODULE_SPLIT_2026-05-12.md`; the first input owner slice moved edit transactions,
   IME delete-surrounding, undo/redo, and row-geom cache shifting into
-  `M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md`; clipboard effects moved into
-  `M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`; keyboard dispatch moved into
-  `M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md`; navigation, pointer selection, and final input boundary
-  cleanup landed in `M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md`; the first syntax owner
-  slice moved prefetch runtime types into
-  `M3_SYNTAX_PREFETCH_RUNTIME_SPLIT_2026-05-12.md`.)
+    `M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md`; clipboard effects moved into
+    `M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md`; keyboard dispatch moved into
+    `M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md`; navigation, pointer selection, and final input boundary
+    cleanup landed in `M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md`; the first syntax owner
+    slice moved prefetch runtime types into
+    `M3_SYNTAX_PREFETCH_RUNTIME_SPLIT_2026-05-12.md`; the syntax cache owner split landed in
+    `M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md`; the paint row-scene cache/replay/store owner
+    split landed in `M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.
 
 ## M4 - Feature Surface Proof

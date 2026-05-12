@@ -168,6 +168,10 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md`
 - Syntax prefetch runtime split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_PREFETCH_RUNTIME_SPLIT_2026-05-12.md`
+- Syntax cache module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md`
+- Paint row-scene module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
@@ -179,6 +183,7 @@ Latest resize probe with paint attribution enabled:
 - Feature payload store: `ecosystem/fret-code-editor/src/editor/feature_payloads.rs`
 - State schema: `ecosystem/fret-code-editor/src/editor/state.rs`
 - Paint hot path: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
+- Paint row-scene owner: `ecosystem/fret-code-editor/src/editor/paint/scene.rs`
 - Input hot path: `ecosystem/fret-code-editor/src/editor/input/mod.rs`
 - Input edit transaction owner: `ecosystem/fret-code-editor/src/editor/input/edit.rs`
 - Input clipboard effect owner: `ecosystem/fret-code-editor/src/editor/input/clipboard.rs`

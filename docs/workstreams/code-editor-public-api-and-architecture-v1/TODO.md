@@ -57,7 +57,7 @@ Last updated: 2026-05-12
   - [x] Split at least one more feature-owned behavior cluster out of `tests/mod.rs` (`syntax-rust` cache regression tests into `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`).
   - [x] Extract feature payload API tests into
         `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`.
-- [ ] Split large internal owners only when the public API or test ownership benefits:
+  - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,
   - [x] state schema,
@@ -72,9 +72,10 @@ Last updated: 2026-05-12
     - [x] caret navigation and pointer selection,
     - [x] clipboard effects,
   - [ ] paint,
-  - [ ] syntax,
+    - [x] row-scene cache freshness / replay / store,
+  - [x] syntax,
     - [x] syntax prefetch runtime types,
-    - [ ] syntax cache invalidation/population/materialization,
+    - [x] syntax cache invalidation/population/materialization,
   - [ ] diagnostics/decorations.
 
 ## P2 - Performance and Diagnostics
