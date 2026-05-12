@@ -162,6 +162,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_KEYBOARD_COMMANDS_MODULE_SPLIT_2026-05-12.md`
 - Preedit paint test module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PREEDIT_PAINT_MODULE_SPLIT_2026-05-12.md`
+- Display navigation test module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_DISPLAY_NAVIGATION_MODULE_SPLIT_2026-05-12.md`
 - Syntax test module split:
   `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`
 - Feature payload store module split:

@@ -79,6 +79,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/keyboard_commands.rs`.
   - [x] Extract preedit rich-text paint tests into
         `ecosystem/fret-code-editor/src/editor/tests/preedit_paint.rs`.
+  - [x] Extract display-row navigation tests into
+        `ecosystem/fret-code-editor/src/editor/tests/display_navigation.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,
