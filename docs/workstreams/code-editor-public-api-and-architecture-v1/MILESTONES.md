@@ -70,6 +70,8 @@ Exit criteria:
 
 ## M3 - First API Cleanup Slice
 
+Status: Complete (2026-05-12)
+
 Exit criteria:
 
 - At least one public API cleanup lands with a surface-diff note.
