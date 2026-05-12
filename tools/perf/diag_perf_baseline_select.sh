@@ -193,7 +193,7 @@ run_baseline() {
   local candidate_out_dir="$3"
 
   local cmd=(
-    cargo run -q -p fretboard --
+    cargo run -q -p fretboard-dev --
     diag perf "$suite"
     --dir "$candidate_out_dir"
     --timeout-ms 300000
@@ -246,7 +246,7 @@ run_validation() {
   local validation_out_dir="$4"
 
   local cmd=(
-    cargo run -q -p fretboard --
+    cargo run -q -p fretboard-dev --
     diag perf "$suite"
     --dir "$validation_out_dir"
     --timeout-ms 300000

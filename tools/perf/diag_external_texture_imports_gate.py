@@ -78,7 +78,7 @@ def _run_suite(
         "run",
         "-q",
         "-p",
-        "fretboard",
+        "fretboard-dev",
         "--",
         "diag",
         "perf",

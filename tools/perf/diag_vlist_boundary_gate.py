@@ -184,7 +184,7 @@ def main() -> int:
             "run",
             "-q",
             "-p",
-            "fretboard",
+            "fretboard-dev",
             "--",
             "diag",
             "run",
