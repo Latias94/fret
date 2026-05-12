@@ -172,12 +172,15 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md`
 - Paint row-scene module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md`
+- Diagnostics/decorations owner closure:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
 - View source: `ecosystem/fret-code-editor-view/src/lib.rs`
 - Diagnostic projection source: `ecosystem/fret-code-editor-view/src/diagnostics.rs`
 - Gutter marker source: `ecosystem/fret-code-editor-view/src/gutter.rs`
 - Range decoration source: `ecosystem/fret-code-editor-view/src/decorations.rs`
 - Semantic token source: `ecosystem/fret-code-editor-view/src/semantic_tokens.rs`
+- Feature payload handle owner: `ecosystem/fret-code-editor/src/editor/handle/feature_payloads.rs`
 - Surface root: `ecosystem/fret-code-editor/src/lib.rs`
 - Surface integration: `ecosystem/fret-code-editor/src/editor/mod.rs`
 - Feature payload store: `ecosystem/fret-code-editor/src/editor/feature_payloads.rs`

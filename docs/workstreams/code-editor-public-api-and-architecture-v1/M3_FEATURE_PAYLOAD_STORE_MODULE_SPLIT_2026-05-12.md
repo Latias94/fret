@@ -36,6 +36,12 @@ and diagnostics/decorations call-site ownership.
 This slice does not change feature payload contracts, visual rendering, diagnostics bundle schema,
 or public handle method names.
 
+## Follow-up
+
+The diagnostics/decorations call-site ownership item was later closed by
+`M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md`. The feature payload store remains the
+widget-local storage owner; the view crate remains the data-contract owner.
+
 ## Evidence
 
 - New owner module: `ecosystem/fret-code-editor/src/editor/feature_payloads.rs`

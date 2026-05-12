@@ -76,7 +76,7 @@ Last updated: 2026-05-12
   - [x] syntax,
     - [x] syntax prefetch runtime types,
     - [x] syntax cache invalidation/population/materialization,
-  - [ ] diagnostics/decorations.
+  - [x] diagnostics/decorations.
 
 ## P2 - Performance and Diagnostics
 
