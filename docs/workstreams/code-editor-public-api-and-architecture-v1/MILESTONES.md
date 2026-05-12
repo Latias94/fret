@@ -81,7 +81,9 @@ Exit criteria:
     `M3_TEST_DISPLAY_NAVIGATION_MODULE_SPLIT_2026-05-12.md`; row geometry cache tests moved in
     `M3_TEST_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md`; state lifecycle tests moved in
     `M3_TEST_STATE_LIFECYCLE_MODULE_SPLIT_2026-05-12.md`; editor scroll window test moved in
-    `M3_TEST_SCROLL_WINDOW_MODULE_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
+    `M3_TEST_SCROLL_WINDOW_MODULE_SPLIT_2026-05-12.md`; remaining syntax-window, paint-guard,
+    fold-lifecycle, and edit-refresh tests moved in
+    `M3_TEST_OWNER_RESIDUAL_CLOSURE_2026-05-12.md`; feature payload store/snapshot split landed in
     `M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`; diagnostics/perf snapshot split landed in
     `M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`; state schema split landed in
     `M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md`; state methods split landed in

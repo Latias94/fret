@@ -52,7 +52,7 @@ Last updated: 2026-05-12
       inlays, soft wrap, selection, and an ecosystem-owned overlay-style hook.
   - [x] Add an anchored text-assist overlay proof on `code_editor_torture`.
 - [x] Add a diagnostics bundle assertion for feature payload stability.
-- [ ] Split monolithic editor tests into feature-owned test modules or fixture-driven runners.
+- [x] Split monolithic editor tests into feature-owned test modules or fixture-driven runners.
   - [x] Move shared scroll-audit/test-telemetry helpers into `ecosystem/fret-code-editor/src/editor/tests/support.rs`.
   - [x] Split at least one more feature-owned behavior cluster out of `tests/mod.rs` (`syntax-rust` cache regression tests into `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`).
   - [x] Extract feature payload API tests into
@@ -87,6 +87,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/state_lifecycle.rs`.
   - [x] Extract editor scroll window test into
         `ecosystem/fret-code-editor/src/editor/tests/scroll_window.rs`.
+  - [x] Extract residual syntax-window, paint-guard, fold-lifecycle, and edit-refresh tests into
+        feature-owned modules.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,

@@ -1,5 +1,5 @@
+use super::paint;
 use super::*;
-use super::{input, paint};
 use fret_app::App;
 use fret_core::{
     AppWindowId, Event, FrameId, MaterialRegistrationError, MaterialService, Modifiers,
@@ -16,9 +16,12 @@ use std::sync::Arc;
 mod accessibility;
 mod caret_navigation;
 mod display_navigation;
+mod edit_refresh;
 mod feature_payloads;
+mod fold_lifecycle;
 mod geometry;
 mod keyboard_commands;
+mod paint_guards;
 mod platform_text_input;
 mod platform_text_input_roundtrip;
 mod pointer_helpers;
@@ -31,6 +34,8 @@ mod state_lifecycle;
 mod support;
 #[cfg(feature = "syntax-rust")]
 mod syntax;
+#[cfg(feature = "syntax")]
+mod syntax_window;
 mod word_navigation;
 
 use support::*;
@@ -126,158 +131,5 @@ impl MaterialService for FakeServices {
 
     fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
-    }
-}
-
-#[cfg(feature = "syntax")]
-#[test]
-fn syntax_prefetch_visible_window_uses_display_map_lines_under_soft_wrap() {
-    let handle = CodeEditorHandle::new("abcdef\nuvwxyz\n123456");
-    handle.set_soft_wrap_cols(Some(2));
-
-    let visible_lines = {
-        let st = handle.state.borrow();
-        crate::editor::syntax::syntax_prefetch_visible_line_window(
-            &st,
-            WindowedRowsPaintFrame {
-                viewport_height: Px(64.0),
-                offset_y: Px(0.0),
-                visible_start: 2,
-                visible_end: 4,
-            },
-        )
-    };
-
-    assert_eq!(
-        visible_lines,
-        Some((0, 1)),
-        "syntax prefetch must translate display rows to physical buffer lines before chunking"
-    );
-}
-
-#[test]
-fn paint_source_does_not_materialize_whole_buffer_string() {
-    // Regression guard: the editor paint path should never call `TextBuffer::text_string()`.
-    // Materializing the entire rope would scale with document size and defeat row virtualization.
-    const SRC: &str = include_str!("../paint/mod.rs");
-    assert!(
-        !SRC.contains(".text_string("),
-        "paint/mod.rs must not call TextBuffer::text_string()"
-    );
-}
-
-#[test]
-fn enabling_folds_snaps_caret_out_of_folded_range() {
-    let handle = CodeEditorHandle::new("abcdef");
-    {
-        let mut st = handle.state.borrow_mut();
-        st.selection = Selection {
-            anchor: 2,
-            focus: 2,
-        };
-    }
-
-    handle.set_line_folds(
-        0,
-        vec![FoldSpan {
-            range: 1..4,
-            placeholder: Arc::<str>::from("…"),
-        }],
-    );
-
-    let st = handle.state.borrow();
-    assert_eq!(st.selection.caret(), 1);
-}
-
-#[test]
-fn enabling_folds_snaps_caret_out_of_folded_range_under_soft_wrap() {
-    let handle = CodeEditorHandle::new("abcdef");
-    handle.set_soft_wrap_cols(Some(2));
-    {
-        let mut st = handle.state.borrow_mut();
-        st.selection = Selection {
-            anchor: 2,
-            focus: 2,
-        };
-    }
-
-    handle.set_line_folds(
-        0,
-        vec![FoldSpan {
-            range: 1..4,
-            placeholder: Arc::<str>::from("…"),
-        }],
-    );
-
-    let st = handle.state.borrow();
-    assert_eq!(st.selection.caret(), 1);
-}
-
-#[test]
-fn apply_and_record_edit_refreshes_display_map_only_when_needed() {
-    let handle = CodeEditorHandle::new("ab\nc");
-
-    {
-        let mut st = handle.state.borrow_mut();
-        assert_eq!(st.display_wrap_cols, None);
-        assert_eq!(st.display_map.row_count(), 2);
-
-        // No newline, no wrap => row_count should remain correct without forcing a refresh.
-        input::apply_and_record_edit(
-            &mut st,
-            UndoGroupKind::Typing,
-            Edit::Insert {
-                at: 0,
-                text: "x".to_string(),
-            },
-            Selection {
-                anchor: 1,
-                focus: 1,
-            },
-        )
-        .expect("apply edit");
-        assert_eq!(st.buffer.line_count(), 2);
-        assert_eq!(st.display_map.row_count(), 2);
-
-        // Newline => line count changes, so the map must refresh.
-        let insert_at = st.buffer.text_string().find('\n').unwrap_or(0);
-        input::apply_and_record_edit(
-            &mut st,
-            UndoGroupKind::Typing,
-            Edit::Insert {
-                at: insert_at,
-                text: "\n".to_string(),
-            },
-            Selection {
-                anchor: insert_at + 1,
-                focus: insert_at + 1,
-            },
-        )
-        .expect("apply edit");
-        assert_eq!(st.buffer.line_count(), 3);
-        assert_eq!(st.display_map.row_count(), 3);
-    }
-
-    // With wrap enabled, edits can change display rows even if line count is stable.
-    let handle = CodeEditorHandle::new("ab");
-    handle.set_soft_wrap_cols(Some(2));
-    {
-        let mut st = handle.state.borrow_mut();
-        assert_eq!(st.display_map.row_count(), 1);
-
-        input::apply_and_record_edit(
-            &mut st,
-            UndoGroupKind::Typing,
-            Edit::Insert {
-                at: 2,
-                text: "c".to_string(),
-            },
-            Selection {
-                anchor: 3,
-                focus: 3,
-            },
-        )
-        .expect("apply edit");
-        assert_eq!(st.display_map.row_count(), 2);
     }
 }
