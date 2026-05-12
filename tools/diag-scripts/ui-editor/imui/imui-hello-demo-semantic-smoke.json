@@ -28,6 +28,13 @@
       "type": "assert",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-hello-demo.count-text" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "role_and_name", "role": "button", "name": "Increment" }
       }
     },
@@ -47,6 +54,14 @@
       }
     },
     {
+      "type": "capture_bundle",
+      "label": "imui-hello-demo-semantic-smoke-before"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-hello-demo-semantic-smoke-before"
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "role_and_name", "role": "button", "name": "Increment" },
       "timeout_frames": 240
@@ -58,6 +73,14 @@
         "target": { "kind": "role_and_name", "role": "text", "name": "Count: 1" }
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-hello-demo-semantic-smoke-after-count"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-hello-demo-semantic-smoke-after-count"
     },
     {
       "type": "click_stable",

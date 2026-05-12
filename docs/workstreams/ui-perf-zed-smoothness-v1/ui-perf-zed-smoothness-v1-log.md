@@ -13022,3 +13022,36 @@ Decision:
 - Do not use `first_frame_smoke_demo` as text evidence: that target intentionally paints only a
   full-window quad for runner bootstrap / first-present validation, so a no-text screenshot there is
   expected.
+
+## 2026-05-13 04:50:39 +08:00 (IMUI hello text pixel-change gate)
+
+Question:
+- Can the `imui_hello_demo` smoke prove that the count text region changes in the GPU screenshot,
+  not only that text semantics exist?
+
+Change:
+- Added stable text-region diagnostics ids in `apps/fret-examples-imui/src/imui_hello_demo.rs`:
+  `imui-hello-demo.count-text` and `imui-hello-demo.enabled-text`.
+- Extended `tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json` to capture a
+  before screenshot at `Count: 0` and an after screenshot at `Count: 1`.
+
+Validation:
+- `cargo fmt -p fret-examples-imui`
+- `python -m json.tool tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json`
+- `cargo build -p fret-demo --bin imui_hello_demo`
+- `FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json --dir target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1 --session-auto --timeout-ms 180000 --check-pixels-changed imui-hello-demo.count-text --launch -- target/debug/imui_hello_demo.exe`
+
+Evidence:
+- Result: `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/script.result.json`
+  passed at `step_index=20`.
+- Pixel check: `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/check.pixels_changed.json`
+  resolved `imui-hello-demo.count-text` and changed hash from `0x878210d4ffe36972` to
+  `0xd1384d303356d837`.
+- Screenshots:
+  - `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/screenshots/1778619038899-imui-hello-demo-semantic-smoke-before/window-4294967297-tick-41-frame-40.png`
+  - `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/screenshots/1778619038999-imui-hello-demo-semantic-smoke-after-count/window-4294967297-tick-47-frame-46.png`
+
+Decision:
+- Keep the semantic smoke and pixel-change check together for the IMUI hello text lane. This is a
+  correctness guard for glyph/text visibility, not a perf threshold; it prevents a future renderer
+  text/glyph regression from passing solely because the semantics tree still contains labels.
