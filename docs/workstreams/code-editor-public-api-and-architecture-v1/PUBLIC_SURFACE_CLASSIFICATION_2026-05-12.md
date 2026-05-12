@@ -101,11 +101,32 @@ Experimental extension contracts:
 - `SemanticTokenError`
 - `validate_semantic_tokens`
 - `normalized_semantic_tokens`
+- `EditorAssistKind`
+- `EditorAssistTrigger`
+- `EditorAssistRequest`
+- `EditorAssistRequestError`
+- `CompletionCandidate`
+- `CompletionCandidateKind`
+- `CompletionCommitKind`
+- `CompletionList`
+- `CompletionListError`
+- `HoverPayload`
+- `HoverPayloadError`
+- `CodeActionKind`
+- `CodeAction`
+- `CodeActionList`
+- `CodeActionListError`
+- `validate_editor_assist_request`
+- `validate_completion_list`
+- `validate_hover_payload`
+- `validate_code_action_list`
 
 Rationale: diagnostics are the first M2 extension model slice. They use the correct view-layer
 coordinate ownership, and gutter markers/range decorations now have explicit payload contracts.
-Semantic tokens now have a paint-color-free input contract. These remain experimental until a UI
-proof is wired on top of the data contract.
+Semantic tokens now have a paint-color-free input contract. Assist contracts carry request,
+completion, hover, and code-action data without owning overlay/focus policy. These remain
+experimental until a UI proof is wired on top of the data contract and a second producer proves the
+shape.
 
 Experimental:
 
@@ -164,6 +185,10 @@ Stable:
   - `TextBuffer`
   - `DisplayMap`
   - `DisplayPoint`
+  - `FoldSpan`
+  - `InlaySpan`
+  - `CodeWrapPolicy`
+  - `CodeWrapPreset`
 
 Near-stable diagnostics/perf:
 
@@ -200,14 +225,22 @@ Experimental:
   - `EditorAssistKind`
   - `EditorAssistTrigger`
   - `EditorAssistRequest`
+  - `EditorAssistRequestError`
   - `CompletionCandidate`
   - `CompletionCandidateKind`
   - `CompletionCommitKind`
   - `CompletionList`
+  - `CompletionListError`
   - `HoverPayload`
+  - `HoverPayloadError`
   - `CodeActionKind`
   - `CodeAction`
   - `CodeActionList`
+  - `CodeActionListError`
+  - `validate_editor_assist_request`
+  - `validate_completion_list`
+  - `validate_hover_payload`
+  - `validate_code_action_list`
 
 Rationale: preedit and font-feature policy are real editor features, but their long-term shape is
 still tied to ADR 0188 and text shaping work. `CodeEditorTorture` is a harness feature, not an app
