@@ -1,0 +1,6 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_clipboard_force_unavailable", "enabled": true }
+  ]
+}
