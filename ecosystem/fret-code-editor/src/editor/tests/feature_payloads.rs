@@ -47,6 +47,50 @@ fn feature_payload_setters_update_snapshot_and_diagnostic_summaries() {
 }
 
 #[test]
+fn feature_payload_setters_do_not_mutate_buffer_revision() {
+    let handle = CodeEditorHandle::new("aa\nbb\ncc");
+    let revision_before = handle.buffer_revision();
+
+    handle
+        .set_diagnostic_spans(vec![DiagnosticSpan::new(
+            0..2,
+            fret_code_editor_view::DiagnosticSeverity::Warning,
+            "warning",
+        )])
+        .expect("diagnostics");
+    handle
+        .set_range_decorations(vec![RangeDecoration::new(0..2, "search.match")])
+        .expect("decorations");
+    handle
+        .set_gutter_markers(vec![GutterMarker::logical_line(
+            1,
+            fret_code_editor_view::GutterMarkerKind::Diagnostic,
+        )])
+        .expect("gutter markers");
+    handle
+        .set_semantic_tokens(vec![SemanticToken::new(3..5, "variable")])
+        .expect("semantic tokens");
+
+    assert_eq!(handle.buffer_revision(), revision_before);
+
+    handle.clear_diagnostic_spans();
+    handle.clear_range_decorations();
+    handle.clear_gutter_markers();
+    handle.clear_semantic_tokens();
+
+    let snapshot = handle.feature_payload_snapshot();
+    assert_eq!(
+        handle.buffer_revision(),
+        revision_before,
+        "feature payload toggles must not mutate the text buffer"
+    );
+    assert_eq!(
+        snapshot.buffer_revision, revision_before.0,
+        "feature payload snapshot should remain attached to the current buffer revision"
+    );
+}
+
+#[test]
 fn feature_payload_setters_are_idempotent_for_same_normalized_value() {
     let handle = CodeEditorHandle::new("abcdef");
     handle

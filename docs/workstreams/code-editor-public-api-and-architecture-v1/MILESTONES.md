@@ -40,7 +40,7 @@ Exit criteria:
 
 ## M2 - Target Extension Package
 
-Status: In progress
+Status: Complete (2026-05-12)
 
 Exit criteria:
 
@@ -62,7 +62,11 @@ Exit criteria:
 - Widget-facing payload storage, public setters/readouts, revision/display-map invalidation, and
   diagnostics snapshot counts exist. (`M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md`.)
 - At least one UI Gallery/example surface can exercise the target package.
+  (`M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md`.)
 - A no-buffer-mutation gate exists for pure decoration toggles.
+  (`feature_payload_setters_do_not_mutate_buffer_revision` in
+  `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`; focused gate:
+  `cargo nextest run -p fret-code-editor feature_payload --no-fail-fast`.)
 
 ## M3 - First API Cleanup Slice
 
