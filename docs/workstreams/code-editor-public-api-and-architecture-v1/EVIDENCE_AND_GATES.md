@@ -34,6 +34,7 @@ cargo check -p fret-code-editor-buffer
 cargo nextest run -p fret-code-editor-buffer --lib --no-fail-fast
 cargo fmt -p fret-code-editor --check
 cargo check -p fret-code-editor --features syntax-rust
+cargo nextest run -p fret-code-editor command_availability --lib --features syntax --no-fail-fast
 cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast
 cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast
 cargo check -p fret-ui-gallery
@@ -114,6 +115,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md`
 - Command/keymap/undo boundary:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_KEYMAP_UNDO_BOUNDARY_2026-05-12.md`
+- Command availability coverage:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md`
 - Diagnostic span contract:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md`
 - Diagnostic line summary contract:

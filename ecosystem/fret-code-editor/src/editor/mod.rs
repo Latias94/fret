@@ -1623,19 +1623,7 @@ impl CodeEditor {
                         }
 
                         let st = avail_state.borrow();
-                        if !st.interaction.enabled || !st.interaction.focusable {
-                            return fret_ui::CommandAvailability::NotHandled;
-                        }
-
-                        match command.as_str() {
-                            "text.select_all" | "edit.select_all" => {
-                                if !st.interaction.selectable || st.buffer.len_bytes() == 0 {
-                                    return fret_ui::CommandAvailability::Blocked;
-                                }
-                                fret_ui::CommandAvailability::Available
-                            }
-                            _ => fret_ui::CommandAvailability::NotHandled,
-                        }
+                        input::command_availability(&st, &acx.input_ctx, command.as_str())
                     }),
                 );
 

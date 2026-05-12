@@ -37,6 +37,8 @@ Last updated: 2026-05-12
         wrapped-row gutter attachments or current visible-row evidence.
 - [x] Define semantic-token inputs separately from paint colors.
 - [x] Define command/keymap/undo grouping boundaries for editor actions.
+- [x] Extend focused command availability beyond `select_all` for the editor-handled undo, redo,
+      copy, cut, paste, and word movement commands.
 - [x] Define how hover/completion/code-action overlays compose with Fret overlay/focus policy
       without putting overlay policy into `fret-code-editor`.
 

@@ -133,3 +133,157 @@ fn read_only_allows_navigation_but_blocks_edits() {
     }
     assert_eq!(handle.with_buffer(|b| b.text_string()), "hello");
 }
+
+fn input_context_with_clipboard(read: bool, write: bool) -> fret_runtime::InputContext {
+    let mut input_ctx = fret_runtime::InputContext::default();
+    input_ctx.caps.clipboard.text.read = read;
+    input_ctx.caps.clipboard.text.write = write;
+    input_ctx
+}
+
+#[test]
+fn command_availability_reports_selection_clipboard_and_navigation_state() {
+    let handle = CodeEditorHandle::new("hello");
+    let mut input_ctx = input_context_with_clipboard(true, true);
+
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.select_all"),
+            fret_ui::CommandAvailability::Available
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.copy"),
+            fret_ui::CommandAvailability::Blocked
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.move_word_left"),
+            fret_ui::CommandAvailability::Available
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "workspace.close_tab"),
+            fret_ui::CommandAvailability::NotHandled
+        );
+    }
+
+    handle.set_selection(Selection {
+        anchor: 0,
+        focus: 5,
+    });
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.copy"),
+            fret_ui::CommandAvailability::Available
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.cut"),
+            fret_ui::CommandAvailability::Available
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.paste"),
+            fret_ui::CommandAvailability::Available
+        );
+    }
+
+    input_ctx.caps.clipboard.text.write = false;
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.copy"),
+            fret_ui::CommandAvailability::Blocked
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.cut"),
+            fret_ui::CommandAvailability::Blocked
+        );
+    }
+
+    input_ctx.caps.clipboard.text.read = false;
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.paste"),
+            fret_ui::CommandAvailability::Blocked
+        );
+    }
+}
+
+#[test]
+fn command_availability_reports_undo_redo_and_read_only_state() {
+    let handle = CodeEditorHandle::new("hello");
+    let input_ctx = input_context_with_clipboard(true, true);
+
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "edit.undo"),
+            fret_ui::CommandAvailability::Blocked
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "edit.redo"),
+            fret_ui::CommandAvailability::Blocked
+        );
+    }
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 5,
+            focus: 5,
+        };
+        assert!(input::insert_text(&mut st, "!").is_some());
+    }
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "edit.undo"),
+            fret_ui::CommandAvailability::Available
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "edit.redo"),
+            fret_ui::CommandAvailability::Blocked
+        );
+    }
+
+    {
+        let mut st = handle.state.borrow_mut();
+        assert!(input::undo(&mut st));
+    }
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "edit.redo"),
+            fret_ui::CommandAvailability::Available
+        );
+    }
+
+    handle.set_selection(Selection {
+        anchor: 0,
+        focus: 5,
+    });
+    handle.set_interaction(CodeEditorInteractionOptions::read_only());
+    {
+        let st = handle.state.borrow();
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.copy"),
+            fret_ui::CommandAvailability::Available
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.cut"),
+            fret_ui::CommandAvailability::Blocked
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.paste"),
+            fret_ui::CommandAvailability::Blocked
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "edit.undo"),
+            fret_ui::CommandAvailability::Blocked
+        );
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, "text.select_word_right"),
+            fret_ui::CommandAvailability::Available
+        );
+    }
+}

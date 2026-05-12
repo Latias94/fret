@@ -83,5 +83,5 @@ breaking callers.
 2. Decide whether the code editor should also accept `text.undo` / `text.redo` as local-history
    aliases while preserving `edit.undo` / `edit.redo` for window/document routing.
 3. Extend command availability beyond `select_all` for undo, redo, cut, paste, copy, and movement
-   commands.
+   commands. Completed in `M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md`.
 4. Define the first `editor.*` command only when a real editor-only behavior is implemented.

@@ -28,7 +28,8 @@ Exit criteria:
 - First proposed removals/renames/moves include migration notes. (`Selection` ownership move
   recorded in `M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md`.)
 - Command/keymap/undo ownership is recorded before adding more command-facing editor features.
-  (`M1_COMMAND_KEYMAP_UNDO_BOUNDARY_2026-05-12.md`.)
+  (`M1_COMMAND_KEYMAP_UNDO_BOUNDARY_2026-05-12.md`; focused command availability coverage landed
+  in `M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md`.)
 - Minimum app-author docs exist for embedding the current surface without reading internal modules.
   (`docs/code-editor.md`.)
 - Focused compile/tests cover unchanged current examples. (Initial public-signature re-export test:

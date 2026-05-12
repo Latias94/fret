@@ -170,3 +170,74 @@ pub(in crate::editor) fn handle_key_down(
     host.request_redraw(action_cx.window);
     true
 }
+
+pub(in crate::editor) fn command_availability(
+    st: &CodeEditorState,
+    input_ctx: &fret_runtime::InputContext,
+    command: &str,
+) -> fret_ui::CommandAvailability {
+    if !st.interaction.enabled || !st.interaction.focusable {
+        return fret_ui::CommandAvailability::NotHandled;
+    }
+
+    let has_selection = !st.selection.normalized().is_empty();
+    let has_text = st.buffer.len_bytes() > 0;
+    let clipboard_read = input_ctx.caps.clipboard.text.read;
+    let clipboard_write = input_ctx.caps.clipboard.text.write;
+
+    match command {
+        "edit.undo" => {
+            if st.interaction.editable && st.undo.can_undo() {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        "edit.redo" => {
+            if st.interaction.editable && st.undo.can_redo() {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        "text.select_all" | "edit.select_all" => {
+            if st.interaction.selectable && has_text {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        "text.copy" | "edit.copy" => {
+            if st.interaction.selectable && has_selection && clipboard_write {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        "text.cut" | "edit.cut" => {
+            if st.interaction.editable && has_selection && clipboard_write {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        "text.paste" | "edit.paste" => {
+            if st.interaction.editable && clipboard_read {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        "text.move_word_left"
+        | "text.move_word_right"
+        | "text.select_word_left"
+        | "text.select_word_right" => {
+            if st.interaction.selectable && has_text {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
+            }
+        }
+        _ => fret_ui::CommandAvailability::NotHandled,
+    }
+}
