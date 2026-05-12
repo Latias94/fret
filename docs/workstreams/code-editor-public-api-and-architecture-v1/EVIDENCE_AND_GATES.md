@@ -176,6 +176,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md`
 - Paint row-geom cache module split:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md`
+- Paint row-rich module split:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_RICH_MODULE_SPLIT_2026-05-12.md`
 - Diagnostics/decorations owner closure:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md`
 - Buffer source: `ecosystem/fret-code-editor-buffer/src/lib.rs`
@@ -193,6 +195,7 @@ Latest resize probe with paint attribution enabled:
 - Paint row-scene owner: `ecosystem/fret-code-editor/src/editor/paint/scene.rs`
 - Paint row-text owner: `ecosystem/fret-code-editor/src/editor/paint/text.rs`
 - Paint row-geom cache owner: `ecosystem/fret-code-editor/src/editor/paint/geom_cache.rs`
+- Paint row-rich owner: `ecosystem/fret-code-editor/src/editor/paint/rich.rs`
 - Input hot path: `ecosystem/fret-code-editor/src/editor/input/mod.rs`
 - Input edit transaction owner: `ecosystem/fret-code-editor/src/editor/input/edit.rs`
 - Input clipboard effect owner: `ecosystem/fret-code-editor/src/editor/input/clipboard.rs`

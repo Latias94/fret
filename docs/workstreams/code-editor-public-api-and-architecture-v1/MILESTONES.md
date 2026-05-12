@@ -85,7 +85,8 @@ Exit criteria:
     `M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md`; the paint row-scene cache/replay/store owner
     split landed in `M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md`; the paint row-text cache owner
     split landed in `M3_PAINT_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md`; the paint row-geom cache
-    owner split landed in `M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md`;
+    owner split landed in `M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md`; the paint row-rich
+    owner split landed in `M3_PAINT_ROW_RICH_MODULE_SPLIT_2026-05-12.md`;
     diagnostics/decorations owner closure landed in
     `M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md`.)
 - `cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast` passes.

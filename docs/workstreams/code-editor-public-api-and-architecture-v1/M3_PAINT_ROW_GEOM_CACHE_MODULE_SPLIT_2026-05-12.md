@@ -28,8 +28,8 @@ field `us_row_geom_cache` / `ns_row_geom_cache` while making the cache owner exp
 This slice does not change row geometry keying, caret-stop generation, row-scene replay/store,
 hit-testing, IME anchoring, or public editor APIs.
 
-`paint/mod.rs` still owns row-level paint orchestration, row-rich cache/prefetch, and
-selection/caret painting.
+`paint/mod.rs` still owns row-level paint orchestration and selection/caret painting. Row-rich
+cache/prefetch later moved to `M3_PAINT_ROW_RICH_MODULE_SPLIT_2026-05-12.md`.
 
 ## Evidence
 

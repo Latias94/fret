@@ -75,6 +75,7 @@ Last updated: 2026-05-12
     - [x] row-scene cache freshness / replay / store,
     - [x] row-text cache materialization / freshness / store,
     - [x] row-geom cache freshness / touch / store,
+    - [x] row-rich cache / syntax mapping / prefetch / materialization,
   - [x] syntax,
     - [x] syntax prefetch runtime types,
     - [x] syntax cache invalidation/population/materialization,
