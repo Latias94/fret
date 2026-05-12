@@ -94,5 +94,7 @@ date: 2026-05-12
   observable from UI Gallery diagnostics.
 - [x] Add ContextMenu submenu safe-corridor runtime placement traces and repair stale/offscreen
   script selectors.
-- [ ] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
+- [x] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
   bridge once a stable public gallery path is selected.
+- [ ] Add a companion RTL submenu tight-left collision fixture that intentionally keeps the
+  trigger too close to the left edge and asserts the correct flip back to physical right.

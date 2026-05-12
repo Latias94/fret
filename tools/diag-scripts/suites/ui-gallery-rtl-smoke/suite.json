@@ -12,6 +12,7 @@
     "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-rtl-open-screenshot.json",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
     "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json",
     "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-rtl-open-screenshot.json",
     "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-rtl-open-screenshot.json",
     "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",

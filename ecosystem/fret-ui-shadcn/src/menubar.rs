@@ -1522,6 +1522,7 @@ impl Menubar {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let direction = crate::direction::use_direction(cx, None);
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
 
@@ -1595,6 +1596,7 @@ impl Menubar {
                 .into_iter()
                 .map(|menu| {
                     menu.modal(modal)
+                        .direction(direction)
                         .on_dismiss_request(on_dismiss_request.clone())
                         .on_open_auto_focus(on_open_auto_focus.clone())
                         .on_close_auto_focus(on_close_auto_focus.clone())
@@ -1750,6 +1752,7 @@ impl MenubarMenu {
             entries: entries.into_iter().collect(),
             modal: false,
             align_leading_icons: true,
+            direction: None,
             on_dismiss_request: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
@@ -1804,6 +1807,7 @@ pub struct MenubarMenuEntries {
     entries: Vec<MenubarEntry>,
     modal: bool,
     align_leading_icons: bool,
+    direction: Option<crate::direction::LayoutDirection>,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
@@ -1816,6 +1820,7 @@ impl std::fmt::Debug for MenubarMenuEntries {
             .field("disabled", &self.menu.disabled)
             .field("entries_len", &self.entries.len())
             .field("modal", &self.modal)
+            .field("direction", &self.direction)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
@@ -1831,6 +1836,11 @@ impl MenubarMenuEntries {
 
     pub fn align_leading_icons(mut self, align: bool) -> Self {
         self.align_leading_icons = align;
+        self
+    }
+
+    fn direction(mut self, direction: crate::direction::LayoutDirection) -> Self {
+        self.direction = Some(direction);
         self
     }
 
@@ -1857,6 +1867,7 @@ impl MenubarMenuEntries {
             entries,
             modal,
             align_leading_icons,
+            direction,
             on_dismiss_request,
             on_open_auto_focus,
             on_close_auto_focus,
@@ -2008,7 +2019,9 @@ impl MenubarMenuEntries {
                 let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
                 let content_id_for_trigger =
                     menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
-                let portal_ctx = portal_inherited::PortalInherited::capture(cx);
+                let portal_ctx = direction
+                    .map(|direction| portal_inherited::PortalInherited { direction })
+                    .unwrap_or_else(|| portal_inherited::PortalInherited::capture(cx));
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
                 let submenu = portal_inherited::with_root_name_inheriting(
                     cx,
@@ -2298,6 +2311,10 @@ impl MenubarMenuEntries {
                         let text_style_for_submenu = text_style.clone();
                         let trigger_registry_for_overlay_for_content =
                             trigger_registry_for_overlay.clone();
+                        let overlay_root_name_for_controls_for_content =
+                            overlay_root_name_for_controls.clone();
+                        let overlay_root_name_for_controls_for_submenu_trace =
+                            overlay_root_name_for_controls.clone();
 
                         let theme_for_content = theme.clone();
                         let (_content_id, content) =
@@ -2949,7 +2966,7 @@ impl MenubarMenuEntries {
                                                                      if inset { pad_x_inset } else { pad_x };
                                                             let _theme = theme.clone();
                                                                 let overlay_root_name_for_controls =
-                                                                    overlay_root_name_for_controls.clone();
+                                                                    overlay_root_name_for_controls_for_content.clone();
                                                                 let first_item_focus_id_for_items =
                                                                     first_item_focus_id_for_children_for_content.clone();
                                                                 let last_item_focus_id_for_items =
@@ -3389,6 +3406,13 @@ impl MenubarMenuEntries {
                             let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
                                 return (children, Some(dismissible_on_pointer_move));
                             };
+                            crate::menu_submenu_diagnostics::record_submenu_placement(
+                                cx,
+                                Some(overlay_root_name_for_controls_for_submenu_trace.as_ref()),
+                                &submenu_for_panel,
+                                outer,
+                                geometry,
+                            );
 
                             let placed = geometry.floating;
                             let Some(submenu_entries) =

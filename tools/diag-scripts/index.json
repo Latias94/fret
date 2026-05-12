@@ -7527,6 +7527,56 @@
       ]
     },
     {
+      "id": "ui-gallery-menubar-rtl-submenu-placement-trace",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "menubar",
+        "placement",
+        "rtl",
+        "shadcn",
+        "submenu",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Menubar RTL section in a wide viewport.",
+        "Opens the RTL File menu and hovers the Share submenu trigger.",
+        "Asserts logical inline-end submenu placement resolves to the physical left in RTL."
+      ]
+    },
+    {
+      "id": "ui-gallery-menubar-submenu-placement-trace",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-submenu-placement-trace.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "ltr",
+        "menubar",
+        "placement",
+        "shadcn",
+        "submenu",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Menubar Demo section.",
+        "Opens the File menu and hovers the Share submenu trigger.",
+        "Asserts the submenu placed-rect trace opens to the physical right in LTR."
+      ]
+    },
+    {
       "id": "ui-gallery-minimal-root-memory-steady",
       "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-minimal-root-memory-steady.json",
       "required_capabilities": [

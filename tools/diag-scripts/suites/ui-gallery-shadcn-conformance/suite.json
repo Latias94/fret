@@ -106,6 +106,8 @@
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-docs-smoke.json",
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+    "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-submenu-placement-trace.json",
+    "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
     "tools/diag-scripts/ui-gallery/item/ui-gallery-item-docs-smoke.json",
