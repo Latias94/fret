@@ -208,14 +208,8 @@ proves the shape.
 
 Internal-by-accident candidates:
 
-- debug and diagnostics helpers on `CodeEditorHandle`:
-  - `set_preedit_debug`
-  - `debug_platform_set_marked_text_for_selection`
-  - `debug_platform_cancel_marked_text`
-  - `diag_buffer_contains_str_cached`
-
-These should either stay explicitly named as debug/diag APIs or move behind a diagnostics/test
-adapter before a stable release.
+- none identified; the remaining helper methods are now explicitly named as either
+  diagnostics/perf readouts or debug/staging controls.
 
 ## `CodeEditorHandle` Method Groups
 
