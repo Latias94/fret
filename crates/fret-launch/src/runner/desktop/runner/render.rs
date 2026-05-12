@@ -146,7 +146,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if cur_w == width.max(1) && cur_h == height.max(1) {
                 return;
             }
-            surface.resize(&context.device, width, height);
+            if let Err(err) = surface.resize(&context.device, width, height) {
+                error!(
+                    window = ?window,
+                    error = ?err,
+                    "failed to resize wgpu surface; dropping surface for recreation"
+                );
+                state.surface = None;
+                return;
+            }
             Some(capture_surface_config_diagnostics_record(&surface.config))
         }) else {
             return;

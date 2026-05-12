@@ -28,6 +28,22 @@ fn present_mode_from_env(caps: &wgpu::SurfaceCapabilities) -> Option<wgpu::Prese
     caps.present_modes.iter().copied().find(|m| *m == desired)
 }
 
+fn configure_surface_checked(
+    surface: &wgpu::Surface<'_>,
+    device: &wgpu::Device,
+    config: &wgpu::SurfaceConfiguration,
+) -> Result<(), RenderError> {
+    let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+    surface.configure(device, config);
+    let validation_error = pollster::block_on(scope.pop());
+    if let Some(err) = validation_error {
+        return Err(RenderError::SurfaceConfigureFailed {
+            message: err.to_string(),
+        });
+    }
+    Ok(())
+}
+
 pub struct SurfaceState<'window> {
     pub surface: wgpu::Surface<'window>,
     pub config: wgpu::SurfaceConfiguration,
@@ -78,7 +94,7 @@ impl<'window> SurfaceState<'window> {
             view_formats: vec![],
         };
 
-        surface.configure(device, &config);
+        configure_surface_checked(&surface, device, &config)?;
 
         Ok(Self { surface, config })
     }
@@ -100,10 +116,19 @@ impl<'window> SurfaceState<'window> {
         )
     }
 
-    pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
+    pub fn resize(
+        &mut self,
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+    ) -> Result<(), RenderError> {
         self.config.width = width.max(1);
         self.config.height = height.max(1);
-        self.surface.configure(device, &self.config);
+        self.reconfigure(device)
+    }
+
+    pub fn reconfigure(&self, device: &wgpu::Device) -> Result<(), RenderError> {
+        configure_surface_checked(&self.surface, device, &self.config)
     }
 
     pub fn get_current_frame_view(

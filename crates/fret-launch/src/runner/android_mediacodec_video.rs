@@ -12,7 +12,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use super::{NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame};
+use super::native_external_import::{
+    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
+};
 use fret_render::{RendererCapabilities, WgpuContext};
 
 #[derive(Clone, Debug)]

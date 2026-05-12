@@ -790,6 +790,11 @@ pub(super) fn configure_surface_alpha_mode_for_composited_window(
 
     if surface.config.alpha_mode != desired {
         surface.config.alpha_mode = desired;
-        surface.surface.configure(device, &surface.config);
+        if let Err(err) = surface.reconfigure(device) {
+            tracing::error!(
+                error = ?err,
+                "failed to reconfigure surface alpha mode for composited window"
+            );
+        }
     }
 }

@@ -314,11 +314,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
             WindowEvent::SurfaceResized(size) => {
                 if let Some(gfx) = self.gfx.as_mut() {
-                    gfx.surface_state.resize(
+                    if let Err(err) = gfx.surface_state.resize(
                         &gfx.ctx.device,
                         size.width.max(1),
                         size.height.max(1),
-                    );
+                    ) {
+                        tracing::error!(
+                            error = ?err,
+                            "failed to resize web surface after surface resize"
+                        );
+                    }
                 }
                 self.platform.handle_window_event(
                     window.scale_factor(),
@@ -331,11 +336,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(gfx) = self.gfx.as_mut() {
                     let size =
                         Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());
-                    gfx.surface_state.resize(
+                    if let Err(err) = gfx.surface_state.resize(
                         &gfx.ctx.device,
                         size.width.max(1),
                         size.height.max(1),
-                    );
+                    ) {
+                        tracing::error!(
+                            error = ?err,
+                            "failed to resize web surface after scale-factor change"
+                        );
+                    }
                 }
                 self.platform.handle_window_event(
                     window.scale_factor(),

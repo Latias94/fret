@@ -47,8 +47,11 @@ use windows::Win32::Media::MediaFoundation::{IMFDXGIBuffer, IMFDXGIDeviceManager
 use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
 use windows::core::{BOOL, HSTRING, Interface as _};
 
-use super::{EngineFrameKeepalive, NativeExternalImportError, NativeExternalImportedFrame};
-use super::{NativeExternalTextureFrame, SharedAllocationExportError};
+use super::EngineFrameKeepalive;
+use super::SharedAllocationExportError;
+use super::native_external_import::{
+    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
+};
 use fret_render::{
     RenderTargetIngestStrategy, RenderTargetMetadata, RendererCapabilities, WgpuContext,
 };

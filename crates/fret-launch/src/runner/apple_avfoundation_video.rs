@@ -17,7 +17,9 @@ use std::{cell::RefCell, rc::Rc};
 
 #[cfg(target_os = "macos")]
 use super::EngineFrameKeepalive;
-use super::{NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame};
+use super::native_external_import::{
+    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
+};
 #[cfg(target_os = "macos")]
 use fret_render::{
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
