@@ -138,6 +138,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md"
     },
     {
@@ -281,6 +285,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
@@ -303,6 +308,7 @@
     "ecosystem/fret-code-editor/src/editor/state.rs",
     "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
     "ecosystem/fret-code-editor/src/editor/paint/text.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/geom_cache.rs",
     "ecosystem/fret-code-editor-view/src/diagnostics.rs",
     "ecosystem/fret-code-editor-view/src/gutter.rs",
     "ecosystem/fret-code-editor-view/src/decorations.rs",

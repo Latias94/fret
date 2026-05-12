@@ -30,8 +30,9 @@ call sites used by paint, a11y, debug hooks, and tests.
 This slice does not change `DisplayMap` materialization, row span composition, cache keys, LRU
 policy, row-rich cache behavior, a11y text-window behavior, or public editor APIs.
 
-`paint/mod.rs` still owns row-level paint orchestration, row-rich cache/prefetch, row-geometry cache
-updates, and selection/caret painting.
+`paint/mod.rs` still owns row-level paint orchestration, row-rich cache/prefetch, and
+selection/caret painting. Row-geometry cache updates later moved to
+`M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md`.
 
 ## Evidence
 
