@@ -44,7 +44,7 @@ Conventions:
     - wrap-from-unwrapped allocation win: perf log entry `2026-02-09 22:12:02` (commit `7b9a98a8f`)
     - non-landed experiment example: perf log entry `2026-02-10 00:18:40` (sticky small-step)
   - Maintenance tasks (keep this workstream “ready to resume”):
-    - [ ] Re-run `ui-resize-probes` + `ui-code-editor-resize-probes` gates after any large merge/refactor and record the
+    - [x] Re-run `ui-resize-probes` + `ui-code-editor-resize-probes` gates after any large merge/refactor and record the
       no-code-change evidence in the perf log.
     - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
 

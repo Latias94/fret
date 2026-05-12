@@ -12773,3 +12773,37 @@ Decision:
 - Keep using the editor component row-scene counters as the near-term replay contract surface. This makes future
   editor paint perf rows self-contained enough to decide whether the limiter is row replay/store, Canvas paint-widget
   work, or renderer payload before proposing another rewrite.
+
+## 2026-05-12 14:01:45 +08:00 (no-code-change contract refresh: code-editor resize probe)
+
+Question:
+- Does the current Windows `ui-code-editor-resize-probes` contract still pass after the editor token/docs
+  maintenance work, without any perf-threshold or code-path changes?
+
+Commands:
+```powershell
+python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
+python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe --out-dir target/fret-diag-code-editor-resize-probes-no-code-20260512
+cargo run -p fretboard --release -- diag stats target/fret-diag-code-editor-resize-probes-no-code-20260512/attempt-1/1778565377903/bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Validation:
+- `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  passed.
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7 --launch-bin target/release/fret-ui-gallery.exe --out-dir target/fret-diag-code-editor-resize-probes-no-code-20260512`
+  passed `3/3` attempts with `fail_attempts=0`.
+- `git diff --check` and `python tools/check_workstream_catalog.py` also stayed green during the refresh.
+
+Evidence:
+- Summary: `target/fret-diag-code-editor-resize-probes-no-code-20260512/summary.json`.
+- Threshold check: `target/fret-diag-code-editor-resize-probes-no-code-20260512/check.perf_thresholds.json`.
+- Selected worst bundle: `target/fret-diag-code-editor-resize-probes-no-code-20260512/attempt-1/1778565377903/bundle.schema2.json`.
+- `diag stats` on the worst bundle reports p50/p95 total `2737/3741us`, layout `922/2008us`, paint `1560/1958us`,
+  and renderer text prepare p95 `676us`.
+- `code_editor.paint_perf` remains a zero-row-scene signal on this resize stressor, so the current pressure is still
+  generic layout + paint + renderer prepare work, not row-scene replay/capture.
+
+Decision:
+- Keep `ui-code-editor-resize-probes` as the current no-code-change regression sentinel for the editor resize path.
+- Do not start a `WindowedRowsSurface` or renderer display-list rewrite from this passing sample alone; the gate is
+  still below threshold and the measured limiter remains layout/paint churn rather than a failing row-scene contract.
