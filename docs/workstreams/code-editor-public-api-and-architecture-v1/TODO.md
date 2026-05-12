@@ -69,6 +69,8 @@ Last updated: 2026-05-12
         `ecosystem/fret-code-editor/src/editor/tests/platform_text_input_roundtrip.rs`.
   - [x] Extract pointer helper tests into
         `ecosystem/fret-code-editor/src/editor/tests/pointer_helpers.rs`.
+  - [x] Extract pointer selection tests into
+        `ecosystem/fret-code-editor/src/editor/tests/pointer_selection.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,
