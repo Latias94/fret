@@ -12863,3 +12863,25 @@ Evidence:
 Decision:
 - Keep the checked-in Windows v2 code-editor resize baseline unchanged. This smoke only verifies
   the post-resource-semantics path remains runnable; it is not a formal repeat=7 re-seed.
+
+## 2026-05-12 18:59:24 +08:00 (warning-cleanup smoke: code-editor resize)
+
+Question:
+- Did the warning cleanup in `fret-runtime` / `fret-ui` preserve the editor resize contract path?
+
+Validation:
+- `cargo check -p fret-ui -p fret-runtime`
+- `cargo build -p fret-ui-gallery --release --features gallery-dev`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 1 --repeat 1 --launch-bin target/release/fret-ui-gallery.exe --out-dir target/fret-diag-code-editor-resize-probes-post-warning-cleanup-smoke-20260512`
+
+Evidence:
+- Summary:
+  `target/fret-diag-code-editor-resize-probes-post-warning-cleanup-smoke-20260512/summary.json`
+- Threshold check:
+  `target/fret-diag-code-editor-resize-probes-post-warning-cleanup-smoke-20260512/check.perf_thresholds.json`
+- Result: PASS, `pass_attempts=1`, `fail_attempts=0`; baseline selected
+  `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`.
+
+Decision:
+- Keep the release resize path and the checked-in Windows v2 baseline unchanged. This smoke only
+  verifies the warning cleanup did not disturb the current contract surface.
