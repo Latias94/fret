@@ -290,3 +290,15 @@ Status: complete
   open, remain aligned, clear together after Escape, and restore focus to the demo trigger.
 - No runtime mechanism defect was found; the gap was missing default-compatible runtime coverage for
   barrier root lifecycle.
+
+## M25: Drawer Underlay Runtime Gate and Renderer Binding Fix
+
+Status: complete
+
+- The overlay/focus diagnostics suite now includes a default-compatible Drawer outside-press gate
+  that asserts modal underlay activation is blocked, the Drawer closes, and focus restores to the
+  trigger.
+- The first run exposed a confirmed renderer defect: `TextDrawKind::Mask` bound `text_vertex_buffer`
+  to a text pipeline whose slot 0 expects `TextGlyphInstance` instance data.
+- The render scene recorder now binds `text_glyph_instance_buffer` for mask text draws, and the
+  Drawer script plus the full five-script overlay/focus suite pass.

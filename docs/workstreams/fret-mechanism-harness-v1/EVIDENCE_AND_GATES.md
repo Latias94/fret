@@ -148,7 +148,8 @@ Suite membership:
 ## UI Gallery Overlay/Focus Runtime Gate
 
 ```powershell
-cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --dir target/fret-diag-mechanism-harness-runtime --session-auto --launch -- cargo run -p fret-ui-gallery --release
+cargo build -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --dir target/fret-diag-mechanism-harness-runtime --session-auto --launch -- target/release/fret-ui-gallery.exe
 ```
 
 Suite membership:
@@ -156,8 +157,15 @@ Suite membership:
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`
+- `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+
+Fast local rerun after the release binary already exists:
+
+```powershell
+cargo run -p fretboard-dev -- diag suite fret-mechanism-harness-overlay-focus --dir target/fret-diag-mechanism-harness-runtime --session-auto --launch -- target/release/fret-ui-gallery.exe
+```
 
 ## Repo Integrity Gates
 
@@ -244,7 +252,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-modal-barrier-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`,
+  `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+- Text render instance binding fix:
+  `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
+  `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
 - Previous focused tests: `crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs`
 - View-cache focused tests: `crates/fret-ui/src/tree/tests/view_cache.rs`
 - Environment focused tests: `crates/fret-ui/src/declarative/tests/environment_queries.rs`

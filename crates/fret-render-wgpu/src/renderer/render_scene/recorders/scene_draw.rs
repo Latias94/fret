@@ -639,7 +639,7 @@ impl Renderer {
                                             .pipeline_switches_text_mask
                                             .saturating_add(1);
                                     }
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_vertex_buffer(0, text_glyph_instance_buffer.slice(..));
                                     pass.set_bind_group(
                                         1,
                                         self.text_system.mask_atlas_bind_group(draw.atlas_page),

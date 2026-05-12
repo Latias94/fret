@@ -6347,6 +6347,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [

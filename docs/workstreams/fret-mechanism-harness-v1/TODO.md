@@ -73,5 +73,6 @@ date: 2026-05-12
   and hidden-subtree policy.
 - [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
 - [x] Add modal-barrier root lifecycle runtime coverage on a default-compatible page.
-- [ ] Add default-compatible underlay block/click-through activation-status coverage once public
-  pages expose an underlay/status probe.
+- [x] Add default-compatible Drawer modal underlay block/focus-restore activation-status coverage.
+- [ ] Add default-compatible non-modal click-through activation-status coverage once public pages
+  expose stable underlay/status probes.
