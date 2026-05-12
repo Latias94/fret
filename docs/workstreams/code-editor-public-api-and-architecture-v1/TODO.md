@@ -57,6 +57,8 @@ Last updated: 2026-05-12
   - [x] Split at least one more feature-owned behavior cluster out of `tests/mod.rs` (`syntax-rust` cache regression tests into `ecosystem/fret-code-editor/src/editor/tests/syntax.rs`).
   - [x] Extract feature payload API tests into
         `ecosystem/fret-code-editor/src/editor/tests/feature_payloads.rs`.
+  - [x] Extract geometry helper/keying tests into
+        `ecosystem/fret-code-editor/src/editor/tests/geometry.rs`.
   - [ ] Split large internal owners only when the public API or test ownership benefits:
   - [x] feature payload store/snapshot,
   - [x] diagnostics/perf snapshots,

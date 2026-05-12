@@ -66,7 +66,8 @@ Exit criteria:
 - Debug-only APIs are either clearly named as debug/staging or moved away from the default public
   path.
   - Module/test ownership improves without changing behavior. (First test split landed in
-    `M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
+    `M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md`; geometry helper/keying tests moved in
+    `M3_TEST_GEOMETRY_MODULE_SPLIT_2026-05-12.md`; feature payload store/snapshot split landed in
     `M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md`; diagnostics/perf snapshot split landed in
     `M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md`; state schema split landed in
     `M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md`; state methods split landed in
