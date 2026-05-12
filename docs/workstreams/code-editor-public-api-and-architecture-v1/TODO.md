@@ -48,6 +48,8 @@ Last updated: 2026-05-12
   - [x] Range decoration payload API and tests.
 - [x] Land the widget-facing feature payload store with public setters/readouts, buffer-revision
       clearing, display-map gutter validation, and row scene cache epoch wiring.
+- [x] Land the first completion/hover/code-action assist request and payload contract without
+      adding overlay/focus/listbox policy to `fret-code-editor`.
 - [x] Add UI Gallery or example coverage that combines diagnostics, gutter markers, syntax, folds,
       inlays, soft wrap, selection, and an ecosystem-owned overlay-style hook.
   - [x] Add an anchored text-assist overlay proof on `code_editor_torture`.

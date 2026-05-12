@@ -149,6 +149,21 @@ Stable:
 - `CodeEditor`
 - `CodeEditorHandle`
 - `CodeEditorInteractionOptions`
+- Re-exported buffer/view model types required by the app-facing editor signatures:
+  - `DocId`
+  - `DocUri`
+  - `Revision`
+  - `Selection`
+  - `Edit`
+  - `AppliedEdit`
+  - `TextBufferTx`
+  - `TextBufferTransaction`
+  - `LineDelta`
+  - `BufferDelta`
+  - `EditError`
+  - `TextBuffer`
+  - `DisplayMap`
+  - `DisplayPoint`
 
 Near-stable diagnostics/perf:
 
@@ -172,10 +187,24 @@ Experimental:
 - `CodeFontFeaturePreset`
 - `CodeFontFeaturePolicy`
 - `CodeEditorTorture`
+- Assist request and payload contracts:
+  - `EditorAssistKind`
+  - `EditorAssistTrigger`
+  - `EditorAssistRequest`
+  - `CompletionCandidate`
+  - `CompletionCandidateKind`
+  - `CompletionCommitKind`
+  - `CompletionList`
+  - `HoverPayload`
+  - `CodeActionKind`
+  - `CodeAction`
+  - `CodeActionList`
 
 Rationale: preedit and font-feature policy are real editor features, but their long-term shape is
 still tied to ADR 0188 and text shaping work. `CodeEditorTorture` is a harness feature, not an app
-model.
+model. Assist request and payload structs are the first public data contract for completion,
+hover, and code actions; they intentionally remain experimental until a second producer/UI recipe
+proves the shape.
 
 Internal-by-accident candidates:
 

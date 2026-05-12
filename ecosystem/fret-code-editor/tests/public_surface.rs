@@ -1,8 +1,11 @@
 use fret_code_editor::{
-    CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorFeaturePayloadSnapshotV1,
-    CodeEditorHandle, CodeEditorMemorySnapshotV1, CodeFontFeaturePolicy, CodeFontFeaturePreset,
-    DiagnosticSeverity, DiagnosticSpan, FoldSpan, GutterMarker, GutterMarkerKind, InlaySpan,
-    RangeDecoration, Selection, SemanticToken,
+    CodeAction, CodeActionList, CodeEditor, CodeEditorCacheSizeSnapshotV1,
+    CodeEditorFeaturePayloadSnapshotV1, CodeEditorHandle, CodeEditorMemorySnapshotV1,
+    CodeFontFeaturePolicy, CodeFontFeaturePreset, CompletionCandidate, CompletionList,
+    DiagnosticSeverity, DiagnosticSpan, DisplayMap, DisplayPoint, DocId, EditorAssistKind,
+    EditorAssistRequest, FoldSpan, GutterMarker, GutterMarkerKind, HoverPayload, InlaySpan,
+    RangeDecoration, Selection, SemanticToken, TextBuffer, validate_code_action_list,
+    validate_completion_list, validate_editor_assist_request, validate_hover_payload,
 };
 use fret_code_editor_buffer::Selection as BufferSelection;
 use std::sync::Arc;
@@ -61,4 +64,39 @@ fn crate_root_exports_public_signature_types() {
     handle
         .set_semantic_tokens(vec![SemanticToken::new(0..2, "keyword")])
         .expect("semantic tokens are public");
+
+    let buffer = TextBuffer::new(DocId::new(), "fn main() {}\n".to_string()).unwrap();
+    let display_map = DisplayMap::new(&buffer, None);
+    let request = EditorAssistRequest::new(
+        EditorAssistKind::Completion,
+        buffer.revision(),
+        selection,
+        0..0,
+        DisplayPoint::new(0, 0),
+    );
+    validate_editor_assist_request(&buffer, Some(&display_map), &request)
+        .expect("assist requests are public");
+
+    let mut completions = CompletionList::new(
+        "request.completion.1",
+        buffer.revision(),
+        vec![CompletionCandidate::new("candidate.main", "main")],
+    );
+    completions.active_id = Some("candidate.main".into());
+    validate_completion_list(&buffer, &completions).expect("completion lists are public");
+
+    let hover = HoverPayload::new("hover.1", buffer.revision(), 0..2, "function item");
+    validate_hover_payload(&buffer, &hover).expect("hover payloads are public");
+
+    let actions = CodeActionList::new(
+        "request.action.1",
+        buffer.revision(),
+        0..2,
+        vec![CodeAction::new(
+            "action.extract",
+            "Extract function",
+            "editor.extract_function",
+        )],
+    );
+    validate_code_action_list(&buffer, &actions).expect("code action lists are public");
 }

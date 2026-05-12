@@ -119,6 +119,15 @@ Current v1 surface:
 - Buffer mutations clear payloads instead of attempting unproven range remapping.
 - Display-row gutter markers are validated against `DisplayMap` and pruned when display-map changes
   make them invalid.
+- `fret-code-editor-view` exposes revision-aware assist request and payload contracts for
+  completion, hover, and code actions:
+  - `EditorAssistRequest`,
+  - `CompletionList` / `CompletionCandidate`,
+  - `HoverPayload`,
+  - `CodeActionList` / `CodeAction`.
+- These assist contracts carry buffer ranges, display points, ids, active candidate identity,
+  command ids, and diagnostic ids as data only. They do not own overlay placement, dismissal,
+  focus, listbox navigation, hover intent, or command execution policy.
 
 ## Commands, Keymap, Undo
 

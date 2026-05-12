@@ -62,6 +62,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_ASSIST_REQUEST_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md"
     },
     {
@@ -334,6 +338,7 @@
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_ASSIST_REQUEST_CONTRACT_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md",
     "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md",
@@ -418,6 +423,7 @@
     "ecosystem/fret-code-editor-view/src/gutter.rs",
     "ecosystem/fret-code-editor-view/src/decorations.rs",
     "ecosystem/fret-code-editor-view/src/semantic_tokens.rs",
+    "ecosystem/fret-code-editor-view/src/assist.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs",
     "apps/fret-ui-gallery/src/driver/render_flow.rs",
     "ecosystem/fret-ui-kit/src/overlay_controller.rs",

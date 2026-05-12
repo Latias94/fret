@@ -126,6 +126,8 @@ Latest resize probe with paint attribution enabled:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md`
 - Overlay feature boundary:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md`
+- Assist request contract:
+  `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_ASSIST_REQUEST_CONTRACT_2026-05-12.md`
 - Coordinate vocabulary:
   `docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md`
 - Widget-facing feature payload surface:
@@ -218,6 +220,7 @@ Latest resize probe with paint attribution enabled:
 - Gutter marker source: `ecosystem/fret-code-editor-view/src/gutter.rs`
 - Range decoration source: `ecosystem/fret-code-editor-view/src/decorations.rs`
 - Semantic token source: `ecosystem/fret-code-editor-view/src/semantic_tokens.rs`
+- Assist request/payload source: `ecosystem/fret-code-editor-view/src/assist.rs`
 - Feature payload handle owner: `ecosystem/fret-code-editor/src/editor/handle/feature_payloads.rs`
 - Surface root: `ecosystem/fret-code-editor/src/lib.rs`
 - Surface integration: `ecosystem/fret-code-editor/src/editor/mod.rs`

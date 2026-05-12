@@ -156,6 +156,51 @@ Hover, completion, signature help, and code actions should compose with Fret's o
 system. The editor should expose request facts such as document revision, caret/selection, display
 point, anchor id/rect, payload ids, and command ids.
 
+The first public data contract for this is available through the root editor facade:
+
+```rust
+use fret_code_editor::{
+    CodeAction, CodeActionList, CompletionCandidate, CompletionList, DisplayMap, DisplayPoint,
+    EditorAssistKind, EditorAssistRequest, HoverPayload, validate_code_action_list,
+    validate_completion_list, validate_editor_assist_request, validate_hover_payload,
+};
+
+handle.with_buffer(|buffer| {
+    let map = DisplayMap::new(buffer, None);
+    let request = EditorAssistRequest::new(
+        EditorAssistKind::Completion,
+        buffer.revision(),
+        handle.selection(),
+        handle.selection().normalized(),
+        DisplayPoint::new(0, 0),
+    );
+    validate_editor_assist_request(buffer, Some(&map), &request).expect("assist request");
+
+    let mut list = CompletionList::new(
+        "completion.request.1",
+        buffer.revision(),
+        vec![CompletionCandidate::new("candidate.println", "println!")],
+    );
+    list.active_id = Some("candidate.println".into());
+    validate_completion_list(buffer, &list).expect("completion list");
+
+    let hover = HoverPayload::new("hover.symbol.1", buffer.revision(), 0..2, "symbol docs");
+    validate_hover_payload(buffer, &hover).expect("hover payload");
+
+    let actions = CodeActionList::new(
+        "code-action.request.1",
+        buffer.revision(),
+        0..2,
+        vec![CodeAction::new(
+            "action.extract",
+            "Extract function",
+            "editor.extract_function",
+        )],
+    );
+    validate_code_action_list(buffer, &actions).expect("code action list");
+});
+```
+
 Do not put overlay policy in `fret-code-editor`. These belong to ecosystem/app layers:
 
 - dismissal rules,
@@ -198,9 +243,9 @@ Then open the editor pages in the gallery navigation.
 
 ## Current Gaps
 
-- Concrete app-facing completion/hover/code-action structs are not stable yet.
+- Concrete app-facing completion/hover/code-action structs now exist as experimental data
+  contracts. They still need real LSP/workspace producers and recipe-level UI integrations.
 - The current overlay proof is a UI Gallery anchored text-assist hook that keeps overlay lifecycle
-  policy in the ecosystem/app layer; stable editor-owned hover/completion/code-action request
-  structs are still future work.
+  policy in the ecosystem/app layer.
 - Linux performance is not validated by the current editor workstream; keep Windows/macOS/wasm
   evidence labeled by environment.

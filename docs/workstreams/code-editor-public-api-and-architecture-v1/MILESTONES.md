@@ -47,7 +47,9 @@ Exit criteria:
   `M2_GUTTER_MARKER_CONTRACT_2026-05-12.md`; range decoration payload contract added in
   `M2_RANGE_DECORATION_CONTRACT_2026-05-12.md`; semantic token input contract added in
   `M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md`; hover/completion/code-action overlay ownership
-  boundary added in `M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md`.)
+  boundary added in `M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md`; the first
+  completion/hover/code-action assist request and payload data contract landed in
+  `M2_ASSIST_REQUEST_CONTRACT_2026-05-12.md`.)
 - Coordinate ownership is explicit and shared with `DisplayMap`. (Diagnostic v1 uses
   `TextBuffer` UTF-8 byte ranges; semantic tokens and range decorations also use `TextBuffer`
   UTF-8 byte ranges; line summaries use logical line indexes. Display-row projection for gutter
