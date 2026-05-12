@@ -13132,3 +13132,40 @@ Decision:
   `test_id` selectors to navigate and find `ui-gallery-hit-test-torture-root`.
 - Treat the current `~1.0-1.1ms` pointer dispatch tail as a separate attribution follow-up, not as
   a reason to weaken the hit-test recovery gate.
+
+## 2026-05-13 06:33:00 +08:00 (dispatch-tail attribution reporting)
+
+Question:
+- Can the existing `diag stats --sort dispatch` output explain the `~1.0-1.1ms` pointer dispatch
+  tail observed in the hit-test torture suite, or is the tail mostly outside the current dispatch
+  sub-phase counters?
+
+Change:
+- Extended `fret-diag` bundle stats with derived dispatch attribution fields:
+  `dispatch_accounted_time_us` and `dispatch_unattributed_time_us`.
+- The human `diag stats` output now prints a per-top-frame `dispatch_breakdown` row, and JSON
+  output includes the derived fields under `p50`, `p95`, `max`, and each `top[]` row.
+
+Validation:
+- `cargo fmt -p fret-diag`
+- `cargo nextest run -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`
+- `cargo test -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`
+- `cargo run -p fretboard-dev -- diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json --sort dispatch --top 1`
+- `cargo run -p fretboard-dev -- diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json --sort dispatch --top 1 --json`
+
+Evidence:
+- The new stats output on
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json`
+  reports dispatch attribution p50/p95/max:
+  `accounted=56/64/64us`, `unattributed=840/946/946us`.
+- The top dispatch frame is `window=4294967297 tick=229 frame=229`, with
+  `dispatch_breakdown.us(total/accounted/unattributed/...)=1010/64/946/...`; the same frame has
+  `hit_test_time_us=17`, `dispatch_widget_bubble_time_us=25`, `dispatch_synth_hover_observer_time_us=9`,
+  and `dispatch_pointer_event_time_us=1010`.
+
+Decision:
+- The hit-test torture recovery gate is still valid: hit-testing is small and bounded. The remaining
+  dispatch tail is mostly unaccounted by the existing sub-phase counters.
+- The next performance slice should add more precise runtime dispatch instrumentation around the
+  currently unmeasured pointer-routing/control-flow regions before changing dispatch thresholds or
+  optimizing a guessed hotspot.

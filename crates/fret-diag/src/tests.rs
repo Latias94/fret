@@ -3043,6 +3043,78 @@ fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
 }
 
 #[test]
+fn bundle_stats_reports_dispatch_unattributed_time() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "events": [
+                    { "frame_id": 1, "type": "pointer.move" }
+                ],
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": { "stats": {
+                            "dispatch_time_us": 1000,
+                            "dispatch_pointer_events": 1,
+                            "dispatch_pointer_event_time_us": 1000,
+                            "hit_test_time_us": 10,
+                            "dispatch_hover_update_time_us": 5,
+                            "dispatch_scroll_handle_invalidation_time_us": 4,
+                            "dispatch_active_layers_time_us": 3,
+                            "dispatch_input_context_time_us": 6,
+                            "dispatch_event_chain_build_time_us": 7,
+                            "dispatch_widget_capture_time_us": 8,
+                            "dispatch_widget_bubble_time_us": 9,
+                            "dispatch_cursor_query_time_us": 2,
+                            "dispatch_pointer_move_layer_observers_time_us": 1,
+                            "dispatch_synth_hover_observer_time_us": 3,
+                            "dispatch_cursor_effect_time_us": 1,
+                            "dispatch_post_dispatch_snapshot_time_us": 1,
+                            "dispatch_events": 1
+                        } }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        1,
+        BundleStatsSort::Dispatch,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    let json = report.to_json();
+    assert_eq!(
+        json.pointer("/top/0/dispatch_accounted_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(60)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(940)
+    );
+    assert_eq!(
+        json.pointer("/p95/dispatch_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(940)
+    );
+    assert_eq!(
+        json.pointer("/max/dispatch_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(940)
+    );
+}
+
+#[test]
 fn bundle_stats_extracts_top_invalidation_walks_with_semantics() {
     let bundle = json!({
         "schema_version": 1,

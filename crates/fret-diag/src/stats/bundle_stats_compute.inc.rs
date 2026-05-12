@@ -1767,6 +1767,25 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_engine_solve_time_us = out
                 .max_layout_engine_solve_time_us
                 .max(layout_engine_solve_time_us);
+            let dispatch_accounted_time_us = hit_test_time_us
+                .saturating_add(dispatch_hover_update_time_us)
+                .saturating_add(dispatch_scroll_handle_invalidation_time_us)
+                .saturating_add(dispatch_active_layers_time_us)
+                .saturating_add(dispatch_input_context_time_us)
+                .saturating_add(dispatch_event_chain_build_time_us)
+                .saturating_add(dispatch_widget_capture_time_us)
+                .saturating_add(dispatch_widget_bubble_time_us)
+                .saturating_add(dispatch_cursor_query_time_us)
+                .saturating_add(dispatch_pointer_move_layer_observers_time_us)
+                .saturating_add(dispatch_synth_hover_observer_time_us)
+                .saturating_add(dispatch_cursor_effect_time_us)
+                .saturating_add(dispatch_post_dispatch_snapshot_time_us);
+            out.max_dispatch_accounted_time_us = out
+                .max_dispatch_accounted_time_us
+                .max(dispatch_accounted_time_us);
+            out.max_dispatch_unattributed_time_us = out
+                .max_dispatch_unattributed_time_us
+                .max(dispatch_time_us.saturating_sub(dispatch_accounted_time_us));
             out.max_renderer_encode_scene_us = out
                 .max_renderer_encode_scene_us
                 .max(renderer_encode_scene_us);
@@ -2264,6 +2283,20 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(rows.iter().map(|r| r.layout_engine_solve_time_us));
     (out.p50_dispatch_time_us, out.p95_dispatch_time_us) =
         p50_p95(rows.iter().map(|r| r.dispatch_time_us));
+    (
+        out.p50_dispatch_accounted_time_us,
+        out.p95_dispatch_accounted_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_accounted_time_us),
+    );
+    (
+        out.p50_dispatch_unattributed_time_us,
+        out.p95_dispatch_unattributed_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_unattributed_time_us),
+    );
     (out.p50_hit_test_time_us, out.p95_hit_test_time_us) =
         p50_p95(rows.iter().map(|r| r.hit_test_time_us));
     (out.p50_paint_widget_time_us, out.p95_paint_widget_time_us) =

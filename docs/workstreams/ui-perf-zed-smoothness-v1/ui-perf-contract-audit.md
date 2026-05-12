@@ -257,6 +257,20 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     waiting for checked state and `Enabled: true`.
   - Do not use `first_frame_smoke_demo` as text evidence: it intentionally paints only a full-window quad for runner
     bootstrap / first-present validation, so no text there is expected.
+- Hit-test torture dispatch attribution:
+  - `diag stats` now reports derived dispatch attribution fields (`dispatch_accounted_time_us` and
+    `dispatch_unattributed_time_us`) in text and JSON output.
+  - Validation:
+    `cargo nextest run -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`;
+    `cargo test -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`;
+    `cargo run -p fretboard-dev -- diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json --sort dispatch --top 1`.
+  - Evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json`:
+    dispatch attribution p50/p95/max `accounted=56/64/64us`, `unattributed=840/946/946us`; top dispatch frame
+    `tick=229 frame=229` reports `dispatch_breakdown.us(total/accounted/unattributed/...)=1010/64/946/...`.
+  - Conclusion: the hit-test contract remains healthy (`hit_test=17us` in the same top frame), but the dispatch tail is
+    mostly outside the current sub-phase counters. The next slice should instrument the remaining pointer-routing
+    control-flow regions before changing dispatch thresholds or optimizing a guessed cause.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
