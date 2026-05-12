@@ -117,7 +117,7 @@ impl CodeEditorHandle {
         self.state.borrow_mut().set_compose_inline_preedit(enabled);
     }
 
-    pub fn debug_decorated_line_text(&self, line: usize) -> Option<String> {
+    pub fn diag_decorated_line_text(&self, line: usize) -> Option<String> {
         let mut st = self.state.borrow_mut();
         if st.preedit.is_some() {
             return None;

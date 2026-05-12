@@ -212,7 +212,6 @@ Internal-by-accident candidates:
   - `set_preedit_debug`
   - `debug_platform_set_marked_text_for_selection`
   - `debug_platform_cancel_marked_text`
-  - `debug_decorated_line_text`
   - `diag_buffer_contains_str_cached`
 
 These should either stay explicitly named as debug/diag APIs or move behind a diagnostics/test
@@ -267,13 +266,13 @@ Diagnostics/perf:
 - `paint_perf_frame`
 - `reset_cache_stats`
 - `diag_buffer_contains_str_cached`
+- `diag_decorated_line_text`
 
 Debug/staging:
 
 - `set_preedit_debug`
 - `debug_platform_set_marked_text_for_selection`
 - `debug_platform_cancel_marked_text`
-- `debug_decorated_line_text`
 - `set_allow_decorations_under_inline_preedit`
 - `set_compose_inline_preedit`
 

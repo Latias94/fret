@@ -342,10 +342,10 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let interaction = handle.interaction();
                                 let buffer_revision = handle.buffer_revision().0;
                                 let fold_placeholder_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains('…'));
                                 let inlay_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains("<inlay>"));
                                 serde_json::json!({
                                     "schema_version": 1,
@@ -456,7 +456,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let interaction = handle.interaction();
                                 let buffer_revision = handle.buffer_revision().0 as u64;
                                 let fold_placeholder_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains('…'));
                                 let fold_fixture_span_line0 = handle
                                     .with_buffer(|b| b.line_text(0))
@@ -470,7 +470,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         }))
                                     });
                                 let inlay_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains("<inlay>"));
                                 let inlay_fixture_byte_line0 = handle
                                     .with_buffer(|b| b.line_text(0))

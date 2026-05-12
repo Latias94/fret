@@ -225,6 +225,11 @@ The current public diagnostics hooks are:
 - `memory_snapshot()`,
 - `paint_perf_frame()`.
 
+The first-party gallery also uses diagnostic helpers for bundle proofs:
+
+- `diag_buffer_contains_str_cached()`,
+- `diag_decorated_line_text()`.
+
 For hot-path editor work, require p50/p95/max evidence and renderer payload evidence before
 changing thresholds or starting a broad rewrite. Feature-heavy editor surfaces should add payload
 counters before promoting new baselines.
