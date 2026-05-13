@@ -71,6 +71,8 @@ cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-dr
 cargo build -p fret-ui-gallery --release
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json --dir target/fret-diag-virtual-list-harness-commit-check --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 ```
 
 Current runtime evidence anchors:
@@ -95,6 +97,31 @@ Current runtime evidence anchors:
   - trace proof:
     `sample_count=45`, `required_samples=45`, `baseline_value=2495.999755859375`,
     `value=2495.999755859375`, `frame_delta=0.0`, `total_delta=0.0`.
+- ScrollArea RTL nested-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - evidence:
+    `target/fret-diag-scroll-area-rtl-idle-stability/sessions/1778705030563-134220/1778705031873/script.result.json`
+  - share pack:
+    `target/fret-diag-scroll-area-rtl-idle-stability/sessions/1778705030563-134220/share/1778705031873.zip`
+  - trace proof:
+    nested RTL viewport `sample_count=60`, `baseline_value=480.0`, `value=480.0`,
+    `frame_delta=0.0`, `total_delta=0.0`; outer content viewport `sample_count=60`,
+    `baseline_value=1220.0`, `value=1220.0`, `frame_delta=0.0`, `total_delta=0.0`.
+- Table RTL post-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - evidence:
+    `target/fret-diag-table-rtl-idle-stability/sessions/1778705380996-128024/1778705382221/script.result.json`
+  - share pack:
+    `target/fret-diag-table-rtl-idle-stability/sessions/1778705380996-128024/share/1778705382221.zip`
+  - trace proof:
+    outer content viewport `sample_count=60`, `baseline_value=1260.0`, `value=1260.0`,
+    `frame_delta=0.0`, `total_delta=0.0`.
 
 ## Environment View-Cache Gates
 

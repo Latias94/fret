@@ -300,6 +300,14 @@
       "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-scroll-area-rtl-idle-stability-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-table-rtl-idle-stability-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
+    },
+    {
       "name": "diag-protocol-scroll-idle-stability-step",
       "command": "cargo test --profile dev-fast -p fret-diag-protocol --lib step_assert_semantics_scroll_idle_stable_deserializes_with_defaults -- --nocapture"
     },
@@ -394,8 +402,11 @@
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-12.md",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
     "tools/diag-scripts/suites/ui-gallery-vlist-no-window-shifts-small-scroll/suite.json",
     "tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs",
     "crates/fret-diag-protocol/src/lib.rs"

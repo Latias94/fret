@@ -8466,6 +8466,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-rtl-idle-stability",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "scroll_area",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the Scroll Area docs page to the RTL ScrollArea, then scrolls the nested RTL viewport.",
+        "The idle-stability assertions fail if either the outer content viewport or the nested RTL ScrollArea keeps drifting after scripted input stops."
+      ]
+    },
+    {
       "id": "ui-gallery-scroll-area-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
       "required_capabilities": [],
@@ -9233,6 +9258,31 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-rtl-idle-stability",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "shadcn",
+        "table",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the Table docs page to the RTL section and samples the outer Gallery content viewport with no scripted input.",
+        "This covers the table/RTL companion to the Checkbox and ScrollArea idle-stability gates."
+      ]
     },
     {
       "id": "ui-gallery-table-smoke",
