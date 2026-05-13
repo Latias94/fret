@@ -78,6 +78,8 @@ pub(super) struct BundleStatsReport {
     pub(super) max_layout_engine_solve_time_us: u64,
     pub(super) max_dispatch_accounted_time_us: u64,
     pub(super) max_dispatch_unattributed_time_us: u64,
+    pub(super) max_dispatch_inner_body_unattributed_time_us: u64,
+    pub(super) max_dispatch_runtime_wrapper_time_us: u64,
     pub(super) max_renderer_encode_scene_us: u64,
     pub(super) max_renderer_ensure_pipelines_us: u64,
     pub(super) max_renderer_plan_compile_us: u64,
@@ -133,6 +135,10 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_dispatch_accounted_time_us: u64,
     pub(super) p50_dispatch_unattributed_time_us: u64,
     pub(super) p95_dispatch_unattributed_time_us: u64,
+    pub(super) p50_dispatch_inner_body_unattributed_time_us: u64,
+    pub(super) p95_dispatch_inner_body_unattributed_time_us: u64,
+    pub(super) p50_dispatch_runtime_wrapper_time_us: u64,
+    pub(super) p95_dispatch_runtime_wrapper_time_us: u64,
     pub(super) p50_hit_test_time_us: u64,
     pub(super) p95_hit_test_time_us: u64,
     pub(super) p50_paint_widget_time_us: u64,
@@ -230,6 +236,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_collapse_observations_time_us: u64,
     pub(super) code_editor_paint_perf: Option<BundleStatsCodeEditorPaintPerf>,
     pub(super) dispatch_time_us: u64,
+    pub(super) dispatch_inner_body_time_us: u64,
     pub(super) dispatch_pointer_events: u32,
     pub(super) dispatch_pointer_event_time_us: u64,
     pub(super) dispatch_timer_events: u32,
@@ -248,6 +255,12 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) dispatch_other_event_time_us: u64,
     pub(super) hit_test_time_us: u64,
     pub(super) dispatch_hover_update_time_us: u64,
+    pub(super) dispatch_input_state_update_time_us: u64,
+    pub(super) dispatch_context_build_time_us: u64,
+    pub(super) dispatch_prelude_time_us: u64,
+    pub(super) dispatch_pointer_arbitration_time_us: u64,
+    pub(super) dispatch_pointer_target_routing_time_us: u64,
+    pub(super) dispatch_post_widget_control_flow_time_us: u64,
     pub(super) dispatch_scroll_handle_invalidation_time_us: u64,
     pub(super) dispatch_active_layers_time_us: u64,
     pub(super) dispatch_input_context_time_us: u64,
@@ -1196,6 +1209,12 @@ impl BundleStatsReport {
     fn dispatch_accounted_time_us(row: &BundleStatsSnapshotRow) -> u64 {
         row.hit_test_time_us
             .saturating_add(row.dispatch_hover_update_time_us)
+            .saturating_add(row.dispatch_input_state_update_time_us)
+            .saturating_add(row.dispatch_context_build_time_us)
+            .saturating_add(row.dispatch_prelude_time_us)
+            .saturating_add(row.dispatch_pointer_arbitration_time_us)
+            .saturating_add(row.dispatch_pointer_target_routing_time_us)
+            .saturating_add(row.dispatch_post_widget_control_flow_time_us)
             .saturating_add(row.dispatch_scroll_handle_invalidation_time_us)
             .saturating_add(row.dispatch_active_layers_time_us)
             .saturating_add(row.dispatch_input_context_time_us)
@@ -1214,6 +1233,23 @@ impl BundleStatsReport {
             .saturating_sub(Self::dispatch_accounted_time_us(row))
     }
 
+    fn dispatch_runtime_wrapper_time_us(row: &BundleStatsSnapshotRow) -> u64 {
+        if row.dispatch_inner_body_time_us == 0 {
+            return 0;
+        }
+        row.dispatch_time_us
+            .saturating_sub(row.dispatch_inner_body_time_us)
+    }
+
+    fn dispatch_inner_body_unattributed_time_us(row: &BundleStatsSnapshotRow) -> u64 {
+        let body_time = if row.dispatch_inner_body_time_us == 0 {
+            row.dispatch_time_us
+        } else {
+            row.dispatch_inner_body_time_us
+        };
+        body_time.saturating_sub(Self::dispatch_accounted_time_us(row))
+    }
+
     fn print_dispatch_breakdown_row(row: &BundleStatsSnapshotRow, label: &str) {
         if row.dispatch_time_us == 0 {
             return;
@@ -1221,13 +1257,24 @@ impl BundleStatsReport {
 
         let accounted = Self::dispatch_accounted_time_us(row);
         let unattributed = row.dispatch_time_us.saturating_sub(accounted);
+        let runtime_wrapper = Self::dispatch_runtime_wrapper_time_us(row);
+        let body_unattributed = Self::dispatch_inner_body_unattributed_time_us(row);
         println!(
-            "    {label}.us(total/accounted/unattributed/hit_test/hover_update/scroll_inv/active_layers/input_ctx/chain/capture/bubble/cursor_query/pointer_observers/synth_hover/cursor_effect/post_snapshot)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{} events(pointer/timer/other)={}/{}/{} event_time(pointer/timer/other)={}/{}/{}",
+            "    {label}.us(total/inner_body/accounted/unattributed/body_unattributed/runtime_wrapper/hit_test/hover_update/input_state/context_build/prelude/pointer_arbitration/pointer_target_routing/post_widget_control_flow/scroll_inv/active_layers/input_ctx/chain/capture/bubble/cursor_query/pointer_observers/synth_hover/cursor_effect/post_snapshot)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{} events(pointer/timer/other)={}/{}/{} event_time(pointer/timer/other)={}/{}/{}",
             row.dispatch_time_us,
+            row.dispatch_inner_body_time_us,
             accounted,
             unattributed,
+            body_unattributed,
+            runtime_wrapper,
             row.hit_test_time_us,
             row.dispatch_hover_update_time_us,
+            row.dispatch_input_state_update_time_us,
+            row.dispatch_context_build_time_us,
+            row.dispatch_prelude_time_us,
+            row.dispatch_pointer_arbitration_time_us,
+            row.dispatch_pointer_target_routing_time_us,
+            row.dispatch_post_widget_control_flow_time_us,
             row.dispatch_scroll_handle_invalidation_time_us,
             row.dispatch_active_layers_time_us,
             row.dispatch_input_context_time_us,
@@ -1437,13 +1484,19 @@ impl BundleStatsReport {
                 self.p95_hit_test_time_us
             );
             println!(
-                "dispatch attribution p50/p95/max (us): accounted={}/{}/{} unattributed={}/{}/{}",
+                "dispatch attribution p50/p95/max (us): accounted={}/{}/{} unattributed={}/{}/{} body_unattributed={}/{}/{} runtime_wrapper={}/{}/{}",
                 self.p50_dispatch_accounted_time_us,
                 self.p95_dispatch_accounted_time_us,
                 self.max_dispatch_accounted_time_us,
                 self.p50_dispatch_unattributed_time_us,
                 self.p95_dispatch_unattributed_time_us,
-                self.max_dispatch_unattributed_time_us
+                self.max_dispatch_unattributed_time_us,
+                self.p50_dispatch_inner_body_unattributed_time_us,
+                self.p95_dispatch_inner_body_unattributed_time_us,
+                self.max_dispatch_inner_body_unattributed_time_us,
+                self.p50_dispatch_runtime_wrapper_time_us,
+                self.p95_dispatch_runtime_wrapper_time_us,
+                self.max_dispatch_runtime_wrapper_time_us
             );
             println!(
                 "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
@@ -1775,13 +1828,19 @@ impl BundleStatsReport {
                 self.p95_hit_test_time_us
             );
             println!(
-                "dispatch attribution p50/p95/max (us): accounted={}/{}/{} unattributed={}/{}/{}",
+                "dispatch attribution p50/p95/max (us): accounted={}/{}/{} unattributed={}/{}/{} body_unattributed={}/{}/{} runtime_wrapper={}/{}/{}",
                 self.p50_dispatch_accounted_time_us,
                 self.p95_dispatch_accounted_time_us,
                 self.max_dispatch_accounted_time_us,
                 self.p50_dispatch_unattributed_time_us,
                 self.p95_dispatch_unattributed_time_us,
-                self.max_dispatch_unattributed_time_us
+                self.max_dispatch_unattributed_time_us,
+                self.p50_dispatch_inner_body_unattributed_time_us,
+                self.p95_dispatch_inner_body_unattributed_time_us,
+                self.max_dispatch_inner_body_unattributed_time_us,
+                self.p50_dispatch_runtime_wrapper_time_us,
+                self.p95_dispatch_runtime_wrapper_time_us,
+                self.max_dispatch_runtime_wrapper_time_us
             );
         }
         if self.p50_ui_thread_cpu_cycle_time_delta_cycles > 0
@@ -3275,6 +3334,14 @@ impl BundleStatsReport {
             Value::from(self.max_dispatch_unattributed_time_us),
         );
         max.insert(
+            "dispatch_inner_body_unattributed_time_us".to_string(),
+            Value::from(self.max_dispatch_inner_body_unattributed_time_us),
+        );
+        max.insert(
+            "dispatch_runtime_wrapper_time_us".to_string(),
+            Value::from(self.max_dispatch_runtime_wrapper_time_us),
+        );
+        max.insert(
             "renderer_encode_scene_us".to_string(),
             Value::from(self.max_renderer_encode_scene_us),
         );
@@ -3563,6 +3630,14 @@ impl BundleStatsReport {
             Value::from(self.p50_dispatch_unattributed_time_us),
         );
         p50.insert(
+            "dispatch_inner_body_unattributed_time_us".to_string(),
+            Value::from(self.p50_dispatch_inner_body_unattributed_time_us),
+        );
+        p50.insert(
+            "dispatch_runtime_wrapper_time_us".to_string(),
+            Value::from(self.p50_dispatch_runtime_wrapper_time_us),
+        );
+        p50.insert(
             "hit_test_time_us".to_string(),
             Value::from(self.p50_hit_test_time_us),
         );
@@ -3692,6 +3767,14 @@ impl BundleStatsReport {
         p95.insert(
             "dispatch_unattributed_time_us".to_string(),
             Value::from(self.p95_dispatch_unattributed_time_us),
+        );
+        p95.insert(
+            "dispatch_inner_body_unattributed_time_us".to_string(),
+            Value::from(self.p95_dispatch_inner_body_unattributed_time_us),
+        );
+        p95.insert(
+            "dispatch_runtime_wrapper_time_us".to_string(),
+            Value::from(self.p95_dispatch_runtime_wrapper_time_us),
         );
         p95.insert(
             "hit_test_time_us".to_string(),
@@ -3990,6 +4073,10 @@ impl BundleStatsReport {
                     "dispatch_time_us".to_string(),
                     Value::from(row.dispatch_time_us),
                 );
+                obj.insert(
+                    "dispatch_inner_body_time_us".to_string(),
+                    Value::from(row.dispatch_inner_body_time_us),
+                );
                 let dispatch_accounted_time_us = Self::dispatch_accounted_time_us(row);
                 obj.insert(
                     "dispatch_accounted_time_us".to_string(),
@@ -3998,6 +4085,14 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_unattributed_time_us".to_string(),
                     Value::from(row.dispatch_time_us.saturating_sub(dispatch_accounted_time_us)),
+                );
+                obj.insert(
+                    "dispatch_inner_body_unattributed_time_us".to_string(),
+                    Value::from(Self::dispatch_inner_body_unattributed_time_us(row)),
+                );
+                obj.insert(
+                    "dispatch_runtime_wrapper_time_us".to_string(),
+                    Value::from(Self::dispatch_runtime_wrapper_time_us(row)),
                 );
                 obj.insert(
                     "dispatch_pointer_events".to_string(),
@@ -4072,6 +4167,30 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_hover_update_time_us".to_string(),
                     Value::from(row.dispatch_hover_update_time_us),
+                );
+                obj.insert(
+                    "dispatch_input_state_update_time_us".to_string(),
+                    Value::from(row.dispatch_input_state_update_time_us),
+                );
+                obj.insert(
+                    "dispatch_context_build_time_us".to_string(),
+                    Value::from(row.dispatch_context_build_time_us),
+                );
+                obj.insert(
+                    "dispatch_prelude_time_us".to_string(),
+                    Value::from(row.dispatch_prelude_time_us),
+                );
+                obj.insert(
+                    "dispatch_pointer_arbitration_time_us".to_string(),
+                    Value::from(row.dispatch_pointer_arbitration_time_us),
+                );
+                obj.insert(
+                    "dispatch_pointer_target_routing_time_us".to_string(),
+                    Value::from(row.dispatch_pointer_target_routing_time_us),
+                );
+                obj.insert(
+                    "dispatch_post_widget_control_flow_time_us".to_string(),
+                    Value::from(row.dispatch_post_widget_control_flow_time_us),
                 );
                 obj.insert(
                     "dispatch_scroll_handle_invalidation_time_us".to_string(),

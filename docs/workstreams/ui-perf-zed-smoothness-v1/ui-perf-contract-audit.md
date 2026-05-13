@@ -27,7 +27,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Full formal gates are green after the helper changes. | `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`: Windows `ui-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=3`. `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`: `ui-code-editor-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=2`. | Covered for both resize gates. |
 | Zed/GPUI and egui comparison remains explicit. | `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md` plus the contract matrix reference pressure column. | Covered as a design map; still needs updates when new gaps close. |
 | Churn reduction is evidence-led. | Perf log entries show measured view-cache harness virtualization, code editor resize attribution, and decisions not to start broad root-solve quantization or `WindowedRowsSurface` rewrites without evidence. | Covered for recent work. |
-| Pointer-move hit-test torture remains runnable as a contract surface. | `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` restores the `ui-gallery-hit-test-torture-root` surface; `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` promotes the via-nav script; `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json` passed `--max-pointer-move-hit-test-us 100` and `--max-pointer-move-global-changes 0`. | Covered as a hit-test gate smoke; dispatch tail optimization remains separate. |
+| Pointer-move hit-test torture remains runnable as a contract surface. | `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` restores the `ui-gallery-hit-test-torture-root` surface; `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` promotes the via-nav script; `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json` passed `--max-pointer-move-hit-test-us 100` and `--max-pointer-move-global-changes 0`; follow-up attribution in `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json` identifies `dispatch_context_build_time_us` as the pointer dispatch tail. | Covered as a hit-test gate smoke; dispatch context/snapshot reuse remains the next optimization gap. |
 | Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, no-silent-threshold-loosening guard, and review checklist. | Covered. |
 | Completion criteria are unambiguous. | This audit maps requirements to evidence and gaps. | Covered, with open gaps below. |
 
@@ -151,10 +151,13 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     passed the hit-test/global-change gate with `pointer_move_max_hit_test_time_us=17`,
     `pointer_move_snapshots_with_global_changes=0`, and bounds-tree queries/hits=`3/3`.
   - Separate finding:
-    an exploratory `--max-pointer-move-dispatch-us 800` run failed at `1010us`. The same bundle
-    also shows non-trivial runtime snapshot work (`focus_repair` and `command_availability`), but
-    the dispatch tail still needs dedicated attribution before assigning cause. Keep dispatch-tail
-    optimization as a follow-up instead of weakening the hit-test recovery gate.
+    an exploratory `--max-pointer-move-dispatch-us 800` run failed at `1010us`. Dedicated follow-up
+    attribution in
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json`
+    shows p50/p95/max dispatch attribution `accounted=913/1139/1139us`,
+    `unattributed=11/45/45us`, `runtime_wrapper=0/1/1us`, with the top frame dominated by
+    `dispatch_context_build_time_us=1046us`. Keep the hit-test recovery gate unchanged and treat
+    dispatch context/snapshot reuse as the next optimization target.
 - Renderer payload contract surface:
   - `renderer_instance_bytes` and `renderer_encode_scene_text_ops` now flow through perf JSON rows, repeat summaries,
     baseline rows, `perf-baseline-from-bundles`, baseline parsing, threshold rows, and threshold failures.
@@ -259,7 +262,9 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     bootstrap / first-present validation, so no text there is expected.
 - Hit-test torture dispatch attribution:
   - `diag stats` now reports derived dispatch attribution fields (`dispatch_accounted_time_us` and
-    `dispatch_unattributed_time_us`) in text and JSON output.
+    `dispatch_unattributed_time_us`) in text and JSON output, plus follow-up body/wrapper/context
+    attribution (`dispatch_inner_body_time_us`, `dispatch_runtime_wrapper_time_us`,
+    `dispatch_context_build_time_us`).
   - Validation:
     `cargo nextest run -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`;
     `cargo test -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`;
@@ -268,9 +273,14 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json`:
     dispatch attribution p50/p95/max `accounted=56/64/64us`, `unattributed=840/946/946us`; top dispatch frame
     `tick=229 frame=229` reports `dispatch_breakdown.us(total/accounted/unattributed/...)=1010/64/946/...`.
-  - Conclusion: the hit-test contract remains healthy (`hit_test=17us` in the same top frame), but the dispatch tail is
-    mostly outside the current sub-phase counters. The next slice should instrument the remaining pointer-routing
-    control-flow regions before changing dispatch thresholds or optimizing a guessed cause.
+  - Follow-up evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json`:
+    dispatch attribution p50/p95/max `accounted=913/1139/1139us`, `unattributed=11/45/45us`,
+    `body_unattributed=11/45/45us`, and `runtime_wrapper=0/1/1us`. The top dispatch frame reports
+    `context_build=1046us` with `hit_test=18us`.
+  - Conclusion: the hit-test contract remains healthy, and the pointer dispatch tail is now attributed to dispatch
+    context/snapshot construction. The next slice should investigate snapshot reuse or lazy focus snapshot
+    construction before changing dispatch thresholds.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
@@ -307,6 +317,10 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.
+5. Pointer dispatch context construction is now the measured hit-test torture tail: the current implementation builds
+   active input/focus dispatch snapshots on each pointer move, costing about `0.9-1.0ms` in the 20k-noise torture
+   surface. Keep this as an optimization gap until a snapshot reuse/lazy-focus-context design is implemented and
+   gated.
 
 ## Audit Conclusion
 

@@ -401,6 +401,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("dispatch_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_inner_body_time_us = stats
+                .and_then(|m| m.get("dispatch_inner_body_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let dispatch_pointer_events = stats
                 .and_then(|m| m.get("dispatch_pointer_events"))
                 .and_then(|v| v.as_u64())
@@ -477,6 +481,30 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let dispatch_hover_update_time_us = stats
                 .and_then(|m| m.get("dispatch_hover_update_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_input_state_update_time_us = stats
+                .and_then(|m| m.get("dispatch_input_state_update_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_context_build_time_us = stats
+                .and_then(|m| m.get("dispatch_context_build_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_prelude_time_us = stats
+                .and_then(|m| m.get("dispatch_prelude_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_pointer_arbitration_time_us = stats
+                .and_then(|m| m.get("dispatch_pointer_arbitration_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_pointer_target_routing_time_us = stats
+                .and_then(|m| m.get("dispatch_pointer_target_routing_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_post_widget_control_flow_time_us = stats
+                .and_then(|m| m.get("dispatch_post_widget_control_flow_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let dispatch_scroll_handle_invalidation_time_us = stats
@@ -1769,6 +1797,12 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max(layout_engine_solve_time_us);
             let dispatch_accounted_time_us = hit_test_time_us
                 .saturating_add(dispatch_hover_update_time_us)
+                .saturating_add(dispatch_input_state_update_time_us)
+                .saturating_add(dispatch_context_build_time_us)
+                .saturating_add(dispatch_prelude_time_us)
+                .saturating_add(dispatch_pointer_arbitration_time_us)
+                .saturating_add(dispatch_pointer_target_routing_time_us)
+                .saturating_add(dispatch_post_widget_control_flow_time_us)
                 .saturating_add(dispatch_scroll_handle_invalidation_time_us)
                 .saturating_add(dispatch_active_layers_time_us)
                 .saturating_add(dispatch_input_context_time_us)
@@ -1786,6 +1820,22 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_dispatch_unattributed_time_us = out
                 .max_dispatch_unattributed_time_us
                 .max(dispatch_time_us.saturating_sub(dispatch_accounted_time_us));
+            let dispatch_body_time_us = if dispatch_inner_body_time_us == 0 {
+                dispatch_time_us
+            } else {
+                dispatch_inner_body_time_us
+            };
+            out.max_dispatch_inner_body_unattributed_time_us = out
+                .max_dispatch_inner_body_unattributed_time_us
+                .max(dispatch_body_time_us.saturating_sub(dispatch_accounted_time_us));
+            let dispatch_runtime_wrapper_time_us = if dispatch_inner_body_time_us == 0 {
+                0
+            } else {
+                dispatch_time_us.saturating_sub(dispatch_inner_body_time_us)
+            };
+            out.max_dispatch_runtime_wrapper_time_us = out
+                .max_dispatch_runtime_wrapper_time_us
+                .max(dispatch_runtime_wrapper_time_us);
             out.max_renderer_encode_scene_us = out
                 .max_renderer_encode_scene_us
                 .max(renderer_encode_scene_us);
@@ -1875,6 +1925,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_collapse_observations_time_us,
                 code_editor_paint_perf,
                 dispatch_time_us,
+                dispatch_inner_body_time_us,
                 dispatch_pointer_events,
                 dispatch_pointer_event_time_us,
                 dispatch_timer_events,
@@ -1893,6 +1944,12 @@ pub(super) fn bundle_stats_from_json_with_options(
                 dispatch_other_event_time_us,
                 hit_test_time_us,
                 dispatch_hover_update_time_us,
+                dispatch_input_state_update_time_us,
+                dispatch_context_build_time_us,
+                dispatch_prelude_time_us,
+                dispatch_pointer_arbitration_time_us,
+                dispatch_pointer_target_routing_time_us,
+                dispatch_post_widget_control_flow_time_us,
                 dispatch_scroll_handle_invalidation_time_us,
                 dispatch_active_layers_time_us,
                 dispatch_input_context_time_us,
@@ -2296,6 +2353,20 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(
         rows.iter()
             .map(BundleStatsReport::dispatch_unattributed_time_us),
+    );
+    (
+        out.p50_dispatch_inner_body_unattributed_time_us,
+        out.p95_dispatch_inner_body_unattributed_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_inner_body_unattributed_time_us),
+    );
+    (
+        out.p50_dispatch_runtime_wrapper_time_us,
+        out.p95_dispatch_runtime_wrapper_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_runtime_wrapper_time_us),
     );
     (out.p50_hit_test_time_us, out.p95_hit_test_time_us) =
         p50_p95(rows.iter().map(|r| r.hit_test_time_us));

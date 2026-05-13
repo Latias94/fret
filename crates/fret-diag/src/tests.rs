@@ -3060,10 +3060,17 @@ fn bundle_stats_reports_dispatch_unattributed_time() {
                         "changed_globals": [],
                         "debug": { "stats": {
                             "dispatch_time_us": 1000,
+                            "dispatch_inner_body_time_us": 950,
                             "dispatch_pointer_events": 1,
                             "dispatch_pointer_event_time_us": 1000,
                             "hit_test_time_us": 10,
                             "dispatch_hover_update_time_us": 5,
+                            "dispatch_input_state_update_time_us": 23,
+                            "dispatch_context_build_time_us": 29,
+                            "dispatch_prelude_time_us": 11,
+                            "dispatch_pointer_arbitration_time_us": 13,
+                            "dispatch_pointer_target_routing_time_us": 17,
+                            "dispatch_post_widget_control_flow_time_us": 19,
                             "dispatch_scroll_handle_invalidation_time_us": 4,
                             "dispatch_active_layers_time_us": 3,
                             "dispatch_input_context_time_us": 6,
@@ -3095,22 +3102,82 @@ fn bundle_stats_reports_dispatch_unattributed_time() {
     assert_eq!(
         json.pointer("/top/0/dispatch_accounted_time_us")
             .and_then(|v| v.as_u64()),
-        Some(60)
+        Some(172)
     );
     assert_eq!(
         json.pointer("/top/0/dispatch_unattributed_time_us")
             .and_then(|v| v.as_u64()),
-        Some(940)
+        Some(828)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_inner_body_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(778)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_runtime_wrapper_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(50)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_prelude_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(11)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_input_state_update_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(23)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_context_build_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(29)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_pointer_arbitration_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(13)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_pointer_target_routing_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(17)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_post_widget_control_flow_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(19)
     );
     assert_eq!(
         json.pointer("/p95/dispatch_unattributed_time_us")
             .and_then(|v| v.as_u64()),
-        Some(940)
+        Some(828)
+    );
+    assert_eq!(
+        json.pointer("/p95/dispatch_inner_body_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(778)
+    );
+    assert_eq!(
+        json.pointer("/p95/dispatch_runtime_wrapper_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(50)
     );
     assert_eq!(
         json.pointer("/max/dispatch_unattributed_time_us")
             .and_then(|v| v.as_u64()),
-        Some(940)
+        Some(828)
+    );
+    assert_eq!(
+        json.pointer("/max/dispatch_inner_body_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(778)
+    );
+    assert_eq!(
+        json.pointer("/max/dispatch_runtime_wrapper_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(50)
     );
 }
 

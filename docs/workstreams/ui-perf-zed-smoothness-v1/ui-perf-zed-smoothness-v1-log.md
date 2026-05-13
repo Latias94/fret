@@ -13169,3 +13169,45 @@ Decision:
 - The next performance slice should add more precise runtime dispatch instrumentation around the
   currently unmeasured pointer-routing/control-flow regions before changing dispatch thresholds or
   optimizing a guessed hotspot.
+
+## 2026-05-13 09:04:27 +08:00 (dispatch-tail context-build attribution)
+
+Question:
+- Is the `~1.0-1.2ms` pointer dispatch tail in the hit-test torture suite caused by outer
+  `stacksafe`/wrapper overhead, hit-testing, or real uninstrumented work inside the dispatch body?
+
+Change:
+- Added coarse dispatch timing fields to the UI diagnostics frame stats and `diag stats` output:
+  `dispatch_inner_body_time_us`, `dispatch_input_state_update_time_us`, and
+  `dispatch_context_build_time_us`.
+- Extended dispatch attribution JSON/text with:
+  `dispatch_inner_body_unattributed_time_us` and `dispatch_runtime_wrapper_time_us`.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo check -p fret-diag -p fret-bootstrap -p fret-ui`
+- `cargo nextest run -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`
+- `cargo build -p fretboard-dev --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-dev`
+- `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard-dev.exe diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json --sort dispatch --top 5`
+
+Evidence:
+- Bundle:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json`
+- Gate result stayed within the existing hit-test/global-change contract:
+  `pointer_move_max_hit_test_time_us=19`, `pointer_move_snapshots_with_global_changes=0`.
+- Dispatch attribution p50/p95/max is now:
+  `accounted=913/1139/1139us`, `unattributed=11/45/45us`,
+  `body_unattributed=11/45/45us`, and `runtime_wrapper=0/1/1us`.
+- Top dispatch frame `tick=227 frame=227` reports
+  `dispatch_breakdown.us(total/inner_body/accounted/unattributed/body_unattributed/runtime_wrapper/...)=1184/1184/1139/45/45/0/...`
+  with `context_build=1046us`, `hit_test=18us`, `bubble=24us`, and `synth_hover=8us`.
+
+Decision:
+- The dispatch tail is not outer wrapper or `stacksafe` overhead; it is real dispatch body work.
+- The dominant measured cost is `dispatch_context_build_time_us`, which builds the active input/focus
+  dispatch snapshots every pointer move. This is the next architectural optimization target.
+- Do not loosen hit-test thresholds. The next slice should evaluate dispatch context snapshot reuse,
+  event-type-specific lazy focus snapshot construction, or a cheaper active-layer membership cache
+  before changing pointer dispatch thresholds.
