@@ -1,9 +1,14 @@
 use fret_core::Rect;
-use fret_diag_protocol::{UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1};
+use fret_diag_protocol::{
+    UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsNumericFieldV1,
+    UiSemanticsScrollFieldV1,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BoundsSpace, ObservedNode, ObservedSemanticsFlag, ObservedSemanticsRelation, ObservedTree,
+    BoundsSpace, ObservedNode, ObservedSemanticsAction, ObservedSemanticsFlag,
+    ObservedSemanticsLive, ObservedSemanticsRelation, ObservedTextRange, ObservedTextSelection,
+    ObservedTree,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,6 +110,30 @@ pub enum MechanismPredicate {
         target: UiSelectorV1,
         flag: ObservedSemanticsFlag,
         expected: bool,
+    },
+    SemanticsActionIs {
+        target: UiSelectorV1,
+        action: ObservedSemanticsAction,
+        expected: bool,
+    },
+    SemanticsLiveIs {
+        target: UiSelectorV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        live: Option<ObservedSemanticsLive>,
+    },
+    SemanticsLiveAtomicIs {
+        target: UiSelectorV1,
+        expected: bool,
+    },
+    SemanticsTextSelectionIs {
+        target: UiSelectorV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        expected: Option<ObservedTextSelection>,
+    },
+    SemanticsTextCompositionRangeIs {
+        target: UiSelectorV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        expected: Option<ObservedTextRange>,
     },
 }
 
@@ -372,6 +401,59 @@ pub fn evaluate_predicate(
                 )
             })
         }
+        MechanismPredicate::SemanticsActionIs {
+            target,
+            action,
+            expected,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let actual = node.actions.get(*action);
+            pass_bool(actual == *expected, || {
+                format!(
+                    "semantics_action_is mismatch target={target:?} action={action:?} expected={expected} actual={actual}"
+                )
+            })
+        }
+        MechanismPredicate::SemanticsLiveIs { target, live } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.live == *live, || {
+                format!(
+                    "semantics_live_is mismatch target={target:?} expected={live:?} actual={:?}",
+                    node.live
+                )
+            })
+        }
+        MechanismPredicate::SemanticsLiveAtomicIs { target, expected } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let Some(actual) = node.live_atomic else {
+                return Err(failure(format!(
+                    "semantics_live_atomic_is target has no observed live_atomic target={target:?}"
+                )));
+            };
+            pass_bool(actual == *expected, || {
+                format!(
+                    "semantics_live_atomic_is mismatch target={target:?} expected={expected} actual={actual}"
+                )
+            })
+        }
+        MechanismPredicate::SemanticsTextSelectionIs { target, expected } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.text_selection == *expected, || {
+                format!(
+                    "semantics_text_selection_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.text_selection
+                )
+            })
+        }
+        MechanismPredicate::SemanticsTextCompositionRangeIs { target, expected } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.text_composition == *expected, || {
+                format!(
+                    "semantics_text_composition_range_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.text_composition
+                )
+            })
+        }
     }
 }
 
@@ -390,6 +472,10 @@ fn semantics_flag_value(node: &ObservedNode, flag: ObservedSemanticsFlag) -> Opt
     match flag {
         ObservedSemanticsFlag::Disabled => node.disabled,
         ObservedSemanticsFlag::Hidden => node.hidden,
+        ObservedSemanticsFlag::Selected => node.selected,
+        ObservedSemanticsFlag::Expanded => node.expanded,
+        ObservedSemanticsFlag::Checked => node.checked,
+        ObservedSemanticsFlag::LiveAtomic => node.live_atomic,
     }
 }
 
@@ -480,6 +566,223 @@ fn eval_ui_predicate(
                     format!(
                         "label mismatch target={target:?} expected contains={text:?} actual={:?}",
                         node.label
+                    )
+                },
+            )
+        }
+        UiPredicateV1::LabelLenIs { target, len_bytes } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = node.label.as_deref().map(|label| label.len() as u32);
+            pass_bool(have == Some(*len_bytes), || {
+                format!(
+                    "label_len_is mismatch target={target:?} expected={len_bytes} actual={have:?}"
+                )
+            })
+        }
+        UiPredicateV1::LabelLenGe {
+            target,
+            min_len_bytes,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = node.label.as_deref().map(|label| label.len() as u32);
+            pass_bool(have.is_some_and(|len| len >= *min_len_bytes), || {
+                format!(
+                    "label_len_ge mismatch target={target:?} expected_min={min_len_bytes} actual={have:?}"
+                )
+            })
+        }
+        UiPredicateV1::ValueContains { target, text } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(
+                node.value
+                    .as_deref()
+                    .is_some_and(|value| value.contains(text)),
+                || {
+                    format!(
+                        "value_contains mismatch target={target:?} expected contains={text:?} actual={:?}",
+                        node.value
+                    )
+                },
+            )
+        }
+        UiPredicateV1::ValueEquals { target, text } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.value.as_deref() == Some(text.as_str()), || {
+                format!(
+                    "value_equals mismatch target={target:?} expected={text:?} actual={:?}",
+                    node.value
+                )
+            })
+        }
+        UiPredicateV1::ValueLenIs { target, len_bytes } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = node.value.as_deref().map(|value| value.len() as u32);
+            pass_bool(have == Some(*len_bytes), || {
+                format!(
+                    "value_len_is mismatch target={target:?} expected={len_bytes} actual={have:?}"
+                )
+            })
+        }
+        UiPredicateV1::ValueLenGe {
+            target,
+            min_len_bytes,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = node.value.as_deref().map(|value| value.len() as u32);
+            pass_bool(have.is_some_and(|len| len >= *min_len_bytes), || {
+                format!(
+                    "value_len_ge mismatch target={target:?} expected_min={min_len_bytes} actual={have:?}"
+                )
+            })
+        }
+        UiPredicateV1::PosInSetIs { target, pos_in_set } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.pos_in_set == Some(*pos_in_set), || {
+                format!(
+                    "pos_in_set_is mismatch target={target:?} expected={pos_in_set} actual={:?}",
+                    node.pos_in_set
+                )
+            })
+        }
+        UiPredicateV1::SetSizeIs { target, set_size } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.set_size == Some(*set_size), || {
+                format!(
+                    "set_size_is mismatch target={target:?} expected={set_size} actual={:?}",
+                    node.set_size
+                )
+            })
+        }
+        UiPredicateV1::CheckedIs { target, checked } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.checked == Some(*checked), || {
+                format!(
+                    "checked_is mismatch target={target:?} expected={checked} actual={:?}",
+                    node.checked
+                )
+            })
+        }
+        UiPredicateV1::SelectedIs { target, selected } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.selected == Some(*selected), || {
+                format!(
+                    "selected_is mismatch target={target:?} expected={selected} actual={:?}",
+                    node.selected
+                )
+            })
+        }
+        UiPredicateV1::SemanticsNumericApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = semantics_numeric_value(node, *field);
+            pass_bool(
+                have.is_some_and(|have| (have - *value).abs() <= eps.max(0.0)),
+                || {
+                    format!(
+                        "semantics_numeric_approx_eq mismatch target={target:?} field={field:?} expected={value} actual={have:?} eps={}",
+                        eps.max(0.0)
+                    )
+                },
+            )
+        }
+        UiPredicateV1::SemanticsScrollIsFinite { target, field } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = semantics_scroll_value(node, *field);
+            pass_bool(have.is_some_and(f64::is_finite), || {
+                format!(
+                    "semantics_scroll_is_finite mismatch target={target:?} field={field:?} actual={have:?}"
+                )
+            })
+        }
+        UiPredicateV1::SemanticsScrollApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = semantics_scroll_value(node, *field);
+            pass_bool(
+                have.is_some_and(|have| (have - *value).abs() <= eps.max(0.0)),
+                || {
+                    format!(
+                        "semantics_scroll_approx_eq mismatch target={target:?} field={field:?} expected={value} actual={have:?} eps={}",
+                        eps.max(0.0)
+                    )
+                },
+            )
+        }
+        UiPredicateV1::SemanticsScrollNotApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = semantics_scroll_value(node, *field);
+            pass_bool(
+                have.is_some_and(|have| (have - *value).abs() > eps.max(0.0)),
+                || {
+                    format!(
+                        "semantics_scroll_not_approx_eq mismatch target={target:?} field={field:?} not_expected={value} actual={have:?} eps={}",
+                        eps.max(0.0)
+                    )
+                },
+            )
+        }
+        UiPredicateV1::TextCompositionIs { target, composing } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let have = node.text_composition.is_some();
+            pass_bool(have == *composing, || {
+                format!(
+                    "text_composition_is mismatch target={target:?} expected={composing} actual={have} range={:?}",
+                    node.text_composition
+                )
+            })
+        }
+        UiPredicateV1::CheckedIsNone { target } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(
+                node.checked.is_none() && node.checked_state.is_none(),
+                || {
+                    format!(
+                        "checked_is_none mismatch target={target:?} checked={:?} checked_state={:?}",
+                        node.checked, node.checked_state
+                    )
+                },
+            )
+        }
+        UiPredicateV1::ActiveItemIs { container, item } => {
+            let container = tree.select_best(container).map_err(fail)?;
+            let item = tree.select_best_unfiltered(item).map_err(fail)?;
+            let item_id = item.node_id;
+            let matches_active_descendant = item_id == container.active_descendant_node_id;
+            let matches_focus = item_id == tree.focus_node_id;
+            pass_bool(matches_active_descendant || matches_focus, || {
+                format!(
+                    "active_item_is mismatch container={container:?} item={item:?} active_descendant={:?} focus={:?}",
+                    container.active_descendant_node_id, tree.focus_node_id
+                )
+            })
+        }
+        UiPredicateV1::ActiveItemIsNone { container } => {
+            let container = tree.select_best(container).map_err(fail)?;
+            let focus_inside_container_item = container
+                .node_id
+                .zip(tree.focus_node_id)
+                .is_some_and(|(container, focus)| {
+                    focus != container && tree.node_is_descendant_of_or_self(focus, container)
+                });
+            pass_bool(
+                container.active_descendant_node_id.is_none() && !focus_inside_container_item,
+                || {
+                    format!(
+                        "active_item_is_none mismatch container={container:?} active_descendant={:?} focus={:?}",
+                        container.active_descendant_node_id, tree.focus_node_id
                     )
                 },
             )
@@ -657,6 +960,29 @@ fn eval_ui_predicate(
         _ => Err(failure(format!(
             "UiPredicateV1 variant is not supported by mechanism harness oracle: {predicate:?}"
         ))),
+    }
+}
+
+fn semantics_numeric_value(node: &ObservedNode, field: UiSemanticsNumericFieldV1) -> Option<f64> {
+    let numeric = node.numeric?;
+    match field {
+        UiSemanticsNumericFieldV1::Value => numeric.value,
+        UiSemanticsNumericFieldV1::Min => numeric.min,
+        UiSemanticsNumericFieldV1::Max => numeric.max,
+        UiSemanticsNumericFieldV1::Step => numeric.step,
+        UiSemanticsNumericFieldV1::Jump => numeric.jump,
+    }
+}
+
+fn semantics_scroll_value(node: &ObservedNode, field: UiSemanticsScrollFieldV1) -> Option<f64> {
+    let scroll = node.scroll?;
+    match field {
+        UiSemanticsScrollFieldV1::X => scroll.x,
+        UiSemanticsScrollFieldV1::XMin => scroll.x_min,
+        UiSemanticsScrollFieldV1::XMax => scroll.x_max,
+        UiSemanticsScrollFieldV1::Y => scroll.y,
+        UiSemanticsScrollFieldV1::YMin => scroll.y_min,
+        UiSemanticsScrollFieldV1::YMax => scroll.y_max,
     }
 }
 

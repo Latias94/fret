@@ -267,6 +267,36 @@ already produced these relationships in `SemanticsSnapshot`, but the mechanism h
 express them as reusable fixture predicates. This blocked proactive parity sweeps for combobox,
 listbox, autocomplete, menu, and future Material 3 composite widgets.
 
+The semantics-state extension expands the same suite beyond relations. The observed tree now mirrors
+`SemanticsSnapshot` value text, selected/expanded/checked state, collection metadata, editing ranges,
+action support, live-region metadata, and structured numeric/scroll metadata. The shared oracle now
+supports the corresponding existing `UiPredicateV1` semantics predicates plus harness-native
+action/live/range predicates.
+
+New fixture cases:
+
+- `text-input-region-value-and-editing-metadata`: focused `TextInputRegion` value, selection,
+  composition, focus action, set-value suppression, and set-text-selection support.
+- `pressable-collection-metadata-and-state`: listbox option `pos_in_set`, `set_size`, selected,
+  checked/unchecked, and invoke action.
+- `semantics-wrapper-live-and-structured-metadata`: `SemanticsProps` live region, live atomic,
+  structured slider numeric metadata/action support, and viewport scroll metadata.
+
+Findings from this extension:
+
+- The runtime already emitted the state/action/metadata facts, but `fret-mechanism-harness` could not
+  observe or assert them, so recipe parity sweeps could not catch many state-level regressions.
+- `role_label` did not cover `Region`, `SpinButton`, `Meter`, or `Splitter`, causing those known core
+  roles to appear as `unknown` in observed snapshots.
+- `WindowTextInputSnapshot` test constructors had not been updated for the `visual` field, blocking
+  targeted `fret-ui` nextest gates before the semantics fixture could run.
+
+Validation:
+
+- `cargo nextest run -p fret-mechanism-harness`
+- `cargo nextest run -p fret-ui mechanism_harness_semantics_relations_match_oracles`
+- `cargo nextest run -p fret-ui window_text_input_snapshot`
+
 ## Phase 2.9 Roving Focus Interaction Coverage
 
 The roving focus interaction fixture suite is
