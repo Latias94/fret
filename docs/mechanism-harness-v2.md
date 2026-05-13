@@ -511,9 +511,42 @@ Validation:
 - `cargo test -p fret-ui-shadcn --lib combobox::tests::responsive_combobox_uses_shadcn_popover_demo_defaults -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --test combobox_responsive_breakpoint -- --nocapture`
 
-Next uncovered combobox slice: add fixture-visible assertions for trigger text truncation and
-chevron slot geometry so responsive/content width fixes cannot regress into the gallery-only
-symptoms that originally looked like isolated visual bugs.
+The next slice promoted that uncovered trigger-slot risk into a dedicated fixture suite.
+
+## Phase 2.16 Combobox Trigger Slot Geometry Sweep
+
+The combobox trigger-slot fixture suite is
+`ecosystem/fret-ui-shadcn/tests/fixtures/layout_combobox_trigger_cases_v1.json`, run by
+`web_vs_fret_layout_combobox_trigger_slots_match_web_fixtures` in the web-vs-Fret layout harness.
+
+It covers:
+
+- `combobox-demo` trigger width/height, right icon size, right inset, center-y alignment, and label
+  bounds staying before the icon;
+- `combobox-responsive` trigger width/height and the upstream text-only trigger shape, where the
+  label owns the full content lane and no icon slot is rendered;
+- a long selected-label case that keeps truncation pressure visible while asserting the label does
+  not overlap the icon slot.
+
+Finding from this sweep:
+
+- `combobox-responsive.trigger_text_only` exposed a real recipe drift. Upstream shadcn responsive
+  combobox uses a plain outline Button with `w-[150px] justify-start` and no right-side icon, while
+  Fret's responsive `Combobox` recipe inherited the default combobox trigger icon. That extra 16px
+  slot reduced the already-narrow text lane and is the kind of issue users see as "text collapses to
+  ellipsis" or "arrow positioning looks wrong". Responsive Button triggers now hide the trigger icon
+  by default, while an explicit `ComboboxInput::show_trigger(true)` still restores it for callers
+  that intentionally want the icon.
+
+Validation:
+
+- `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib responsive_button_trigger_hides_icon_unless_explicit -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox_show_trigger_hides_chevron_icon -- --nocapture`
+
+Next uncovered combobox slice: add a screenshot/paint-level or icon-identity gate for the
+`combobox-demo` custom `ChevronsUpDown` trigger icon. Geometry now proves the slot is in the right
+place, but it does not distinguish a single chevron from the upstream double-chevron glyph.
 
 ## Diagnostics Reuse
 
@@ -572,6 +605,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement combobox::fixtures::web_vs_fret_combobox_cases_match_web_fixtures -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome combobox::fixtures::web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

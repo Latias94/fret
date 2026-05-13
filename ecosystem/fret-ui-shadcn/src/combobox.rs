@@ -864,6 +864,7 @@ pub struct Combobox {
     search_enabled: bool,
     show_clear: bool,
     show_trigger: bool,
+    show_trigger_explicit: bool,
     input_addons: Vec<crate::input_group::InputGroupAddon>,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -906,6 +907,7 @@ impl Combobox {
         }
         if let Some(show_trigger) = patch.show_trigger {
             self.show_trigger = show_trigger;
+            self.show_trigger_explicit = true;
         }
         if let Some(show_clear) = patch.show_clear {
             self.show_clear = show_clear;
@@ -980,6 +982,7 @@ impl Combobox {
             search_enabled: true,
             show_clear: false,
             show_trigger: true,
+            show_trigger_explicit: false,
             input_addons: Vec::new(),
             trigger_variant: ComboboxTriggerVariant::default(),
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
@@ -1259,6 +1262,7 @@ impl Combobox {
             self.auto_highlight,
             self.show_clear,
             self.show_trigger,
+            self.show_trigger_explicit,
             self.input_addons,
             self.trigger_variant,
             self.consume_outside_pointer_events,
@@ -1308,6 +1312,7 @@ fn combobox_with_patch<H: UiHost>(
     auto_highlight: bool,
     show_clear: bool,
     show_trigger: bool,
+    show_trigger_explicit: bool,
     input_addons: Vec<crate::input_group::InputGroupAddon>,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -1436,6 +1441,14 @@ fn combobox_with_patch<H: UiHost>(
             })
             .map(|it| (it.label.clone(), true))
             .unwrap_or((placeholder.clone(), false));
+        let show_trigger = if device_shell_responsive
+            && trigger_variant == ComboboxTriggerVariant::Button
+            && !show_trigger_explicit
+        {
+            false
+        } else {
+            show_trigger
+        };
 
         let text_style = TextStyle {
             font: FontId::default(),
@@ -4009,6 +4022,85 @@ mod tests {
                     .is_some_and(|id| id == "combobox-show-trigger-trigger-icon")
             }),
             "expected trigger icon to be visible when show_trigger=true"
+        );
+    }
+
+    #[test]
+    fn responsive_button_trigger_hides_icon_unless_explicit() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let mut render_frame = |ui: &mut UiTree<App>, app: &mut App, show_trigger: Option<bool>| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                &mut services,
+                window,
+                bounds,
+                "combobox-responsive-button-trigger",
+                |cx| {
+                    let mut input = ComboboxInput::new().placeholder("+ Set status");
+                    if let Some(show_trigger) = show_trigger {
+                        input = input.show_trigger(show_trigger);
+                    }
+
+                    vec![
+                        Combobox::new(model.clone(), open.clone())
+                            .a11y_label("Status")
+                            .device_shell_responsive(true)
+                            .test_id_prefix("combobox-responsive-button-trigger")
+                            .items([ComboboxItem::new("todo", "Todo")])
+                            .trigger(
+                                ComboboxTrigger::new()
+                                    .variant(ComboboxTriggerVariant::Button)
+                                    .width_px(Px(150.0)),
+                            )
+                            .input(input)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, &mut services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, &mut services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, None);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-responsive-button-trigger-trigger-icon")
+            }),
+            "expected responsive Button trigger to match upstream text-only example by default"
+        );
+
+        render_frame(&mut ui, &mut app, Some(true));
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-responsive-button-trigger-trigger-icon")
+            }),
+            "expected explicit show_trigger=true to keep the trigger icon available"
         );
     }
 

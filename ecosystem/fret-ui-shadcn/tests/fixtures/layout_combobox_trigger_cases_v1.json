@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "combobox-demo.trigger_label_and_icon_slot",
+      "web_name": "combobox-demo",
+      "recipe": "demo_trigger",
+      "icon": "present"
+    },
+    {
+      "id": "combobox-responsive.trigger_text_only",
+      "web_name": "combobox-responsive",
+      "recipe": "responsive_trigger",
+      "icon": "absent"
+    },
+    {
+      "id": "combobox-demo.long_selected_label_before_icon",
+      "web_name": "combobox-demo",
+      "recipe": "demo_long_selected_trigger",
+      "icon": "present"
+    }
+  ]
+}
