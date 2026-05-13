@@ -1,6 +1,10 @@
 use super::*;
 use std::any::{Any, TypeId};
 
+pub trait BoundarySceneFragmentDebug: Any {
+    fn boundary_scene_fragment_entry_count(&self) -> usize;
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct BoundaryId(NodeId);
 
@@ -57,6 +61,7 @@ pub(super) struct ViewBoundaryState {
     pub(super) kind: ViewBoundaryKind,
     pub(super) layout_dependencies: BoundaryLayoutDependencies,
     pub(super) prepaint: BoundaryPrepaintState,
+    pub(super) scene_fragment: BoundarySceneFragmentState,
 }
 
 impl ViewBoundaryState {
@@ -71,6 +76,7 @@ impl ViewBoundaryState {
             },
             layout_dependencies: BoundaryLayoutDependencies::from_view_cache_flags(flags),
             prepaint: BoundaryPrepaintState::default(),
+            scene_fragment: BoundarySceneFragmentState::default(),
         }
     }
 
@@ -87,7 +93,7 @@ impl ViewBoundaryState {
 
 #[derive(Default)]
 pub(super) struct BoundaryPrepaintState {
-    outputs: PrepaintOutputs,
+    outputs: BoundaryTypedOutputs,
 }
 
 impl BoundaryPrepaintState {
@@ -121,16 +127,104 @@ impl BoundaryPrepaintState {
 }
 
 #[derive(Default)]
-struct PrepaintOutputs {
-    key: Option<PaintCacheKey>,
-    values: Vec<(TypeId, Box<dyn Any>)>,
+pub(super) struct BoundarySceneFragmentState {
+    outputs: BoundaryTypedOutputs,
+    used_entries: usize,
+    rejected_entries: usize,
+    last_reject_reason: Option<&'static str>,
 }
 
-impl PrepaintOutputs {
-    fn begin_frame(&mut self, key: PaintCacheKey) {
+impl BoundarySceneFragmentState {
+    pub(super) fn begin_fragment(&mut self, key: PaintCacheKey) {
+        if self.outputs.begin_frame(key) {
+            self.used_entries = 0;
+            self.rejected_entries = 0;
+            self.last_reject_reason = None;
+        }
+    }
+
+    pub(super) fn set_fragment<T: Any>(&mut self, value: T) {
+        self.outputs.set(value);
+    }
+
+    pub(super) fn set_fragment_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
+        self.outputs.set_box(ty, value);
+    }
+
+    pub(super) fn set_fragment_with_entry_count<T: Any>(&mut self, value: T, entry_count: usize) {
+        self.outputs.set_with_entry_count(value, entry_count);
+    }
+
+    pub(super) fn set_fragment_box_with_entry_count(
+        &mut self,
+        ty: TypeId,
+        value: Box<dyn Any>,
+        entry_count: usize,
+    ) {
+        self.outputs
+            .set_box_with_entry_count(ty, value, entry_count);
+    }
+
+    pub(super) fn fragment<T: Any>(&self) -> Option<&T> {
+        self.outputs.get::<T>()
+    }
+
+    pub(super) fn fragment_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.outputs.get_mut::<T>()
+    }
+
+    pub(super) fn fragment_any(&self, ty: TypeId) -> Option<&dyn Any> {
+        self.outputs.get_any(ty)
+    }
+
+    pub(super) fn fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
+        self.outputs.get_any_mut(ty)
+    }
+
+    pub(super) fn slot_count(&self) -> usize {
+        self.outputs.len()
+    }
+
+    pub(super) fn entry_count(&self) -> usize {
+        self.outputs.entry_count()
+    }
+
+    pub(super) fn record_used_entries(&mut self, count: usize) {
+        self.used_entries = self.used_entries.saturating_add(count);
+    }
+
+    pub(super) fn record_rejected_entries(&mut self, count: usize, reason: &'static str) {
+        self.rejected_entries = self.rejected_entries.saturating_add(count);
+        self.last_reject_reason = Some(reason);
+    }
+
+    pub(super) fn used_entries(&self) -> usize {
+        self.used_entries
+    }
+
+    pub(super) fn rejected_entries(&self) -> usize {
+        self.rejected_entries
+    }
+
+    pub(super) fn last_reject_reason(&self) -> Option<&'static str> {
+        self.last_reject_reason
+    }
+}
+
+#[derive(Default)]
+struct BoundaryTypedOutputs {
+    key: Option<PaintCacheKey>,
+    values: Vec<(TypeId, Box<dyn Any>, usize)>,
+}
+
+impl BoundaryTypedOutputs {
+    fn begin_frame(&mut self, key: PaintCacheKey) -> bool {
         if self.key != Some(key) {
             self.key = Some(key);
             self.values.clear();
+            true
+        } else {
+            false
         }
     }
 
@@ -139,11 +233,22 @@ impl PrepaintOutputs {
     }
 
     fn set_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
-        if let Some((_, existing)) = self.values.iter_mut().find(|(id, _)| *id == ty) {
+        self.set_box_with_entry_count(ty, value, 0);
+    }
+
+    fn set_with_entry_count<T: Any>(&mut self, value: T, entry_count: usize) {
+        self.set_box_with_entry_count(TypeId::of::<T>(), Box::new(value), entry_count);
+    }
+
+    fn set_box_with_entry_count(&mut self, ty: TypeId, value: Box<dyn Any>, entry_count: usize) {
+        if let Some((_, existing, existing_entry_count)) =
+            self.values.iter_mut().find(|(id, _, _)| *id == ty)
+        {
             *existing = value;
+            *existing_entry_count = entry_count;
             return;
         }
-        self.values.push((ty, value));
+        self.values.push((ty, value, entry_count));
     }
 
     fn get<T: Any>(&self) -> Option<&T> {
@@ -159,15 +264,26 @@ impl PrepaintOutputs {
     fn get_any(&self, ty: TypeId) -> Option<&dyn Any> {
         self.values
             .iter()
-            .find(|(id, _)| *id == ty)
-            .map(|(_, value)| value.as_ref())
+            .find(|(id, _, _)| *id == ty)
+            .map(|(_, value, _)| value.as_ref())
     }
 
     fn get_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
         self.values
             .iter_mut()
-            .find(|(id, _)| *id == ty)
-            .map(|(_, value)| value.as_mut())
+            .find(|(id, _, _)| *id == ty)
+            .map(|(_, value, _)| value.as_mut())
+    }
+
+    fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    fn entry_count(&self) -> usize {
+        self.values
+            .iter()
+            .map(|(_, _, entry_count)| *entry_count)
+            .sum()
     }
 }
 
@@ -263,6 +379,16 @@ impl<H: UiHost> UiTree<H> {
                     ViewBoundaryKind::ViewCacheRoot => "view_cache",
                 },
                 prepaint_owner: "view_boundary_prepaint_state",
+                scene_fragment_owner: if state.scene_fragment.slot_count() > 0 {
+                    "view_boundary_scene_fragment_state"
+                } else {
+                    "none"
+                },
+                scene_fragment_slots: state.scene_fragment.slot_count(),
+                scene_fragment_entries: state.scene_fragment.entry_count(),
+                scene_fragment_used_entries: state.scene_fragment.used_entries(),
+                scene_fragment_rejected_entries: state.scene_fragment.rejected_entries(),
+                scene_fragment_reject_reason: state.scene_fragment.last_reject_reason(),
                 layout_dependency: match state.layout_dependencies.parent {
                     BoundaryParentLayoutDependency::ParentDependent => "parent_dependent",
                     BoundaryParentLayoutDependency::ContainedWhenBoundsKnown => {

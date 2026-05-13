@@ -1080,7 +1080,7 @@ impl CodeEditor {
                         theme_revision,
                         cx.scale_factor(),
                     );
-                    cx.set_output(plan);
+                    cx.set_scene_fragment_debug(plan);
                 });
                 hook
             };

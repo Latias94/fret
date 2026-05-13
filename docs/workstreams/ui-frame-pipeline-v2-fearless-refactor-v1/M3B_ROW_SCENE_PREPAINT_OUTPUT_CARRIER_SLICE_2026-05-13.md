@@ -3,6 +3,10 @@
 Status: landed; the transitional row-scene replay plan now lives in node-scoped canvas prepaint
 output instead of `CodeEditorState`.
 
+Status note (2026-05-14): this slice is now partially superseded by
+`M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md`. The replay-plan carrier no longer uses
+generic canvas prepaint output; it now flows through `ViewBoundaryState::scene_fragment`.
+
 ## Scope
 
 This slice keeps the code-editor replay-plan story transitional, but changes the carrier:

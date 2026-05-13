@@ -3,7 +3,7 @@
   "slug": "ui-frame-pipeline-v2-fearless-refactor-v1",
   "title": "UI Frame Pipeline v2 Fearless Refactor",
   "status": "active",
-  "updated": "2026-05-13",
+  "updated": "2026-05-14",
   "scope_kind": "execution",
   "problem": "Fret's current retained UiTree, declarative mounting, view-cache, paint-cache, and editor-specific hot paths are correct enough to optimize locally but do not yet form one direct, phase-attributable execution model. This lane owns the migration to explicit build/layout/prepaint/paint/render boundaries, complete old-path cleanup, and perf-gated editor-grade validation.",
   "authoritative_docs": [
@@ -54,6 +54,10 @@
     {
       "role": "implementation",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md"
     }
   ],
   "repro": {
@@ -81,6 +85,7 @@
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
   ],
@@ -90,6 +95,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration. M2 prepaint ownership now includes a minimal ViewBoundaryState owner for typed prepaint outputs, and diagnostics now expose a top-level debug.boundaries[] list from direct UiTree::debug_boundary_stats() enumeration with cache-root outcome joins when present. M3 row-scene prepaint replay plans are no longer code-editor-owned. The final boundary-owned scene-fragment owner, boundary dirty-set migration, and full boundary-owned deletion sweep are still pending."
+    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration. M2 prepaint ownership now includes a minimal ViewBoundaryState owner for typed prepaint outputs, and diagnostics now expose a top-level debug.boundaries[] list from direct UiTree::debug_boundary_stats() enumeration with cache-root outcome joins when present. M3 row-scene prepaint replay plans are no longer code-editor-owned and now use ViewBoundaryState::scene_fragment via CanvasSceneFragment<RowSceneFragmentPayload>. Boundary fragment diagnostics, boundary dirty-set migration, and full boundary-owned deletion sweep are still pending."
   }
 }

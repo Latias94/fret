@@ -1,7 +1,7 @@
 # TODO
 
 Status: Active
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## P0 Contract Setup
 
@@ -36,12 +36,13 @@ Last updated: 2026-05-13
 ## P2 Runtime Migration
 
 - [x] Convert layout containment from a standalone flag into boundary dependency metadata.
-- [ ] Convert paint replay into boundary-owned scene-fragment reuse where possible.
+- [x] Convert the code-editor row-scene replay carrier into boundary-owned scene-fragment state.
+- [ ] Promote boundary-owned scene-fragment reuse diagnostics and perf closeout evidence.
 - [x] Make prepaint diagnostics first-class per boundary.
 - [ ] Remove duplicated or superseded debug counters after boundary diagnostics cover them.
 - [x] Replace code-editor-owned `RowSceneReplayPlan` with a boundary-owned prepaint output
   carrier.
-- [ ] Move the transitional replay-plan carrier into boundary-owned fragment state or delete it if a
+- [x] Move the transitional replay-plan carrier into boundary-owned fragment state or delete it if a
   narrower direct replay contract replaces it.
 - [ ] Keep `fret-ui` mechanism-only; move any policy decisions back to ecosystem crates.
 

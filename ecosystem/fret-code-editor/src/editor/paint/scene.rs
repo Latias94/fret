@@ -169,7 +169,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             continue;
         }
 
-        let origin = cached.origin;
+        let scene_origin = cached.origin;
         let geom = cached.geom.clone();
         let is_rich = cached.is_rich;
         let ops = Arc::clone(&cached.ops);
@@ -183,20 +183,23 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         let Some(rect) = frame.row_rect(content_bounds, row) else {
             continue;
         };
-        plan.entries.push_back(RowSceneReplayPlanEntry {
-            row,
-            rect,
-            row_range,
-            line,
-            row_folds,
-            row_preedit_range,
-            row_spans,
-            scene_origin: origin,
-            geom,
-            is_rich,
-            ops,
-            hosted_resources,
-        });
+        plan.entries
+            .push_back(fret_ui::canvas::CanvasSceneFragment::new(
+                RowSceneFragmentPayload {
+                    row,
+                    row_range,
+                    line,
+                    row_folds,
+                    row_preedit_range,
+                    row_spans,
+                    geom,
+                    is_rich,
+                },
+                ops,
+                hosted_resources,
+                rect,
+                scene_origin,
+            ));
         planned = planned.saturating_add(1);
         st.cache_stats.row_scene_fast_hits = st.cache_stats.row_scene_fast_hits.saturating_add(1);
         st.cache_stats.row_scene_get_calls = st.cache_stats.row_scene_get_calls.saturating_add(1);

@@ -89,6 +89,7 @@ impl<H: UiHost> UiTree<H> {
             let window = self.window;
             let sf = scale_factor;
             self.begin_prepaint_outputs_for_node(node, key);
+            self.begin_scene_fragment_for_node(node, key);
             self.with_widget_mut(node, |widget, tree| {
                 let mut cx = crate::widget::PrepaintCx {
                     app,

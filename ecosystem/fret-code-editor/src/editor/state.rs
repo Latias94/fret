@@ -245,25 +245,30 @@ pub(super) struct RowSceneCacheEntry {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct RowSceneReplayPlanEntry {
+pub(super) struct RowSceneFragmentPayload {
     pub(super) row: usize,
-    pub(super) rect: Rect,
     pub(super) row_range: Range<usize>,
     pub(super) line: Arc<str>,
     pub(super) row_folds: Option<geom::RowFoldMap>,
     pub(super) row_preedit_range: Option<Range<usize>>,
     pub(super) row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
-    pub(super) scene_origin: Point,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
-    pub(super) ops: Arc<[SceneOp]>,
-    pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
 }
+
+pub(super) type RowSceneReplayPlanEntry =
+    fret_ui::canvas::CanvasSceneFragment<RowSceneFragmentPayload>;
 
 #[derive(Debug, Default, Clone)]
 pub(super) struct RowSceneReplayPlan {
     pub(super) frame_seq: u64,
     pub(super) entries: VecDeque<RowSceneReplayPlanEntry>,
+}
+
+impl fret_ui::tree::BoundarySceneFragmentDebug for RowSceneReplayPlan {
+    fn boundary_scene_fragment_entry_count(&self) -> usize {
+        self.entries.len()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,7 +1,7 @@
 # Milestones
 
 Status: Active
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## M0: Contract Lock
 
@@ -92,7 +92,12 @@ Status on 2026-05-13:
   `M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md` removes the code-editor-local
   fixed-row rect reconstruction from replay planning; `WindowedRowsPaintFrame::row_rect(...)` now
   owns that surface geometry.
-- M3 is not complete: the final `ViewBoundary` fragment store and the 20-30% end-to-end bottleneck
+- The boundary fragment-carrier slice in
+  `M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md` moves the replay-plan carrier out of
+  generic prepaint output and into `ViewBoundaryState::scene_fragment`, using a fragment-shaped
+  `CanvasSceneFragment<RowSceneFragmentPayload>` for ops, hosted-resource side indexes, local
+  bounds, and origin.
+- M3 is not complete: fragment hit/reject diagnostics and the 20-30% end-to-end bottleneck
   improvement proof are still pending.
 
 ## M4: Runtime Consolidation
@@ -107,8 +112,8 @@ Status on 2026-05-13:
 
 - Minimal boundary layout dependency metadata exists in `ViewBoundaryState`; current
   `should_reuse_view_cache_node(...)` uses it for contained-relayout eligibility.
-- `debug.boundaries[]` exists as a first-class bundle field, but still derives from
-  `debug.cache_roots[].boundary` until direct boundary enumeration lands.
+- `debug.boundaries[]` exists as a first-class bundle field and is directly enumerated from
+  `ViewBoundaryState`, with matching cache-root outcome fields joined in when present.
 - Broader dirty-set migration, view-cache/paint-cache consolidation, and old-path deletion are still
   pending.
 

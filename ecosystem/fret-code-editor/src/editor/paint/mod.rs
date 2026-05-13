@@ -118,22 +118,39 @@ pub(super) fn take_row_scene_replay_plan_entry(
     plan: Option<&mut RowSceneReplayPlan>,
     frame_seq: u64,
     row: usize,
-) -> Option<RowSceneReplayPlanEntry> {
-    let plan = plan?;
+) -> (Option<RowSceneReplayPlanEntry>, usize, Option<&'static str>) {
+    let Some(plan) = plan else {
+        return (None, 0, None);
+    };
     if plan.frame_seq != frame_seq {
+        let rejected = plan.entries.len();
         plan.entries.clear();
-        return None;
+        return (None, rejected, Some("frame_seq_mismatch"));
     }
 
-    while plan.entries.front().is_some_and(|entry| entry.row < row) {
+    let mut rejected = 0usize;
+    while plan
+        .entries
+        .front()
+        .is_some_and(|entry| entry.payload.row < row)
+    {
         let _ = plan.entries.pop_front();
+        rejected = rejected.saturating_add(1);
     }
 
-    if plan.entries.front().is_some_and(|entry| entry.row == row) {
-        return plan.entries.pop_front();
+    if plan
+        .entries
+        .front()
+        .is_some_and(|entry| entry.payload.row == row)
+    {
+        return (plan.entries.pop_front(), rejected, None);
     }
 
-    None
+    (
+        None,
+        rejected,
+        (rejected > 0).then_some("row_advanced_past_entry"),
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -163,22 +180,34 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
-    let replay_plan_entry = take_row_scene_replay_plan_entry(
-        painter.prepaint_output_mut::<RowSceneReplayPlan>(),
+    let (replay_plan_entry, rejected_entries, reject_reason) = take_row_scene_replay_plan_entry(
+        painter.scene_fragment_mut::<RowSceneReplayPlan>(),
         st.paint_perf_frame.frame_seq,
         row,
     );
+    if rejected_entries > 0 {
+        painter.record_scene_fragment_rejected_entries(
+            rejected_entries,
+            reject_reason.unwrap_or("row_scene_plan_rejected"),
+        );
+    }
+    let replay_plan_entry_matches_rect = replay_plan_entry
+        .as_ref()
+        .is_some_and(|entry| entry.local_bounds == rect);
+    if replay_plan_entry_matches_rect {
+        painter.record_scene_fragment_used_entries(1);
+    }
     let (row_range, line, row_folds, row_preedit_range, row_spans) = if let Some(entry) =
         replay_plan_entry
             .as_ref()
-            .filter(|entry| entry.rect == rect)
+            .filter(|_| replay_plan_entry_matches_rect)
     {
         (
-            entry.row_range.clone(),
-            Arc::clone(&entry.line),
-            entry.row_folds.clone(),
-            entry.row_preedit_range.clone(),
-            Arc::clone(&entry.row_spans),
+            entry.payload.row_range.clone(),
+            Arc::clone(&entry.payload.line),
+            entry.payload.row_folds.clone(),
+            entry.payload.row_preedit_range.clone(),
+            Arc::clone(&entry.payload.row_spans),
         )
     } else if perf_enabled {
         let started = Instant::now();
@@ -192,6 +221,9 @@ pub(super) fn paint_row(
     } else {
         cached_row_text_with_range(st, row, text_cache_max_entries)
     };
+    if replay_plan_entry.is_some() && !replay_plan_entry_matches_rect {
+        painter.record_scene_fragment_rejected_entries(1, "rect_mismatch");
+    }
     #[cfg(not(feature = "syntax"))]
     let _ = &row_spans;
     // Rows do not emit an inert transparent background quad here.
@@ -299,13 +331,13 @@ pub(super) fn paint_row(
 
     let row_content_resolve_started = perf_enabled.then(Instant::now);
     if let Some(entry) = replay_plan_entry.as_ref() {
-        if entry.rect == rect {
+        if entry.local_bounds == rect {
             row_scene_key = None;
-            row_scene_is_rich = entry.is_rich;
+            row_scene_is_rich = entry.payload.is_rich;
             row_scene_replayed = true;
-            drew_rich = entry.is_rich;
-            row_preedit = entry.geom.preedit;
-            fresh_geom = Some(entry.geom.clone());
+            drew_rich = entry.payload.is_rich;
+            row_preedit = entry.payload.geom.preedit;
+            fresh_geom = Some(entry.payload.geom.clone());
             scene::replay_row_scene_plan_entry(painter, st, entry, origin);
         }
     }

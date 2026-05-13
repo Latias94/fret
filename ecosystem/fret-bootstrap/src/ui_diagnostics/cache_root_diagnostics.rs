@@ -64,6 +64,13 @@ pub struct UiBoundaryDiagnosticsV1 {
     pub layout_dependency: String,
     pub layout_definite: bool,
     pub prepaint_owner: String,
+    pub scene_fragment_owner: String,
+    pub scene_fragment_slots: usize,
+    pub scene_fragment_entries: usize,
+    pub scene_fragment_used_entries: usize,
+    pub scene_fragment_rejected_entries: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scene_fragment_reject_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build_outcome: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -97,6 +104,14 @@ impl UiBoundaryDiagnosticsV1 {
             layout_dependency: boundary.layout_dependency.to_string(),
             layout_definite: boundary.layout_definite,
             prepaint_owner: boundary.prepaint_owner.to_string(),
+            scene_fragment_owner: boundary.scene_fragment_owner.to_string(),
+            scene_fragment_slots: boundary.scene_fragment_slots,
+            scene_fragment_entries: boundary.scene_fragment_entries,
+            scene_fragment_used_entries: boundary.scene_fragment_used_entries,
+            scene_fragment_rejected_entries: boundary.scene_fragment_rejected_entries,
+            scene_fragment_reject_reason: boundary
+                .scene_fragment_reject_reason
+                .map(str::to_string),
             build_outcome: cache_root_boundary.map(|b| b.build_outcome.clone()),
             reuse_reason: cache_root_boundary.map(|b| b.reuse_reason.clone()),
             layout_outcome: cache_root_boundary.map(|b| b.layout_outcome.clone()),
@@ -108,6 +123,8 @@ impl UiBoundaryDiagnosticsV1 {
         truncate_string_bytes(&mut out.source, max_debug_string_bytes);
         truncate_string_bytes(&mut out.layout_dependency, max_debug_string_bytes);
         truncate_string_bytes(&mut out.prepaint_owner, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.scene_fragment_owner, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.scene_fragment_reject_reason, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.build_outcome, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.layout_outcome, max_debug_string_bytes);
@@ -410,6 +427,12 @@ mod cache_root_boundary_tests {
             kind: "view_cache_root",
             source: "view_cache",
             prepaint_owner: "view_boundary_prepaint_state",
+            scene_fragment_owner: "view_boundary_scene_fragment_state",
+            scene_fragment_slots: 1,
+            scene_fragment_entries: 7,
+            scene_fragment_used_entries: 5,
+            scene_fragment_rejected_entries: 2,
+            scene_fragment_reject_reason: Some("rect_mismatch"),
             layout_dependency: "contained_when_bounds_known",
             layout_definite: true,
         };
@@ -428,6 +451,18 @@ mod cache_root_boundary_tests {
         assert_eq!(boundary.layout_dependency, "contained_when_bounds_known");
         assert!(boundary.layout_definite);
         assert_eq!(boundary.prepaint_owner, "view_boundary_prepaint_state");
+        assert_eq!(
+            boundary.scene_fragment_owner,
+            "view_boundary_scene_fragment_state"
+        );
+        assert_eq!(boundary.scene_fragment_slots, 1);
+        assert_eq!(boundary.scene_fragment_entries, 7);
+        assert_eq!(boundary.scene_fragment_used_entries, 5);
+        assert_eq!(boundary.scene_fragment_rejected_entries, 2);
+        assert_eq!(
+            boundary.scene_fragment_reject_reason.as_deref(),
+            Some("rect_mismatch")
+        );
         assert_eq!(boundary.paint_outcome.as_deref(), Some("scene_ops_replayed"));
         assert_eq!(boundary.build_outcome.as_deref(), Some("reused"));
     }

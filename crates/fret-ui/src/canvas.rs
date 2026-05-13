@@ -28,6 +28,41 @@ pub struct CanvasHostedResourceTouchCounts {
     pub svgs: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct CanvasSceneFragment<T> {
+    pub payload: T,
+    pub ops: Arc<[SceneOp]>,
+    pub hosted_resources: CanvasHostedResources,
+    pub local_bounds: Rect,
+    pub scene_origin: Point,
+}
+
+impl<T> CanvasSceneFragment<T> {
+    pub fn new(
+        payload: T,
+        ops: Arc<[SceneOp]>,
+        hosted_resources: CanvasHostedResources,
+        local_bounds: Rect,
+        scene_origin: Point,
+    ) -> Self {
+        Self {
+            payload,
+            ops,
+            hosted_resources,
+            local_bounds,
+            scene_origin,
+        }
+    }
+}
+
+impl<T: crate::tree::BoundarySceneFragmentDebug> crate::tree::BoundarySceneFragmentDebug
+    for CanvasSceneFragment<T>
+{
+    fn boundary_scene_fragment_entry_count(&self) -> usize {
+        self.payload.boundary_scene_fragment_entry_count()
+    }
+}
+
 /// Precomputed hosted resource references extracted from retained `SceneOp`s.
 ///
 /// Replay caches can store this alongside the op buffer so cache-hit paths only need to touch the
@@ -131,6 +166,17 @@ pub(crate) trait UiCanvasPrepaintHost {
     fn set_output_box(&mut self, ty: TypeId, value: Box<dyn Any>);
     fn output_any(&self, ty: TypeId) -> Option<&dyn Any>;
     fn output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
+    fn set_scene_fragment_box(&mut self, ty: TypeId, value: Box<dyn Any>);
+    fn set_scene_fragment_box_with_entry_count(
+        &mut self,
+        ty: TypeId,
+        value: Box<dyn Any>,
+        entry_count: usize,
+    );
+    fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any>;
+    fn scene_fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
+    fn record_scene_fragment_used_entries(&mut self, count: usize);
+    fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str);
 }
 
 pub(crate) struct UiCanvasPrepaintHostAdapter<'a, 'b, H: UiHost> {
@@ -176,6 +222,41 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
 
     fn output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
         self.cx.tree.prepaint_output_any_mut(self.cx.node, ty)
+    }
+
+    fn set_scene_fragment_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
+        self.cx.tree.set_scene_fragment_box(self.cx.node, ty, value);
+    }
+
+    fn set_scene_fragment_box_with_entry_count(
+        &mut self,
+        ty: TypeId,
+        value: Box<dyn Any>,
+        entry_count: usize,
+    ) {
+        self.cx
+            .tree
+            .set_scene_fragment_box_with_entry_count(self.cx.node, ty, value, entry_count);
+    }
+
+    fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any> {
+        self.cx.tree.scene_fragment_any(self.cx.node, ty)
+    }
+
+    fn scene_fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
+        self.cx.tree.scene_fragment_any_mut(self.cx.node, ty)
+    }
+
+    fn record_scene_fragment_used_entries(&mut self, count: usize) {
+        self.cx
+            .tree
+            .record_scene_fragment_used_entries(self.cx.node, count);
+    }
+
+    fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str) {
+        self.cx
+            .tree
+            .record_scene_fragment_rejected_entries(self.cx.node, count, reason);
     }
 }
 
@@ -223,6 +304,44 @@ impl<'a> CanvasPrepaintCx<'a> {
             .output_any_mut(TypeId::of::<T>())
             .and_then(|value| value.downcast_mut::<T>())
     }
+
+    pub fn set_scene_fragment<T: Any>(&mut self, value: T) {
+        self.host
+            .set_scene_fragment_box(TypeId::of::<T>(), Box::new(value));
+    }
+
+    pub fn set_scene_fragment_debug<T: crate::tree::BoundarySceneFragmentDebug>(
+        &mut self,
+        value: T,
+    ) {
+        let entry_count = value.boundary_scene_fragment_entry_count();
+        self.host.set_scene_fragment_box_with_entry_count(
+            TypeId::of::<T>(),
+            Box::new(value),
+            entry_count,
+        );
+    }
+
+    pub fn scene_fragment<T: Any>(&self) -> Option<&T> {
+        self.host
+            .scene_fragment_any(TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    pub fn scene_fragment_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.host
+            .scene_fragment_any_mut(TypeId::of::<T>())
+            .and_then(|value| value.downcast_mut::<T>())
+    }
+
+    pub fn record_scene_fragment_used_entries(&mut self, count: usize) {
+        self.host.record_scene_fragment_used_entries(count);
+    }
+
+    pub fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str) {
+        self.host
+            .record_scene_fragment_rejected_entries(count, reason);
+    }
 }
 
 /// Object-safe paint surface for declarative canvas paint handlers.
@@ -249,6 +368,10 @@ pub(crate) trait UiCanvasHost {
 
     fn prepaint_output_any(&self, ty: TypeId) -> Option<&dyn Any>;
     fn prepaint_output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
+    fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any>;
+    fn scene_fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
+    fn record_scene_fragment_used_entries(&mut self, count: usize);
+    fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str);
 }
 
 pub(crate) struct UiCanvasHostAdapter<'a, 'b, H: UiHost> {
@@ -329,6 +452,26 @@ impl<'a, 'b, H: UiHost> UiCanvasHost for UiCanvasHostAdapter<'a, 'b, H> {
 
     fn prepaint_output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
         self.cx.tree.prepaint_output_any_mut(self.cx.node, ty)
+    }
+
+    fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any> {
+        self.cx.tree.scene_fragment_any(self.cx.node, ty)
+    }
+
+    fn scene_fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
+        self.cx.tree.scene_fragment_any_mut(self.cx.node, ty)
+    }
+
+    fn record_scene_fragment_used_entries(&mut self, count: usize) {
+        self.cx
+            .tree
+            .record_scene_fragment_used_entries(self.cx.node, count);
+    }
+
+    fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str) {
+        self.cx
+            .tree
+            .record_scene_fragment_rejected_entries(self.cx.node, count, reason);
     }
 }
 
@@ -457,6 +600,27 @@ impl<'a> CanvasPainter<'a> {
         self.host
             .prepaint_output_any_mut(TypeId::of::<T>())
             .and_then(|value| value.downcast_mut::<T>())
+    }
+
+    pub fn scene_fragment<T: Any>(&self) -> Option<&T> {
+        self.host
+            .scene_fragment_any(TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    pub fn scene_fragment_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.host
+            .scene_fragment_any_mut(TypeId::of::<T>())
+            .and_then(|value| value.downcast_mut::<T>())
+    }
+
+    pub fn record_scene_fragment_used_entries(&mut self, count: usize) {
+        self.host.record_scene_fragment_used_entries(count);
+    }
+
+    pub fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str) {
+        self.host
+            .record_scene_fragment_rejected_entries(count, reason);
     }
 
     pub fn with_clip_rect<R>(&mut self, rect: Rect, f: impl FnOnce(&mut Self) -> R) -> R {

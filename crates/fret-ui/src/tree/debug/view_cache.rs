@@ -18,6 +18,12 @@ pub struct UiDebugBoundaryStats {
     pub kind: &'static str,
     pub source: &'static str,
     pub prepaint_owner: &'static str,
+    pub scene_fragment_owner: &'static str,
+    pub scene_fragment_slots: usize,
+    pub scene_fragment_entries: usize,
+    pub scene_fragment_used_entries: usize,
+    pub scene_fragment_rejected_entries: usize,
+    pub scene_fragment_reject_reason: Option<&'static str>,
     pub layout_dependency: &'static str,
     pub layout_definite: bool,
 }

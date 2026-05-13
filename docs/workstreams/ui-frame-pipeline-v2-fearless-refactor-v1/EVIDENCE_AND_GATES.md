@@ -1,7 +1,7 @@
 # Evidence and Gates
 
 Status: Active
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Primary Repro
 
@@ -233,6 +233,32 @@ storage from `Node` to `ViewBoundaryState::prepaint`, updates cache-root boundar
 report `prepaint_owner=view_boundary_prepaint_state`, builds top-level `debug.boundaries[]` from
 direct `UiTree::debug_boundary_stats()` enumeration, and introduces minimal boundary layout
 dependency metadata for contained-relayout eligibility. The final scene-fragment store, boundary
+dirty-set migration, and the 20-30% p95/max closeout proof are still pending.
+
+Most recent boundary scene-fragment carrier slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md`
+- Focused correctness gates:
+  `cargo nextest run -p fret-ui declarative::tests::canvas::canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key --no-fail-fast`
+  and
+  `cargo nextest run -p fret-code-editor --features syntax-rust prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint --no-fail-fast`
+  and
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes --no-fail-fast`
+- Compile gate:
+  `cargo check -p fret-ui -p fret-ui-kit -p fret-code-editor --features syntax-rust`
+
+Observed result:
+
+- `fret-ui` canvas scene-fragment nextest: `1 passed, 931 skipped`.
+- `fret-code-editor` row-scene replay nextest: `1 passed, 128 skipped`.
+- `fret-bootstrap` boundary diagnostics nextest: `4 passed, 97 skipped`.
+- `cargo check`: passed.
+
+This slice is a correctness/ownership step, not a new perf claim. It moves the row-scene replay
+carrier from generic canvas prepaint output into `ViewBoundaryState::scene_fragment` through
+`CanvasSceneFragment<RowSceneFragmentPayload>`, and `debug.boundaries[]` now reports fragment owner,
+slot count, and fragment entry count for debug-aware carriers. Fragment hit/reject reasons,
 dirty-set migration, and the 20-30% p95/max closeout proof are still pending.
 
 ## Correctness Gates
