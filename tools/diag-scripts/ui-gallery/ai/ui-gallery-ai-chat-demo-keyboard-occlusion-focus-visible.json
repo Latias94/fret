@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery ai-chat keyboard occlusion keeps prompt visible",
     "required_capabilities": ["diag.window_insets_override", "diag.screenshot_png"]
   },

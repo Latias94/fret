@@ -121,12 +121,18 @@ Scripts MAY include an optional `meta` object (schema-stable):
 - `name`: human-readable stable name,
 - `tags`: small set of strings (e.g. `smoke`, `overlay`, `ime`, `canvas`),
 - `required_capabilities`: list of capability strings,
+- `required_launch_features`: list of target build features needed before a tooling-owned launch,
 - `target_hints`: optional non-normative hints (e.g. “run against ui_gallery”, “requires view cache on”).
 
 Rules:
 
 - Tooling MUST ignore unknown keys under `meta` to allow future expansion.
-- `meta` MUST NOT affect execution semantics directly; it is for orchestration and discovery only.
+- `target_hints` MUST remain display-only and MUST NOT be used as a hard gate.
+- `required_launch_features` MAY fail a tooling-owned launch before process spawn when the launch command is
+  inspectable (for example first-party `cargo run ... --features ...` gallery launches).
+- Non-inspectable prebuilt binary launches cannot prove compile-time Cargo features and MAY fail this preflight when
+  a script declares `required_launch_features`.
+- `meta` MUST NOT affect in-app script execution semantics directly; it is for tooling orchestration and discovery only.
 
 ### 4) Extend scripts to target windows explicitly (future-proofing)
 
@@ -176,9 +182,11 @@ As of 2026-02-10, the repo provides:
 - JSON scripts in `tools/diag-scripts/` executed via `fretboard-dev diag`.
 - Script schema v2 intent-level steps in `crates/fret-diag-protocol`.
 - Typed script authoring helpers (builder) and an internal script generator tool for ergonomic authoring.
+- Launch-feature preflight for first-party feature-gated gallery scripts via `meta.required_launch_features`.
 
 These are compatible with the ADR as long as:
 
 - JSON remains the portable artifact,
 - the protocol remains versioned,
 - optional capabilities are surfaced and enforced deterministically.
+- launch-feature preflight remains a tooling orchestration gate and does not change the runtime meaning of script steps.

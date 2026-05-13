@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 #[cfg(windows)]
@@ -748,10 +749,449 @@ fn validate_tool_launched_diag_config(
     Ok(())
 }
 
+#[derive(Debug, Clone, Default)]
+struct LaunchFeatureSet {
+    features: BTreeSet<String>,
+    known: bool,
+    package: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct CargoMetadataForLaunchFeatures {
+    packages: Vec<CargoPackageForLaunchFeatures>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct CargoPackageForLaunchFeatures {
+    name: String,
+    features: BTreeMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct CargoRunFeatureArgs {
+    features: Vec<String>,
+    all_features: bool,
+    default_features: bool,
+}
+
+fn normalize_launch_feature(feature: &str) -> Option<String> {
+    let feature = feature.trim();
+    if feature.is_empty() {
+        return None;
+    }
+
+    Some(
+        match feature {
+            // `fret-demo` and `fret-demo-web` expose wrapper feature names for the gallery package.
+            // Normalize those to the app-local contract names that scripts declare.
+            "ui-gallery-dev" | "fret-demo/ui-gallery-dev" | "fret-demo-web/ui-gallery-dev" => {
+                "gallery-dev"
+            }
+            "ui-gallery-full" | "fret-demo/ui-gallery-full" | "fret-demo-web/ui-gallery-full" => {
+                "gallery-full"
+            }
+            "ui-gallery-material3"
+            | "fret-demo/ui-gallery-material3"
+            | "fret-demo-web/ui-gallery-material3" => "gallery-material3",
+            "fret-ui-gallery/gallery-dev" => "gallery-dev",
+            "fret-ui-gallery/gallery-full" => "gallery-full",
+            "fret-ui-gallery/gallery-material3" => "gallery-material3",
+            "fret-ui-gallery/gallery-web-ime-harness" => "gallery-web-ime-harness",
+            "fret-ui-gallery/gallery-chart" => "gallery-chart",
+            "fret-ui-gallery/gallery-ai" => "gallery-ai",
+            other => other,
+        }
+        .to_string(),
+    )
+}
+
+fn normalize_launch_features(features: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut out: Vec<String> = features
+        .into_iter()
+        .filter_map(|feature| normalize_launch_feature(&feature))
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn launch_feature_aliases(feature: &str) -> &'static [&'static str] {
+    match feature {
+        "gallery-dev" => &["ui-gallery-dev", "fret-ui-gallery/gallery-dev"],
+        "gallery-full" => &["ui-gallery-full", "fret-ui-gallery/gallery-full"],
+        "gallery-material3" => &["ui-gallery-material3", "fret-ui-gallery/gallery-material3"],
+        "gallery-web-ime-harness" => &["fret-ui-gallery/gallery-web-ime-harness"],
+        "gallery-chart" => &["fret-ui-gallery/gallery-chart"],
+        "gallery-ai" => &["fret-ui-gallery/gallery-ai"],
+        _ => &[],
+    }
+}
+
+fn parse_cargo_run_feature_args(launch: &[String]) -> CargoRunFeatureArgs {
+    let mut features: Vec<String> = Vec::new();
+    let mut all_features = false;
+    let mut default_features = true;
+    let Some(run_idx) = launch.iter().position(|arg| arg == "run") else {
+        return CargoRunFeatureArgs {
+            features,
+            all_features,
+            default_features,
+        };
+    };
+
+    let mut i = run_idx + 1;
+    while i < launch.len() {
+        let arg = launch[i].as_str();
+        if arg == "--" {
+            break;
+        }
+        if matches!(arg, "--features" | "-F") {
+            if let Some(value) = launch.get(i + 1) {
+                features.extend(split_cargo_feature_value(value));
+                i += 2;
+                continue;
+            }
+        } else if let Some(value) = arg.strip_prefix("--features=") {
+            features.extend(split_cargo_feature_value(value));
+        } else if let Some(value) = arg.strip_prefix("-F=") {
+            features.extend(split_cargo_feature_value(value));
+        } else if arg == "--all-features" {
+            all_features = true;
+        } else if arg == "--no-default-features" {
+            default_features = false;
+        }
+        i += 1;
+    }
+
+    CargoRunFeatureArgs {
+        features,
+        all_features,
+        default_features,
+    }
+}
+
+fn split_cargo_feature_value(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .flat_map(|chunk| chunk.split_whitespace())
+        .filter_map(normalize_launch_feature)
+        .collect()
+}
+
+fn parse_cargo_run_package(launch: &[String]) -> Option<String> {
+    let run_idx = launch.iter().position(|arg| arg == "run")?;
+    let mut i = run_idx + 1;
+    while i < launch.len() {
+        let arg = launch[i].as_str();
+        if arg == "--" {
+            break;
+        }
+        if matches!(arg, "-p" | "--package") {
+            return launch.get(i + 1).cloned();
+        }
+        if let Some(value) = arg.strip_prefix("--package=") {
+            return Some(value.to_string());
+        }
+        i += 1;
+    }
+    None
+}
+
+fn cargo_run_feature_package_candidates(launch: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(package) = parse_cargo_run_package(launch) {
+        out.push(package);
+    }
+    if launch.iter().any(|arg| arg == "fret-ui-gallery") {
+        out.push("fret-ui-gallery".to_string());
+    }
+    if launch.iter().any(|arg| arg == "fret-demo") {
+        out.push("fret-demo".to_string());
+    }
+    if launch.iter().any(|arg| arg == "fret-demo-web") {
+        out.push("fret-demo-web".to_string());
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn is_cargo_run_launch(launch: &[String]) -> bool {
+    let Some(exe) = launch.first() else {
+        return false;
+    };
+    let exe_lower = exe.to_ascii_lowercase();
+    let is_cargo = exe_lower == "cargo"
+        || exe_lower.ends_with("\\cargo.exe")
+        || exe_lower.ends_with("/cargo.exe")
+        || exe_lower.ends_with("/cargo");
+    is_cargo && launch.iter().any(|arg| arg == "run")
+}
+
+fn infer_direct_binary_launch_features(launch: &[String]) -> LaunchFeatureSet {
+    let mut out = LaunchFeatureSet::default();
+    let Some(exe) = launch.first() else {
+        return out;
+    };
+    let Some(file_name) = Path::new(exe)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.trim_end_matches(".exe"))
+    else {
+        return out;
+    };
+
+    if file_name == "fret-ui-gallery" || file_name == "ui_gallery" {
+        out.package = Some("fret-ui-gallery".to_string());
+    }
+    out
+}
+
+fn resolve_required_launch_feature_closure(required: &[String]) -> BTreeSet<String> {
+    let mut resolved = BTreeSet::new();
+    let mut stack = normalize_launch_features(required.to_vec());
+
+    while let Some(feature) = stack.pop() {
+        if !resolved.insert(feature.clone()) {
+            continue;
+        }
+        match feature.as_str() {
+            "gallery-full" => {
+                stack.push("gallery-dev".to_string());
+                stack.push("gallery-material3".to_string());
+            }
+            "gallery-dev" => {
+                stack.push("gallery-ai".to_string());
+                stack.push("gallery-chart".to_string());
+                stack.push("gallery-web-ime-harness".to_string());
+            }
+            _ => {}
+        }
+    }
+    resolved
+}
+
+fn expand_launch_features_with_metadata(
+    workspace_root: &Path,
+    package_candidates: &[String],
+    feature_args: CargoRunFeatureArgs,
+) -> LaunchFeatureSet {
+    let direct_features = normalize_launch_features(feature_args.features);
+    let fallback = LaunchFeatureSet {
+        features: resolve_required_launch_feature_closure(&direct_features),
+        known: false,
+        package: package_candidates.first().cloned(),
+    };
+    if package_candidates.is_empty() {
+        return fallback;
+    }
+
+    let metadata = match load_cargo_metadata_for_launch_features(workspace_root) {
+        Ok(metadata) => metadata,
+        Err(_) => return fallback,
+    };
+    let package_by_name: BTreeMap<String, CargoPackageForLaunchFeatures> = metadata
+        .packages
+        .into_iter()
+        .map(|package| (package.name.clone(), package))
+        .collect();
+
+    expand_launch_features_with_package_map(
+        &package_by_name,
+        package_candidates,
+        &direct_features,
+        feature_args.all_features,
+        feature_args.default_features,
+    )
+}
+
+fn expand_launch_features_with_package_map(
+    package_by_name: &BTreeMap<String, CargoPackageForLaunchFeatures>,
+    package_candidates: &[String],
+    direct_features: &[String],
+    all_features: bool,
+    default_features: bool,
+) -> LaunchFeatureSet {
+    let mut out = LaunchFeatureSet {
+        features: resolve_required_launch_feature_closure(direct_features),
+        known: false,
+        package: package_candidates.first().cloned(),
+    };
+
+    for package_name in package_candidates {
+        let Some(package) = package_by_name.get(package_name) else {
+            continue;
+        };
+        out.known = true;
+        out.package = Some(package.name.clone());
+
+        let mut package_features = direct_features.to_vec();
+        if default_features && package.features.contains_key("default") {
+            package_features.push("default".to_string());
+        }
+        if all_features {
+            package_features.extend(package.features.keys().cloned());
+        }
+        package_features.sort();
+        package_features.dedup();
+
+        for feature in &package_features {
+            expand_package_feature(
+                package_by_name,
+                package,
+                feature,
+                &mut out.features,
+                &mut BTreeSet::new(),
+            );
+        }
+    }
+
+    out
+}
+
+fn load_cargo_metadata_for_launch_features(
+    workspace_root: &Path,
+) -> Result<CargoMetadataForLaunchFeatures, String> {
+    let output = Command::new("cargo")
+        .args(["metadata", "--format-version", "1", "--no-deps"])
+        .current_dir(workspace_root)
+        .output()
+        .map_err(|err| format!("failed to run cargo metadata: {err}"))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    }
+    serde_json::from_slice(&output.stdout).map_err(|err| err.to_string())
+}
+
+fn expand_package_feature(
+    package_by_name: &BTreeMap<String, CargoPackageForLaunchFeatures>,
+    package: &CargoPackageForLaunchFeatures,
+    feature: &str,
+    out: &mut BTreeSet<String>,
+    seen: &mut BTreeSet<(String, String)>,
+) {
+    let Some(feature) = normalize_launch_feature(feature) else {
+        return;
+    };
+    if !seen.insert((package.name.clone(), feature.clone())) {
+        return;
+    }
+    out.insert(feature.clone());
+    out.extend(resolve_required_launch_feature_closure(
+        std::slice::from_ref(&feature),
+    ));
+
+    let Some(edges) = package.features.get(&feature) else {
+        return;
+    };
+    for edge in edges {
+        let edge = edge.trim();
+        if edge.is_empty() || edge.starts_with("dep:") {
+            continue;
+        }
+        if let Some((dep_package, dep_feature)) = edge.split_once('/') {
+            if let Some(dep) = package_by_name.get(dep_package) {
+                expand_package_feature(package_by_name, dep, dep_feature, out, seen);
+            }
+        } else {
+            expand_package_feature(package_by_name, package, edge, out, seen);
+        }
+    }
+}
+
+fn infer_enabled_launch_features(launch: &[String], workspace_root: &Path) -> LaunchFeatureSet {
+    if is_cargo_run_launch(launch) {
+        return expand_launch_features_with_metadata(
+            workspace_root,
+            &cargo_run_feature_package_candidates(launch),
+            parse_cargo_run_feature_args(launch),
+        );
+    }
+    infer_direct_binary_launch_features(launch)
+}
+
+fn format_launch_feature_suggestion(feature: &str, package: Option<&str>) -> String {
+    let aliases = launch_feature_aliases(feature);
+    let primary = aliases.first().copied().unwrap_or(feature);
+    match package {
+        Some("fret-demo") | Some("fret-demo-web") => match feature {
+            "gallery-dev" => "--features ui-gallery-dev".to_string(),
+            "gallery-full" => "--features ui-gallery-full".to_string(),
+            "gallery-material3" => "--features ui-gallery-material3".to_string(),
+            // `fret-demo` exposes fine-grained gallery groups through the dev wrapper.
+            "gallery-ai" | "gallery-chart" | "gallery-web-ime-harness" => {
+                "--features ui-gallery-dev".to_string()
+            }
+            _ if primary.starts_with("ui-gallery-") => format!("--features {primary}"),
+            _ => format!("--features {feature}"),
+        },
+        Some("fret-ui-gallery") => format!("--features {feature}"),
+        Some(_) | None => match aliases {
+            [] => format!("--features {feature}"),
+            [alias] => format!("--features {alias}"),
+            [primary, rest @ ..] => {
+                format!("--features {primary} (or {})", rest.join(", "))
+            }
+        },
+    }
+}
+
+fn preflight_required_launch_features(
+    launch: &[String],
+    required_launch_features: &[String],
+    workspace_root: &Path,
+) -> Result<(), String> {
+    let required = resolve_required_launch_feature_closure(required_launch_features);
+    if required.is_empty() {
+        return Ok(());
+    }
+
+    let inferred = infer_enabled_launch_features(launch, workspace_root);
+    let missing: Vec<String> = required
+        .iter()
+        .filter(|feature| !inferred.features.contains(*feature))
+        .cloned()
+        .collect();
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let declared: Vec<String> = normalize_launch_features(required_launch_features.to_vec());
+    let enabled = inferred.features.into_iter().collect::<Vec<_>>().join(", ");
+    let package = inferred.package.as_deref();
+    let mut suggestions = missing
+        .iter()
+        .map(|feature| format_launch_feature_suggestion(feature, package))
+        .collect::<Vec<_>>();
+    suggestions.sort();
+    suggestions.dedup();
+    let package_note = package
+        .map(|package| format!("launch_package={package} "))
+        .unwrap_or_default();
+    let known_note = if inferred.known {
+        ""
+    } else {
+        " (feature state inferred as empty because this is not an inspectable cargo-run feature launch)"
+    };
+    Err(format!(
+        "missing required launch features before starting demo: {}\n\
+script meta.required_launch_features declares: {}\n\
+{}enabled_launch_features=[{}]{}\n\
+hint: add {} to the cargo command after `--launch --`; prebuilt binaries cannot prove compile-time Cargo features to the preflight",
+        missing.join(", "),
+        declared.join(", "),
+        package_note,
+        enabled,
+        known_note,
+        suggestions.join(" and "),
+    ))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
+    required_launch_features: &[String],
     workspace_root: &Path,
     ready_path: &Path,
     exit_path: &Path,
@@ -765,6 +1205,7 @@ pub(crate) fn maybe_launch_demo(
     let Some(launch) = launch else {
         return Ok(None);
     };
+    preflight_required_launch_features(launch, required_launch_features, workspace_root)?;
 
     // Tool-launched runs should be deterministic and small-by-default. The runtime's config
     // resolution is "env overrides config", so inherited shell env vars can silently override the
@@ -1057,6 +1498,7 @@ pub(crate) fn maybe_launch_demo(
 pub(crate) fn maybe_launch_demo_without_diagnostics(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
+    required_launch_features: &[String],
     workspace_root: &Path,
     out_dir: &Path,
     _poll_ms: u64,
@@ -1065,6 +1507,7 @@ pub(crate) fn maybe_launch_demo_without_diagnostics(
     let Some(launch) = launch else {
         return Ok(None);
     };
+    preflight_required_launch_features(launch, required_launch_features, workspace_root)?;
 
     let exe = launch
         .first()
@@ -1176,6 +1619,200 @@ pub(crate) fn maybe_launch_demo_without_diagnostics(
     };
 
     Ok(Some(demo))
+}
+
+#[cfg(test)]
+mod launch_feature_preflight_tests {
+    use std::collections::BTreeMap;
+    use std::path::Path;
+
+    use super::{
+        CargoPackageForLaunchFeatures, expand_launch_features_with_package_map,
+        format_launch_feature_suggestion, parse_cargo_run_feature_args,
+        preflight_required_launch_features, resolve_required_launch_feature_closure,
+    };
+
+    fn strings(items: &[&str]) -> Vec<String> {
+        items.iter().map(|item| (*item).to_string()).collect()
+    }
+
+    fn package(name: &str, features: &[(&str, &[&str])]) -> CargoPackageForLaunchFeatures {
+        CargoPackageForLaunchFeatures {
+            name: name.to_string(),
+            features: features
+                .iter()
+                .map(|(name, edges)| {
+                    (
+                        (*name).to_string(),
+                        edges.iter().map(|edge| (*edge).to_string()).collect(),
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn parses_cargo_run_feature_flags_and_normalizes_gallery_wrappers() {
+        let launch = strings(&[
+            "cargo",
+            "run",
+            "-p",
+            "fret-demo",
+            "--features",
+            "ui-gallery-dev,devtools-ws",
+            "-F=fret-demo/ui-gallery-material3",
+            "--features=fret-ui-gallery/gallery-chart",
+            "--",
+            "--app-arg",
+        ]);
+
+        assert_eq!(
+            parse_cargo_run_feature_args(&launch).features,
+            strings(&[
+                "gallery-dev",
+                "devtools-ws",
+                "gallery-material3",
+                "gallery-chart",
+            ])
+        );
+    }
+
+    #[test]
+    fn parses_cargo_run_all_features_and_no_default_features_flags() {
+        let launch = strings(&[
+            "cargo",
+            "run",
+            "-p",
+            "fret-demo",
+            "--all-features",
+            "--no-default-features",
+            "--features",
+            "ui-gallery-dev",
+        ]);
+
+        let parsed = parse_cargo_run_feature_args(&launch);
+
+        assert!(parsed.all_features);
+        assert!(!parsed.default_features);
+        assert_eq!(parsed.features, strings(&["gallery-dev"]));
+    }
+
+    #[test]
+    fn all_features_expands_first_party_gallery_wrappers_from_metadata() {
+        let package_by_name = BTreeMap::from([
+            (
+                "fret-demo".to_string(),
+                package(
+                    "fret-demo",
+                    &[
+                        ("default", &[]),
+                        ("ui-gallery", &[]),
+                        (
+                            "ui-gallery-dev",
+                            &["ui-gallery", "fret-ui-gallery/gallery-dev"],
+                        ),
+                    ],
+                ),
+            ),
+            (
+                "fret-ui-gallery".to_string(),
+                package(
+                    "fret-ui-gallery",
+                    &[
+                        ("default", &[]),
+                        (
+                            "gallery-dev",
+                            &["gallery-ai", "gallery-chart", "gallery-web-ime-harness"],
+                        ),
+                        ("gallery-ai", &[]),
+                        ("gallery-chart", &[]),
+                        ("gallery-web-ime-harness", &[]),
+                    ],
+                ),
+            ),
+        ]);
+
+        let enabled = expand_launch_features_with_package_map(
+            &package_by_name,
+            &strings(&["fret-demo"]),
+            &[],
+            true,
+            true,
+        );
+
+        assert!(enabled.known);
+        assert!(enabled.features.contains("gallery-dev"));
+        assert!(enabled.features.contains("gallery-ai"));
+        assert!(enabled.features.contains("gallery-chart"));
+        assert!(enabled.features.contains("gallery-web-ime-harness"));
+    }
+
+    #[test]
+    fn launch_feature_suggestions_are_package_specific_and_do_not_emit_empty_aliases() {
+        assert_eq!(
+            format_launch_feature_suggestion("gallery-chart", Some("fret-demo")),
+            "--features ui-gallery-dev"
+        );
+        assert_eq!(
+            format_launch_feature_suggestion("gallery-chart", None),
+            "--features fret-ui-gallery/gallery-chart"
+        );
+    }
+
+    #[test]
+    fn gallery_full_launch_feature_satisfies_gallery_dev_contract() {
+        let launch = strings(&[
+            "cargo",
+            "run",
+            "-p",
+            "fret-demo",
+            "--features",
+            "ui-gallery-full",
+        ]);
+
+        let enabled = resolve_required_launch_feature_closure(
+            &parse_cargo_run_feature_args(&launch).features,
+        );
+
+        assert!(enabled.contains("gallery-full"));
+        assert!(enabled.contains("gallery-dev"));
+        assert!(enabled.contains("gallery-material3"));
+        assert!(enabled.contains("gallery-chart"));
+    }
+
+    #[test]
+    fn ui_gallery_dev_wrapper_satisfies_gallery_dev_contract() {
+        let launch = strings(&[
+            "cargo",
+            "run",
+            "-p",
+            "fret-demo-web",
+            "-F",
+            "fret-demo-web/ui-gallery-dev",
+        ]);
+
+        let enabled = resolve_required_launch_feature_closure(
+            &parse_cargo_run_feature_args(&launch).features,
+        );
+
+        assert!(enabled.contains("gallery-dev"));
+        assert!(enabled.contains("gallery-ai"));
+        assert!(enabled.contains("gallery-chart"));
+        assert!(enabled.contains("gallery-web-ime-harness"));
+    }
+
+    #[test]
+    fn preflight_reports_missing_required_launch_features_before_spawn() {
+        let launch = strings(&["/tmp/fret-ui-gallery"]);
+        let required = strings(&["gallery-dev"]);
+
+        let err = preflight_required_launch_features(&launch, &required, Path::new("."))
+            .expect_err("missing launch feature should fail before demo spawn");
+
+        assert!(err.contains("missing required launch features"));
+        assert!(err.contains("gallery-dev"));
+        assert!(err.contains("required_launch_features"));
+    }
 }
 
 #[cfg(test)]
@@ -2445,8 +3082,9 @@ impl std::str::FromStr for PerfBaselineThresholdSurface {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(super) enum PerfBaselineUiThresholdMode {
+    #[default]
     Top,
     FrameP95,
     TopAndFrameP95,
@@ -2473,12 +3111,6 @@ impl PerfBaselineUiThresholdMode {
             self,
             PerfBaselineUiThresholdMode::FrameP95 | PerfBaselineUiThresholdMode::TopAndFrameP95
         )
-    }
-}
-
-impl Default for PerfBaselineUiThresholdMode {
-    fn default() -> Self {
-        Self::Top
     }
 }
 

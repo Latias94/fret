@@ -31,6 +31,10 @@ pub(super) fn compute_required_caps(scripts: &[PathBuf]) -> Vec<String> {
     required_caps
 }
 
+pub(super) fn compute_required_launch_features(scripts: &[PathBuf]) -> Vec<String> {
+    scripts_required_launch_features(scripts.iter().map(|src| src.as_path()))
+}
+
 pub(super) fn merged_script_env_defaults(
     scripts: &[PathBuf],
 ) -> Result<Vec<(String, String)>, String> {

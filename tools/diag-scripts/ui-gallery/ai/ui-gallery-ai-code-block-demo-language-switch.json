@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "UI gallery: AI code block demo language switch",
     "tags": ["ui-gallery", "ai-elements", "code-block"],
     "target_hints": [

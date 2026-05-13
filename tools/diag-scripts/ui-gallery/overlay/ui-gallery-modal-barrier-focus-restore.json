@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery-modal-barrier-focus-restore",
     "required_capabilities": ["diag.script_v2"],
     "tags": ["ui_gallery", "gallery_dev", "overlay", "modal_barrier", "focus_restore"],

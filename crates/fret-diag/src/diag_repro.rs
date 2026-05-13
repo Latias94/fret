@@ -261,6 +261,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
     let required_caps = scripts::compute_required_caps(&scripts);
+    let required_launch_features = scripts::compute_required_launch_features(&scripts);
 
     let mut overall_reason_code: Option<String> = None;
     let tool_launched = launch.is_some();
@@ -278,6 +279,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let mut child = match maybe_launch_demo(
         &prepared_launch.launch,
         &prepared_launch.launch_env,
+        &required_launch_features,
         &workspace_root,
         &resolved_ready_path,
         &resolved_exit_path,

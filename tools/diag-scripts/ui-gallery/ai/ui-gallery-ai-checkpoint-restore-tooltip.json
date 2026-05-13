@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery-ai-checkpoint-restore-tooltip",
     "required_capabilities": ["diag.script_v2"],
     "tags": ["ui_gallery", "ai", "checkpoint", "tooltip", "restore"],

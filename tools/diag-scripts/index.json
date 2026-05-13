@@ -7,6 +7,7 @@
       "id": "components-gallery-file-tree-toggle-and-scroll",
       "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-toggle-and-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "components-gallery-file-tree"
       ],
@@ -17,6 +18,7 @@
       "id": "components-gallery-file-tree-window-boundary-bounce",
       "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-window-boundary-bounce.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "components-gallery-file-tree"
       ],
@@ -27,6 +29,7 @@
       "id": "components-gallery-file-tree-window-boundary-scroll",
       "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-window-boundary-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "components-gallery-file-tree"
       ],
@@ -37,6 +40,7 @@
       "id": "components-gallery-table-sort-and-scroll",
       "path": "tools/diag-scripts/components-gallery/table/components-gallery-table-sort-and-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "components-gallery-table"
       ],
@@ -47,6 +51,7 @@
       "id": "components-gallery-table-window-boundary-bounce",
       "path": "tools/diag-scripts/components-gallery/table/components-gallery-table-window-boundary-bounce.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "components-gallery-table-keep-alive"
       ],
@@ -57,6 +62,7 @@
       "id": "components-gallery-table-window-boundary-scroll",
       "path": "tools/diag-scripts/components-gallery/table/components-gallery-table-window-boundary-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "components-gallery-table"
       ],
@@ -70,6 +76,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-assets-reload-epoch-basics"
       ],
@@ -91,6 +98,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-async-inbox-basics"
       ],
@@ -110,6 +118,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-canvas-pan-zoom-basics"
       ],
@@ -129,6 +138,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-chart-interactions-basics"
       ],
@@ -146,6 +156,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-commands-keymap-basics"
       ],
@@ -169,6 +180,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-compositing-alpha-basics"
       ],
@@ -190,6 +202,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-customv1-basics"
       ],
@@ -213,6 +226,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-data-table-basics"
       ],
@@ -234,6 +248,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-date-picker-basics"
       ],
@@ -251,6 +266,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-docking-basics"
       ],
@@ -269,6 +285,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-drag-basics"
       ],
@@ -287,6 +304,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-drop-shadow-basics"
       ],
@@ -307,6 +325,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-effects-layer-basics"
       ],
@@ -330,6 +349,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-embedded-viewport-basics"
       ],
@@ -352,6 +372,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-external-texture-import-basics"
       ],
@@ -375,6 +396,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-form-basics"
       ],
@@ -393,6 +415,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-gizmo-basics"
       ],
@@ -416,6 +439,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-hello"
       ],
@@ -437,6 +461,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-hello-counter"
       ],
@@ -458,6 +483,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-icons-and-assets-basics"
       ],
@@ -478,6 +504,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-image-asset-cache-basics"
       ],
@@ -499,6 +526,7 @@
         "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-imui-action-basics"
       ],
@@ -521,6 +549,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-imui-debug-draw-basics"
       ],
@@ -543,6 +572,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-markdown-and-code-basics"
       ],
@@ -563,6 +593,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-mutation-toast-feedback-basics"
       ],
@@ -582,6 +613,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-overlay-basics"
       ],
@@ -605,6 +637,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-overlay-basics"
       ],
@@ -628,6 +661,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-query-basics"
       ],
@@ -651,6 +685,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-router-basics"
       ],
@@ -674,6 +709,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-simple-todo"
       ],
@@ -692,6 +728,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-text-input-basics"
       ],
@@ -711,6 +748,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-theme-switching-basics"
       ],
@@ -733,6 +771,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-toast-basics"
       ],
@@ -751,6 +790,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-undo-basics"
       ],
@@ -769,6 +809,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-virtual-list-basics"
       ],
@@ -786,6 +827,7 @@
       "id": "custom-effect-v2-non-filterable-input-fallback-screenshot",
       "path": "tools/diag-scripts/tooling/custom-effect-v2-non-filterable-input-fallback-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-customv2-basics"
       ],
@@ -796,6 +838,7 @@
       "id": "custom-effect-v3-non-filterable-user0-fallback-screenshot",
       "path": "tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user0-fallback-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-customv3-basics"
       ],
@@ -806,6 +849,7 @@
       "id": "custom-effect-v3-non-filterable-user01-fallback-screenshot",
       "path": "tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user01-fallback-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-customv3-basics"
       ],
@@ -816,6 +860,7 @@
       "id": "custom-effect-v3-non-filterable-user1-fallback-screenshot",
       "path": "tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user1-fallback-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "cookbook-customv3-basics"
       ],
@@ -828,6 +873,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -849,6 +895,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -869,6 +916,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -890,6 +938,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -911,6 +960,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -932,6 +982,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -951,6 +1002,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -971,6 +1023,7 @@
         "diag.incoming_open_inject",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -990,6 +1043,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1010,6 +1064,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1034,6 +1089,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking",
         "docking-arbitration",
@@ -1058,6 +1114,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1084,6 +1141,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1108,6 +1166,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1133,6 +1192,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/windows"
@@ -1156,6 +1216,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1179,6 +1240,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -1201,6 +1263,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -1225,6 +1288,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -1248,6 +1312,7 @@
         "diag.multi_window",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1271,6 +1336,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1288,6 +1354,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1308,6 +1375,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1325,6 +1393,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1342,6 +1411,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1364,6 +1434,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-docking-arbitration-steady"
       ],
@@ -1384,6 +1455,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1401,6 +1473,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-docking-arbitration-steady"
       ],
@@ -1422,6 +1495,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1438,6 +1512,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1455,6 +1530,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1476,6 +1552,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1496,6 +1573,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-arbitration",
         "docking-arbitration/common"
@@ -1518,6 +1596,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -1540,6 +1619,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -1564,6 +1644,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-docking"
       ],
@@ -1582,6 +1663,7 @@
       "id": "docking-demo-split-toggle-retarget-fixed-frame-delta",
       "path": "tools/diag-scripts/docking/demo/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "docking-motion-pilot"
       ],
@@ -1592,6 +1674,7 @@
       "id": "extras-marquee-steady",
       "path": "tools/diag-scripts/extras/extras-marquee-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-extras-marquee-steady"
       ],
@@ -1604,6 +1687,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "hello-world-compare-idle-present"
       ],
@@ -1624,6 +1708,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-image-heavy-memory-sweep-count"
       ],
@@ -1644,6 +1729,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-image-heavy-memory-sweep-count"
       ],
@@ -1664,6 +1750,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-image-heavy-memory-sweep-count"
       ],
@@ -1684,6 +1771,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-image-heavy-memory-sweep-size"
       ],
@@ -1704,6 +1792,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-image-heavy-memory-sweep-size"
       ],
@@ -1724,6 +1813,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-image-heavy-memory-sweep-count",
         "tooling-image-heavy-memory-sweep-size"
@@ -1743,6 +1833,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-editor-proof-edit-outcomes"
       ],
@@ -1767,6 +1858,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-editor-proof-edit-outcomes"
       ],
@@ -1790,6 +1882,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-editor-proof-edit-outcomes"
       ],
@@ -1812,6 +1905,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-editor-proof-edit-outcomes"
       ],
@@ -1838,6 +1932,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-hello-semantic-smoke"
       ],
@@ -1860,6 +1955,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-interaction-inspector-diag-gate"
       ],
@@ -1882,6 +1978,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-response-signals-edit-lifecycle"
       ],
@@ -1906,6 +2003,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-response-signals-edit-lifecycle"
       ],
@@ -1930,6 +2028,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-table-sortable-diag-gate"
       ],
@@ -1954,6 +2053,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "imui-table-column-width-diag-gate"
       ],
@@ -1977,6 +2077,7 @@
       "id": "liquid-glass-backdrop-warp-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-liquid-glass-backdrop-warp-steady"
       ],
@@ -1987,6 +2088,7 @@
       "id": "liquid-glass-custom-v3-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-custom-v3-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-liquid-glass-custom-v3-steady"
       ],
@@ -1997,6 +2099,7 @@
       "id": "liquid-glass-lens-custom-v3-bevel-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-bevel-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3"
       ],
@@ -2007,6 +2110,7 @@
       "id": "liquid-glass-lens-custom-v3-corners-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-corners-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3"
       ],
@@ -2017,6 +2121,7 @@
       "id": "liquid-glass-lens-custom-v3-dispersion-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-dispersion-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3"
       ],
@@ -2027,6 +2132,7 @@
       "id": "liquid-glass-lens-custom-v3-pair-no-group-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-pair-no-group-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3"
       ],
@@ -2037,6 +2143,7 @@
       "id": "liquid-glass-lens-custom-v3-source-group-degraded-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-source-group-degraded-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3-degraded"
       ],
@@ -2047,6 +2154,7 @@
       "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-source-group-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3"
       ],
@@ -2057,6 +2165,7 @@
       "id": "liquid-glass-lens-custom-v3-sources-degraded-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-sources-degraded-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "liquid-glass-custom-v3-sources-degraded"
       ],
@@ -2069,6 +2178,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph"
       ],
@@ -2097,6 +2207,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2120,6 +2231,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2142,6 +2254,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2165,6 +2278,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2189,6 +2303,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2213,6 +2328,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2238,6 +2354,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2260,6 +2377,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2286,6 +2404,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2311,6 +2430,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2337,6 +2457,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2362,6 +2483,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2386,6 +2508,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2408,6 +2531,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2432,6 +2556,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2455,6 +2580,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2477,6 +2603,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-examples-node-graph-paint-only"
       ],
@@ -2501,6 +2628,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-todo-resize"
       ],
@@ -2519,6 +2647,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-todo-resize"
       ],
@@ -2537,6 +2666,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-todo-resize"
       ],
@@ -2555,6 +2685,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "tooling-todo-resize"
       ],
@@ -2570,6 +2701,7 @@
       "id": "tooling-suite-prelude-clipboard-unavailable",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-clipboard-unavailable.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "_prelude"
       ],
@@ -2580,6 +2712,7 @@
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "_prelude"
       ],
@@ -2590,6 +2723,7 @@
       "id": "tooling-suite-prelude-ui-gallery-normalize",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-ui-gallery-normalize.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "_prelude"
       ],
@@ -2600,6 +2734,7 @@
       "id": "tooling-suite-prewarm-fonts",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "_prelude"
       ],
@@ -2610,6 +2745,7 @@
       "id": "ui-gallery-accordion-borders-card-screenshots",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-borders-card-screenshots.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2620,6 +2756,7 @@
       "id": "ui-gallery-accordion-demo-shipping-initial-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-shipping-initial-open-height.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2632,6 +2769,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2647,6 +2785,7 @@
       "id": "ui-gallery-accordion-faq-toggle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -2660,6 +2799,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2675,6 +2815,7 @@
       "id": "ui-gallery-accordion-returns-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-returns-first-open-height.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2685,6 +2826,7 @@
       "id": "ui-gallery-accordion-rtl-trigger-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-rtl-trigger-non-overlap.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2695,6 +2837,7 @@
       "id": "ui-gallery-accordion-trigger-hover-underline-pixels-changed",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-trigger-hover-underline-pixels-changed.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -2707,6 +2850,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-runtime-evidence"
       ],
@@ -2723,6 +2867,9 @@
       "id": "ui-gallery-ai-agent-demo-expand-tool",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-agent-demo-expand-tool.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-agent"
       ],
@@ -2733,6 +2880,9 @@
       "id": "ui-gallery-ai-artifact-docs-run-action",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-artifact-docs-run-action.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -2744,6 +2894,9 @@
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-checkpoint"
@@ -2767,6 +2920,9 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-transcript-retained"
       ],
@@ -2788,6 +2944,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-transcript-retained"
       ],
@@ -2807,6 +2966,9 @@
       "id": "ui-gallery-ai-file-tree-demo-actions",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-actions.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-file-tree"
       ],
@@ -2819,6 +2981,9 @@
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-file-tree"
@@ -2840,6 +3005,9 @@
       "id": "ui-gallery-ai-file-tree-demo-toggle",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-toggle.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-file-tree"
       ],
@@ -2850,6 +3018,9 @@
       "id": "ui-gallery-ai-file-tree-large-scroll",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-large-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-file-tree"
       ],
@@ -2862,6 +3033,9 @@
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
@@ -2886,6 +3060,9 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -2908,6 +3085,9 @@
       "id": "ui-gallery-ai-package-info-demo-basics",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-package-info-demo-basics.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -2920,6 +3100,9 @@
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
@@ -2944,6 +3127,9 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -2964,6 +3150,9 @@
       "id": "ui-gallery-ai-plan-demo-toggle",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -2976,6 +3165,9 @@
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
@@ -2998,6 +3190,9 @@
       "id": "ui-gallery-ai-sandbox-demo-switch-tab",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sandbox-demo-switch-tab.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -3010,6 +3205,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -3021,6 +3219,9 @@
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sources-demo.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-sources"
@@ -3040,6 +3241,9 @@
       "id": "ui-gallery-ai-suggestions-demo-click",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-suggestions-demo-click.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-suggestions"
       ],
@@ -3050,6 +3254,7 @@
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-ai-transcript-retained"
       ],
@@ -3062,6 +3267,9 @@
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
@@ -3083,6 +3291,9 @@
       "id": "ui-gallery-ai-transcription-demo-seek",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcription-demo-seek.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-elements"
       ],
@@ -3095,6 +3306,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3112,6 +3324,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3131,6 +3344,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3149,6 +3363,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3162,6 +3377,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3174,6 +3390,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus"
       ],
@@ -3191,6 +3408,7 @@
       "id": "ui-gallery-alert-dialog-least-destructive-initial-focus",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3203,6 +3421,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3221,6 +3440,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -3233,6 +3453,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-avatar-dropdown-attribution"
       ],
@@ -3251,6 +3472,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-avatar-dropdown-attribution"
       ],
@@ -3270,6 +3492,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-avatar-dropdown-attribution"
       ],
@@ -3289,6 +3512,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-avatar-dropdown-attribution",
         "ui-gallery-shadcn-conformance"
@@ -3308,6 +3532,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-avatar-dropdown-attribution"
       ],
@@ -3326,6 +3551,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3342,6 +3568,7 @@
       "id": "ui-gallery-breadcrumb-custom-separator-single-line",
       "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3354,6 +3581,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3371,6 +3599,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3389,6 +3618,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3408,6 +3638,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -3427,6 +3658,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3443,12 +3675,61 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-input-group-geometry",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button_group",
+        "geometry",
+        "input_group",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Button Group Input Group fixture.",
+        "Asserts the trailing voice button icon is observable, centered, and not clipped.",
+        "Asserts the grouped input keeps meaningful width next to the Add and trailing Voice controls."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-input-group-long-text",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button_group",
+        "input_group",
+        "long_text",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Button Group Input Group fixture.",
+        "Injects a long value into the grouped input through the SetValue path.",
+        "Asserts the input, trailing voice button, and IME/caret anchor remain bounded under long text."
+      ]
+    },
+    {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3466,56 +3747,12 @@
       ]
     },
     {
-      "id": "ui-gallery-button-group-input-group-geometry",
-      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "button-group",
-        "geometry",
-        "input-group",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Starts on the Button Group Input Group fixture.",
-        "Asserts trailing voice-button/icon centering, input width, and control non-overlap."
-      ]
-    },
-    {
-      "id": "ui-gallery-button-group-input-group-long-text",
-      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "button-group",
-        "input-group",
-        "long-text",
-        "shadcn",
-        "text-input",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Starts on the Button Group Input Group fixture.",
-        "Injects a long input value and asserts overflow, horizontal offset, visible-text viewport clipping, IME caret bounds, and trailing-control non-overlap."
-      ]
-    },
-    {
       "id": "ui-gallery-button-link-render",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3535,6 +3772,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -3554,6 +3792,7 @@
       "id": "ui-gallery-button-with-icon-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3567,6 +3806,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3586,6 +3826,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-extents-dom-parity"
       ],
@@ -3605,6 +3846,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadow-surface-screenshots"
       ],
@@ -3621,6 +3863,7 @@
       "id": "ui-gallery-canvas-cull-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-canvas-cull-torture-pan-zoom.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-canvas-cull"
       ],
@@ -3631,6 +3874,7 @@
       "id": "ui-gallery-card-content-button-hitbox-not-stretched",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3644,6 +3888,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance",
         "ui-gallery-shadow-surface-screenshots"
@@ -3661,6 +3906,7 @@
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3673,6 +3919,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3685,6 +3932,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-retained-analysis-navnone"
       ],
@@ -3706,6 +3954,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect",
         "ui-gallery-memory-bisect"
@@ -3726,6 +3975,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3748,6 +3998,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-preview-retained-hotspots-navnone"
       ],
@@ -3772,6 +4023,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3794,6 +4046,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-preview-retained-bisect-navnone"
       ],
@@ -3818,6 +4071,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3842,6 +4096,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3864,6 +4119,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-preview-retained-hotspots-navnone"
       ],
@@ -3888,6 +4144,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3910,6 +4167,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-preview-retained-bisect-navnone"
       ],
@@ -3934,6 +4192,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3958,6 +4217,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -3980,6 +4240,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-preview-retained-hotspots-navnone"
       ],
@@ -4004,6 +4265,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -4026,6 +4288,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-preview-retained-bisect-navnone",
         "ui-gallery-card-preview-retained-hotspots-navnone",
@@ -4050,6 +4313,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -4072,6 +4336,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-retained-analysis-navnone"
       ],
@@ -4094,6 +4359,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-section-memory-bisect"
       ],
@@ -4118,6 +4384,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4137,6 +4404,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4156,6 +4424,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-embla-engine"
       ],
@@ -4179,6 +4448,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-embla-engine"
       ],
@@ -4202,6 +4472,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-embla-engine"
       ],
@@ -4225,6 +4496,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4242,6 +4514,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity"
       ],
@@ -4263,6 +4536,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4282,6 +4556,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4299,6 +4574,7 @@
       "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -4311,6 +4587,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -4333,6 +4610,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-embla-engine",
         "ui-gallery-motion-pilot"
@@ -4357,6 +4635,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-embla-engine"
       ],
@@ -4380,6 +4659,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4399,6 +4679,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4420,6 +4701,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4441,6 +4723,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4461,6 +4744,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4480,6 +4764,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4501,6 +4786,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4523,6 +4809,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4542,6 +4829,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4563,6 +4851,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4585,6 +4874,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4607,6 +4897,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
@@ -4623,6 +4914,9 @@
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-chart"
+      ],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -4633,6 +4927,9 @@
       "id": "ui-gallery-chart-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-chart"
+      ],
       "suite_memberships": [
         "ui-gallery-chart-torture"
       ],
@@ -4646,6 +4943,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke"
       ],
@@ -4667,6 +4965,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
@@ -4688,6 +4987,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -4698,6 +4998,7 @@
       "id": "ui-gallery-chrome-torture-layout",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-layout.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-layout"
       ],
@@ -4708,6 +5009,7 @@
       "id": "ui-gallery-chrome-torture-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady"
       ],
@@ -4718,6 +5020,7 @@
       "id": "ui-gallery-chrome-torture-typical",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-typical"
       ],
@@ -4731,6 +5034,7 @@
         "diag.clipboard_text",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke"
       ],
@@ -4744,6 +5048,9 @@
       "id": "ui-gallery-code-editor-a11y-composition-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4754,6 +5061,9 @@
       "id": "ui-gallery-code-editor-a11y-composition-drag-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-drag-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4767,6 +5077,9 @@
         "diag.inject_ime",
         "diag.script_v2",
         "diag.text_input_snapshot"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-code-editor"
@@ -4783,6 +5096,9 @@
       "id": "ui-gallery-code-editor-a11y-composition-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4793,6 +5109,9 @@
       "id": "ui-gallery-code-editor-a11y-composition-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4803,6 +5122,9 @@
       "id": "ui-gallery-code-editor-a11y-composition-wrap-scroll-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-wrap-scroll-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4813,6 +5135,9 @@
       "id": "ui-gallery-code-editor-a11y-selection-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-selection-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4823,6 +5148,9 @@
       "id": "ui-gallery-code-editor-a11y-selection-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-selection-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4833,6 +5161,9 @@
       "id": "ui-gallery-code-editor-a11y-selection-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-selection-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-code-editor"
       ],
@@ -4844,6 +5175,9 @@
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady"
@@ -4860,6 +5194,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "perf-ui-gallery-code-editor-torture-autoscroll-typical"
       ],
@@ -4873,6 +5210,9 @@
       "id": "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4884,6 +5224,9 @@
       "id": "ui-gallery-code-editor-torture-folds-placeholder-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4895,6 +5238,9 @@
       "id": "ui-gallery-code-editor-torture-folds-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4906,6 +5252,9 @@
       "id": "ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4917,6 +5266,9 @@
       "id": "ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4928,6 +5280,9 @@
       "id": "ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4939,6 +5294,9 @@
       "id": "ui-gallery-code-editor-torture-idle-typical",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "perf-ui-gallery-complex-typical"
       ],
@@ -4949,6 +5307,9 @@
       "id": "ui-gallery-code-editor-torture-inlays-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-inlays-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4960,6 +5321,9 @@
       "id": "ui-gallery-code-editor-torture-inlays-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4971,6 +5335,9 @@
       "id": "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4982,6 +5349,9 @@
       "id": "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -4993,6 +5363,9 @@
       "id": "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5004,6 +5377,9 @@
       "id": "ui-gallery-code-editor-torture-read-only-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-read-only-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5015,6 +5391,9 @@
       "id": "ui-gallery-code-editor-torture-scroll-stability",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-scroll-stability.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5026,6 +5405,9 @@
       "id": "ui-gallery-code-editor-torture-soft-wrap-editing-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5037,6 +5419,9 @@
       "id": "ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5048,6 +5433,9 @@
       "id": "ui-gallery-code-editor-window-resize-drag-jitter-steady",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "perf-ui-code-editor-resize-probes"
       ],
@@ -5058,6 +5446,9 @@
       "id": "ui-gallery-code-editor-word-boundary-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-word-boundary-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5069,6 +5460,9 @@
       "id": "ui-gallery-code-editor-word-boundary-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5080,6 +5474,9 @@
       "id": "ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -5091,6 +5488,7 @@
       "id": "ui-gallery-code-view-scroll-refresh-pixels-changed",
       "path": "tools/diag-scripts/ui-gallery/code-view/ui-gallery-code-view-scroll-refresh-pixels-changed.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -5101,6 +5499,7 @@
       "id": "ui-gallery-code-view-torture-wheel-scroll-hit-changes",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-hit-changes.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -5111,6 +5510,7 @@
       "id": "ui-gallery-collapsible-basic-double-click-close",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5121,6 +5521,7 @@
       "id": "ui-gallery-collapsible-demo-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-first-open-height.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5133,6 +5534,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5145,6 +5547,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5161,6 +5564,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5174,6 +5578,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5193,6 +5598,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5205,6 +5611,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5218,6 +5625,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5236,6 +5644,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5253,6 +5662,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5270,6 +5680,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5289,6 +5700,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus",
         "ui-gallery-combobox"
@@ -5302,6 +5714,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -5319,6 +5732,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5332,6 +5746,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5345,6 +5760,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5363,6 +5779,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5384,11 +5801,38 @@
         "diag.shortcut_routing_trace",
         "diag.text_input_snapshot"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-combobox-input-group-long-query-text",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "input_group",
+        "long_text",
+        "shadcn",
+        "text_input",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Input Group fixture.",
+        "Opens the searchable combobox input with an inline search addon.",
+        "Injects a long query and asserts TextInput paint-time overflow, offset, and visible viewport clipping."
+      ]
     },
     {
       "id": "ui-gallery-combobox-keyboard-commit-apple",
@@ -5397,6 +5841,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5410,6 +5855,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5417,11 +5863,38 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-long-text-geometry",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "long_text",
+        "shadcn",
+        "truncation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Long Text fixture.",
+        "Asserts the selected trigger label is constrained before the chevron.",
+        "Opens the popup and asserts the long option label remains within its row before the checkmark."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-multiple-chips",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-multiple-chips.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5441,6 +5914,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
         "ui-gallery-shadcn-conformance"
@@ -5456,6 +5930,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5463,90 +5938,14 @@
         "combobox",
         "popup",
         "shadcn",
+        "tight_window",
         "trigger",
         "ui_gallery"
       ],
       "target_hints": [
-        "Navigates to the Combobox popup-trigger example.",
-        "Keeps the trigger near the viewport bottom so collision solving must flip the popup to top.",
+        "Starts on the Combobox Popup section.",
+        "Uses a short viewport so bottom placement has insufficient room and collision solving must flip the popup to top.",
         "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
-      ]
-    },
-    {
-      "id": "ui-gallery-combobox-input-group-long-query-text",
-      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-combobox",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "combobox",
-        "input-group",
-        "long-text",
-        "shadcn",
-        "text-input",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Starts on the Combobox Input Group fixture.",
-        "Injects a long query into the searchable input with an inline addon.",
-        "Asserts TextInput paint-time overflow, horizontal offset range, and visible text viewport clipping."
-      ]
-    },
-    {
-      "id": "ui-gallery-combobox-long-text-geometry",
-      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json",
-      "required_capabilities": [
-        "diag.overlay_placement_trace",
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-combobox",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "combobox",
-        "long_text",
-        "shadcn",
-        "truncation",
-        "ui_gallery"
-      ],
-      "target_hints": [
-        "Starts on the Combobox Long Text fixture.",
-        "Asserts selected trigger label truncation before the chevron.",
-        "Asserts selected option label truncation before the checkmark."
-      ]
-    },
-    {
-      "id": "ui-gallery-combobox-rtl-long-text-geometry",
-      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
-      "required_capabilities": [
-        "diag.overlay_placement_trace",
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-combobox",
-        "ui-gallery-rtl-smoke",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "combobox",
-        "long_text",
-        "rtl",
-        "shadcn",
-        "truncation",
-        "ui_gallery"
-      ],
-      "target_hints": [
-        "Starts on the Combobox RTL Long Text fixture.",
-        "Asserts selected trigger label ownership against the physical-left RTL chevron.",
-        "Asserts selected option label ownership against the physical-right RTL checkmark."
       ]
     },
     {
@@ -5557,6 +5956,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5582,6 +5982,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5605,11 +6006,40 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-combobox-rtl-long-text-geometry",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "truncation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox RTL Long Text fixture.",
+        "Asserts the selected trigger label stays after the physical-left RTL chevron.",
+        "Opens the popup, records the content-shell collision flip, and asserts the selected option label stays before the physical-right RTL checkmark."
+      ]
     },
     {
       "id": "ui-gallery-combobox-rtl-open-screenshot",
@@ -5618,6 +6048,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -5635,12 +6066,38 @@
       ]
     },
     {
+      "id": "ui-gallery-combobox-trigger-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-trigger-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox"
+      ],
+      "tags": [
+        "combobox",
+        "screenshots",
+        "shadcn",
+        "trigger",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the Combobox page.",
+        "Captures a screenshot of the trigger chrome."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-typeahead-commit-banana",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-typeahead-commit-banana.json",
       "required_capabilities": [
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox"
       ],
@@ -5654,6 +6111,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5677,6 +6135,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5700,6 +6159,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command",
         "ui-gallery-shadcn-conformance"
@@ -5724,6 +6184,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5747,6 +6208,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5770,6 +6232,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5782,6 +6245,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5794,6 +6258,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5806,6 +6271,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5818,6 +6284,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5830,6 +6297,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command"
       ],
@@ -5843,6 +6311,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command",
         "ui-gallery-rtl-smoke"
@@ -5866,6 +6335,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command",
         "ui-gallery-shadcn-runtime-evidence"
@@ -5885,6 +6355,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -5904,6 +6375,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -5920,6 +6392,7 @@
       "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -5930,6 +6403,7 @@
       "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -5940,6 +6414,7 @@
       "id": "ui-gallery-context-menu-right-click",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery"
@@ -5952,6 +6427,9 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "perf-ui-gallery-context-menu-right-click-steady",
@@ -5972,6 +6450,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -5995,6 +6474,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
@@ -6009,6 +6489,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6028,6 +6509,7 @@
       "id": "ui-gallery-data-table-basic-row-actions-menu-toggle-stability",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-basic-row-actions-menu-toggle-stability.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table"
       ],
@@ -6038,6 +6520,7 @@
       "id": "ui-gallery-data-table-default-recipe-smoke",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-recipe-smoke.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table"
       ],
@@ -6048,6 +6531,7 @@
       "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table"
       ],
@@ -6061,6 +6545,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table",
         "ui-gallery-shadcn-conformance"
@@ -6083,6 +6568,7 @@
       "id": "ui-gallery-data-table-guide-row-actions-menu-stability",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table"
       ],
@@ -6093,6 +6579,7 @@
       "id": "ui-gallery-data-table-listlike-pointer-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table"
       ],
@@ -6104,6 +6591,9 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
@@ -6131,6 +6621,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
@@ -6156,6 +6649,9 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
@@ -6183,6 +6679,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
@@ -6208,6 +6707,9 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-faceted-filter.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
@@ -6235,6 +6737,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
@@ -6260,6 +6765,9 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-multi-sort-shift-click.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
@@ -6287,6 +6795,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
@@ -6312,6 +6823,9 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-sort-select-scroll.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
@@ -6340,6 +6854,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
         "ui-gallery-data-table-retained-measured"
@@ -6364,6 +6881,7 @@
       "id": "ui-gallery-data-table-smoke",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-data-table"
@@ -6375,6 +6893,7 @@
       "id": "ui-gallery-data-table-window-boundary-bounce-keep-alive",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-window-boundary-bounce-keep-alive.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-data-table-retained-keep-alive"
       ],
@@ -6386,6 +6905,9 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-window-boundary-scroll-retained.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-data-table-retained",
@@ -6414,6 +6936,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-date-picker"
       ],
@@ -6432,6 +6955,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-date-picker"
       ],
@@ -6449,6 +6973,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-date-picker"
       ],
@@ -6469,6 +6994,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-date-picker"
       ],
@@ -6486,6 +7012,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus",
         "ui-gallery-shadcn-conformance"
@@ -6509,6 +7036,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6519,6 +7047,7 @@
       "id": "ui-gallery-dialog-escape-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-escape-focus-restore.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery",
@@ -6533,6 +7062,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-dialog-escape-focus-restore-steady",
         "perf-ui-gallery-overlay-interaction-steady",
@@ -6558,6 +7088,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus"
       ],
@@ -6581,6 +7112,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6593,6 +7125,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6611,6 +7144,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus",
         "ui-gallery-shadcn-conformance"
@@ -6635,6 +7169,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6645,6 +7180,7 @@
       "id": "ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -6655,6 +7191,7 @@
       "id": "ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -6667,6 +7204,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
@@ -6687,6 +7225,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
@@ -6707,6 +7246,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6729,6 +7269,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
@@ -6742,6 +7283,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6754,6 +7296,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -6773,6 +7316,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
@@ -6791,6 +7335,7 @@
       "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -6801,6 +7346,7 @@
       "id": "ui-gallery-dropdown-open-select",
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery"
       ],
@@ -6811,6 +7357,7 @@
       "id": "ui-gallery-dropdown-open-select-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-dropdown-open-select-steady",
         "perf-ui-gallery-overlay-steady",
@@ -6827,6 +7374,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke",
         "ui-gallery-shadcn-conformance"
@@ -6847,6 +7395,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -6857,6 +7406,7 @@
       "id": "ui-gallery-file-tree-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-file-tree-torture"
       ],
@@ -6867,6 +7417,7 @@
       "id": "ui-gallery-file-tree-torture-toggle",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-toggle.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-file-tree-torture-interactive"
       ],
@@ -6880,6 +7431,7 @@
         "diag.gesture_long_press",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -6901,6 +7453,7 @@
         "diag.gesture_pinch",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -6923,6 +7476,7 @@
         "diag.gesture_swipe",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -6945,6 +7499,7 @@
         "diag.gesture_tap",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke",
         "ui-gallery"
@@ -6964,6 +7519,7 @@
       "id": "ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-hit-test-torture-steady"
       ],
@@ -6976,6 +7532,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-hover-card"
       ],
@@ -7000,6 +7557,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-hover-card"
       ],
@@ -7013,6 +7571,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-hover-card",
         "ui-gallery-rtl-smoke"
@@ -7038,6 +7597,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-hover-card"
       ],
@@ -7050,6 +7610,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-hover-card"
       ],
@@ -7060,6 +7621,7 @@
       "id": "ui-gallery-hover-layout-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-layout"
@@ -7073,6 +7635,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-layout-steady",
         "perf-ui-gallery-steady"
@@ -7093,6 +7656,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-hover-card"
       ],
@@ -7115,6 +7679,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -7137,34 +7702,12 @@
         "diag.incoming_open_inject",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke"
       ],
       "tags": [],
       "target_hints": []
-    },
-    {
-      "id": "ui-gallery-input-button-group-and-file-controls-fill",
-      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "button-group",
-        "file",
-        "input",
-        "layout",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Navigates to the Input page via the left nav search.",
-        "Asserts that the composed Input controls inside File and Button Group examples keep a visible width instead of collapsing to the button width."
-      ]
     },
     {
       "id": "ui-gallery-input-basic-and-file-long-text",
@@ -7173,6 +7716,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7191,12 +7735,37 @@
       ]
     },
     {
+      "id": "ui-gallery-input-button-group-and-file-controls-fill",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "file",
+        "input",
+        "layout",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page via the left nav search.",
+        "Asserts that the composed Input controls inside File and Button Group examples keep a visible width instead of collapsing to the button width."
+      ]
+    },
+    {
       "id": "ui-gallery-input-docs-screenshots",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7216,6 +7785,7 @@
       "id": "ui-gallery-input-file-browse-mocked",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-file-browse-mocked.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7226,11 +7796,36 @@
       "id": "ui-gallery-input-group-addon-after-control-tab-focus",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-group-rtl-addon-order",
+      "path": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "input_group",
+        "layout",
+        "rtl",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Input Group RTL fixture.",
+        "Asserts authored leading/trailing addons map to the correct physical sides under RTL.",
+        "Asserts leading/control/trailing remain non-overlapping and vertically aligned."
+      ]
     },
     {
       "id": "ui-gallery-input-group-rtl-screenshot",
@@ -7239,6 +7834,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -7259,6 +7855,7 @@
       "id": "ui-gallery-input-group-text-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7273,6 +7870,7 @@
         "diag.script_v2",
         "diag.text_input_snapshot"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-ime"
       ],
@@ -7292,6 +7890,7 @@
         "diag.script_v2",
         "diag.shortcut_routing_trace"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-ime"
       ],
@@ -7304,6 +7903,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7314,6 +7914,7 @@
       "id": "ui-gallery-inspector-help-lock-match-copy-selector-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -7329,6 +7930,7 @@
       "id": "ui-gallery-inspector-help-tree-lock-match-copy-selector-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -7345,6 +7947,7 @@
       "id": "ui-gallery-inspector-torture-bounce-keep-alive",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-bounce-keep-alive.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-inspector-torture-keep-alive"
       ],
@@ -7355,6 +7958,7 @@
       "id": "ui-gallery-inspector-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-inspector-torture",
         "ui-gallery-inspector-torture-keep-alive"
@@ -7368,6 +7972,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7380,6 +7985,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7398,6 +8004,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke"
       ],
@@ -7414,6 +8021,7 @@
       "id": "ui-gallery-layout-sweep-core",
       "path": "tools/diag-scripts/ui-gallery/layout/ui-gallery-layout-sweep-core.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-layout"
       ],
@@ -7424,6 +8032,7 @@
       "id": "ui-gallery-layout-sweep-extended",
       "path": "tools/diag-scripts/ui-gallery/layout/ui-gallery-layout-sweep-extended.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-layout"
       ],
@@ -7434,6 +8043,7 @@
       "id": "ui-gallery-layout-sweep-extended-chrome",
       "path": "tools/diag-scripts/ui-gallery/layout/ui-gallery-layout-sweep-extended-chrome.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-layout"
       ],
@@ -7444,6 +8054,7 @@
       "id": "ui-gallery-layout-sweep-torture",
       "path": "tools/diag-scripts/ui-gallery/layout/ui-gallery-layout-sweep-torture.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-layout"
       ],
@@ -7454,6 +8065,7 @@
       "id": "ui-gallery-lite-smoke",
       "path": "tools/diag-scripts/ui-gallery/lite/ui-gallery-lite-smoke.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-lite-smoke"
       ],
@@ -7464,6 +8076,7 @@
       "id": "ui-gallery-markdown-editor-source-a11y-composition-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-a11y-composition-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7475,6 +8088,7 @@
       "id": "ui-gallery-markdown-editor-source-folds-clamp-selection-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7486,6 +8100,7 @@
       "id": "ui-gallery-markdown-editor-source-folds-placeholder-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7497,6 +8112,7 @@
       "id": "ui-gallery-markdown-editor-source-folds-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7508,6 +8124,7 @@
       "id": "ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7519,6 +8136,7 @@
       "id": "ui-gallery-markdown-editor-source-inlays-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-inlays-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7530,6 +8148,7 @@
       "id": "ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7541,6 +8160,7 @@
       "id": "ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7552,6 +8172,7 @@
       "id": "ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7563,6 +8184,7 @@
       "id": "ui-gallery-markdown-editor-source-read-only-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-read-only-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7574,6 +8196,7 @@
       "id": "ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7585,6 +8208,7 @@
       "id": "ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7596,6 +8220,7 @@
       "id": "ui-gallery-markdown-editor-source-word-boundary-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-word-boundary-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7607,6 +8232,7 @@
       "id": "ui-gallery-markdown-editor-source-word-boundary-double-click-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7618,6 +8244,7 @@
       "id": "ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7629,6 +8256,7 @@
       "id": "ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7640,6 +8268,7 @@
       "id": "ui-gallery-markdown-editor-source-word-boundary-inlays-baseline",
       "path": "tools/diag-scripts/ui-gallery/markdown-editor/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
@@ -7654,6 +8283,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-wrap"
       ],
@@ -7674,6 +8304,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-wrap"
       ],
@@ -7691,6 +8322,9 @@
       "id": "ui-gallery-material3-tabs-switch-perf",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf.json",
       "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery"
@@ -7703,6 +8337,9 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
       ],
       "suite_memberships": [
         "perf-ui-gallery-steady"
@@ -7722,6 +8359,7 @@
       "id": "ui-gallery-menubar-keyboard-nav",
       "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery"
@@ -7733,6 +8371,7 @@
       "id": "ui-gallery-menubar-keyboard-nav-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-steady"
       ],
@@ -7746,6 +8385,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -7770,6 +8410,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke",
         "ui-gallery-shadcn-conformance"
@@ -7796,6 +8437,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke",
         "ui-gallery-shadcn-conformance"
@@ -7822,6 +8464,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7845,6 +8488,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-memory-bisect"
       ],
@@ -7864,6 +8508,9 @@
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json",
       "required_capabilities": [
         "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
       ],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
@@ -7885,6 +8532,7 @@
       "id": "ui-gallery-modal-barrier-underlay-block",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-underlay-block.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -7895,6 +8543,7 @@
       "id": "ui-gallery-modal-barrier-wheel-block",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -7908,6 +8557,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -7921,6 +8571,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -7944,6 +8595,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance",
         "ui-gallery-shadcn-runtime-evidence"
@@ -7969,6 +8621,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -7992,6 +8645,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8016,6 +8670,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -8039,6 +8694,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8059,6 +8715,7 @@
       "id": "ui-gallery-node-graph-cull-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-node-graph-cull-torture-pan-zoom.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-node-graph-cull"
       ],
@@ -8069,6 +8726,7 @@
       "id": "ui-gallery-node-graph-cull-window-no-shifts-small-pan",
       "path": "tools/diag-scripts/ui-gallery/node-graph/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-node-graph-cull-window-no-shifts-small-pan"
       ],
@@ -8079,6 +8737,7 @@
       "id": "ui-gallery-node-graph-cull-window-shifts",
       "path": "tools/diag-scripts/ui-gallery/node-graph/ui-gallery-node-graph-cull-window-shifts.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-node-graph-cull-window-shifts"
       ],
@@ -8089,6 +8748,7 @@
       "id": "ui-gallery-overlay-dialog-open-close-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -8101,6 +8761,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -8121,6 +8782,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-overlay-interaction-steady",
         "perf-ui-gallery-overlay-pointer-move-steady",
@@ -8142,6 +8804,7 @@
       "id": "ui-gallery-overlay-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery",
@@ -8154,6 +8817,7 @@
       "id": "ui-gallery-overlay-torture-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady",
         "perf-ui-gallery-overlay-steady",
@@ -8168,6 +8832,7 @@
       "id": "ui-gallery-overlay-torture-typical",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-typical"
       ],
@@ -8181,6 +8846,7 @@
         "diag.pointer_kind_pen",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -8202,6 +8868,7 @@
         "diag.pointer_kind_touch",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke",
         "ui-gallery"
@@ -8221,6 +8888,7 @@
       "id": "ui-gallery-popover-click-through-outside-press-focus-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8231,6 +8899,7 @@
       "id": "ui-gallery-popover-dialog-escape-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-dialog-escape-underlay.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
@@ -8244,6 +8913,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8260,6 +8930,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus"
       ],
@@ -8280,6 +8951,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-extents-dom-parity"
       ],
@@ -8298,6 +8970,7 @@
       "id": "ui-gallery-portal-geometry-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/portal/ui-gallery-portal-geometry-scroll-clamp.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -8311,6 +8984,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8321,6 +8995,7 @@
       "id": "ui-gallery-progress-numeric-semantics",
       "path": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8331,6 +9006,7 @@
       "id": "ui-gallery-radio-group-description-layout",
       "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8343,6 +9019,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke"
       ],
@@ -8361,6 +9038,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-area"
       ],
@@ -8379,6 +9057,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke",
         "ui-gallery-scroll-area"
@@ -8395,6 +9074,7 @@
       "id": "ui-gallery-scroll-area-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -8407,6 +9087,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-area"
       ],
@@ -8423,6 +9104,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-area"
       ],
@@ -8435,6 +9117,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-scroll-area"
       ],
@@ -8450,6 +9133,7 @@
       "id": "ui-gallery-scroll-into-view-padding-is-soft",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8470,6 +9154,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-area"
       ],
@@ -8488,6 +9173,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-runtime-evidence"
       ],
@@ -8501,6 +9187,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8514,6 +9201,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8527,6 +9215,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8540,6 +9229,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8553,6 +9243,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8565,6 +9256,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8589,6 +9281,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8603,6 +9296,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8616,6 +9310,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8629,6 +9324,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -8652,6 +9348,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8665,6 +9362,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8678,6 +9376,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-select"
       ],
@@ -8690,6 +9389,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8700,6 +9400,7 @@
       "id": "ui-gallery-shadcn-extras-kanban-dnd",
       "path": "tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-shadcn-extras-kanban-dnd.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -8710,6 +9411,7 @@
       "id": "ui-gallery-shadcn-extras-screenshots",
       "path": "tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-shadcn-extras-screenshots.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -8723,6 +9425,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-parity"
       ],
@@ -8747,6 +9450,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8765,6 +9469,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8784,6 +9489,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8803,6 +9509,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8821,6 +9528,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -8831,6 +9539,7 @@
       "id": "ui-gallery-sidebar-scroll-refresh",
       "path": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-scroll-refresh.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-cache005"
       ],
@@ -8841,6 +9550,7 @@
       "id": "ui-gallery-sidebar-toggle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -8853,6 +9563,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-card-retained-analysis-navnone"
       ],
@@ -8875,6 +9586,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-memory-bisect"
       ],
@@ -8895,6 +9607,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-memory-bisect"
       ],
@@ -8916,6 +9629,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-slider-docs"
       ],
@@ -8935,6 +9649,7 @@
       "id": "ui-gallery-slider-set-value",
       "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -8948,6 +9663,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadow-surface-screenshots"
       ],
@@ -8968,6 +9684,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-sonner-docs"
       ],
@@ -8988,6 +9705,7 @@
       "id": "ui-gallery-sonner-interrupt-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -8998,6 +9716,7 @@
       "id": "ui-gallery-sonner-open-close-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-open-close-fixed-frame-delta.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-motion-pilot"
       ],
@@ -9011,6 +9730,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-spinner-docs"
       ],
@@ -9032,6 +9752,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9053,6 +9774,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9074,6 +9796,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9084,6 +9807,7 @@
       "id": "ui-gallery-table-retained-keyboard-typeahead",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-table-retained",
@@ -9096,6 +9820,7 @@
       "id": "ui-gallery-table-retained-multi-sort-shift-click",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-multi-sort-shift-click.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -9107,6 +9832,7 @@
       "id": "ui-gallery-table-retained-row-pinning-keep-pinned-false",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-false.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -9118,6 +9844,7 @@
       "id": "ui-gallery-table-retained-row-pinning-keep-pinned-true",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -9129,6 +9856,7 @@
       "id": "ui-gallery-table-retained-sort-desc",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-desc.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -9140,6 +9868,7 @@
       "id": "ui-gallery-table-retained-sort-select-scroll",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-table-retained",
@@ -9152,6 +9881,7 @@
       "id": "ui-gallery-table-retained-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-window-boundary-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-table-retained",
@@ -9164,6 +9894,7 @@
       "id": "ui-gallery-table-smoke",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke",
         "ui-gallery"
@@ -9178,6 +9909,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9201,6 +9933,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9213,6 +9946,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-rtl-smoke"
       ],
@@ -9233,6 +9967,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9258,6 +9993,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-wrap"
       ],
@@ -9276,6 +10012,7 @@
       "id": "ui-gallery-text-fallback-policy-key-bumps-on-settings-change",
       "path": "tools/diag-scripts/ui-gallery/text/ui-gallery-text-fallback-policy-key-bumps-on-settings-change.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -9293,6 +10030,7 @@
       "id": "ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady",
       "path": "tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-wrap"
       ],
@@ -9306,6 +10044,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-wrap"
       ],
@@ -9323,6 +10062,7 @@
       "id": "ui-gallery-text-rescan-system-fonts-font-stack-key-bumps",
       "path": "tools/diag-scripts/ui-gallery/text/ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery"
       ],
@@ -9342,6 +10082,7 @@
       "required_capabilities": [
         "diag.screenshot_png"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9362,6 +10103,7 @@
         "diag.script_v2",
         "diag.text_input_snapshot"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-text-ime"
       ],
@@ -9380,6 +10122,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9399,6 +10142,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9413,6 +10157,7 @@
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9425,6 +10170,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9438,6 +10184,7 @@
         "diag.overlay_placement_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-extents-dom-parity"
       ],
@@ -9456,6 +10203,7 @@
       "id": "ui-gallery-tooltip-repeat-hover",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-repeat-hover.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9468,6 +10216,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -9478,6 +10227,7 @@
       "id": "ui-gallery-tree-retained-toggle-and-scroll",
       "path": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-toggle-and-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-tree-retained",
@@ -9490,6 +10240,7 @@
       "id": "ui-gallery-tree-window-boundary-scroll-retained",
       "path": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-window-boundary-scroll-retained.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-tree-retained",
@@ -9505,6 +10256,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
@@ -9523,6 +10275,7 @@
       "id": "ui-gallery-ui-kit-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/ui-kit/ui-gallery-ui-kit-list-window-boundary-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-ui-kit-list-retained"
       ],
@@ -9533,6 +10286,7 @@
       "id": "ui-gallery-view-cache-toggle-perf",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery"
@@ -9544,6 +10298,7 @@
       "id": "ui-gallery-view-cache-toggle-perf-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-steady"
       ],
@@ -9554,6 +10309,7 @@
       "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-vlist-no-window-shifts-small-scroll"
       ],
@@ -9564,6 +10320,7 @@
       "id": "ui-gallery-virtual-list-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
         "ui-gallery"
@@ -9577,6 +10334,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady",
         "perf-ui-gallery-layout-steady",
@@ -9595,6 +10353,7 @@
       "id": "ui-gallery-virtual-list-torture-typical",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-typical"
       ],
@@ -9607,6 +10366,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-virtual-list",
         "ui-gallery-virtual-list"
@@ -9624,6 +10384,7 @@
       "id": "ui-gallery-virtual-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-vlist-window-boundary",
         "ui-gallery-vlist-window-boundary-retained"
@@ -9635,6 +10396,7 @@
       "id": "ui-gallery-virtual-list-window-boundary-scroll-retained",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-virt-retained",
@@ -9650,6 +10412,7 @@
         "diag.script_v2",
         "diag.wheel_burst_inject"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke"
       ],
@@ -9669,6 +10432,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-layout-steady",
         "perf-ui-resize-probes"
@@ -9687,6 +10451,7 @@
       "id": "ui-gallery-window-resize-stress",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery"
       ],
@@ -9699,6 +10464,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-layout-steady",
         "perf-ui-gallery-steady",
@@ -9721,6 +10487,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-workspace-shell"
       ],
@@ -9743,6 +10510,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-workspace-shell"
       ],
@@ -9767,6 +10535,7 @@
         "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-workspace-shell"
       ],
@@ -9788,6 +10557,7 @@
       "id": "workspace-shell-demo-file-tree-bounce-keep-alive",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-file-tree-bounce-keep-alive.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace",
         "workspace-shell-demo-file-tree-keep-alive"
@@ -9802,6 +10572,7 @@
         "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -9825,6 +10596,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -9850,6 +10622,7 @@
         "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -9872,6 +10645,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -9887,6 +10661,7 @@
       "id": "workspace-shell-demo-tab-drag-and-scroll",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-and-scroll.json",
       "required_capabilities": [],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -9899,6 +10674,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -9922,6 +10698,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -9940,6 +10717,7 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -9962,6 +10740,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -9985,6 +10764,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -10007,6 +10787,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -10029,6 +10810,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10052,6 +10834,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10074,6 +10857,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10092,6 +10876,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10113,6 +10898,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10135,6 +10921,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10156,6 +10943,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "workspace-shell-demo"
       ],
@@ -10179,6 +10967,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],
@@ -10201,6 +10990,7 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
+      "required_launch_features": [],
       "suite_memberships": [
         "diag-hardening-smoke-workspace"
       ],

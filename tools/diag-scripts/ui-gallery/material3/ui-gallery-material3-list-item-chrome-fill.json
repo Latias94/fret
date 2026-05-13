@@ -1,5 +1,6 @@
 {
   "meta": {
+    "required_launch_features": ["gallery-material3"],
     "name": "ui-gallery-material3-list-item-chrome-fill",
     "required_capabilities": ["diag.script_v2"]
   },

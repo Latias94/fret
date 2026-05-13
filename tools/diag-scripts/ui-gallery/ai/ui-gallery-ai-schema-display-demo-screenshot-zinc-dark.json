@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "UI gallery: SchemaDisplay demo screenshot (zinc dark)",
     "tags": ["ui-gallery", "ai-elements", "schema-display", "screenshots", "zinc-dark"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],

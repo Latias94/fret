@@ -387,6 +387,25 @@ fn script_required_capabilities(script: &Path) -> Vec<String> {
     script_required_capabilities_value(&resolved.value)
 }
 
+pub(crate) fn script_required_launch_features(script: &Path) -> Vec<String> {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
+        return Vec::new();
+    };
+    script_required_launch_features_value(&resolved.value)
+}
+
+pub(crate) fn scripts_required_launch_features<'a>(
+    scripts: impl IntoIterator<Item = &'a Path>,
+) -> Vec<String> {
+    let mut required: Vec<String> = Vec::new();
+    for src in scripts {
+        required.extend(script_required_launch_features(src));
+    }
+    required.sort();
+    required.dedup();
+    required
+}
+
 fn script_env_defaults(script: &Path) -> Vec<(String, String)> {
     let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return Vec::new();
@@ -469,6 +488,28 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
     normalized.sort();
     normalized.dedup();
     normalized
+}
+
+fn script_required_launch_features_value(value: &serde_json::Value) -> Vec<String> {
+    let mut required: Vec<String> = Vec::new();
+
+    if let Some(meta_required) = value
+        .get("meta")
+        .and_then(|m| m.get("required_launch_features"))
+        .and_then(|v| v.as_array())
+    {
+        for feature in meta_required.iter().filter_map(|v| v.as_str()) {
+            let feature = feature.trim();
+            if feature.is_empty() {
+                continue;
+            }
+            required.push(feature.to_string());
+        }
+    }
+
+    required.sort();
+    required.dedup();
+    required
 }
 
 fn script_env_defaults_value(value: &serde_json::Value) -> Vec<(String, String)> {
@@ -1849,6 +1890,27 @@ mod capability_tests {
             ]
         );
     }
+
+    #[test]
+    fn parses_script_required_launch_features_from_meta() {
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "meta": {
+                "required_launch_features": [
+                    "gallery-dev",
+                    " gallery-material3 ",
+                    "",
+                    "gallery-dev"
+                ]
+            },
+            "steps": []
+        });
+
+        assert_eq!(
+            script_required_launch_features_value(&script),
+            vec!["gallery-dev".to_string(), "gallery-material3".to_string()]
+        );
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -2703,10 +2765,13 @@ fn run_script_suite_collect_bundles(
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
     let launch = Some(launch.to_vec());
+    let required_launch_features =
+        scripts_required_launch_features(scripts.iter().map(|src| src.as_path()));
     let launch_fs_transport_cfg = paths.launch_fs_transport_cfg();
     let mut child = maybe_launch_demo(
         &launch,
         launch_env,
+        &required_launch_features,
         workspace_root,
         &paths.ready_path,
         &paths.exit_path,

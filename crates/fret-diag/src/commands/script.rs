@@ -460,6 +460,7 @@ pub(crate) fn cmd_script(
             let mut child = maybe_launch_demo(
                 launch,
                 &shrink_launch_env,
+                &crate::script_required_launch_features(&src),
                 workspace_root,
                 ready_path,
                 exit_path,

@@ -387,6 +387,13 @@ b={}",
                     .collect();
             set.into_iter().collect::<Vec<_>>()
         };
+        let required_launch_features = {
+            let set: BTreeSet<String> =
+                normalize_string_list(meta.and_then(|m| m.get("required_launch_features")))
+                    .into_iter()
+                    .collect();
+            set.into_iter().collect::<Vec<_>>()
+        };
         let target_hints = normalize_string_list(meta.and_then(|m| m.get("target_hints")));
 
         let mut suite_memberships = suites.into_iter().collect::<Vec<_>>();
@@ -397,6 +404,7 @@ b={}",
             "id": entry_id,
             "path": rel,
             "required_capabilities": required_capabilities,
+            "required_launch_features": required_launch_features,
             "suite_memberships": suite_memberships,
             "tags": tags,
             "target_hints": target_hints,

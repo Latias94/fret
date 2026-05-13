@@ -340,6 +340,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         || pack_include_screenshots
         || check_pixels_changed_test_id.is_some()
         || check_pixels_unchanged_test_id.is_some();
+    let required_launch_features = scripts_required_launch_features(std::iter::once(src.as_path()));
 
     let repeat_launch_env = merged_repeat_launch_env(&launch_env, script_env_defaults(&src));
     let reuse_process = launch.is_none() || reuse_launch;
@@ -348,6 +349,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         maybe_launch_demo(
             &launch,
             &repeat_launch_env,
+            &required_launch_features,
             &workspace_root,
             &resolved_ready_path,
             &resolved_exit_path,
@@ -648,6 +650,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
             child = maybe_launch_demo(
                 &launch,
                 &repeat_launch_env,
+                &required_launch_features,
                 &workspace_root,
                 &resolved_ready_path,
                 &resolved_exit_path,

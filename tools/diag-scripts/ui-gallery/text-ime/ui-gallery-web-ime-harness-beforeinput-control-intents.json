@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-web-ime-harness"],
     "name": "ui-gallery-web-ime-harness-beforeinput-control-intents",
     "required_capabilities": ["diag.script_v2"],
     "tags": ["ui_gallery", "ime", "web", "beforeinput", "control_intents"],

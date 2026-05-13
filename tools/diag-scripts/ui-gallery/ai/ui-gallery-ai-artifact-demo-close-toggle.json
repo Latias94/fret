@@ -1,5 +1,8 @@
 {
   "schema_version": 2,
+  "meta": {
+    "required_launch_features": ["gallery-dev"]
+  },
   "steps": [
     { "type": "reset_diagnostics" },
     { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 880.0 },

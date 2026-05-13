@@ -288,8 +288,12 @@ pub(in crate::ui) fn preview_code_editor_torture(
     let allow_decorations_under_preedit =
         cx.slot_state(|| Rc::new(Cell::new(false)), |v| v.clone());
     let allow_decorations_under_preedit_enabled = allow_decorations_under_preedit.get();
-    if handle.debug_allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
-        handle.debug_set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
+    if handle.debug_allow_decorations_under_inline_preedit()
+        != allow_decorations_under_preedit_enabled
+    {
+        handle.debug_set_allow_decorations_under_inline_preedit(
+            allow_decorations_under_preedit_enabled,
+        );
     }
 
     let compose_inline_preedit = cx.slot_state(|| Rc::new(Cell::new(false)), |v| v.clone());

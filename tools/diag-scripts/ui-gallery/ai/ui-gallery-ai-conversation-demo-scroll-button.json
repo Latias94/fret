@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "UI gallery: AI conversation demo scroll-to-bottom button behavior",
     "tags": ["ui-gallery", "ai-elements", "conversation", "scroll"],
     "required_capabilities": ["diag.script_v2"],

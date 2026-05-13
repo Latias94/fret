@@ -125,6 +125,7 @@ class ScriptRegistryEntryV1:
     tags: list[str]
     target_hints: list[str]
     required_capabilities: list[str]
+    required_launch_features: list[str]
     suite_memberships: list[str]
 
 
@@ -263,6 +264,7 @@ def build_registry(repo_root: Path) -> dict[str, Any]:
         tags = sorted(set(normalize_string_list(meta.get("tags"))))
         target_hints = normalize_string_list(meta.get("target_hints"))
         required_capabilities = sorted(set(normalize_string_list(meta.get("required_capabilities"))))
+        required_launch_features = sorted(set(normalize_string_list(meta.get("required_launch_features"))))
 
         meta_id = meta.get("id")
         if isinstance(meta_id, str) and meta_id.strip():
@@ -287,6 +289,7 @@ def build_registry(repo_root: Path) -> dict[str, Any]:
                 tags=tags,
                 target_hints=target_hints,
                 required_capabilities=required_capabilities,
+                required_launch_features=required_launch_features,
                 suite_memberships=suite_memberships,
             )
         )

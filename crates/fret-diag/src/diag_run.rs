@@ -181,6 +181,7 @@ pub(crate) fn run_external_no_diagnostics_post_run(
     let mut child = maybe_launch_demo_without_diagnostics(
         launch,
         &run_launch_env,
+        &script_required_launch_features(src),
         workspace_root,
         resolved_out_dir,
         poll_ms,
@@ -893,6 +894,7 @@ fn run_cmd_run_filesystem_branch(request: RunFilesystemBranchRequest<'_>) -> Res
     let mut child = maybe_launch_demo(
         request.launch,
         &run_launch_env,
+        &script_required_launch_features(request.src),
         request.workspace_root,
         request.resolved_ready_path,
         request.resolved_exit_path,

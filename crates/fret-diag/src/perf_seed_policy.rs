@@ -462,10 +462,10 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
             "seed": rule.seed.as_str(),
             "source": rule.source.as_str(),
         });
-        if let Some(tuning) = rule.tuning.as_json() {
-            if let Some(map) = obj.as_object_mut() {
-                map.insert("tuning".to_string(), tuning);
-            }
+        if let Some(tuning) = rule.tuning.as_json()
+            && let Some(map) = obj.as_object_mut()
+        {
+            map.insert("tuning".to_string(), tuning);
         }
         audit_rules.push(obj);
     }

@@ -106,6 +106,8 @@ pub struct UiScriptMetaV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_capabilities: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_launch_features: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub target_hints: Vec<String>,
 }
 
