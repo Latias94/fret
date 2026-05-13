@@ -24,8 +24,10 @@ Last updated: 2026-05-14
 - Current Fret IMUI source:
   - `ecosystem/fret-imui/src/lib.rs`
   - `ecosystem/fret-imui/src/frontend.rs`
+  - `ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs`
@@ -194,6 +196,33 @@ Run evidence:
   `ecosystem/fret-imui/Cargo.toml` `[dependencies]` and rejects policy/runtime drift such as
   `fret-ui-kit`, `fret-ui-editor`, `fret-docking`, `fret-workspace`, `fret-ui-shadcn`, `winit`, or
   `wgpu` in the runtime dependency section.
+
+## IMUI Maintainer Test Ownership / Table Layout Gate
+
+Use this gate when changing menu/tab interaction ownership, table cell semantics, or IMUI layout
+mechanics that can accidentally make diagnostics bounds diverge from visual column layout.
+
+```powershell
+cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast
+cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast
+cargo nextest run -p fret-imui --no-fail-fast
+python tools/gate_imui_workstream_source.py
+git diff --check
+```
+
+Run evidence:
+
+- 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
+  file into `menu_activation`, `submenu_hover`, `submenu_shortcuts`, and `tabs` test owners under
+  `ecosystem/fret-imui/src/tests/interaction_menu_tabs/`.
+- 2026-05-14: `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast` passed
+  locally with 18 tests.
+- 2026-05-14: `cargo nextest run -p fret-imui
+  table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast` passed
+  locally after moving table body-cell test semantics to layout-transparent
+  `SemanticsDecoration`.
+- 2026-05-14: `cargo nextest run -p fret-imui --no-fail-fast` passed locally with 163 tests.
+- 2026-05-14: `python tools/gate_imui_workstream_source.py` and `git diff --check` passed locally.
 
 ## P3 Diagnostics / DevTools First-Open Gate
 

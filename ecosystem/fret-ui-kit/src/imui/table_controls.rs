@@ -6,7 +6,7 @@ use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, PressableState, SemanticsProps,
+    PressableProps, PressableState, SemanticsDecoration, SemanticsProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
@@ -780,14 +780,15 @@ fn wrap_table_cell<H: UiHost>(
     }
     let cell = cx.container(cell, move |_cx| vec![content]);
     if let Some(test_id) = test_id {
-        let mut semantics = SemanticsProps::default();
-        semantics.role = if header {
-            SemanticsRole::Heading
-        } else {
-            SemanticsRole::Group
-        };
-        semantics.test_id = Some(test_id);
-        cx.semantics(semantics, move |_cx| vec![cell])
+        cell.attach_semantics(
+            SemanticsDecoration::default()
+                .role(if header {
+                    SemanticsRole::Heading
+                } else {
+                    SemanticsRole::Group
+                })
+                .test_id(test_id),
+        )
     } else {
         cell
     }
