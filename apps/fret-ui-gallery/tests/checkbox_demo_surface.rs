@@ -72,5 +72,11 @@ fn checkbox_rtl_diag_scripts_use_current_section_anchor_and_scroll_stability_gat
                 && source.contains("\"type\": \"wait_bounds_stable\""),
             "{path} should gate RTL scroll/bounds stability instead of relying on screenshots only"
         );
+        assert!(
+            source.contains("\"motion_check\"")
+                && source.contains("\"scroll_target\"")
+                && source.contains("\"require_scroll_progress\": true"),
+            "{path} should check scroll motion during scroll_into_view, not only final stability"
+        );
     }
 }

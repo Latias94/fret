@@ -420,6 +420,30 @@ fn script_v2_roundtrip_wait_bounds_stable() {
 }
 
 #[test]
+fn script_v2_roundtrip_scroll_into_view_motion_check() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "content-scroll" },
+      "target": { "kind": "test_id", "id": "rtl-section" },
+      "motion_check": {
+        "scroll_target": { "kind": "test_id", "id": "content-viewport" },
+        "field": "y",
+        "max_target_reverse_px": 1.25,
+        "max_scroll_reverse_px": 1.25,
+        "require_scroll_progress": true
+      },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn transport_message_roundtrip_envelope() {
     let message_1 = DiagTransportMessageV1 {
         schema_version: 1,

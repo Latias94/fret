@@ -1021,6 +1021,8 @@ pub enum UiActionStepV2 {
         padding_px: f32,
         #[serde(default)]
         padding_insets_px: Option<UiPaddingInsetsV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        motion_check: Option<UiScrollMotionCheckV1>,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
@@ -1523,6 +1525,22 @@ fn default_semantics_scroll_stable_frames() -> u32 {
 
 fn default_semantics_scroll_stable_max_delta() -> f64 {
     1.0
+}
+
+fn default_scroll_motion_field() -> UiSemanticsScrollFieldV1 {
+    UiSemanticsScrollFieldV1::Y
+}
+
+fn default_scroll_motion_max_target_reverse_px() -> f32 {
+    1.0
+}
+
+fn default_scroll_motion_max_scroll_reverse_px() -> f64 {
+    1.0
+}
+
+fn default_scroll_motion_require_scroll_progress() -> bool {
+    true
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -2730,6 +2748,20 @@ pub enum UiSemanticsScrollFieldV1 {
     YMax,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollMotionCheckV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<UiSelectorV1>,
+    #[serde(default = "default_scroll_motion_field")]
+    pub field: UiSemanticsScrollFieldV1,
+    #[serde(default = "default_scroll_motion_max_target_reverse_px")]
+    pub max_target_reverse_px: f32,
+    #[serde(default = "default_scroll_motion_max_scroll_reverse_px")]
+    pub max_scroll_reverse_px: f64,
+    #[serde(default = "default_scroll_motion_require_scroll_progress")]
+    pub require_scroll_progress: bool,
+}
+
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOptionalRootStateV1 {
@@ -3026,6 +3058,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scroll_motion_trace: Vec<UiScrollMotionTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -3238,6 +3272,31 @@ pub struct UiBoundsStableTraceEntryV1 {
     pub remaining_frames: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollMotionTraceEntryV1 {
+    pub step_index: u32,
+    pub container: UiSelectorV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<UiSelectorV1>,
+    pub target: UiSelectorV1,
+    pub field: UiSemanticsScrollFieldV1,
+    pub sample_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_delta: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_delta_y_px: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_target_reverse_px: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_scroll_reverse_px: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }

@@ -35,6 +35,7 @@ pub(super) struct ActiveScript {
     pub(super) hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     pub(super) click_stable_trace: Vec<UiClickStableTraceEntryV1>,
     pub(super) bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
+    pub(super) scroll_motion_trace: Vec<UiScrollMotionTraceEntryV1>,
     pub(super) focus_trace: Vec<UiFocusTraceEntryV1>,
     pub(super) last_clipboard_write_completion: Option<ObservedClipboardWriteCompletion>,
     pub(super) shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -256,6 +257,12 @@ pub(super) struct V2ScrollIntoViewState {
     pub(super) no_progress_frames: u32,
     pub(super) last_target_bounds: Option<fret_core::Rect>,
     pub(super) last_container_bounds: Option<fret_core::Rect>,
+    pub(super) motion_sample_count: u32,
+    pub(super) motion_last_scroll_value: Option<f64>,
+    pub(super) motion_last_target_y: Option<f32>,
+    pub(super) motion_scroll_direction: Option<i8>,
+    pub(super) motion_target_direction: Option<i8>,
+    pub(super) motion_saw_scroll_progress: bool,
 }
 
 #[derive(Debug, Clone)]

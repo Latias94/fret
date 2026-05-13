@@ -152,3 +152,31 @@ pub(super) fn push_bounds_stable_trace(
         trace.drain(0..extra);
     }
 }
+
+fn scroll_motion_trace_entry_eq(
+    a: &UiScrollMotionTraceEntryV1,
+    b: &UiScrollMotionTraceEntryV1,
+) -> bool {
+    a.step_index == b.step_index
+        && selector_trace_eq(&a.container, &b.container)
+        && selector_trace_eq(&a.target, &b.target)
+}
+
+pub(super) fn push_scroll_motion_trace(
+    trace: &mut Vec<UiScrollMotionTraceEntryV1>,
+    entry: UiScrollMotionTraceEntryV1,
+) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| scroll_motion_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_BOUNDS_STABLE_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_BOUNDS_STABLE_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}

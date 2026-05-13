@@ -86,6 +86,120 @@ fn bounded_scroll_delta_for_axis(
     }
 }
 
+fn ui_rect_from_rect(rect: Rect) -> UiRectV1 {
+    UiRectV1 {
+        x_px: rect.origin.x.0,
+        y_px: rect.origin.y.0,
+        w_px: rect.size.width.0,
+        h_px: rect.size.height.0,
+    }
+}
+
+fn sign_with_epsilon_f32(value: f32, eps: f32) -> Option<i8> {
+    if value > eps {
+        Some(1)
+    } else if value < -eps {
+        Some(-1)
+    } else {
+        None
+    }
+}
+
+fn sign_with_epsilon_f64(value: f64, eps: f64) -> Option<i8> {
+    if value > eps {
+        Some(1)
+    } else if value < -eps {
+        Some(-1)
+    } else {
+        None
+    }
+}
+
+fn record_scroll_motion_check(
+    active: &mut ActiveScript,
+    step_index: usize,
+    container: &UiSelectorV1,
+    target: &UiSelectorV1,
+    check: &UiScrollMotionCheckV1,
+    state: &mut V2ScrollIntoViewState,
+    scroll_node: Option<&fret_core::SemanticsNode>,
+    target_bounds: Option<Rect>,
+) -> Option<String> {
+    state.motion_sample_count = state.motion_sample_count.saturating_add(1);
+
+    let scroll_value = scroll_node.and_then(|node| semantics_scroll_field_value(node, check.field));
+    let scroll_delta = scroll_value
+        .zip(state.motion_last_scroll_value)
+        .map(|(value, last)| value - last);
+    let target_delta_y = target_bounds
+        .zip(state.motion_last_target_y)
+        .map(|(bounds, last)| bounds.origin.y.0 - last);
+
+    let mut note = "scroll_into_view.motion.sample".to_string();
+    let mut reason = None;
+
+    if let Some(delta) = scroll_delta.filter(|delta| delta.is_finite()) {
+        if delta.abs() > 0.01 {
+            state.motion_saw_scroll_progress = true;
+        }
+        if let Some(sign) = sign_with_epsilon_f64(delta, check.max_scroll_reverse_px) {
+            if state.motion_scroll_direction.is_none() {
+                state.motion_scroll_direction = Some(sign);
+            } else if state.motion_scroll_direction != Some(sign) {
+                note = format!(
+                    "scroll_into_view.motion.scroll_reversed delta={delta:.3} last_direction={:?}",
+                    state.motion_scroll_direction
+                );
+                reason = Some("scroll_into_view_motion_scroll_reversed".to_string());
+            }
+        }
+    }
+
+    if reason.is_none() {
+        if let Some(delta) = target_delta_y {
+            if let Some(sign) = sign_with_epsilon_f32(delta, check.max_target_reverse_px) {
+                if state.motion_target_direction.is_none() {
+                    state.motion_target_direction = Some(sign);
+                } else if state.motion_target_direction != Some(sign) {
+                    note = format!(
+                        "scroll_into_view.motion.target_reversed delta={delta:.3} last_direction={:?}",
+                        state.motion_target_direction
+                    );
+                    reason = Some("scroll_into_view_motion_target_reversed".to_string());
+                }
+            }
+        }
+    }
+
+    push_scroll_motion_trace(
+        &mut active.scroll_motion_trace,
+        UiScrollMotionTraceEntryV1 {
+            step_index: step_index as u32,
+            container: container.clone(),
+            scroll_target: check.scroll_target.clone(),
+            target: target.clone(),
+            field: check.field,
+            sample_count: state.motion_sample_count,
+            scroll_value,
+            scroll_delta,
+            target_bounds: target_bounds.map(ui_rect_from_rect),
+            target_delta_y_px: target_delta_y,
+            max_target_reverse_px: Some(check.max_target_reverse_px),
+            max_scroll_reverse_px: Some(check.max_scroll_reverse_px),
+            note: Some(note),
+        },
+    );
+
+    if let Some(value) = scroll_value.filter(|value| value.is_finite()) {
+        state.motion_last_scroll_value = Some(value);
+    }
+    if let Some(bounds) = target_bounds {
+        state.motion_last_target_y = Some(bounds.origin.y.0);
+    }
+
+    reason
+}
+
 pub(super) fn handle_scroll_into_view_step(
     svc: &mut UiDiagnosticsService,
     _app: &App,
@@ -116,6 +230,7 @@ pub(super) fn handle_scroll_into_view_step(
         require_fully_within_window,
         padding_px,
         padding_insets_px,
+        motion_check,
         timeout_frames,
     } = step
     else {
@@ -150,6 +265,12 @@ pub(super) fn handle_scroll_into_view_step(
             no_progress_frames: 0,
             last_target_bounds: None,
             last_container_bounds: None,
+            motion_sample_count: 0,
+            motion_last_scroll_value: None,
+            motion_last_target_y: None,
+            motion_scroll_direction: None,
+            motion_target_direction: None,
+            motion_saw_scroll_progress: false,
         },
     };
 
@@ -163,6 +284,24 @@ pub(super) fn handle_scroll_into_view_step(
         svc.cfg.redact_text,
         &mut active.selector_resolution_trace,
     );
+    let scroll_target_selector = motion_check
+        .as_ref()
+        .and_then(|check| check.scroll_target.as_ref())
+        .unwrap_or(&container);
+    let scroll_node = if motion_check.is_some() {
+        select_semantics_node_with_trace(
+            snapshot,
+            window,
+            element_runtime,
+            scroll_target_selector,
+            active.scope_root_for_window(window),
+            step_index as u32,
+            svc.cfg.redact_text,
+            &mut active.selector_resolution_trace,
+        )
+    } else {
+        container_node
+    };
     let target_node = select_semantics_node_with_trace(
         snapshot,
         window,
@@ -184,6 +323,26 @@ pub(super) fn handle_scroll_into_view_step(
             .and_then(|ui| ui.debug_node_visual_bounds(node.id))
             .unwrap_or(node.bounds)
     });
+
+    if let Some(check) = motion_check.as_ref() {
+        if let Some(reason) = record_scroll_motion_check(
+            active,
+            step_index,
+            &container,
+            &target,
+            check,
+            &mut state,
+            scroll_node,
+            target_bounds,
+        ) {
+            *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
+            *stop_script = true;
+            *failure_reason = Some(reason);
+            active.v2_step_state = None;
+            output.request_redraw = true;
+            return true;
+        }
+    }
 
     // `padding_px` / `padding_insets_px` is a *scroll margin preference* (how much breathing room we
     // try to maintain while scrolling), not a hard correctness requirement.
@@ -217,6 +376,35 @@ pub(super) fn handle_scroll_into_view_step(
     };
 
     if visible_ok && container_ok {
+        if let Some(check) = motion_check.as_ref() {
+            if check.require_scroll_progress && !state.motion_saw_scroll_progress {
+                let reason = "scroll_into_view_motion_no_scroll_progress".to_string();
+                push_scroll_motion_trace(
+                    &mut active.scroll_motion_trace,
+                    UiScrollMotionTraceEntryV1 {
+                        step_index: step_index as u32,
+                        container: container.clone(),
+                        scroll_target: check.scroll_target.clone(),
+                        target: target.clone(),
+                        field: check.field,
+                        sample_count: state.motion_sample_count,
+                        scroll_value: state.motion_last_scroll_value,
+                        scroll_delta: None,
+                        target_bounds: target_bounds.map(ui_rect_from_rect),
+                        target_delta_y_px: None,
+                        max_target_reverse_px: Some(check.max_target_reverse_px),
+                        max_scroll_reverse_px: Some(check.max_scroll_reverse_px),
+                        note: Some(reason.clone()),
+                    },
+                );
+                *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
+                *stop_script = true;
+                *failure_reason = Some(reason);
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return true;
+            }
+        }
         active.v2_step_state = None;
         active.next_step = active.next_step.saturating_add(1);
         output.request_redraw = true;

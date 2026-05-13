@@ -65,6 +65,13 @@
       "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
+      "motion_check": {
+        "scroll_target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y",
+        "max_target_reverse_px": 1.0,
+        "max_scroll_reverse_px": 1.0,
+        "require_scroll_progress": true
+      },
       "timeout_frames": 900
     },
     {

@@ -871,8 +871,7 @@ impl UiDiagnosticsService {
                 }
                 V2StepState::DragTo(state) => {
                     if let Some(playback) = state.playback.as_mut() {
-                        if (!state.down_issued && playback.frame == 0)
-                            || allow_remap_captured_drag
+                        if (!state.down_issued && playback.frame == 0) || allow_remap_captured_drag
                         {
                             playback.window = new_window;
                         }
@@ -1729,6 +1728,7 @@ mod service_tests {
             hit_test_trace: Vec::new(),
             click_stable_trace: Vec::new(),
             bounds_stable_trace: Vec::new(),
+            scroll_motion_trace: Vec::new(),
             focus_trace: Vec::new(),
             last_clipboard_write_completion: None,
             shortcut_routing_trace: Vec::new(),

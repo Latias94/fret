@@ -240,6 +240,7 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         && active.hit_test_trace.is_empty()
         && active.click_stable_trace.is_empty()
         && active.bounds_stable_trace.is_empty()
+        && active.scroll_motion_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
         && active.command_dispatch_trace.is_empty()
@@ -257,6 +258,7 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         hit_test_trace: active.hit_test_trace.clone(),
         click_stable_trace: active.click_stable_trace.clone(),
         bounds_stable_trace: active.bounds_stable_trace.clone(),
+        scroll_motion_trace: active.scroll_motion_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
         command_dispatch_trace: active.command_dispatch_trace.clone(),
