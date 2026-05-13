@@ -370,8 +370,8 @@ pub fn evaluate_predicate(
             relation,
             target,
         } => {
-            let source_node = tree.select_best(source).map_err(fail)?;
-            let target_node = tree.select_best(target).map_err(fail)?;
+            let source_node = tree.select_best_unfiltered(source).map_err(fail)?;
+            let target_node = tree.select_best_unfiltered(target).map_err(fail)?;
             let Some(target_id) = target_node.node_id else {
                 return Err(failure(format!(
                     "semantics_relation_includes target has no node id target={target:?}"

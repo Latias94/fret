@@ -439,6 +439,45 @@ The first draft exposed a harness schema constraint rather than a runtime defect
 the fixed mechanism enum and cannot accept a free-form `dispatch` tag. After aligning the fixture
 to the allowed domain set, the suite passed.
 
+## Phase 2.14 Shadcn Recipe Semantics Coverage
+
+The shadcn recipe semantics fixture suite is
+`ecosystem/fret-ui-shadcn/tests/fixtures/recipe_semantics_cases_v1.json`, run by
+`mechanism_harness_recipe_semantics_cases_match_oracles` in
+`ecosystem/fret-ui-shadcn/tests/recipe_semantics_mechanism_harness.rs`.
+
+This suite is the first consumer of the expanded semantics/state/action oracle from a shadcn recipe
+surface. It intentionally verifies behavior outcomes instead of source shape.
+
+It covers:
+
+- open combobox search input exposing `role=combo_box`, `expanded=true`, focus/set-value actions,
+  `controls` linkage to its listbox, and reciprocal listbox labelling;
+- committed combobox selection exposing selected option state plus `pos_in_set` / `set_size`
+  collection metadata;
+- combobox ArrowDown highlight using `active_descendant` while keeping committed selection false;
+- open select listbox ↔ trigger labelled-by/controls relationships across the modal barrier root;
+- selected select option active-item, selected-state, collection metadata, and invoke-action
+  semantics.
+
+The first run exposed a real mechanism-harness oracle defect. `SemanticsRelationIncludes` resolved
+both relation endpoints through the normal barrier-filtered selector path. That made a valid modal
+select relation fail: the open listbox lives inside the barrier while its `labelled_by` target is the
+underlay trigger. Relation predicates now resolve source and target with unfiltered selectors, while
+ordinary `role_is`, `expanded`, and similar current-surface predicates remain barrier-filtered.
+
+This slice also clarified an authoring rule for future recipe fixtures:
+
+- use relation predicates for cross-root semantics edges such as `labelled_by` and `controls`;
+- do not assert underlay trigger role/state through normal selectors while a modal barrier is active;
+- assert the current accessible surface on the overlay listbox/options, and use metrics or relation
+  predicates for hidden/outside nodes when they are still needed as semantics references.
+
+Validation:
+
+- `cargo nextest run -p fret-mechanism-harness`
+- `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -493,6 +532,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-ui mechanism_harness_focus_scope_stale_parent_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles`
+- `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

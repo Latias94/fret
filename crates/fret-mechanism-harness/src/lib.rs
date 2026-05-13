@@ -353,6 +353,63 @@ mod tests {
     }
 
     #[test]
+    fn semantics_relation_oracles_resolve_targets_across_barrier_roots() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ));
+
+        let mut trigger = ObservedNode::new(
+            "trigger",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        trigger.node_id = Some(1);
+        trigger.controls_node_ids = vec![2];
+
+        let mut listbox = ObservedNode::new(
+            "listbox",
+            Rect::new(Point::new(Px(0.0), Px(24.0)), Size::new(Px(80.0), Px(48.0))),
+        );
+        listbox.node_id = Some(2);
+        listbox.labelled_by_node_ids = vec![1];
+
+        tree.barrier_root_node_id = Some(2);
+        tree.push_node(trigger);
+        tree.push_node(listbox);
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "listbox".to_string(),
+                    root_z_index: None,
+                },
+                relation: ObservedSemanticsRelation::LabelledBy,
+                target: UiSelectorV1::TestId {
+                    id: "trigger".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "trigger".to_string(),
+                    root_z_index: None,
+                },
+                relation: ObservedSemanticsRelation::Controls,
+                target: UiSelectorV1::TestId {
+                    id: "listbox".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
     fn semantics_value_state_actions_and_structured_metadata_are_queryable() {
         let mut tree = ObservedTree::new(Rect::new(
             Point::new(Px(0.0), Px(0.0)),
