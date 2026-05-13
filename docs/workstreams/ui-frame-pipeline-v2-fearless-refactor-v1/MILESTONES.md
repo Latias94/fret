@@ -31,6 +31,8 @@ Exit criteria:
 Status on 2026-05-13:
 
 - Transitional boundary diagnostics are implemented through `debug.cache_roots[].boundary`.
+- The first internal `ViewBoundaryState` store now exists in `crates/fret-ui`, with `BoundaryId`
+  keyed to the retained node identity for this migration slice.
 - Deletion plan for this transitional path is recorded in
   `M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md`.
 - Perf gate and worst-bundle attribution were rerun for the diagnostic slice. The result confirms
@@ -52,10 +54,17 @@ Status on 2026-05-13:
 - The latest canvas-output slice now carries the row-scene replay plan through node-scoped
   `PrepaintOutputs`, so the prepaint phase owns a concrete output carrier instead of only the
   scheduling hook.
+- The follow-up boundary-prepaint slice in
+  `M2B_VIEW_BOUNDARY_PREPAINT_STATE_SLICE_2026-05-13.md` moves `PrepaintOutputs` out of `Node` and
+  into `ViewBoundaryState::prepaint`, so canvas prepaint output is now boundary-owned rather than
+  node-owned.
+- The same slice adds `debug.boundaries[]` as the first top-level boundary diagnostics list. It is
+  directly enumerated from `ViewBoundaryState`, joins matching cache-root outcome fields, and
+  reports `prepaint_owner=view_boundary_prepaint_state`.
 - `ecosystem/fret-code-editor` now schedules frame-derived prefetch/bookkeeping in prepaint.
 - A focused helper test locks prepaint-before-paint ordering and output visibility for the windowed
   rows surface.
-- The final `ViewBoundary` owner and stale-state replay guard are still pending, so M2 remains a
+- The final stale-state replay guard and scene-fragment owner are still pending, so M2 remains a
   partial migration rather than a closeout.
 
 ## M3: Scene Fragment Replay
@@ -93,6 +102,15 @@ Exit criteria:
 - Layout containment is represented as boundary dependency metadata, not only as an ad hoc flag.
 - View-cache and paint-cache paths are consolidated where the boundary model covers both.
 - Old private paths replaced by the v2 path are deleted or marked migration-only with a date.
+
+Status on 2026-05-13:
+
+- Minimal boundary layout dependency metadata exists in `ViewBoundaryState`; current
+  `should_reuse_view_cache_node(...)` uses it for contained-relayout eligibility.
+- `debug.boundaries[]` exists as a first-class bundle field, but still derives from
+  `debug.cache_roots[].boundary` until direct boundary enumeration lands.
+- Broader dirty-set migration, view-cache/paint-cache consolidation, and old-path deletion are still
+  pending.
 
 ## M5: Closeout and Deletion Audit
 

@@ -1,5 +1,4 @@
 use super::*;
-use std::any::{Any, TypeId};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(super) struct ViewCacheFlags {
@@ -60,7 +59,6 @@ pub(super) struct Node<H: UiHost> {
     pub(super) paint_invalidated_by_hit_test_only: bool,
     pub(super) paint_cache: Option<PaintCacheEntry>,
     pub(super) interaction_cache: Option<prepaint::InteractionCacheEntry>,
-    pub(super) prepaint_outputs: PrepaintOutputs,
     pub(super) prepaint_hit_test: Option<PrepaintHitTestCache>,
     pub(super) widget_prepaint_enabled: bool,
     pub(super) view_cache: ViewCacheFlags,
@@ -83,57 +81,6 @@ pub(super) struct PrepaintHitTestCache {
     pub(super) is_focusable: bool,
     pub(super) focus_traversal_children: bool,
     pub(super) can_scroll_descendant_into_view: bool,
-}
-
-#[derive(Default)]
-pub(super) struct PrepaintOutputs {
-    key: Option<PaintCacheKey>,
-    values: Vec<(TypeId, Box<dyn Any>)>,
-}
-
-impl PrepaintOutputs {
-    pub(super) fn begin_frame(&mut self, key: PaintCacheKey) {
-        if self.key != Some(key) {
-            self.key = Some(key);
-            self.values.clear();
-        }
-    }
-
-    pub(super) fn set<T: Any>(&mut self, value: T) {
-        self.set_box(TypeId::of::<T>(), Box::new(value));
-    }
-
-    pub(super) fn set_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
-        if let Some((_, existing)) = self.values.iter_mut().find(|(id, _)| *id == ty) {
-            *existing = value;
-            return;
-        }
-        self.values.push((ty, value));
-    }
-
-    pub(super) fn get<T: Any>(&self) -> Option<&T> {
-        self.get_any(TypeId::of::<T>())
-            .and_then(|value| value.downcast_ref::<T>())
-    }
-
-    pub(super) fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
-        self.get_any_mut(TypeId::of::<T>())
-            .and_then(|value| value.downcast_mut::<T>())
-    }
-
-    pub(super) fn get_any(&self, ty: TypeId) -> Option<&dyn Any> {
-        self.values
-            .iter()
-            .find(|(id, _)| *id == ty)
-            .map(|(_, value)| value.as_ref())
-    }
-
-    pub(super) fn get_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
-        self.values
-            .iter_mut()
-            .find(|(id, _)| *id == ty)
-            .map(|(_, value)| value.as_mut())
-    }
 }
 
 impl<H: UiHost> Node<H> {
@@ -159,7 +106,6 @@ impl<H: UiHost> Node<H> {
             paint_invalidated_by_hit_test_only: false,
             paint_cache: None,
             interaction_cache: None,
-            prepaint_outputs: PrepaintOutputs::default(),
             prepaint_hit_test: None,
             widget_prepaint_enabled: false,
             view_cache: ViewCacheFlags::default(),

@@ -135,17 +135,17 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         key: PaintCacheKey,
     ) {
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        n.prepaint_outputs.begin_frame(key);
+        boundary.prepaint.begin_outputs(key);
     }
 
     pub(crate) fn set_prepaint_output<T: Any>(&mut self, node: NodeId, value: T) {
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        n.prepaint_outputs.set(value);
+        boundary.prepaint.set_output(value);
     }
 
     pub(crate) fn set_prepaint_output_box(
@@ -154,22 +154,25 @@ impl<H: UiHost> UiTree<H> {
         ty: TypeId,
         value: Box<dyn Any>,
     ) {
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        n.prepaint_outputs.set_box(ty, value);
+        boundary.prepaint.set_output_box(ty, value);
     }
 
     pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
-        self.nodes.get(node)?.prepaint_outputs.get::<T>()
+        self.view_boundaries.get(node)?.prepaint.output::<T>()
     }
 
     pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
-        self.nodes.get_mut(node)?.prepaint_outputs.get_mut::<T>()
+        self.view_boundaries
+            .get_mut(node)?
+            .prepaint
+            .output_mut::<T>()
     }
 
     pub(crate) fn prepaint_output_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
-        self.nodes.get(node)?.prepaint_outputs.get_any(ty)
+        self.view_boundaries.get(node)?.prepaint.output_any(ty)
     }
 
     pub(crate) fn prepaint_output_any_mut(
@@ -177,6 +180,9 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         ty: TypeId,
     ) -> Option<&mut dyn Any> {
-        self.nodes.get_mut(node)?.prepaint_outputs.get_any_mut(ty)
+        self.view_boundaries
+            .get_mut(node)?
+            .prepaint
+            .output_any_mut(ty)
     }
 }

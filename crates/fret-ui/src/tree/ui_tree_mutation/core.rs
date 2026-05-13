@@ -6,6 +6,7 @@ impl<H: UiHost> UiTree<H> {
         let node = Node::new(widget);
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
+        self.sync_view_boundary_state_for_node(id);
         self.mark_semantics_dirty();
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
         if inv.layout {
@@ -48,6 +49,7 @@ impl<H: UiHost> UiTree<H> {
         let node = Node::new_for_element(element, widget);
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
+        self.sync_view_boundary_state_for_node(id);
         self.mark_semantics_dirty();
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
         if inv.layout {

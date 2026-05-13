@@ -51,6 +51,71 @@ pub struct UiBoundaryCacheRootDiagnosticsV1 {
     pub paint_outcome: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiBoundaryDiagnosticsV1 {
+    pub schema_version: u32,
+    pub id: u64,
+    pub parent: Option<u64>,
+    pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
+    pub kind: String,
+    pub source: String,
+    pub layout_dependency: String,
+    pub layout_definite: bool,
+    pub prepaint_owner: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build_outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reuse_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paint_outcome: Option<String>,
+}
+
+impl UiBoundaryDiagnosticsV1 {
+    pub fn from_boundary_stats(
+        window: AppWindowId,
+        element_runtime: Option<&ElementRuntime>,
+        boundary: &fret_ui::tree::UiDebugBoundaryStats,
+        cache_root: Option<&UiCacheRootStatsV1>,
+        max_debug_string_bytes: usize,
+    ) -> Self {
+        let element_path = boundary
+            .element
+            .and_then(|id| element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id)));
+        let cache_root_boundary = cache_root.and_then(|stats| stats.boundary.as_ref());
+        let mut out = Self {
+            schema_version: 1,
+            id: boundary.id.data().as_ffi(),
+            parent: boundary.parent.map(|id| id.data().as_ffi()),
+            element: boundary.element.map(|id| id.0),
+            element_path,
+            kind: boundary.kind.to_string(),
+            source: boundary.source.to_string(),
+            layout_dependency: boundary.layout_dependency.to_string(),
+            layout_definite: boundary.layout_definite,
+            prepaint_owner: boundary.prepaint_owner.to_string(),
+            build_outcome: cache_root_boundary.map(|b| b.build_outcome.clone()),
+            reuse_reason: cache_root_boundary.map(|b| b.reuse_reason.clone()),
+            layout_outcome: cache_root_boundary.map(|b| b.layout_outcome.clone()),
+            paint_outcome: cache_root_boundary.map(|b| b.paint_outcome.clone()),
+        };
+
+        truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.kind, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.source, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.layout_dependency, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.prepaint_owner, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.build_outcome, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.layout_outcome, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.paint_outcome, max_debug_string_bytes);
+        out
+    }
+}
+
 impl UiCacheRootStatsV1 {
     fn from_stats(
         window: AppWindowId,
@@ -179,7 +244,9 @@ impl UiCacheRootStatsV1 {
                     contained_relayout_in_frame,
                 )
                 .to_string(),
-                prepaint_owner: "node_prepaint_output".to_string(),
+                prepaint_owner: ui
+                    .debug_boundary_prepaint_owner_for_node(stats.root)
+                    .to_string(),
                 paint_outcome: cache_root_boundary_paint_outcome(stats.paint_replayed_ops)
                     .to_string(),
             }),
@@ -297,5 +364,71 @@ mod cache_root_boundary_tests {
     fn cache_root_boundary_paint_outcome_reports_replay_state() {
         assert_eq!(cache_root_boundary_paint_outcome(0), "not_replayed");
         assert_eq!(cache_root_boundary_paint_outcome(1), "scene_ops_replayed");
+    }
+
+    #[test]
+    fn boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes() {
+        let node = fret_core::NodeId::from(slotmap::KeyData::from_ffi(7));
+        let node_id = node.data().as_ffi();
+        let cache_root = UiCacheRootStatsV1 {
+            root: node_id,
+            element: None,
+            element_path: None,
+            reused: true,
+            contained_layout: true,
+            contained_relayout_in_frame: false,
+            paint_replayed_ops: 3,
+            direct_child_nodes: None,
+            subtree_nodes: None,
+            subtree_nodes_truncated_at: None,
+            root_in_semantics: None,
+            children_last_set_location: None,
+            children_last_set_old_len: None,
+            children_last_set_new_len: None,
+            children_last_set_old_elements_head: Vec::new(),
+            children_last_set_new_elements_head: Vec::new(),
+            children_last_set_old_elements_head_paths: Vec::new(),
+            children_last_set_new_elements_head_paths: Vec::new(),
+            children_last_set_frame_id: None,
+            reuse_reason: Some("marked_reuse_root".to_string()),
+            boundary: Some(UiBoundaryCacheRootDiagnosticsV1 {
+                schema_version: 1,
+                id: node_id,
+                kind: "view_cache_root".to_string(),
+                build_outcome: "reused".to_string(),
+                reuse_reason: "marked_reuse_root".to_string(),
+                layout_outcome: "contained_clean".to_string(),
+                prepaint_owner: "view_boundary_prepaint_state".to_string(),
+                paint_outcome: "scene_ops_replayed".to_string(),
+            }),
+        };
+
+        let boundary_stats = fret_ui::tree::UiDebugBoundaryStats {
+            id: node,
+            parent: None,
+            element: None,
+            kind: "view_cache_root",
+            source: "view_cache",
+            prepaint_owner: "view_boundary_prepaint_state",
+            layout_dependency: "contained_when_bounds_known",
+            layout_definite: true,
+        };
+
+        let boundary = UiBoundaryDiagnosticsV1::from_boundary_stats(
+            AppWindowId::default(),
+            None,
+            &boundary_stats,
+            Some(&cache_root),
+            4096,
+        );
+
+        assert_eq!(boundary.id, node_id);
+        assert_eq!(boundary.source, "view_cache");
+        assert_eq!(boundary.kind, "view_cache_root");
+        assert_eq!(boundary.layout_dependency, "contained_when_bounds_known");
+        assert!(boundary.layout_definite);
+        assert_eq!(boundary.prepaint_owner, "view_boundary_prepaint_state");
+        assert_eq!(boundary.paint_outcome.as_deref(), Some("scene_ops_replayed"));
+        assert_eq!(boundary.build_outcome.as_deref(), Some("reused"));
     }
 }

@@ -20,7 +20,7 @@ Last updated: 2026-05-13
 
 ## P1 First Vertical Slice: Code Editor Boundary
 
-- [ ] Define the first internal `BoundaryId` / boundary-state shape or a narrower transitional
+- [x] Define the first internal `BoundaryId` / boundary-state shape or a narrower transitional
   equivalent.
 - [x] Make UI Gallery code-editor content root report boundary-level reuse/reject reasons through
   transitional `debug.cache_roots[].boundary` diagnostics.
@@ -35,11 +35,11 @@ Last updated: 2026-05-13
 
 ## P2 Runtime Migration
 
-- [ ] Convert layout containment from a standalone flag into boundary dependency metadata.
+- [x] Convert layout containment from a standalone flag into boundary dependency metadata.
 - [ ] Convert paint replay into boundary-owned scene-fragment reuse where possible.
-- [ ] Make prepaint diagnostics first-class per boundary.
+- [x] Make prepaint diagnostics first-class per boundary.
 - [ ] Remove duplicated or superseded debug counters after boundary diagnostics cover them.
-- [x] Replace code-editor-owned `RowSceneReplayPlan` with a transitional node-scoped prepaint output
+- [x] Replace code-editor-owned `RowSceneReplayPlan` with a boundary-owned prepaint output
   carrier.
 - [ ] Move the transitional replay-plan carrier into boundary-owned fragment state or delete it if a
   narrower direct replay contract replaces it.

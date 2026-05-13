@@ -61,15 +61,16 @@ mod ui_tree_text_input;
 mod ui_tree_view_cache;
 mod ui_tree_widget;
 mod util;
+mod view_boundary;
 use debug::{
     DebugLayoutStackFrame, DebugPaintStackFrame, DebugViewCacheRootRecord,
     DebugWidgetMeasureStackFrame, UiDebugHoverDeclarativeInvalidationCounts,
     UiDebugLayoutDirtySource,
 };
 pub use debug::{
-    PointerOcclusion, UiDebugCacheRootReuseReason, UiDebugCacheRootStats, UiDebugDirtyView,
-    UiDebugFrameStats, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved, UiDebugHitTest,
-    UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
+    PointerOcclusion, UiDebugBoundaryStats, UiDebugCacheRootReuseReason, UiDebugCacheRootStats,
+    UiDebugDirtyView, UiDebugFrameStats, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved,
+    UiDebugHitTest, UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
     UiDebugInvalidationSource, UiDebugInvalidationWalk, UiDebugLayerInfo,
     UiDebugLayoutDirtyDescendant, UiDebugLayoutEngineMeasureChildHotspot,
     UiDebugLayoutEngineMeasureHotspot, UiDebugLayoutEngineSolve, UiDebugLayoutHotspot,
@@ -122,6 +123,7 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
+use view_boundary::ViewBoundaryState;
 
 pub(crate) use dispatch_snapshot::{UiDispatchSnapshot, UiDispatchSnapshotCacheEntry};
 
@@ -361,6 +363,7 @@ pub struct UiTree<H: UiHost> {
     inspection_active: bool,
     paint_cache: PaintCacheState,
     interaction_cache: prepaint::InteractionCacheState,
+    view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
 
     dirty_cache_roots: HashSet<NodeId>,
     dirty_cache_root_reasons:

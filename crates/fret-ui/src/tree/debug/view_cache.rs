@@ -10,6 +10,18 @@ pub struct UiDebugCacheRootStats {
     pub reuse_reason: UiDebugCacheRootReuseReason,
 }
 
+#[derive(Debug, Clone)]
+pub struct UiDebugBoundaryStats {
+    pub id: NodeId,
+    pub parent: Option<NodeId>,
+    pub element: Option<GlobalElementId>,
+    pub kind: &'static str,
+    pub source: &'static str,
+    pub prepaint_owner: &'static str,
+    pub layout_dependency: &'static str,
+    pub layout_definite: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugCacheRootReuseReason {
     FirstMount,

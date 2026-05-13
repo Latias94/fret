@@ -41,6 +41,10 @@
     },
     {
       "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2B_VIEW_BOUNDARY_PREPAINT_STATE_SLICE_2026-05-13.md"
+    },
+    {
+      "role": "implementation",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md"
     },
     {
@@ -73,6 +77,7 @@
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2_CANVAS_PREPAINT_WINDOWED_ROWS_SLICE_2026-05-13.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2B_VIEW_BOUNDARY_PREPAINT_STATE_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md",
@@ -85,6 +90,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration. M2 prepaint ownership now includes a transitional node-scoped prepaint output carrier for row-scene replay plans, and M3 row-scene prepaint replay plans are no longer code-editor-owned. The final ViewBoundary store, final scene-fragment owner, and full boundary-owned deletion sweep are still pending."
+    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration. M2 prepaint ownership now includes a minimal ViewBoundaryState owner for typed prepaint outputs, and diagnostics now expose a top-level debug.boundaries[] list from direct UiTree::debug_boundary_stats() enumeration with cache-root outcome joins when present. M3 row-scene prepaint replay plans are no longer code-editor-owned. The final boundary-owned scene-fragment owner, boundary dirty-set migration, and full boundary-owned deletion sweep are still pending."
   }
 }

@@ -34,6 +34,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub cache_roots: Vec<UiCacheRootStatsV1>,
     #[serde(default)]
+    pub boundaries: Vec<UiBoundaryDiagnosticsV1>,
+    #[serde(default)]
     pub overlay_synthesis: Vec<UiOverlaySynthesisEventV1>,
     /// Viewport input forwarding events observed during the current frame.
     ///

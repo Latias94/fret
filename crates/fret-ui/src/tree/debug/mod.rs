@@ -32,7 +32,7 @@ pub use scroll::{
     UiDebugScrollOverflowObservationTelemetry, UiDebugScrollbarTelemetry,
 };
 pub use text::{UiDebugPaintTextPrepareHotspot, UiDebugTextConstraintsSnapshot};
-pub use view_cache::{UiDebugCacheRootReuseReason, UiDebugCacheRootStats};
+pub use view_cache::{UiDebugBoundaryStats, UiDebugCacheRootReuseReason, UiDebugCacheRootStats};
 pub use virtual_list::{
     UiDebugPrepaintAction, UiDebugPrepaintActionKind, UiDebugRetainedVirtualListReconcile,
     UiDebugRetainedVirtualListReconcileKind, UiDebugVirtualListWindow,

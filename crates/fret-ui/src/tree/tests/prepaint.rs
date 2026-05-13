@@ -264,3 +264,48 @@ fn prepaint_output_store_is_keyed_by_cache_root_prepaint_key() {
     assert_eq!(seen_prev.load(Ordering::SeqCst), 1);
     assert_eq!(ui.prepaint_output::<u32>(cache_root).copied(), Some(1));
 }
+
+#[test]
+fn prepaint_output_is_owned_by_view_boundary_state_and_removed_with_node() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(PrepaintOutputCounter {
+        seen_prev: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+    });
+    ui.set_root(root);
+    ui.add_child(root, cache_root);
+    ui.set_node_view_cache_flags(cache_root, true, true, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(ui.test_view_boundary_exists(cache_root));
+    assert_eq!(ui.test_view_boundary_parent(cache_root), None);
+    assert_eq!(
+        ui.test_view_boundary_prepaint_output::<u32>(cache_root)
+            .copied(),
+        Some(1)
+    );
+    assert_eq!(
+        ui.debug_boundary_prepaint_owner_for_node(cache_root),
+        "view_boundary_prepaint_state"
+    );
+    assert!(ui.test_view_boundary_allows_contained_relayout(cache_root));
+
+    let removed = ui.remove_subtree(&mut services, cache_root);
+    assert_eq!(removed, vec![cache_root]);
+    assert!(!ui.test_view_boundary_exists(cache_root));
+    assert_eq!(
+        ui.debug_boundary_prepaint_owner_for_node(cache_root),
+        "none"
+    );
+}

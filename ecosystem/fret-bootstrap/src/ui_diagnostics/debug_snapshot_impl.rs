@@ -159,6 +159,21 @@ impl UiTreeDebugSnapshotV1 {
                 )
             })
             .collect();
+        let cache_root_by_root: HashMap<u64, &UiCacheRootStatsV1> =
+            cache_roots.iter().map(|root| (root.root, root)).collect();
+        let boundaries: Vec<UiBoundaryDiagnosticsV1> = ui
+            .debug_boundary_stats()
+            .iter()
+            .map(|boundary| {
+                UiBoundaryDiagnosticsV1::from_boundary_stats(
+                    window,
+                    element_runtime_state,
+                    boundary,
+                    cache_root_by_root.get(&boundary.id.data().as_ffi()).copied(),
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
 
         let removed_subtrees: Vec<UiRemovedSubtreeV1> = ui
             .debug_removed_subtrees()
@@ -302,6 +317,7 @@ impl UiTreeDebugSnapshotV1 {
                 .map(|u| UiGlobalChangeUnobservedV1::from_unobserved(app, u))
                 .collect(),
             cache_roots,
+            boundaries,
             overlay_synthesis: app
                 .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
                 .and_then(|diag| diag.events_for_window(window, app.frame_id()))

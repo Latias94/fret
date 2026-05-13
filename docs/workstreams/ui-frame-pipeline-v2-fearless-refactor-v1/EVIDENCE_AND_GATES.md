@@ -209,6 +209,32 @@ Worst-bundle attribution:
 - `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `55/77us`
 - `code_editor.paint_perf` p50/p95 `us_row_text`: `0/5us`
 
+Most recent boundary-prepaint-state slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2B_VIEW_BOUNDARY_PREPAINT_STATE_SLICE_2026-05-13.md`
+- Focused correctness gates:
+  `cargo nextest run -p fret-ui tree::tests::prepaint::prepaint_output_is_owned_by_view_boundary_state_and_removed_with_node tree::tests::prepaint::prepaint_output_store_is_keyed_by_cache_root_prepaint_key declarative::tests::canvas::canvas_prepaint_output_is_visible_to_canvas_paint --no-fail-fast`
+  and
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes --no-fail-fast`
+- Compile/layering gates:
+  `cargo check -p fret-ui -p fret-ui-kit -p fret-code-editor -p fret-bootstrap --features syntax-rust`
+  and `python3 tools/check_layering.py`
+
+Observed result:
+
+- `fret-ui` focused nextest: `3 passed, 928 skipped`.
+- `fret-bootstrap` boundary diagnostics nextest: `4 passed, 97 skipped`.
+- `cargo check`: passed.
+- `tools/check_layering.py`: passed.
+
+This slice is correctness/ownership work, not a new perf claim. It moves typed prepaint output
+storage from `Node` to `ViewBoundaryState::prepaint`, updates cache-root boundary diagnostics to
+report `prepaint_owner=view_boundary_prepaint_state`, builds top-level `debug.boundaries[]` from
+direct `UiTree::debug_boundary_stats()` enumeration, and introduces minimal boundary layout
+dependency metadata for contained-relayout eligibility. The final scene-fragment store, boundary
+dirty-set migration, and the 20-30% p95/max closeout proof are still pending.
+
 ## Correctness Gates
 
 Use focused tests first:

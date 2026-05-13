@@ -47,6 +47,7 @@ impl<H: UiHost> UiTree<H> {
         if let Some(n) = self.nodes.get_mut(node) {
             n.widget_prepaint_enabled = enabled;
         }
+        self.sync_view_boundary_state_for_node(node);
     }
 
     pub(crate) fn node_element(&self, node: NodeId) -> Option<GlobalElementId> {

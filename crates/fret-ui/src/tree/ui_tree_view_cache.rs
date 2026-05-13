@@ -110,9 +110,7 @@ impl<H: UiHost> UiTree<H> {
         //
         // This mirrors the same conditions used by invalidation propagation to truncate at cache
         // boundaries.
-        n.view_cache.contained_layout
-            && n.view_cache.layout_definite
-            && n.bounds.size != Size::default()
+        self.boundary_allows_contained_relayout(node) && n.bounds.size != Size::default()
     }
 
     pub(crate) fn view_cache_node_needs_rerender(&self, node: NodeId) -> bool {
@@ -143,6 +141,7 @@ impl<H: UiHost> UiTree<H> {
                 return;
             }
             n.view_cache = next;
+            self.sync_view_boundary_state_for_node(node);
         }
     }
 

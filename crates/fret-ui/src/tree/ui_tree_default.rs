@@ -120,6 +120,7 @@ impl<H: UiHost> Default for UiTree<H> {
             inspection_active: false,
             paint_cache: PaintCacheState::default(),
             interaction_cache: prepaint::InteractionCacheState::default(),
+            view_boundaries: SecondaryMap::new(),
             dirty_cache_roots: HashSet::new(),
             dirty_cache_root_reasons: HashMap::new(),
             last_redraw_request_tick: None,
