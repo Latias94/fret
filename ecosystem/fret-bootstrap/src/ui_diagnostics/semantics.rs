@@ -141,6 +141,8 @@ pub struct UiSemanticsNodeV1 {
     pub controls: Vec<u64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub inline_spans: Vec<UiSemanticsInlineSpanV1>,
+    #[serde(default, skip_serializing_if = "UiSemanticsScrollV1::is_default")]
+    pub scroll: UiSemanticsScrollV1,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,6 +151,22 @@ pub struct UiSemanticsInlineSpanV1 {
     pub role: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tag: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct UiSemanticsScrollV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_max: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -205,6 +223,17 @@ impl UiSemanticsFlagsV1 {
             && v.invalid.is_none()
             && v.live.is_none()
             && !v.live_atomic
+    }
+}
+
+impl UiSemanticsScrollV1 {
+    fn is_default(v: &Self) -> bool {
+        v.x.is_none()
+            && v.x_min.is_none()
+            && v.x_max.is_none()
+            && v.y.is_none()
+            && v.y_min.is_none()
+            && v.y_max.is_none()
     }
 }
 
@@ -364,6 +393,14 @@ impl UiSemanticsNodeV1 {
                 .iter()
                 .map(|span| UiSemanticsInlineSpanV1::from_span(span, redact_text, max_string_bytes))
                 .collect(),
+            scroll: UiSemanticsScrollV1 {
+                x: node.extra.scroll.x,
+                x_min: node.extra.scroll.x_min,
+                x_max: node.extra.scroll.x_max,
+                y: node.extra.scroll.y,
+                y_min: node.extra.scroll.y_min,
+                y_max: node.extra.scroll.y_max,
+            },
         }
     }
 }
@@ -398,6 +435,7 @@ mod tests {
             described_by: Vec::new(),
             controls: Vec::new(),
             inline_spans: Vec::new(),
+            scroll: UiSemanticsScrollV1::default(),
         };
 
         let v = serde_json::to_value(&node).expect("serialize");
@@ -408,6 +446,7 @@ mod tests {
         assert!(v.get("controls").is_none());
         assert!(v.get("inline_spans").is_none());
         assert!(v.get("test_id").is_none());
+        assert!(v.get("scroll").is_none());
     }
 
     #[test]
@@ -421,6 +460,7 @@ mod tests {
         assert!(UiSemanticsFlagsV1::is_default(&parsed.flags));
         assert!(UiSemanticsActionsV1::is_default(&parsed.actions));
         assert!(parsed.inline_spans.is_empty());
+        assert!(UiSemanticsScrollV1::is_default(&parsed.scroll));
     }
 
     #[test]
@@ -452,6 +492,17 @@ mod tests {
                 role: fret_core::SemanticsRole::Link,
                 tag: Some("settings://workspace".to_string()),
             }],
+            extra: fret_core::SemanticsNodeExtra {
+                scroll: fret_core::SemanticsScroll {
+                    x: Some(12.5),
+                    x_min: Some(0.0),
+                    x_max: Some(240.0),
+                    y: Some(8.0),
+                    y_min: Some(0.0),
+                    y_max: Some(480.0),
+                },
+                ..Default::default()
+            },
         };
 
         let exported = UiSemanticsNodeV1::from_node(&node, false, 512);
@@ -461,6 +512,17 @@ mod tests {
         assert_eq!(
             exported.inline_spans[0].tag.as_deref(),
             Some("settings://workspace")
+        );
+        assert_eq!(
+            exported.scroll,
+            UiSemanticsScrollV1 {
+                x: Some(12.5),
+                x_min: Some(0.0),
+                x_max: Some(240.0),
+                y: Some(8.0),
+                y_min: Some(0.0),
+                y_max: Some(480.0),
+            }
         );
     }
 }
