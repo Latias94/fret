@@ -13322,3 +13322,18 @@ Decision:
 - Keep this direct threshold gate instead of a checked-in baseline for now, because the purpose is
   protecting the architectural invariant that stable topology must not rebuild 20k-node dispatch
   snapshot forests on every pointer move.
+
+Follow-up tool surface:
+- Added `tools/perf/diag_hit_test_torture_dispatch_gate.py` as the short, cross-platform helper for
+  this contract. It wraps the same `diag perf` thresholds, defaults to repeat=7, writes
+  `summary.json`/`gate.summary.json`, and keeps the raw `check.perf_thresholds.json` output as the
+  source of truth.
+
+Helper validation:
+- `python -m py_compile tools/perf/diag_hit_test_torture_dispatch_gate.py`
+- `python tools/perf/diag_hit_test_torture_dispatch_gate.py --help`
+- `python tools/perf/diag_hit_test_torture_dispatch_gate.py --repeat 1 --out-dir target/fret-diag-hit-test-torture-dispatch-gate-helper-smoke-r2`
+- Result:
+  `target/fret-diag-hit-test-torture-dispatch-gate-helper-smoke-r2/summary.json` passed with
+  `failures=0`, pointer dispatch/hit-test/global-change=`98us/15us/0`, and worst bundle
+  `target/fret-diag-hit-test-torture-dispatch-gate-helper-smoke-r2/1778637860996/bundle.schema2.json`.

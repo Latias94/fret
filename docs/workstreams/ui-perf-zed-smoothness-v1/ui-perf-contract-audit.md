@@ -303,6 +303,8 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
   - Repeat=7 formal gate:
     `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7 --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-dispatch-us 250 --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+  - Helper entrypoint:
+    `python tools/perf/diag_hit_test_torture_dispatch_gate.py --repeat 7`.
   - Repeat=7 threshold report:
     `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json`
     has `failures=[]` with thresholds dispatch/hit-test/global-change=`250us/100us/0`.
