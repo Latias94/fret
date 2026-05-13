@@ -1441,8 +1441,7 @@ fn combobox_with_patch<H: UiHost>(
             })
             .map(|it| (it.label.clone(), true))
             .unwrap_or((placeholder.clone(), false));
-        let show_trigger = if device_shell_responsive
-            && trigger_variant == ComboboxTriggerVariant::Button
+        let show_trigger = if trigger_variant == ComboboxTriggerVariant::Button
             && !show_trigger_explicit
         {
             false
@@ -4026,7 +4025,7 @@ mod tests {
     }
 
     #[test]
-    fn responsive_button_trigger_hides_icon_unless_explicit() {
+    fn button_trigger_hides_icon_unless_explicit() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -4062,7 +4061,6 @@ mod tests {
                     vec![
                         Combobox::new(model.clone(), open.clone())
                             .a11y_label("Status")
-                            .device_shell_responsive(true)
                             .test_id_prefix("combobox-responsive-button-trigger")
                             .items([ComboboxItem::new("todo", "Todo")])
                             .trigger(
@@ -4089,7 +4087,7 @@ mod tests {
                     .as_deref()
                     .is_some_and(|id| id == "combobox-responsive-button-trigger-trigger-icon")
             }),
-            "expected responsive Button trigger to match upstream text-only example by default"
+            "expected Button trigger to match upstream text-only examples by default"
         );
 
         render_frame(&mut ui, &mut app, Some(true));
@@ -4200,11 +4198,14 @@ mod tests {
                             "Enterprise Observability Platform With Extremely Long Label",
                         )])
                         .into_element_parts(cx, |_cx| {
-                            vec![ComboboxPart::trigger(
-                                ComboboxTrigger::new()
-                                    .variant(ComboboxTriggerVariant::Button)
-                                    .width_px(Px(180.0)),
-                            )]
+                            vec![
+                                ComboboxPart::trigger(
+                                    ComboboxTrigger::new()
+                                        .variant(ComboboxTriggerVariant::Button)
+                                        .width_px(Px(180.0)),
+                                ),
+                                ComboboxPart::input(ComboboxInput::new().show_trigger(true)),
+                            ]
                         }),
                 ]
             },

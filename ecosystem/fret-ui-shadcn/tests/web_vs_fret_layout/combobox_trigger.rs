@@ -6,6 +6,7 @@ use fret_ui_shadcn::facade as shadcn;
 enum LayoutComboboxTriggerRecipe {
     DemoTrigger,
     ResponsiveTrigger,
+    PopoverTrigger,
     DemoLongSelectedTrigger,
 }
 
@@ -190,10 +191,11 @@ fn web_combobox_trigger(theme: &WebGoldenTheme, recipe: LayoutComboboxTriggerRec
             n.tag == "button" && n.attrs.get("role").is_some_and(|role| role == "combobox")
         })
         .expect("web combobox-demo trigger"),
-        LayoutComboboxTriggerRecipe::ResponsiveTrigger => find_first(&theme.root, &|n| {
+        LayoutComboboxTriggerRecipe::ResponsiveTrigger
+        | LayoutComboboxTriggerRecipe::PopoverTrigger => find_first(&theme.root, &|n| {
             n.tag == "button" && class_has_token(n, "w-[150px]")
         })
-        .expect("web combobox-responsive trigger"),
+        .expect("web combobox text-only Button trigger"),
     }
 }
 
@@ -211,7 +213,8 @@ fn render_fret_combobox_trigger(
                 .models_mut()
                 .insert(Some(Arc::<str>::from("enterprise-observability-platform"))),
             LayoutComboboxTriggerRecipe::DemoTrigger
-            | LayoutComboboxTriggerRecipe::ResponsiveTrigger => {
+            | LayoutComboboxTriggerRecipe::ResponsiveTrigger
+            | LayoutComboboxTriggerRecipe::PopoverTrigger => {
                 cx.app.models_mut().insert(None::<Arc<str>>)
             }
         };
@@ -231,9 +234,21 @@ fn render_fret_combobox_trigger(
                         .variant(shadcn::ComboboxTriggerVariant::Button)
                         .width_px(Px(200.0)),
                 )
-                .input(shadcn::ComboboxInput::new().placeholder("Select framework...")),
+                .input(
+                    shadcn::ComboboxInput::new()
+                        .placeholder("Select framework...")
+                        .show_trigger(true),
+                ),
             LayoutComboboxTriggerRecipe::ResponsiveTrigger => combobox
                 .device_shell_responsive(true)
+                .items(status_items())
+                .trigger(
+                    shadcn::ComboboxTrigger::new()
+                        .variant(shadcn::ComboboxTriggerVariant::Button)
+                        .width_px(Px(150.0)),
+                )
+                .input(shadcn::ComboboxInput::new().placeholder("+ Set status")),
+            LayoutComboboxTriggerRecipe::PopoverTrigger => combobox
                 .items(status_items())
                 .trigger(
                     shadcn::ComboboxTrigger::new()
@@ -251,7 +266,11 @@ fn render_fret_combobox_trigger(
                         .variant(shadcn::ComboboxTriggerVariant::Button)
                         .width_px(Px(200.0)),
                 )
-                .input(shadcn::ComboboxInput::new().placeholder("Select framework...")),
+                .input(
+                    shadcn::ComboboxInput::new()
+                        .placeholder("Select framework...")
+                        .show_trigger(true),
+                ),
         };
 
         vec![combobox.into_element(cx)]

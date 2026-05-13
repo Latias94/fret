@@ -523,8 +523,8 @@ It covers:
 
 - `combobox-demo` trigger width/height, right icon size, right inset, center-y alignment, and label
   bounds staying before the icon;
-- `combobox-responsive` trigger width/height and the upstream text-only trigger shape, where the
-  label owns the full content lane and no icon slot is rendered;
+- `combobox-responsive` and `combobox-popover` trigger width/height and the upstream text-only
+  trigger shape, where the label owns the full content lane and no icon slot is rendered;
 - a long selected-label case that keeps truncation pressure visible while asserting the label does
   not overlap the icon slot.
 - trigger label `fontWeight` against the web golden's computed style, so chrome drift can be caught
@@ -546,12 +546,19 @@ Finding from this sweep:
 - UI Gallery docs-surface inspection exposed a diagnostics coverage gap: the Combobox page had
   `Long Text` and `RTL Long Text` follow-up sections, but the docs smoke script did not wait for
   them. The smoke gate now includes both truncation-oriented sections.
+- Adding `combobox-popover.trigger_text_only` exposed that the responsive-only icon default was
+  still too narrow. Upstream Button-trigger combobox examples are text-only by default; the simple
+  `combobox-demo` is the special case that explicitly authors an icon. Fret now treats
+  `ComboboxTriggerVariant::Button` as text-only unless `ComboboxInput::show_trigger(true)` is
+  explicitly set, and the Usage/Long Text follow-ups opt into the icon where their examples need
+  truncation-plus-icon coverage.
 
 Validation:
 
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
-- `cargo test -p fret-ui-shadcn --lib responsive_button_trigger_hides_icon_unless_explicit -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib button_trigger_hides_icon_unless_explicit -- --nocapture`
 - `cargo test -p fret-ui-shadcn --lib combobox_show_trigger_hides_chevron_icon -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox_trigger_long_label_stays_before_chevron -- --nocapture`
 - `cargo test -p fret-ui-gallery --test combobox_docs_surface -- --nocapture`
 
 Next uncovered combobox slice: add a screenshot/paint-level or icon-identity gate for the

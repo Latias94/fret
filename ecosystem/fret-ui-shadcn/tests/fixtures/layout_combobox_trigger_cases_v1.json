@@ -16,6 +16,13 @@
       "icon": "absent"
     },
     {
+      "id": "combobox-popover.trigger_text_only",
+      "web_name": "combobox-popover",
+      "recipe": "popover_trigger",
+      "label": "+ Set status",
+      "icon": "absent"
+    },
+    {
       "id": "combobox-demo.long_selected_label_before_icon",
       "web_name": "combobox-demo",
       "recipe": "demo_long_selected_trigger",

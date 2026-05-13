@@ -27,7 +27,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ComboboxTriggerVariant::Button)
                 .width_px(Px(200.0)),
         )
-        .input(shadcn::ComboboxInput::new().placeholder("Select framework..."))
+        .input(
+            shadcn::ComboboxInput::new()
+                .placeholder("Select framework...")
+                .show_trigger(true),
+        )
         .into_element(cx)
 }
 // endregion: example
