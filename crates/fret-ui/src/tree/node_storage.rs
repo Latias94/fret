@@ -100,28 +100,39 @@ impl PrepaintOutputs {
     }
 
     pub(super) fn set<T: Any>(&mut self, value: T) {
-        let ty = TypeId::of::<T>();
+        self.set_box(TypeId::of::<T>(), Box::new(value));
+    }
+
+    pub(super) fn set_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
         if let Some((_, existing)) = self.values.iter_mut().find(|(id, _)| *id == ty) {
-            *existing = Box::new(value);
+            *existing = value;
             return;
         }
-        self.values.push((ty, Box::new(value)));
+        self.values.push((ty, value));
     }
 
     pub(super) fn get<T: Any>(&self) -> Option<&T> {
-        let ty = TypeId::of::<T>();
-        self.values
-            .iter()
-            .find(|(id, _)| *id == ty)
-            .and_then(|(_, value)| value.downcast_ref::<T>())
+        self.get_any(TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
     }
 
     pub(super) fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
-        let ty = TypeId::of::<T>();
+        self.get_any_mut(TypeId::of::<T>())
+            .and_then(|value| value.downcast_mut::<T>())
+    }
+
+    pub(super) fn get_any(&self, ty: TypeId) -> Option<&dyn Any> {
+        self.values
+            .iter()
+            .find(|(id, _)| *id == ty)
+            .map(|(_, value)| value.as_ref())
+    }
+
+    pub(super) fn get_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
         self.values
             .iter_mut()
             .find(|(id, _)| *id == ty)
-            .and_then(|(_, value)| value.downcast_mut::<T>())
+            .map(|(_, value)| value.as_mut())
     }
 }
 

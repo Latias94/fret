@@ -73,10 +73,13 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     _theme_revision: u64,
     _constraints: CanvasTextConstraints,
     _scale_factor: f32,
-) {
+) -> RowSceneReplayPlan {
     let _ = content_bounds;
-    st.reset_row_scene_replay_plan(st.paint_perf_frame.frame_seq);
     let _ = frame;
+    RowSceneReplayPlan {
+        frame_seq: st.paint_perf_frame.frame_seq,
+        entries: VecDeque::new(),
+    }
 }
 
 #[cfg(feature = "syntax")]
@@ -91,12 +94,15 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     theme_revision: u64,
     constraints: CanvasTextConstraints,
     scale_factor: f32,
-) {
+) -> RowSceneReplayPlan {
     let frame_seq = st.paint_perf_frame.frame_seq;
-    st.reset_row_scene_replay_plan(frame_seq);
+    let mut plan = RowSceneReplayPlan {
+        frame_seq,
+        entries: VecDeque::new(),
+    };
 
     if st.preedit.is_some() {
-        return;
+        return plan;
     }
 
     ensure_row_scene_cache_fresh(st);
@@ -108,7 +114,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     let code_font_feature_policy_rev = st.code_font_feature_policy_rev;
     let row_count = st.display_map.row_count();
     if row_count == 0 {
-        return;
+        return plan;
     }
 
     let end = frame.visible_end.min(row_count.saturating_sub(1));
@@ -177,7 +183,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         let Some(rect) = frame.row_rect(content_bounds, row) else {
             continue;
         };
-        st.push_row_scene_replay_plan_entry(RowSceneReplayPlanEntry {
+        plan.entries.push_back(RowSceneReplayPlanEntry {
             row,
             rect,
             row_range,
@@ -216,6 +222,8 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             started,
         );
     }
+
+    plan
 }
 
 pub(super) fn replay_row_scene_plan_entry(

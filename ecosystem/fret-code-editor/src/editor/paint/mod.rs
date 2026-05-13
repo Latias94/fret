@@ -89,7 +89,7 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame(
     fg: Color,
     theme_revision: u64,
     scale_factor: f32,
-) {
+) -> RowSceneReplayPlan {
     let width = Px(content_bounds.size.width.0.max(0.0));
     let stable_max_width = if cell_w.0 > 0.01 {
         Px((cell_w.0 * 512.0).max(width.0))
@@ -111,7 +111,29 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame(
         theme_revision,
         constraints,
         scale_factor,
-    );
+    )
+}
+
+pub(super) fn take_row_scene_replay_plan_entry(
+    plan: Option<&mut RowSceneReplayPlan>,
+    frame_seq: u64,
+    row: usize,
+) -> Option<RowSceneReplayPlanEntry> {
+    let plan = plan?;
+    if plan.frame_seq != frame_seq {
+        plan.entries.clear();
+        return None;
+    }
+
+    while plan.entries.front().is_some_and(|entry| entry.row < row) {
+        let _ = plan.entries.pop_front();
+    }
+
+    if plan.entries.front().is_some_and(|entry| entry.row == row) {
+        return plan.entries.pop_front();
+    }
+
+    None
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -141,7 +163,11 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
-    let replay_plan_entry = st.take_row_scene_replay_plan_entry(row);
+    let replay_plan_entry = take_row_scene_replay_plan_entry(
+        painter.prepaint_output_mut::<RowSceneReplayPlan>(),
+        st.paint_perf_frame.frame_seq,
+        row,
+    );
     let (row_range, line, row_folds, row_preedit_range, row_spans) = if let Some(entry) =
         replay_plan_entry
             .as_ref()

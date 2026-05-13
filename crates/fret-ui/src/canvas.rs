@@ -1,4 +1,4 @@
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -128,6 +128,9 @@ pub(crate) trait UiCanvasPrepaintHost {
     fn theme(&self) -> &Theme;
     fn request_redraw(&mut self);
     fn request_animation_frame(&mut self);
+    fn set_output_box(&mut self, ty: TypeId, value: Box<dyn Any>);
+    fn output_any(&self, ty: TypeId) -> Option<&dyn Any>;
+    fn output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
 }
 
 pub(crate) struct UiCanvasPrepaintHostAdapter<'a, 'b, H: UiHost> {
@@ -160,6 +163,20 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
     fn request_animation_frame(&mut self) {
         self.cx.request_animation_frame();
     }
+
+    fn set_output_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
+        self.cx
+            .tree
+            .set_prepaint_output_box(self.cx.node, ty, value);
+    }
+
+    fn output_any(&self, ty: TypeId) -> Option<&dyn Any> {
+        self.cx.tree.prepaint_output_any(self.cx.node, ty)
+    }
+
+    fn output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
+        self.cx.tree.prepaint_output_any_mut(self.cx.node, ty)
+    }
 }
 
 pub struct CanvasPrepaintCx<'a> {
@@ -190,6 +207,22 @@ impl<'a> CanvasPrepaintCx<'a> {
     pub fn request_animation_frame(&mut self) {
         self.host.request_animation_frame();
     }
+
+    pub fn set_output<T: Any>(&mut self, value: T) {
+        self.host.set_output_box(TypeId::of::<T>(), Box::new(value));
+    }
+
+    pub fn output<T: Any>(&self) -> Option<&T> {
+        self.host
+            .output_any(TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    pub fn output_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.host
+            .output_any_mut(TypeId::of::<T>())
+            .and_then(|value| value.downcast_mut::<T>())
+    }
 }
 
 /// Object-safe paint surface for declarative canvas paint handlers.
@@ -213,6 +246,9 @@ pub(crate) trait UiCanvasHost {
 
     fn scene(&mut self) -> &mut Scene;
     fn services_and_scene(&mut self) -> (&mut dyn fret_core::UiServices, &mut Scene);
+
+    fn prepaint_output_any(&self, ty: TypeId) -> Option<&dyn Any>;
+    fn prepaint_output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
 }
 
 pub(crate) struct UiCanvasHostAdapter<'a, 'b, H: UiHost> {
@@ -285,6 +321,14 @@ impl<'a, 'b, H: UiHost> UiCanvasHost for UiCanvasHostAdapter<'a, 'b, H> {
 
     fn services_and_scene(&mut self) -> (&mut dyn fret_core::UiServices, &mut Scene) {
         (self.cx.services, self.cx.scene)
+    }
+
+    fn prepaint_output_any(&self, ty: TypeId) -> Option<&dyn Any> {
+        self.cx.tree.prepaint_output_any(self.cx.node, ty)
+    }
+
+    fn prepaint_output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
+        self.cx.tree.prepaint_output_any_mut(self.cx.node, ty)
     }
 }
 
@@ -401,6 +445,18 @@ impl<'a> CanvasPainter<'a> {
     /// surfaces that need text geometry queries (selection rects, hit-testing, etc.).
     pub fn services_and_scene(&mut self) -> (&mut dyn fret_core::UiServices, &mut Scene) {
         self.host.services_and_scene()
+    }
+
+    pub fn prepaint_output<T: Any>(&self) -> Option<&T> {
+        self.host
+            .prepaint_output_any(TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    pub fn prepaint_output_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.host
+            .prepaint_output_any_mut(TypeId::of::<T>())
+            .and_then(|value| value.downcast_mut::<T>())
     }
 
     pub fn with_clip_rect<R>(&mut self, rect: Rect, f: impl FnOnce(&mut Self) -> R) -> R {

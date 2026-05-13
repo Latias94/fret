@@ -1,5 +1,5 @@
 use super::*;
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
@@ -148,11 +148,35 @@ impl<H: UiHost> UiTree<H> {
         n.prepaint_outputs.set(value);
     }
 
+    pub(crate) fn set_prepaint_output_box(
+        &mut self,
+        node: NodeId,
+        ty: TypeId,
+        value: Box<dyn Any>,
+    ) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.prepaint_outputs.set_box(ty, value);
+    }
+
     pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
         self.nodes.get(node)?.prepaint_outputs.get::<T>()
     }
 
     pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
         self.nodes.get_mut(node)?.prepaint_outputs.get_mut::<T>()
+    }
+
+    pub(crate) fn prepaint_output_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
+        self.nodes.get(node)?.prepaint_outputs.get_any(ty)
+    }
+
+    pub(crate) fn prepaint_output_any_mut(
+        &mut self,
+        node: NodeId,
+        ty: TypeId,
+    ) -> Option<&mut dyn Any> {
+        self.nodes.get_mut(node)?.prepaint_outputs.get_any_mut(ty)
     }
 }

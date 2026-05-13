@@ -1069,7 +1069,7 @@ impl CodeEditor {
                     let theme_revision = cx.theme().revision();
                     let cell_w = cell_w.get();
                     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                    paint::prepaint_row_scene_replay_plan_for_frame(
+                    let plan = paint::prepaint_row_scene_replay_plan_for_frame(
                         &mut editor_state.borrow_mut(),
                         frame,
                         bounds,
@@ -1080,6 +1080,7 @@ impl CodeEditor {
                         theme_revision,
                         cx.scale_factor(),
                     );
+                    cx.set_output(plan);
                 });
                 hook
             };

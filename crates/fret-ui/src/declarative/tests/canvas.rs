@@ -193,6 +193,81 @@ fn canvas_prepaint_hook_runs_before_paint_without_view_cache_root() {
 }
 
 #[test]
+fn canvas_prepaint_output_is_visible_to_canvas_paint() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let seen = Arc::new(AtomicUsize::new(0));
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-prepaint-output",
+        |cx| {
+            let seen = seen.clone();
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                move |cx| {
+                    let prev = cx.output::<usize>().copied().unwrap_or(0);
+                    cx.set_output(prev.saturating_add(1));
+                },
+                move |p| {
+                    seen.store(
+                        p.prepaint_output::<usize>().copied().unwrap_or(0),
+                        Ordering::SeqCst,
+                    );
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(seen.load(Ordering::SeqCst), 1);
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        1,
+        "stable frames should preserve the previous canvas prepaint output"
+    );
+
+    app.advance_frame();
+    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        2,
+        "repainted frames with the same prepaint key should observe previous canvas output"
+    );
+
+    app.advance_frame();
+    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.layout_all(&mut app, &mut services, bounds, 2.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 2.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        1,
+        "changing the canvas prepaint key should reset canvas output state"
+    );
+}
+
+#[test]
 fn canvas_hosts_text_and_releases_on_cleanup() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
