@@ -4696,6 +4696,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-scroll-to-rtl-field",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "checkbox",
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the default Checkbox page to the RTL section and then samples the content viewport with no scripted input.",
+        "The final idle-stability assertion fails if the viewport keeps drifting or oscillating after the RTL section is visible."
+      ]
+    },
+    {
       "id": "ui-gallery-chrome-torture-layout",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-layout.json",
       "required_capabilities": [],

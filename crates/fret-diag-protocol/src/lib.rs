@@ -991,6 +991,25 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Assert that a target's structured semantics scroll field stays idle-stable for `frames`
+    /// consecutive frames with no scripted input.
+    ///
+    /// Unlike `wait_semantics_scroll_stable`, this is an oracle step: it first samples the current
+    /// value as a baseline, then fails if any later sample drifts too far from that baseline or if a
+    /// single-frame delta exceeds the allowed threshold. This catches post-scroll oscillation/jitter
+    /// that may already look "stable enough" at a short wait boundary.
+    AssertSemanticsScrollIdleStable {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        field: UiSemanticsScrollFieldV1,
+        #[serde(default = "default_semantics_scroll_idle_stable_frames")]
+        frames: u32,
+        #[serde(default = "default_semantics_scroll_idle_stable_max_delta")]
+        max_delta: f64,
+        #[serde(default = "default_semantics_scroll_idle_stable_max_total_delta")]
+        max_total_delta: f64,
+    },
     EnsureVisible {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -1525,6 +1544,18 @@ fn default_semantics_scroll_stable_frames() -> u32 {
 
 fn default_semantics_scroll_stable_max_delta() -> f64 {
     1.0
+}
+
+fn default_semantics_scroll_idle_stable_frames() -> u32 {
+    30
+}
+
+fn default_semantics_scroll_idle_stable_max_delta() -> f64 {
+    0.25
+}
+
+fn default_semantics_scroll_idle_stable_max_total_delta() -> f64 {
+    0.5
 }
 
 fn default_scroll_motion_field() -> UiSemanticsScrollFieldV1 {
@@ -3069,6 +3100,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scroll_motion_trace: Vec<UiScrollMotionTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub semantics_scroll_idle_stable_trace: Vec<UiSemanticsScrollIdleStableTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -3306,6 +3339,29 @@ pub struct UiScrollMotionTraceEntryV1 {
     pub max_target_reverse_px: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_scroll_reverse_px: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsScrollIdleStableTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    pub field: UiSemanticsScrollFieldV1,
+    pub sample_count: u32,
+    pub required_samples: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub baseline_value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_delta: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_delta: Option<f64>,
+    pub max_delta: f64,
+    pub max_total_delta: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }
@@ -4811,6 +4867,38 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected wait_semantics_scroll_stable"),
+        }
+    }
+
+    #[test]
+    fn step_assert_semantics_scroll_idle_stable_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "assert_semantics_scroll_idle_stable",
+            "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+            "field": "y"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::AssertSemanticsScrollIdleStable {
+                window,
+                target,
+                field,
+                frames,
+                max_delta,
+                max_total_delta,
+            } => {
+                assert!(window.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+                assert_eq!(field, UiSemanticsScrollFieldV1::Y);
+                assert_eq!(frames, default_semantics_scroll_idle_stable_frames());
+                assert_eq!(max_delta, default_semantics_scroll_idle_stable_max_delta());
+                assert_eq!(
+                    max_total_delta,
+                    default_semantics_scroll_idle_stable_max_total_delta()
+                );
+            }
+            _ => panic!("expected assert_semantics_scroll_idle_stable"),
         }
     }
 

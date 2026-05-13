@@ -313,3 +313,20 @@ Status: complete
   the gap where `exists` could match an offscreen semantics node that was not actually clickable.
 - The overlay/focus diagnostics suite now includes the public Combobox outside-press gate, and the
   six-script suite passes against the release UI Gallery binary.
+
+## M27: Scroll and Virtual-List Runtime Gate Slice
+
+Status: complete for first runtime gates
+
+- The dev-only Virtual List Torture page now has a promoted diagnostics gate for small-scroll
+  retained-window stability. The gate resets diagnostics on the settled page and asserts
+  `virtual_list_window_shift_samples_len_le max=0` before and after small wheel deltas.
+- The default Checkbox page now has a promoted RTL scroll idle-stability gate. After scrolling to
+  the RTL checkbox section, `assert_semantics_scroll_idle_stable` samples the content viewport for
+  45 no-input frames and fails on single-frame drift or total drift.
+- The first pass exposed two harness defects, not a runtime mechanism defect:
+  the Virtual List script targeted a dev-only page without recording the feature precondition and
+  used the wrong scroll semantics node; the new idle-stability trace was initially dropped from
+  passed script evidence when a following capture step started.
+- Current runtime evidence did not reproduce the reported RTL scroll jitter: the Checkbox gate
+  sampled `y=2495.999755859375` for all 45 frames with `frame_delta=0.0` and `total_delta=0.0`.

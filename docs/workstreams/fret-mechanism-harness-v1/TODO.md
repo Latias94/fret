@@ -55,8 +55,10 @@ date: 2026-05-12
   context-menu nested submenu keyboard restore focused gate.
 - [x] Extend the roving focus interaction fixture with printable-key typeahead dispatch,
   no-match preservation, wrapper traversal, and call-count metrics.
-- [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
+- [x] Add real UI Gallery scroll/virtual-list diagnostics gates once the smallest stable demo pages
   and selectors are identified.
+  - Result: the dev-only Virtual List Torture page now gates small-scroll no-window-shift telemetry,
+    and the default Checkbox page now gates post-scroll RTL viewport idle stability.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes

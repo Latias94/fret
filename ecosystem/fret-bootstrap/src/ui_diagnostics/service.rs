@@ -435,6 +435,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::ClickSelectableTextSpanStable { target, .. }
             | UiActionStepV2::WaitBoundsStable { target, .. }
             | UiActionStepV2::WaitSemanticsScrollStable { target, .. }
+            | UiActionStepV2::AssertSemanticsScrollIdleStable { target, .. }
             | UiActionStepV2::EnsureVisible { target, .. }
             | UiActionStepV2::ScrollIntoView { target, .. }
             | UiActionStepV2::TypeTextInto { target, .. }
@@ -762,6 +763,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
                 | UiActionStepV2::WaitBoundsStable { window, .. }
                 | UiActionStepV2::WaitSemanticsScrollStable { window, .. }
+                | UiActionStepV2::AssertSemanticsScrollIdleStable { window, .. }
                 | UiActionStepV2::EnsureVisible { window, .. }
                 | UiActionStepV2::ScrollIntoView { window, .. }
                 | UiActionStepV2::TypeTextInto { window, .. }
@@ -814,6 +816,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
             | UiActionStepV2::WaitBoundsStable { window, .. }
             | UiActionStepV2::WaitSemanticsScrollStable { window, .. }
+            | UiActionStepV2::AssertSemanticsScrollIdleStable { window, .. }
             | UiActionStepV2::EnsureVisible { window, .. }
             | UiActionStepV2::ScrollIntoView { window, .. }
             | UiActionStepV2::TypeTextInto { window, .. }
@@ -1729,6 +1732,7 @@ mod service_tests {
             click_stable_trace: Vec::new(),
             bounds_stable_trace: Vec::new(),
             scroll_motion_trace: Vec::new(),
+            semantics_scroll_idle_stable_trace: Vec::new(),
             focus_trace: Vec::new(),
             last_clipboard_write_completion: None,
             shortcut_routing_trace: Vec::new(),
@@ -1784,6 +1788,47 @@ mod service_tests {
             mouse_buttons_override_issued: down_issued,
             release_armed: false,
         }
+    }
+
+    #[test]
+    fn step_start_retains_semantics_scroll_idle_stable_trace_for_passed_evidence() {
+        let svc = UiDiagnosticsService::default();
+        let app = App::new();
+        let window = app_window(1);
+        let mut active = active_script_for_step(UiActionStepV2::CaptureBundle { label: None, max_snapshots: None });
+        active.next_step = 1;
+        active.semantics_scroll_idle_stable_trace.push(
+            UiSemanticsScrollIdleStableTraceEntryV1 {
+                step_index: 0,
+                selector: UiSelectorV1::TestId {
+                    id: "ui-gallery-content-viewport".to_string(),
+                    root_z_index: None,
+                },
+                field: fret_diag_protocol::UiSemanticsScrollFieldV1::Y,
+                sample_count: 45,
+                required_samples: 45,
+                baseline_value: Some(120.0),
+                value: Some(120.0),
+                frame_delta: Some(0.0),
+                total_delta: Some(0.0),
+                max_delta: 0.25,
+                max_total_delta: 0.5,
+                bounds: None,
+                note: Some("assert_semantics_scroll_idle_stable.sample".to_string()),
+            },
+        );
+
+        let step = UiActionStepV2::CaptureBundle {
+            label: None,
+            max_snapshots: None,
+        };
+        svc.note_step_start_and_scope_evidence(&app, window, 1, &step, &mut active);
+
+        assert_eq!(active.semantics_scroll_idle_stable_trace.len(), 1);
+        assert_eq!(
+            active.semantics_scroll_idle_stable_trace[0].sample_count,
+            45
+        );
     }
 
     #[test]

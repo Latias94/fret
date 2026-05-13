@@ -10,6 +10,7 @@ pub(super) const MAX_WEB_IME_TRACE_ENTRIES: usize = 64;
 pub(super) const MAX_IME_EVENT_TRACE_ENTRIES: usize = 64;
 pub(super) const MAX_BOUNDS_STABLE_TRACE_ENTRIES: usize = 32;
 pub(super) const MAX_CLICK_STABLE_TRACE_ENTRIES: usize = 32;
+pub(super) const MAX_SEMANTICS_SCROLL_IDLE_STABLE_TRACE_ENTRIES: usize = 32;
 
 fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
     match (a, b) {
@@ -177,6 +178,34 @@ pub(super) fn push_scroll_motion_trace(
     trace.push(entry);
     if trace.len() > MAX_BOUNDS_STABLE_TRACE_ENTRIES {
         let extra = trace.len().saturating_sub(MAX_BOUNDS_STABLE_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn semantics_scroll_idle_stable_trace_entry_eq(
+    a: &UiSemanticsScrollIdleStableTraceEntryV1,
+    b: &UiSemanticsScrollIdleStableTraceEntryV1,
+) -> bool {
+    a.step_index == b.step_index && selector_trace_eq(&a.selector, &b.selector)
+}
+
+pub(super) fn push_semantics_scroll_idle_stable_trace(
+    trace: &mut Vec<UiSemanticsScrollIdleStableTraceEntryV1>,
+    entry: UiSemanticsScrollIdleStableTraceEntryV1,
+) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| semantics_scroll_idle_stable_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_SEMANTICS_SCROLL_IDLE_STABLE_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_SEMANTICS_SCROLL_IDLE_STABLE_TRACE_ENTRIES);
         trace.drain(0..extra);
     }
 }

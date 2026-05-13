@@ -36,6 +36,7 @@ pub(super) struct ActiveScript {
     pub(super) click_stable_trace: Vec<UiClickStableTraceEntryV1>,
     pub(super) bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
     pub(super) scroll_motion_trace: Vec<UiScrollMotionTraceEntryV1>,
+    pub(super) semantics_scroll_idle_stable_trace: Vec<UiSemanticsScrollIdleStableTraceEntryV1>,
     pub(super) focus_trace: Vec<UiFocusTraceEntryV1>,
     pub(super) last_clipboard_write_completion: Option<ObservedClipboardWriteCompletion>,
     pub(super) shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -161,6 +162,7 @@ pub(super) enum V2StepState {
     LongPress(V2LongPressState),
     WaitBoundsStable(V2WaitBoundsStableState),
     WaitSemanticsScrollStable(V2WaitSemanticsScrollStableState),
+    AssertSemanticsScrollIdleStable(V2AssertSemanticsScrollIdleStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -241,6 +243,14 @@ pub(super) struct V2WaitSemanticsScrollStableState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
     pub(super) stable_count: u32,
+    pub(super) last_value: Option<f64>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2AssertSemanticsScrollIdleStableState {
+    pub(super) step_index: usize,
+    pub(super) sample_count: u32,
+    pub(super) baseline_value: Option<f64>,
     pub(super) last_value: Option<f64>,
 }
 

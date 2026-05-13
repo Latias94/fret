@@ -23,10 +23,11 @@ use fret_diag_protocol::{
     UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
     UiScriptResultV1, UiScriptStageV1, UiScrollMotionCheckV1, UiScrollMotionTraceEntryV1,
     UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTaskbarVisibilityV1,
-    UiTextInputSnapshotV1, UiTextInputVisualSnapshotV1, UiWebImeTraceEntryV1,
-    UiWindowBackgroundMaterialRequestV1, UiWindowDecorationsRequestV1, UiWindowHitTestRequestV1,
-    UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
+    UiSemanticsScrollIdleStableTraceEntryV1, UiShortcutRoutingTraceEntryV1,
+    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTaskbarVisibilityV1, UiTextInputSnapshotV1,
+    UiTextInputVisualSnapshotV1, UiWebImeTraceEntryV1, UiWindowBackgroundMaterialRequestV1,
+    UiWindowDecorationsRequestV1, UiWindowHitTestRequestV1, UiWindowStyleMatchV1, UiWindowTargetV1,
+    UiWindowZLevelV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;
@@ -127,6 +128,7 @@ use trace_helpers::{
     MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES, MAX_SELECTOR_TRACE_CANDIDATES,
     MAX_SHORTCUT_ROUTING_TRACE_ENTRIES, MAX_WEB_IME_TRACE_ENTRIES, push_bounds_stable_trace,
     push_hit_test_trace, push_scroll_motion_trace, push_selector_resolution_trace,
+    push_semantics_scroll_idle_stable_trace,
 };
 
 // Split out the DevTools WS wiring to reduce churn in this file.

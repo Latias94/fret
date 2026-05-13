@@ -65,7 +65,36 @@ cargo test --profile dev-fast -p fret-ui --lib view_cache_scroll -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache_virtual_list -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib scroll_handle_changes_classify -- --nocapture
+cargo test --profile dev-fast -p fret-diag-protocol --lib predicate_virtual_list_window_shift_samples_len_le_serializes -- --nocapture
+cargo test --profile dev-fast -p fret-diag-protocol --lib step_assert_semantics_scroll_idle_stable_deserializes_with_defaults -- --nocapture
+cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-driver --lib step_start_retains_semantics_scroll_idle_stable_trace_for_passed_evidence -- --nocapture
+cargo build -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json --dir target/fret-diag-virtual-list-harness-commit-check --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 ```
+
+Current runtime evidence anchors:
+
+- Virtual-list small-scroll no-window-shift gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-no-window-shifts-small-scroll/suite.json`
+  - evidence:
+    `target/fret-diag-virtual-list-harness-commit-check/sessions/1778697640180-135472/1778697641371/script.result.json`
+  - share pack:
+    `target/fret-diag-virtual-list-harness-commit-check/sessions/1778697640180-135472/share/1778697641371.zip`
+- Checkbox RTL post-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - evidence:
+    `target/fret-diag-rtl-scroll-idle-stability-v2/sessions/1778699811444-47076/1778699812656/script.result.json`
+  - share pack:
+    `target/fret-diag-rtl-scroll-idle-stability-v2/sessions/1778699811444-47076/share/1778699812656.zip`
+  - trace proof:
+    `sample_count=45`, `required_samples=45`, `baseline_value=2495.999755859375`,
+    `value=2495.999755859375`, `frame_delta=0.0`, `total_delta=0.0`.
 
 ## Environment View-Cache Gates
 

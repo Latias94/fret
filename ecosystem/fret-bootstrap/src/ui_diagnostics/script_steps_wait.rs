@@ -343,6 +343,219 @@ pub(super) fn handle_wait_semantics_scroll_stable_step(
     true
 }
 
+pub(super) fn handle_assert_semantics_scroll_idle_stable_step(
+    svc: &mut UiDiagnosticsService,
+    window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::AssertSemanticsScrollIdleStable {
+        window: _,
+        target,
+        field,
+        frames,
+        max_delta,
+        max_total_delta,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    let Some(snapshot) = semantics_snapshot else {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-assert_semantics_scroll_idle_stable-no-semantics"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("no_semantics_snapshot".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
+    };
+
+    let required_samples = frames.max(1);
+    let max_delta = max_delta.abs();
+    let max_total_delta = max_total_delta.abs();
+
+    let mut state = match active.v2_step_state.take() {
+        Some(V2StepState::AssertSemanticsScrollIdleStable(state))
+            if state.step_index == step_index =>
+        {
+            state
+        }
+        _ => V2AssertSemanticsScrollIdleStableState {
+            step_index,
+            sample_count: 0,
+            baseline_value: None,
+            last_value: None,
+        },
+    };
+
+    let node = select_semantics_node_with_trace(
+        snapshot,
+        window,
+        element_runtime,
+        &target,
+        active.scope_root_for_window(window),
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
+    );
+
+    let Some(node) = node else {
+        push_semantics_scroll_idle_stable_trace(
+            &mut active.semantics_scroll_idle_stable_trace,
+            UiSemanticsScrollIdleStableTraceEntryV1 {
+                step_index: step_index as u32,
+                selector: target.clone(),
+                field,
+                sample_count: state.sample_count,
+                required_samples,
+                baseline_value: state.baseline_value,
+                value: None,
+                frame_delta: None,
+                total_delta: None,
+                max_delta,
+                max_total_delta,
+                bounds: None,
+                note: Some("assert_semantics_scroll_idle_stable.no_semantics_match".to_string()),
+            },
+        );
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-assert_semantics_scroll_idle_stable-no-semantics-match"
+        ));
+        *stop_script = true;
+        *failure_reason =
+            Some("assert_semantics_scroll_idle_stable_no_semantics_match".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
+    };
+
+    let value = semantics_scroll_field_value(node, field).filter(|v| v.is_finite());
+    let Some(value) = value else {
+        push_semantics_scroll_idle_stable_trace(
+            &mut active.semantics_scroll_idle_stable_trace,
+            UiSemanticsScrollIdleStableTraceEntryV1 {
+                step_index: step_index as u32,
+                selector: target.clone(),
+                field,
+                sample_count: state.sample_count,
+                required_samples,
+                baseline_value: state.baseline_value,
+                value: None,
+                frame_delta: None,
+                total_delta: None,
+                max_delta,
+                max_total_delta,
+                bounds: Some(UiRectV1 {
+                    x_px: node.bounds.origin.x.0,
+                    y_px: node.bounds.origin.y.0,
+                    w_px: node.bounds.size.width.0,
+                    h_px: node.bounds.size.height.0,
+                }),
+                note: Some("assert_semantics_scroll_idle_stable.missing_scroll_field".to_string()),
+            },
+        );
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-assert_semantics_scroll_idle_stable-missing-scroll-field"
+        ));
+        *stop_script = true;
+        *failure_reason =
+            Some("assert_semantics_scroll_idle_stable_missing_scroll_field".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
+    };
+
+    let baseline = state.baseline_value.unwrap_or(value);
+    let frame_delta = state
+        .last_value
+        .map(|last| (value - last).abs())
+        .unwrap_or(0.0);
+    let total_delta = (value - baseline).abs();
+    state.baseline_value = Some(baseline);
+    state.last_value = Some(value);
+    state.sample_count = state.sample_count.saturating_add(1);
+
+    let bounds = UiRectV1 {
+        x_px: node.bounds.origin.x.0,
+        y_px: node.bounds.origin.y.0,
+        w_px: node.bounds.size.width.0,
+        h_px: node.bounds.size.height.0,
+    };
+
+    let note = if frame_delta > max_delta {
+        "assert_semantics_scroll_idle_stable.frame_delta_exceeded"
+    } else if total_delta > max_total_delta {
+        "assert_semantics_scroll_idle_stable.total_delta_exceeded"
+    } else {
+        "assert_semantics_scroll_idle_stable.sample"
+    };
+
+    push_semantics_scroll_idle_stable_trace(
+        &mut active.semantics_scroll_idle_stable_trace,
+        UiSemanticsScrollIdleStableTraceEntryV1 {
+            step_index: step_index as u32,
+            selector: target,
+            field,
+            sample_count: state.sample_count,
+            required_samples,
+            baseline_value: Some(baseline),
+            value: Some(value),
+            frame_delta: Some(frame_delta),
+            total_delta: Some(total_delta),
+            max_delta,
+            max_total_delta,
+            bounds: Some(bounds),
+            note: Some(note.to_string()),
+        },
+    );
+
+    if frame_delta > max_delta {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-assert_semantics_scroll_idle_stable-frame-delta-exceeded"
+        ));
+        *stop_script = true;
+        *failure_reason =
+            Some("assert_semantics_scroll_idle_stable_frame_delta_exceeded".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+    } else if total_delta > max_total_delta {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-assert_semantics_scroll_idle_stable-total-delta-exceeded"
+        ));
+        *stop_script = true;
+        *failure_reason =
+            Some("assert_semantics_scroll_idle_stable_total_delta_exceeded".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+    } else if state.sample_count >= required_samples {
+        active.v2_step_state = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+        if svc.cfg.script_auto_dump {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-assert_semantics_scroll_idle_stable"
+            ));
+        }
+    } else {
+        active.v2_step_state = Some(V2StepState::AssertSemanticsScrollIdleStable(state));
+        output.request_redraw = true;
+    }
+
+    true
+}
+
 pub(super) fn handle_wait_shortcut_routing_trace_step(
     cfg: &UiDiagnosticsConfig,
     app: &App,

@@ -33,6 +33,7 @@
     "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json",
     "tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json",
     "tools/diag-scripts/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
+    "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
     "tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json",
     "tools/diag-scripts/ui-gallery-collapsible-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
