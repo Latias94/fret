@@ -99,21 +99,34 @@
     { "type": "wait_frames", "n": 2 },
     {
       "target": {
-        "id": "ui-gallery-virtual-list-row-0-label",
+        "id": "ui-gallery-virtual-list-root",
         "kind": "test_id"
       },
       "type": "move_pointer"
     },
     {
       "delta_x": 0.0,
-      "delta_y": 720.0,
+      "delta_y": -720.0,
       "target": {
-        "id": "ui-gallery-content-viewport-virtual_list_torture",
+        "id": "ui-gallery-virtual-list-root",
         "kind": "test_id"
       },
       "type": "wheel"
     },
-    { "type": "wait_frames", "n": 16 },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_not_approx_eq",
+        "target": {
+          "id": "ui-gallery-virtual-list-root",
+          "kind": "test_id"
+        },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
     {
       "type": "assert",
       "predicate": {
