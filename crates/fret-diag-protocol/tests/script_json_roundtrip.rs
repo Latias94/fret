@@ -234,6 +234,13 @@ fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_combobox_long_text_geometry() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"

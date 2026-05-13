@@ -964,6 +964,52 @@ Follow-up recommendation:
 - Add a documented prebuilt-binary diagnostics lane for promoted UI Gallery gates so CI/local agents
   do not conflate build time with script execution time.
 
+## Phase 2.30 Combobox Long Text Geometry Gate
+
+The combobox long-text audit found a real diagnostics gate defect, not a component/runtime defect.
+`ui-gallery-combobox-long-text-geometry` was meant to assert trigger/item truncation and bottom
+placement in a non-colliding viewport, while separate scripts already cover bottom-room and
+tight-window flip behavior. At `900x640`, the Long Text trigger was near the bottom of the window:
+the overlay trace reported only `133.33px` available below the trigger for a `140px` panel, so the
+correct collision outcome was `chosen_side=top` and `flipped=true`. The script incorrectly expected
+bottom/no-flip and timed out.
+
+Fixes:
+
+- Raised the long-text geometry script viewport from `900x640` to `900x760` so the gate tests long
+  text geometry rather than collision flip.
+- Kept the bottom/no-flip assertion in this script because enough bottom room is now part of the
+  scenario contract.
+- Left flip coverage in the existing `ui-gallery-combobox-flip-tight-window` and
+  `ui-gallery-combobox-popup-trigger-bottom-room` scripts.
+
+Evidence:
+
+- Failing run:
+  `target/fret-diag-combobox-evidence/sessions/1778674553514-117240`
+- Failure note:
+  `wait_overlay_placement_trace.candidate_mismatch` with `preferred_available_main_px=133.33`,
+  `desired.h=140`, `chosen_side=Top`, `flipped=true`.
+- Passing long-text run:
+  `target/fret-diag-combobox-evidence-fixed/sessions/1778674801724-124080`,
+  `run_id=1778674872931`, `stage=passed`, `step_index=24`,
+  `last_bundle_dir=1778674874277-ui-gallery-combobox-long-text-open`.
+- Passing input-group long-query run:
+  `target/fret-diag-combobox-input-group-evidence/sessions/1778674921550-121564`,
+  `run_id=1778674924032`, `stage=passed`, `step_index=21`,
+  `last_bundle_dir=1778674925736-ui-gallery-combobox-input-group-long-query-text`.
+
+Validation:
+
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-evidence-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json --dir target/fret-diag-combobox-input-group-evidence --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+
+Follow-up recommendation:
+
+- Add a preflight rule for overlay-placement scripts: if a script asserts `chosen_side=bottom` and
+  `flipped=false`, its viewport/scroll setup should leave at least `content_height + side_offset`
+  available below the anchor, or the script should explicitly be a collision/flip test.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -1037,6 +1083,8 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
 - `python tools/check_diag_scripts_registry.py`
 - `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-evidence-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json --dir target/fret-diag-combobox-input-group-evidence --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
