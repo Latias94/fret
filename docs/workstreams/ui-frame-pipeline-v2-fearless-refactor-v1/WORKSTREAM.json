@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "ui-frame-pipeline-v2-fearless-refactor-v1",
   "title": "UI Frame Pipeline v2 Fearless Refactor",
-  "status": "active",
+  "status": "active-follow-on",
   "updated": "2026-05-14",
   "scope_kind": "execution",
   "problem": "Fret's current retained UiTree, declarative mounting, view-cache, paint-cache, and editor-specific hot paths are correct enough to optimize locally but do not yet form one direct, phase-attributable execution model. This lane owns the migration to explicit build/layout/prepaint/paint/render boundaries, complete old-path cleanup, and perf-gated editor-grade validation.",
@@ -66,6 +66,10 @@
     {
       "role": "implementation",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-14.md"
     }
   ],
   "repro": {
@@ -96,6 +100,7 @@
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4A_BOUNDARY_DIRTY_SET_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
   ],
@@ -104,7 +109,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration. M2 prepaint ownership now includes a minimal ViewBoundaryState owner for typed prepaint outputs, and diagnostics expose a top-level debug.boundaries[] list from direct UiTree::debug_boundary_stats() enumeration with cache-root outcome joins when present. M3 row-scene prepaint replay plans are no longer code-editor-owned and now use ViewBoundaryState::scene_fragment via CanvasSceneFragment<RowSceneFragmentPayload>. M4A moved contained-relayout dirty reasons into ViewBoundaryState::dirty while retaining a dirty_boundaries fast index. M4B retired the nested debug.cache_roots[].boundary compatibility schema and makes fret-diag derive cache-root report summaries from canonical debug.boundaries[]. The code-editor closeout perf run now proves the paint-side bottleneck target; the full completion audit is still pending."
+    "default_action": "continue_follow_on",
+    "notes": "The ADR 0327 code-editor vertical slice is closed in CLOSEOUT_AUDIT_2026-05-14.md. M2 prepaint ownership includes a minimal ViewBoundaryState owner for typed prepaint outputs, diagnostics expose a top-level debug.boundaries[] list, M3 row-scene replay plans use ViewBoundaryState::scene_fragment via CanvasSceneFragment<RowSceneFragmentPayload>, M4A moved contained-relayout dirty reasons into ViewBoundaryState::dirty with a dirty_boundaries fast index, and M4B retired the nested debug.cache_roots[].boundary compatibility schema. The code-editor closeout perf run proves the selected paint-side bottleneck target. Continue this lane only for broader ADR 0327 follow-ons such as ADR review/acceptance, public boundary hint design, wider view-cache/paint-cache consolidation, and older env-knob ownership decisions."
   }
 }

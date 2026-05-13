@@ -1,6 +1,6 @@
 # Milestones
 
-Status: Active
+Status: Code-editor vertical slice complete; broader ADR 0327 lane active
 Last updated: 2026-05-14
 
 ## M0: Contract Lock
@@ -138,7 +138,14 @@ Status on 2026-05-14:
   `layout_dirty_source`, and `layout_dirty_detail`.
 - M4B removed the nested `debug.cache_roots[].boundary` schema and changed `fret-diag stats` to join
   cache-root report summaries from canonical `debug.boundaries[]`.
-- Broader view-cache/paint-cache consolidation and the final completion audit are still pending.
+- The final closeout audit is recorded below; broader view-cache/paint-cache consolidation remains
+  follow-on ADR 0327 work.
+
+Status after closeout audit on 2026-05-14:
+
+- `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.
+- Broader view-cache/paint-cache consolidation remains follow-on ADR 0327 work, not a blocker for
+  the current vertical-slice closeout.
 
 ## M5: Closeout and Deletion Audit
 
@@ -148,3 +155,11 @@ Exit criteria:
 - `docs/adr/IMPLEMENTATION_ALIGNMENT.md` reflects the final ADR 0327 state.
 - Perf gates and correctness gates are documented with final evidence paths.
 - Workstream status is moved to maintenance or closed.
+
+Status on 2026-05-14:
+
+- Code-editor vertical slice closeout audit is complete in `CLOSEOUT_AUDIT_2026-05-14.md`.
+- Deletion audit is complete for paths replaced by this vertical slice.
+- Perf/correctness/layering/check evidence is documented in `EVIDENCE_AND_GATES.md` and the
+  closeout audit.
+- The broader ADR 0327 lane remains active for architecture follow-ons and ADR acceptance/review.

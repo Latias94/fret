@@ -1,6 +1,6 @@
 # TODO
 
-Status: Active
+Status: Code-editor vertical slice complete; broader ADR 0327 lane active
 Last updated: 2026-05-14
 
 ## P0 Contract Setup
@@ -30,9 +30,10 @@ Last updated: 2026-05-14
   windowed-rows/editor prefetch slice.
 - [x] Split code-editor paint attribution into transitional prepaint plan, paint replay, and renderer
   payload buckets for the row scene replay-plan slice.
-- [ ] Add or promote a stricter code-editor paint stressor if resize probes are no longer sensitive
-  enough.
-- [ ] Prove `paint.widget` or total p95/max improves by at least 20-30% on the selected bottleneck
+- [x] Add or promote a stricter code-editor paint stressor if resize probes are no longer sensitive
+  enough. Current closeout keeps `ui-code-editor-resize-probes` because it still catches and proves
+  the selected paint-side bottleneck.
+- [x] Prove `paint.widget` or total p95/max improves by at least 20-30% on the selected bottleneck
   after the final boundary-owned scene-fragment store replaces the transitional editor-owned plan.
 
 ## P2 Runtime Migration
@@ -49,21 +50,33 @@ Last updated: 2026-05-14
   carrier.
 - [x] Move the transitional replay-plan carrier into boundary-owned fragment state or delete it if a
   narrower direct replay contract replaces it.
-- [ ] Keep `fret-ui` mechanism-only; move any policy decisions back to ecosystem crates.
+- [x] Keep `fret-ui` mechanism-only; move any policy decisions back to ecosystem crates.
 
 ## P3 Delete Old Paths
 
 - [x] Write a deletion audit before closeout.
-- [ ] Delete or retire old private paths that v2 replaces. M4A removed
+- [x] Delete or retire old private paths that v2 replaces for the code-editor vertical slice. M4A removed
   `dirty_cache_roots` / `dirty_cache_root_reasons`, but broader view-cache/paint-cache compatibility
   views remain. M4B retired the nested `debug.cache_roots[].boundary` compatibility path.
-- [ ] Remove migration-only env knobs that no longer have a diagnostic purpose.
-- [ ] Update first-party examples and docs if public authoring guidance changes.
-- [ ] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` when ADR 0327 is implemented or superseded.
+- [x] Remove migration-only env knobs that no longer have a diagnostic purpose for this vertical
+  slice. No migration-only env knob was introduced by the slice; retained env knobs are documented
+  as out-of-scope diagnostics in `CLOSEOUT_AUDIT_2026-05-14.md`.
+- [x] Update first-party examples and docs if public authoring guidance changes. No public
+  authoring guidance changed in this vertical slice.
+- [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` for the code-editor vertical slice state.
 
 ## Always-On Gates
 
-- [ ] `python3 tools/check_layering.py`
-- [ ] Focused `fret-ui` unit tests for any boundary/invalidation change.
-- [ ] `ui-code-editor-resize-probes` perf gate on macOS M4 for code-editor slices.
-- [ ] Worst-bundle `diag stats` attribution for every perf claim.
+- [x] `python3 tools/check_layering.py`
+- [x] Focused `fret-ui` unit tests for any boundary/invalidation change.
+- [x] `ui-code-editor-resize-probes` perf gate on macOS M4 for code-editor slices.
+- [x] Worst-bundle `diag stats` attribution for every perf claim.
+
+## Follow-On ADR 0327 Lane Work
+
+- [ ] Review ADR 0327 and either accept it or revise/supersede it before broad migration.
+- [ ] Design a non-page-specific boundary hint API that can eventually replace direct
+  `contained_layout` authoring hints.
+- [ ] Consolidate broader view-cache rendered/next maps and paint-cache previous-op-range replay
+  into final boundary-owned build/paint stores.
+- [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.
