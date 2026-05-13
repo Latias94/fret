@@ -5,15 +5,17 @@ Status: code-editor vertical slice complete; broader ADR 0327 lane remains activ
 Status note (2026-05-14): this audit closed the code-editor vertical slice before the ADR contract
 freeze. ADR 0327 is now accepted as the target contract in
 `M0_CONTRACT_FREEZE_2026-05-14.md`; the broader implementation follow-ons below still remain open.
+`M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` later closed the public/non-page-specific boundary-hint
+API follow-on, but the global refactor still remains active.
 
 ## Scope
 
 This audit closes the current goal's code-editor vertical slice, not the full ADR 0327 program.
 
 ADR 0327 now describes the accepted broader architecture direction: future build-boundary
-consolidation, public naming review, wider paint-cache/view-cache unification, and final global
-closeout. Those broader items stay in this workstream as follow-on work and must not be mistaken for
-missing evidence in this vertical slice.
+consolidation, wider paint-cache/view-cache unification, and final global closeout. The public
+boundary-hint API follow-on landed later in M4C. The remaining broader items stay in this workstream
+as follow-on work and must not be mistaken for missing evidence in this vertical slice.
 
 ## Prompt-to-Artifact Checklist
 
@@ -21,7 +23,7 @@ missing evidence in this vertical slice.
 | --- | --- | --- |
 | Land the minimal `ViewBoundaryState` / `BoundaryId` runtime state. | `crates/fret-ui/src/tree/view_boundary.rs` defines `BoundaryId`, `ViewBoundaryState`, `BoundaryLayoutDependencies`, `BoundaryPrepaintState`, `BoundarySceneFragmentState`, and `BoundaryDirtyState`. `M2B_VIEW_BOUNDARY_PREPAINT_STATE_SLICE_2026-05-13.md` records the first state slice. | Complete for this vertical slice. |
 | Move node-scoped `PrepaintOutputs` / `RowSceneReplayPlan` into boundary-owned prepaint/fragment state or delete transitional carriers. | `crates/fret-ui/src/tree/ui_tree_invalidation.rs` routes prepaint outputs and scene fragments through `ViewBoundaryState`; `crates/fret-ui/src/tree/tests/prepaint.rs` proves prepaint output ownership. `ecosystem/fret-code-editor/src/editor/mod.rs` writes row replay plans with `cx.set_scene_fragment_debug(plan)`, and `ecosystem/fret-code-editor/src/editor/paint/mod.rs` consumes them with `painter.scene_fragment_mut::<RowSceneReplayPlan>()`. | Complete. Generic prepaint outputs remain as the shared boundary-owned mechanism for non-fragment prepaint data. |
-| Convert layout containment from standalone flag into boundary dependency metadata. | `BoundaryLayoutDependencies::from_view_cache_flags(...)` maps current flags into boundary dependency metadata; `boundary_allows_contained_relayout(...)` is the boundary query used by reuse logic; `debug.boundaries[].layout_dependency` reports the dependency. | Complete for the vertical slice. The public/exemplar `contained_layout` hint remains as an authoring input until a broader boundary-hint API replaces it. |
+| Convert layout containment from standalone flag into boundary dependency metadata. | `BoundaryLayoutDependencies::from_view_cache_flags(...)` maps current flags into boundary dependency metadata; `boundary_allows_contained_relayout(...)` is the boundary query used by reuse logic; `debug.boundaries[].layout_dependency` reports the dependency. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` later replaced first-party direct `contained_layout` authoring with `ViewBoundaryHints`. | Complete for the vertical slice; authoring follow-on now also complete. Internal low-level flags remain for broader consolidation. |
 | Change code-editor row scene replay to boundary-owned scene fragment reuse. | `CanvasSceneFragment<RowSceneFragmentPayload>` is the row replay carrier (`ecosystem/fret-code-editor/src/editor/state.rs`, `paint/scene.rs`); paint records used/rejected fragment entries through `CanvasPainter`. `M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md` records the migration. | Complete. |
 | Migrate `debug.cache_roots[].boundary` to first-class boundary diagnostics. | `M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md`; `UiCacheRootStatsV1` no longer has a nested `boundary` field; `debug.boundaries[]` owns build/reuse/layout/paint outcomes; `fret-diag stats` joins cache-root report summaries from top-level boundaries. | Complete. |
 | Delete or retire v2-replaced private paths and migration env knobs. | Deleted/retired in-scope paths: node-owned prepaint output storage, code-editor-owned row replay-plan carrier, `dirty_cache_roots` / `dirty_cache_root_reasons` / `mark_cache_root_dirty(...)`, serialized `debug.cache_roots[].boundary`, and `UiBoundaryCacheRootDiagnosticsV1`. `rg` confirms no live `UiBoundaryCacheRootDiagnosticsV1`, `pub boundary:`, or `r.get("boundary")` producer/consumer path remains. | Complete for in-scope replaced paths. No migration-only env knob was introduced by this slice. Existing paint-cache/layout diagnostic env knobs are explicitly out-of-scope retained mechanisms with separate evidence and follow-on ownership. |
@@ -151,8 +153,10 @@ Retained intentionally:
   now live in `debug.boundaries[]`.
 - `top_cache_roots[].boundary` in `fret-diag` report JSON: report-only derived summary sourced
   from `debug.boundaries[]`, not a bundle schema path.
-- `ViewCacheProps::contained_layout` and UI Gallery page containment hints: still the authoring
-  input for the first boundary slice; runtime now mirrors this into boundary dependency metadata.
+- internal `ViewCacheFlags::contained_layout` and cache-root diagnostic field names: still the
+  low-level implementation/debug vocabulary for contained relayout until broader view-cache and
+  build-boundary ownership is consolidated. Public/first-party authoring moved to
+  `ViewBoundaryHints` in `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`.
 - `FRET_UI_GALLERY_VIEW_CACHE` / `FRET_UI_GALLERY_VIEW_CACHE_SHELL`: perf/script setup flags used by
   `fret-diag` to make the selected repro deterministic, not v2 migration compatibility shims.
 - `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING`,
@@ -168,8 +172,8 @@ Retained intentionally:
 These are real architecture follow-ons, but they are outside the current code-editor closeout goal:
 
 - continue implementation against accepted ADR 0327,
-- design a public/non-page-specific boundary hint API that can eventually replace direct
-  `contained_layout` authoring hints,
+- consolidate or rename internal low-level `contained_layout` flags/debug fields after the broader
+  view-cache/build-boundary owner path is migrated,
 - consolidate broader view-cache rendered/next maps and paint-cache previous-op-range replay into
   final boundary-owned build/paint stores,
 - decide the future of older paint-cache/layout env knobs in their owning workstreams,

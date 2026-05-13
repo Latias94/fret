@@ -97,7 +97,7 @@ fn preview_hit_test_torture_surface(
     };
 
     cx.cached_subtree_with(
-        CachedSubtreeProps::default().contained_layout(true),
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         move |cx| {
             let mut stack_layout = LayoutStyle::default();
             stack_layout.size.width = Length::Px(area_w);

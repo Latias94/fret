@@ -78,42 +78,50 @@ pub(in crate::ui) fn preview_tree_torture(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2).into_element(cx);
 
-    let tree = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
-            .filter(|v| !v.is_empty())
-            .is_some();
+    let tree = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
+            let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
+                .filter(|v| !v.is_empty())
+                .is_some();
 
-        let tree = if retained {
-            if variable_height {
-                fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
-                    cx,
-                    items,
-                    state,
-                    fret_ui_kit::Size::Medium,
-                    fret_ui::element::VirtualListMeasureMode::Measured,
-                    Some(Arc::<str>::from("ui-gallery-tree-row")),
-                )
+            let tree = if retained {
+                if variable_height {
+                    fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                        fret_ui::element::VirtualListMeasureMode::Measured,
+                        Some(Arc::<str>::from("ui-gallery-tree-row")),
+                    )
+                } else {
+                    fret_ui_kit::declarative::tree::tree_view_retained(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                        Some(Arc::<str>::from("ui-gallery-tree-row")),
+                    )
+                }
             } else {
-                fret_ui_kit::declarative::tree::tree_view_retained(
+                fret_ui_kit::declarative::tree::tree_view(
                     cx,
                     items,
                     state,
                     fret_ui_kit::Size::Medium,
-                    Some(Arc::<str>::from("ui-gallery-tree-row")),
                 )
-            }
-        } else {
-            fret_ui_kit::declarative::tree::tree_view(cx, items, state, fret_ui_kit::Size::Medium)
-        };
+            };
 
-        vec![
-            tree.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(fret_core::SemanticsRole::Group)
-                    .test_id("ui-gallery-tree-torture-root"),
-            ),
-        ]
-    });
+            vec![
+                tree.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Group)
+                        .test_id("ui-gallery-tree-torture-root"),
+                ),
+            ]
+        },
+    );
 
     let mut container_props = decl_style::container_props(
         theme,

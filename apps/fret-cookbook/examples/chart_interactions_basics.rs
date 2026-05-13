@@ -295,7 +295,7 @@ fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) 
     .with_layout(layout);
 
     cx.cached_subtree_with(
-        CachedSubtreeProps::default().contained_layout(true),
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |cx: &mut AppComponentCx<'_>| vec![cx.retained_subtree(props)],
     )
 }

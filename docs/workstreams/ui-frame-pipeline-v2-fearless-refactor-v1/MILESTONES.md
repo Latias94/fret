@@ -160,6 +160,14 @@ Status on 2026-05-14:
 - The final closeout audit is recorded below; broader view-cache/paint-cache consolidation remains
   follow-on ADR 0327 work.
 
+Status after M4C on 2026-05-14:
+
+- `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` replaces first-party direct `contained_layout`
+  authoring with `ViewBoundaryHints` and `contain_layout_when_bounds_known(...)`.
+- Public/ecosystem boundary-hint naming is no longer open for this lane. Remaining
+  `contained_layout` names are internal low-level flags, diagnostic fields, or historical notes
+  until broader view-cache/build-boundary consolidation can remove or rename them.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.
@@ -203,5 +211,5 @@ Exit criteria:
 Status on 2026-05-14:
 
 - Open. The code-editor vertical slice is complete, but the global contract is not complete while
-  broader view-cache/paint-cache consolidation, the final boundary-hint decision, old env-knob
-  ownership, and the second non-code-editor proof surface remain open.
+  broader view-cache/paint-cache consolidation, internal contained-layout flag cleanup, old
+  env-knob ownership, and the second non-code-editor proof surface remain open.

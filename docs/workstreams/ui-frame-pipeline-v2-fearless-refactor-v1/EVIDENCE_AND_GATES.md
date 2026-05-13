@@ -322,6 +322,31 @@ This slice deletes the serialized `debug.cache_roots[].boundary` compatibility f
 `debug.boundaries[]` is now the canonical boundary diagnostics list, and `fret-diag stats` derives
 its report-only `top_cache_roots[].boundary` summary from that canonical list.
 
+Most recent boundary hint API slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`
+- Focused correctness gates:
+  `cargo nextest run -p fret-ui view_cache_boundary_hints_drive_boundary_layout_dependency view_cache_runs_contained_relayout_for_invalidated_boundaries view_cache_contained_relayout_does_not_force_next_frame_rerender --no-fail-fast`
+  and
+  `cargo nextest run -p fret-ui-kit cached_subtree_props_boundary_hint_replaces_direct_contained_layout_authoring --no-fail-fast`
+- Compile gate:
+  `cargo check -p fret-ui -p fret-ui-kit -p fret-ui-gallery -p fret-docking -p fret-workspace -p fret --all-targets`
+- Source drift check:
+  `rg -n "contained_layout\\(|page_content_cache_contained_layout|ViewCacheProps \\{[^\\n]*contained_layout|contained_layout:" apps/fret-cookbook apps/fret-examples apps/fret-ui-gallery ecosystem/fret-ui-kit/src/declarative crates/fret-ui/src/declarative crates/fret-ui/src/element.rs ecosystem/fret-docking ecosystem/fret-workspace ecosystem/fret/src --glob '*.rs'`
+
+Observed result:
+
+- `fret-ui` focused nextest: `3 passed, 930 skipped`.
+- `fret-ui-kit` focused nextest: `1 passed, 519 skipped`.
+- `cargo check`: passed.
+- source drift check: no matches.
+
+This slice is an authoring-contract step, not a new perf claim. It introduces
+`ViewBoundaryHints`, replaces first-party direct `contained_layout` authoring with
+`contain_layout_when_bounds_known(...)`, and leaves internal low-level contained-layout flags for
+the broader view-cache/build-boundary consolidation.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

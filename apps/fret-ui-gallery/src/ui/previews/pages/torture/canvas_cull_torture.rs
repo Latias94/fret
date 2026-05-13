@@ -17,8 +17,9 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
     use fret_ui::element::{CanvasCachePolicy, Length};
     use std::cmp::Ordering;
 
-    let canvas =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let canvas = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let bg_even = theme.color_token("background");
             let bg_odd = theme.color_token("muted");
             let fg = theme.color_token("foreground");
@@ -159,7 +160,8 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
                         .test_id("ui-gallery-canvas-cull-root"),
                 ),
             ]
-        });
+        },
+    );
 
     let canvas = DocSection::build(cx, "Canvas", canvas)
         .description("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles.")

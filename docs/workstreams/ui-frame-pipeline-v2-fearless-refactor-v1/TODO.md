@@ -21,8 +21,9 @@ Progress ledger:
   behind an accepted ADR/workstream reason.
 - [ ] Broader paint-cache replay stores are consolidated into boundary-owned scene-fragment state or
   retained behind an accepted ADR/workstream reason.
-- [ ] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
-  boundary-hint API, or explicitly retained by accepted decision.
+- [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
+  boundary-hint API. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces
+  `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring.
 - [ ] Replaced old runtime paths and compatibility diagnostics are deleted, with retained paths
   named in a deletion/retention audit.
 - [ ] Boundary diagnostics remain the canonical bundle truth for boundary reuse/rejection; any
@@ -110,8 +111,9 @@ Progress ledger:
 
 - [x] Review ADR 0327 and either accept it or revise/supersede it before broad migration.
   Closed by `M0_CONTRACT_FREEZE_2026-05-14.md`.
-- [ ] Design a non-page-specific boundary hint API that can eventually replace direct
-  `contained_layout` authoring hints.
+- [x] Design and land a non-page-specific boundary hint API that replaces first-party direct
+  `contained_layout` authoring hints. Landed in
+  `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`.
 - [ ] Consolidate broader view-cache rendered/next maps and paint-cache previous-op-range replay
   into final boundary-owned build/paint stores.
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.

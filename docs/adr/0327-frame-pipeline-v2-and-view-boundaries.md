@@ -16,7 +16,7 @@ Fret currently combines several valid but partially overlapping runtime ideas:
 - a retained `UiTree` that owns layout, hit testing, focus, paint state, and invalidation,
 - declarative element trees mounted into that retained runtime,
 - view-cache and paint-cache roots that can replay previously recorded work,
-- targeted containment knobs such as `ViewCacheProps::contained_layout`,
+- targeted containment knobs historically exposed as `ViewCacheProps::contained_layout`,
 - and editor-specific hot paths such as code-editor row-scene replay.
 
 This has worked well enough to build real demos and diagnostics, but recent editor-grade perf work
@@ -124,8 +124,10 @@ scene_fragment
 diagnostic counters
 ```
 
-Current `ViewCacheProps`, cache roots, paint-cache roots, and `contained_layout` should migrate
-toward this boundary model rather than expanding as separate one-off mechanisms.
+Current `ViewCacheProps`, cache roots, paint-cache roots, and low-level contained-layout flags
+should migrate toward this boundary model rather than expanding as separate one-off mechanisms.
+M4C introduced `ViewBoundaryHints` as the first public authoring step away from direct
+`contained_layout` knobs; the remaining migration is internal runtime consolidation.
 
 ### 3. Layout containment is a dependency contract
 

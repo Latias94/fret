@@ -1301,7 +1301,7 @@ mod authoring_surface_policy_tests {
             &[
                 "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
                 "RetainedSubtreeProps::new::<KernelApp>",
-                "cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true),",
+                "cx.cached_subtree_with(CachedSubtreeProps::default().contain_layout_when_bounds_known(true),",
                 "vec![cx.retained_subtree(props)]",
             ],
             &[

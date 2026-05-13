@@ -48,7 +48,9 @@ The global refactor remains incomplete while:
 
 - broader view-cache rendered/next maps still have separate ownership;
 - broader paint-cache replay stores still have separate ownership;
-- direct page-specific `contained_layout` remains the practical authoring hint;
+- direct page-specific `contained_layout` authoring was still open at contract freeze time, but it
+  is now closed by `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`; internal low-level
+  `contained_layout` flags remain until broader runtime consolidation;
 - older paint-cache/layout env knobs still need owner-specific deletion or retention decisions;
 - a second non-code-editor proof surface has not yet validated the final model.
 
@@ -78,7 +80,8 @@ git diff --check
 
 Continue with the next global-contract follow-ons:
 
-- design the boundary-hint API that can replace direct `contained_layout`;
+- continue after the M4C boundary-hint API slice by consolidating the remaining internal
+  `contained_layout` flags/debug fields with the broader view-cache/build-boundary owner path;
 - migrate a broader view-cache or paint-cache ownership path into boundary state;
 - choose and gate a second non-code-editor proof surface;
 - record deletion or retention decisions for old runtime paths as each replacement lands.

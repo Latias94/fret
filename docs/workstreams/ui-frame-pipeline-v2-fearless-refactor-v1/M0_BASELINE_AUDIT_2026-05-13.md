@@ -317,8 +317,10 @@ correctness and perf evidence.
   - `FRET_UI_LAYOUT_ENGINE_SWEEP`
 - Code-editor paint-hook ownership for visible-window/overlay projection after boundary prepaint
   state owns the phase entry.
-- UI Gallery's page-id-specific `page_content_cache_contained_layout(...)` once boundary hints are
-  explicit and not page-specific.
+- UI Gallery's historical page-id-specific `page_content_cache_contained_layout(...)`; this was
+  replaced by `page_content_cache_contain_layout_when_bounds_known(...)` in
+  `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`, with remaining cleanup focused on internal runtime
+  flags.
 
 ## First Slice Proposal
 

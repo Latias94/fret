@@ -239,10 +239,7 @@ fn viewport_resize_cached_flow(
     let cache_renders = cache_renders.clone();
     let observed_viewports = observed_viewports.clone();
     vec![cx.view_cache(
-        crate::element::ViewCacheProps {
-            contained_layout: true,
-            ..Default::default()
-        },
+        crate::element::ViewCacheProps::default().contain_layout_when_bounds_known(true),
         move |cx| {
             cache_renders.fetch_add(1, Ordering::SeqCst);
             let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
@@ -470,10 +467,7 @@ fn viewport_resize_after_cache_enable_keeps_cache_root_membership_complete() {
         };
 
         let cache = cx.view_cache(
-            crate::element::ViewCacheProps {
-                contained_layout: true,
-                ..Default::default()
-            },
+            crate::element::ViewCacheProps::default().contain_layout_when_bounds_known(true),
             move |_cx| vec![footer],
         );
         ids.lock().unwrap().cache_root = Some(cache.id);
@@ -597,10 +591,7 @@ fn viewport_resize_after_cache_enable_keeps_roving_keyed_semantics_and_membershi
         let action_root = cx.named("__test.action_root", |cx| {
             let ids_for_cache = ids.clone();
             let cache = cx.view_cache(
-                crate::element::ViewCacheProps {
-                    contained_layout: true,
-                    ..Default::default()
-                },
+                crate::element::ViewCacheProps::default().contain_layout_when_bounds_known(true),
                 move |cx| {
                     let ids_for_roving = ids_for_cache.clone();
                     let roving = cx.roving_flex(

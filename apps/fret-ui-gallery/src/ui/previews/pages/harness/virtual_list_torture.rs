@@ -216,7 +216,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
     let list = cx.cached_subtree_with(
         CachedSubtreeProps::default()
             .layout(list_layout)
-            .contained_layout(true),
+            .contain_layout_when_bounds_known(true),
         |cx| {
             let list = if minimal_harness {
                 if retained_host {
@@ -419,7 +419,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                     if row_cache {
                         cx.cached_subtree_with(
                             CachedSubtreeProps::default()
-                                .contained_layout(true)
+                                .contain_layout_when_bounds_known(true)
                                 .cache_key(index_u64),
                             |cx| [row(cx)],
                         )
@@ -541,7 +541,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         if row_cache {
                             cx.cached_subtree_with(
                                 CachedSubtreeProps::default()
-                                    .contained_layout(true)
+                                    .contain_layout_when_bounds_known(true)
                                     .cache_key(index_u64),
                                 |cx| vec![row(cx)],
                             )

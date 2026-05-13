@@ -278,8 +278,9 @@ pub(in crate::ui) fn preview_data_table_torture(
             .gap(Space::N2).into_element(cx);
 
     let state_for_table = state.clone();
-    let table =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let table = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let retained = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
             let data_table = if retained {
                 let mut t = shadcn::DataTable::new();
@@ -394,7 +395,8 @@ pub(in crate::ui) fn preview_data_table_torture(
                         .test_id("ui-gallery-data-table-torture-root"),
                 ),
             ]
-        });
+        },
+    );
 
     let mut container_props = decl_style::container_props(
         theme,

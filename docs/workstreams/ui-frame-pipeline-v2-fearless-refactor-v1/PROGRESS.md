@@ -91,7 +91,7 @@ Out of scope:
 | Boundary diagnostics | Complete for the slice | `debug.boundaries[]` is canonical; nested `debug.cache_roots[].boundary` is retired. | Keep diagnostics stable while broader boundary stores are consolidated. |
 | Prepaint ownership | Partial global, complete for the slice | Code-editor row-derived state moved out of paint into boundary-owned prepaint/scene-fragment state. | Audit other geometry-derived paint work and migrate only with proof surfaces. |
 | Scene-fragment replay | Partial global, complete for row replay | `CanvasSceneFragment<RowSceneFragmentPayload>` is boundary-owned for the code-editor row path. | Decide final paint-cache replay store shape for non-code-editor surfaces. |
-| Layout containment | Partial global | Runtime mirrors `contained_layout` into boundary dependency metadata for the slice. | Design a non-page-specific boundary hint API that can replace direct `contained_layout` authoring hints. |
+| Layout containment | Authoring API replaced; runtime consolidation still partial | `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring. Runtime still maps that hint into low-level view-cache flags. | Consolidate remaining internal `contained_layout` flags/debug fields when broader view-cache/build-boundary ownership is migrated. |
 | Old-path deletion | Complete for replaced slice paths | Closeout audit records deleted node-owned prepaint storage, row replay carriers, dirty cache-root maps, and nested boundary diagnostics. | Keep deleting only when a replacement path has gates and evidence. |
 | Perf gate | Complete for the slice | `paint.widget` p95 improved from `1494us` to `650us`; total p95 improved from `1811us` to `1396us`. | Add a stricter code-editor paint stressor only if resize probes stop catching regressions. |
 | Env knob cleanup | Open | Older paint-cache/layout knobs remain intentionally out of this slice. | Decide ownership and deletion policy in the relevant follow-on workstreams. |
@@ -106,7 +106,8 @@ Do not reopen the closed slice unless fresh evidence shows its gates or diagnost
 Continue this workstream for broader ADR 0327 follow-ons:
 
 - Implementation against accepted ADR 0327.
-- Public or ecosystem-facing boundary hint design.
+- Broader runtime consolidation after the public/ecosystem boundary hint design landed in
+  `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`.
 - Wider view-cache rendered/next map consolidation.
 - Wider paint-cache previous-op-range and scene-fragment replay consolidation.
 - Ownership and deletion decisions for older paint-cache/layout env knobs.
@@ -148,8 +149,8 @@ Not complete:
 - `ViewBoundaryState` only covers the code-editor vertical slice.
 - view-cache rendered/next maps and paint-cache replay stores still have parallel ownership that
   the boundary model could own but has not migrated.
-- direct `contained_layout` remains the only practical authoring contract without an accepted
-  boundary-hint decision.
+- internal low-level `contained_layout` flags and diagnostic fields remain after public authoring
+  moved to boundary hints.
 - old env knobs or compatibility paths remain without an owner and a deletion/retention decision.
 - diagnostics require reading both old cache-root boundary data and new boundary data as independent
   sources of truth.

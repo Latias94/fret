@@ -256,8 +256,9 @@ pub(in crate::ui) fn preview_table_retained_torture(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2).into_element(cx);
 
-    let table =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let table = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
             let state_revision = cx.app.models().revision(&state).unwrap_or(0);
@@ -348,7 +349,8 @@ pub(in crate::ui) fn preview_table_retained_torture(
                         .test_id("ui-gallery-table-retained-torture-root"),
                 ),
             ]
-        });
+        },
+    );
 
     let mut container_props = decl_style::container_props(
         theme,

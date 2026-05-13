@@ -114,7 +114,8 @@ Replay may translate or transform when dependency keys allow it.
 The following current concepts should be treated as candidates for migration, consolidation, or
 deletion:
 
-- `ViewCacheProps::contained_layout` as a standalone knob,
+- internal `ViewCacheFlags::contained_layout` as a standalone low-level runtime flag after
+  `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` moved public authoring to `ViewBoundaryHints`,
 - separate view-cache root and paint-cache root bookkeeping when a boundary can own both,
 - env-only perf knobs that become unnecessary once boundary diagnostics are explicit,
 - code-editor-local prepaint-like staging that can move to the shared prepaint phase,

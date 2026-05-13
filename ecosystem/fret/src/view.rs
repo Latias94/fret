@@ -3316,10 +3316,10 @@ fn render_app_ui_with_cached_handlers<'a, Owner: 'static, H: UiHost + 'static>(
 
         cx.view_cache(
             fret_ui::element::ViewCacheProps {
-                contained_layout: true,
                 cache_key: 0,
                 ..fret_ui::element::ViewCacheProps::default()
-            },
+            }
+            .contain_layout_when_bounds_known(true),
             |cx| {
                 let action_root = cx.root_id();
                 clear_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root);

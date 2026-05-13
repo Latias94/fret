@@ -28,14 +28,16 @@ pub fn render_cached_panel_root<H: UiHost + 'static>(
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, H>) -> Vec<fret_ui::element::AnyElement>,
 ) -> NodeId {
     declarative::render_root(ui, app, services, window, bounds, root_name, |cx| {
-        vec![cx.view_cache(
-            fret_ui::element::ViewCacheProps {
-                layout: fill_layout(),
-                contained_layout: true,
-                ..Default::default()
-            },
-            f,
-        )]
+        vec![
+            cx.view_cache(
+                fret_ui::element::ViewCacheProps {
+                    layout: fill_layout(),
+                    ..Default::default()
+                }
+                .contain_layout_when_bounds_known(true),
+                f,
+            ),
+        ]
     })
 }
 

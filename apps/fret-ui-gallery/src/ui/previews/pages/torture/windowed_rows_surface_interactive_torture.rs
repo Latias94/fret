@@ -32,7 +32,7 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
     let scroll_handle = cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
 
     let surface =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+        cx.cached_subtree_with(CachedSubtreeProps::default().contain_layout_when_bounds_known(true), |cx| {
             let bg_even = theme.color_token("background");
             let bg_odd = theme.color_token("muted");
             let bg_hover = theme.color_token("accent");

@@ -1251,7 +1251,7 @@ impl WorkspaceShellDemoDriver {
                     let out = if view_cache_shell {
                         let mut props = ViewCacheProps::default();
                         props.layout = fill_layout();
-                        props.contained_layout = true;
+                        props = props.contain_layout_when_bounds_known(true);
                         cx.view_cache(props, move |_cx| vec![frame])
                     } else {
                         frame

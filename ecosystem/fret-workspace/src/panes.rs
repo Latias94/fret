@@ -975,14 +975,16 @@ where
                             ..Default::default()
                         },
                         |cx| {
-                            vec![cx.view_cache(
-                                ViewCacheProps {
-                                    layout: fill_layout(),
-                                    contained_layout: true,
-                                    ..Default::default()
-                                },
-                                |cx| vec![render_pane(cx, pane, is_active, tab_drag.clone())],
-                            )]
+                            vec![
+                                cx.view_cache(
+                                    ViewCacheProps {
+                                        layout: fill_layout(),
+                                        ..Default::default()
+                                    }
+                                    .contain_layout_when_bounds_known(true),
+                                    |cx| vec![render_pane(cx, pane, is_active, tab_drag.clone())],
+                                ),
+                            ]
                         },
                     );
                     pane_bounds_element.set(Some(inner.id));

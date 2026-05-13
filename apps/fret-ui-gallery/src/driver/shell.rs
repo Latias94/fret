@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::spec::{
     BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO, PageContentCachePolicy,
-    page_content_cache_contained_layout, page_content_cache_policy,
+    page_content_cache_contain_layout_when_bounds_known, page_content_cache_policy,
 };
 use crate::ui;
 
@@ -64,9 +64,9 @@ pub(super) fn sidebar_view(
                 layout.size.height = Length::Fill;
                 ViewCacheProps {
                     layout,
-                    contained_layout: true,
                     ..Default::default()
                 }
+                .contain_layout_when_bounds_known(true)
             },
             |cx| {
                 let selected = cx
@@ -162,9 +162,11 @@ pub(super) fn content_view(
                 layout.flex.grow = 1.0;
                 ViewCacheProps {
                     layout,
-                    contained_layout: page_content_cache_contained_layout(selected.as_ref()),
                     ..Default::default()
                 }
+                .contain_layout_when_bounds_known(
+                    page_content_cache_contain_layout_when_bounds_known(selected.as_ref()),
+                )
             },
             |cx| {
                 // Read `selected_page` within the view-cache scope so model invalidations can mark
