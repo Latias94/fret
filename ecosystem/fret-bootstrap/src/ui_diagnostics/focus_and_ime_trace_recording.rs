@@ -218,6 +218,41 @@ fn text_input_focus_summary(snapshot: Option<&UiTextInputSnapshotV1>) -> String 
     }
 }
 
+fn web_ime_trace_summary_note(trace: &[UiWebImeTraceEntryV1], step_index: u32) -> Option<String> {
+    let entry = trace
+        .iter()
+        .rev()
+        .find(|entry| entry.step_index == step_index)?;
+
+    Some(format!(
+        "note={:?} enabled={} composing={} suppress_next_input={} textarea_has_focus={:?} active_element_tag={:?} position_mode={:?} mount_kind={:?} dpr={:?} textarea_selection=({:?},{:?}) last_cursor_area={:?} last_cursor_anchor_px={:?} last_input_type={:?} last_preedit_len={:?} last_preedit_cursor_utf16={:?} last_commit_len={:?} beforeinput_seen={} input_seen={} suppressed_input_seen={} composition_start_seen={} composition_update_seen={} composition_end_seen={} cursor_area_set_seen={}",
+        entry.note.as_deref(),
+        entry.enabled,
+        entry.composing,
+        entry.suppress_next_input,
+        entry.textarea_has_focus,
+        entry.active_element_tag.as_deref(),
+        entry.position_mode.as_deref(),
+        entry.mount_kind.as_deref(),
+        entry.device_pixel_ratio,
+        entry.textarea_selection_start_utf16,
+        entry.textarea_selection_end_utf16,
+        entry.last_cursor_area,
+        entry.last_cursor_anchor_px,
+        entry.last_input_type.as_deref(),
+        entry.last_preedit_len,
+        entry.last_preedit_cursor_utf16,
+        entry.last_commit_len,
+        entry.beforeinput_seen,
+        entry.input_seen,
+        entry.suppressed_input_seen,
+        entry.composition_start_seen,
+        entry.composition_update_seen,
+        entry.composition_end_seen,
+        entry.cursor_area_set_seen
+    ))
+}
+
 #[cfg(test)]
 mod focus_trace_summary_tests {
     use super::*;
@@ -283,6 +318,65 @@ mod focus_trace_summary_tests {
 
         assert!(note.contains("focused_test_id=Some(\"latest.focus\")"));
         assert!(!note.contains("step_index=2"));
+    }
+
+    fn web_ime_entry(step_index: u32) -> UiWebImeTraceEntryV1 {
+        UiWebImeTraceEntryV1 {
+            step_index,
+            note: Some("paste_text_into.wait_clipboard_write".to_string()),
+            enabled: true,
+            composing: false,
+            suppress_next_input: true,
+            textarea_has_focus: Some(false),
+            active_element_tag: Some("BODY".to_string()),
+            position_mode: Some("cursor".to_string()),
+            mount_kind: Some("hidden_textarea".to_string()),
+            device_pixel_ratio: Some(1.5),
+            textarea_selection_start_utf16: Some(2),
+            textarea_selection_end_utf16: Some(4),
+            last_cursor_area: Some(UiRectV1 {
+                x_px: 10.0,
+                y_px: 20.0,
+                w_px: 30.0,
+                h_px: 40.0,
+            }),
+            last_cursor_anchor_px: Some((11.0, 21.0)),
+            last_input_type: Some("insertFromPaste".to_string()),
+            last_preedit_len: Some(3),
+            last_preedit_cursor_utf16: Some((1, 2)),
+            last_commit_len: Some(5),
+            beforeinput_seen: 1,
+            input_seen: 0,
+            suppressed_input_seen: 1,
+            composition_start_seen: 1,
+            composition_update_seen: 1,
+            composition_end_seen: 0,
+            cursor_area_set_seen: 1,
+        }
+    }
+
+    #[test]
+    fn web_ime_trace_summary_note_names_bridge_state() {
+        let note = web_ime_trace_summary_note(&[web_ime_entry(9)], 9).unwrap();
+
+        assert!(note.contains("enabled=true"));
+        assert!(note.contains("textarea_has_focus=Some(false)"));
+        assert!(note.contains("active_element_tag=Some(\"BODY\")"));
+        assert!(note.contains("last_input_type=Some(\"insertFromPaste\")"));
+        assert!(note.contains("suppressed_input_seen=1"));
+        assert!(note.contains("cursor_area_set_seen=1"));
+    }
+
+    #[test]
+    fn web_ime_trace_summary_note_uses_latest_matching_step() {
+        let old = web_ime_entry(8);
+        let mut latest = web_ime_entry(9);
+        latest.active_element_tag = Some("TEXTAREA".to_string());
+
+        let note = web_ime_trace_summary_note(&[old, latest], 9).unwrap();
+
+        assert!(note.contains("active_element_tag=Some(\"TEXTAREA\")"));
+        assert!(!note.contains("step_index=8"));
     }
 }
 

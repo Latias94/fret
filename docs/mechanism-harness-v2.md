@@ -836,6 +836,36 @@ Follow-up recommendation:
   `type_text_into`, `set_text_value`) when they fail waiting for focus or clipboard/IME state. Those
   are the next highest risk editor-grade focus paths.
 
+## Phase 2.26 Text Input Timeout Evidence Events
+
+The text-input audit showed that multi-phase input steps already recorded the right mechanism
+evidence while waiting for focus, clipboard completion, and Web IME state, but their timeout paths
+still collapsed to generic failure reasons. That made editor-grade failures hard to triage: a script
+could not distinguish a focus barrier mismatch, stale focused node, missing text-input focus, or Web
+IME bridge state without opening the full evidence trace.
+
+Fixes:
+
+- `type_text_into` focus timeouts now publish `type_text_into.focus_timeout` with the latest focus
+  trace summary for the failing step.
+- `paste_text_into` focus timeouts now publish `paste_text_into.focus_timeout` with the same focus
+  evidence.
+- `paste_text_into` clipboard-write timeouts now publish
+  `paste_text_into.clipboard_write_timeout`, including expected node/test id, clipboard token
+  presence, focus state, and Web IME bridge state.
+- A Web IME summary helper now reports textarea focus, active DOM tag, bridge mode, selection,
+  cursor, input/composition counters, and suppressed-input counters in a compact event note.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" text_input_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Extend the same failure-event pattern to `set_text_value` selector/action failures and then add a
+  promoted UI Gallery editor fixture that captures focus + Web IME traces for a real text field.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -904,6 +934,8 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" selectable_span_timeout_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" focus_trace_summary_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" text_input_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

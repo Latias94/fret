@@ -419,6 +419,18 @@ pub(super) fn handle_type_text_into_step(
                 *force_dump_label = Some(format!(
                     "script-step-{step_index:04}-type_text_into-focus-timeout"
                 ));
+                push_text_input_timeout_event(
+                    svc,
+                    app,
+                    window,
+                    active,
+                    "type_text_into.focus_timeout",
+                    step_index,
+                    Some(state.remaining_frames),
+                    state.expected_node_id,
+                    state.expected_test_id.as_deref(),
+                    None,
+                );
                 *stop_script = true;
                 *failure_reason = Some("type_text_into_focus_timeout".to_string());
                 active.v2_step_state = None;
@@ -829,6 +841,18 @@ pub(super) fn handle_paste_text_into_step(
                 *force_dump_label = Some(format!(
                     "script-step-{step_index:04}-paste_text_into-focus-timeout"
                 ));
+                push_text_input_timeout_event(
+                    svc,
+                    app,
+                    window,
+                    active,
+                    "paste_text_into.focus_timeout",
+                    step_index,
+                    Some(state.remaining_frames),
+                    state.expected_node_id,
+                    state.expected_test_id.as_deref(),
+                    state.clipboard_token,
+                );
                 *stop_script = true;
                 *failure_reason = Some("paste_text_into_focus_timeout".to_string());
                 active.v2_step_state = None;
@@ -931,6 +955,18 @@ pub(super) fn handle_paste_text_into_step(
                 *force_dump_label = Some(format!(
                     "script-step-{step_index:04}-paste_text_into-clipboard-write-timeout"
                 ));
+                push_text_input_timeout_event(
+                    svc,
+                    app,
+                    window,
+                    active,
+                    "paste_text_into.clipboard_write_timeout",
+                    step_index,
+                    Some(state.remaining_frames),
+                    state.expected_node_id,
+                    state.expected_test_id.as_deref(),
+                    state.clipboard_token,
+                );
                 *stop_script = true;
                 *failure_reason = Some("paste_text_into_clipboard_write_timeout".to_string());
                 active.v2_step_state = None;
@@ -1000,4 +1036,175 @@ pub(super) fn handle_paste_text_into_step(
     }
 
     true
+}
+
+fn push_text_input_timeout_event(
+    svc: &UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    active: &mut ActiveScript,
+    kind: &'static str,
+    step_index: usize,
+    remaining_frames: Option<u32>,
+    expected_node_id: Option<u64>,
+    expected_test_id: Option<&str>,
+    clipboard_token: Option<fret_core::ClipboardToken>,
+) {
+    let step_index = step_index.min(u32::MAX as usize) as u32;
+    let note = text_input_timeout_note(
+        kind,
+        step_index,
+        remaining_frames,
+        expected_node_id,
+        expected_test_id,
+        clipboard_token.is_some(),
+        &active.focus_trace,
+        &active.web_ime_trace,
+    );
+
+    push_script_event_log(
+        active,
+        &svc.cfg,
+        UiScriptEventLogEntryV1 {
+            unix_ms: unix_ms_now(),
+            kind: kind.to_string(),
+            step_index: Some(step_index),
+            note: Some(note),
+            bundle_dir: None,
+            window: Some(window.data().as_ffi()),
+            tick_id: Some(app.tick_id().0),
+            frame_id: Some(app.frame_id().0),
+            window_snapshot_seq: None,
+        },
+    );
+}
+
+fn text_input_timeout_note(
+    kind: &'static str,
+    step_index: u32,
+    remaining_frames: Option<u32>,
+    expected_node_id: Option<u64>,
+    expected_test_id: Option<&str>,
+    clipboard_token_present: bool,
+    focus_trace: &[UiFocusTraceEntryV1],
+    web_ime_trace: &[UiWebImeTraceEntryV1],
+) -> String {
+    let focus = focus_trace_summary_note(focus_trace, step_index)
+        .unwrap_or_else(|| "focus_trace=none".to_string());
+    let web_ime = web_ime_trace_summary_note(web_ime_trace, step_index)
+        .unwrap_or_else(|| "web_ime_trace=none".to_string());
+
+    format!(
+        "kind={kind} step_index={step_index} remaining_frames={remaining_frames:?} expected_node_id={expected_node_id:?} expected_test_id={expected_test_id:?} clipboard_token_present={clipboard_token_present} focus=[{focus}] web_ime=[{web_ime}]"
+    )
+}
+
+#[cfg(test)]
+mod text_input_timeout_tests {
+    use super::*;
+
+    fn focus_entry(step_index: u32) -> UiFocusTraceEntryV1 {
+        UiFocusTraceEntryV1 {
+            step_index,
+            note: Some("type_text_into.wait_focus".to_string()),
+            reason_code: Some("focus.mismatch".to_string()),
+            text_input_snapshot: Some(UiTextInputSnapshotV1 {
+                focus_is_text_input: false,
+                is_composing: false,
+                text_len_utf16: 0,
+                selection_utf16: None,
+                marked_utf16: None,
+                ime_cursor_area: None,
+                visual: None,
+                ime_surrounding_text_len_bytes: None,
+                ime_surrounding_cursor_bytes: None,
+                ime_surrounding_anchor_bytes: None,
+            }),
+            expected_node_id: Some(42),
+            expected_test_id: Some("search.input".to_string()),
+            modal_barrier_root: None,
+            focus_barrier_root: Some(7),
+            pointer_occlusion: Some("blocks_underlay_input".to_string()),
+            pointer_occlusion_layer_id: Some(8),
+            pointer_capture_active: Some(false),
+            pointer_capture_layer_id: None,
+            pointer_capture_multiple_layers: Some(false),
+            focused_element: Some(9),
+            focused_element_path: Some("Root/Other".to_string()),
+            focused_node_id: Some(43),
+            focused_test_id: Some("other.input".to_string()),
+            focused_role: Some("text_input".to_string()),
+            matches_expected: Some(false),
+        }
+    }
+
+    fn web_ime_entry(step_index: u32) -> UiWebImeTraceEntryV1 {
+        UiWebImeTraceEntryV1 {
+            step_index,
+            note: Some("paste_text_into.wait_clipboard_write".to_string()),
+            enabled: true,
+            composing: false,
+            suppress_next_input: false,
+            textarea_has_focus: Some(true),
+            active_element_tag: Some("TEXTAREA".to_string()),
+            position_mode: Some("cursor".to_string()),
+            mount_kind: Some("hidden_textarea".to_string()),
+            device_pixel_ratio: Some(1.5),
+            textarea_selection_start_utf16: Some(0),
+            textarea_selection_end_utf16: Some(0),
+            last_cursor_area: None,
+            last_cursor_anchor_px: None,
+            last_input_type: Some("insertFromPaste".to_string()),
+            last_preedit_len: None,
+            last_preedit_cursor_utf16: None,
+            last_commit_len: Some(6),
+            beforeinput_seen: 1,
+            input_seen: 1,
+            suppressed_input_seen: 0,
+            composition_start_seen: 0,
+            composition_update_seen: 0,
+            composition_end_seen: 0,
+            cursor_area_set_seen: 1,
+        }
+    }
+
+    #[test]
+    fn text_input_timeout_note_summarizes_focus_and_web_ime_evidence() {
+        let note = text_input_timeout_note(
+            "paste_text_into.clipboard_write_timeout",
+            12,
+            Some(0),
+            Some(42),
+            Some("search.input"),
+            true,
+            &[focus_entry(12)],
+            &[web_ime_entry(12)],
+        );
+
+        assert!(note.contains("kind=paste_text_into.clipboard_write_timeout"));
+        assert!(note.contains("expected_test_id=Some(\"search.input\")"));
+        assert!(note.contains("reason_code=Some(\"focus.mismatch\")"));
+        assert!(note.contains("focused_test_id=Some(\"other.input\")"));
+        assert!(note.contains("focus_barrier_root=Some(7)"));
+        assert!(note.contains("textarea_has_focus=Some(true)"));
+        assert!(note.contains("last_input_type=Some(\"insertFromPaste\")"));
+        assert!(note.contains("clipboard_token_present=true"));
+    }
+
+    #[test]
+    fn text_input_timeout_note_reports_missing_traces() {
+        let note = text_input_timeout_note(
+            "type_text_into.focus_timeout",
+            99,
+            Some(0),
+            Some(42),
+            Some("search.input"),
+            false,
+            &[],
+            &[],
+        );
+
+        assert!(note.contains("focus=[focus_trace=none]"));
+        assert!(note.contains("web_ime=[web_ime_trace=none]"));
+    }
 }
