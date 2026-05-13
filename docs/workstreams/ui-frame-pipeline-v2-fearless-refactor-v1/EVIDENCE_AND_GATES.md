@@ -140,6 +140,39 @@ Worst-bundle attribution:
 This slice proves the planned phase split for cached row scene replay. It does not yet complete the
 final `ViewBoundary` store or the final 20-30% end-to-end improvement target.
 
+Most recent windowed-rows canonical row-rect slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md`
+- Perf output directory:
+  `target/fret-diag-code-editor-resize-probes-windowed-row-rect-20260513`
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-windowed-row-rect-20260513/1778681710195/bundle.schema2.json`
+
+Observed result from that run:
+
+- gate failures: `[]`,
+- total p50/p95/max: `1250/1519/1519us`,
+- layout p50/p95/max: `335/345/345us`,
+- prepaint p50/p95/max: `275/349/349us`,
+- paint p50/p95/max: `727/825/825us`,
+- row scene replay hit rate: `99%`,
+- renderer prepare/encode/upload counters stayed at `0`.
+
+Worst-bundle attribution:
+
+- time p50/p95: total `1125/1519`, layout `35/345`, prepaint `265/380`, paint `672/900`
+- hot p50/p95: `layout.engine_solve=0/127`, `paint.widget=456/691`,
+  `paint.text_prepare=9/12`
+- `code_editor.paint_perf` sum planned/used replay entries: `2090/2090`
+- max planned/used replay entries per frame: `289/289`
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `67/89us`
+- `code_editor.paint_perf` p50/p95 `us_row_text`: `0/12us`
+
+This slice removes code-editor-local fixed-row rect reconstruction from replay planning. It keeps
+the replay plan editor-owned, so it is still a transition step before the final boundary fragment
+store.
+
 ## Correctness Gates
 
 Use focused tests first:

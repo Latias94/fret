@@ -66,9 +66,7 @@ pub(super) fn row_scene_cached_entry_matches_syntax(
 pub(super) fn replay_row_scene_plan_candidates_for_frame(
     st: &mut CodeEditorState,
     frame: WindowedRowsPaintFrame,
-    row_h: Px,
-    content_origin: Point,
-    width: Px,
+    content_bounds: Rect,
     _max_entries: usize,
     _text_style: &TextStyle,
     _fg: Color,
@@ -76,7 +74,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     _constraints: CanvasTextConstraints,
     _scale_factor: f32,
 ) {
-    let _ = (row_h, content_origin, width);
+    let _ = content_bounds;
     st.reset_row_scene_replay_plan(st.paint_perf_frame.frame_seq);
     let _ = frame;
 }
@@ -86,9 +84,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
 pub(super) fn replay_row_scene_plan_candidates_for_frame(
     st: &mut CodeEditorState,
     frame: WindowedRowsPaintFrame,
-    row_h: Px,
-    content_origin: Point,
-    width: Px,
+    content_bounds: Rect,
     max_entries: usize,
     text_style: &TextStyle,
     fg: Color,
@@ -178,10 +174,12 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         let _ = cached;
         st.row_scene_cache_queue.push_back((row, tick));
 
-        let y = Px(content_origin.y.0 + row_h.0 * row as f32);
+        let Some(rect) = frame.row_rect(content_bounds, row) else {
+            continue;
+        };
         st.push_row_scene_replay_plan_entry(RowSceneReplayPlanEntry {
             row,
-            rect: Rect::new(Point::new(content_origin.x, y), Size::new(width, row_h)),
+            rect,
             row_range,
             line,
             row_folds,

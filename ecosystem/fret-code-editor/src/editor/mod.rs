@@ -1072,9 +1072,7 @@ impl CodeEditor {
                     paint::prepaint_row_scene_replay_plan_for_frame(
                         &mut editor_state.borrow_mut(),
                         frame,
-                        row_h,
-                        bounds.origin,
-                        Px(bounds.size.width.0.max(0.0)),
+                        bounds,
                         cell_w,
                         text_cache_max_entries,
                         &text_style,

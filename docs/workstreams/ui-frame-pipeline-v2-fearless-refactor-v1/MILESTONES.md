@@ -70,6 +70,10 @@ Status on 2026-05-13:
 - Diagnostics expose planned vs used replay entries plus prepaint planning cost.
 - The current evidence shows the expected phase move: paint-side `us_row_text` is `0/6us`
   p50/p95 in the worst bundle, while prepaint planning is visible as `65/123us` p50/p95.
+- The follow-up row-rect slice in
+  `M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md` removes the code-editor-local
+  fixed-row rect reconstruction from replay planning; `WindowedRowsPaintFrame::row_rect(...)` now
+  owns that surface geometry.
 - M3 is not complete: the final `ViewBoundary` fragment store and the 20-30% end-to-end bottleneck
   improvement proof are still pending.
 

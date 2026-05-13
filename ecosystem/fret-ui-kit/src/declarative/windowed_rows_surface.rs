@@ -37,8 +37,36 @@ use tracing::info;
 pub struct WindowedRowsPaintFrame {
     pub viewport_height: Px,
     pub offset_y: Px,
+    pub row_height: Px,
+    pub row_stride: Px,
+    pub gap: Px,
+    pub scroll_margin: Px,
     pub visible_start: usize,
     pub visible_end: usize,
+}
+
+impl WindowedRowsPaintFrame {
+    pub fn row_offset_y(&self, index: usize) -> Px {
+        Px(self.scroll_margin.0.max(0.0) + self.row_stride.0.max(0.0) * index as f32)
+    }
+
+    pub fn row_rect(&self, content_bounds: Rect, index: usize) -> Option<Rect> {
+        if index < self.visible_start || index > self.visible_end {
+            return None;
+        }
+
+        let offset_y = self.row_offset_y(index);
+        Some(Rect::new(
+            Point::new(
+                content_bounds.origin.x,
+                Px(content_bounds.origin.y.0 + offset_y.0),
+            ),
+            Size::new(
+                Px(content_bounds.size.width.0.max(0.0)),
+                Px(self.row_height.0.max(0.0)),
+            ),
+        ))
+    }
 }
 
 pub type OnWindowedRowsPaintFrame =
@@ -179,10 +207,21 @@ fn current_windowed_rows_frame(
 
     let start = visible.start_index.saturating_sub(visible.overscan);
     let end = (visible.end_index + visible.overscan).min(visible.count.saturating_sub(1));
+    let row_height = metrics.height_at(0);
+    let scroll_margin = metrics.offset_for_index(0);
+    let row_stride = if visible.count > 1 {
+        Px((metrics.offset_for_index(1).0 - scroll_margin.0).max(0.0))
+    } else {
+        Px((row_height.0 + metrics.gap().0).max(0.0))
+    };
 
     Some(WindowedRowsPaintFrame {
         viewport_height: viewport_h,
         offset_y,
+        row_height,
+        row_stride,
+        gap: metrics.gap(),
+        scroll_margin,
         visible_start: start,
         visible_end: end,
     })
@@ -306,22 +345,15 @@ pub fn windowed_rows_surface<H: UiHost>(
             };
 
             let bounds = painter.bounds();
-            let origin_x = bounds.origin.x;
-            let origin_y = bounds.origin.y;
-            let width = Px(bounds.size.width.0.max(0.0));
 
             if let Some(on_paint_frame) = &on_paint_frame {
                 on_paint_frame(painter, frame);
             }
 
             for index in frame.visible_start..=frame.visible_end {
-                let y = metrics.offset_for_index(index);
-                let h = metrics.height_at(index);
-                let rect = Rect::new(
-                    Point::new(origin_x, Px(origin_y.0 + y.0)),
-                    Size::new(width, h),
-                );
-                paint_row(painter, index, rect);
+                if let Some(rect) = frame.row_rect(bounds, index) {
+                    paint_row(painter, index, rect);
+                }
             }
         };
 
@@ -622,22 +654,15 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                 };
 
                 let bounds = painter.bounds();
-                let origin_x = bounds.origin.x;
-                let origin_y = bounds.origin.y;
-                let width = Px(bounds.size.width.0.max(0.0));
 
                 if let Some(on_paint_frame) = &on_paint_frame {
                     on_paint_frame(painter, frame);
                 }
 
                 for index in frame.visible_start..=frame.visible_end {
-                    let y = metrics.offset_for_index(index);
-                    let h = metrics.height_at(index);
-                    let rect = Rect::new(
-                        Point::new(origin_x, Px(origin_y.0 + y.0)),
-                        Size::new(width, h),
-                    );
-                    paint_row(painter, index, rect);
+                    if let Some(rect) = frame.row_rect(bounds, index) {
+                        paint_row(painter, index, rect);
+                    }
                 }
             };
 
@@ -744,6 +769,33 @@ mod tests {
         let props = WindowedRowsSurfaceProps::default();
         assert_eq!(props.scroll.axis, ScrollAxis::Y);
         assert!(props.scroll.windowed_paint);
+    }
+
+    #[test]
+    fn windowed_rows_frame_row_rect_uses_surface_geometry() {
+        let frame = WindowedRowsPaintFrame {
+            viewport_height: Px(48.0),
+            offset_y: Px(0.0),
+            row_height: Px(20.0),
+            row_stride: Px(24.0),
+            gap: Px(4.0),
+            scroll_margin: Px(6.0),
+            visible_start: 2,
+            visible_end: 4,
+        };
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(30.0)),
+            Size::new(Px(120.0), Px(96.0)),
+        );
+
+        assert_eq!(frame.row_rect(bounds, 1), None);
+        assert_eq!(
+            frame.row_rect(bounds, 3),
+            Some(Rect::new(
+                Point::new(Px(10.0), Px(108.0)),
+                Size::new(Px(120.0), Px(20.0))
+            ))
+        );
     }
 
     #[test]

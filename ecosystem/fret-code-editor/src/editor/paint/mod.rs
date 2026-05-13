@@ -82,9 +82,7 @@ pub(super) fn frame_cache_max_entries(st: &CodeEditorState, max_entries: usize) 
 pub(super) fn prepaint_row_scene_replay_plan_for_frame(
     st: &mut CodeEditorState,
     frame: WindowedRowsPaintFrame,
-    row_h: Px,
-    content_origin: Point,
-    width: Px,
+    content_bounds: Rect,
     cell_w: Px,
     text_cache_max_entries: usize,
     text_style: &TextStyle,
@@ -92,6 +90,7 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame(
     theme_revision: u64,
     scale_factor: f32,
 ) {
+    let width = Px(content_bounds.size.width.0.max(0.0));
     let stable_max_width = if cell_w.0 > 0.01 {
         Px((cell_w.0 * 512.0).max(width.0))
     } else {
@@ -105,9 +104,7 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame(
     scene::replay_row_scene_plan_candidates_for_frame(
         st,
         frame,
-        row_h,
-        content_origin,
-        width,
+        content_bounds,
         text_cache_max_entries,
         text_style,
         fg,

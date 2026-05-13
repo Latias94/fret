@@ -12,6 +12,10 @@ fn syntax_prefetch_visible_window_uses_display_map_lines_under_soft_wrap() {
             WindowedRowsPaintFrame {
                 viewport_height: Px(64.0),
                 offset_y: Px(0.0),
+                row_height: Px(16.0),
+                row_stride: Px(16.0),
+                gap: Px(0.0),
+                scroll_margin: Px(0.0),
                 visible_start: 2,
                 visible_end: 4,
             },

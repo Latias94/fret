@@ -113,6 +113,10 @@ fn begin_paint_frame_sets_cache_floor_from_actual_visible_rows() {
         st.begin_paint_frame(WindowedRowsPaintFrame {
             viewport_height: Px(520.0),
             offset_y: Px(0.0),
+            row_height: Px(16.0),
+            row_stride: Px(16.0),
+            gap: Px(0.0),
+            scroll_margin: Px(0.0),
             visible_start: 10,
             visible_end: 298,
         });
@@ -121,6 +125,10 @@ fn begin_paint_frame_sets_cache_floor_from_actual_visible_rows() {
         st.begin_paint_frame(WindowedRowsPaintFrame {
             viewport_height: Px(520.0),
             offset_y: Px(0.0),
+            row_height: Px(16.0),
+            row_stride: Px(16.0),
+            gap: Px(0.0),
+            scroll_margin: Px(0.0),
             visible_start: 0,
             visible_end: 288,
         });

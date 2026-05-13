@@ -134,8 +134,9 @@ What changed:
 What is still intentionally old or transitional:
 
 - `RowSceneReplayPlan` is editor-owned state, not the final `ViewBoundary` fragment store.
-- row rect reconstruction in prepaint assumes the current fixed-height windowed rows surface
-  (`content_origin.y + row_h * row`, no row gap and no scroll margin).
+- Row rect reconstruction in prepaint was originally editor-local in this slice; this specific
+  assumption was removed by `M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md`, which moved
+  rect ownership to `WindowedRowsPaintFrame::row_rect(...)`.
 - only syntax-replayable row scene cache entries are planned in this slice.
 - cache rejection diagnostics still live in code-editor counters rather than canonical boundary
   fragment diagnostics.
