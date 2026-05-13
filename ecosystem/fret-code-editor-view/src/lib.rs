@@ -12,16 +12,44 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::Arc;
 
+mod assist;
 pub mod code_wrap_policy;
+mod decorations;
+mod diagnostics;
 mod folds;
+mod gutter;
 mod inlays;
 pub mod row_spans;
+mod semantic_tokens;
 
+pub use assist::{
+    CodeAction, CodeActionKind, CodeActionList, CodeActionListError, CompletionCandidate,
+    CompletionCandidateKind, CompletionCommitKind, CompletionList, CompletionListError,
+    EditorAssistKind, EditorAssistRequest, EditorAssistRequestError, EditorAssistTrigger,
+    HoverPayload, HoverPayloadError, validate_code_action_list, validate_completion_list,
+    validate_editor_assist_request, validate_hover_payload,
+};
+pub use decorations::{
+    RangeDecoration, RangeDecorationError, RangeDecorationHitTest, RangeDecorationLayer,
+    normalized_range_decorations, validate_range_decorations,
+};
+pub use diagnostics::{
+    DiagnosticLineSummary, DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan,
+    DiagnosticSpanError, diagnostic_line_summaries, normalized_diagnostic_spans,
+    validate_diagnostic_spans,
+};
 pub use folds::{
     FoldSpan, FoldSpanError, apply_fold_spans, folded_byte_to_col, folded_col_count,
     folded_col_to_byte, validate_fold_spans,
 };
+pub use gutter::{
+    GutterMarker, GutterMarkerAnchor, GutterMarkerError, GutterMarkerHitTarget, GutterMarkerKind,
+    GutterMarkerVisual, normalized_gutter_markers, validate_gutter_markers,
+};
 pub use inlays::{InlaySpan, InlaySpanError, apply_inlay_spans, validate_inlay_spans};
+pub use semantic_tokens::{
+    SemanticToken, SemanticTokenError, normalized_semantic_tokens, validate_semantic_tokens,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InlinePreedit {

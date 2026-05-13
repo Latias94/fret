@@ -102,7 +102,7 @@ echo "[gate] launch-bin: ${launch_bin}"
 cargo build -q -p fret-demo --release --bin extras_marquee_perf_demo
 
 cmd=(
-  cargo run -q -p fretboard --
+  cargo run -q -p fretboard-dev --
   diag perf extras-marquee-steady
   --dir "$out_dir"
   --timeout-ms "$timeout_ms"

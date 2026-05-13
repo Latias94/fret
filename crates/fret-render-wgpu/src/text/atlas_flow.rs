@@ -119,19 +119,9 @@ impl TextSystem {
             let Some(blob) = self.blob_state.blobs.get(text) else {
                 continue;
             };
-            self.collect_blob_pinned_keys(blob.shape().glyphs(), &mut pinned_keys);
+            pinned_keys.extend_pin_keys(blob.shape().pin_keys());
         }
         pinned_keys
-    }
-
-    fn collect_blob_pinned_keys(
-        &self,
-        glyphs: &[super::GlyphInstance],
-        pinned_keys: &mut GlyphKeyBuckets,
-    ) {
-        for glyph in glyphs {
-            pinned_keys.insert(glyph.key);
-        }
     }
 
     fn prewarm_pin_bucket(

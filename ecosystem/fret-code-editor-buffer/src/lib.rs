@@ -48,6 +48,30 @@ impl DocUri {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Revision(pub u64);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Selection {
+    pub anchor: usize,
+    pub focus: usize,
+}
+
+impl Selection {
+    pub fn is_caret(self) -> bool {
+        self.anchor == self.focus
+    }
+
+    pub fn normalized(self) -> Range<usize> {
+        if self.anchor <= self.focus {
+            self.anchor..self.focus
+        } else {
+            self.focus..self.anchor
+        }
+    }
+
+    pub fn caret(self) -> usize {
+        self.focus
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Edit {
     Insert { at: usize, text: String },
@@ -758,5 +782,24 @@ mod tests {
 
         buf.set_uri(Some(uri));
         assert_eq!(buf.uri().map(DocUri::as_str), Some("file:///tmp/hello.txt"));
+    }
+
+    #[test]
+    fn selection_preserves_anchor_focus_and_normalizes_range() {
+        let selection = Selection {
+            anchor: 9,
+            focus: 3,
+        };
+
+        assert!(!selection.is_caret());
+        assert_eq!(selection.caret(), 3);
+        assert_eq!(selection.normalized(), 3..9);
+        assert!(
+            Selection {
+                anchor: 4,
+                focus: 4
+            }
+            .is_caret()
+        );
     }
 }

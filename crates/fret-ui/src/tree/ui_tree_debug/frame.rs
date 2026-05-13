@@ -36,6 +36,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.element_children_vec_pool_reuses = 0;
         self.debug_stats.element_children_vec_pool_misses = 0;
         self.debug_stats.dispatch_time = Duration::default();
+        self.debug_stats.dispatch_inner_body_time = Duration::default();
         self.debug_stats.dispatch_pointer_events = u32::default();
         self.debug_stats.dispatch_pointer_event_time = Duration::default();
         self.debug_stats.dispatch_timer_events = u32::default();
@@ -70,6 +71,12 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.hit_test_candidate_self_only_time = Duration::default();
         self.debug_stats.hit_test_fallback_traversal_time = Duration::default();
         self.debug_stats.dispatch_hover_update_time = Duration::default();
+        self.debug_stats.dispatch_input_state_update_time = Duration::default();
+        self.debug_stats.dispatch_context_build_time = Duration::default();
+        self.debug_stats.dispatch_prelude_time = Duration::default();
+        self.debug_stats.dispatch_pointer_arbitration_time = Duration::default();
+        self.debug_stats.dispatch_pointer_target_routing_time = Duration::default();
+        self.debug_stats.dispatch_post_widget_control_flow_time = Duration::default();
         self.debug_stats.dispatch_scroll_handle_invalidation_time = Duration::default();
         self.debug_stats.dispatch_active_layers_time = Duration::default();
         self.debug_stats.dispatch_input_context_time = Duration::default();

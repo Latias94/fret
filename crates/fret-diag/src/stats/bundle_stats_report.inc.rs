@@ -76,6 +76,10 @@ pub(super) struct BundleStatsReport {
     pub(super) max_ui_thread_cpu_time_us: u64,
     pub(super) max_ui_thread_cpu_cycle_time_delta_cycles: u64,
     pub(super) max_layout_engine_solve_time_us: u64,
+    pub(super) max_dispatch_accounted_time_us: u64,
+    pub(super) max_dispatch_unattributed_time_us: u64,
+    pub(super) max_dispatch_inner_body_unattributed_time_us: u64,
+    pub(super) max_dispatch_runtime_wrapper_time_us: u64,
     pub(super) max_renderer_encode_scene_us: u64,
     pub(super) max_renderer_ensure_pipelines_us: u64,
     pub(super) max_renderer_plan_compile_us: u64,
@@ -127,6 +131,14 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_engine_solve_time_us: u64,
     pub(super) p50_dispatch_time_us: u64,
     pub(super) p95_dispatch_time_us: u64,
+    pub(super) p50_dispatch_accounted_time_us: u64,
+    pub(super) p95_dispatch_accounted_time_us: u64,
+    pub(super) p50_dispatch_unattributed_time_us: u64,
+    pub(super) p95_dispatch_unattributed_time_us: u64,
+    pub(super) p50_dispatch_inner_body_unattributed_time_us: u64,
+    pub(super) p95_dispatch_inner_body_unattributed_time_us: u64,
+    pub(super) p50_dispatch_runtime_wrapper_time_us: u64,
+    pub(super) p95_dispatch_runtime_wrapper_time_us: u64,
     pub(super) p50_hit_test_time_us: u64,
     pub(super) p95_hit_test_time_us: u64,
     pub(super) p50_paint_widget_time_us: u64,
@@ -149,6 +161,7 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    code_editor_paint_perf: BundleStatsCodeEditorPaintPerfSummary,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -221,7 +234,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_collect_roots_time_us: u64,
     pub(super) paint_publish_text_input_snapshot_time_us: u64,
     pub(super) paint_collapse_observations_time_us: u64,
+    pub(super) code_editor_paint_perf: Option<BundleStatsCodeEditorPaintPerf>,
     pub(super) dispatch_time_us: u64,
+    pub(super) dispatch_inner_body_time_us: u64,
     pub(super) dispatch_pointer_events: u32,
     pub(super) dispatch_pointer_event_time_us: u64,
     pub(super) dispatch_timer_events: u32,
@@ -240,6 +255,12 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) dispatch_other_event_time_us: u64,
     pub(super) hit_test_time_us: u64,
     pub(super) dispatch_hover_update_time_us: u64,
+    pub(super) dispatch_input_state_update_time_us: u64,
+    pub(super) dispatch_context_build_time_us: u64,
+    pub(super) dispatch_prelude_time_us: u64,
+    pub(super) dispatch_pointer_arbitration_time_us: u64,
+    pub(super) dispatch_pointer_target_routing_time_us: u64,
+    pub(super) dispatch_post_widget_control_flow_time_us: u64,
     pub(super) dispatch_scroll_handle_invalidation_time_us: u64,
     pub(super) dispatch_active_layers_time_us: u64,
     pub(super) dispatch_input_context_time_us: u64,
@@ -484,6 +505,379 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCodeEditorPaintPerf {
+    pub(super) frame_seq: u64,
+    pub(super) visible_start: u64,
+    pub(super) visible_end: u64,
+    pub(super) visible_rows: u64,
+    pub(super) cache_base_entries: u64,
+    pub(super) cache_frame_min_entries: u64,
+    pub(super) cache_effective_entries: u64,
+    pub(super) rows_painted: u64,
+    pub(super) rows_drew_rich: u64,
+    pub(super) rows_scene_replayed: u64,
+    pub(super) rows_scene_stored: u64,
+    pub(super) row_scene_ops_stored: u64,
+    pub(super) quads_selection: u64,
+    pub(super) quads_caret: u64,
+    pub(super) syntax_rows_stored: u64,
+    pub(super) us_total: u64,
+    pub(super) us_row_text: u64,
+    pub(super) us_baseline_measure: u64,
+    pub(super) us_row_content_resolve: u64,
+    pub(super) us_row_rich_cache_compare: u64,
+    pub(super) us_row_geom_key: u64,
+    pub(super) us_rich_materialize: u64,
+    pub(super) us_text_draw: u64,
+    pub(super) us_row_scene_key: u64,
+    pub(super) us_row_scene_fast_probe: u64,
+    pub(super) us_row_scene_full_probe: u64,
+    pub(super) us_row_scene_fast_key_compare: u64,
+    pub(super) us_row_scene_full_key_compare: u64,
+    pub(super) us_row_scene_replay_touch: u64,
+    pub(super) us_row_scene_replay_ops: u64,
+    pub(super) us_row_scene_capture_ops: u64,
+    pub(super) us_row_scene_store: u64,
+    pub(super) us_row_scene_fast_path: u64,
+    pub(super) us_row_scene_full_path: u64,
+    pub(super) us_syntax_spans: u64,
+    pub(super) us_syntax_slice: u64,
+    pub(super) us_syntax_highlight: u64,
+    pub(super) us_syntax_distribute: u64,
+    pub(super) us_syntax_store: u64,
+    pub(super) us_selection_rects: u64,
+    pub(super) us_caret_x: u64,
+    pub(super) us_caret_stops: u64,
+    pub(super) us_caret_rect: u64,
+    pub(super) us_row_geom_cache: u64,
+    pub(super) us_row_geom_resolve: u64,
+    pub(super) us_row_overlay: u64,
+    pub(super) us_frame_overlay_prepare: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsCodeEditorPaintPerfSummary {
+    frames: u32,
+    sum: BundleStatsCodeEditorPaintPerfTotals,
+    max: BundleStatsCodeEditorPaintPerfTotals,
+    p50: BundleStatsCodeEditorPaintPerfTotals,
+    p95: BundleStatsCodeEditorPaintPerfTotals,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsCodeEditorPaintPerfTotals {
+    rows_painted: u64,
+    rows_drew_rich: u64,
+    rows_scene_replayed: u64,
+    rows_scene_stored: u64,
+    row_scene_ops_stored: u64,
+    quads_selection: u64,
+    quads_caret: u64,
+    syntax_rows_stored: u64,
+    us_total: u64,
+    us_row_text: u64,
+    us_baseline_measure: u64,
+    us_row_content_resolve: u64,
+    us_row_rich_cache_compare: u64,
+    us_row_geom_key: u64,
+    us_rich_materialize: u64,
+    us_text_draw: u64,
+    us_row_scene_key: u64,
+    us_row_scene_fast_probe: u64,
+    us_row_scene_full_probe: u64,
+    us_row_scene_fast_key_compare: u64,
+    us_row_scene_full_key_compare: u64,
+    us_row_scene_replay_touch: u64,
+    us_row_scene_replay_ops: u64,
+    us_row_scene_capture_ops: u64,
+    us_row_scene_store: u64,
+    us_row_scene_fast_path: u64,
+    us_row_scene_full_path: u64,
+    us_syntax_spans: u64,
+    us_syntax_slice: u64,
+    us_syntax_highlight: u64,
+    us_syntax_distribute: u64,
+    us_syntax_store: u64,
+    us_selection_rects: u64,
+    us_caret_x: u64,
+    us_caret_stops: u64,
+    us_caret_rect: u64,
+    us_row_geom_cache: u64,
+    us_row_geom_resolve: u64,
+    us_row_overlay: u64,
+    us_frame_overlay_prepare: u64,
+}
+
+impl BundleStatsCodeEditorPaintPerfTotals {
+    fn add_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
+        self.rows_painted = self.rows_painted.saturating_add(p.rows_painted);
+        self.rows_drew_rich = self.rows_drew_rich.saturating_add(p.rows_drew_rich);
+        self.rows_scene_replayed = self
+            .rows_scene_replayed
+            .saturating_add(p.rows_scene_replayed);
+        self.rows_scene_stored = self.rows_scene_stored.saturating_add(p.rows_scene_stored);
+        self.row_scene_ops_stored = self
+            .row_scene_ops_stored
+            .saturating_add(p.row_scene_ops_stored);
+        self.quads_selection = self.quads_selection.saturating_add(p.quads_selection);
+        self.quads_caret = self.quads_caret.saturating_add(p.quads_caret);
+        self.syntax_rows_stored = self
+            .syntax_rows_stored
+            .saturating_add(p.syntax_rows_stored);
+        self.us_total = self.us_total.saturating_add(p.us_total);
+        self.us_row_text = self.us_row_text.saturating_add(p.us_row_text);
+        self.us_baseline_measure = self
+            .us_baseline_measure
+            .saturating_add(p.us_baseline_measure);
+        self.us_row_content_resolve = self
+            .us_row_content_resolve
+            .saturating_add(p.us_row_content_resolve);
+        self.us_row_rich_cache_compare = self
+            .us_row_rich_cache_compare
+            .saturating_add(p.us_row_rich_cache_compare);
+        self.us_row_geom_key = self.us_row_geom_key.saturating_add(p.us_row_geom_key);
+        self.us_rich_materialize = self
+            .us_rich_materialize
+            .saturating_add(p.us_rich_materialize);
+        self.us_text_draw = self.us_text_draw.saturating_add(p.us_text_draw);
+        self.us_row_scene_key = self.us_row_scene_key.saturating_add(p.us_row_scene_key);
+        self.us_row_scene_fast_probe = self
+            .us_row_scene_fast_probe
+            .saturating_add(p.us_row_scene_fast_probe);
+        self.us_row_scene_full_probe = self
+            .us_row_scene_full_probe
+            .saturating_add(p.us_row_scene_full_probe);
+        self.us_row_scene_fast_key_compare = self
+            .us_row_scene_fast_key_compare
+            .saturating_add(p.us_row_scene_fast_key_compare);
+        self.us_row_scene_full_key_compare = self
+            .us_row_scene_full_key_compare
+            .saturating_add(p.us_row_scene_full_key_compare);
+        self.us_row_scene_replay_touch = self
+            .us_row_scene_replay_touch
+            .saturating_add(p.us_row_scene_replay_touch);
+        self.us_row_scene_replay_ops = self
+            .us_row_scene_replay_ops
+            .saturating_add(p.us_row_scene_replay_ops);
+        self.us_row_scene_capture_ops = self
+            .us_row_scene_capture_ops
+            .saturating_add(p.us_row_scene_capture_ops);
+        self.us_row_scene_store = self
+            .us_row_scene_store
+            .saturating_add(p.us_row_scene_store);
+        self.us_row_scene_fast_path = self
+            .us_row_scene_fast_path
+            .saturating_add(p.us_row_scene_fast_path);
+        self.us_row_scene_full_path = self
+            .us_row_scene_full_path
+            .saturating_add(p.us_row_scene_full_path);
+        self.us_syntax_spans = self.us_syntax_spans.saturating_add(p.us_syntax_spans);
+        self.us_syntax_slice = self.us_syntax_slice.saturating_add(p.us_syntax_slice);
+        self.us_syntax_highlight = self
+            .us_syntax_highlight
+            .saturating_add(p.us_syntax_highlight);
+        self.us_syntax_distribute = self
+            .us_syntax_distribute
+            .saturating_add(p.us_syntax_distribute);
+        self.us_syntax_store = self.us_syntax_store.saturating_add(p.us_syntax_store);
+        self.us_selection_rects = self
+            .us_selection_rects
+            .saturating_add(p.us_selection_rects);
+        self.us_caret_x = self.us_caret_x.saturating_add(p.us_caret_x);
+        self.us_caret_stops = self.us_caret_stops.saturating_add(p.us_caret_stops);
+        self.us_caret_rect = self.us_caret_rect.saturating_add(p.us_caret_rect);
+        self.us_row_geom_cache = self
+            .us_row_geom_cache
+            .saturating_add(p.us_row_geom_cache);
+        self.us_row_geom_resolve = self
+            .us_row_geom_resolve
+            .saturating_add(p.us_row_geom_resolve);
+        self.us_row_overlay = self.us_row_overlay.saturating_add(p.us_row_overlay);
+        self.us_frame_overlay_prepare = self
+            .us_frame_overlay_prepare
+            .saturating_add(p.us_frame_overlay_prepare);
+    }
+
+    fn max_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
+        self.rows_painted = self.rows_painted.max(p.rows_painted);
+        self.rows_drew_rich = self.rows_drew_rich.max(p.rows_drew_rich);
+        self.rows_scene_replayed = self.rows_scene_replayed.max(p.rows_scene_replayed);
+        self.rows_scene_stored = self.rows_scene_stored.max(p.rows_scene_stored);
+        self.row_scene_ops_stored = self.row_scene_ops_stored.max(p.row_scene_ops_stored);
+        self.quads_selection = self.quads_selection.max(p.quads_selection);
+        self.quads_caret = self.quads_caret.max(p.quads_caret);
+        self.syntax_rows_stored = self.syntax_rows_stored.max(p.syntax_rows_stored);
+        self.us_total = self.us_total.max(p.us_total);
+        self.us_row_text = self.us_row_text.max(p.us_row_text);
+        self.us_baseline_measure = self.us_baseline_measure.max(p.us_baseline_measure);
+        self.us_row_content_resolve = self
+            .us_row_content_resolve
+            .max(p.us_row_content_resolve);
+        self.us_row_rich_cache_compare = self
+            .us_row_rich_cache_compare
+            .max(p.us_row_rich_cache_compare);
+        self.us_row_geom_key = self.us_row_geom_key.max(p.us_row_geom_key);
+        self.us_rich_materialize = self.us_rich_materialize.max(p.us_rich_materialize);
+        self.us_text_draw = self.us_text_draw.max(p.us_text_draw);
+        self.us_row_scene_key = self.us_row_scene_key.max(p.us_row_scene_key);
+        self.us_row_scene_fast_probe = self
+            .us_row_scene_fast_probe
+            .max(p.us_row_scene_fast_probe);
+        self.us_row_scene_full_probe = self
+            .us_row_scene_full_probe
+            .max(p.us_row_scene_full_probe);
+        self.us_row_scene_fast_key_compare = self
+            .us_row_scene_fast_key_compare
+            .max(p.us_row_scene_fast_key_compare);
+        self.us_row_scene_full_key_compare = self
+            .us_row_scene_full_key_compare
+            .max(p.us_row_scene_full_key_compare);
+        self.us_row_scene_replay_touch = self
+            .us_row_scene_replay_touch
+            .max(p.us_row_scene_replay_touch);
+        self.us_row_scene_replay_ops = self.us_row_scene_replay_ops.max(p.us_row_scene_replay_ops);
+        self.us_row_scene_capture_ops = self
+            .us_row_scene_capture_ops
+            .max(p.us_row_scene_capture_ops);
+        self.us_row_scene_store = self.us_row_scene_store.max(p.us_row_scene_store);
+        self.us_row_scene_fast_path = self.us_row_scene_fast_path.max(p.us_row_scene_fast_path);
+        self.us_row_scene_full_path = self.us_row_scene_full_path.max(p.us_row_scene_full_path);
+        self.us_syntax_spans = self.us_syntax_spans.max(p.us_syntax_spans);
+        self.us_syntax_slice = self.us_syntax_slice.max(p.us_syntax_slice);
+        self.us_syntax_highlight = self.us_syntax_highlight.max(p.us_syntax_highlight);
+        self.us_syntax_distribute = self.us_syntax_distribute.max(p.us_syntax_distribute);
+        self.us_syntax_store = self.us_syntax_store.max(p.us_syntax_store);
+        self.us_selection_rects = self.us_selection_rects.max(p.us_selection_rects);
+        self.us_caret_x = self.us_caret_x.max(p.us_caret_x);
+        self.us_caret_stops = self.us_caret_stops.max(p.us_caret_stops);
+        self.us_caret_rect = self.us_caret_rect.max(p.us_caret_rect);
+        self.us_row_geom_cache = self.us_row_geom_cache.max(p.us_row_geom_cache);
+        self.us_row_geom_resolve = self.us_row_geom_resolve.max(p.us_row_geom_resolve);
+        self.us_row_overlay = self.us_row_overlay.max(p.us_row_overlay);
+        self.us_frame_overlay_prepare = self
+            .us_frame_overlay_prepare
+            .max(p.us_frame_overlay_prepare);
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "rows_painted": self.rows_painted,
+            "rows_drew_rich": self.rows_drew_rich,
+            "rows_scene_replayed": self.rows_scene_replayed,
+            "rows_scene_stored": self.rows_scene_stored,
+            "row_scene_ops_stored": self.row_scene_ops_stored,
+            "quads_selection": self.quads_selection,
+            "quads_caret": self.quads_caret,
+            "syntax_rows_stored": self.syntax_rows_stored,
+            "us_total": self.us_total,
+            "us_row_text": self.us_row_text,
+            "us_baseline_measure": self.us_baseline_measure,
+            "us_row_content_resolve": self.us_row_content_resolve,
+            "us_row_rich_cache_compare": self.us_row_rich_cache_compare,
+            "us_row_geom_key": self.us_row_geom_key,
+            "us_rich_materialize": self.us_rich_materialize,
+            "us_text_draw": self.us_text_draw,
+            "us_row_scene_key": self.us_row_scene_key,
+            "us_row_scene_fast_probe": self.us_row_scene_fast_probe,
+            "us_row_scene_full_probe": self.us_row_scene_full_probe,
+            "us_row_scene_fast_key_compare": self.us_row_scene_fast_key_compare,
+            "us_row_scene_full_key_compare": self.us_row_scene_full_key_compare,
+            "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
+            "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
+            "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
+            "us_row_scene_store": self.us_row_scene_store,
+            "us_row_scene_fast_path": self.us_row_scene_fast_path,
+            "us_row_scene_full_path": self.us_row_scene_full_path,
+            "us_syntax_spans": self.us_syntax_spans,
+            "us_syntax_slice": self.us_syntax_slice,
+            "us_syntax_highlight": self.us_syntax_highlight,
+            "us_syntax_distribute": self.us_syntax_distribute,
+            "us_syntax_store": self.us_syntax_store,
+            "us_selection_rects": self.us_selection_rects,
+            "us_caret_x": self.us_caret_x,
+            "us_caret_stops": self.us_caret_stops,
+            "us_caret_rect": self.us_caret_rect,
+            "us_row_geom_cache": self.us_row_geom_cache,
+            "us_row_geom_resolve": self.us_row_geom_resolve,
+            "us_row_overlay": self.us_row_overlay,
+            "us_frame_overlay_prepare": self.us_frame_overlay_prepare,
+        })
+    }
+}
+
+impl BundleStatsCodeEditorPaintPerfSummary {
+    fn observe(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
+        self.frames = self.frames.saturating_add(1);
+        self.sum.add_frame(p);
+        self.max.max_frame(p);
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "frames": self.frames,
+            "sum": self.sum.to_json(),
+            "max": self.max.to_json(),
+            "p50": self.p50.to_json(),
+            "p95": self.p95.to_json(),
+        })
+    }
+}
+
+impl BundleStatsCodeEditorPaintPerf {
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "frame_seq": self.frame_seq,
+            "visible_start": self.visible_start,
+            "visible_end": self.visible_end,
+            "visible_rows": self.visible_rows,
+            "cache_base_entries": self.cache_base_entries,
+            "cache_frame_min_entries": self.cache_frame_min_entries,
+            "cache_effective_entries": self.cache_effective_entries,
+            "rows_painted": self.rows_painted,
+            "rows_drew_rich": self.rows_drew_rich,
+            "rows_scene_replayed": self.rows_scene_replayed,
+            "rows_scene_stored": self.rows_scene_stored,
+            "row_scene_ops_stored": self.row_scene_ops_stored,
+            "quads_selection": self.quads_selection,
+            "quads_caret": self.quads_caret,
+            "syntax_rows_stored": self.syntax_rows_stored,
+            "us_total": self.us_total,
+            "us_row_text": self.us_row_text,
+            "us_baseline_measure": self.us_baseline_measure,
+            "us_row_content_resolve": self.us_row_content_resolve,
+            "us_row_rich_cache_compare": self.us_row_rich_cache_compare,
+            "us_row_geom_key": self.us_row_geom_key,
+            "us_rich_materialize": self.us_rich_materialize,
+            "us_text_draw": self.us_text_draw,
+            "us_row_scene_key": self.us_row_scene_key,
+            "us_row_scene_fast_probe": self.us_row_scene_fast_probe,
+            "us_row_scene_full_probe": self.us_row_scene_full_probe,
+            "us_row_scene_fast_key_compare": self.us_row_scene_fast_key_compare,
+            "us_row_scene_full_key_compare": self.us_row_scene_full_key_compare,
+            "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
+            "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
+            "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
+            "us_row_scene_store": self.us_row_scene_store,
+            "us_row_scene_fast_path": self.us_row_scene_fast_path,
+            "us_row_scene_full_path": self.us_row_scene_full_path,
+            "us_syntax_spans": self.us_syntax_spans,
+            "us_syntax_slice": self.us_syntax_slice,
+            "us_syntax_highlight": self.us_syntax_highlight,
+            "us_syntax_distribute": self.us_syntax_distribute,
+            "us_syntax_store": self.us_syntax_store,
+            "us_selection_rects": self.us_selection_rects,
+            "us_caret_x": self.us_caret_x,
+            "us_caret_stops": self.us_caret_stops,
+            "us_caret_rect": self.us_caret_rect,
+            "us_row_geom_cache": self.us_row_geom_cache,
+            "us_row_geom_resolve": self.us_row_geom_resolve,
+            "us_row_overlay": self.us_row_overlay,
+            "us_frame_overlay_prepare": self.us_frame_overlay_prepare,
+        })
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -812,6 +1206,220 @@ impl BundleStatsReport {
         self.derived_from_frames_index
     }
 
+    fn dispatch_accounted_time_us(row: &BundleStatsSnapshotRow) -> u64 {
+        row.hit_test_time_us
+            .saturating_add(row.dispatch_hover_update_time_us)
+            .saturating_add(row.dispatch_input_state_update_time_us)
+            .saturating_add(row.dispatch_context_build_time_us)
+            .saturating_add(row.dispatch_prelude_time_us)
+            .saturating_add(row.dispatch_pointer_arbitration_time_us)
+            .saturating_add(row.dispatch_pointer_target_routing_time_us)
+            .saturating_add(row.dispatch_post_widget_control_flow_time_us)
+            .saturating_add(row.dispatch_scroll_handle_invalidation_time_us)
+            .saturating_add(row.dispatch_active_layers_time_us)
+            .saturating_add(row.dispatch_input_context_time_us)
+            .saturating_add(row.dispatch_event_chain_build_time_us)
+            .saturating_add(row.dispatch_widget_capture_time_us)
+            .saturating_add(row.dispatch_widget_bubble_time_us)
+            .saturating_add(row.dispatch_cursor_query_time_us)
+            .saturating_add(row.dispatch_pointer_move_layer_observers_time_us)
+            .saturating_add(row.dispatch_synth_hover_observer_time_us)
+            .saturating_add(row.dispatch_cursor_effect_time_us)
+            .saturating_add(row.dispatch_post_dispatch_snapshot_time_us)
+    }
+
+    fn dispatch_unattributed_time_us(row: &BundleStatsSnapshotRow) -> u64 {
+        row.dispatch_time_us
+            .saturating_sub(Self::dispatch_accounted_time_us(row))
+    }
+
+    fn dispatch_runtime_wrapper_time_us(row: &BundleStatsSnapshotRow) -> u64 {
+        if row.dispatch_inner_body_time_us == 0 {
+            return 0;
+        }
+        row.dispatch_time_us
+            .saturating_sub(row.dispatch_inner_body_time_us)
+    }
+
+    fn dispatch_inner_body_unattributed_time_us(row: &BundleStatsSnapshotRow) -> u64 {
+        let body_time = if row.dispatch_inner_body_time_us == 0 {
+            row.dispatch_time_us
+        } else {
+            row.dispatch_inner_body_time_us
+        };
+        body_time.saturating_sub(Self::dispatch_accounted_time_us(row))
+    }
+
+    fn print_dispatch_breakdown_row(row: &BundleStatsSnapshotRow, label: &str) {
+        if row.dispatch_time_us == 0 {
+            return;
+        }
+
+        let accounted = Self::dispatch_accounted_time_us(row);
+        let unattributed = row.dispatch_time_us.saturating_sub(accounted);
+        let runtime_wrapper = Self::dispatch_runtime_wrapper_time_us(row);
+        let body_unattributed = Self::dispatch_inner_body_unattributed_time_us(row);
+        println!(
+            "    {label}.us(total/inner_body/accounted/unattributed/body_unattributed/runtime_wrapper/hit_test/hover_update/input_state/context_build/prelude/pointer_arbitration/pointer_target_routing/post_widget_control_flow/scroll_inv/active_layers/input_ctx/chain/capture/bubble/cursor_query/pointer_observers/synth_hover/cursor_effect/post_snapshot)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{} events(pointer/timer/other)={}/{}/{} event_time(pointer/timer/other)={}/{}/{}",
+            row.dispatch_time_us,
+            row.dispatch_inner_body_time_us,
+            accounted,
+            unattributed,
+            body_unattributed,
+            runtime_wrapper,
+            row.hit_test_time_us,
+            row.dispatch_hover_update_time_us,
+            row.dispatch_input_state_update_time_us,
+            row.dispatch_context_build_time_us,
+            row.dispatch_prelude_time_us,
+            row.dispatch_pointer_arbitration_time_us,
+            row.dispatch_pointer_target_routing_time_us,
+            row.dispatch_post_widget_control_flow_time_us,
+            row.dispatch_scroll_handle_invalidation_time_us,
+            row.dispatch_active_layers_time_us,
+            row.dispatch_input_context_time_us,
+            row.dispatch_event_chain_build_time_us,
+            row.dispatch_widget_capture_time_us,
+            row.dispatch_widget_bubble_time_us,
+            row.dispatch_cursor_query_time_us,
+            row.dispatch_pointer_move_layer_observers_time_us,
+            row.dispatch_synth_hover_observer_time_us,
+            row.dispatch_cursor_effect_time_us,
+            row.dispatch_post_dispatch_snapshot_time_us,
+            row.dispatch_pointer_events,
+            row.dispatch_timer_events,
+            row.dispatch_other_events,
+            row.dispatch_pointer_event_time_us,
+            row.dispatch_timer_event_time_us,
+            row.dispatch_other_event_time_us
+        );
+    }
+
+    fn print_code_editor_paint_perf_summary(&self) {
+        let p = &self.code_editor_paint_perf;
+        if p.frames == 0 {
+            return;
+        }
+
+        println!(
+            "code_editor.paint_perf frames={} sum.rows(painted/replayed/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{} sum.quads(selection/caret)={}/{} max.rows(painted/replayed/stored/row_ops)={}/{}/{}/{}",
+            p.frames,
+            p.sum.rows_painted,
+            p.sum.rows_scene_replayed,
+            p.sum.rows_scene_stored,
+            p.sum.row_scene_ops_stored,
+            p.sum.rows_drew_rich,
+            p.sum.syntax_rows_stored,
+            p.sum.quads_selection,
+            p.sum.quads_caret,
+            p.max.rows_painted,
+            p.max.rows_scene_replayed,
+            p.max.rows_scene_stored,
+            p.max.row_scene_ops_stored,
+        );
+        println!(
+            "code_editor.paint_perf sum.us(content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/syntax_spans/text/rich/fast_path/full_path)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            p.sum.us_row_content_resolve,
+            p.sum.us_row_text,
+            p.sum.us_row_geom_key,
+            p.sum.us_row_scene_key,
+            p.sum.us_row_rich_cache_compare,
+            p.sum.us_row_scene_fast_key_compare,
+            p.sum.us_row_scene_full_key_compare,
+            p.sum.us_syntax_spans,
+            p.sum.us_text_draw,
+            p.sum.us_rich_materialize,
+            p.sum.us_row_scene_fast_path,
+            p.sum.us_row_scene_full_path,
+        );
+        println!(
+            "code_editor.paint_perf sum.us(total/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            p.sum.us_total,
+            p.sum.us_row_scene_replay_touch,
+            p.sum.us_row_scene_replay_ops,
+            p.sum.us_row_scene_capture_ops,
+            p.sum.us_row_scene_store,
+            p.sum.us_row_scene_fast_probe,
+            p.sum.us_row_scene_full_probe,
+            p.sum.us_row_geom_cache,
+            p.sum.us_row_geom_resolve,
+            p.sum.us_row_overlay,
+            p.sum.us_frame_overlay_prepare,
+        );
+        println!(
+            "code_editor.paint_perf p50/p95.us(total/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            p.p50.us_total,
+            p.p95.us_total,
+            p.p50.us_row_content_resolve,
+            p.p95.us_row_content_resolve,
+            p.p50.us_row_text,
+            p.p95.us_row_text,
+            p.p50.us_row_geom_key,
+            p.p95.us_row_geom_key,
+            p.p50.us_row_scene_key,
+            p.p95.us_row_scene_key,
+            p.p50.us_row_rich_cache_compare,
+            p.p95.us_row_rich_cache_compare,
+            p.p50.us_row_scene_fast_key_compare,
+            p.p95.us_row_scene_fast_key_compare,
+            p.p50.us_text_draw,
+            p.p95.us_text_draw,
+            p.p50.us_row_scene_fast_path,
+            p.p95.us_row_scene_fast_path,
+        );
+    }
+
+    fn print_code_editor_paint_perf_row(row: &BundleStatsSnapshotRow) {
+        let Some(p) = row.code_editor_paint_perf.as_ref() else {
+            return;
+        };
+
+        println!(
+            "    code_editor.paint_perf frame_seq={} visible(start/end/rows)={}/{}/{} cache(base/min/effective)={}/{}/{} rows(painted/replayed/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{} quads(selection/caret)={}/{}",
+            p.frame_seq,
+            p.visible_start,
+            p.visible_end,
+            p.visible_rows,
+            p.cache_base_entries,
+            p.cache_frame_min_entries,
+            p.cache_effective_entries,
+            p.rows_painted,
+            p.rows_scene_replayed,
+            p.rows_scene_stored,
+            p.row_scene_ops_stored,
+            p.rows_drew_rich,
+            p.syntax_rows_stored,
+            p.quads_selection,
+            p.quads_caret,
+        );
+        println!(
+            "    code_editor.paint_perf.us(total/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            p.us_total,
+            p.us_row_content_resolve,
+            p.us_row_text,
+            p.us_text_draw,
+            p.us_rich_materialize,
+            p.us_row_geom_key,
+            p.us_row_scene_key,
+            p.us_row_rich_cache_compare,
+            p.us_row_scene_fast_key_compare,
+            p.us_row_scene_full_key_compare,
+            p.us_row_scene_replay_touch,
+            p.us_row_scene_replay_ops,
+            p.us_row_scene_capture_ops,
+            p.us_row_scene_store,
+            p.us_row_scene_fast_probe,
+            p.us_row_scene_full_probe,
+            p.us_row_scene_fast_path,
+            p.us_row_scene_full_path,
+            p.us_syntax_spans,
+            p.us_row_geom_cache,
+            p.us_row_geom_resolve,
+            p.us_row_overlay,
+            p.us_frame_overlay_prepare,
+        );
+    }
+
     pub(super) fn print_human_brief(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         if self.derived_from_frames_index {
@@ -876,6 +1484,21 @@ impl BundleStatsReport {
                 self.p95_hit_test_time_us
             );
             println!(
+                "dispatch attribution p50/p95/max (us): accounted={}/{}/{} unattributed={}/{}/{} body_unattributed={}/{}/{} runtime_wrapper={}/{}/{}",
+                self.p50_dispatch_accounted_time_us,
+                self.p95_dispatch_accounted_time_us,
+                self.max_dispatch_accounted_time_us,
+                self.p50_dispatch_unattributed_time_us,
+                self.p95_dispatch_unattributed_time_us,
+                self.max_dispatch_unattributed_time_us,
+                self.p50_dispatch_inner_body_unattributed_time_us,
+                self.p95_dispatch_inner_body_unattributed_time_us,
+                self.max_dispatch_inner_body_unattributed_time_us,
+                self.p50_dispatch_runtime_wrapper_time_us,
+                self.p95_dispatch_runtime_wrapper_time_us,
+                self.max_dispatch_runtime_wrapper_time_us
+            );
+            println!(
                 "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
                 self.p50_layout_engine_solve_time_us,
                 self.p95_layout_engine_solve_time_us,
@@ -914,6 +1537,7 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_svg_us,
             );
         }
+        self.print_code_editor_paint_perf_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
             let mode = if self.pointer_move_frames_present {
                 "pointer_move"
@@ -1109,6 +1733,8 @@ impl BundleStatsReport {
                 }
             }
             println!("{line}");
+            Self::print_code_editor_paint_perf_row(row);
+            Self::print_dispatch_breakdown_row(row, "dispatch_breakdown");
             if row.dispatch_post_dispatch_snapshot_time_us > 0
                 || row.window_runtime_snapshot_focus_repair_time_us > 0
                 || row.window_runtime_snapshot_input_context_time_us > 0
@@ -1200,6 +1826,21 @@ impl BundleStatsReport {
                 self.p95_dispatch_time_us,
                 self.p50_hit_test_time_us,
                 self.p95_hit_test_time_us
+            );
+            println!(
+                "dispatch attribution p50/p95/max (us): accounted={}/{}/{} unattributed={}/{}/{} body_unattributed={}/{}/{} runtime_wrapper={}/{}/{}",
+                self.p50_dispatch_accounted_time_us,
+                self.p95_dispatch_accounted_time_us,
+                self.max_dispatch_accounted_time_us,
+                self.p50_dispatch_unattributed_time_us,
+                self.p95_dispatch_unattributed_time_us,
+                self.max_dispatch_unattributed_time_us,
+                self.p50_dispatch_inner_body_unattributed_time_us,
+                self.p95_dispatch_inner_body_unattributed_time_us,
+                self.max_dispatch_inner_body_unattributed_time_us,
+                self.p50_dispatch_runtime_wrapper_time_us,
+                self.p95_dispatch_runtime_wrapper_time_us,
+                self.max_dispatch_runtime_wrapper_time_us
             );
         }
         if self.p50_ui_thread_cpu_cycle_time_delta_cycles > 0
@@ -1318,6 +1959,7 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_text_us,
             );
         }
+        self.print_code_editor_paint_perf_summary();
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -1545,6 +2187,8 @@ impl BundleStatsReport {
                 }
             }
             println!("{line}");
+            Self::print_code_editor_paint_perf_row(row);
+            Self::print_dispatch_breakdown_row(row, "dispatch_breakdown");
             if row.layout_observation_record_time_us > 0
                 || row.layout_observation_record_models_items > 0
                 || row.layout_observation_record_globals_items > 0
@@ -2499,6 +3143,10 @@ impl BundleStatsReport {
                 "snapshots_with_global_changes": self.pointer_move_snapshots_with_global_changes,
             }),
         );
+        root.insert(
+            "code_editor_paint_perf".to_string(),
+            self.code_editor_paint_perf.to_json(),
+        );
 
         let mut sum = Map::new();
         sum.insert(
@@ -2676,6 +3324,22 @@ impl BundleStatsReport {
         max.insert(
             "layout_engine_solve_time_us".to_string(),
             Value::from(self.max_layout_engine_solve_time_us),
+        );
+        max.insert(
+            "dispatch_accounted_time_us".to_string(),
+            Value::from(self.max_dispatch_accounted_time_us),
+        );
+        max.insert(
+            "dispatch_unattributed_time_us".to_string(),
+            Value::from(self.max_dispatch_unattributed_time_us),
+        );
+        max.insert(
+            "dispatch_inner_body_unattributed_time_us".to_string(),
+            Value::from(self.max_dispatch_inner_body_unattributed_time_us),
+        );
+        max.insert(
+            "dispatch_runtime_wrapper_time_us".to_string(),
+            Value::from(self.max_dispatch_runtime_wrapper_time_us),
         );
         max.insert(
             "renderer_encode_scene_us".to_string(),
@@ -2958,6 +3622,22 @@ impl BundleStatsReport {
             Value::from(self.p50_dispatch_time_us),
         );
         p50.insert(
+            "dispatch_accounted_time_us".to_string(),
+            Value::from(self.p50_dispatch_accounted_time_us),
+        );
+        p50.insert(
+            "dispatch_unattributed_time_us".to_string(),
+            Value::from(self.p50_dispatch_unattributed_time_us),
+        );
+        p50.insert(
+            "dispatch_inner_body_unattributed_time_us".to_string(),
+            Value::from(self.p50_dispatch_inner_body_unattributed_time_us),
+        );
+        p50.insert(
+            "dispatch_runtime_wrapper_time_us".to_string(),
+            Value::from(self.p50_dispatch_runtime_wrapper_time_us),
+        );
+        p50.insert(
             "hit_test_time_us".to_string(),
             Value::from(self.p50_hit_test_time_us),
         );
@@ -3079,6 +3759,22 @@ impl BundleStatsReport {
         p95.insert(
             "dispatch_time_us".to_string(),
             Value::from(self.p95_dispatch_time_us),
+        );
+        p95.insert(
+            "dispatch_accounted_time_us".to_string(),
+            Value::from(self.p95_dispatch_accounted_time_us),
+        );
+        p95.insert(
+            "dispatch_unattributed_time_us".to_string(),
+            Value::from(self.p95_dispatch_unattributed_time_us),
+        );
+        p95.insert(
+            "dispatch_inner_body_unattributed_time_us".to_string(),
+            Value::from(self.p95_dispatch_inner_body_unattributed_time_us),
+        );
+        p95.insert(
+            "dispatch_runtime_wrapper_time_us".to_string(),
+            Value::from(self.p95_dispatch_runtime_wrapper_time_us),
         );
         p95.insert(
             "hit_test_time_us".to_string(),
@@ -3378,6 +4074,27 @@ impl BundleStatsReport {
                     Value::from(row.dispatch_time_us),
                 );
                 obj.insert(
+                    "dispatch_inner_body_time_us".to_string(),
+                    Value::from(row.dispatch_inner_body_time_us),
+                );
+                let dispatch_accounted_time_us = Self::dispatch_accounted_time_us(row);
+                obj.insert(
+                    "dispatch_accounted_time_us".to_string(),
+                    Value::from(dispatch_accounted_time_us),
+                );
+                obj.insert(
+                    "dispatch_unattributed_time_us".to_string(),
+                    Value::from(row.dispatch_time_us.saturating_sub(dispatch_accounted_time_us)),
+                );
+                obj.insert(
+                    "dispatch_inner_body_unattributed_time_us".to_string(),
+                    Value::from(Self::dispatch_inner_body_unattributed_time_us(row)),
+                );
+                obj.insert(
+                    "dispatch_runtime_wrapper_time_us".to_string(),
+                    Value::from(Self::dispatch_runtime_wrapper_time_us(row)),
+                );
+                obj.insert(
                     "dispatch_pointer_events".to_string(),
                     Value::from(row.dispatch_pointer_events),
                 );
@@ -3450,6 +4167,30 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_hover_update_time_us".to_string(),
                     Value::from(row.dispatch_hover_update_time_us),
+                );
+                obj.insert(
+                    "dispatch_input_state_update_time_us".to_string(),
+                    Value::from(row.dispatch_input_state_update_time_us),
+                );
+                obj.insert(
+                    "dispatch_context_build_time_us".to_string(),
+                    Value::from(row.dispatch_context_build_time_us),
+                );
+                obj.insert(
+                    "dispatch_prelude_time_us".to_string(),
+                    Value::from(row.dispatch_prelude_time_us),
+                );
+                obj.insert(
+                    "dispatch_pointer_arbitration_time_us".to_string(),
+                    Value::from(row.dispatch_pointer_arbitration_time_us),
+                );
+                obj.insert(
+                    "dispatch_pointer_target_routing_time_us".to_string(),
+                    Value::from(row.dispatch_pointer_target_routing_time_us),
+                );
+                obj.insert(
+                    "dispatch_post_widget_control_flow_time_us".to_string(),
+                    Value::from(row.dispatch_post_widget_control_flow_time_us),
                 );
                 obj.insert(
                     "dispatch_scroll_handle_invalidation_time_us".to_string(),
@@ -3784,6 +4525,13 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_text_prepare_reason_font_stack_changed".to_string(),
                     Value::from(row.paint_text_prepare_reason_font_stack_changed),
+                );
+                obj.insert(
+                    "code_editor_paint_perf".to_string(),
+                    row.code_editor_paint_perf
+                        .as_ref()
+                        .map(BundleStatsCodeEditorPaintPerf::to_json)
+                        .unwrap_or(Value::Null),
                 );
                 obj.insert(
                     "paint_input_context_time_us".to_string(),

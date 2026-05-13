@@ -18,9 +18,9 @@ Goal: treat UI bugs as “repro artifacts” (script + bundle + gate) instead of
 
 ## Tooling entrypoints
 
-- Scripted repro runner: `cargo run -p fretboard -- diag run ...`
-- Packaging for sharing: `cargo run -p fretboard -- diag pack ... --include-screenshots`
-- Summarize regressions: `cargo run -p fretboard -- diag triage ... --json`
+- Scripted repro runner: `cargo run -p fretboard-dev -- diag run ...`
+- Packaging for sharing: `cargo run -p fretboard-dev -- diag pack ... --include-screenshots`
+- Summarize regressions: `cargo run -p fretboard-dev -- diag triage ... --json`
 
 ## See also
 

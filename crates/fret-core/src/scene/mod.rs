@@ -1357,6 +1357,48 @@ mod tests {
     }
 
     #[test]
+    fn replay_ops_tracks_text_blob_ids_in_op_order() {
+        let first = text_blob_id(1);
+        let second = text_blob_id(2);
+        let ops = [
+            text_op(first),
+            SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+                background: Paint::Solid(Color::TRANSPARENT).into(),
+                border: Edges::all(Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::all(Px(0.0)),
+            },
+            text_op(second),
+        ];
+
+        let mut scene = Scene::default();
+        scene.replay_ops(&ops);
+
+        assert_eq!(scene.text_blob_ids(), &[first, second]);
+    }
+
+    #[test]
+    fn replay_ops_translated_with_text_blob_ids_tracks_precomputed_index() {
+        let first = text_blob_id(1);
+        let second = text_blob_id(2);
+        let ops = [text_op(first), text_op(second)];
+
+        let mut scene = Scene::default();
+        scene.replay_ops_translated_with_text_blob_ids(
+            &ops,
+            Point::new(Px(2.0), Px(3.0)),
+            &[first, second],
+        );
+
+        assert_eq!(scene.ops_len(), 4);
+        assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
+        assert!(matches!(scene.ops()[3], SceneOp::PopTransform));
+        assert_eq!(scene.text_blob_ids(), &[first, second]);
+    }
+
+    #[test]
     fn scene_tracks_text_blob_ids_in_op_order() {
         let first = text_blob_id(1);
         let second = text_blob_id(2);

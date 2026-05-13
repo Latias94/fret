@@ -34,7 +34,9 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) scroll_defer_unbounded_probe_on_invalidation: bool,
     pub(crate) scroll_defer_unbounded_probe_stable_frames: u8,
 
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_pointer_region_move_hook: bool,
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_pointer_region_move_backtrace: bool,
     pub(crate) debug_scroll_wheel_vlist: bool,
     pub(crate) debug_scroll_wheel: bool,
@@ -62,6 +64,7 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) layout_engine_sweep_policy: LayoutEngineSweepPolicy,
     pub(crate) layout_skip_request_build_translation_only: bool,
     pub(crate) layout_flow_skip_barrier_clean_children: bool,
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_focus_repair: bool,
     pub(crate) taffy_dump: Option<RuntimeTaffyDumpConfig>,
     pub(crate) taffy_dump_once: bool,
@@ -71,10 +74,15 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) layout_node_profile: Option<RuntimeNodeProfileConfig>,
     pub(crate) measure_node_profile: Option<RuntimeNodeProfileConfig>,
 
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_interactivity_gate_sync: bool,
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_hit_test_gate_sync: bool,
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_focus_traversal_gate_sync: bool,
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_pointer_down_outside: bool,
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_forbid_propagate_after_render_root: bool,
 
     pub(crate) semantics_profile: bool,

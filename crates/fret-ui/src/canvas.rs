@@ -64,6 +64,10 @@ impl CanvasHostedResources {
         resources.extend_scene_ops(ops);
         resources
     }
+
+    pub fn text_blob_ids(&self) -> &[fret_core::TextBlobId] {
+        &self.text_blobs
+    }
 }
 
 /// A stable, user-provided cache key for hosted canvas resources.

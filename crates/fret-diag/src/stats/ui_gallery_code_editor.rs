@@ -141,6 +141,277 @@ pub(crate) fn check_bundle_for_ui_gallery_code_editor_torture_marker_present_jso
     ))
 }
 
+pub(crate) fn check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut torture_snapshots: u64 = 0;
+    let mut feature_payload_snapshots: u64 = 0;
+    let mut missing_feature_payload_snapshots: u64 = 0;
+    let mut unstable_snapshots: u64 = 0;
+    let mut stable_counts: Option<(u64, u64, u64, u64, u64)> = None;
+    let mut stable_buffer_revision: Option<u64> = None;
+    let mut first_observed: Option<serde_json::Value> = None;
+    let mut last_observed: Option<serde_json::Value> = None;
+    let mut invalid_observations: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let torture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"));
+            let Some(torture) = torture else {
+                continue;
+            };
+            torture_snapshots = torture_snapshots.saturating_add(1);
+
+            let feature_payloads = torture.get("feature_payloads");
+            let Some(feature_payloads) = feature_payloads else {
+                missing_feature_payload_snapshots =
+                    missing_feature_payload_snapshots.saturating_add(1);
+                if invalid_observations.len() < 8 {
+                    invalid_observations.push(serde_json::json!({
+                        "window": window_id,
+                        "tick_id": tick_id,
+                        "frame_id": frame_id,
+                        "reasons": ["missing feature_payloads"],
+                    }));
+                }
+                continue;
+            };
+            feature_payload_snapshots = feature_payload_snapshots.saturating_add(1);
+
+            let schema_version = feature_payloads
+                .get("schema_version")
+                .and_then(|v| v.as_u64());
+            let epoch = feature_payloads.get("epoch").and_then(|v| v.as_u64());
+            let buffer_revision = feature_payloads
+                .get("buffer_revision")
+                .and_then(|v| v.as_u64());
+            let display_map_epoch = feature_payloads
+                .get("display_map_epoch")
+                .and_then(|v| v.as_u64());
+            let diagnostic_spans_count = feature_payloads
+                .get("diagnostic_spans_count")
+                .and_then(|v| v.as_u64());
+            let diagnostic_line_summaries_count = feature_payloads
+                .get("diagnostic_line_summaries_count")
+                .and_then(|v| v.as_u64());
+            let range_decorations_count = feature_payloads
+                .get("range_decorations_count")
+                .and_then(|v| v.as_u64());
+            let gutter_markers_count = feature_payloads
+                .get("gutter_markers_count")
+                .and_then(|v| v.as_u64());
+            let semantic_tokens_count = feature_payloads
+                .get("semantic_tokens_count")
+                .and_then(|v| v.as_u64());
+
+            let counts = (
+                diagnostic_spans_count.unwrap_or(0),
+                diagnostic_line_summaries_count.unwrap_or(0),
+                range_decorations_count.unwrap_or(0),
+                gutter_markers_count.unwrap_or(0),
+                semantic_tokens_count.unwrap_or(0),
+            );
+
+            let mut reasons: Vec<&'static str> = Vec::new();
+            if schema_version != Some(1) {
+                reasons.push("schema_version must be 1");
+            }
+            if epoch.is_none() {
+                reasons.push("epoch missing");
+            }
+            if buffer_revision.is_none() {
+                reasons.push("buffer_revision missing");
+            }
+            if display_map_epoch.is_none() {
+                reasons.push("display_map_epoch missing");
+            }
+            if diagnostic_spans_count.unwrap_or(0) == 0 {
+                reasons.push("diagnostic_spans_count must be non-zero");
+            }
+            if diagnostic_line_summaries_count.unwrap_or(0) == 0 {
+                reasons.push("diagnostic_line_summaries_count must be non-zero");
+            }
+            if range_decorations_count.unwrap_or(0) == 0 {
+                reasons.push("range_decorations_count must be non-zero");
+            }
+            if gutter_markers_count.unwrap_or(0) == 0 {
+                reasons.push("gutter_markers_count must be non-zero");
+            }
+            if semantic_tokens_count.unwrap_or(0) == 0 {
+                reasons.push("semantic_tokens_count must be non-zero");
+            }
+
+            if let Some(expected) = stable_counts {
+                if counts != expected {
+                    unstable_snapshots = unstable_snapshots.saturating_add(1);
+                    reasons.push("feature payload counts changed");
+                }
+            } else {
+                stable_counts = Some(counts);
+            }
+
+            if let Some(buffer_revision) = buffer_revision {
+                if let Some(expected) = stable_buffer_revision {
+                    if buffer_revision != expected {
+                        unstable_snapshots = unstable_snapshots.saturating_add(1);
+                        reasons.push("buffer_revision changed");
+                    }
+                } else {
+                    stable_buffer_revision = Some(buffer_revision);
+                }
+            }
+
+            let observed = serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "schema_version": schema_version,
+                "epoch": epoch,
+                "buffer_revision": buffer_revision,
+                "display_map_epoch": display_map_epoch,
+                "diagnostic_spans_count": diagnostic_spans_count,
+                "diagnostic_line_summaries_count": diagnostic_line_summaries_count,
+                "range_decorations_count": range_decorations_count,
+                "gutter_markers_count": gutter_markers_count,
+                "semantic_tokens_count": semantic_tokens_count,
+            });
+            if first_observed.is_none() {
+                first_observed = Some(observed.clone());
+            }
+            last_observed = Some(observed.clone());
+
+            if !reasons.is_empty() && invalid_observations.len() < 8 {
+                invalid_observations.push(serde_json::json!({
+                    "observation": observed,
+                    "reasons": reasons,
+                }));
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_torture_feature_payloads_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_feature_payloads_stable",
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "torture_snapshots": torture_snapshots,
+        "feature_payload_snapshots": feature_payload_snapshots,
+        "missing_feature_payload_snapshots": missing_feature_payload_snapshots,
+        "unstable_snapshots": unstable_snapshots,
+        "stable_counts": stable_counts.map(|(
+            diagnostic_spans,
+            diagnostic_line_summaries,
+            range_decorations,
+            gutter_markers,
+            semantic_tokens,
+        )| serde_json::json!({
+            "diagnostic_spans_count": diagnostic_spans,
+            "diagnostic_line_summaries_count": diagnostic_line_summaries,
+            "range_decorations_count": range_decorations,
+            "gutter_markers_count": gutter_markers,
+            "semantic_tokens_count": semantic_tokens,
+        })),
+        "stable_buffer_revision": stable_buffer_revision,
+        "first_observed": first_observed,
+        "last_observed": last_observed,
+        "invalid_observations": invalid_observations.clone(),
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor feature payload gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if torture_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor feature payload gate requires code_editor.torture snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, ui_gallery_snapshots={ui_gallery_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if feature_payload_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor feature payload gate requires code_editor.torture.feature_payloads after warmup, but none were observed (warmup_frames={warmup_frames}, torture_snapshots={torture_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if missing_feature_payload_snapshots > 0 || !invalid_observations.is_empty() {
+        return Err(format!(
+            "ui-gallery code-editor feature payload gate failed (expected stable non-zero diagnostics/decorations/gutter/semantic payload counters with schema/version/revision fields)\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
 pub(crate) fn check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
     bundle_path: &Path,
     warmup_frames: u64,

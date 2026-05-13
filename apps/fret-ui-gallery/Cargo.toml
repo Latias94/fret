@@ -25,6 +25,7 @@ gallery-dev = [
     "gallery-ai",
     "gallery-chart",
     "gallery-web-ime-harness",
+    "dep:fret-ui-editor",
     "dep:fret-ui-magic",
     "dep:fret-code-editor-view",
     "dep:fret-canvas",
@@ -50,6 +51,7 @@ fret-render = { path = "../../crates/fret-render" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["ui", "image-decode", "image-metadata"] }
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai", optional = true }
+fret-ui-editor = { path = "../../ecosystem/fret-ui-editor", optional = true }
 fret-ui-magic = { path = "../../ecosystem/fret-ui-magic", optional = true, features = ["app-integration"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3", optional = true }

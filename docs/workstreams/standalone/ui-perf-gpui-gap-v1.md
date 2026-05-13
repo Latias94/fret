@@ -46,9 +46,15 @@ Protocol:
 
 Recommended default gate set (global sanity):
 
-- `ui-gallery-steady` (canonical baseline)
 - `ui-resize-probes` (attempts=3)
 - `ui-code-editor-resize-probes` (attempts=3)
+- the dedicated single-script gallery contracts in
+  `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md`
+
+`ui-gallery-steady` is no longer the canonical formal gate by itself. Keep it as drift evidence or
+redefine it as a suite-of-contracts before promoting it again; the current matrix uses narrower
+contracts for resize, overlays, virtual lists, menu navigation, material tabs, and code-editor paint
+payloads.
 
 Evidence template (copy/paste into the perf log):
 
@@ -87,6 +93,20 @@ Recent editor-class wins (evidence lives in the perf log):
 - Code editor resize drag smoothness: `top_total_time_us ~42ms → ~16ms` by making `CodeEditorHandle::set_language(...)`
   idempotent (avoid per-frame syntax/rich cache resets), guided by in-bundle Canvas phase attribution (commits
   `f664ead2d`, `1778ba563`).
+- Current Windows editor contract refresh (2026-05-11):
+  - `ui-code-editor-resize-probes.windows-rtx4090.v2.json` carries p50/p95/max resize evidence and passed the formal
+    repeat=7 helper gate.
+  - `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json` and
+    `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json` are payload-aware
+    `ui-renderer-payload` contracts with `renderer_instance_bytes` and `renderer_encode_scene_text_ops`.
+  - `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`
+    is the high-stress editor wheel contract covering folds, inlays, soft wrap, inline preedit, and decorations.
+  - The latest attribution says broad `WindowedRowsSurface` display-list work is not justified yet: row-scene
+    capture/store is not the limiter on the passing baselines; remaining pressure is Canvas/text prepare/renderer
+    payload unless a future near-threshold stressor proves otherwise.
+- Current renderer text-prepare win (2026-05-11): pre-deduplicated glyph pin keys reduced complex-wheel renderer text
+  prepare p95/max from `1287/1302us` to `660/722us`, with the non-instrumented baseline check still passing the
+  checked-in v1 contract.
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
@@ -269,10 +289,12 @@ Baseline fact (quick reference):
 
 ## 0.3 Pointer-move hit-test status (current probe)
 
-Current “Zed feel” probe:
+Current "Zed feel" probe:
 
-- Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
-- Gate: `fretboard-dev diag perf ... --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us`
+- Script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json`
+- Gate helper: `python tools/perf/diag_hit_test_torture_dispatch_gate.py --repeat 7`
+- Raw gate shape:
+  `fretboard-dev diag perf perf-ui-gallery-hit-test-torture-steady --max-pointer-move-dispatch-us 250 --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0`
 
 Findings (macOS Apple M4; repeat=7):
 
@@ -292,16 +314,33 @@ Findings (macOS Apple M4; repeat=7):
 - Cached-path reuse remains low on the stripes sweep workload (pointer crosses many regions):
   - With bounds-tree disabled (A/B), hit testing rises to ~2ms p50 and can spike to ~4ms, and cached-path hit rate is
     still ~2.1%.
+- Current Windows heavy-tree result after dispatch snapshot reuse:
+  - The former `~1ms` pointer dispatch tail on the 20k-noise torture surface was not hit-testing or wrapper overhead.
+    It was dispatch context snapshot construction (`dispatch_context_build_time_us` around `1046us` on the attributed
+    worst frame).
+  - `fret-ui` now caches the retained-tree/layer-topology dispatch snapshot forest and shares the heavy snapshot
+    vectors via `Arc`.
+  - Formal repeat=7 gate evidence:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json`
+    passed thresholds dispatch/hit-test/global-change=`250us/100us/0`.
+  - Worst repeat=7 bundle:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/1778636886432/bundle.schema2.json`.
+  - Pointer max dispatch min/p50/p95/max=`79/87/112/112us`, hit-test=`13/16/20/20us`,
+    global-change snapshots=`0/0/0/0`, and worst-bundle top dispatch still has `context_build=3us`.
 
 Implication:
 
 - For Tier B “Zed feel”, a spatial index (bounds-tree or equivalent) is mandatory, and “cached-path hit testing” should
   not be attempted when the index is enabled (it can be slower than the index on sibling-heavy trees).
+- The dispatch-side equivalent is now also explicit: stable tree/layer topology must not rebuild the active input/focus
+  snapshot forest on every pointer move. The repeat=7 gate protects that invariant.
 
 Evidence:
 
 - Perf log entries under:
-  - `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`, `7fa76fd5`, `5ab4ba71`)
+  - `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`,
+    `8bc15eda`, `7fa76fd5`, `5ab4ba71`, `6f110a7523`, `1ad7de6531`, `c0c3be53fc`, `d453aa4938`,
+    `8f6dad9b2c`)
 
 ---
 
@@ -935,11 +974,16 @@ Progress:
   - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, `--max-pointer-move-global-changes`
   - plus derived pointer-move stats in `tools/perf/perf_log.py`
   - Evidence: perf log entry for commit `6da92d3d`.
+- Follow-up 2026-05-13: the remaining heavy-tree pointer dispatch tail was traced to active dispatch snapshot
+  construction, not global churn itself. The retained tree/layer topology dispatch snapshot cache now keeps
+  `dispatch_context_build_time_us` near `3us` on the hit-test torture worst frames.
+- The promoted helper `tools/perf/diag_hit_test_torture_dispatch_gate.py` now runs the formal repeat=7 dispatch gate
+  with thresholds dispatch/hit-test/global-change=`250us/100us/0`.
 
 Acceptance:
 
-- In hit-test torture sweep probes, `snapshots_with_global_changes` drops materially (or `unobs.globals` becomes rare),
-  and per-run max `dispatch_time_us` stabilizes (no outlier spikes) while preserving correctness of cursor/hover/focus.
+- In hit-test torture sweep probes, `snapshots_with_global_changes` stays at `0`, per-run max `dispatch_time_us`
+  remains under the formal threshold, and correctness of cursor/hover/focus is preserved.
 
 ---
 

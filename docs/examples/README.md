@@ -146,6 +146,8 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
     dispatch, editor controls, menu/popup behavior, and diagnostic `test_id` anchors
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
+    - this is the smallest IMUI text/control smoke; use it when checking that visible text,
+      button semantics, and checkbox semantics still work
     - `fretboard` / `fretboard-dev` need an explicit package here because both
       `fret-demo` and `fret-examples-imui` both define `imui_hello_demo`
     - maintainer wrapper:
@@ -245,6 +247,8 @@ stress). They are useful for maintainers and advanced users but are not the onbo
 
 Explicit advanced/reference roster:
 
+- `first_frame_smoke_demo` is a runner bootstrap / first-present smoke. It intentionally paints only
+  a full-window quad and closes itself after several frames; it is not a text-rendering smoke.
 - `custom_effect_v1_demo`, `custom_effect_v2_demo`, and `custom_effect_v3_demo` are renderer/effect
   reference surfaces. They keep explicit effect/runtime ownership because the point is validating
   effect ABI, bounded custom-effect authoring, and diagnostics behavior.
@@ -255,9 +259,9 @@ Explicit advanced/reference roster:
   ownership because the point is catalog/runtime/validation integration, not first-contact app
   authoring.
 - `imui_hello_demo` is a tiny IMUI smoke/reference surface. It remains useful for the smallest
-  runnable facade check, but the generic/editor immediate teaching path should start from
-  `imui_action_basics` and `imui_editor_controls_basics`; use `imui_editor_proof_demo` when you
-  need the heavier editor product proof.
+  runnable facade check and the smallest text/control rendering check, but the generic/editor
+  immediate teaching path should start from `imui_action_basics` and `imui_editor_controls_basics`;
+  use `imui_editor_proof_demo` when you need the heavier editor product proof.
   - when launched through `fretboard`, select `fret-demo` or `fret-examples-imui` explicitly:
     `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`
     or

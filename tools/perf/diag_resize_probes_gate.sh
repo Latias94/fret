@@ -200,7 +200,7 @@ for ((i=1; i<=attempts; i++)); do
   mkdir -p "$attempt_dir"
 
   cmd=(
-    cargo run -q -p fretboard --
+    cargo run -q -p fretboard-dev --
     diag perf "$suite"
     --dir "$attempt_dir"
     --timeout-ms "$timeout_ms"

@@ -14,6 +14,7 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
         shape.glyphs().len(),
         std::mem::size_of::<GlyphInstance>(),
     ));
+    bytes = bytes.saturating_add(shape.pin_keys().heap_bytes_estimate());
     bytes = bytes.saturating_add(mul(shape.lines().len(), std::mem::size_of::<TextLine>()));
     bytes = bytes.saturating_add(mul(
         shape.caret_stops().len(),

@@ -51,7 +51,7 @@ tracing-tracy = { version = "0.11.4", default-features = false, features = ["ena
 ureq = "2"
 notify = "8"
 web-time = "1"
-zbus = { version = "5.14.0", default-features = false, features = ["blocking"] }
+zbus = { version = "5.14.0", default-features = false, features = ["async-io", "blocking-api"] }
 rustc-hash = "2"
 fluent-bundle = "0.16.0"
 fluent-fallback = "0.7.2"

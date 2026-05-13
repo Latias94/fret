@@ -81,6 +81,18 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             .as_mut()
             .and_then(|renderer| renderer.system_font_rescan_seed())
         else {
+            if let Some(renderer) = self.renderer.as_mut() {
+                // If system fonts are disabled, desktop async startup may still have seeded an
+                // empty runtime catalog while the renderer already contains the bundled baseline.
+                // Reconcile the catalog with the current renderer environment instead of leaving
+                // diagnostics waiting on an impossible system-font rescan.
+                let _ = crate::runner::font_catalog::apply_renderer_font_catalog_update(
+                    &mut self.app,
+                    renderer,
+                    fret_runtime::FontFamilyDefaultsPolicy::None,
+                );
+                self.request_redraw_all_windows();
+            }
             return;
         };
 
@@ -185,7 +197,19 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             return true;
         };
 
+        let rescan_entries = result.all_font_catalog_entries().to_vec();
         if !renderer.apply_system_font_rescan_result(result) {
+            // Desktop async startup seeds an empty runtime catalog before the background scan.
+            // A no-op renderer apply can still carry the first completed catalog snapshot, so
+            // publish the scan entries without requiring a second main-thread enumeration.
+            let _ =
+                crate::runner::font_catalog::publish_renderer_font_environment_from_catalog_entries(
+                    &mut self.app,
+                    renderer,
+                    rescan_entries,
+                    fret_runtime::FontFamilyDefaultsPolicy::None,
+                );
+            self.request_redraw_all_windows();
             if should_restart {
                 self.request_system_font_rescan();
             }

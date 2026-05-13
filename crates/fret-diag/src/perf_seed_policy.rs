@@ -228,7 +228,7 @@ struct ResolvedPerfRule {
     source: RuleSourceKind,
 }
 
-fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
+fn perf_suite_membership_name(name: &str) -> Option<&str> {
     match name {
         "ui-gallery" | "perf-ui-gallery" => Some("perf-ui-gallery"),
         "ui-gallery-steady" | "perf-ui-gallery-steady" => Some("perf-ui-gallery-steady"),
@@ -256,6 +256,9 @@ fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
         }
         "ui-gallery-overlay-torture-steady" | "perf-ui-gallery-overlay-torture-steady" => {
             Some("perf-ui-gallery-overlay-torture-steady")
+        }
+        "ui-gallery-hit-test-torture-steady" | "perf-ui-gallery-hit-test-torture-steady" => {
+            Some("perf-ui-gallery-hit-test-torture-steady")
         }
         "ui-gallery-layout-steady" | "perf-ui-gallery-layout-steady" => {
             Some("perf-ui-gallery-layout-steady")
@@ -289,6 +292,7 @@ fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
         "liquid-glass-backdrop-warp-steady" | "perf-liquid-glass-backdrop-warp-steady" => {
             Some("perf-liquid-glass-backdrop-warp-steady")
         }
+        _ if name.starts_with("perf-") => Some(name),
         _ => None,
     }
 }
@@ -984,6 +988,14 @@ mod tests {
                 "perf-ui-gallery-overlay-torture-steady",
             ),
             (
+                "ui-gallery-hit-test-torture-steady",
+                "perf-ui-gallery-hit-test-torture-steady",
+            ),
+            (
+                "perf-ui-gallery-hit-test-torture-steady",
+                "perf-ui-gallery-hit-test-torture-steady",
+            ),
+            (
                 "ui-gallery-code-editor-torture-autoscroll-typical",
                 "perf-ui-gallery-code-editor-torture-autoscroll-typical",
             ),
@@ -996,5 +1008,17 @@ mod tests {
         for (input, expected) in cases {
             assert_eq!(perf_suite_membership_name(input), Some(expected));
         }
+    }
+
+    #[test]
+    fn perf_suite_membership_name_accepts_registry_backed_perf_suites() {
+        assert_eq!(
+            perf_suite_membership_name("perf-ui-gallery-new-focused-suite"),
+            Some("perf-ui-gallery-new-focused-suite")
+        );
+        assert_eq!(
+            perf_suite_membership_name("ui-gallery-new-focused-suite"),
+            None
+        );
     }
 }

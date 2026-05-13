@@ -11,7 +11,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use super::EditorTokenKeys;
-use super::colors::editor_muted_foreground;
+use super::colors::{editor_focus_ring, editor_muted_foreground};
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
@@ -344,9 +344,7 @@ pub(crate) fn resolve_editor_text_area_field_style(
     refinement: &ChromeRefinement,
 ) -> (TextAreaStyle, TextStyle) {
     let resolved = resolve_editor_text_field_input_chrome(theme, size, refinement);
-    let ring_color = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_token("primary"));
+    let ring_color = editor_focus_ring(theme);
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
@@ -381,7 +379,7 @@ pub(crate) fn resolve_editor_text_area_field_style(
             a: 0.22,
             ..resolved.selection_color
         },
-        preedit_underline_color: theme.color_token("primary"),
+        preedit_underline_color: editor_focus_ring(theme),
     };
 
     (chrome, text_style)
@@ -424,6 +422,33 @@ mod tests {
         assert_eq!(
             style.vertical_placement,
             TextVerticalPlacement::CenterMetricsBox
+        );
+    }
+
+    #[test]
+    fn editor_text_area_style_uses_editor_focus_ring_token() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors.insert(
+                EditorTokenKeys::CHROME_RING.to_string(),
+                "#7faee8".to_string(),
+            );
+            cfg.colors.insert("ring".to_string(), "#ff0000".to_string());
+            cfg.colors
+                .insert("primary".to_string(), "#00ff00".to_string());
+            theme.apply_config_patch(&cfg);
+        });
+
+        let theme = Theme::global(&app);
+        let (chrome, _style) =
+            resolve_editor_text_area_field_style(theme, Size::Small, &ChromeRefinement::default());
+
+        let ring = chrome.focus_ring.expect("text area should keep focus ring");
+        assert_eq!(ring.color, Color::from_srgb_hex_rgb(0x7f_ae_e8));
+        assert_eq!(
+            chrome.preedit_underline_color,
+            Color::from_srgb_hex_rgb(0x7f_ae_e8)
         );
     }
 

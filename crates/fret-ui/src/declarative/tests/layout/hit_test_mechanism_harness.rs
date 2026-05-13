@@ -382,7 +382,7 @@ fn observe_tree(
     bounds: Rect,
 ) -> ObservedTree {
     let mut observed = ObservedTree::from_semantics_snapshot(snapshot, bounds);
-    for node in &snapshot.nodes {
+    for node in snapshot.nodes.iter() {
         if let Some(layout) = ui.debug_node_bounds(node.id) {
             observed.set_layout_bounds_for_node_id(node.id.data().as_ffi(), layout);
         }

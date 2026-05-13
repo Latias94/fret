@@ -40,6 +40,7 @@ mod tests {
         let ids: Vec<&str> = entries().iter().map(|entry| entry.id).collect();
         let expected = vec![
             "ui_gallery_code_editor_torture_marker_present",
+            "ui_gallery_code_editor_torture_feature_payloads_stable",
             "ui_gallery_code_editor_torture_undo_redo",
             "ui_gallery_code_editor_torture_geom_fallbacks_low",
             "ui_gallery_markdown_editor_source_soft_wrap_toggle_stable",

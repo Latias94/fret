@@ -4,6 +4,61 @@ fn json_u64(v: &serde_json::Value, key: &str) -> u64 {
     v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn perf_repeat_summary_json_row_summarizes_code_editor_row_scene_fields() {
+        let mut rows = Vec::new();
+        let runs = vec![
+            serde_json::json!({
+                "top_code_editor_rows_painted": 10,
+                "top_code_editor_rows_scene_replayed": 6,
+                "top_code_editor_rows_scene_stored": 4,
+                "top_code_editor_row_scene_ops_stored": 40,
+                "top_code_editor_row_scene_replay_hit_rate_pct": 60
+            }),
+            serde_json::json!({
+                "top_code_editor_rows_painted": 20,
+                "top_code_editor_rows_scene_replayed": 18,
+                "top_code_editor_rows_scene_stored": 2,
+                "top_code_editor_row_scene_ops_stored": 12,
+                "top_code_editor_row_scene_replay_hit_rate_pct": 90
+            }),
+        ];
+
+        push_perf_json_repeat_summary_row(
+            &mut rows,
+            Path::new("tools/diag-scripts/editor.json"),
+            BundleStatsSort::Time,
+            runs.len(),
+            &runs,
+            &[100, 200],
+            &[10, 20],
+            &[0, 0],
+            &[5, 6],
+            &[80, 160],
+            &[1, 2],
+            &[0, 1],
+            &[0, 0],
+            &[0, 0],
+            &[0, 0],
+            None,
+        );
+
+        let stats = &rows[0]["stats"];
+        assert_eq!(stats["top_code_editor_rows_painted"]["max"], 20);
+        assert_eq!(stats["top_code_editor_rows_scene_replayed"]["p50"], 6);
+        assert_eq!(stats["top_code_editor_rows_scene_stored"]["p95"], 4);
+        assert_eq!(stats["top_code_editor_row_scene_ops_stored"]["max"], 40);
+        assert_eq!(
+            stats["top_code_editor_row_scene_replay_hit_rate_pct"]["p95"],
+            90
+        );
+    }
+}
+
 pub(super) fn print_perf_no_last_bundle_dir(
     src: &Path,
     sort: BundleStatsSort,
@@ -130,6 +185,11 @@ pub(super) fn push_perf_json_repeat_summary_row(
     let mut top_barrier_relayouts_performed: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_virtual_list_visible_range_checks: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_virtual_list_visible_range_refreshes: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_rows_painted: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_rows_scene_replayed: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_rows_scene_stored: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_ops_stored: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_replay_hit_rate_pct: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_draw_calls: Vec<u64> = Vec::with_capacity(repeat);
@@ -194,6 +254,16 @@ pub(super) fn push_perf_json_repeat_summary_row(
             .push(json_u64(run, "top_virtual_list_visible_range_checks"));
         top_virtual_list_visible_range_refreshes
             .push(json_u64(run, "top_virtual_list_visible_range_refreshes"));
+        top_code_editor_rows_painted.push(json_u64(run, "top_code_editor_rows_painted"));
+        top_code_editor_rows_scene_replayed
+            .push(json_u64(run, "top_code_editor_rows_scene_replayed"));
+        top_code_editor_rows_scene_stored.push(json_u64(run, "top_code_editor_rows_scene_stored"));
+        top_code_editor_row_scene_ops_stored
+            .push(json_u64(run, "top_code_editor_row_scene_ops_stored"));
+        top_code_editor_row_scene_replay_hit_rate_pct.push(json_u64(
+            run,
+            "top_code_editor_row_scene_replay_hit_rate_pct",
+        ));
         top_renderer_encode_scene_us.push(json_u64(run, "top_renderer_encode_scene_us"));
         top_renderer_prepare_text_us.push(json_u64(run, "top_renderer_prepare_text_us"));
         top_renderer_draw_calls.push(json_u64(run, "top_renderer_draw_calls"));
@@ -287,6 +357,11 @@ pub(super) fn push_perf_json_repeat_summary_row(
             "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
             "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
             "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
+            "top_code_editor_rows_painted": summarize_times_us(&top_code_editor_rows_painted),
+            "top_code_editor_rows_scene_replayed": summarize_times_us(&top_code_editor_rows_scene_replayed),
+            "top_code_editor_rows_scene_stored": summarize_times_us(&top_code_editor_rows_scene_stored),
+            "top_code_editor_row_scene_ops_stored": summarize_times_us(&top_code_editor_row_scene_ops_stored),
+            "top_code_editor_row_scene_replay_hit_rate_pct": summarize_times_us(&top_code_editor_row_scene_replay_hit_rate_pct),
             "top_renderer_encode_scene_us": summarize_times_us(&top_renderer_encode_scene_us),
             "top_renderer_prepare_text_us": summarize_times_us(&top_renderer_prepare_text_us),
             "top_renderer_draw_calls": summarize_times_us(&top_renderer_draw_calls),

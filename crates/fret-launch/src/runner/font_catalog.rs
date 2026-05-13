@@ -27,33 +27,7 @@ impl RendererFontEnvironmentHost for fret_render::Renderer {
     fn all_font_catalog_entries_runtime(&mut self) -> Vec<FontCatalogEntry> {
         self.all_font_catalog_entries()
             .into_iter()
-            .map(|entry| {
-                let (
-                    family,
-                    has_variable_axes,
-                    known_variable_axes,
-                    variable_axes,
-                    is_monospace_candidate,
-                ) = entry.into_parts();
-                FontCatalogEntry {
-                    family,
-                    has_variable_axes,
-                    known_variable_axes,
-                    variable_axes: variable_axes
-                        .into_iter()
-                        .map(|axis| {
-                            let (tag, min_bits, max_bits, default_bits) = axis.into_parts();
-                            fret_runtime::FontVariableAxisInfo {
-                                tag,
-                                min_bits,
-                                max_bits,
-                                default_bits,
-                            }
-                        })
-                        .collect(),
-                    is_monospace_candidate,
-                }
-            })
+            .map(runtime_font_catalog_entry_from_renderer)
             .collect()
     }
 
@@ -67,6 +41,31 @@ impl RendererFontEnvironmentHost for fret_render::Renderer {
 
     fn text_font_stack_key(&self) -> u64 {
         self.text_font_stack_key()
+    }
+}
+
+fn runtime_font_catalog_entry_from_renderer(
+    entry: fret_render::FontCatalogEntryMetadata,
+) -> FontCatalogEntry {
+    let (family, has_variable_axes, known_variable_axes, variable_axes, is_monospace_candidate) =
+        entry.into_parts();
+    FontCatalogEntry {
+        family,
+        has_variable_axes,
+        known_variable_axes,
+        variable_axes: variable_axes
+            .into_iter()
+            .map(|axis| {
+                let (tag, min_bits, max_bits, default_bits) = axis.into_parts();
+                fret_runtime::FontVariableAxisInfo {
+                    tag,
+                    min_bits,
+                    max_bits,
+                    default_bits,
+                }
+            })
+            .collect(),
+        is_monospace_candidate,
     }
 }
 
@@ -663,6 +662,25 @@ pub fn publish_renderer_font_environment(
 }
 
 #[doc(hidden)]
+#[cfg(any(test, not(target_arch = "wasm32")))]
+pub fn publish_renderer_font_environment_from_catalog_entries(
+    app: &mut impl GlobalsHost,
+    renderer: &mut impl RendererFontEnvironmentHost,
+    entries: Vec<fret_render::FontCatalogEntryMetadata>,
+    policy: FontFamilyDefaultsPolicy,
+) -> FontCatalogUpdate {
+    publish_renderer_font_environment(
+        app,
+        renderer,
+        entries
+            .into_iter()
+            .map(runtime_font_catalog_entry_from_renderer)
+            .collect(),
+        policy,
+    )
+}
+
+#[doc(hidden)]
 pub fn apply_renderer_font_catalog_update(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,
@@ -990,6 +1008,65 @@ mod tests {
                 .0,
             42,
             "expected desktop async startup to publish the post-locale renderer key"
+        );
+    }
+
+    #[test]
+    fn desktop_async_noop_rescan_entries_populate_runtime_catalog() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+        let existing = TextFontFamilyConfig {
+            ui_sans: vec!["Inter".to_string()],
+            ..Default::default()
+        };
+
+        let empty_update = initialize_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            existing.clone(),
+            StartupFontEnvironmentMode::DesktopAsync,
+        );
+        assert!(
+            empty_update.families.is_empty(),
+            "desktop async startup intentionally publishes an empty catalog while the scan runs"
+        );
+
+        let update = publish_renderer_font_environment_from_catalog_entries(
+            &mut app,
+            &mut renderer,
+            vec![fret_render::FontCatalogEntryMetadata::new(
+                "Inter".to_string(),
+                false,
+                Vec::new(),
+                Vec::new(),
+                true,
+            )],
+            FontFamilyDefaultsPolicy::None,
+        );
+
+        assert_eq!(update.families, vec!["Inter"]);
+        assert!(
+            update.revision > empty_update.revision,
+            "publishing the completed scan should advance the runtime catalog revision"
+        );
+        assert_eq!(update.config, existing);
+        assert_eq!(renderer.last_config, Some(existing));
+
+        let catalog = app
+            .global::<fret_runtime::FontCatalog>()
+            .expect("runtime font catalog");
+        assert_eq!(catalog.families, vec!["Inter"]);
+        assert_eq!(catalog.revision, update.revision);
+
+        let metadata = app
+            .global::<fret_runtime::FontCatalogMetadata>()
+            .expect("runtime font catalog metadata");
+        assert_eq!(metadata.revision, update.revision);
+        assert_eq!(metadata.entries.len(), 1);
+        assert_eq!(metadata.entries[0].family, "Inter");
+        assert!(
+            metadata.entries[0].is_monospace_candidate,
+            "renderer catalog metadata should survive conversion into the runtime catalog"
         );
     }
 

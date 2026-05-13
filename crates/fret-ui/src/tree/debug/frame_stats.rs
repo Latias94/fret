@@ -28,6 +28,13 @@ pub struct UiDebugFrameStats {
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
     /// not include layout/prepaint/paint, which are tracked separately.
     pub dispatch_time: Duration,
+    /// Wall time spent after entering the stack-safe dispatch body.
+    ///
+    /// Compared with `dispatch_time`, this excludes the outer event-kind wrapper and any
+    /// stack-safety entry overhead before the body starts. It is intentionally coarse: the narrower
+    /// dispatch fields below explain the body work, while the difference between `dispatch_time`
+    /// and this value explains wrapper/runtime overhead.
+    pub dispatch_inner_body_time: Duration,
     /// Number of pointer/drag events dispatched during the current frame.
     pub dispatch_pointer_events: u32,
     /// Total wall time spent dispatching pointer/drag events during the current frame.
@@ -94,6 +101,19 @@ pub struct UiDebugFrameStats {
     pub hit_test_fallback_traversal_time: Duration,
     /// Total wall time spent updating hover state from pointer hit-testing in the current frame.
     pub dispatch_hover_update_time: Duration,
+    /// Total wall time spent mirroring raw event state into runtime services before routing.
+    pub dispatch_input_state_update_time: Duration,
+    /// Total wall time spent building dispatch routing snapshots for active input/focus layers.
+    pub dispatch_context_build_time: Duration,
+    /// Total wall time spent in pre-routing dispatch policy checks not covered by narrower spans.
+    pub dispatch_prelude_time: Duration,
+    /// Total wall time spent in pointer outside-press, occlusion, and hover arbitration not covered
+    /// by narrower hit-test/cursor spans.
+    pub dispatch_pointer_arbitration_time: Duration,
+    /// Total wall time spent resolving the dispatch target after pointer/capture/drag routing.
+    pub dispatch_pointer_target_routing_time: Duration,
+    /// Total wall time spent in default actions and post-widget control flow before final effects.
+    pub dispatch_post_widget_control_flow_time: Duration,
     /// Total wall time spent applying scroll-handle binding invalidations during event dispatch.
     pub dispatch_scroll_handle_invalidation_time: Duration,
     /// Total wall time spent computing active input layers and enforcing modal barrier scope.

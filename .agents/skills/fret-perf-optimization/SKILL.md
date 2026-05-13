@@ -20,13 +20,13 @@ Use `fret-diag-workflow` when your main goal is simply “run a script, capture 
 
 1) Run a suite with normalization hooks (recommended defaults):
 
-- `cargo run -p fretboard --release -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev --release -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release`
 
 2) When a perf gate fails, go straight to per-failure evidence:
 
 - Open `target/fret-diag/check.perf_thresholds.json`
 - For each item in `failures[]`, run:
-  - `cargo run -p fretboard --release -- diag stats <evidence_bundle> --sort cpu_cycles --top 30`
+  - `cargo run -p fretboard-dev --release -- diag stats <evidence_bundle> --sort cpu_cycles --top 30`
 
 3) If you need node-level layout attribution:
 
@@ -89,7 +89,7 @@ Use `fret-diag-workflow` when your main goal is simply “run a script, capture 
 Common “where to look” anchors for smoothness work:
 
 - Perf gate output: `target/fret-diag/check.perf_thresholds.json` (each failure includes `evidence_bundle`)
-- Bundle triage: `cargo run -p fretboard --release -- diag stats <bundle.json> --sort cpu_cycles --top 30` (or `target/release/fretboard[.exe] ...` if already built)
+- Bundle triage: `cargo run -p fretboard-dev --release -- diag stats <bundle.json> --sort cpu_cycles --top 30` (or `target/release/fretboard-dev[.exe] ...` if already built)
 - Layout mechanism:
   - `crates/fret-ui/src/tree/layout/mod.rs`
   - `crates/fret-ui/src/layout/engine.rs`

@@ -110,6 +110,18 @@ fn apply_linux_windowing_capability_posture(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn apply_native_clipboard_capability_posture(
+    caps: &mut PlatformCapabilities,
+    native_clipboard_disabled: bool,
+) {
+    let text_available = !native_clipboard_disabled;
+    caps.clipboard.text.read = text_available;
+    caps.clipboard.text.write = text_available;
+    caps.clipboard.files = false;
+    caps.clipboard.primary_text = cfg!(target_os = "linux") && text_available;
+}
+
 #[derive(Debug, Default)]
 struct DiagIncomingOpenPayload {
     files: Vec<fret_core::ExternalDropFileData>,
@@ -345,7 +357,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
-    fn backend_platform_capabilities(_config: &WinitRunnerConfig) -> PlatformCapabilities {
+    fn backend_platform_capabilities(config: &WinitRunnerConfig) -> PlatformCapabilities {
+        Self::backend_platform_capabilities_with_native_clipboard_disabled(
+            config,
+            fret_platform_native::clipboard::native_clipboard_disabled_by_env(),
+        )
+    }
+
+    fn backend_platform_capabilities_with_native_clipboard_disabled(
+        _config: &WinitRunnerConfig,
+        native_clipboard_disabled: bool,
+    ) -> PlatformCapabilities {
         let mut caps = PlatformCapabilities::default();
 
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -422,9 +444,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 );
             }
 
-            caps.clipboard.text.read = true;
-            caps.clipboard.text.write = true;
-            caps.clipboard.files = false;
+            apply_native_clipboard_capability_posture(&mut caps, native_clipboard_disabled);
 
             caps.dnd.external = true;
             // The portable external drag contract is token-based (ADR 0053).
@@ -482,6 +502,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.clipboard.text.read = false;
             caps.clipboard.text.write = false;
             caps.clipboard.files = false;
+            caps.clipboard.primary_text = false;
 
             caps.dnd.external = false;
             caps.dnd.external_payload = ExternalDragPayloadKind::None;
@@ -516,6 +537,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.clipboard.text.read = false;
             caps.clipboard.text.write = false;
             caps.clipboard.files = false;
+            caps.clipboard.primary_text = false;
 
             caps.dnd.external = false;
             caps.dnd.external_payload = ExternalDragPayloadKind::None;
@@ -541,6 +563,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         requested: &PlatformCapabilities,
     ) -> PlatformCapabilities {
         let available = Self::backend_platform_capabilities(config);
+        Self::effective_platform_capabilities_from_available(requested, &available)
+    }
+
+    fn effective_platform_capabilities_from_available(
+        requested: &PlatformCapabilities,
+        available: &PlatformCapabilities,
+    ) -> PlatformCapabilities {
         let mut caps = requested.clone();
 
         caps.exec.background_work = caps
@@ -589,6 +618,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.clipboard.text.read &= available.clipboard.text.read;
         caps.clipboard.text.write &= available.clipboard.text.write;
         caps.clipboard.files &= available.clipboard.files;
+        caps.clipboard.primary_text &= available.clipboard.primary_text;
 
         caps.dnd.external &= available.dnd.external;
         caps.dnd.external_payload =
@@ -1052,6 +1082,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 mod tests {
     use super::*;
 
+    struct TestDriver;
+    struct TestWindowState;
+
+    impl WinitAppDriver for TestDriver {
+        type WindowState = TestWindowState;
+
+        fn create_window_state(
+            &mut self,
+            _app: &mut App,
+            _window: fret_core::AppWindowId,
+        ) -> Self::WindowState {
+            TestWindowState
+        }
+
+        fn handle_event(
+            &mut self,
+            _context: WinitEventContext<'_, Self::WindowState>,
+            _event: &Event,
+        ) {
+        }
+
+        fn render(&mut self, _context: WinitRenderContext<'_, Self::WindowState>) {}
+    }
+
     #[test]
     fn linux_windowing_capability_posture_keeps_x11_as_best_effort() {
         let mut caps = PlatformCapabilities::default();
@@ -1098,6 +1152,73 @@ mod tests {
             caps.ui.window_z_level,
             fret_runtime::WindowZLevelQuality::None
         );
+    }
+
+    #[test]
+    fn native_clipboard_capability_posture_disables_text_files_and_primary_selection() {
+        let mut caps = PlatformCapabilities::default();
+        caps.clipboard.text.read = true;
+        caps.clipboard.text.write = true;
+        caps.clipboard.files = true;
+        caps.clipboard.primary_text = true;
+
+        apply_native_clipboard_capability_posture(&mut caps, true);
+
+        assert!(!caps.clipboard.text.read);
+        assert!(!caps.clipboard.text.write);
+        assert!(!caps.clipboard.files);
+        assert!(!caps.clipboard.primary_text);
+    }
+
+    #[test]
+    fn native_clipboard_capability_posture_advertises_linux_primary_selection_when_enabled() {
+        let mut caps = PlatformCapabilities::default();
+        caps.clipboard.text.read = false;
+        caps.clipboard.text.write = false;
+        caps.clipboard.files = true;
+        caps.clipboard.primary_text = false;
+
+        apply_native_clipboard_capability_posture(&mut caps, false);
+
+        assert!(caps.clipboard.text.read);
+        assert!(caps.clipboard.text.write);
+        assert!(!caps.clipboard.files);
+        assert_eq!(caps.clipboard.primary_text, cfg!(target_os = "linux"));
+    }
+
+    #[test]
+    fn backend_platform_capabilities_honor_native_clipboard_disabled() {
+        let caps =
+            WinitRunner::<TestDriver>::backend_platform_capabilities_with_native_clipboard_disabled(
+                &WinitRunnerConfig::default(),
+                true,
+            );
+
+        assert!(!caps.clipboard.text.read);
+        assert!(!caps.clipboard.text.write);
+        assert!(!caps.clipboard.files);
+        assert!(!caps.clipboard.primary_text);
+    }
+
+    #[test]
+    fn effective_platform_capabilities_clamp_primary_selection_to_backend() {
+        let mut requested = PlatformCapabilities::default();
+        requested.clipboard.text.read = true;
+        requested.clipboard.text.write = true;
+        requested.clipboard.primary_text = true;
+
+        let mut available = PlatformCapabilities::default();
+        available.clipboard.text.read = true;
+        available.clipboard.text.write = true;
+        available.clipboard.primary_text = false;
+
+        let caps = WinitRunner::<TestDriver>::effective_platform_capabilities_from_available(
+            &requested, &available,
+        );
+
+        assert!(caps.clipboard.text.read);
+        assert!(caps.clipboard.text.write);
+        assert!(!caps.clipboard.primary_text);
     }
 }
 

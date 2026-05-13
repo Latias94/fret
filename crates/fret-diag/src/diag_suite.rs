@@ -35,6 +35,7 @@ struct SuiteRunProfile {
     components_gallery_file_tree_suite: bool,
     components_gallery_table_suite: bool,
     components_gallery_table_keep_alive_suite: bool,
+    imui_hello_semantic_smoke_suite: bool,
 }
 
 impl SuiteRunProfile {
@@ -67,6 +68,7 @@ impl SuiteRunProfile {
             components_gallery_table_keep_alive_suite: is_suite(
                 "components-gallery-table-keep-alive",
             ),
+            imui_hello_semantic_smoke_suite: is_suite("imui-hello-semantic-smoke"),
         }
     }
 
@@ -138,6 +140,7 @@ impl SuiteRunProfile {
             || self.vlist_window_boundary_suite()
             || self.ui_gallery_vlist_no_window_shifts_small_scroll_suite
             || self.components_gallery_suite()
+            || self.imui_hello_semantic_smoke_suite
             || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script)
     }
 
@@ -158,6 +161,8 @@ impl SuiteRunProfile {
             Some("ui-gallery-canvas-cull-root")
         } else if self.ui_gallery_chart_torture_suite {
             Some("ui-gallery-chart-torture-root")
+        } else if self.imui_hello_semantic_smoke_suite {
+            Some("imui-hello-demo.count-text")
         } else {
             None
         }
@@ -2685,6 +2690,10 @@ fn build_suite_editor_text_default_post_run_checks(
     defaults.check_ui_gallery_code_editor_torture_marker_present =
         diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(src)
             && !user_checks.check_ui_gallery_code_editor_torture_marker_present;
+    defaults.check_ui_gallery_code_editor_torture_feature_payloads_stable =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_feature_payloads_stable_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_code_editor_torture_feature_payloads_stable;
     defaults.check_ui_gallery_code_editor_torture_undo_redo =
         diag_policy::ui_gallery_script_requires_code_editor_torture_undo_redo_gate(src)
             && !user_checks.check_ui_gallery_code_editor_torture_undo_redo;
@@ -2802,6 +2811,8 @@ fn apply_suite_editor_text_default_post_run_checks(
 ) {
     checks.check_ui_gallery_code_editor_torture_marker_present |=
         defaults.check_ui_gallery_code_editor_torture_marker_present;
+    checks.check_ui_gallery_code_editor_torture_feature_payloads_stable |=
+        defaults.check_ui_gallery_code_editor_torture_feature_payloads_stable;
     checks.check_ui_gallery_code_editor_torture_undo_redo |=
         defaults.check_ui_gallery_code_editor_torture_undo_redo;
     checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low |=
@@ -2949,6 +2960,7 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
         || checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
         || checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance
         || checks.check_ui_gallery_code_editor_torture_marker_present
+        || checks.check_ui_gallery_code_editor_torture_feature_payloads_stable
         || checks.check_ui_gallery_code_editor_torture_undo_redo
         || checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low
         || checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits
@@ -3032,6 +3044,7 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
         || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_feature_payloads_stable_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(src)
         || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(src)
@@ -3875,6 +3888,8 @@ mod tests {
         ]);
         let components_profile =
             SuiteRunProfile::from_suite_args(&["components-gallery-table-keep-alive".to_string()]);
+        let imui_profile =
+            SuiteRunProfile::from_suite_args(&["imui-hello-semantic-smoke".to_string()]);
 
         assert!(profile.ui_gallery_vlist_no_window_shifts_small_scroll_suite);
         assert_eq!(profile.resolve_warmup_frames(0), 32);
@@ -3886,6 +3901,28 @@ mod tests {
         assert_eq!(
             components_profile.components_gallery_root_test_id(),
             Some("components-gallery-table-root")
+        );
+        assert_eq!(
+            imui_profile.default_pixels_changed_test_id(),
+            Some("imui-hello-demo.count-text")
+        );
+        assert!(imui_profile.wants_post_run_checks_for_script(None, false, false));
+    }
+
+    #[test]
+    fn build_suite_core_default_post_run_checks_sets_imui_hello_text_pixels_gate() {
+        let profile = SuiteRunProfile::from_suite_args(&["imui-hello-semantic-smoke".to_string()]);
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("imui-hello-demo-semantic-smoke.json"),
+            profile,
+            None,
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(
+            defaults.check_pixels_changed_test_id.as_deref(),
+            Some("imui-hello-demo.count-text")
         );
     }
 
@@ -3950,6 +3987,19 @@ mod tests {
         assert!(defaults.check_ui_gallery_code_editor_torture_marker_present);
         assert!(defaults.check_ui_gallery_code_editor_torture_undo_redo);
         assert!(!defaults.check_ui_gallery_markdown_editor_source_word_boundary);
+    }
+
+    #[test]
+    fn build_suite_editor_text_default_post_run_checks_sets_feature_payloads_stable_flag() {
+        let defaults = build_suite_editor_text_default_post_run_checks(
+            std::path::Path::new(
+                "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json",
+            ),
+            &SuiteChecks::default(),
+        );
+
+        assert!(defaults.check_ui_gallery_code_editor_torture_feature_payloads_stable);
+        assert!(!defaults.check_ui_gallery_code_editor_torture_marker_present);
     }
 
     #[test]

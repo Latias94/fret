@@ -58,7 +58,7 @@ Write-Host "[gate] launch-bin: $LaunchBin"
 & cargo build -q -p fret-demo --release --bin drop_shadow_demo
 
 $cmd = @(
-  "cargo", "run", "-q", "-p", "fretboard", "--",
+  "cargo", "run", "-q", "-p", "fretboard-dev", "--",
   "diag", "perf", "tools/diag-scripts/drop-shadow-v1-steady.json",
   "--dir", $OutDir,
   "--timeout-ms", $TimeoutMs,

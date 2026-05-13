@@ -44,6 +44,7 @@ pub(crate) struct StatsCmdContext {
     pub check_wheel_scroll_test_id: Option<String>,
     pub check_wheel_scroll_hit_changes_test_id: Option<String>,
     pub check_drag_cache_root_paint_only_test_id: Option<String>,
+    pub check_ui_gallery_code_editor_torture_feature_payloads_stable: bool,
     pub check_hover_layout_max: Option<u32>,
     pub check_gc_sweep_liveness: bool,
     pub check_notify_hotspot_file_max: Vec<(String, u64)>,
@@ -93,6 +94,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_wheel_scroll_test_id,
         check_wheel_scroll_hit_changes_test_id,
         check_drag_cache_root_paint_only_test_id,
+        check_ui_gallery_code_editor_torture_feature_payloads_stable,
         check_hover_layout_max,
         check_gc_sweep_liveness,
         check_notify_hotspot_file_max,
@@ -617,6 +619,18 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         stats::check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_feature_payloads_stable {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-ui-gallery-code-editor-torture-feature-payloads-stable",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable(
+            bundle_path.as_path(),
+            warmup_frames,
+        )?;
     }
     if let Some(max_allowed) = check_hover_layout_max {
         ensure_check_supported_in_stats_mode(

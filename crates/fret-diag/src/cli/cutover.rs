@@ -1096,6 +1096,8 @@ fn parse_stats_command(
             check_wheel_scroll_test_id: checks.check_wheel_scroll,
             check_wheel_scroll_hit_changes_test_id: checks.check_wheel_scroll_hit_changes,
             check_drag_cache_root_paint_only_test_id: checks.check_drag_cache_root_paint_only,
+            check_ui_gallery_code_editor_torture_feature_payloads_stable: checks
+                .check_ui_gallery_code_editor_torture_feature_payloads_stable,
             check_hover_layout_max: if checks.check_hover_layout {
                 Some(0)
             } else {
@@ -5001,6 +5003,7 @@ mod tests {
             "7".to_string(),
             "--check-view-cache-reuse-min".to_string(),
             "1".to_string(),
+            "--check-ui-gallery-code-editor-torture-feature-payloads-stable".to_string(),
         ];
 
         let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
@@ -5023,6 +5026,7 @@ mod tests {
             vec![("src/view.rs".to_string(), 7)]
         );
         assert_eq!(ctx.check_view_cache_reuse_min, Some(1));
+        assert!(ctx.check_ui_gallery_code_editor_torture_feature_payloads_stable);
     }
 
     #[test]

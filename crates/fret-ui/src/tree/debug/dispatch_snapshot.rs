@@ -41,7 +41,7 @@ pub struct UiDebugDispatchSnapshotParityReport {
 impl UiDebugDispatchSnapshot {
     pub(in crate::tree) fn from_snapshot(snapshot: &UiDispatchSnapshot) -> Self {
         let mut nodes: Vec<UiDebugDispatchSnapshotNode> = Vec::with_capacity(snapshot.nodes.len());
-        for &node in &snapshot.nodes {
+        for &node in snapshot.nodes.iter() {
             let pre = snapshot.pre.get(node).copied().unwrap_or_default();
             let post = snapshot.post.get(node).copied().unwrap_or_default();
             let parent = snapshot.parent.get(node).copied().flatten();

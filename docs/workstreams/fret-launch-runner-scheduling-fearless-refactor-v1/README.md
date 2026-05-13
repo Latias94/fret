@@ -117,6 +117,8 @@ Implementation update (2026-04-26, first-frame bootstrap closure):
   redraw request, preventing the initial `RedrawRequested` event from being dropped.
 - `first_frame_smoke_demo` is the tiny native repro for blank-start reports: it paints a full-window
   quad, requests follow-up animation frames, and closes itself after several frames.
+- It is intentionally not a text-rendering smoke. Use a text/control surface such as
+  `imui_hello_demo` when validating glyph visibility or UI semantics.
 - The lane now has a machine-readable `WORKSTREAM.json` and an explicit
   `EVIDENCE_AND_GATES.md` gate set.
 

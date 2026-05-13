@@ -2,7 +2,10 @@
 use super::DebugGlyphAtlasLookup;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum GlyphQuadKind {
@@ -126,12 +129,48 @@ impl GlyphKeyBuckets {
         }
     }
 
+    pub(super) fn extend_pin_keys(&mut self, keys: &GlyphPinKeys) {
+        self.mask.extend(keys.mask.iter().copied());
+        self.color.extend(keys.color.iter().copied());
+        self.subpixel.extend(keys.subpixel.iter().copied());
+    }
+
     pub(super) fn into_pin_bucket(self) -> (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>) {
         (
             self.mask.into_iter().collect(),
             self.color.into_iter().collect(),
             self.subpixel.into_iter().collect(),
         )
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub(super) struct GlyphPinKeys {
+    mask: Arc<[GlyphKey]>,
+    color: Arc<[GlyphKey]>,
+    subpixel: Arc<[GlyphKey]>,
+}
+
+impl GlyphPinKeys {
+    pub(super) fn from_keys(keys: impl IntoIterator<Item = GlyphKey>) -> Self {
+        let mut buckets = GlyphKeyBuckets::default();
+        for key in keys {
+            buckets.insert(key);
+        }
+        let (mask, color, subpixel) = buckets.into_pin_bucket();
+        Self {
+            mask: Arc::from(mask),
+            color: Arc::from(color),
+            subpixel: Arc::from(subpixel),
+        }
+    }
+
+    pub(super) fn heap_bytes_estimate(&self) -> u64 {
+        let bytes = (self.mask.len() as u128)
+            .saturating_add(self.color.len() as u128)
+            .saturating_add(self.subpixel.len() as u128)
+            .saturating_mul(std::mem::size_of::<GlyphKey>() as u128);
+        bytes.min(u64::MAX as u128) as u64
     }
 }
 
@@ -142,6 +181,35 @@ fn glyph_image_content_metadata(
         parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
         parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
         parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn face() -> FontFaceKey {
+        FontFaceKey::new(1, 0, 0, false, 0)
+    }
+
+    #[test]
+    fn glyph_pin_keys_deduplicate_by_bucket() {
+        let [color, subpixel, mask] = GlyphKey::lookup_keys(face(), 42, 16.0f32.to_bits(), 0, 0);
+
+        let keys = GlyphPinKeys::from_keys([mask, color, mask, subpixel, color]);
+
+        assert_eq!(keys.mask.as_ref(), &[mask]);
+        assert_eq!(keys.color.as_ref(), &[color]);
+        assert_eq!(keys.subpixel.as_ref(), &[subpixel]);
+
+        let mut buckets = GlyphKeyBuckets::default();
+        buckets.extend_pin_keys(&keys);
+        buckets.extend_pin_keys(&keys);
+        let (mask, color, subpixel) = buckets.into_pin_bucket();
+
+        assert_eq!(mask.len(), 1);
+        assert_eq!(color.len(), 1);
+        assert_eq!(subpixel.len(), 1);
     }
 }
 

@@ -7,6 +7,9 @@
 
 use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 
+const TEST_ID_COUNT_TEXT: &str = "imui-hello-demo.count-text";
+const TEST_ID_ENABLED_TEXT: &str = "imui-hello-demo.enabled-text";
+
 struct ImUiHelloView;
 
 pub fn run() -> anyhow::Result<()> {
@@ -32,14 +35,24 @@ impl View for ImUiHelloView {
         // This demo mounts IMUI directly at the view root, so the default `imui(...)` entrypoint
         // should own the stacked host for us.
         imui_in(cx, |ui| {
-            ui.text(format!("Count: {count}"));
+            ui.mount(|cx| {
+                vec![
+                    cx.text(format!("Count: {count}"))
+                        .test_id(TEST_ID_COUNT_TEXT),
+                ]
+            });
             if ui.button("Increment").clicked() {
                 let _ = count_state.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
             }
 
             ui.separator();
 
-            ui.text(format!("Enabled: {enabled}"));
+            ui.mount(|cx| {
+                vec![
+                    cx.text(format!("Enabled: {enabled}"))
+                        .test_id(TEST_ID_ENABLED_TEXT),
+                ]
+            });
             let changed = ui
                 .checkbox_model("Enabled", enabled_state.model())
                 .changed();

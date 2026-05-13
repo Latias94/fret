@@ -19,6 +19,7 @@ pub(crate) fn push_perf_repeat_run_json_row(
     let top = report.top.first();
     let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
     let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
+    let top_code_editor = code_editor_rows::TopCodeEditorRowSceneFields::from_top(top);
 
     let top_hit_test_bounds_tree_queries = top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
     let top_hit_test_bounds_tree_disabled =
@@ -212,6 +213,11 @@ pub(crate) fn push_perf_repeat_run_json_row(
         "frame_p95_hit_test_time_us": report.p95_hit_test_time_us,
         "top_dispatch_events": top_dispatch_events,
         "top_hit_test_queries": top_hit_test_queries,
+        "top_code_editor_rows_painted": top_code_editor.rows_painted,
+        "top_code_editor_rows_scene_replayed": top_code_editor.rows_scene_replayed,
+        "top_code_editor_rows_scene_stored": top_code_editor.rows_scene_stored,
+        "top_code_editor_row_scene_ops_stored": top_code_editor.row_scene_ops_stored,
+        "top_code_editor_row_scene_replay_hit_rate_pct": top_code_editor.row_scene_replay_hit_rate_pct,
         "pointer_move_frames_present": pointer_move_frames_present,
         "pointer_move_frames_considered": pointer_move_frames_considered,
         "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
@@ -294,4 +300,48 @@ pub(crate) fn push_perf_repeat_run_json_row(
         "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
         "bundle": bundle_path.display().to_string(),
     }));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stats::{BundleStatsCodeEditorPaintPerf, BundleStatsSnapshotRow};
+
+    #[test]
+    fn perf_repeat_run_json_row_exports_top_code_editor_row_scene_fields() {
+        let mut rows = Vec::new();
+        let mut report = BundleStatsReport::default();
+        report.top.push(BundleStatsSnapshotRow {
+            code_editor_paint_perf: Some(BundleStatsCodeEditorPaintPerf {
+                rows_painted: 10,
+                rows_scene_replayed: 7,
+                rows_scene_stored: 3,
+                row_scene_ops_stored: 41,
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        push_perf_repeat_run_json_row(
+            &mut rows,
+            2,
+            &report,
+            100,
+            20,
+            5,
+            10,
+            60,
+            3,
+            1,
+            0,
+            0,
+            Path::new("target/fret-diag/editor/bundle.schema2.json"),
+        );
+
+        assert_eq!(rows[0]["top_code_editor_rows_painted"], 10);
+        assert_eq!(rows[0]["top_code_editor_rows_scene_replayed"], 7);
+        assert_eq!(rows[0]["top_code_editor_rows_scene_stored"], 3);
+        assert_eq!(rows[0]["top_code_editor_row_scene_ops_stored"], 41);
+        assert_eq!(rows[0]["top_code_editor_row_scene_replay_hit_rate_pct"], 70);
+    }
 }

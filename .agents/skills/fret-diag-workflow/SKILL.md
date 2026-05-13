@@ -1,6 +1,6 @@
 ---
 name: fret-diag-workflow
-description: "Runs and triages Fret UI diagnostics via `fretboard diag` (scripts, bundles, shareable artifacts, compare/triage, perf gates). Use when user asks to reproduce a flaky UI bug, write a diag script, capture/share a diagnostics bundle, triage/compare bundles, or add a perf gate."
+description: "Runs and triages Fret UI diagnostics via `fretboard-dev diag` (scripts, bundles, shareable artifacts, compare/triage, perf gates). Use when user asks to reproduce a flaky UI bug, write a diag script, capture/share a diagnostics bundle, triage/compare bundles, or add a perf gate."
 ---
 
 # Fret diagnostics workflow (correctness + perf)
@@ -53,7 +53,7 @@ Defaults if unclear:
 
 Recommended first command:
 
-- `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`
+- `cargo run -p fretboard-dev -- diag config doctor --mode launch --print-launch-policy`
 
 ## Workflow
 
@@ -101,7 +101,7 @@ Recommended first command:
 
 Use `diag perf` + worst-bundle evidence, then inspect the worst frames:
 
-- `fretboard diag stats <bundle.json> --sort time --top 30`
+- `fretboard-dev diag stats <bundle.json> --sort time --top 30`
 
 See: `references/perf-handoff.md`.
 
@@ -153,9 +153,9 @@ Ship a result that is reviewable and reusable:
 - Leaving no stable selectors behind, so scripts rot immediately.
 - Jumping straight to screenshots when a layout sidecar would explain width/flex/clipping ownership faster.
 - Treating CI or large artifacts as the first place to discover what happened.
-- Mixing the public `fretboard diag ...` evidence owner with the workspace-dev
-  `fretboard-dev diag ...` help surface; use `crates/fretboard/src/cli/help.rs` for the public CLI
-  and `apps/fretboard/src/cli/help.rs` for the mono-repo developer wrapper.
+- Mixing public CLI examples with the mono-repo diagnostics wrapper. Use `fretboard-dev diag ...`
+  for in-repo diagnostics, perf gates, and bundle triage; reserve `fretboard` examples for public
+  scaffold/dev-loop surfaces.
 
 ## Troubleshooting
 

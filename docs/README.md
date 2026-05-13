@@ -61,6 +61,7 @@ Unless a document says otherwise:
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Code editor app-author surface: [docs/code-editor.md](./code-editor.md)
 - Shadcn recipe focus + builder render closure (active maintenance lane for text-entry chrome and builder single-render discipline): `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/DESIGN.md`, `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/TODO.md`, and `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/MILESTONES.md`
 - Portable shadow softness follow-on (active fidelity lane after preset/token closure): `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/TODO.md`, and `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/MILESTONES.md`
 - Action-first authoring + view runtime refactor (closed lane): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`

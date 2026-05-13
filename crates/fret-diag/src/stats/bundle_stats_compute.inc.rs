@@ -1,3 +1,104 @@
+fn snapshot_code_editor_paint_perf(
+    snapshot: &serde_json::Value,
+) -> Option<BundleStatsCodeEditorPaintPerf> {
+    let p = snapshot
+        .get("app_snapshot")?
+        .get("code_editor")?
+        .get("torture")?
+        .get("paint_perf")?;
+
+    macro_rules! u64_field {
+        ($key:literal) => {
+            p.get($key).and_then(|v| v.as_u64()).unwrap_or(0)
+        };
+    }
+    macro_rules! us_field {
+        ($us_key:literal, $ns_key:literal) => {
+            p.get($ns_key)
+                .and_then(|v| v.as_u64())
+                .map(|ns| ns / 1_000)
+                .unwrap_or_else(|| u64_field!($us_key))
+        };
+    }
+
+    Some(BundleStatsCodeEditorPaintPerf {
+        frame_seq: u64_field!("frame_seq"),
+        visible_start: u64_field!("visible_start"),
+        visible_end: u64_field!("visible_end"),
+        visible_rows: u64_field!("visible_rows"),
+        cache_base_entries: u64_field!("cache_base_entries"),
+        cache_frame_min_entries: u64_field!("cache_frame_min_entries"),
+        cache_effective_entries: u64_field!("cache_effective_entries"),
+        rows_painted: u64_field!("rows_painted"),
+        rows_drew_rich: u64_field!("rows_drew_rich"),
+        rows_scene_replayed: u64_field!("rows_scene_replayed"),
+        rows_scene_stored: u64_field!("rows_scene_stored"),
+        row_scene_ops_stored: u64_field!("row_scene_ops_stored"),
+        quads_selection: u64_field!("quads_selection"),
+        quads_caret: u64_field!("quads_caret"),
+        syntax_rows_stored: u64_field!("syntax_rows_stored"),
+        us_total: us_field!("us_total", "ns_total"),
+        us_row_text: us_field!("us_row_text", "ns_row_text"),
+        us_baseline_measure: us_field!("us_baseline_measure", "ns_baseline_measure"),
+        us_row_content_resolve: us_field!("us_row_content_resolve", "ns_row_content_resolve"),
+        us_row_rich_cache_compare: us_field!(
+            "us_row_rich_cache_compare",
+            "ns_row_rich_cache_compare"
+        ),
+        us_row_geom_key: us_field!("us_row_geom_key", "ns_row_geom_key"),
+        us_rich_materialize: us_field!("us_rich_materialize", "ns_rich_materialize"),
+        us_text_draw: us_field!("us_text_draw", "ns_text_draw"),
+        us_row_scene_key: us_field!("us_row_scene_key", "ns_row_scene_key"),
+        us_row_scene_fast_probe: us_field!(
+            "us_row_scene_fast_probe",
+            "ns_row_scene_fast_probe"
+        ),
+        us_row_scene_full_probe: us_field!(
+            "us_row_scene_full_probe",
+            "ns_row_scene_full_probe"
+        ),
+        us_row_scene_fast_key_compare: us_field!(
+            "us_row_scene_fast_key_compare",
+            "ns_row_scene_fast_key_compare"
+        ),
+        us_row_scene_full_key_compare: us_field!(
+            "us_row_scene_full_key_compare",
+            "ns_row_scene_full_key_compare"
+        ),
+        us_row_scene_replay_touch: us_field!(
+            "us_row_scene_replay_touch",
+            "ns_row_scene_replay_touch"
+        ),
+        us_row_scene_replay_ops: us_field!(
+            "us_row_scene_replay_ops",
+            "ns_row_scene_replay_ops"
+        ),
+        us_row_scene_capture_ops: us_field!(
+            "us_row_scene_capture_ops",
+            "ns_row_scene_capture_ops"
+        ),
+        us_row_scene_store: us_field!("us_row_scene_store", "ns_row_scene_store"),
+        us_row_scene_fast_path: us_field!("us_row_scene_fast_path", "ns_row_scene_fast_path"),
+        us_row_scene_full_path: us_field!("us_row_scene_full_path", "ns_row_scene_full_path"),
+        us_syntax_spans: us_field!("us_syntax_spans", "ns_syntax_spans"),
+        us_syntax_slice: us_field!("us_syntax_slice", "ns_syntax_slice"),
+        us_syntax_highlight: us_field!("us_syntax_highlight", "ns_syntax_highlight"),
+        us_syntax_distribute: us_field!("us_syntax_distribute", "ns_syntax_distribute"),
+        us_syntax_store: us_field!("us_syntax_store", "ns_syntax_store"),
+        us_selection_rects: us_field!("us_selection_rects", "ns_selection_rects"),
+        us_caret_x: us_field!("us_caret_x", "ns_caret_x"),
+        us_caret_stops: us_field!("us_caret_stops", "ns_caret_stops"),
+        us_caret_rect: us_field!("us_caret_rect", "ns_caret_rect"),
+        us_row_geom_cache: us_field!("us_row_geom_cache", "ns_row_geom_cache"),
+        us_row_geom_resolve: us_field!("us_row_geom_resolve", "ns_row_geom_resolve"),
+        us_row_overlay: us_field!("us_row_overlay", "ns_row_overlay"),
+        us_frame_overlay_prepare: us_field!(
+            "us_frame_overlay_prepare",
+            "ns_frame_overlay_prepare"
+        ),
+    })
+}
+
 pub(super) fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
@@ -300,6 +401,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("dispatch_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_inner_body_time_us = stats
+                .and_then(|m| m.get("dispatch_inner_body_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let dispatch_pointer_events = stats
                 .and_then(|m| m.get("dispatch_pointer_events"))
                 .and_then(|v| v.as_u64())
@@ -376,6 +481,30 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let dispatch_hover_update_time_us = stats
                 .and_then(|m| m.get("dispatch_hover_update_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_input_state_update_time_us = stats
+                .and_then(|m| m.get("dispatch_input_state_update_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_context_build_time_us = stats
+                .and_then(|m| m.get("dispatch_context_build_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_prelude_time_us = stats
+                .and_then(|m| m.get("dispatch_prelude_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_pointer_arbitration_time_us = stats
+                .and_then(|m| m.get("dispatch_pointer_arbitration_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_pointer_target_routing_time_us = stats
+                .and_then(|m| m.get("dispatch_pointer_target_routing_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_post_widget_control_flow_time_us = stats
+                .and_then(|m| m.get("dispatch_post_widget_control_flow_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let dispatch_scroll_handle_invalidation_time_us = stats
@@ -1522,6 +1651,10 @@ pub(super) fn bundle_stats_from_json_with_options(
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
             let global_change_unobserved = snapshot_global_change_unobserved(s, 3);
+            let code_editor_paint_perf = snapshot_code_editor_paint_perf(s);
+            if let Some(perf) = code_editor_paint_perf.as_ref() {
+                out.code_editor_paint_perf.observe(perf);
+            }
 
             out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout_time_us);
             out.sum_layout_collect_roots_time_us = out
@@ -1662,6 +1795,47 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_engine_solve_time_us = out
                 .max_layout_engine_solve_time_us
                 .max(layout_engine_solve_time_us);
+            let dispatch_accounted_time_us = hit_test_time_us
+                .saturating_add(dispatch_hover_update_time_us)
+                .saturating_add(dispatch_input_state_update_time_us)
+                .saturating_add(dispatch_context_build_time_us)
+                .saturating_add(dispatch_prelude_time_us)
+                .saturating_add(dispatch_pointer_arbitration_time_us)
+                .saturating_add(dispatch_pointer_target_routing_time_us)
+                .saturating_add(dispatch_post_widget_control_flow_time_us)
+                .saturating_add(dispatch_scroll_handle_invalidation_time_us)
+                .saturating_add(dispatch_active_layers_time_us)
+                .saturating_add(dispatch_input_context_time_us)
+                .saturating_add(dispatch_event_chain_build_time_us)
+                .saturating_add(dispatch_widget_capture_time_us)
+                .saturating_add(dispatch_widget_bubble_time_us)
+                .saturating_add(dispatch_cursor_query_time_us)
+                .saturating_add(dispatch_pointer_move_layer_observers_time_us)
+                .saturating_add(dispatch_synth_hover_observer_time_us)
+                .saturating_add(dispatch_cursor_effect_time_us)
+                .saturating_add(dispatch_post_dispatch_snapshot_time_us);
+            out.max_dispatch_accounted_time_us = out
+                .max_dispatch_accounted_time_us
+                .max(dispatch_accounted_time_us);
+            out.max_dispatch_unattributed_time_us = out
+                .max_dispatch_unattributed_time_us
+                .max(dispatch_time_us.saturating_sub(dispatch_accounted_time_us));
+            let dispatch_body_time_us = if dispatch_inner_body_time_us == 0 {
+                dispatch_time_us
+            } else {
+                dispatch_inner_body_time_us
+            };
+            out.max_dispatch_inner_body_unattributed_time_us = out
+                .max_dispatch_inner_body_unattributed_time_us
+                .max(dispatch_body_time_us.saturating_sub(dispatch_accounted_time_us));
+            let dispatch_runtime_wrapper_time_us = if dispatch_inner_body_time_us == 0 {
+                0
+            } else {
+                dispatch_time_us.saturating_sub(dispatch_inner_body_time_us)
+            };
+            out.max_dispatch_runtime_wrapper_time_us = out
+                .max_dispatch_runtime_wrapper_time_us
+                .max(dispatch_runtime_wrapper_time_us);
             out.max_renderer_encode_scene_us = out
                 .max_renderer_encode_scene_us
                 .max(renderer_encode_scene_us);
@@ -1749,7 +1923,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_collect_roots_time_us,
                 paint_publish_text_input_snapshot_time_us,
                 paint_collapse_observations_time_us,
+                code_editor_paint_perf,
                 dispatch_time_us,
+                dispatch_inner_body_time_us,
                 dispatch_pointer_events,
                 dispatch_pointer_event_time_us,
                 dispatch_timer_events,
@@ -1768,6 +1944,12 @@ pub(super) fn bundle_stats_from_json_with_options(
                 dispatch_other_event_time_us,
                 hit_test_time_us,
                 dispatch_hover_update_time_us,
+                dispatch_input_state_update_time_us,
+                dispatch_context_build_time_us,
+                dispatch_prelude_time_us,
+                dispatch_pointer_arbitration_time_us,
+                dispatch_pointer_target_routing_time_us,
+                dispatch_post_widget_control_flow_time_us,
                 dispatch_scroll_handle_invalidation_time_us,
                 dispatch_active_layers_time_us,
                 dispatch_input_context_time_us,
@@ -2024,6 +2206,71 @@ pub(super) fn bundle_stats_from_json_with_options(
         (p50, p95)
     }
 
+    fn code_editor_paint_perf_percentile<'a>(
+        values: impl Iterator<Item = &'a BundleStatsCodeEditorPaintPerf>,
+        percentile: f64,
+    ) -> BundleStatsCodeEditorPaintPerfTotals {
+        let values: Vec<&BundleStatsCodeEditorPaintPerf> = values.collect();
+        if values.is_empty() {
+            return BundleStatsCodeEditorPaintPerfTotals::default();
+        }
+
+        fn percentile_value(values: impl Iterator<Item = u64>, percentile: f64) -> u64 {
+            let mut sorted: Vec<u64> = values.collect();
+            sorted.sort_unstable();
+            crate::percentile_nearest_rank_sorted(&sorted, percentile)
+        }
+
+        macro_rules! metric {
+            ($field:ident) => {
+                percentile_value(values.iter().map(|p| p.$field), percentile)
+            };
+        }
+
+        BundleStatsCodeEditorPaintPerfTotals {
+            rows_painted: metric!(rows_painted),
+            rows_drew_rich: metric!(rows_drew_rich),
+            rows_scene_replayed: metric!(rows_scene_replayed),
+            rows_scene_stored: metric!(rows_scene_stored),
+            row_scene_ops_stored: metric!(row_scene_ops_stored),
+            quads_selection: metric!(quads_selection),
+            quads_caret: metric!(quads_caret),
+            syntax_rows_stored: metric!(syntax_rows_stored),
+            us_total: metric!(us_total),
+            us_row_text: metric!(us_row_text),
+            us_baseline_measure: metric!(us_baseline_measure),
+            us_row_content_resolve: metric!(us_row_content_resolve),
+            us_row_rich_cache_compare: metric!(us_row_rich_cache_compare),
+            us_row_geom_key: metric!(us_row_geom_key),
+            us_rich_materialize: metric!(us_rich_materialize),
+            us_text_draw: metric!(us_text_draw),
+            us_row_scene_key: metric!(us_row_scene_key),
+            us_row_scene_fast_probe: metric!(us_row_scene_fast_probe),
+            us_row_scene_full_probe: metric!(us_row_scene_full_probe),
+            us_row_scene_fast_key_compare: metric!(us_row_scene_fast_key_compare),
+            us_row_scene_full_key_compare: metric!(us_row_scene_full_key_compare),
+            us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
+            us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
+            us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
+            us_row_scene_store: metric!(us_row_scene_store),
+            us_row_scene_fast_path: metric!(us_row_scene_fast_path),
+            us_row_scene_full_path: metric!(us_row_scene_full_path),
+            us_syntax_spans: metric!(us_syntax_spans),
+            us_syntax_slice: metric!(us_syntax_slice),
+            us_syntax_highlight: metric!(us_syntax_highlight),
+            us_syntax_distribute: metric!(us_syntax_distribute),
+            us_syntax_store: metric!(us_syntax_store),
+            us_selection_rects: metric!(us_selection_rects),
+            us_caret_x: metric!(us_caret_x),
+            us_caret_stops: metric!(us_caret_stops),
+            us_caret_rect: metric!(us_caret_rect),
+            us_row_geom_cache: metric!(us_row_geom_cache),
+            us_row_geom_resolve: metric!(us_row_geom_resolve),
+            us_row_overlay: metric!(us_row_overlay),
+            us_frame_overlay_prepare: metric!(us_frame_overlay_prepare),
+        }
+    }
+
     (out.p50_total_time_us, out.p95_total_time_us) = p50_p95(rows.iter().map(|r| r.total_time_us));
     (out.p50_ui_thread_cpu_time_us, out.p95_ui_thread_cpu_time_us) =
         p50_p95(rows.iter().map(|r| r.ui_thread_cpu_time_us));
@@ -2093,6 +2340,34 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(rows.iter().map(|r| r.layout_engine_solve_time_us));
     (out.p50_dispatch_time_us, out.p95_dispatch_time_us) =
         p50_p95(rows.iter().map(|r| r.dispatch_time_us));
+    (
+        out.p50_dispatch_accounted_time_us,
+        out.p95_dispatch_accounted_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_accounted_time_us),
+    );
+    (
+        out.p50_dispatch_unattributed_time_us,
+        out.p95_dispatch_unattributed_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_unattributed_time_us),
+    );
+    (
+        out.p50_dispatch_inner_body_unattributed_time_us,
+        out.p95_dispatch_inner_body_unattributed_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_inner_body_unattributed_time_us),
+    );
+    (
+        out.p50_dispatch_runtime_wrapper_time_us,
+        out.p95_dispatch_runtime_wrapper_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(BundleStatsReport::dispatch_runtime_wrapper_time_us),
+    );
     (out.p50_hit_test_time_us, out.p95_hit_test_time_us) =
         p50_p95(rows.iter().map(|r| r.hit_test_time_us));
     (out.p50_paint_widget_time_us, out.p95_paint_widget_time_us) =
@@ -2131,6 +2406,14 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p50_renderer_prepare_text_us,
         out.p95_renderer_prepare_text_us,
     ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_us));
+    out.code_editor_paint_perf.p50 = code_editor_paint_perf_percentile(
+        rows.iter().filter_map(|r| r.code_editor_paint_perf.as_ref()),
+        0.50,
+    );
+    out.code_editor_paint_perf.p95 = code_editor_paint_perf_percentile(
+        rows.iter().filter_map(|r| r.code_editor_paint_perf.as_ref()),
+        0.95,
+    );
 
     match sort {
         BundleStatsSort::Invalidation => {

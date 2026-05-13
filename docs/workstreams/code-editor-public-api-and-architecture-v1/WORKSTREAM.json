@@ -1,0 +1,465 @@
+{
+  "schema_version": 1,
+  "slug": "code-editor-public-api-and-architecture-v1",
+  "title": "Code Editor Public API and Architecture v1",
+  "status": "active",
+  "updated": "2026-05-12",
+  "scope_kind": "execution",
+  "follow_on_of": "code-editor-ecosystem-v1",
+  "problem": "Stabilize the Fret code editor as an editor-grade subsystem by auditing and tightening its public API, buffer/view/surface boundaries, feature extension points, and performance gates before adding more editor features or broad hot-path rewrites.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "guide",
+      "path": "docs/code-editor.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_KEYMAP_UNDO_BOUNDARY_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_ASSIST_REQUEST_CONTRACT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_GEOMETRY_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ACCESSIBILITY_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PLATFORM_TEXT_INPUT_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PLATFORM_TEXT_INPUT_ROUNDTRIP_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_POINTER_HELPERS_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_POINTER_SELECTION_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_WORD_NAVIGATION_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_CARET_NAVIGATION_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_KEYBOARD_COMMANDS_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PREEDIT_PAINT_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_DISPLAY_NAVIGATION_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_STATE_LIFECYCLE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_SCROLL_WINDOW_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_OWNER_RESIDUAL_CLOSURE_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_METHOD_BOUNDARY_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_A11Y_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_PREFETCH_RUNTIME_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_RICH_MODULE_SPLIT_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from a source-backed public-surface audit of the code editor crates and the existing editor perf contracts before changing public APIs or adding feature surfaces.",
+    "commands": [
+      "python tools/audit_crate.py --crate fret-code-editor",
+      "rg -n \"pub (struct|enum|trait|type|fn)|pub use|pub mod\" ecosystem/fret-code-editor/src ecosystem/fret-code-editor-buffer/src ecosystem/fret-code-editor-view/src",
+      "rg -n \"0185|code editor ecosystem v1|fret-code-editor\" docs/adr docs/workstreams -g \"*.md\""
+    ]
+  },
+  "gates": [
+    {
+      "name": "json shape",
+      "command": "python -m json.tool docs/workstreams/code-editor-public-api-and-architecture-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff hygiene",
+      "command": "git diff --check"
+    },
+    {
+      "name": "code editor view format",
+      "command": "cargo fmt -p fret-code-editor-view --check"
+    },
+    {
+      "name": "code editor view check",
+      "command": "cargo check -p fret-code-editor-view"
+    },
+    {
+      "name": "code editor view tests",
+      "command": "cargo nextest run -p fret-code-editor-view --lib --no-fail-fast"
+    },
+    {
+      "name": "code editor buffer format",
+      "command": "cargo fmt -p fret-code-editor-buffer --check"
+    },
+    {
+      "name": "code editor buffer check",
+      "command": "cargo check -p fret-code-editor-buffer"
+    },
+    {
+      "name": "code editor buffer tests",
+      "command": "cargo nextest run -p fret-code-editor-buffer --lib --no-fail-fast"
+    },
+    {
+      "name": "code editor format",
+      "command": "cargo fmt -p fret-code-editor --check"
+    },
+    {
+      "name": "code editor syntax feature check",
+      "command": "cargo check -p fret-code-editor --features syntax-rust"
+    },
+    {
+      "name": "code editor command availability tests",
+      "command": "cargo nextest run -p fret-code-editor command_availability --lib --features syntax --no-fail-fast"
+    },
+    {
+      "name": "code editor text undo redo alias tests",
+      "command": "cargo nextest run -p fret-code-editor text_undo_redo --lib --features syntax --no-fail-fast"
+    },
+    {
+      "name": "code editor focused tests",
+      "command": "cargo nextest run -p fret-code-editor --lib --features syntax --no-fail-fast"
+    },
+    {
+      "name": "code editor public surface test",
+      "command": "cargo nextest run -p fret-code-editor --test public_surface --no-fail-fast"
+    },
+    {
+      "name": "code editor feature payload tests",
+      "command": "cargo nextest run -p fret-code-editor feature_payload --no-fail-fast"
+    },
+    {
+      "name": "ui gallery check",
+      "command": "cargo check -p fret-ui-gallery"
+    },
+    {
+      "name": "ui gallery code editor overlay hook gate",
+      "command": "cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_assist_overlay_hook_stays_within_window --no-fail-fast"
+    },
+    {
+      "name": "feature payload bundle stats gate",
+      "command": "cargo run -p fretboard -- diag stats <bundle.schema2.json> --warmup-frames 5 --check-ui-gallery-code-editor-torture-feature-payloads-stable"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_AUDIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/PUBLIC_SURFACE_CLASSIFICATION_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_SELECTION_OWNERSHIP_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_KEYMAP_UNDO_BOUNDARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_SPAN_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_DIAGNOSTIC_LINE_SUMMARY_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_GUTTER_MARKER_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_RANGE_DECORATION_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_SEMANTIC_TOKEN_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_OVERLAY_FEATURE_BOUNDARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_ASSIST_REQUEST_CONTRACT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_COORDINATE_VOCABULARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M2_WIDGET_FEATURE_PAYLOAD_SURFACE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_MODULE_FIRST_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_GEOMETRY_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ACCESSIBILITY_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PLATFORM_TEXT_INPUT_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PLATFORM_TEXT_INPUT_ROUNDTRIP_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_POINTER_HELPERS_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_POINTER_SELECTION_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_WORD_NAVIGATION_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_CARET_NAVIGATION_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_KEYBOARD_COMMANDS_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_PREEDIT_PAINT_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_DISPLAY_NAVIGATION_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_STATE_LIFECYCLE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_SCROLL_WINDOW_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_TEST_OWNER_RESIDUAL_CLOSURE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_FEATURE_PAYLOAD_STORE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_SNAPSHOT_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_SCHEMA_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_METHODS_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_STATE_INITIALIZER_BOUNDARY_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_HANDLE_METHOD_BOUNDARY_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_A11Y_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_EDIT_TRANSACTION_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_CLIPBOARD_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_KEYBOARD_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_INPUT_NAVIGATION_POINTER_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_PREFETCH_RUNTIME_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_SYNTAX_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_SCENE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_TEXT_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_GEOM_CACHE_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_PAINT_ROW_RICH_MODULE_SPLIT_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M3_DIAGNOSTICS_DECORATIONS_OWNER_CLOSURE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_UI_GALLERY_FEATURE_PAYLOAD_FIXTURE_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_FEATURE_PAYLOAD_BUNDLE_ASSERTION_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M4_OVERLAY_FEATURE_HOOK_PROOF_2026-05-12.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md",
+    "docs/code-editor.md",
+    "docs/adr/0185-code-editor-ecosystem-v1.md",
+    "docs/adr/0011-overlays-and-multi-root.md",
+    "docs/adr/0020-focus-and-command-routing.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/reference-stack-ui-behavior.md",
+    "docs/workstreams/code-editor-ecosystem-v1/code-editor-ecosystem-v1.md",
+    "docs/workstreams/editor-text-pipeline-v1/editor-text-pipeline-v1.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md",
+    "ecosystem/fret-code-editor/src/lib.rs",
+    "ecosystem/fret-code-editor-buffer/src/lib.rs",
+    "ecosystem/fret-code-editor-view/src/lib.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/geometry.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/accessibility.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/platform_text_input.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/platform_text_input_roundtrip.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/pointer_helpers.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/pointer_selection.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/word_navigation.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/caret_navigation.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/keyboard_commands.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/preedit_paint.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/display_navigation.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/row_geom_cache.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/state_lifecycle.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/scroll_window.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/syntax_window.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/paint_guards.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/fold_lifecycle.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/edit_refresh.rs",
+    "ecosystem/fret-code-editor/src/editor/feature_payloads.rs",
+    "ecosystem/fret-code-editor/src/editor/handle/feature_payloads.rs",
+    "ecosystem/fret-code-editor/src/editor/state.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/text.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/geom_cache.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/rich.rs",
+    "ecosystem/fret-code-editor-view/src/diagnostics.rs",
+    "ecosystem/fret-code-editor-view/src/gutter.rs",
+    "ecosystem/fret-code-editor-view/src/decorations.rs",
+    "ecosystem/fret-code-editor-view/src/semantic_tokens.rs",
+    "ecosystem/fret-code-editor-view/src/assist.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs",
+    "apps/fret-ui-gallery/src/driver/render_flow.rs",
+    "ecosystem/fret-ui-kit/src/overlay_controller.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0011-overlays-and-multi-root.md",
+    "docs/adr/0020-focus-and-command-routing.md",
+    "docs/adr/0185-code-editor-ecosystem-v1.md",
+    "docs/adr/0188-code-editor-display-fragments-and-displaymap-composition-v1.md",
+    "docs/adr/0179-text-navigation-and-word-boundaries-v1.md",
+    "docs/adr/0261-platform-text-input-client-interop-v1.md",
+    "docs/adr/0055-frame-recording-and-subtree-replay-caching.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this narrow follow-on until the code editor public API, extension model, and first performance/diagnostics gate set are explicit. Keep broad feature implementation in smaller slices after M1."
+  }
+}

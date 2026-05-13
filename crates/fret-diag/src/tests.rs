@@ -42,6 +42,7 @@ use crate::stats::{
     check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json,
     check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json,
     check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+    check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json,
@@ -3042,6 +3043,145 @@ fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
 }
 
 #[test]
+fn bundle_stats_reports_dispatch_unattributed_time() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "events": [
+                    { "frame_id": 1, "type": "pointer.move" }
+                ],
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": { "stats": {
+                            "dispatch_time_us": 1000,
+                            "dispatch_inner_body_time_us": 950,
+                            "dispatch_pointer_events": 1,
+                            "dispatch_pointer_event_time_us": 1000,
+                            "hit_test_time_us": 10,
+                            "dispatch_hover_update_time_us": 5,
+                            "dispatch_input_state_update_time_us": 23,
+                            "dispatch_context_build_time_us": 29,
+                            "dispatch_prelude_time_us": 11,
+                            "dispatch_pointer_arbitration_time_us": 13,
+                            "dispatch_pointer_target_routing_time_us": 17,
+                            "dispatch_post_widget_control_flow_time_us": 19,
+                            "dispatch_scroll_handle_invalidation_time_us": 4,
+                            "dispatch_active_layers_time_us": 3,
+                            "dispatch_input_context_time_us": 6,
+                            "dispatch_event_chain_build_time_us": 7,
+                            "dispatch_widget_capture_time_us": 8,
+                            "dispatch_widget_bubble_time_us": 9,
+                            "dispatch_cursor_query_time_us": 2,
+                            "dispatch_pointer_move_layer_observers_time_us": 1,
+                            "dispatch_synth_hover_observer_time_us": 3,
+                            "dispatch_cursor_effect_time_us": 1,
+                            "dispatch_post_dispatch_snapshot_time_us": 1,
+                            "dispatch_events": 1
+                        } }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        1,
+        BundleStatsSort::Dispatch,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    let json = report.to_json();
+    assert_eq!(
+        json.pointer("/top/0/dispatch_accounted_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(172)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(828)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_inner_body_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(778)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_runtime_wrapper_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(50)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_prelude_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(11)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_input_state_update_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(23)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_context_build_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(29)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_pointer_arbitration_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(13)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_pointer_target_routing_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(17)
+    );
+    assert_eq!(
+        json.pointer("/top/0/dispatch_post_widget_control_flow_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(19)
+    );
+    assert_eq!(
+        json.pointer("/p95/dispatch_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(828)
+    );
+    assert_eq!(
+        json.pointer("/p95/dispatch_inner_body_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(778)
+    );
+    assert_eq!(
+        json.pointer("/p95/dispatch_runtime_wrapper_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(50)
+    );
+    assert_eq!(
+        json.pointer("/max/dispatch_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(828)
+    );
+    assert_eq!(
+        json.pointer("/max/dispatch_inner_body_unattributed_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(778)
+    );
+    assert_eq!(
+        json.pointer("/max/dispatch_runtime_wrapper_time_us")
+            .and_then(|v| v.as_u64()),
+        Some(50)
+    );
+}
+
+#[test]
 fn bundle_stats_extracts_top_invalidation_walks_with_semantics() {
     let bundle = json!({
         "schema_version": 1,
@@ -5938,6 +6078,117 @@ fn ui_gallery_code_editor_undo_redo_gate_fails_without_redo() {
     )
     .unwrap_err();
     assert!(err.contains("undo/redo gate failed"));
+}
+
+#[test]
+fn ui_gallery_code_editor_feature_payloads_gate_passes_on_stable_nonzero_payloads() {
+    let feature_payloads = json!({
+        "schema_version": 1,
+        "epoch": 7,
+        "buffer_revision": 1,
+        "display_map_epoch": 3,
+        "diagnostic_spans_count": 1,
+        "diagnostic_line_summaries_count": 1,
+        "range_decorations_count": 1,
+        "gutter_markers_count": 2,
+        "semantic_tokens_count": 3
+    });
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "app_snapshot": {
+                            "kind": "fret_ui_gallery",
+                            "code_editor": { "torture": {
+                                "feature_payloads": feature_payloads.clone()
+                            }}
+                        }
+                    },
+                    {
+                        "tick_id": 2,
+                        "frame_id": 2,
+                        "app_snapshot": {
+                            "kind": "fret_ui_gallery",
+                            "code_editor": { "torture": {
+                                "feature_payloads": feature_payloads.clone()
+                            }}
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("ui_gallery_code_editor_feature_payloads_gate_passes");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json(
+        &bundle,
+        &bundle_path,
+        0,
+    )
+    .unwrap();
+
+    let evidence = read_json_value(
+        &out_dir.join("check.ui_gallery_code_editor_torture_feature_payloads_stable.json"),
+    )
+    .unwrap();
+    assert_eq!(
+        evidence
+            .get("feature_payload_snapshots")
+            .and_then(|v| v.as_u64()),
+        Some(2)
+    );
+}
+
+#[test]
+fn ui_gallery_code_editor_feature_payloads_gate_fails_on_missing_payload_family() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "app_snapshot": {
+                            "kind": "fret_ui_gallery",
+                            "code_editor": { "torture": {
+                                "feature_payloads": {
+                                    "schema_version": 1,
+                                    "epoch": 7,
+                                    "buffer_revision": 1,
+                                    "display_map_epoch": 3,
+                                    "diagnostic_spans_count": 1,
+                                    "diagnostic_line_summaries_count": 1,
+                                    "range_decorations_count": 1,
+                                    "gutter_markers_count": 1,
+                                    "semantic_tokens_count": 0
+                                }
+                            }}
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("ui_gallery_code_editor_feature_payloads_gate_fails");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err = check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable_json(
+        &bundle,
+        &bundle_path,
+        0,
+    )
+    .unwrap_err();
+    assert!(err.contains("feature payload gate failed"));
 }
 
 #[test]

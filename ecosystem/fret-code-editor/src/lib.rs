@@ -7,7 +7,26 @@
 
 mod editor;
 
+pub use fret_code_editor_buffer::{
+    AppliedEdit, BufferDelta, DocId, DocUri, Edit, EditError, LineDelta, Revision, Selection,
+    TextBuffer, TextBufferTransaction, TextBufferTx,
+};
+pub use fret_code_editor_view::code_wrap_policy::{CodeWrapPolicy, CodeWrapPreset};
+pub use fret_code_editor_view::{
+    CodeAction, CodeActionKind, CodeActionList, CodeActionListError, CompletionCandidate,
+    CompletionCandidateKind, CompletionCommitKind, CompletionList, CompletionListError,
+    DiagnosticLineSummary, DiagnosticSeverity, DiagnosticSourceKind, DiagnosticSpan,
+    DiagnosticSpanError, DisplayMap, DisplayPoint, EditorAssistKind, EditorAssistRequest,
+    EditorAssistRequestError, EditorAssistTrigger, FoldSpan, GutterMarker, GutterMarkerAnchor,
+    GutterMarkerError, GutterMarkerHitTarget, GutterMarkerKind, GutterMarkerVisual, HoverPayload,
+    HoverPayloadError, InlaySpan, RangeDecoration, RangeDecorationError, RangeDecorationHitTest,
+    RangeDecorationLayer, SemanticToken, SemanticTokenError, validate_code_action_list,
+    validate_completion_list, validate_editor_assist_request, validate_hover_payload,
+};
+
 pub use editor::{
-    CodeEditor, CodeEditorCacheStats, CodeEditorHandle, CodeEditorInteractionOptions,
-    CodeEditorPaintPerfFrame, CodeEditorTorture, PreeditState, Selection,
+    CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats,
+    CodeEditorFeaturePayloadSnapshotV1, CodeEditorHandle, CodeEditorInteractionOptions,
+    CodeEditorMemorySnapshotV1, CodeEditorPaintPerfFrame, CodeEditorTorture, CodeFontFeaturePolicy,
+    CodeFontFeaturePreset, PreeditState,
 };

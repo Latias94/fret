@@ -2260,15 +2260,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             fret_render::RenderError::SurfaceAcquireFailed {
                                 source: fret_render::SurfaceAcquireError::Lost,
                             } => {
-                                let size = state.window.surface_size();
-                                surface.resize(&context.device, size.width, size.height);
-                                let surface_record =
-                                    super::render::capture_surface_config_diagnostics_record(
-                                        &surface.config,
-                                    );
                                 let _ = surface;
+                                state.surface = None;
                                 let _ = state;
-                                self.record_surface_config_snapshot(app_window, surface_record);
                                 let _ = self.request_window_redraw_with_reason(
                                     app_window,
                                     fret_runtime::RunnerFrameDriveReason::SurfaceRecoverLost,
@@ -2279,15 +2273,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             fret_render::RenderError::SurfaceAcquireFailed {
                                 source: fret_render::SurfaceAcquireError::Outdated,
                             } => {
-                                let size = state.window.surface_size();
-                                surface.resize(&context.device, size.width, size.height);
-                                let surface_record =
-                                    super::render::capture_surface_config_diagnostics_record(
-                                        &surface.config,
-                                    );
                                 let _ = surface;
+                                state.surface = None;
                                 let _ = state;
-                                self.record_surface_config_snapshot(app_window, surface_record);
                                 let _ = self.request_window_redraw_with_reason(
                                     app_window,
                                     fret_runtime::RunnerFrameDriveReason::SurfaceRecoverOutdated,

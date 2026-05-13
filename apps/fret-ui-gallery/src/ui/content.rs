@@ -370,6 +370,8 @@ fn page_preview(
             text_area,
         ),
         #[cfg(feature = "gallery-dev")]
+        PAGE_HIT_TEST_TORTURE => preview_hit_test_torture(cx, theme),
+        #[cfg(feature = "gallery-dev")]
         PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE => preview_hit_test_only_paint_cache_probe(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_VIRTUAL_LIST_TORTURE => preview_virtual_list_torture(

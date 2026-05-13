@@ -4747,6 +4747,20 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn code_editor_torture_assist_overlay_hook_stays_within_window() {
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(960.0), Px(720.0)));
+
+        assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_CODE_EDITOR_TORTURE,
+            "ui-gallery-code-editor-torture-assist-open",
+            "ui-gallery-code-editor-torture-assist-list",
+            &["ui-gallery-code-editor-torture-assist.item.feature-overlay-hook"],
+            bounds,
+        );
+    }
+
     #[test]
     fn dialog_and_drawer_inner_viewports_scroll_without_advancing_gallery_page() {
         let cases = [

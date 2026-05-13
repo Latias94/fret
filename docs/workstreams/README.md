@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-11
+Catalog updated: 2026-05-12
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -1739,6 +1739,7 @@ Rule:
 - `docs/workstreams/carousel-embla-parity-v2/` — first 2026-02-28, latest 2026-03-03, 5 markdown docs
 - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/` — first 2026-03-25, latest 2026-03-25, 5 markdown docs
 - `docs/workstreams/code-editor-ecosystem-v1/` — first 2026-01-27, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/code-editor-public-api-and-architecture-v1/` — first n/a, latest n/a, 18 markdown docs (active narrow follow-on for stabilizing the code editor public API, model boundaries, extension points, and perf/diagnostics gates; includes `WORKSTREAM.json`)
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
 - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
 - `docs/workstreams/container-aware-editor-rail-surface-v1/` — first 2026-04-11, latest 2026-04-11, 11 markdown docs
@@ -1780,7 +1781,7 @@ Rule:
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
-- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/` — first 2026-03-09, latest 2026-03-10, 7 markdown docs
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/` — first 2026-03-09, latest 2026-05-12, 12 markdown docs (active editor ecosystem orchestration lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-05, 7 markdown docs
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/environment-queries-v1/` — first 2026-02-09, latest 2026-03-12, 6 markdown docs
@@ -2065,7 +2066,7 @@ Rule:
 - `docs/workstreams/ui-memory-footprint-closure-v1/` — first 2026-03-04, latest 2026-03-10, 17 markdown docs
 - `docs/workstreams/ui-perf-paint-pass-breakdown-v1/` — first 2026-02-05, latest 2026-02-05, 2 markdown docs
 - `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1/` — first 2026-02-12, latest 2026-02-16, 3 markdown docs
-- `docs/workstreams/ui-perf-zed-smoothness-v1/` — first 2026-02-02, latest 2026-02-24, 4 markdown docs
+- `docs/workstreams/ui-perf-zed-smoothness-v1/` — first 2026-02-02, latest 2026-05-12, 6 markdown docs (active editor-grade performance contract lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-typography-presets-v1/` — first 2026-02-22, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/uicx-compat-alias-release-retirement-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs

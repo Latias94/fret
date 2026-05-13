@@ -17,6 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::primitives::colors::{editor_border, editor_focus_ring};
 use crate::primitives::input_group::derived_test_id;
 
 use super::super::model::{
@@ -32,6 +33,10 @@ use super::preview::{checkerboard_grid, fill_preview_layout};
 const HSV_PICKER_SIZE: Px = Px(120.0);
 const HUE_WHEEL_PICKER_WIDTH: Px = Px(138.0);
 const HUE_WHEEL_TRIANGLE_STEPS: usize = 12;
+
+fn picker_border_and_ring(theme: &Theme) -> (Color, Color) {
+    (editor_border(theme), editor_focus_ring(theme))
+}
 
 pub(super) fn hsv_picker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -286,16 +291,8 @@ fn hue_wheel_picker<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let (border, ring) = {
-                let theme = Theme::global(&*cx.app);
-                let border = theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_token("border"));
-                let ring = theme
-                    .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_token("primary"));
-                (border, ring)
-            };
+            let theme = Theme::global(&*cx.app);
+            let (border, ring) = picker_border_and_ring(theme);
             let border_color = if st.focused { ring } else { border };
 
             vec![cx.container(
@@ -727,16 +724,8 @@ fn sv_picker<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let (border, ring) = {
-                let theme = Theme::global(&*cx.app);
-                let border = theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_token("border"));
-                let ring = theme
-                    .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_token("primary"));
-                (border, ring)
-            };
+            let theme = Theme::global(&*cx.app);
+            let (border, ring) = picker_border_and_ring(theme);
             let border_color = if st.focused { ring } else { border };
 
             vec![cx.container(
@@ -1008,16 +997,8 @@ fn hue_bar<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let (border, ring) = {
-                let theme = Theme::global(&*cx.app);
-                let border = theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_token("border"));
-                let ring = theme
-                    .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_token("primary"));
-                (border, ring)
-            };
+            let theme = Theme::global(&*cx.app);
+            let (border, ring) = picker_border_and_ring(theme);
             let border_color = if st.focused { ring } else { border };
 
             vec![cx.container(
@@ -1255,16 +1236,8 @@ fn vertical_alpha_bar<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let (border, ring) = {
-                let theme = Theme::global(&*cx.app);
-                let border = theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_token("border"));
-                let ring = theme
-                    .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_token("primary"));
-                (border, ring)
-            };
+            let theme = Theme::global(&*cx.app);
+            let (border, ring) = picker_border_and_ring(theme);
             let border_color = if st.focused { ring } else { border };
 
             vec![cx.container(
@@ -1428,16 +1401,8 @@ pub(super) fn alpha_bar<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let (border, ring) = {
-                let theme = Theme::global(&*cx.app);
-                let border = theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_token("border"));
-                let ring = theme
-                    .color_by_key("ring")
-                    .unwrap_or_else(|| theme.color_token("primary"));
-                (border, ring)
-            };
+            let theme = Theme::global(&*cx.app);
+            let (border, ring) = picker_border_and_ring(theme);
             let border_color = if st.focused { ring } else { border };
 
             vec![cx.container(

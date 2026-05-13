@@ -220,6 +220,7 @@ mod command_enabled_service;
 mod cursor_icon_query;
 mod descendant_via_children;
 mod dispatch_phase;
+mod dispatch_snapshot_cache;
 mod dock_drag;
 mod escape_dismiss;
 mod focus_barrier_routing_harness;

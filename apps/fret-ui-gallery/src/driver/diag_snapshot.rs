@@ -65,14 +65,14 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(88);
+    let mut out = serde_json::Map::with_capacity(89);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
         };
     }
 
-    insert_u64!("schema_version", 8);
+    insert_u64!("schema_version", 9);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -84,6 +84,7 @@ fn code_editor_paint_perf_json(
     insert_u64!("rows_drew_rich", frame.rows_drew_rich);
     insert_u64!("rows_scene_replayed", frame.rows_scene_replayed);
     insert_u64!("rows_scene_stored", frame.rows_scene_stored);
+    insert_u64!("row_scene_ops_stored", frame.row_scene_ops_stored);
     insert_u64!("quads_selection", frame.quads_selection);
     insert_u64!("quads_caret", frame.quads_caret);
     insert_u64!("us_total", frame.us_total);
@@ -333,17 +334,18 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let mem = handle.memory_snapshot();
                                 let paint_perf =
                                     handle.paint_perf_frame().map(code_editor_paint_perf_json);
+                                let feature_payloads = handle.feature_payload_snapshot();
                                 let preedit_active = handle.preedit_active();
                                 let allow_decorations_under_inline_preedit =
-                                    handle.allow_decorations_under_inline_preedit();
-                                let compose_inline_preedit = handle.compose_inline_preedit();
+                                    handle.debug_allow_decorations_under_inline_preedit();
+                                let compose_inline_preedit = handle.debug_compose_inline_preedit();
                                 let interaction = handle.interaction();
                                 let buffer_revision = handle.buffer_revision().0;
                                 let fold_placeholder_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains('…'));
                                 let inlay_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains("<inlay>"));
                                 serde_json::json!({
                                     "schema_version": 1,
@@ -426,6 +428,17 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "undo_edit_count_total": mem.undo_edit_count_total,
                                         "redo_edit_count_total": mem.redo_edit_count_total,
                                     },
+                                    "feature_payloads": {
+                                        "schema_version": feature_payloads.schema_version,
+                                        "epoch": feature_payloads.epoch,
+                                        "buffer_revision": feature_payloads.buffer_revision,
+                                        "display_map_epoch": feature_payloads.display_map_epoch,
+                                        "diagnostic_spans_count": feature_payloads.diagnostic_spans_count,
+                                        "diagnostic_line_summaries_count": feature_payloads.diagnostic_line_summaries_count,
+                                        "range_decorations_count": feature_payloads.range_decorations_count,
+                                        "gutter_markers_count": feature_payloads.gutter_markers_count,
+                                        "semantic_tokens_count": feature_payloads.semantic_tokens_count,
+                                    },
                                     "paint_perf": paint_perf,
                                 })
                             })
@@ -443,7 +456,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let interaction = handle.interaction();
                                 let buffer_revision = handle.buffer_revision().0 as u64;
                                 let fold_placeholder_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains('…'));
                                 let fold_fixture_span_line0 = handle
                                     .with_buffer(|b| b.line_text(0))
@@ -457,7 +470,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         }))
                                     });
                                 let inlay_present = handle
-                                    .debug_decorated_line_text(0)
+                                    .diag_decorated_line_text(0)
                                     .is_some_and(|t| t.contains("<inlay>"));
                                 let inlay_fixture_byte_line0 = handle
                                     .with_buffer(|b| b.line_text(0))

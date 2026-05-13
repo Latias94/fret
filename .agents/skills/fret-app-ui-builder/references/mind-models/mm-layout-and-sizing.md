@@ -78,7 +78,7 @@ If it’s a shadcn recipe dimension (control heights, paddings, radii):
 
 ## Debugging layout regressions
 
-Use `fretboard diag` to capture bundles and check geometry invariants before you chase pixels:
+Use `fretboard-dev diag` to capture bundles and check geometry invariants before you chase pixels:
 
 - add `test_id` on the relevant nodes,
 - capture a bundle after the interaction,

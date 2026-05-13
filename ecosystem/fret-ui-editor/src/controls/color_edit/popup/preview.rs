@@ -12,6 +12,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::typography;
 
+use crate::primitives::colors::{editor_border, editor_muted_foreground};
 use crate::primitives::input_group::derived_test_id;
 
 use super::super::model::format_hex;
@@ -230,17 +231,9 @@ fn preview_cell_content<H: UiHost>(
     show_alpha: bool,
     alpha_preview: ColorEditAlphaPreview,
 ) -> AnyElement {
-    let (border, text_color) = {
-        let theme = Theme::global(&*cx.app);
-        (
-            theme
-                .color_by_key("border")
-                .unwrap_or_else(|| theme.color_token("border")),
-            theme
-                .color_by_key("muted-foreground")
-                .unwrap_or_else(|| theme.color_token("foreground")),
-        )
-    };
+    let theme = Theme::global(&*cx.app);
+    let border = editor_border(theme);
+    let text_color = editor_muted_foreground(theme);
 
     cx.flex(
         FlexProps {

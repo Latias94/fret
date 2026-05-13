@@ -435,11 +435,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let (cur_w, cur_h) = gfx.surface_state.size();
         if (cur_w, cur_h) != (physical.width.max(1), physical.height.max(1)) {
-            gfx.surface_state.resize(
+            if let Err(err) = gfx.surface_state.resize(
                 &gfx.ctx.device,
                 physical.width.max(1),
                 physical.height.max(1),
-            );
+            ) {
+                tracing::error!(
+                    error = ?err,
+                    "failed to resize web surface before render"
+                );
+                return;
+            }
         }
 
         self.drain_turns(event_loop, window, gfx, state);
@@ -509,7 +515,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     fret_render::SurfaceAcquireError::Lost
                     | fret_render::SurfaceAcquireError::Outdated => {
                         let (w, h) = gfx.surface_state.size();
-                        gfx.surface_state.resize(&gfx.ctx.device, w, h);
+                        if let Err(err) = gfx.surface_state.resize(&gfx.ctx.device, w, h) {
+                            tracing::error!(
+                                error = ?err,
+                                "failed to recover lost/outdated web surface"
+                            );
+                        }
                     }
                     fret_render::SurfaceAcquireError::Timeout => {}
                     fret_render::SurfaceAcquireError::OutOfMemory => {

@@ -44,9 +44,19 @@ Conventions:
     - wrap-from-unwrapped allocation win: perf log entry `2026-02-09 22:12:02` (commit `7b9a98a8f`)
     - non-landed experiment example: perf log entry `2026-02-10 00:18:40` (sticky small-step)
   - Maintenance tasks (keep this workstream “ready to resume”):
-    - [ ] Re-run `ui-resize-probes` + `ui-code-editor-resize-probes` gates after any large merge/refactor and record the
+    - [x] Re-run `ui-resize-probes` + `ui-code-editor-resize-probes` gates after any large merge/refactor and record the
       no-code-change evidence in the perf log.
     - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
+
+- [ ] Linux editor-grade perf evidence.
+  - Status: blocked for formal contract closure until a real Linux runner/profile exists.
+    A smoke-only `linux-local` export exists at
+    `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.linux-local.v1.json`, but it is
+    repeat=1/max-only evidence and not a contract baseline.
+  - Goal: add a checked-in Linux baseline for the editor-grade probes that already close on Windows/macOS, and keep
+    Linux evidence labeled separately from Windows/macOS contracts until then.
+  - Evidence anchors: `docs/code-editor.md`; `docs/workstreams/code-editor-public-api-and-architecture-v1/M5_PERF_CONTRACT_CLOSURE_2026-05-12.md`;
+    `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md`.
 
 - Representative daily smoke set (local, not CI yet):
   - `tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json`
@@ -86,6 +96,9 @@ Conventions:
   - egui adds the pass/repaint/cache accounting counter-reference; keep it updated when a Fret optimization changes
     frame cause accounting, extra-pass behavior, cache eviction, scene diff/replay, or multi-viewport repaint coupling.
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
+  - Latest: refreshed the GPUI gap map on 2026-05-12 so it no longer treats broad `ui-gallery-steady` as the canonical
+    formal gate and now points at the dedicated resize/code-editor/payload contracts plus the current no-display-list
+    rewrite decision.
 
 - [ ] Dev tooling: keep the “perf investigation loop” crisp for contributors (skills + checklists + attribution playbooks).
   - Workstream: `docs/workstreams/standalone/perf-devtools-skills-v1.md`
@@ -390,17 +403,34 @@ Conventions:
     - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
     - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
   - Work items (fearless refactor allowed; log every perf-affecting change):
-    - [ ] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
+    - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
-    - [ ] Decide the replay boundary:
+      - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and
+        `code_editor_paint_perf.*.row_scene_ops_stored` in `fretboard diag stats --json`.
+      - Evidence: perf log entry `2026-05-12` (`code editor row-scene stored-op signal`); gallery-dev typical
+        autoscroll smoke bundle `target/fret-diag/codex-row-scene-ops-smoke-gallery-dev/1778538679777/bundle.schema2.json`
+        reports frames `180`, sum/p50/p95/max `row_scene_ops_stored=90/0/1/1`.
+    - [x] Decide the replay boundary:
       - Option A (component-level): `fret-code-editor` caches per-row paint ops and replays when inputs unchanged.
       - Option B (mechanism-level): add a general `CanvasPainter` op cache (keyed, bounded, frame-aware) that any
         component can use.
+      - Decision (2026-05-12): do not start Option B from the current evidence. Keep the current row-scene replay
+        boundary, and if a future near-threshold/failing editor stressor proves store/capture churn is the limiter,
+        prototype Option A first as an editor-owned row payload boundary.
+      - Evidence: complex wheel repeat=3 paint-detail run
+        `target/fret-diag/perf-complex-editor-row-store-ops-v1/1778539097606/bundle.schema2.json` reports
+        `row_scene_ops_stored` p50/p95/max `2/10/12`, p95 replay rows `288`, and worst top total `2601us`.
     - [ ] Ensure replay is correctness-safe:
       - invalidation keys include font stack, scale factor, wrap width bucket, theme/style, and selection/preedit
         geometry dependencies.
       - replayed ops preserve hit-testing / selection rect correctness (or explicitly opt-out).
-    - [ ] Add a “canvas replay hit rate” counter to `fretboard-dev diag perf --json` output for the editor probes.
+    - [x] Add a “canvas replay hit rate” counter to `fretboard-dev diag perf --json` output for the editor probes.
+      - Fields:
+        `top_code_editor_rows_painted`, `top_code_editor_rows_scene_replayed`,
+        `top_code_editor_rows_scene_stored`, `top_code_editor_row_scene_ops_stored`, and
+        `top_code_editor_row_scene_replay_hit_rate_pct`.
+      - Coverage: single-run `rows[]`, repeat `runs[]`, and repeat `stats{}` JSON output.
+      - Evidence: perf log entry `2026-05-12` (`diag perf editor row-scene replay JSON fields`).
     - [ ] Tighten the `ui-code-editor-resize-probes` baseline once replay is real and stable.
   - Acceptance (initial):
     - `ui-code-editor-resize-probes` stays PASS (no regressions in P0 `ui-resize-probes`).
@@ -667,9 +697,10 @@ Correctness acceptance:
     - `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
     - `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
 - [x] Find (or construct) a workload where `top_hit_test_time_us` is a meaningful slice of the frame budget.
-  - Page: `apps/fret-ui-gallery/src/ui.rs` (`hit_test_torture`)
+  - Page: `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` (`hit_test_torture`)
   - Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
-  - Harness-only mode (to remove gallery chrome noise): `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+  - Named suite: `perf-ui-gallery-hit-test-torture-steady`
+  - Current via-nav script keeps gallery chrome in setup but resets diagnostics before the measured sweep.
   - Evidence + metrics: see `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entries after commit `811101c3`.
 - [x] Record baseline numbers for the two “realistic move sweep” probes:
   - Data table sweep: `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
@@ -1300,6 +1331,57 @@ Perf acceptance:
     target legitimate wide or width-sensitive roots after demo pressure sources are removed.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
+- [x] Surface code-editor row-scene paint attribution in `diag stats`.
+  - Target: make the existing `app_snapshot.code_editor.torture.paint_perf` counters queryable from normal
+    `fretboard diag stats` output so editor paint work can be split between row-scene replay/store, content resolve,
+    text draw, rich materialization, syntax work, and renderer encode/upload before a display-list rewrite is attempted.
+  - Implementation: `diag stats --json` now emits top-level `code_editor_paint_perf` p50/p95/max/sum summaries and
+    per-top-frame `top[].code_editor_paint_perf`; human output prints the same row-scene and text/content breakdown.
+    The stats reader now prefers `ns_*` paint counters when present, because summing per-row `as_micros()` values was
+    under-reporting editor paint by roughly 15-25% on the current complex wheel bundle.
+  - Gate: `cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot`.
+  - Evidence: `cargo run -p fretboard -- diag stats target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json --json --top 1 --sort time`
+    now reports `code_editor_paint_perf.frames=34`, top frame `rows_scene_replayed=204`, `rows_scene_stored=1`,
+    `us_row_content_resolve=544`, `us_row_scene_fast_path=373`, `us_row_scene_fast_probe=63`,
+    `us_row_scene_replay_ops=70`, `us_row_scene_replay_touch=78`, `us_row_scene_capture_ops=0`,
+    and `us_text_draw=0`; summary p95 is `us_total=886`, `us_row_content_resolve=636`,
+    `us_row_scene_fast_path=347`, `us_row_text=88`, and `us_text_draw=147`.
+  - Decision: keep the next optimization evidence-led. The post-fix wheel bundle points at the row-scene fast replay
+    path plus Canvas paint-widget and renderer payload, not at row-scene capture/store or syntax materialization. Do
+    not start a broad row display-list rewrite until a near-threshold or failing stressor shows replay/capture/store
+    as the measured limiter.
+- [x] Fix `Scene::replay` text-blob side-index semantics before deeper row-scene rewrites.
+  - Discovery: `SceneRecording::push` recorded `SceneOp::Text` ids in `Scene::text_blob_ids()`, but
+    `SceneRecording::replay_ops` only copied ops/fingerprint. Replayed row text therefore skipped the renderer text
+    prepare side index, even though the text ops remained in the op stream.
+  - Implementation: replay now maintains `text_blob_ids`; hot paths can call
+    `replay_ops_with_text_blob_ids` / translated / transformed variants with a precomputed text index. Debug builds
+    assert that the provided ids match the replayed ops. Code editor row-scene replay uses
+    `CanvasHostedResources::text_blob_ids()` to avoid rescanning cached row ops.
+  - Gate: `cargo nextest run -p fret-core replay_ops_tracks_text_blob_ids_in_op_order replay_ops_translated_with_text_blob_ids_tracks_precomputed_index`;
+    `cargo check -p fret-ui`; `cargo check -p fret-code-editor --features syntax-rust`;
+    `cargo nextest run -p fret-ui --lib hosted_resources_from_scene_ops_collects_resource_ids`.
+  - Evidence: perf log entry `2026-05-11 23:59`. Complex wheel repeat=3 with paint detail reports worst total
+    `3408us`, p95 `us_row_scene_replay_touch=65`, `us_row_scene_replay_ops=77`, and renderer text prepare p95/max
+    `1287/1302us` with atlas upload/eviction still `0`. The formal baseline repeat=3 without paint detail passes the
+    current Windows v1 contract with worst top total `2859us` and payload text ops / instance bytes `254/192368`.
+  - Decision: keep hosted-resource touch for Canvas resource lifetime; treat renderer text prepare / glyph pinning as
+    the next evidence target rather than row-scene capture/store or broad display-list replacement.
+- [x] Precompute per-shape glyph pin keys for renderer text prepare.
+  - Discovery: after replayed text correctly entered `Scene::text_blob_ids()`, renderer text prepare spent real CPU
+    walking every `TextShape::glyphs()` entry and inserting each glyph key into per-frame `HashSet`s. The unique pin-key
+    set is stable for the prepared shape.
+  - Implementation: `TextShape` stores `GlyphPinKeys` built once at shape creation; renderer atlas pinning merges those
+    pre-deduplicated key sets. Shape heap-byte diagnostics now include the pin-key arrays.
+  - Gate: `cargo fmt -p fret-render-wgpu --check`; `cargo check -p fret-render-wgpu`;
+    `cargo nextest run -p fret-render-wgpu --lib glyph_pin_keys_deduplicate_by_bucket`.
+    Package-wide `nextest` without `--lib` hit Windows pagefile/mmap pressure while compiling integration tests
+    (`os error 1455`), so the focused library gate is the reliable test evidence for this slice.
+  - Evidence: perf log entry `2026-05-11 23:59`. Complex wheel repeat=3 paint detail reports renderer text p95/max
+    `660/722us` versus the prior replay-index slice's `1287/1302us`; perf row `top_renderer_prepare_text_us`
+    p50/p95/max is `441/541/541us`. Formal baseline repeat=3 passes with worst top total `2206us`,
+    frame p95 total `2206us`, and payload text ops / instance bytes `254/192368`.
+  - Decision: keep the current v1 baseline unchanged; this reduces headroom pressure without changing thresholds.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.

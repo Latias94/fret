@@ -130,6 +130,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub dispatch_time_us: u64,
     #[serde(default)]
+    pub dispatch_inner_body_time_us: u64,
+    #[serde(default)]
     pub dispatch_pointer_events: u32,
     #[serde(default)]
     pub dispatch_pointer_event_time_us: u64,
@@ -195,6 +197,18 @@ pub struct UiFrameStatsV1 {
     pub hit_test_fallback_traversal_time_us: u64,
     #[serde(default)]
     pub dispatch_hover_update_time_us: u64,
+    #[serde(default)]
+    pub dispatch_input_state_update_time_us: u64,
+    #[serde(default)]
+    pub dispatch_context_build_time_us: u64,
+    #[serde(default)]
+    pub dispatch_prelude_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_arbitration_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_target_routing_time_us: u64,
+    #[serde(default)]
+    pub dispatch_post_widget_control_flow_time_us: u64,
     #[serde(default)]
     pub dispatch_scroll_handle_invalidation_time_us: u64,
     #[serde(default)]
@@ -862,6 +876,7 @@ impl UiFrameStatsV1 {
             paint_collapse_observations_time_us: stats.paint_collapse_observations_time.as_micros()
                 as u64,
             dispatch_time_us: stats.dispatch_time.as_micros() as u64,
+            dispatch_inner_body_time_us: stats.dispatch_inner_body_time.as_micros() as u64,
             dispatch_pointer_events: stats.dispatch_pointer_events,
             dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
             dispatch_timer_events: stats.dispatch_timer_events,
@@ -907,6 +922,20 @@ impl UiFrameStatsV1 {
             hit_test_fallback_traversal_time_us: stats.hit_test_fallback_traversal_time.as_micros()
                 as u64,
             dispatch_hover_update_time_us: stats.dispatch_hover_update_time.as_micros() as u64,
+            dispatch_input_state_update_time_us: stats
+                .dispatch_input_state_update_time
+                .as_micros() as u64,
+            dispatch_context_build_time_us: stats.dispatch_context_build_time.as_micros() as u64,
+            dispatch_prelude_time_us: stats.dispatch_prelude_time.as_micros() as u64,
+            dispatch_pointer_arbitration_time_us: stats
+                .dispatch_pointer_arbitration_time
+                .as_micros() as u64,
+            dispatch_pointer_target_routing_time_us: stats
+                .dispatch_pointer_target_routing_time
+                .as_micros() as u64,
+            dispatch_post_widget_control_flow_time_us: stats
+                .dispatch_post_widget_control_flow_time
+                .as_micros() as u64,
             dispatch_scroll_handle_invalidation_time_us: stats
                 .dispatch_scroll_handle_invalidation_time
                 .as_micros() as u64,

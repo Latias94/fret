@@ -6,13 +6,13 @@ Use this note when you already have a run directory or bundle and need to explai
 
 Prefer bounded queries:
 
-- `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
-- `fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json>`
-- `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
-- `fretboard diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json>`
-- `fretboard diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
-- `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
-- `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
+- `fretboard-dev diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+- `fretboard-dev diag windows <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard-dev diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard-dev diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard-dev diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
+- `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
+- `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 
 Safe repo search templates live behind `tools/rg-safe.ps1`.
 
@@ -20,9 +20,9 @@ Safe repo search templates live behind `tools/rg-safe.ps1`.
 
 Use these when you need a compact artifact for review:
 
-- `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]`
-- `fretboard diag query test-id [<bundle_dir|bundle.json|bundle.schema2.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json]`
-- `fretboard diag slice [<bundle_dir|bundle.json|bundle.schema2.json>] --test-id <test_id> [--frame-id <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json]`
+- `fretboard-dev diag meta <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]`
+- `fretboard-dev diag query test-id [<bundle_dir|bundle.json|bundle.schema2.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json]`
+- `fretboard-dev diag slice [<bundle_dir|bundle.json|bundle.schema2.json>] --test-id <test_id> [--frame-id <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json]`
 
 ## 3) Troubleshooting patterns
 
@@ -44,11 +44,11 @@ Operational failures:
 - missing script / subcommand
   - use promoted `script_id` or a valid path under `tools/diag-scripts/`
 - no bundles produced
-  - prefer `fretboard diag run ... --launch -- <cmd>`
+  - prefer `fretboard-dev diag run ... --launch -- <cmd>`
 - `tooling.launch.failed`
   - check writable `--dir`, then inspect `script.result.json`
 - unexpectedly huge artifacts
-  - run `fretboard diag config doctor --mode launch` and check whether raw bundle or pretty JSON was enabled
+  - run `fretboard-dev diag config doctor --mode launch` and check whether raw bundle or pretty JSON was enabled
 - screenshot capability missing
   - ensure the runner advertises `diag.screenshot_png`
 - flaky selectors

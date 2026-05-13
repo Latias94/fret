@@ -128,7 +128,7 @@ for ((i=1; i<=runs; i++)); do
   mkdir -p "$run_dir"
 
   cmd=(
-    cargo run -q -p fretboard --
+    cargo run -q -p fretboard-dev --
     diag run "$script_path"
     --dir "$run_dir"
     --timeout-ms "$timeout_ms"

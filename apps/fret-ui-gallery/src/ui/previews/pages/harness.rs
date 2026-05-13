@@ -1,5 +1,7 @@
 #[cfg(feature = "gallery-dev")]
 mod hit_test_only_paint_cache_probe;
+#[cfg(feature = "gallery-dev")]
+mod hit_test_torture;
 mod intro;
 mod layout;
 #[cfg(feature = "gallery-dev")]
@@ -10,6 +12,8 @@ mod virtual_list_torture;
 
 #[cfg(feature = "gallery-dev")]
 pub(in crate::ui) use hit_test_only_paint_cache_probe::*;
+#[cfg(feature = "gallery-dev")]
+pub(in crate::ui) use hit_test_torture::*;
 pub(in crate::ui) use intro::*;
 pub(in crate::ui) use layout::*;
 #[cfg(feature = "gallery-dev")]

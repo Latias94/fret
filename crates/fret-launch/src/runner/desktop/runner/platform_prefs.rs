@@ -59,11 +59,11 @@ mod linux_portal_settings {
             }
         }
 
-        let connection = cache.connection.as_ref()?;
+        let connection = cache.connection.as_ref()?.clone();
         drop(cache);
 
         let proxy = Proxy::new(
-            connection,
+            &connection,
             SETTINGS_SERVICE,
             SETTINGS_PATH,
             SETTINGS_INTERFACE,
@@ -97,9 +97,6 @@ mod linux_portal_settings {
 
         if let Ok(v) = f64::try_from(&value) {
             return Some(v);
-        }
-        if let Ok(v) = f32::try_from(&value) {
-            return Some(v as f64);
         }
         if let Ok(v) = u32::try_from(&value) {
             return Some(v as f64);

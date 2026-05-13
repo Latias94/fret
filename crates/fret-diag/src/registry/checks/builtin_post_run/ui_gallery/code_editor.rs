@@ -10,6 +10,13 @@ pub(super) const EARLY_ENTRIES: &[PostRunCheckEntry] = &[
         run: run_ui_gallery_code_editor_torture_marker_present,
     },
     PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_feature_payloads_stable",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_feature_payloads_stable,
+        run: run_ui_gallery_code_editor_torture_feature_payloads_stable,
+    },
+    PostRunCheckEntry {
         id: "ui_gallery_code_editor_torture_undo_redo",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -205,6 +212,20 @@ fn run_ui_gallery_code_editor_torture_marker_present(
     _checks: &RunChecks,
 ) -> Result<(), String> {
     crate::stats::check_bundle_for_ui_gallery_code_editor_torture_marker_present(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_feature_payloads_stable(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_torture_feature_payloads_stable
+}
+
+fn run_ui_gallery_code_editor_torture_feature_payloads_stable(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_feature_payloads_stable(
         ctx.bundle_path,
         ctx.warmup_frames,
     )

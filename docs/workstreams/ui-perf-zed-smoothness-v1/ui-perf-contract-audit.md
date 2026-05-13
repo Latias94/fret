@@ -27,6 +27,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Full formal gates are green after the helper changes. | `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`: Windows `ui-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=3`. `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`: `ui-code-editor-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=2`. | Covered for both resize gates. |
 | Zed/GPUI and egui comparison remains explicit. | `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md` plus the contract matrix reference pressure column. | Covered as a design map; still needs updates when new gaps close. |
 | Churn reduction is evidence-led. | Perf log entries show measured view-cache harness virtualization, code editor resize attribution, and decisions not to start broad root-solve quantization or `WindowedRowsSurface` rewrites without evidence. | Covered for recent work. |
+| Pointer-move hit-test torture remains runnable as a contract surface. | `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` restores the `ui-gallery-hit-test-torture-root` surface; `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` promotes the via-nav script; `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json` passed `--max-pointer-move-hit-test-us 100` and `--max-pointer-move-global-changes 0`; follow-up attribution in `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json` identified `dispatch_context_build_time_us` as the pointer dispatch tail; repeat=7 dispatch gate `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json` passed dispatch/hit-test/global-change thresholds `250us/100us/0`. | Covered as a formal pointer-move dispatch + hit-test gate for the optimized snapshot-cache path. |
 | Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, no-silent-threshold-loosening guard, and review checklist. | Covered. |
 | Completion criteria are unambiguous. | This audit maps requirements to evidence and gaps. | Covered, with open gaps below. |
 
@@ -47,6 +48,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - `380db5d44d perf(ui): profile flex-wrap layout patch`
   - `a58277f72 feat(diag): surface hotspot and scratch growth signals`
   - `0ebcebd04 docs(perf): record code-editor hotspot evidence`
+- Linux smoke export:
+  - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.linux-local.v1.json` is a smoke-level
+    `linux-local` export from the successful Linux GL bundle. It records `threshold_surface=ui`,
+    `repeat=1`, and max-only values, so it is useful evidence but not a checked-in Linux
+    editor-grade contract.
 - Short resize gate smoke:
   - Summary: `target/fret-diag/codex-resize-gate-default-hooks-smoke/summary.json`
   - Result: PASS, `failures=0`
@@ -131,8 +137,27 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - p50/p95/max total=`998/1285/1285us`; thresholds total/layout/solve/pointer_move(dispatch/hit-test)=
     `1542/248/0/448/32`.
   - Semantic hover gate:
-    `cargo run -q -p fretboard -- diag stats target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/candidate-2-baseline/1778476920836/bundle.schema2.json --check-hover-layout-max 0`
+    `cargo run -q -p fretboard-dev -- diag stats target/fret-diag-baseline-select-ui-gallery-hover-layout-torture-steady-windows-rtx4090-v1-policy/candidate-2-baseline/1778476920836/bundle.schema2.json --check-hover-layout-max 0`
     passed; `hover.decl_inv(layout/hit/paint)=0/0/0`.
+- Hit-test torture named suite recovery:
+  - Restored page implementation:
+    `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs`.
+  - Suite manifest:
+    `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json`.
+  - Gate smoke:
+    `target/debug/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort hit_test --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+  - Result:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json`
+    passed the hit-test/global-change gate with `pointer_move_max_hit_test_time_us=17`,
+    `pointer_move_snapshots_with_global_changes=0`, and bounds-tree queries/hits=`3/3`.
+  - Separate finding:
+    an exploratory `--max-pointer-move-dispatch-us 800` run failed at `1010us`. Dedicated follow-up
+    attribution in
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json`
+    shows p50/p95/max dispatch attribution `accounted=913/1139/1139us`,
+    `unattributed=11/45/45us`, `runtime_wrapper=0/1/1us`, with the top frame dominated by
+    `dispatch_context_build_time_us=1046us`. Keep the hit-test recovery gate unchanged and treat
+    dispatch context/snapshot reuse as the next optimization target.
 - Renderer payload contract surface:
   - `renderer_instance_bytes` and `renderer_encode_scene_text_ops` now flow through perf JSON rows, repeat summaries,
     baseline rows, `perf-baseline-from-bundles`, baseline parsing, threshold rows, and threshold failures.
@@ -169,8 +194,131 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     checked-in baseline still passes with max total `3238us` and max paint `3046us`.
   - Fresh CPU attribution on the post-fix worst bundle shows the remaining hot path is Canvas paint-widget work
     (`paint_widget_time_us=1550`, Canvas hotspot `1250us`) with renderer encode/upload still visible
-    (`renderer_encode_scene_us=319`, `renderer_upload_us=78`). That means the next slice should compare row-scene
-    replay/capture against renderer encode/upload before changing thresholds again.
+    (`renderer_encode_scene_us=319`, `renderer_upload_us=78`). That means the next slice should compare the row-scene
+    fast replay path against Canvas/renderer payload before changing thresholds again.
+  - `diag stats` now surfaces the existing editor `paint_perf` counters as first-class JSON/text attribution and
+    prefers `ns_*` counters when present, avoiding the per-row microsecond rounding loss in the original `us_*`
+    fields.
+    Validation on
+    `target/fret-diag/perf-complex-editor-wheel-tail-syntax-line-prefetch-v1/1778501381582/bundle.json` reports
+    `code_editor_paint_perf.frames=34`; the worst top frame has `rows_scene_replayed=204`,
+    `rows_scene_stored=1`, `us_row_content_resolve=544`, `us_row_scene_fast_path=373`,
+    `us_row_scene_fast_probe=63`, `us_row_scene_replay_ops=70`, `us_row_scene_replay_touch=78`,
+    `us_row_scene_capture_ops=0`, and `us_text_draw=0`. The summary p95 has `us_total=886`,
+    `us_row_content_resolve=636`, `us_row_scene_fast_path=347`, `us_row_text=88`, and `us_text_draw=147`.
+    Keep the next optimization focused on measured fast-replay/content/Canvas/renderer cost unless a new stressor
+    shows row-scene capture/store as the limiter.
+  - Follow-up replay semantics fix: `SceneRecording::replay_ops` now maintains `Scene::text_blob_ids()` for replayed
+    text ops, and code-editor row-scene replay uses the new precomputed-index replay API. This matches the GPUI/Zed
+    direction where replay rebuilds side collections via the normal scene insertion path. Paint-detail repeat=3
+    evidence in
+    `target/fret-diag/perf-complex-editor-scene-replay-text-index-v1/1778515050738/bundle.schema2.json` reports
+    code-editor p95 `us_row_scene_replay_touch=65`, `us_row_scene_replay_ops=77`, and
+    `us_row_scene_fast_path=451`; the newly correct renderer text prepare cost is now visible as p95/max
+    `1287/1302us` with text atlas upload/eviction still `0`. The non-instrumented repeat=3 baseline check in
+    `target/fret-diag/perf-complex-editor-scene-replay-text-index-baseline-check-v1/1778515146987/bundle.json` passed
+    the checked-in v1 contract with worst top total `2859us` and payload `254/192368`.
+    Next attribution should inspect renderer text prepare / glyph pinning and possible text-index compaction; do not
+    treat the larger text-prepare number as a regression caused by row-scene replay.
+  - Follow-up renderer text prepare fix: `TextShape` now stores a pre-deduplicated `GlyphPinKeys` set and renderer
+    atlas pinning merges those sets instead of scanning every glyph instance each frame. Paint-detail repeat=3 evidence
+    in `target/fret-diag/perf-complex-editor-shape-pin-keys-v1/1778516581210/bundle.schema2.json` improves renderer
+    text p95/max from `1287/1302us` to `660/722us`, while top total p50/p95/max becomes `1925/2125/2125us`. The
+    non-instrumented repeat=3 baseline check in
+    `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passed the
+    checked-in v1 contract with worst top total `2206us`, `top_renderer_prepare_text_us` p50/p95/max `424/426/426us`,
+    and payload `254/192368`.
+- IMUI hello smoke correctness recheck:
+  - `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-screenshot-recheck FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/local-debug/imui-hello-demo-screenshot.json --dir target/fret-diag/imui-hello-demo-screenshot-recheck --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin imui_hello_demo`
+  - Screenshot evidence:
+    `target/fret-diag/imui-hello-demo-screenshot-recheck/sessions/1778605632348-99852/screenshots/1778606081730-imui-hello-demo/window-4294967297-tick-41-frame-40.png`
+  - The recheck now shows visible text again (`Count: 0`, `Increment`, `Enabled: false`, `Enabled`), so the earlier blank Windows smoke is confirmed as pre-fix evidence rather than a WSL-specific symptom.
+- IMUI hello semantic smoke gate:
+  - Script: `tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json`
+  - Suite: `tools/diag-scripts/suites/imui-hello-semantic-smoke/suite.json`
+  - Command:
+    `FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json --dir target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1 --session-auto --timeout-ms 180000 --check-pixels-changed imui-hello-demo.count-text --launch -- target/debug/imui_hello_demo.exe`
+  - Suite command:
+    `FRET_DIAG=1 FRET_DIAG_GPU_SCREENSHOTS=1 target/debug/fretboard-dev.exe diag suite imui-hello-semantic-smoke --dir target/fret-diag/imui-hello-semantic-smoke-suite-r2 --session-auto --timeout-ms 180000 --launch -- target/debug/imui_hello_demo.exe`
+  - Result:
+    `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/script.result.json`
+    passed at `step_index=20`.
+  - Suite result:
+    `target/fret-diag/imui-hello-semantic-smoke-suite-r2/sessions/1778619813105-103420/suite.summary.json`
+    passed with `status=passed`, `wants_screenshots=true`, and one passed script row.
+  - Pixel check:
+    `target/fret-diag/imui-hello-demo-semantic-smoke-pixels-r1/sessions/1778619037159-98320/check.pixels_changed.json`
+    resolved `imui-hello-demo.count-text` before/after count-change screenshots and saw the region hash change from
+    `0x878210d4ffe36972` to `0xd1384d303356d837`.
+  - Suite pixel check:
+    `target/fret-diag/imui-hello-semantic-smoke-suite-r2/sessions/1778619813105-103420/check.pixels_changed.json`
+    was produced without passing `--check-pixels-changed` explicitly. The `imui-hello-semantic-smoke` suite profile
+    supplies the default `imui-hello-demo.count-text` check and saw the same before/after hash change from
+    `0x878210d4ffe36972` to `0xd1384d303356d837`.
+  - The script now machine-checks `Count: 0`, `Increment`, `Enabled: false`, unchecked checkbox state, then clicks
+    `Increment` and captures a before/after screenshot pair for the count text region before clicking `Enabled` and
+    waiting for checked state and `Enabled: true`.
+  - Do not use `first_frame_smoke_demo` as text evidence: it intentionally paints only a full-window quad for runner
+    bootstrap / first-present validation, so no text there is expected.
+- Hit-test torture dispatch attribution:
+  - `diag stats` now reports derived dispatch attribution fields (`dispatch_accounted_time_us` and
+    `dispatch_unattributed_time_us`) in text and JSON output, plus follow-up body/wrapper/context
+    attribution (`dispatch_inner_body_time_us`, `dispatch_runtime_wrapper_time_us`,
+    `dispatch_context_build_time_us`).
+  - Validation:
+    `cargo nextest run -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`;
+    `cargo test -p fret-diag bundle_stats_reports_dispatch_unattributed_time --no-fail-fast`;
+    `cargo run -p fretboard-dev -- diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json --sort dispatch --top 1`.
+  - Evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r6/1778623403891/bundle.schema2.json`:
+    dispatch attribution p50/p95/max `accounted=56/64/64us`, `unattributed=840/946/946us`; top dispatch frame
+    `tick=229 frame=229` reports `dispatch_breakdown.us(total/accounted/unattributed/...)=1010/64/946/...`.
+  - Follow-up evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json`:
+    dispatch attribution p50/p95/max `accounted=913/1139/1139us`, `unattributed=11/45/45us`,
+    `body_unattributed=11/45/45us`, and `runtime_wrapper=0/1/1us`. The top dispatch frame reports
+    `context_build=1046us` with `hit_test=18us`.
+  - Conclusion: the hit-test contract remains healthy, and the pointer dispatch tail is now attributed to dispatch
+    context/snapshot construction. The next slice should investigate snapshot reuse or lazy focus snapshot
+    construction before changing dispatch thresholds.
+- Hit-test torture dispatch snapshot cache:
+  - Implemented a retained-tree/layer-topology dispatch snapshot cache in `fret-ui`, with shared `Arc` snapshot
+    forests for `nodes`, `parent`, `pre`, and `post`.
+  - Validation:
+    `cargo check -p fret-ui`;
+    `cargo nextest run -p fret-ui dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes --no-fail-fast`;
+    `cargo nextest run -p fret-ui -E "test(~focus_scope) | test(~outside_press) | test(~window_input_arbitration_snapshot) | test(~window_command_action_availability_snapshot)" --no-fail-fast`;
+    `cargo build -p fretboard-dev --release`;
+    `cargo build -p fret-ui-gallery --release --features gallery-dev`;
+    `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`.
+  - Evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7/1778636234419/bundle.schema2.json`:
+    pointer max dispatch/hit-test=`97/17us`, `pointer_move_snapshots_with_global_changes=0`;
+    dispatch attribution p50/p95/max `accounted=79/91/91us`, `unattributed=3/6/6us`,
+    `body_unattributed=2/5/5us`, `runtime_wrapper=0/1/1us`.
+  - Repeat=3 evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r8-repeat3/1778636608073/bundle.schema2.json`:
+    `pointer_move_max_dispatch_time_us` min/p50/p95/max=`82/89/91/91`,
+    `pointer_move_max_hit_test_time_us` min/p50/p95/max=`14/16/17/17`, and
+    `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
+  - Repeat=7 formal gate:
+    `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7 --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-dispatch-us 250 --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+  - Helper entrypoint:
+    `python tools/perf/diag_hit_test_torture_dispatch_gate.py --repeat 7`.
+  - Repeat=7 threshold report:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json`
+    has `failures=[]` with thresholds dispatch/hit-test/global-change=`250us/100us/0`.
+  - Worst repeat=7 bundle:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/1778636886432/bundle.schema2.json`.
+  - Repeat=7 evidence:
+    `pointer_move_max_dispatch_time_us` min/p50/p95/max=`79/87/112/112`,
+    `pointer_move_max_hit_test_time_us` min/p50/p95/max=`13/16/20/20`, and
+    `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
+  - Worst-bundle `diag stats --sort dispatch --top 5` reports dispatch/hit-test p50/p95=`86/112us` and
+    `16/17us`, derived pointer max dispatch/hit-test=`112/17us`, dispatch attribution
+    `accounted=79/105/105us`, `unattributed=4/7/7us`, and top-frame `context_build=3us`.
+  - Conclusion: the prior `~1ms` pointer dispatch tail is fixed and now protected by a formal repeat=7
+    dispatch-tail threshold gate.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
@@ -203,8 +351,10 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    complex wheel overlay hotspot now has a narrower frame-derived-state fix. Keep the `WindowedRowsSurface`
    display-list rewrite gated on a future near-threshold or failing stressor where row op replay/capture is the
    measured limiter, not on these passing baselines alone.
-3. Keep non-Windows/macOS machine profiles explicit until a checked-in baseline and owner profile exist.
-
+3. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
+4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
+   `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
+   checked-in Linux editor-grade baseline from this run.
 ## Audit Conclusion
 
 The goal is not complete. The Windows `ui-resize-probes` and `ui-code-editor-resize-probes` contracts now have
@@ -212,6 +362,7 @@ checked-in `measured_p50` evidence and green formal repeat=7 gates, the code-edi
 typical, and complex wheel contracts now have payload-aware baselines with explicit UI threshold modes, and
 `ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
-v1 contracts. The next work should only start a `WindowedRowsSurface` display-list rewrite from a near-threshold or
-failing editor paint stressor, and keep non-Windows machine profiles explicit rather than inferring them from the
-Windows RTX 4090 contract set.
+v1 contracts. The hit-test torture pointer-move path now also has a formal repeat=7 dispatch/hit-test threshold gate
+for the optimized dispatch snapshot cache path. The next work should only start a `WindowedRowsSurface` display-list
+rewrite from a near-threshold or failing editor paint stressor, and keep non-Windows machine profiles explicit rather
+than inferring them from the Windows RTX 4090 contract set.
