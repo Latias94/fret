@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "slug": "ui-frame-pipeline-v2-fearless-refactor-v1",
+  "title": "UI Frame Pipeline v2 Fearless Refactor",
+  "status": "active",
+  "updated": "2026-05-13",
+  "scope_kind": "execution",
+  "problem": "Fret's current retained UiTree, declarative mounting, view-cache, paint-cache, and editor-specific hot paths are correct enough to optimize locally but do not yet form one direct, phase-attributable execution model. This lane owns the migration to explicit build/layout/prepaint/paint/render boundaries, complete old-path cleanup, and perf-gated editor-grade validation.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the code-editor resize/paint path that already exposes layout containment and paint attribution pressure.",
+    "commands": [
+      "cargo run -p fretboard-dev --release -- diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    ]
+  },
+  "gates": [
+    {
+      "name": "macos-code-editor-resize-probes",
+      "command": "cargo run -p fretboard-dev --release -- diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    },
+    {
+      "name": "runtime-layering",
+      "command": "python3 tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration."
+  }
+}

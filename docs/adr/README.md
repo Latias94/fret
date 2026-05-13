@@ -30,6 +30,14 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
+- **Frame Pipeline v2 + ViewBoundary execution model**
+  - Proposed: `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md`
+  - Decide: the explicit build / request-layout / layout / prepaint / paint / renderer phase
+    contract, the first-class boundary state model, and the migration rule for deleting old
+    view-cache / paint-cache / containment paths after perf-gated replacement.
+  - Implement: `crates/fret-ui` frame pipeline, boundary diagnostics, code-editor vertical slice,
+    and workstream `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/`.
+
 - **Rounded-rect box-shadow scene primitive**
   - Proposed: `docs/adr/0318-rounded-rect-shadow-scene-primitive-v1.md`
   - Decide: the first-class scene-op shape for geometric box shadows, its clip/transform/order
@@ -162,6 +170,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Declarative/composable authoring (GPUI-style)**: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 - **Typed actions + action dispatch (action-first authoring)**: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0312-payload-actions-v2.md`, `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - **View runtime + hooks (ecosystem authoring loop)**: `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`, `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`, `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+- **Frame pipeline + runtime view boundaries**: `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md`, `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`, `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - **Fluent authoring ergonomics (unified builder surface)**: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - **Declarative layout semantics (Flex + sizing)**: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`, `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`, `docs/adr/0042-virtualization-and-large-lists.md`
 - **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
