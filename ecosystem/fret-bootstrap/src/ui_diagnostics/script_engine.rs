@@ -972,6 +972,7 @@ pub(super) fn dispatch_drive_script_step(
                 step,
                 element_runtime,
                 semantics_snapshot,
+                ui.as_deref_mut(),
                 text_font_stack_key_stable_frames,
                 font_catalog_populated,
                 system_font_rescan_idle,

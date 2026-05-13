@@ -372,15 +372,28 @@ The promoted launched suite now freezes this minimum shell coverage:
 - and left-rail / file-tree keep-alive.
 
 The 2026-05-13 workspace tab split handoff source gate is not a replacement for the launched
-`diag-hardening-smoke-workspace` suite. A local `workspace_shell_demo --release` rebuild timed out
-during this slice, so the launched inactive-tab drag-to-split-right smoke should be rerun before
-claiming the demo-level regression closed:
+`diag-hardening-smoke-workspace` suite. The launched inactive-tab drag-to-split-right smoke is now
+closed with a release demo rebuild plus a packed diagnostics artifact:
 
 ```powershell
 cargo build -p fret-demo --bin workspace_shell_demo --release
-cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-inactive-to-split-right-smoke.json --dir target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run8 --timeout-ms 180000 --exit-after-run --pack --ai-packet --launch -- target/release/workspace_shell_demo.exe
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-inactive-to-split-right-smoke.json --dir target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run15 --timeout-ms 180000 --exit-after-run --pack --ai-packet --launch -- target/release/workspace_shell_demo.exe
 cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- target/release/workspace_shell_demo.exe
 ```
+
+Run evidence:
+
+- `target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run15/1778688009999/script.result.json`
+  reports `stage=passed`.
+- `drag_pointer_until.start` resolved to `x=588.3334,y=14.666666`, hit
+  `workspace-shell-pane-pane-a-tab-doc-a-2.chrome`, and set
+  `hit_path_contains_intended=true`.
+- Step 14 dispatches `workspace.tab.activate.doc-a-2`,
+  `workspace.pane.split.horizontal.second.window-1.pane.1`, and
+  `workspace.pane.move_active_tab_to.window-1.pane.1`, proving the inactive source tab moved into
+  the generated pane rather than moving pane B's active tab.
+- Packed share artifact:
+  `target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run15/share/1778688009999.zip`.
 
 ### Diagnostics / tooling gates
 
