@@ -26,6 +26,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-imui/src/frontend.rs`
   - `ecosystem/fret-imui/src/tests/floating/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs`
+  - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
@@ -206,6 +207,7 @@ mechanics that can accidentally make diagnostics bounds diverge from visual colu
 ```powershell
 cargo nextest run -p fret-imui floating --no-fail-fast
 cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast
+cargo nextest run -p fret-imui popup_hover --no-fail-fast
 cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast
 cargo nextest run -p fret-imui --no-fail-fast
 python tools/gate_imui_workstream_source.py
@@ -224,6 +226,11 @@ Run evidence:
   `ecosystem/fret-imui/src/tests/interaction_menu_tabs/`.
 - 2026-05-14: `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast` passed
   locally with 18 tests.
+- 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/popup_hover.rs` file into
+  `context_basics`, `hover_flags`, `item_keyboard`, `item_pointer`, and `lifecycle_modal` test
+  owners under `ecosystem/fret-imui/src/tests/popup_hover/`.
+- 2026-05-14: `cargo nextest run -p fret-imui popup_hover --no-fail-fast` passed locally with 21
+  tests.
 - 2026-05-14: `cargo nextest run -p fret-imui
   table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast` passed
   locally after moving table body-cell test semantics to layout-transparent
