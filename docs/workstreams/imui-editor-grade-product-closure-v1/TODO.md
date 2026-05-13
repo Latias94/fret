@@ -8,6 +8,11 @@ implementation-heavy work in this folder while the closed child-region depth clo
 in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution continues in
 `docs/workstreams/docking-multiwindow-imgui-parity/`.
 
+Status note (2026-05-14): the workspace shell tab-strip evidence now has a fresh launched gate
+set, but this folder remains an umbrella maintenance lane. Keep implementation-heavy follow-ons in
+their narrower owners and record new shell evidence here only as proof-state refresh, not as a lane
+reopen.
+
 ## Lane setup
 
 - [x] Create the lane and record why the older `imui` closeout folders stay closed.

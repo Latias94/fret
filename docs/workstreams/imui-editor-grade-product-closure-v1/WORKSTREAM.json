@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-05-13",
+  "updated": "2026-05-14",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",

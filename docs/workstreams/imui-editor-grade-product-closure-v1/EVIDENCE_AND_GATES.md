@@ -365,6 +365,29 @@ This package currently proves:
   workspace tab drag and then move the dragged tab into the generated pane,
 - and the shell proof set does not silently collapse back into the generic `imui` backlog.
 
+### Workspace shell tab-strip gates
+
+- `cargo nextest run -p fret-workspace`
+- `cargo run -p fret-demo --bin workspace_shell_demo --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json --dir target/fret-diag/workspace-reorder-first-to-end-2026-05-14-v3 --timeout-ms 240000 --exit-after-run --launch -- target/release/workspace_shell_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke.json --dir target/fret-diag/workspace-row-suppressed-2026-05-14-v3 --timeout-ms 240000 --exit-after-run --launch -- target/release/workspace_shell_demo.exe`
+- `python tools/diag_gate_imui_product_chain.py --launched --only workspace-shell --release --out-dir target/imui-product-chain-launched-2026-05-14-workspace-shell-v3`
+
+This package now proves:
+
+- `WorkspaceTabDragState` is anchored at the root model identity, not a transient local model identity, so tab drag state survives pane-tree churn.
+- local release on the tab strip claims end-drop and row-local drop before pane-level move/split arbitration can steal the gesture.
+- tab-row hover keeps publishing `hovered_pane_tab_rects`, so the split-preview path no longer starves itself when the pointer sits inside the row.
+- the reorder-first-to-end smoke now lands on `workspace-shell-pane-pane-a-tab-strip.drop_end` and reorders `doc-a-0` to `pos_in_set=3`.
+- the row-suppressed smoke keeps pane B split previews absent while the pointer remains on the source row.
+- the launched workspace-shell product chain stays green with `stage_counts: {"passed": 11}`.
+
+Run evidence:
+
+- `target/fret-diag/workspace-reorder-first-to-end-2026-05-14-v3/1778711172824-workspace-shell-demo-tab-reorder-first-to-end-smoke/script.result.json` reports `stage=passed`.
+- `target/fret-diag/workspace-row-suppressed-2026-05-14-v3/1778711195977-workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke/script.result.json` reports `stage=passed`.
+- `target/imui-product-chain-launched-2026-05-14-workspace-shell-v3/1778711236860/workspace-shell/suite.summary.json` reports `status=passed` and `stage_counts.passed=11`.
+
 The promoted launched suite now freezes this minimum shell coverage:
 
 - tab close / reorder / split preview,

@@ -504,7 +504,7 @@ struct SplitResizeModelState {
 
 #[track_caller]
 fn get_tab_drag_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<WorkspaceTabDragState> {
-    cx.local_model(WorkspaceTabDragState::default)
+    cx.model_for(cx.root_id(), WorkspaceTabDragState::default)
 }
 
 #[track_caller]
