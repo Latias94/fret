@@ -47,6 +47,10 @@ The summary must mention:
 
 Most recent pre-lane evidence:
 
+- M0 baseline/source audit:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+- M1 boundary diagnostics slice:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md`
 - Workstream log:
   `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
 - macOS contained-layout run:
@@ -62,6 +66,24 @@ Observed result from that run:
 - p95/max top layout solve: `116/116us`,
 - p95/max paint: `1134/1134us`,
 - `code_editor.paint_perf` p50/p95 total: `241/401us`.
+
+Most recent boundary-diagnostics slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md`
+- Perf output directory:
+  `target/fret-diag-code-editor-resize-probes-boundary-diag-20260513`
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-boundary-diag-20260513/1778668519515/bundle.schema2.json`
+
+Observed result from that run:
+
+- time p50/p95: total `1203/1811us`, layout `38/364us`, prepaint `15/34us`,
+  paint `949/1737us`,
+- hot p50/p95: `layout.engine_solve=0/140us`, `paint.widget=731/1494us`,
+  `paint.text_prepare=10/15us`,
+- `code_editor.paint_perf` p50/p95 total: `302/743us`,
+- renderer prepare/encode/upload counters stayed at zero.
 
 ## Correctness Gates
 

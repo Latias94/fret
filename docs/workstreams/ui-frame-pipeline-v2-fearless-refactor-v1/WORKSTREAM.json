@@ -26,6 +26,14 @@
     {
       "role": "execution",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md"
     }
   ],
   "repro": {
@@ -46,6 +54,8 @@
   ],
   "evidence": [
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
   ],

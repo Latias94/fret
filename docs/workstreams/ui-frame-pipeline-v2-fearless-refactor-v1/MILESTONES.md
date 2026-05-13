@@ -12,6 +12,12 @@ Exit criteria:
 - The old-path inventory exists.
 - The first code-editor repro and gate commands are current.
 
+Status on 2026-05-13:
+
+- Baseline/source inventory exists in `M0_BASELINE_AUDIT_2026-05-13.md`.
+- First repro and gate commands are current in `EVIDENCE_AND_GATES.md`.
+- ADR 0327 still needs review/acceptance or a superseding accepted ADR before broad migration.
+
 ## M1: Code Editor Boundary Pilot
 
 Exit criteria:
@@ -21,6 +27,14 @@ Exit criteria:
   deletion plan.
 - `ui-code-editor-resize-probes` still passes.
 - `code_editor.paint_perf` remains non-zero and is correlated with boundary diagnostics.
+
+Status on 2026-05-13:
+
+- Transitional boundary diagnostics are implemented through `debug.cache_roots[].boundary`.
+- Deletion plan for this transitional path is recorded in
+  `M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md`.
+- Perf gate and worst-bundle attribution were rerun for the diagnostic slice. The result confirms
+  this slice is attribution-only: `paint.widget` remains dominant and is the M2/M3 target.
 
 ## M2: Prepaint Ownership
 

@@ -8,8 +8,9 @@ Last updated: 2026-05-13
 - [x] Create workstream lane for Frame Pipeline v2.
 - [x] Add ADR 0327 as the proposed frame-pipeline and boundary contract.
 - [ ] Review ADR 0327 and either accept it or revise it before broad code migration.
-- [ ] Add an assumptions-first baseline audit of current `UiTree` build/layout/prepaint/paint paths.
-- [ ] Add a source map of old paths that are migration candidates:
+- [x] Add an assumptions-first baseline audit of current `UiTree` build/layout/prepaint/paint paths:
+  `M0_BASELINE_AUDIT_2026-05-13.md`.
+- [x] Add a source map of old paths that are migration candidates:
   - `ViewCacheProps::contained_layout`,
   - view-cache root bookkeeping,
   - paint-cache replay bookkeeping,
@@ -21,7 +22,8 @@ Last updated: 2026-05-13
 
 - [ ] Define the first internal `BoundaryId` / boundary-state shape or a narrower transitional
   equivalent.
-- [ ] Make UI Gallery code-editor content root report boundary-level reuse/reject reasons.
+- [x] Make UI Gallery code-editor content root report boundary-level reuse/reject reasons through
+  transitional `debug.cache_roots[].boundary` diagnostics.
 - [ ] Move code-editor frame-derived row state toward shared prepaint ownership.
 - [ ] Split code-editor paint attribution into boundary prepaint, paint replay, and renderer payload
   buckets.
