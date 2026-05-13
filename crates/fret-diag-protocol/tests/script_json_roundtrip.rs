@@ -227,6 +227,13 @@ fn script_v2_roundtrip_ui_gallery_input_group_text_non_overlap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"

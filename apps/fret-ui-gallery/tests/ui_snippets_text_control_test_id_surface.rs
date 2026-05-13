@@ -77,6 +77,10 @@ fn set_text_value_targets_are_not_stamped_after_landing_snippet_controls() {
         "the Input long-text diagnostics gate should keep the Basic Input direct-control target visible to this authoring-surface test",
     );
     assert!(
+        target_ids.contains("ui-gallery-input-file-control"),
+        "the Input long-text diagnostics gate should keep the File Input direct-control target visible to this authoring-surface test",
+    );
+    assert!(
         !target_ids.is_empty(),
         "UI Gallery diagnostics should expose at least one set_text_value target for direct-control authoring checks",
     );
