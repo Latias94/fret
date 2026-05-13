@@ -318,6 +318,10 @@
       "command": "cargo run -p fretboard-dev -- diag suite cookbook-imui-editor-controls-basics --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics"
     },
     {
+      "name": "imui-product-chain-discovery-gate",
+      "command": "python tools/diag_gate_imui_product_chain.py"
+    },
+    {
       "name": "imui-collection-command-package-closeout",
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
     },
@@ -569,6 +573,7 @@
     "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
     "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
     "tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json",
+    "tools/diag_gate_imui_product_chain.py",
     "apps/fret-cookbook/src/lib.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/options.rs",

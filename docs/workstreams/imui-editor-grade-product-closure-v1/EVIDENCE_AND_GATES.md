@@ -23,6 +23,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json`
 - `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json`
 - `tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json`
+- `tools/diag_gate_imui_product_chain.py`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
@@ -401,6 +402,7 @@ Run evidence:
 - `cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast`
 - `cargo nextest run -p fret-diag identity_browser_html --no-fail-fast`
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
+- `python tools/diag_gate_imui_product_chain.py`
 - `cargo build -p fret-devtools`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
 - `cargo run -p fretboard-dev -- list tool-apps`
@@ -523,6 +525,29 @@ The captured first-contact editor-control artifacts are:
   `target/fret-diag/cookbook-imui-editor-controls-basics/2026-05-13-run6/1778653020746-cookbook-imui-editor-controls-basics-smoke/bundle.schema2.json`
 - roughness typing bundle:
   `target/fret-diag/1778653344759-cookbook-imui-editor-controls-roughness-typing/bundle.schema2.json`
+
+### Product-chain discovery gate
+
+Status: landed as a lightweight maintainer gate.
+
+The default product-chain gate validates discovery plus promoted script/suite inputs across
+`imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`,
+`workspace_shell_demo`, DevTools/diagnostics first-open, and the IMUI source gates. It does not
+replace the individual launched gates; it keeps the cross-app product chain discoverable and
+validated without forcing a single `diag campaign` launch target onto unrelated apps.
+
+Focused command:
+
+```text
+python tools/diag_gate_imui_product_chain.py
+```
+
+Use `--launched` when the local machine should also execute the existing launched proof commands
+sequentially across the cookbook, editor proof, and workspace shell surfaces:
+
+```text
+python tools/diag_gate_imui_product_chain.py --launched --only generic-action,editor-controls,editor-proof,workspace-shell
+```
 
 ### P3 multi-window parity gate
 
