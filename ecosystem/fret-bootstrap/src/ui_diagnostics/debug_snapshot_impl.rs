@@ -144,8 +144,23 @@ impl UiTreeDebugSnapshotV1 {
                 })
         };
 
-        let cache_roots: Vec<UiCacheRootStatsV1> = ui
-            .debug_cache_root_stats()
+        let debug_cache_root_stats = ui.debug_cache_root_stats();
+        let cache_root_outcome_by_root: HashMap<u64, UiCacheRootBoundaryOutcomeV1> =
+            debug_cache_root_stats
+                .iter()
+                .map(|stats| {
+                    let root = stats.root.data().as_ffi();
+                    let contained_relayout_in_frame = contained_relayout_roots.contains(&stats.root);
+                    (
+                        root,
+                        UiBoundaryDiagnosticsV1::cache_root_outcome_from_debug_stats(
+                            stats,
+                            contained_relayout_in_frame,
+                        ),
+                    )
+                })
+                .collect();
+        let cache_roots: Vec<UiCacheRootStatsV1> = debug_cache_root_stats
             .iter()
             .map(|stats| {
                 UiCacheRootStatsV1::from_stats(
@@ -170,6 +185,9 @@ impl UiTreeDebugSnapshotV1 {
                     element_runtime_state,
                     boundary,
                     cache_root_by_root.get(&boundary.id.data().as_ffi()).copied(),
+                    cache_root_outcome_by_root
+                        .get(&boundary.id.data().as_ffi())
+                        .copied(),
                     max_debug_string_bytes,
                 )
             })

@@ -30,13 +30,20 @@ Exit criteria:
 
 Status on 2026-05-13:
 
-- Transitional boundary diagnostics are implemented through `debug.cache_roots[].boundary`.
+- Historical note: the first boundary-diagnostics pilot used transitional
+  `debug.cache_roots[].boundary`.
 - The first internal `ViewBoundaryState` store now exists in `crates/fret-ui`, with `BoundaryId`
   keyed to the retained node identity for this migration slice.
-- Deletion plan for this transitional path is recorded in
+- Deletion plan for that transitional path is recorded in
   `M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md`.
 - Perf gate and worst-bundle attribution were rerun for the diagnostic slice. The result confirms
   this slice is attribution-only: `paint.widget` remains dominant and is the M2/M3 target.
+
+Status on 2026-05-14:
+
+- M4B retires the transitional `debug.cache_roots[].boundary` field. Boundary-level diagnostics are
+  now emitted through first-class `debug.boundaries[]`, and `fret-diag` derives any cache-root
+  report summary from that canonical top-level list.
 
 ## M2: Prepaint Ownership
 
@@ -97,8 +104,16 @@ Status on 2026-05-13:
   generic prepaint output and into `ViewBoundaryState::scene_fragment`, using a fragment-shaped
   `CanvasSceneFragment<RowSceneFragmentPayload>` for ops, hosted-resource side indexes, local
   bounds, and origin.
-- M3 is not complete: fragment hit/reject diagnostics and the 20-30% end-to-end bottleneck
-  improvement proof are still pending.
+Status on 2026-05-14:
+
+- Boundary fragment diagnostics now report owner, slot count, total entries, used entries,
+  rejected entries, and reject reason through `debug.boundaries[]`.
+- The latest closeout perf run shows `paint.widget` p95 at `689us` versus the M1 selected
+  bottleneck evidence at `1494us`, exceeding the required 20-30% improvement for the paint-side
+  bottleneck. Total p95 improved from `1811us` to `1544us`; that is useful but is not the primary
+  closeout claim.
+- M3 is complete for the code-editor vertical slice. Broader renderer-side fragment/replay
+  unification remains future work outside this vertical closeout.
 
 ## M4: Runtime Consolidation
 
@@ -121,8 +136,9 @@ Status on 2026-05-14:
   old `dirty_cache_roots` / `dirty_cache_root_reasons` owner with a `dirty_boundaries` fast index.
 - `debug.boundaries[]` now reports boundary layout dirty state through `layout_dirty`,
   `layout_dirty_source`, and `layout_dirty_detail`.
-- Broader view-cache/paint-cache consolidation, compatibility diagnostic cleanup, and old-path
-  deletion are still pending.
+- M4B removed the nested `debug.cache_roots[].boundary` schema and changed `fret-diag stats` to join
+  cache-root report summaries from canonical `debug.boundaries[]`.
+- Broader view-cache/paint-cache consolidation and the final completion audit are still pending.
 
 ## M5: Closeout and Deletion Audit
 

@@ -224,7 +224,7 @@ Most recent boundary-prepaint-state slice evidence:
 Observed result:
 
 - `fret-ui` focused nextest: `3 passed, 928 skipped`.
-- `fret-bootstrap` boundary diagnostics nextest: `4 passed, 97 skipped`.
+- `fret-bootstrap` boundary diagnostics nextest: `5 passed, 97 skipped`.
 - `cargo check`: passed.
 - `tools/check_layering.py`: passed.
 
@@ -258,8 +258,7 @@ Observed result:
 This slice is a correctness/ownership step, not a new perf claim. It moves the row-scene replay
 carrier from generic canvas prepaint output into `ViewBoundaryState::scene_fragment` through
 `CanvasSceneFragment<RowSceneFragmentPayload>`, and `debug.boundaries[]` now reports fragment owner,
-slot count, and fragment entry count for debug-aware carriers. Fragment hit/reject reasons,
-dirty-set migration, and the 20-30% p95/max closeout proof are still pending.
+slot count, and fragment entry count for debug-aware carriers.
 
 Most recent boundary dirty-set slice evidence:
 
@@ -287,6 +286,71 @@ This slice is a correctness/ownership step, not a new perf claim. It removes
 owner path, keeps `dirty_boundaries` as the hot-path scheduling index, and emits boundary-owned
 layout dirty source/detail through `debug.boundaries[]`. The final perf closeout proof and broader
 view-cache/paint-cache compatibility cleanup are still pending.
+
+Most recent boundary diagnostics canonicalization slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md`
+- Focused correctness gates:
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes --no-fail-fast`
+  and
+  `cargo nextest run -p fret-diag bundle_stats_preserves_cache_root_boundary_summary --no-fail-fast`
+- Compile/layering gates:
+  `cargo check -p fret-bootstrap -p fret-diag --features diagnostics`,
+  `cargo check -p fret-ui -p fret-ui-kit -p fret-code-editor -p fret-bootstrap --features syntax-rust,diagnostics`,
+  and `python3 tools/check_layering.py`
+
+Observed result:
+
+- `fret-bootstrap` boundary diagnostics nextest: `4 passed, 97 skipped`.
+- `fret-diag` stats join nextest: `1 passed, 818 skipped`.
+- `cargo check -p fret-bootstrap -p fret-diag --features diagnostics`: passed.
+- `cargo check -p fret-ui -p fret-ui-kit -p fret-code-editor -p fret-bootstrap --features syntax-rust,diagnostics`:
+  passed.
+- `python3 tools/check_layering.py`: passed.
+- `cargo fmt`, `WORKSTREAM.json` validation, and `git diff --check`: passed.
+
+This slice deletes the serialized `debug.cache_roots[].boundary` compatibility field. Top-level
+`debug.boundaries[]` is now the canonical boundary diagnostics list, and `fret-diag stats` derives
+its report-only `top_cache_roots[].boundary` summary from that canonical list.
+
+Most recent code-editor closeout perf evidence:
+
+- Perf output directory:
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514`
+- Threshold report:
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/check.perf_thresholds.json`
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json`
+
+Observed result:
+
+- gate failures: `[]`,
+- total p50/p95/max: `1138/1544/1544us`,
+- layout p50/p95/max: `310/348/348us`,
+- prepaint p50/p95/max: `225/349/349us`,
+- paint p50/p95/max: `674/847/847us`,
+- row scene replay hit rate: `99-100%`,
+- renderer prepare/encode/upload counters stayed at `0`.
+
+Worst-bundle attribution:
+
+- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json --sort time --top 15`
+- time sum: total `11488us`, layout `1026us`, prepaint `2997us`, paint `7465us`
+- time p50/p95: total `1177/1544us`, layout `34/348us`, prepaint `285/349us`,
+  paint `666/897us`
+- hot p50/p95: `layout.engine_solve=0/133us`, `paint.widget=466/689us`,
+  `paint.text_prepare=9/12us`
+- `code_editor.paint_perf` planned/used replay entries: `2090/2090`
+- `code_editor.paint_perf` rows replayed: `2885`
+- `code_editor.paint_perf` p50/p95 `us_row_text`: `0/13us`
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `58/103us`
+- `code_editor.paint_perf` p50/p95 total: `191/419us`
+
+Compared with the M1 boundary-diagnostics bottleneck evidence (`paint.widget` p95 `1494us`, paint
+p95 `1737us`), the latest closeout run shows `paint.widget` p95 `689us` and paint p95 `897us`.
+That exceeds the required 20-30% improvement for the selected paint-side bottleneck. Total p95
+improved from `1811us` to `1544us`; useful, but below the primary target threshold.
 
 ## Correctness Gates
 

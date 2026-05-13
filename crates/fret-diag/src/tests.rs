@@ -3068,17 +3068,28 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
                                     "reused": false,
                                     "contained_layout": true,
                                     "paint_replayed_ops": 0,
+                                    "reuse_reason": "needs_rerender"
+                                }
+                            ],
+                            "boundaries": [
+                                {
+                                    "schema_version": 1,
+                                    "id": 42,
+                                    "kind": "view_cache_root",
+                                    "source": "view_cache",
+                                    "layout_dependency": "contained_when_bounds_known",
+                                    "layout_definite": true,
+                                    "layout_dirty": false,
+                                    "prepaint_owner": "view_boundary_prepaint_state",
+                                    "scene_fragment_owner": "view_boundary_scene_fragment_state",
+                                    "scene_fragment_slots": 1,
+                                    "scene_fragment_entries": 0,
+                                    "scene_fragment_used_entries": 0,
+                                    "scene_fragment_rejected_entries": 0,
+                                    "build_outcome": "rebuilt",
                                     "reuse_reason": "needs_rerender",
-                                    "boundary": {
-                                        "schema_version": 1,
-                                        "id": 42,
-                                        "kind": "view_cache_root",
-                                        "build_outcome": "rebuilt",
-                                        "reuse_reason": "needs_rerender",
-                                        "layout_outcome": "contained_clean",
-                                        "prepaint_owner": "node_prepaint_output",
-                                        "paint_outcome": "not_replayed"
-                                    }
+                                    "layout_outcome": "contained_clean",
+                                    "paint_outcome": "not_replayed"
                                 }
                             ]
                         }
@@ -3115,7 +3126,7 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
     );
     assert_eq!(
         cache_root.boundary_prepaint_owner.as_deref(),
-        Some("node_prepaint_output")
+        Some("view_boundary_prepaint_state")
     );
     assert_eq!(
         cache_root.boundary_paint_outcome.as_deref(),

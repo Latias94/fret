@@ -2883,6 +2883,17 @@ fn snapshot_cache_root_stats(
     let mut replayed_ops_sum: u64 = 0;
 
     let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
+    let boundaries_by_id: std::collections::HashMap<u64, &serde_json::Value> = snapshot
+        .get("debug")
+        .and_then(|v| v.get("boundaries"))
+        .and_then(|v| v.as_array())
+        .map(|boundaries| {
+            boundaries
+                .iter()
+                .filter_map(|b| b.get("id").and_then(|v| v.as_u64()).map(|id| (id, b)))
+                .collect()
+        })
+        .unwrap_or_default();
 
     let mut out: Vec<BundleStatsCacheRoot> = roots
         .iter()
@@ -2907,7 +2918,7 @@ fn snapshot_cache_root_stats(
             replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
 
             let (role, test_id) = semantics_index.lookup_for_cache_root(root_node);
-            let boundary = r.get("boundary");
+            let boundary = boundaries_by_id.get(&root_node).copied();
             BundleStatsCacheRoot {
                 root_node,
                 element: r.get("element").and_then(|v| v.as_u64()),

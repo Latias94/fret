@@ -35,20 +35,13 @@ pub struct UiCacheRootStatsV1 {
     pub children_last_set_frame_id: Option<u64>,
     #[serde(default)]
     pub reuse_reason: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub boundary: Option<UiBoundaryCacheRootDiagnosticsV1>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiBoundaryCacheRootDiagnosticsV1 {
-    pub schema_version: u32,
-    pub id: u64,
-    pub kind: String,
-    pub build_outcome: String,
-    pub reuse_reason: String,
-    pub layout_outcome: String,
-    pub prepaint_owner: String,
-    pub paint_outcome: String,
+#[derive(Debug, Clone, Copy)]
+struct UiCacheRootBoundaryOutcomeV1 {
+    build_outcome: &'static str,
+    layout_outcome: &'static str,
+    paint_outcome: &'static str,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -87,17 +80,17 @@ pub struct UiBoundaryDiagnosticsV1 {
 }
 
 impl UiBoundaryDiagnosticsV1 {
-    pub fn from_boundary_stats(
+    fn from_boundary_stats(
         window: AppWindowId,
         element_runtime: Option<&ElementRuntime>,
         boundary: &fret_ui::tree::UiDebugBoundaryStats,
         cache_root: Option<&UiCacheRootStatsV1>,
+        cache_root_outcome: Option<UiCacheRootBoundaryOutcomeV1>,
         max_debug_string_bytes: usize,
     ) -> Self {
         let element_path = boundary
             .element
             .and_then(|id| element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id)));
-        let cache_root_boundary = cache_root.and_then(|stats| stats.boundary.as_ref());
         let mut out = Self {
             schema_version: 1,
             id: boundary.id.data().as_ffi(),
@@ -124,10 +117,10 @@ impl UiBoundaryDiagnosticsV1 {
             scene_fragment_reject_reason: boundary
                 .scene_fragment_reject_reason
                 .map(str::to_string),
-            build_outcome: cache_root_boundary.map(|b| b.build_outcome.clone()),
-            reuse_reason: cache_root_boundary.map(|b| b.reuse_reason.clone()),
-            layout_outcome: cache_root_boundary.map(|b| b.layout_outcome.clone()),
-            paint_outcome: cache_root_boundary.map(|b| b.paint_outcome.clone()),
+            build_outcome: cache_root_outcome.map(|outcome| outcome.build_outcome.to_string()),
+            reuse_reason: cache_root.and_then(|stats| stats.reuse_reason.clone()),
+            layout_outcome: cache_root_outcome.map(|outcome| outcome.layout_outcome.to_string()),
+            paint_outcome: cache_root_outcome.map(|outcome| outcome.paint_outcome.to_string()),
         };
 
         truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
@@ -144,6 +137,20 @@ impl UiBoundaryDiagnosticsV1 {
         truncate_opt_string_bytes(&mut out.layout_outcome, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.paint_outcome, max_debug_string_bytes);
         out
+    }
+
+    fn cache_root_outcome_from_debug_stats(
+        stats: &fret_ui::tree::UiDebugCacheRootStats,
+        contained_relayout_in_frame: bool,
+    ) -> UiCacheRootBoundaryOutcomeV1 {
+        UiCacheRootBoundaryOutcomeV1 {
+            build_outcome: cache_root_boundary_build_outcome(stats.reused, stats.reuse_reason),
+            layout_outcome: cache_root_boundary_layout_outcome(
+                stats.contained_layout,
+                contained_relayout_in_frame,
+            ),
+            paint_outcome: cache_root_boundary_paint_outcome(stats.paint_replayed_ops),
+        }
     }
 }
 
@@ -260,27 +267,6 @@ impl UiCacheRootStatsV1 {
             children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
-            boundary: Some(UiBoundaryCacheRootDiagnosticsV1 {
-                schema_version: 1,
-                id: stats.root.data().as_ffi(),
-                kind: "view_cache_root".to_string(),
-                build_outcome: cache_root_boundary_build_outcome(
-                    stats.reused,
-                    stats.reuse_reason,
-                )
-                .to_string(),
-                reuse_reason: stats.reuse_reason.as_str().to_string(),
-                layout_outcome: cache_root_boundary_layout_outcome(
-                    stats.contained_layout,
-                    contained_relayout_in_frame,
-                )
-                .to_string(),
-                prepaint_owner: ui
-                    .debug_boundary_prepaint_owner_for_node(stats.root)
-                    .to_string(),
-                paint_outcome: cache_root_boundary_paint_outcome(stats.paint_replayed_ops)
-                    .to_string(),
-            }),
         };
 
         truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
@@ -294,14 +280,6 @@ impl UiCacheRootStatsV1 {
             max_debug_string_bytes,
         );
         truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
-        if let Some(boundary) = out.boundary.as_mut() {
-            truncate_string_bytes(&mut boundary.kind, max_debug_string_bytes);
-            truncate_string_bytes(&mut boundary.build_outcome, max_debug_string_bytes);
-            truncate_string_bytes(&mut boundary.reuse_reason, max_debug_string_bytes);
-            truncate_string_bytes(&mut boundary.layout_outcome, max_debug_string_bytes);
-            truncate_string_bytes(&mut boundary.prepaint_owner, max_debug_string_bytes);
-            truncate_string_bytes(&mut boundary.paint_outcome, max_debug_string_bytes);
-        }
 
         out
     }
@@ -398,6 +376,35 @@ mod cache_root_boundary_tests {
     }
 
     #[test]
+    fn cache_root_stats_serialization_omits_retired_nested_boundary() {
+        let cache_root = UiCacheRootStatsV1 {
+            root: 7,
+            element: None,
+            element_path: None,
+            reused: false,
+            contained_layout: true,
+            contained_relayout_in_frame: false,
+            paint_replayed_ops: 0,
+            direct_child_nodes: None,
+            subtree_nodes: None,
+            subtree_nodes_truncated_at: None,
+            root_in_semantics: None,
+            children_last_set_location: None,
+            children_last_set_old_len: None,
+            children_last_set_new_len: None,
+            children_last_set_old_elements_head: Vec::new(),
+            children_last_set_new_elements_head: Vec::new(),
+            children_last_set_old_elements_head_paths: Vec::new(),
+            children_last_set_new_elements_head_paths: Vec::new(),
+            children_last_set_frame_id: None,
+            reuse_reason: Some("needs_rerender".to_string()),
+        };
+
+        let value = serde_json::to_value(cache_root).expect("cache root stats json");
+        assert!(value.get("boundary").is_none());
+    }
+
+    #[test]
     fn boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes() {
         let node = fret_core::NodeId::from(slotmap::KeyData::from_ffi(7));
         let node_id = node.data().as_ffi();
@@ -422,16 +429,6 @@ mod cache_root_boundary_tests {
             children_last_set_new_elements_head_paths: Vec::new(),
             children_last_set_frame_id: None,
             reuse_reason: Some("marked_reuse_root".to_string()),
-            boundary: Some(UiBoundaryCacheRootDiagnosticsV1 {
-                schema_version: 1,
-                id: node_id,
-                kind: "view_cache_root".to_string(),
-                build_outcome: "reused".to_string(),
-                reuse_reason: "marked_reuse_root".to_string(),
-                layout_outcome: "contained_clean".to_string(),
-                prepaint_owner: "view_boundary_prepaint_state".to_string(),
-                paint_outcome: "scene_ops_replayed".to_string(),
-            }),
         };
 
         let boundary_stats = fret_ui::tree::UiDebugBoundaryStats {
@@ -461,6 +458,11 @@ mod cache_root_boundary_tests {
             None,
             &boundary_stats,
             Some(&cache_root),
+            Some(UiCacheRootBoundaryOutcomeV1 {
+                build_outcome: "reused",
+                layout_outcome: "contained_clean",
+                paint_outcome: "scene_ops_replayed",
+            }),
             4096,
         );
 

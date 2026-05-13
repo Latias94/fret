@@ -23,7 +23,9 @@ Last updated: 2026-05-14
 - [x] Define the first internal `BoundaryId` / boundary-state shape or a narrower transitional
   equivalent.
 - [x] Make UI Gallery code-editor content root report boundary-level reuse/reject reasons through
-  transitional `debug.cache_roots[].boundary` diagnostics.
+  first-class `debug.boundaries[]` diagnostics. The original transitional
+  `debug.cache_roots[].boundary` path is retired in
+  `M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md`.
 - [x] Move code-editor frame-derived row state toward shared prepaint ownership for the
   windowed-rows/editor prefetch slice.
 - [x] Split code-editor paint attribution into transitional prepaint plan, paint replay, and renderer
@@ -38,9 +40,11 @@ Last updated: 2026-05-14
 - [x] Convert layout containment from a standalone flag into boundary dependency metadata.
 - [x] Move contained-relayout dirty reasons from cache-root side maps into `ViewBoundaryState`.
 - [x] Convert the code-editor row-scene replay carrier into boundary-owned scene-fragment state.
-- [ ] Promote boundary-owned scene-fragment reuse diagnostics and perf closeout evidence.
+- [x] Promote boundary-owned scene-fragment reuse diagnostics and perf closeout evidence for the
+  code-editor vertical slice.
 - [x] Make prepaint diagnostics first-class per boundary.
-- [ ] Remove duplicated or superseded debug counters after boundary diagnostics cover them.
+- [x] Remove duplicated or superseded debug counters after boundary diagnostics cover them for the
+  retired nested cache-root boundary path.
 - [x] Replace code-editor-owned `RowSceneReplayPlan` with a boundary-owned prepaint output
   carrier.
 - [x] Move the transitional replay-plan carrier into boundary-owned fragment state or delete it if a
@@ -52,7 +56,7 @@ Last updated: 2026-05-14
 - [x] Write a deletion audit before closeout.
 - [ ] Delete or retire old private paths that v2 replaces. M4A removed
   `dirty_cache_roots` / `dirty_cache_root_reasons`, but broader view-cache/paint-cache compatibility
-  views remain.
+  views remain. M4B retired the nested `debug.cache_roots[].boundary` compatibility path.
 - [ ] Remove migration-only env knobs that no longer have a diagnostic purpose.
 - [ ] Update first-party examples and docs if public authoring guidance changes.
 - [ ] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` when ADR 0327 is implemented or superseded.
