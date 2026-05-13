@@ -2223,6 +2223,53 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when the runtime-published IME cursor area for the focused text input is fully within
+    /// a target node's bounds.
+    ///
+    /// This is stronger than the window-level check for self-drawn controls: after long text,
+    /// scrolling, transforms, or addon layout changes, the caret/candidate anchor should remain
+    /// inside the focused input's own visual box rather than merely somewhere on screen.
+    TextInputImeCursorAreaWithinBounds {
+        target: UiSelectorV1,
+        #[serde(default)]
+        padding_px: f32,
+        /// Optional per-edge padding (added on top of `padding_px`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the focused text input's paint-time visible text bounds remain inside its padded
+    /// content viewport.
+    ///
+    /// This is a self-drawn text-input mechanism gate: long text, horizontal scrolling, padding, and
+    /// clipping must agree before screenshots or component parity checks can be trusted.
+    TextInputVisibleTextWithinViewport {
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the focused text input's horizontal scroll offset is finite and within
+    /// `0..=max_offset`.
+    TextInputHorizontalOffsetInRange {
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the focused text input reports whether its single-line text content overflows the
+    /// padded content viewport.
+    TextInputHorizontalOverflowIs {
+        overflowing: bool,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the focused text input's padded viewport is tall enough to contain the measured
+    /// single-line text run.
+    ///
+    /// This catches recipe/mechanism mismatches where vertical padding or fixed heights would crop
+    /// glyphs after the text clip is correctly scoped to the content viewport.
+    TextInputViewportCoversTextHeight {
+        #[serde(default)]
+        eps_px: f32,
+    },
     BoundsMinSize {
         target: UiSelectorV1,
         #[serde(default)]
@@ -2271,6 +2318,20 @@ pub enum UiPredicateV1 {
         a: UiSelectorV1,
         b: UiSelectorV1,
         metric: UiBoundsMetricV1,
+        comparison: UiComparisonV1,
+        value_px: f32,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when two possibly different scalar bounds metrics satisfy a delta comparison.
+    ///
+    /// The evaluated value is `a_metric(a.bounds) - b_metric(b.bounds)`. This covers common
+    /// self-drawn overlay and slot-spacing oracles such as `content.top - trigger.bottom = 6`.
+    BoundsMetricPairDelta {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        a_metric: UiBoundsMetricV1,
+        b_metric: UiBoundsMetricV1,
         comparison: UiComparisonV1,
         value_px: f32,
         #[serde(default)]
@@ -3237,6 +3298,19 @@ pub struct UiFocusTraceEntryV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiTextInputVisualSnapshotV1 {
+    pub viewport_bounds: UiRectV1,
+    pub clip_bounds: UiRectV1,
+    pub unclipped_text_bounds: UiRectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible_text_bounds: Option<UiRectV1>,
+    pub content_width_px: f32,
+    pub viewport_width_px: f32,
+    pub offset_x_px: f32,
+    pub max_offset_x_px: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiTextInputSnapshotV1 {
     #[serde(default)]
     pub focus_is_text_input: bool,
@@ -3250,6 +3324,8 @@ pub struct UiTextInputSnapshotV1 {
     pub marked_utf16: Option<(u32, u32)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ime_cursor_area: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visual: Option<UiTextInputVisualSnapshotV1>,
     /// Optional IME surrounding text excerpt metadata (bytes).
     ///
     /// This is derived from `WindowTextInputSnapshot.surrounding_text` and is intended for
@@ -3828,6 +3904,121 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::BoundsMetricDelta { .. }));
+    }
+
+    #[test]
+    fn predicate_bounds_metric_pair_delta_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::BoundsMetricPairDelta {
+            a: UiSelectorV1::TestId {
+                id: "content".to_string(),
+                root_z_index: None,
+            },
+            b: UiSelectorV1::TestId {
+                id: "trigger".to_string(),
+                root_z_index: None,
+            },
+            a_metric: UiBoundsMetricV1::Top,
+            b_metric: UiBoundsMetricV1::Bottom,
+            comparison: UiComparisonV1::Eq,
+            value_px: 6.0,
+            eps_px: 1.0,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "bounds_metric_pair_delta",
+                "a": { "kind": "test_id", "id": "content" },
+                "b": { "kind": "test_id", "id": "trigger" },
+                "a_metric": "top",
+                "b_metric": "bottom",
+                "comparison": "eq",
+                "value_px": 6.0,
+                "eps_px": 1.0
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::BoundsMetricPairDelta { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_text_input_ime_cursor_area_within_bounds_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::TextInputImeCursorAreaWithinBounds {
+            target: UiSelectorV1::TestId {
+                id: "field".to_string(),
+                root_z_index: None,
+            },
+            padding_px: 1.0,
+            padding_insets_px: Some(UiPaddingInsetsV1 {
+                left_px: 2.0,
+                top_px: 3.0,
+                right_px: 4.0,
+                bottom_px: 5.0,
+            }),
+            eps_px: 0.5,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "text_input_ime_cursor_area_within_bounds",
+                "target": { "kind": "test_id", "id": "field" },
+                "padding_px": 1.0,
+                "padding_insets_px": {
+                    "left_px": 2.0,
+                    "top_px": 3.0,
+                    "right_px": 4.0,
+                    "bottom_px": 5.0
+                },
+                "eps_px": 0.5
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::TextInputImeCursorAreaWithinBounds { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_text_input_visual_sanity_serializes_and_deserializes() {
+        let predicates = [
+            UiPredicateV1::TextInputVisibleTextWithinViewport { eps_px: 0.5 },
+            UiPredicateV1::TextInputHorizontalOffsetInRange { eps_px: 0.25 },
+            UiPredicateV1::TextInputHorizontalOverflowIs {
+                overflowing: true,
+                eps_px: 1.0,
+            },
+            UiPredicateV1::TextInputViewportCoversTextHeight { eps_px: 0.5 },
+        ];
+
+        for predicate in predicates {
+            let value = serde_json::to_value(&predicate).unwrap();
+            let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+            assert!(matches!(
+                (predicate, roundtrip),
+                (
+                    UiPredicateV1::TextInputVisibleTextWithinViewport { .. },
+                    UiPredicateV1::TextInputVisibleTextWithinViewport { .. }
+                ) | (
+                    UiPredicateV1::TextInputHorizontalOffsetInRange { .. },
+                    UiPredicateV1::TextInputHorizontalOffsetInRange { .. }
+                ) | (
+                    UiPredicateV1::TextInputHorizontalOverflowIs { .. },
+                    UiPredicateV1::TextInputHorizontalOverflowIs { .. }
+                ) | (
+                    UiPredicateV1::TextInputViewportCoversTextHeight { .. },
+                    UiPredicateV1::TextInputViewportCoversTextHeight { .. }
+                )
+            ));
+        }
     }
 
     #[test]

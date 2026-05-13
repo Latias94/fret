@@ -799,7 +799,11 @@ impl ElementHostWidget {
                             crate::elements::GlobalElementId(element),
                         )
                     })
-                    .and_then(|node| cx.tree.debug_node_bounds(node))
+                    .and_then(|node| {
+                        cx.tree
+                            .debug_node_visual_bounds(node)
+                            .or_else(|| cx.tree.debug_node_bounds(node))
+                    })
                     .filter(|bounds| *bounds != Rect::default())
                     .unwrap_or(props.anchor);
 

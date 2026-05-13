@@ -2,6 +2,39 @@ use super::*;
 use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
+    fn invalidate_layout_driven_anchored_nodes_for_scroll_geometry_change(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        visited: &mut HashMap<NodeId, u8>,
+    ) {
+        let mut anchored_nodes = Vec::new();
+        crate::declarative::with_window_frame(app, window, |window_frame| {
+            let Some(window_frame) = window_frame else {
+                return;
+            };
+            for (node, record) in window_frame.instances.iter() {
+                if matches!(
+                    record.instance,
+                    crate::declarative::frame::ElementInstance::Anchored(_)
+                ) && self.node_is_attached_to_layer_tree(node)
+                {
+                    anchored_nodes.push(node);
+                }
+            }
+        });
+
+        for node in anchored_nodes {
+            self.mark_invalidation_dedup_with_detail(
+                node,
+                Invalidation::Layout,
+                visited,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::ScrollHandleLayout,
+            );
+        }
+    }
+
     fn virtual_list_scroll_handle_requires_layout(
         app: &mut H,
         window: AppWindowId,
@@ -805,6 +838,11 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if request_followup_redraw {
+            self.invalidate_layout_driven_anchored_nodes_for_scroll_geometry_change(
+                app,
+                window,
+                &mut visited,
+            );
             self.request_redraw_coalesced(app);
         }
     }

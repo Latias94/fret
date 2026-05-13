@@ -7,10 +7,14 @@
       "diag.overlay_placement_trace",
       "diag.screenshot_png"
     ],
-    "tags": ["ui_gallery", "shadcn", "combobox", "popup", "trigger"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "Popup"
+    },
+    "tags": ["ui_gallery", "shadcn", "combobox", "popup", "trigger", "tight_window"],
     "target_hints": [
-      "Navigates to the Combobox popup-trigger example.",
-      "Keeps the trigger near the viewport bottom so collision solving must flip the popup to top.",
+      "Starts on the Combobox Popup section.",
+      "Uses a short viewport so bottom placement has insufficient room and collision solving must flip the popup to top.",
       "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
     ]
   },
@@ -26,15 +30,8 @@
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 440.0 },
     { "type": "wait_frames", "n": 20 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "combobox" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-combobox" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -55,7 +52,23 @@
       "timeout_frames": 1800
     },
     { "type": "wait_frames", "n": 10 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -65,17 +78,219 @@
       "timeout_frames": 600
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
       "type": "wait_overlay_placement_trace",
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-popup-trigger",
-        "content_test_id": "ui-gallery-combobox-popup-listbox",
+        "content_test_id": "ui-gallery-combobox-popup-content",
         "chosen_side": "top",
         "flipped": true,
         "side_offset_px": 6.0,
         "side_offset_eps_px": 0.25
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-content" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-content" },
+      "stable_frames": 4,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-content" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "eq",
+        "value_px": 6.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+        "metric": "left",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" },
+        "metric": "width",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-listbox" },
+        "min_w_px": 240.0,
+        "min_h_px": 160.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-listbox" },
+        "max_w_px": 280.0,
+        "max_h_px": 190.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "min_w_px": 230.0,
+        "min_h_px": 30.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "max_w_px": 260.0,
+        "max_h_px": 34.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.label" },
+        "min_w_px": 40.0,
+        "min_h_px": 18.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.label" },
+        "max_w_px": 220.0,
+        "max_h_px": 22.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.label" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.label" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "metric": "left",
+        "comparison": "eq",
+        "value_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.checkmark" },
+        "min_w_px": 15.0,
+        "min_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.checkmark" },
+        "max_w_px": 17.0,
+        "max_h_px": 17.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.checkmark" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next.checkmark" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "metric": "left",
+        "comparison": "eq",
+        "value_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-svelte" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-popup-item-next" },
+        "metric": "top",
+        "comparison": "eq",
+        "value_px": 32.0,
+        "eps_px": 1.0
+      }
     },
     {
       "type": "capture_layout_sidecar",

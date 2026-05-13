@@ -56,6 +56,36 @@ impl UiTreeDebugSnapshotV1 {
                 selection_utf16: snapshot.selection_utf16,
                 marked_utf16: snapshot.marked_utf16,
                 ime_cursor_area: snapshot.ime_cursor_area.map(RectV1::from),
+                visual: snapshot.visual.map(|visual| UiTextInputVisualSnapshotV1 {
+                    viewport_bounds: UiRectV1 {
+                        x_px: visual.viewport_bounds.origin.x.0,
+                        y_px: visual.viewport_bounds.origin.y.0,
+                        w_px: visual.viewport_bounds.size.width.0,
+                        h_px: visual.viewport_bounds.size.height.0,
+                    },
+                    clip_bounds: UiRectV1 {
+                        x_px: visual.clip_bounds.origin.x.0,
+                        y_px: visual.clip_bounds.origin.y.0,
+                        w_px: visual.clip_bounds.size.width.0,
+                        h_px: visual.clip_bounds.size.height.0,
+                    },
+                    unclipped_text_bounds: UiRectV1 {
+                        x_px: visual.unclipped_text_bounds.origin.x.0,
+                        y_px: visual.unclipped_text_bounds.origin.y.0,
+                        w_px: visual.unclipped_text_bounds.size.width.0,
+                        h_px: visual.unclipped_text_bounds.size.height.0,
+                    },
+                    visible_text_bounds: visual.visible_text_bounds.map(|bounds| UiRectV1 {
+                        x_px: bounds.origin.x.0,
+                        y_px: bounds.origin.y.0,
+                        w_px: bounds.size.width.0,
+                        h_px: bounds.size.height.0,
+                    }),
+                    content_width_px: visual.content_width_px,
+                    viewport_width_px: visual.viewport_width_px,
+                    offset_x_px: visual.offset_x_px,
+                    max_offset_x_px: visual.max_offset_x_px,
+                }),
             });
 
         let runner_surface_lifecycle = app

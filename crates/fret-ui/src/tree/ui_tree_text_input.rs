@@ -301,6 +301,7 @@ pub(in crate::tree) fn text_input_region_platform_text_input_snapshot(
         selection_utf16,
         marked_utf16,
         ime_cursor_area: props.ime_cursor_area,
+        visual: None,
         surrounding_text: props.ime_surrounding_text.clone(),
     }
 }

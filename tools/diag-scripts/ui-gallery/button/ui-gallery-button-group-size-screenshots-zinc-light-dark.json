@@ -54,6 +54,64 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-button-group-size-zinc-light.layout" },
     { "type": "capture_screenshot", "label": "ui-gallery-button-group-size-zinc-light" },
     { "type": "capture_bundle", "label": "ui-gallery-button-group-size-zinc-light" },
 
@@ -82,8 +140,65 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-button-group-size-zinc-dark.layout" },
     { "type": "capture_screenshot", "label": "ui-gallery-button-group-size-zinc-dark" },
     { "type": "capture_bundle", "label": "ui-gallery-button-group-size-zinc-dark" }
   ]
 }
-

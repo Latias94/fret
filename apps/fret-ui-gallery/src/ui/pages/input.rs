@@ -33,7 +33,7 @@ pub(super) fn preview_input(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "Native file inputs are authored as `Input` + `Browse` button composition; Fret does not mirror DOM `type=\"file\"` directly, and diagnostics runs mock the picker to keep scripted gates deterministic.",
         "`Input::required(true)` keeps required semantics on the input control itself; any visible required marker remains caller-owned label composition.",
         "Required markers remain label/call-site composition; the recipe owns input chrome, not surrounding form-policy affordances.",
-        "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
+        "Keep `ui-gallery-input-basic-control` stable for IME routing regression scripts.",
     ]);
     let notes = doc_layout::notes_block([
         "This page follows the upstream Input docs path first: Demo, Usage, Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL.",

@@ -1787,6 +1787,7 @@ pub struct InputGroupText {
     text: Arc<str>,
     size: InputGroupTextSize,
     layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
 }
 
 impl InputGroupText {
@@ -1795,11 +1796,17 @@ impl InputGroupText {
             text: text.into(),
             size: InputGroupTextSize::Sm,
             layout: LayoutRefinement::default(),
+            test_id: None,
         }
     }
 
     pub fn size(mut self, size: InputGroupTextSize) -> Self {
         self.size = size;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -1827,7 +1834,7 @@ impl InputGroupText {
         // weight when rendered inside an addon.
         style.weight = FontWeight::MEDIUM;
 
-        cx.text_props(TextProps {
+        let mut text = cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, self.layout.h_px(line_height)),
             text: self.text,
             style: Some(style),
@@ -1836,7 +1843,11 @@ impl InputGroupText {
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
             ink_overflow: Default::default(),
-        })
+        });
+        if let Some(test_id) = self.test_id {
+            text = text.test_id(test_id);
+        }
+        text
     }
 }
 
@@ -2063,6 +2074,18 @@ impl InputGroupButton {
             let a11y_label = self.a11y_label;
             let children = self.children;
             let test_id = self.test_id;
+            let icon_test_id = test_id
+                .clone()
+                .map(|id| Arc::<str>::from(format!("{id}.icon")));
+            let leading_icon_test_id = test_id
+                .clone()
+                .map(|id| Arc::<str>::from(format!("{id}.leading-icon")));
+            let label_test_id = test_id
+                .clone()
+                .map(|id| Arc::<str>::from(format!("{id}.label")));
+            let trailing_icon_test_id = test_id
+                .clone()
+                .map(|id| Arc::<str>::from(format!("{id}.trailing-icon")));
             let icon = self.icon;
             let leading_icon = self.leading_icon;
             let trailing_icon = self.trailing_icon;
@@ -2143,10 +2166,18 @@ impl InputGroupButton {
 
                     let mut row = Vec::new();
                     if let Some(icon) = icon {
-                        row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                        let mut icon = decl_icon::icon_with(cx, icon, Some(icon_px), None);
+                        if let Some(test_id) = icon_test_id.clone() {
+                            icon = icon.test_id(test_id);
+                        }
+                        row.push(icon);
                     } else {
                         if let Some(icon) = leading_icon {
-                            row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            let mut icon = decl_icon::icon_with(cx, icon, Some(icon_px), None);
+                            if let Some(test_id) = leading_icon_test_id.clone() {
+                                icon = icon.test_id(test_id);
+                            }
+                            row.push(icon);
                         }
 
                         if !label.is_empty() {
@@ -2156,7 +2187,7 @@ impl InputGroupButton {
                                 line_height,
                             );
                             style.weight = FontWeight::MEDIUM;
-                            row.push(cx.text_props(TextProps {
+                            let mut label = cx.text_props(TextProps {
                                 layout: LayoutStyle {
                                     size: fret_ui::element::SizeStyle {
                                         width: Length::Auto,
@@ -2172,12 +2203,20 @@ impl InputGroupButton {
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
                                 ink_overflow: Default::default(),
-                            }));
+                            });
+                            if let Some(test_id) = label_test_id.clone() {
+                                label = label.test_id(test_id);
+                            }
+                            row.push(label);
                         }
                         row.extend(children);
 
                         if let Some(icon) = trailing_icon {
-                            row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            let mut icon = decl_icon::icon_with(cx, icon, Some(icon_px), None);
+                            if let Some(test_id) = trailing_icon_test_id.clone() {
+                                icon = icon.test_id(test_id);
+                            }
+                            row.push(icon);
                         }
                     }
 
@@ -2350,6 +2389,14 @@ mod tests {
         node.children
             .iter()
             .find_map(|c| find_container_with_test_id(c, test_id))
+    }
+
+    fn contains_test_id(node: &AnyElement, test_id: &str) -> bool {
+        node.semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            .is_some_and(|id| id == test_id)
+            || node.children.iter().any(|c| contains_test_id(c, test_id))
     }
 
     fn find_opacity(node: &AnyElement, opacity: f32) -> bool {
@@ -2979,6 +3026,68 @@ mod tests {
                     !contains_foreground_scope(&el),
                     "expected input-group button content to attach inherited foreground without inserting a ForegroundScope"
                 );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_button_derives_internal_test_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_button_internal_test_ids",
+            |cx| {
+                let icon_only = InputGroupButton::new("")
+                    .test_id("input_group.button.icon_only")
+                    .icon(fret_icons::IconId::new_static("lucide.audio-lines"))
+                    .into_element(cx);
+                assert!(contains_test_id(
+                    &icon_only,
+                    "input_group.button.icon_only.icon"
+                ));
+
+                let text_button = InputGroupButton::new("Search")
+                    .test_id("input_group.button.text")
+                    .leading_icon(fret_icons::IconId::new_static("lucide.search"))
+                    .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-right"))
+                    .into_element(cx);
+                assert!(contains_test_id(
+                    &text_button,
+                    "input_group.button.text.leading-icon"
+                ));
+                assert!(contains_test_id(
+                    &text_button,
+                    "input_group.button.text.label"
+                ));
+                assert!(contains_test_id(
+                    &text_button,
+                    "input_group.button.text.trailing-icon"
+                ));
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_text_stamps_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_text_test_id",
+            |cx| {
+                let text = InputGroupText::new("lock")
+                    .test_id("input_group.text.leading")
+                    .into_element(cx);
+                assert!(contains_test_id(&text, "input_group.text.leading"));
             },
         );
     }

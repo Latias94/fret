@@ -146,6 +146,9 @@ impl ButtonGroupText {
 
         let content = self.content;
         let test_id = self.test_id;
+        let label_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.label")));
         let px_4 = MetricRef::space(Space::N4).resolve(&theme);
 
         let mut props = decl_style::container_props(&theme, chrome, self.layout);
@@ -214,6 +217,9 @@ impl ButtonGroupText {
                             .nowrap();
                         if let Some(letter_spacing_em) = style.letter_spacing_em {
                             el = el.letter_spacing_em(letter_spacing_em);
+                        }
+                        if let Some(test_id) = label_test_id.clone() {
+                            el = el.test_id(test_id);
                         }
                         vec![el.into_element(cx)]
                     }
@@ -1163,6 +1169,77 @@ mod tests {
         assert_eq!(row_props.align, fret_ui::element::CrossAlign::Center);
         assert_eq!(row_props.padding.left, SpacingLength::Px(Px(0.0)));
         assert_eq!(row_props.padding.right, SpacingLength::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn button_group_text_derives_internal_label_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let text = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new([ButtonGroupText::new(".com")
+                .test_id("button-group-text-suffix")
+                .into()]),
+        );
+
+        let text_item = &text.children[0];
+        let Some(content_row) = text_item.children.first() else {
+            panic!("expected ButtonGroupText content row");
+        };
+        let Some(label) = content_row.children.first() else {
+            panic!("expected ButtonGroupText label child");
+        };
+
+        assert!(
+            label
+                .semantics_decoration
+                .as_ref()
+                .and_then(|decoration| decoration.test_id.as_deref())
+                .is_some_and(|id| id == "button-group-text-suffix.label"),
+            "expected ButtonGroupText to derive an internal label test id"
+        );
+    }
+
+    #[test]
+    fn button_group_text_custom_children_do_not_get_derived_label_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let child = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds_320x240(),
+            "button-group-text-child",
+            |cx| cx.text("https://"),
+        );
+        let text = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new([ButtonGroupText::new_children([child])
+                .test_id("button-group-text-prefix")
+                .into()]),
+        );
+
+        let text_item = &text.children[0];
+        let Some(content_row) = text_item.children.first() else {
+            panic!("expected ButtonGroupText content row");
+        };
+        let Some(label) = content_row.children.first() else {
+            panic!("expected ButtonGroupText custom label child");
+        };
+
+        assert!(
+            label
+                .semantics_decoration
+                .as_ref()
+                .and_then(|decoration| decoration.test_id.as_deref())
+                .is_none(),
+            "expected custom ButtonGroupText children to keep explicit ownership of child test ids"
+        );
     }
 
     #[test]

@@ -1,0 +1,152 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-button-group-input-group-long-text",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "button_group",
+      "FRET_UI_GALLERY_START_SECTION": "Input Group"
+    },
+    "tags": ["ui_gallery", "shadcn", "button_group", "input_group", "long_text"],
+    "target_hints": [
+      "Starts on the Button Group Input Group fixture.",
+      "Injects a long value into the grouped input through the SetValue path.",
+      "Asserts the input, trailing voice button, and IME/caret anchor remain bounded under long text."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 760.0, "height_px": 640.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+      "text": "enterprise-observability-platform-production-incident-retrospective-channel-with-extra-long-context",
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_len_ge",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "min_len_bytes": 90
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "min_w_px": 260.0,
+        "min_h_px": 30.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "max_w_px": 348.0,
+        "max_h_px": 38.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group" },
+        "max_w_px": 422.0,
+        "max_h_px": 38.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "min_w_px": 23.0,
+        "min_h_px": 23.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "ime_cursor_area_is_some",
+        "is_some": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_ime_cursor_area_within_bounds",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_horizontal_overflow_is",
+        "overflowing": true,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_horizontal_offset_in_range",
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_visible_text_within_viewport",
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_viewport_covers_text_height",
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-button-group-input-group-long-text.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-button-group-input-group-long-text"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-button-group-input-group-long-text" }
+  ]
+}

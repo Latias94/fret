@@ -191,6 +191,7 @@ fn paint_frame(
 }
 
 mod anchored;
+mod anchored_layout_invalidation_harness;
 mod canvas;
 mod combobox_active_descendant_interaction_harness;
 mod command_hooks;

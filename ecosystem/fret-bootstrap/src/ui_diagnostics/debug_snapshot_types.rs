@@ -188,6 +188,8 @@ pub struct UiWindowTextInputSnapshotV1 {
     pub marked_utf16: Option<(u32, u32)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ime_cursor_area: Option<RectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visual: Option<UiTextInputVisualSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

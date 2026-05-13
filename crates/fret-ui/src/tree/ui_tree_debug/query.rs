@@ -455,18 +455,24 @@ impl<H: UiHost> UiTree<H> {
     pub fn debug_node_render_transform(&self, node: NodeId) -> Option<Transform2D> {
         let n = self.nodes.get(node)?;
         let widget = n.widget.as_ref();
+        if let Some(transform) = widget.and_then(|w| w.render_transform(n.bounds)) {
+            return Some(transform);
+        }
         let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
             .then_some(n.prepaint_hit_test)
             .flatten();
         if let Some(inv) = prepaint.as_ref().and_then(|p| p.render_transform_inv) {
             return inv.inverse();
         }
-        widget.and_then(|w| w.render_transform(n.bounds))
+        None
     }
 
     pub fn debug_node_children_render_transform(&self, node: NodeId) -> Option<Transform2D> {
         let n = self.nodes.get(node)?;
         let widget = n.widget.as_ref();
+        if let Some(transform) = widget.and_then(|w| w.children_render_transform(n.bounds)) {
+            return Some(transform);
+        }
         let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
             .then_some(n.prepaint_hit_test)
             .flatten();
@@ -476,7 +482,7 @@ impl<H: UiHost> UiTree<H> {
         {
             return inv.inverse();
         }
-        widget.and_then(|w| w.children_render_transform(n.bounds))
+        None
     }
 
     pub fn debug_text_constraints_snapshot(&self, node: NodeId) -> UiDebugTextConstraintsSnapshot {

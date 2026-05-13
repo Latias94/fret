@@ -1,0 +1,865 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.overlay-placement.anchored-panel-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["overlay", "layout"],
+  "cases": [
+    {
+      "id": "bottom-start-fits-with-gap",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 400.0, "height": 400.0 }
+        },
+        "anchor": {
+          "origin": { "x": 10.0, "y": 10.0 },
+          "size": { "width": 40.0, "height": 10.0 }
+        },
+        "content": { "width": 120.0, "height": 80.0 },
+        "side_offset_px": 8.0,
+        "preferred_side": "bottom",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 28.0 },
+              "size": { "width": 120.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.bottom",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.preferred_fits_without_main_clamp",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "bottom-start-flips-top-near-bottom-edge",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": 10.0, "y": 190.0 },
+          "size": { "width": 40.0, "height": 10.0 }
+        },
+        "content": { "width": 120.0, "height": 80.0 },
+        "side_offset_px": 8.0,
+        "preferred_side": "bottom",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 102.0 },
+              "size": { "width": 120.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.preferred_fits_without_main_clamp",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.flipped_fits_without_main_clamp",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "right-start-flips-left-near-right-edge",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": 190.0, "y": 10.0 },
+          "size": { "width": 10.0, "height": 20.0 }
+        },
+        "content": { "width": 120.0, "height": 40.0 },
+        "side_offset_px": 6.0,
+        "preferred_side": "right",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 64.0, "y": 10.0 },
+              "size": { "width": 120.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.left",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "sized-greedy-prefers-top-with-more-available-space",
+      "scenario": {
+        "variant": "sized",
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": 10.0, "y": 150.0 },
+          "size": { "width": 40.0, "height": 10.0 }
+        },
+        "content": { "width": 120.0, "height": 10000.0 },
+        "side_offset_px": 8.0,
+        "preferred_side": "bottom",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 0.0 },
+              "size": { "width": 120.0, "height": 142.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.preferred_available_main_px",
+            "comparison": "eq",
+            "value": 32.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.flipped_available_main_px",
+            "comparison": "eq",
+            "value": 142.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "collision-padding-bottom-forces-flip",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 100.0 }
+        },
+        "anchor": {
+          "origin": { "x": 10.0, "y": 40.0 },
+          "size": { "width": 40.0, "height": 10.0 }
+        },
+        "content": { "width": 120.0, "height": 40.0 },
+        "side_offset_px": 0.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "collision": {
+            "padding": { "bottom": 20.0 }
+          }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "outer-collision" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 200.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 0.0 },
+              "size": { "width": 120.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "collision-boundary-intersects-before-solving",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": 80.0, "y": 80.0 },
+          "size": { "width": 10.0, "height": 10.0 }
+        },
+        "content": { "width": 60.0, "height": 40.0 },
+        "side_offset_px": 0.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "collision": {
+            "boundary": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 100.0, "height": 100.0 }
+            }
+          }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "outer-collision" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 100.0, "height": 100.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 40.0, "y": 40.0 },
+              "size": { "width": 60.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "rtl-alignment-axis-inverts-vertical-start",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 400.0, "height": 400.0 }
+        },
+        "anchor": {
+          "origin": { "x": 100.0, "y": 100.0 },
+          "size": { "width": 40.0, "height": 10.0 }
+        },
+        "content": { "width": 120.0, "height": 80.0 },
+        "side_offset_px": 8.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "direction": "rtl",
+          "offset": { "alignment_axis_px": 10.0 }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 118.0 },
+              "size": { "width": 120.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.bottom",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "cross-axis-skidding-moves-panel-without-changing-main-axis",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 400.0, "height": 400.0 }
+        },
+        "anchor": {
+          "origin": { "x": 100.0, "y": 100.0 },
+          "size": { "width": 40.0, "height": 10.0 }
+        },
+        "content": { "width": 120.0, "height": 80.0 },
+        "side_offset_px": 8.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "offset": { "cross_axis_px": 12.0 }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 112.0, "y": 118.0 },
+              "size": { "width": 120.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.shift_delta_y_px",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "sticky-always-clamps-detached-cross-axis-into-outer",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 100.0, "height": 100.0 }
+        },
+        "anchor": {
+          "origin": { "x": 150.0, "y": 10.0 },
+          "size": { "width": 10.0, "height": 10.0 }
+        },
+        "content": { "width": 10.0, "height": 10.0 },
+        "side_offset_px": 0.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": { "sticky": "always" }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 90.0, "y": 20.0 },
+              "size": { "width": 10.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.shift_delta_x_px",
+            "comparison": "eq",
+            "value": -60.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "sticky-partial-keeps-panel-touching-detached-anchor",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 100.0, "height": 100.0 }
+        },
+        "anchor": {
+          "origin": { "x": 150.0, "y": 10.0 },
+          "size": { "width": 10.0, "height": 10.0 }
+        },
+        "content": { "width": 10.0, "height": 10.0 },
+        "side_offset_px": 0.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": { "sticky": "partial" }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 140.0, "y": 20.0 },
+              "size": { "width": 10.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.shift_delta_x_px",
+            "comparison": "eq",
+            "value": -10.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "arrow-centers-when-anchor-has-room",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 800.0, "height": 800.0 }
+        },
+        "anchor": {
+          "origin": { "x": 300.0, "y": 200.0 },
+          "size": { "width": 100.0, "height": 20.0 }
+        },
+        "content": { "width": 200.0, "height": 120.0 },
+        "side_offset_px": 8.0,
+        "preferred_side": "bottom",
+        "align": "center",
+        "options": {
+          "arrow": {
+            "size": { "width": 12.0, "height": 12.0 },
+            "padding": {
+              "top": 8.0,
+              "right": 8.0,
+              "bottom": 8.0,
+              "left": 8.0
+            }
+          }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 250.0, "y": 228.0 },
+              "size": { "width": 200.0, "height": 120.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_exists",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_offset_px",
+            "comparison": "eq",
+            "value": 94.0,
+            "eps": 0.1
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_center_offset_abs_px",
+            "comparison": "le",
+            "value": 0.1,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "arrow-clamps-to-padding-near-panel-edge",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 220.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": 0.0, "y": 50.0 },
+          "size": { "width": 10.0, "height": 10.0 }
+        },
+        "content": { "width": 200.0, "height": 80.0 },
+        "side_offset_px": 4.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "arrow": {
+            "size": { "width": 12.0, "height": 12.0 },
+            "padding": {
+              "top": 16.0,
+              "right": 16.0,
+              "bottom": 16.0,
+              "left": 16.0
+            }
+          }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 64.0 },
+              "size": { "width": 200.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_offset_px",
+            "comparison": "ge",
+            "value": 16.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.arrow_center_offset_abs_px",
+            "comparison": "ge",
+            "value": 0.1,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-zero-outer-origin-preserves-global-panel-coordinates",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 100.0, "y": 50.0 },
+          "size": { "width": 300.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": 120.0, "y": 70.0 },
+          "size": { "width": 40.0, "height": 20.0 }
+        },
+        "content": { "width": 80.0, "height": 60.0 },
+        "side_offset_px": 5.0,
+        "preferred_side": "bottom",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 120.0, "y": 95.0 },
+              "size": { "width": 80.0, "height": 60.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.bottom",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.preferred_available_main_px",
+            "comparison": "eq",
+            "value": 155.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "negative-outer-origin-clamps-cross-axis-to-outer-min-not-zero",
+      "scenario": {
+        "outer": {
+          "origin": { "x": -200.0, "y": -100.0 },
+          "size": { "width": 300.0, "height": 200.0 }
+        },
+        "anchor": {
+          "origin": { "x": -240.0, "y": -80.0 },
+          "size": { "width": 20.0, "height": 20.0 }
+        },
+        "content": { "width": 80.0, "height": 40.0 },
+        "side_offset_px": 5.0,
+        "preferred_side": "bottom",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": -200.0, "y": -55.0 },
+              "size": { "width": 80.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.shift_delta_x_px",
+            "comparison": "eq",
+            "value": 40.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "offset-collision-boundary-intersects-and-insets-before-solving",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 500.0, "height": 500.0 }
+        },
+        "anchor": {
+          "origin": { "x": 120.0, "y": 130.0 },
+          "size": { "width": 40.0, "height": 20.0 }
+        },
+        "content": { "width": 80.0, "height": 50.0 },
+        "side_offset_px": 5.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "collision": {
+            "boundary": {
+              "origin": { "x": 100.0, "y": 100.0 },
+              "size": { "width": 200.0, "height": 160.0 }
+            },
+            "padding": {
+              "top": 20.0,
+              "right": 30.0,
+              "bottom": 40.0,
+              "left": 10.0
+            }
+          }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "outer-collision" },
+            "expected": {
+              "origin": { "x": 110.0, "y": 120.0 },
+              "size": { "width": 160.0, "height": 100.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 120.0, "y": 155.0 },
+              "size": { "width": 80.0, "height": 50.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.bottom",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "shift-cross-axis-disabled-preserves-horizontal-overflow",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 100.0, "height": 100.0 }
+        },
+        "anchor": {
+          "origin": { "x": 90.0, "y": 10.0 },
+          "size": { "width": 20.0, "height": 20.0 }
+        },
+        "content": { "width": 80.0, "height": 40.0 },
+        "side_offset_px": 0.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "shift": { "cross_axis": false }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 90.0, "y": 30.0 },
+              "size": { "width": 80.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.shift_delta_x_px",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "shift-main-axis-disabled-preserves-main-axis-overflow",
+      "scenario": {
+        "outer": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 100.0, "height": 100.0 }
+        },
+        "anchor": {
+          "origin": { "x": 10.0, "y": 45.0 },
+          "size": { "width": 20.0, "height": 10.0 }
+        },
+        "content": { "width": 80.0, "height": 90.0 },
+        "side_offset_px": 0.0,
+        "preferred_side": "bottom",
+        "align": "start",
+        "options": {
+          "shift": { "main_axis": false }
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 55.0 },
+              "size": { "width": 80.0, "height": 90.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.bottom",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.shift_delta_y_px",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "sized-non-zero-outer-origin-prefers-top-and-clamps-to-available-space",
+      "scenario": {
+        "variant": "sized",
+        "outer": {
+          "origin": { "x": 100.0, "y": 50.0 },
+          "size": { "width": 200.0, "height": 150.0 }
+        },
+        "anchor": {
+          "origin": { "x": 120.0, "y": 160.0 },
+          "size": { "width": 40.0, "height": 20.0 }
+        },
+        "content": { "width": 100.0, "height": 300.0 },
+        "side_offset_px": 5.0,
+        "preferred_side": "bottom",
+        "align": "start"
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 120.0, "y": 50.0 },
+              "size": { "width": 100.0, "height": 105.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.chosen_side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.preferred_available_main_px",
+            "comparison": "eq",
+            "value": 15.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored_panel.flipped_available_main_px",
+            "comparison": "eq",
+            "value": 105.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    }
+  ]
+}

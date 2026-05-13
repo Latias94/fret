@@ -12,6 +12,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::ButtonGroup::new([
         shadcn::ButtonGroupText::new_children([shadcn::Label::new("https://")
             .for_control(control_id)
+            .test_id("ui-gallery-button-group-text-prefix-label")
             .into_element(cx)])
         .test_id("ui-gallery-button-group-text-prefix")
         .into(),

@@ -1401,6 +1401,11 @@ fn combobox_with_patch<H: UiHost>(
         } else {
             cx.local_model_keyed("query", String::new)
         };
+        let content_test_id = content_test_id.or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-content")))
+        });
 
         let should_clear_query = cx.slot_state(kit_combobox::ClearQueryOnCloseState::default, |state| {
             kit_combobox::should_clear_query_on_close(state, is_open)
@@ -1800,6 +1805,13 @@ fn combobox_with_patch<H: UiHost>(
                                                 label_style.letter_spacing_em
                                             {
                                                 label = label.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            if let Some(prefix) =
+                                                test_id_prefix_for_trigger.as_deref()
+                                            {
+                                                label = label.test_id(format!(
+                                                    "{prefix}-trigger-label"
+                                                ));
                                             }
                                             label.into_element(cx)
                                         };
@@ -2637,6 +2649,10 @@ fn combobox_with_patch<H: UiHost>(
                                     if let Some(letter_spacing_em) = label_style.letter_spacing_em
                                     {
                                         label = label.letter_spacing_em(letter_spacing_em);
+                                    }
+                                    if let Some(prefix) = test_id_prefix_for_trigger.as_deref() {
+                                        label =
+                                            label.test_id(format!("{prefix}-trigger-label"));
                                     }
                                     label.into_element(cx)
                                 };
@@ -3989,6 +4005,86 @@ mod tests {
         assert!(
             icon_right >= trigger_right - 24.0,
             "expected chevron near inline end: trigger_right={trigger_right}, icon_right={icon_right}"
+        );
+    }
+
+    #[test]
+    fn combobox_trigger_long_label_stays_before_chevron() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let selected_value = Arc::<str>::from("enterprise-observability-platform");
+        let model = app.models_mut().insert(Some(selected_value.clone()));
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "combobox-trigger-long-label",
+            |cx| {
+                vec![
+                    Combobox::new(model.clone(), open.clone())
+                        .a11y_label("Combobox")
+                        .test_id_prefix("combobox-long-label")
+                        .items([ComboboxItem::new(
+                            selected_value.clone(),
+                            "Enterprise Observability Platform With Extremely Long Label",
+                        )])
+                        .into_element_parts(cx, |_cx| {
+                            vec![ComboboxPart::trigger(
+                                ComboboxTrigger::new()
+                                    .variant(ComboboxTriggerVariant::Button)
+                                    .width_px(Px(180.0)),
+                            )]
+                        }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("combobox-long-label-trigger"))
+            .expect("trigger semantics node");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("combobox-long-label-trigger-label"))
+            .expect("trigger label semantics node");
+        let icon = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("combobox-long-label-trigger-icon"))
+            .expect("trigger icon semantics node");
+
+        let trigger_right = trigger.bounds.origin.x.0 + trigger.bounds.size.width.0;
+        let label_right = label.bounds.origin.x.0 + label.bounds.size.width.0;
+        let icon_left = icon.bounds.origin.x.0;
+        let icon_right = icon.bounds.origin.x.0 + icon.bounds.size.width.0;
+
+        assert!(
+            label_right <= icon_left + 1.0,
+            "expected long label to stay before chevron: label_right={label_right}, icon_left={icon_left}"
+        );
+        assert!(
+            icon_right >= trigger_right - 24.0,
+            "expected chevron to remain near inline end: trigger_right={trigger_right}, icon_right={icon_right}"
         );
     }
 

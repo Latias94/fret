@@ -1,0 +1,130 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-input-group-rtl-addon-order",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "input_group",
+      "FRET_UI_GALLERY_START_SECTION": "RTL"
+    },
+    "tags": ["ui_gallery", "shadcn", "input_group", "rtl", "layout"],
+    "target_hints": [
+      "Starts on the Input Group RTL fixture.",
+      "Asserts authored leading/trailing addons map to the correct physical sides under RTL.",
+      "Asserts leading/control/trailing remain non-overlapping and vertically aligned."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-rtl" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 640.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-rtl" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-rtl" },
+        "min_w_px": 300.0,
+        "min_h_px": 34.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-leading" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-control" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-control" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-trailing" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-leading" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-control" },
+        "metric": "left",
+        "comparison": "ge",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-trailing" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-control" },
+        "metric": "right",
+        "comparison": "le",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-leading" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-control" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-trailing" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-rtl-control" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-input-group-rtl-addon-order.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-input-group-rtl-addon-order"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-input-group-rtl-addon-order" }
+  ]
+}

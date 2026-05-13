@@ -23,6 +23,8 @@ pub(super) fn preview_combobox(
     let responsive = snippets::responsive::render(cx);
     let multiple = snippets::multiple_selection::render(cx);
     let custom_items = snippets::custom_items::render(cx);
+    let long_text = snippets::long_text::render(cx);
+    let rtl_long_text = snippets::rtl_long_text::render(cx);
     let long_list = snippets::long_list::render(cx);
     let invalid = snippets::invalid::render(cx);
     let disabled = snippets::disabled::render(cx);
@@ -114,6 +116,18 @@ pub(super) fn preview_combobox(
         .test_id_prefix("ui-gallery-combobox-responsive-docsec")
         .no_shell()
         .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
+    let long_text = DocSection::build(cx, "Long Text", long_text)
+        .description(
+            "Constrained trigger and popup item text fixture for truncation and inline icon spacing.",
+        )
+        .test_id_prefix("ui-gallery-combobox-long-text-docsec")
+        .code_rust_from_file_region(snippets::long_text::SOURCE, "example");
+    let rtl_long_text = DocSection::build(cx, "RTL Long Text", rtl_long_text)
+        .description(
+            "RTL companion for constrained trigger and popup item text, including chevron and checkmark ownership.",
+        )
+        .test_id_prefix("ui-gallery-combobox-rtl-long-text-docsec")
+        .code_rust_from_file_region(snippets::rtl_long_text::SOURCE, "example");
     let groups_with_separator = DocSection::build(cx, "Groups + Separator", groups_with_separator)
         .description("Fret follow-up for explicit separator coverage between grouped sections.")
         .code_rust_from_file_region(snippets::groups_with_separator::SOURCE, "example")
@@ -130,7 +144,7 @@ pub(super) fn preview_combobox(
     let notes = doc_layout::notes_block([
         "Base UI lifecycle parity already covers `onValueChange`, `onOpenChange`, reason-aware open changes, and transition-complete callbacks.",
         "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
-        "`Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay after `API Reference` as explicit Fret follow-ups so the docs path remains readable without losing diagnostics coverage.",
+        "`Responsive`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay after `API Reference` as explicit Fret follow-ups so the docs path remains readable without losing diagnostics coverage.",
         "For invalid visuals, use root `Combobox::aria_invalid(true)` and pair it with caller-owned field-level error copy.",
         "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
     ]);
@@ -141,7 +155,7 @@ pub(super) fn preview_combobox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
+            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
         ),
         vec![
             basic,
@@ -158,6 +172,8 @@ pub(super) fn preview_combobox(
             rtl,
             api_reference,
             responsive,
+            long_text,
+            rtl_long_text,
             conformance_demo,
             groups_with_separator,
             label,

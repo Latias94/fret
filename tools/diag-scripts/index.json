@@ -3434,6 +3434,51 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-input-group-geometry",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "geometry",
+        "input-group",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts on the Button Group Input Group fixture.",
+        "Asserts trailing voice-button/icon centering, input width, and control non-overlap."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-input-group-long-text",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "input-group",
+        "long-text",
+        "shadcn",
+        "text-input",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts on the Button Group Input Group fixture.",
+        "Injects a long input value and asserts overflow, horizontal offset, visible-text viewport clipping, IME caret bounds, and trailing-control non-overlap."
+      ]
+    },
+    {
       "id": "ui-gallery-button-link-render",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
       "required_capabilities": [
@@ -5396,6 +5441,83 @@
       ]
     },
     {
+      "id": "ui-gallery-combobox-input-group-long-query-text",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "input-group",
+        "long-text",
+        "shadcn",
+        "text-input",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Input Group fixture.",
+        "Injects a long query into the searchable input with an inline addon.",
+        "Asserts TextInput paint-time overflow, horizontal offset range, and visible text viewport clipping."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-long-text-geometry",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "long_text",
+        "shadcn",
+        "truncation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Long Text fixture.",
+        "Asserts selected trigger label truncation before the chevron.",
+        "Asserts selected option label truncation before the checkmark."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-rtl-long-text-geometry",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "truncation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox RTL Long Text fixture.",
+        "Asserts selected trigger label ownership against the physical-left RTL chevron.",
+        "Asserts selected option label ownership against the physical-right RTL checkmark."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-popup-trigger-bottom-room",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json",
       "required_capabilities": [
@@ -5418,6 +5540,30 @@
         "Starts on the Combobox Popup section in a taller viewport.",
         "Keeps enough space below the trigger so collision solving should preserve bottom placement.",
         "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-responsive-open",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox"
+      ],
+      "tags": [
+        "combobox",
+        "desktop",
+        "responsive",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Combobox page with only the Responsive section mounted in a desktop viewport.",
+        "Opens the responsive demo combobox trigger.",
+        "Captures a layout sidecar, screenshot, and bundle to validate desktop overlay placement."
       ]
     },
     {
@@ -5513,6 +5659,30 @@
         "Sets theme preset to zinc/dark.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
         "Captures screenshots to gate currentColor-driven icon visibility (enabled + disabled rows)."
+      ]
+    },
+    {
+      "id": "ui-gallery-command-docs-demo-long-query-text",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "command",
+        "long_text",
+        "shadcn",
+        "text_input",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Command docs demo palette.",
+        "Injects a long query into the cmdk-style command input.",
+        "Asserts TextInput paint-time overflow, offset, visible viewport clipping, and text-height coverage."
       ]
     },
     {
@@ -6955,6 +7125,30 @@
       ]
     },
     {
+      "id": "ui-gallery-input-basic-and-file-long-text",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "file",
+        "input",
+        "long_text",
+        "shadcn",
+        "text_input",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page through the stable UI Gallery nav path.",
+        "Injects long values into a plain Input and the file-composition Input.",
+        "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, and text-height coverage."
+      ]
+    },
+    {
       "id": "ui-gallery-input-docs-screenshots",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
       "required_capabilities": [
@@ -7550,6 +7744,33 @@
         "Starts on the Menubar RTL section in a wide viewport.",
         "Opens the RTL File menu and hovers the Share submenu trigger.",
         "Asserts logical inline-end submenu placement resolves to the physical left in RTL."
+      ]
+    },
+    {
+      "id": "ui-gallery-menubar-rtl-submenu-tight-left-collision",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-tight-left-collision.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "collision",
+        "menubar",
+        "placement",
+        "rtl",
+        "shadcn",
+        "submenu",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Menubar RTL section in a tighter viewport.",
+        "Opens the RTL File menu and hovers the Share submenu trigger.",
+        "Asserts collision flips the submenu back to the physical right when left room is insufficient."
       ]
     },
     {

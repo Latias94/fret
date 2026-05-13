@@ -24,9 +24,28 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_roving_focus_in
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_nested_focus_scope_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_scope_stale_parent_interaction_matches_oracles -- --nocapture
+cargo nextest run -p fret-ui mechanism_harness_anchored_panel_placement_matches_oracles
+cargo nextest run -p fret-ui mechanism_harness_anchored_layout_invalidation_matches_oracles
 cargo test --profile dev-fast -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
+```
+
+## Core Overlay Placement Gates
+
+```powershell
+python -m json.tool crates/fret-ui/src/overlay_placement/fixtures/anchored_panel_placement_v1.json
+cargo nextest run -p fret-ui mechanism_harness_anchored_panel_placement_matches_oracles
+```
+
+## Anchored Layout Invalidation Gates
+
+```powershell
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_layout_invalidation_v1.json
+cargo nextest run -p fret-ui mechanism_harness_anchored_layout_invalidation_matches_oracles
+cargo nextest run -p fret-ui anchored_anchor_element_uses_render_transformed_visual_bounds
+cargo nextest run -p fret-ui anchored_anchor_element_uses_scroll_transformed_visual_bounds
+cargo nextest run -p fret-ui anchored
 ```
 
 ## View-Cache and Root-Boundary Gates
@@ -135,12 +154,22 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanis
 ```powershell
 cargo test -p fret-ui-shadcn --test web_vs_fret_overlay_placement web_vs_fret_combobox_cases_match_web_fixtures -- --nocapture
 cargo test -p fret-ui-shadcn --lib combobox_trigger_places_chevron_at_inline_end -- --nocapture
+cargo test -p fret-ui-shadcn --lib combobox_trigger_long_label_stays_before_chevron -- --nocapture
+cargo test -p fret-ui-shadcn --lib command_palette_test_id_prefix_derives_surface_ids -- --nocapture
+cargo nextest run -p fret-ui-shadcn popover_first_open_center_alignment_uses_explicit_width_for_x
+cargo test -p fret-ui-shadcn --lib popover::tests::popover_transformed_trigger_uses_visual_anchor_bounds -- --exact --nocapture
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-open-neutral-dark-screenshot.json --dir target/fret-diag-mechanism-harness-runtime --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-narrow-open-screenshot.json --dir target/fret-diag-mechanism-harness-runtime --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json --dir target/fret-diag-cb-responsive-tightened --session-auto --launch -- target/release/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-label-checkmark --session-auto --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json --dir target/fret-diag-combobox-popup-bottom-room-label-checkmark --session-auto --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-long-text-geometry-v4 --session-auto --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current evidence anchors:
 
+- Visual parity matrix:
+  `docs/workstreams/fret-mechanism-harness-v1/VISUAL_PARITY_MATRIX.md`
 - Normal-width open screenshot after the chevron fix:
   `target/fret-diag-mechanism-harness-runtime/sessions/1778558055240-49296/screenshots/1778558059695-ui-gallery-combobox-basic-neutral-dark-open/window-4294967297-tick-101-frame-101.png`
 - Normal-width open placement trace after the Popover size-hint fix:
@@ -153,8 +182,148 @@ Current evidence anchors:
   `target/fret-diag-mechanism-harness-runtime/sessions/1778557035697-61384/screenshots/1778557037892-ui-gallery-combobox-demo-open-narrow/window-4294967297-tick-59-frame-59.png`
 - Screenshot script hardening:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-open-neutral-dark-screenshot.json`
+- Trigger chrome screenshot gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-trigger-screenshot-zinc-dark.json`
+  - scrolls `ui-gallery-nav-combobox` into view before `click_stable`
+  - asserts `ui-gallery-combobox-multiple-trigger` stays within the window and at least
+    `240px x 32px`
+  - captures a layout sidecar for the trigger chrome section
+  - suite membership: `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`
+  - evidence:
+    `target/fret-diag-combobox-trigger-zinc-dark/sessions/1778609257776-96708/1778609258840/script.result.json`
+  - screenshot:
+    `target/fret-diag-combobox-trigger-zinc-dark/sessions/1778609257776-96708/screenshots/.../window-4294967297-tick-75-frame-75.png`
 - Combobox placement fixture suite:
   `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_combobox_cases_v1.json`
+- Responsive Combobox desktop placement gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json`
+  - asserts `preferred_side=bottom`, `chosen_side=bottom`, `flipped=false`, and `side_offset_px=6`
+  - asserts visible content left aligns with the trigger and visible content width is 200px against
+    the 150px responsive trigger
+  - suite membership: `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`
+  - evidence:
+    `target/fret-diag-cb-responsive-tightened/sessions/1778583319711-74988/script.result.json`
+  - trace: `anchor=ui-gallery-combobox-responsive-trigger`,
+    `content=ui-gallery-combobox-responsive-content`, `chosen_side=bottom`, `side_offset_px=6`
+- Command item internal-anchor gate:
+  `ecosystem/fret-ui-shadcn/src/command.rs`
+  - test: `command_palette_test_id_prefix_derives_surface_ids`
+  - protects `.chrome`, `.label`, and `.checkmark` surfaces derived from a `test_id_prefix` so
+    runtime diagnostics can inspect item internals.
+- Popup-trigger label/checkmark geometry gates:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json` and
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json`
+  - assert listbox/option size, row spacing, label size, label vertical centering, label left inset,
+    checkmark size, checkmark vertical centering, and checkmark left inset.
+  - top-flip evidence:
+    `target/fret-diag-combobox-popup-label-checkmark/sessions/1778616773537-101944/script.result.json`
+  - top-flip bundle with item child anchors:
+    `target/fret-diag-combobox-popup-label-checkmark/sessions/1778616773537-101944/1778616779787-ui-gallery-combobox-popup-trigger-open/bundle.schema2.json`
+  - bottom-room evidence:
+    `target/fret-diag-combobox-popup-bottom-room-label-checkmark/sessions/1778616793292-16876/script.result.json`
+  - bottom-room bundle with item child anchors:
+    `target/fret-diag-combobox-popup-bottom-room-label-checkmark/sessions/1778616793292-16876/1778616796767-ui-gallery-combobox-popup-trigger-bottom-room-open/bundle.schema2.json`
+- Combobox long-text trigger/option geometry gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json`
+  - asserts trigger label width budget, label-before-chevron right delta, chrome-relative vertical
+    centering, popup placement, option label width budget, option label/checkmark insets, and
+    option label vertical centering.
+  - focused test:
+    `combobox_trigger_long_label_stays_before_chevron`
+  - evidence:
+    `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/script.result.json`
+  - bundle with long-text child anchors:
+    `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/1778619501160-ui-gallery-combobox-long-text-open/bundle.schema2.json`
+- Popover first-open explicit-width center alignment gate:
+  `ecosystem/fret-ui-shadcn/src/popover.rs`
+  - test: `popover_first_open_center_alignment_uses_explicit_width_for_x`
+  - protects the component bridge from reusing the default `288px` estimate for visible x placement
+    when explicit content width is smaller.
+- Popover transformed-trigger visual anchor gate:
+  `ecosystem/fret-ui-shadcn/src/popover.rs`
+  - test: `popover_transformed_trigger_uses_visual_anchor_bounds`
+  - protects the recipe path from anchoring to wrapper/layout x=`40` instead of the inner
+    transformed trigger x=`340`.
+
+## Shadcn Button Group Layout Gates
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json --dir target/fret-diag-button-group-size --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json --dir target/fret-diag-control-chrome-button-group-text --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json --dir target/fret-diag-button-group-input-group-geometry --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json --dir target/fret-diag-button-group-input-group-long-text --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json --dir target/fret-diag-input-group-rtl-addon-order --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json --dir target/fret-diag-input-button-group-fill --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo test -p fret-ui-shadcn --lib button_group_text_derives_internal_label_test_id -- --nocapture
+cargo test -p fret-ui-shadcn --lib button_group_text_custom_children_do_not_get_derived_label_test_id -- --nocapture
+cargo test -p fret-ui-shadcn --lib input_group_button_derives_internal_test_ids -- --nocapture
+cargo test -p fret-ui-shadcn --lib input_group_text_stamps_test_id -- --nocapture
+cargo test -p fret-diag-protocol --lib predicate_text_input_ime_cursor_area_within_bounds_serializes_and_deserializes -- --nocapture
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json --dir target/fret-diag-button-group-text-alignment-v2 --session-auto --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json --dir target/fret-diag-button-group-input-group-geometry-final-current --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json --dir target/fret-diag-button-group-input-group-long-text-final-current --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json --dir target/fret-diag-input-group-rtl-addon-order-final-current --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+```
+
+Current evidence anchors:
+
+- Size gate evidence:
+  `target/fret-diag-button-group-size/...`
+- Size layout sidecar:
+  `target/fret-diag-button-group-size/.../layout.taffy.v1.json`
+- The related control-chrome and input gates are tracked in the same shadcn suite:
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+- ButtonGroupText alignment gate:
+  `tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json`
+  - asserts `w-fit`, prefix/suffix label size, prefix/suffix label vertical centering inside their
+    segments, and prefix/suffix segment vertical centering against the input control.
+  - focused internal-anchor tests:
+    `button_group_text_derives_internal_label_test_id` and
+    `button_group_text_custom_children_do_not_get_derived_label_test_id`.
+  - evidence:
+    `target/fret-diag-button-group-text-alignment-v2/sessions/1778621202064-80960/script.result.json`
+  - bundle with label anchors:
+    `target/fret-diag-button-group-text-alignment-v2/sessions/1778621202064-80960/1778621207864-ui-gallery-control-chrome-button-group-text-w-fit/bundle.schema2.json`
+- Button Group Input Group geometry gate:
+  `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json`
+  - asserts root/control/add-button/voice-button/icon sizes, voice icon centering inside the voice
+    button, voice button vertical centering against the input, and input-vs-trailing-button
+    non-overlap.
+  - focused internal-anchor test:
+    `input_group_button_derives_internal_test_ids`.
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-button-group-input-group-geometry.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-button-group-input-group-geometry`)
+  - current evidence:
+    `target/fret-diag-button-group-input-group-geometry-final-current/1778624775617/script.result.json`
+  - current share pack:
+    `target/fret-diag-button-group-input-group-geometry-final-current/share/1778624775617.zip`
+- Button Group Input Group long-text caret/bounds gate:
+  `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json`
+  - injects a long value, asserts the value remains present, the input/root stay bounded, the
+    trailing voice button does not overlap the input, and the runtime IME/caret area stays within
+    the input control bounds.
+  - mechanism predicate contract:
+    `text_input_ime_cursor_area_within_bounds`.
+  - protocol roundtrip test:
+    `predicate_text_input_ime_cursor_area_within_bounds_serializes_and_deserializes`.
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json`
+  - current evidence:
+    `target/fret-diag-button-group-input-group-long-text-final-current/1778626121814/script.result.json`
+  - current share pack:
+    `target/fret-diag-button-group-input-group-long-text-final-current/share/1778626121814.zip`
+- Input Group RTL addon-order gate:
+  `tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json`
+  - asserts logical leading/trailing addons map to the correct physical sides under RTL, remain
+    non-overlapping with the control, and stay vertically centered against the control.
+  - focused internal-anchor test:
+    `input_group_text_stamps_test_id`.
+  - current evidence:
+    `target/fret-diag-input-group-rtl-addon-order-final-current/1778627682652/script.result.json`
+  - current share pack:
+    `target/fret-diag-input-group-rtl-addon-order-final-current/share/1778627682652.zip`
 
 ## Shadcn DropdownMenu Submenu Placement Gate
 
@@ -320,6 +489,29 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json`
 - Shadcn recipe typeahead runner:
   `ecosystem/fret-ui-shadcn/tests/recipe_typeahead_mechanism_harness.rs`
+- Anchored panel overlay placement fixture:
+  `crates/fret-ui/src/overlay_placement/fixtures/anchored_panel_placement_v1.json`
+- Anchored panel overlay placement runner:
+  `crates/fret-ui/src/overlay_placement/tests.rs`
+- Anchored layout invalidation fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/anchored_layout_invalidation_v1.json`
+- Anchored layout invalidation runner:
+  `crates/fret-ui/src/declarative/tests/anchored_layout_invalidation_harness.rs`
+- Anchored prop-diff fix:
+  `crates/fret-ui/src/declarative/mount.rs`
+- Anchored transformed-anchor fix:
+  `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - focused gate: `anchored_anchor_element_uses_render_transformed_visual_bounds`
+  - before fix: panel x=`0` from raw layout bounds; after fix: panel x=`40` from visual bounds.
+- Anchored scroll-transformed anchor fix:
+  `crates/fret-ui/src/tree/layout/state.rs`,
+  `crates/fret-ui/src/tree/ui_tree_debug/query.rs`
+  - focused gate: `anchored_anchor_element_uses_scroll_transformed_visual_bounds`
+  - before fix: panel y=`90` from stale/content-space placement; after fix: panel y=`30` from
+    scrolled visual bounds.
+  - companion scroll gates:
+    `scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate` and
+    `scroll_wheel_updates_offset_and_shifts_child_bounds`
 - UI Gallery overlay/focus runtime suite:
   `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
 - UI Gallery overlay/focus runtime scripts:
@@ -331,9 +523,32 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
 - Combobox popup-trigger placement gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json`
-  - asserts collision flip to top and `side_offset_px=6`
+  - asserts collision flip to top, `side_offset_px=6`, visible and stable trigger/content-shell
+    bounds, content-shell top/bottom side gap, content left/width alignment with the trigger,
+    listbox min/max size, option min/max size, and first-to-second row spacing
+  - current content-shell evidence:
+    `target/fret-diag-combobox-popup-trigger-content-current/1778629033429/script.result.json`
+  - current content-shell share pack:
+    `target/fret-diag-combobox-popup-trigger-content-current/share/1778629033429.zip`
+  - bounds proof:
+    content bottom `369.33331`, trigger top `375.3333`, gap `6px`
+  - current deterministic tight-window evidence:
+    `target/fret-diag-combobox-popup-tight-fixed-current/script.result.json`
+  - current share pack:
+    `target/fret-diag-combobox-popup-tight-fixed-current/share/1778622970638.zip`
+  - current Codex rerun evidence:
+    `target/fret-diag/codex-combobox-popup-tight/sessions/1778634941245-107020/script.result.json`
+  - current Codex rerun share pack:
+    `target/fret-diag/codex-combobox-popup-tight/sessions/1778634941245-107020/share/1778634943439.zip`
+  - current Codex trace proof:
+    preferred `Bottom`, chosen `Top`, flipped, side offset `6.0`, final rect `(377.7, 165.3, 256.0, 204.0)`,
+    shift `(0.0, 0.0)`
+  - current Codex screenshot:
+    `target/fret-diag/codex-combobox-popup-tight/sessions/1778634941245-107020/screenshots/1778634944932-ui-gallery-combobox-popup-trigger-open/window-4294967297-tick-79-frame-79.png`
   - evidence:
-    `target/fret-diag-combobox-popup-position-side-offset/sessions/1778576696581-76876/1778576699867/script.result.json`
+    `target/fret-diag-combobox-popup-trigger-visible-bounds/sessions/1778609728199-76436/1778609729283/script.result.json`
+  - row-bounds evidence:
+    `target/fret-diag-combobox-popup-trigger-row-bounds/sessions/1778610794278-89396/1778610796686/script.result.json`
   - layout sidecar:
     `target/fret-diag-combobox-popup-position-side-offset/sessions/1778576696581-76876/1778576702191-ui-gallery-combobox-popup-trigger-open.layout/layout.taffy.v1.json`
   - screenshot:
@@ -341,12 +556,144 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - Companion Combobox popup-trigger bottom-room gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json`
   - asserts preferred-bottom placement with `chosen_side=bottom`, `flipped=false`, and `side_offset_px=6`
+  - asserts visible and stable trigger/content-shell bounds, content-shell top/bottom side gap,
+    content left/width alignment with the trigger, listbox min/max size, option min/max size, and
+    first-to-second row spacing
+  - current content-shell evidence:
+    `target/fret-diag-combobox-popup-bottom-room-content-current/1778629019743/script.result.json`
+  - current content-shell share pack:
+    `target/fret-diag-combobox-popup-bottom-room-content-current/share/1778629019743.zip`
+  - bounds proof:
+    trigger bottom `503.3333`, content top `509.33334`, gap `6px`
+  - current debug-exe evidence:
+    `target/fret-diag-combobox-popup-bottom-room-debug-current/script.result.json`
+  - current share pack:
+    `target/fret-diag-combobox-popup-bottom-room-debug-current/share/1778622441910.zip`
   - evidence:
-    `target/fret-diag-combobox-popup-bottom-room/sessions/1778578242074-69792/1778578244187/script.result.json`
+    `target/fret-diag-combobox-popup-bottom-room-visible-bounds/sessions/1778609769648-73816/1778609770731/script.result.json`
+  - row-bounds evidence:
+    `target/fret-diag-combobox-popup-bottom-room-row-bounds/sessions/1778610812280-94832/1778610814288/script.result.json`
   - layout sidecar:
     `target/fret-diag-combobox-popup-bottom-room/sessions/1778578242074-69792/1778578245269-ui-gallery-combobox-popup-trigger-bottom-room-open.layout/layout.taffy.v1.json`
   - screenshot:
     `target/fret-diag-combobox-popup-bottom-room/sessions/1778578242074-69792/screenshots/1778578245323-ui-gallery-combobox-popup-trigger-bottom-room-open/window-4294967297-tick-62-frame-62.png`
+  - current Codex rerun evidence:
+    `target/fret-diag/codex-combobox-popup-bottom/sessions/1778634652696-96372/script.result.json`
+  - current Codex rerun share pack:
+    `target/fret-diag/codex-combobox-popup-bottom/sessions/1778634652696-96372/share/1778634922898.zip`
+  - current Codex trace proof:
+    preferred `Bottom`, chosen `Bottom`, side offset `6.0`, final rect `(377.7, 509.3, 256.0, 204.0)`,
+    shift `(0.0, 0.0)`
+  - current Codex screenshot:
+    `target/fret-diag/codex-combobox-popup-bottom/sessions/1778634652696-96372/screenshots/1778634924219-ui-gallery-combobox-popup-trigger-bottom-room-open/window-4294967297-tick-69-frame-69.png`
+- Button Group Input Group long-text visible-text gate:
+  `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json`
+  - asserts bounded input/root geometry, trailing-control non-overlap, IME cursor area inside the
+    input, text-input horizontal overflow, offset range, and visible text inside the padded content
+    viewport
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-button-group-input-group-long-text`)
+  - current evidence:
+    `target/fret-diag-button-group-input-group-long-text-text-visual-current/1778630553853/script.result.json`
+  - current share pack:
+    `target/fret-diag-button-group-input-group-long-text-text-visual-current/share/1778630553853.zip`
+  - redirect-path evidence:
+    `target/fret-diag-button-group-input-group-long-text-redirect-current/1778631486645/script.result.json`
+  - redirect-path share pack:
+    `target/fret-diag-button-group-input-group-long-text-redirect-current/share/1778631486645.zip`
+  - visual proof:
+    content width `625.2627`, viewport width `326.0`, offset/max offset `299.2627`, visible text
+    bounds inside viewport `x=335.33334..661.33337`
+- Combobox Input Group long-query visible-text gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json`
+  - asserts the searchable combobox input with an inline search addon keeps long-query text within
+    its viewport, clamps horizontal offset, reports overflow, keeps the IME cursor inside bounds,
+    and covers the measured text height
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-combobox-input-group-long-query-text.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-combobox-input-group-long-query-text`)
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-combobox/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - current evidence:
+    `target/fret-diag-combobox-input-group-long-query-text-height-current/1778633183489/script.result.json`
+  - current share pack:
+    `target/fret-diag-combobox-input-group-long-query-text-height-current/share/1778633183489.zip`
+  - visual proof after the TextInput viewport-height fix:
+    viewport height `20.0`, clip height `20.0`, visible text height `20.0`, text run height `20.0`,
+    content width `511.00684`, viewport width `170.0`, offset/max offset `341.00684`
+- Command docs demo long-query visible-text gate:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json`
+  - asserts the cmdk-style Command search input keeps long-query text inside its viewport, clamps
+    horizontal offset, reports overflow, keeps the IME cursor inside bounds, and covers the measured
+    text height
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-command-docs-demo-long-query-text`)
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - first-run harness failure evidence:
+    `target/fret-diag/codex-command-long-query/sessions/1778633868562-103168/script.result.json`
+  - current passing evidence:
+    `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/script.result.json`
+  - current share pack:
+    `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/share/1778634605262.zip`
+  - current screenshot:
+    `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/screenshots/1778634607431-ui-gallery-command-docs-demo-long-query-text/window-4294967297-tick-80-frame-80.png`
+- Input Basic + File long-text visible-text gate:
+  `tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json`
+  - asserts a plain Input and the file-composition Input both expose direct editable text-field
+    semantics, accept long values, report horizontal overflow, keep offset in range, keep visible
+    text inside the viewport, keep the IME cursor inside bounds, and cover measured text height
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-input-basic-and-file-long-text`)
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - first failed evidence, before the Basic Input builder-order fix:
+    `target/fret-diag/codex-input-basic-file-long-text/sessions/1778635410854-100860/script.result.json`
+  - second failed evidence, after assigning a unique id but before moving `.test_id(...)` before
+    `.into_element(cx)`:
+    `target/fret-diag/codex-input-basic-file-long-text-fixed/sessions/1778635816647-104372/script.result.json`
+  - current passing evidence:
+    `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/script.result.json`
+  - current share pack:
+    `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/share/1778636299109.zip`
+  - current slices:
+    `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/1778636303293-ui-gallery-input-basic-and-file-long-text/slice.ui-gallery-input-basic-control.json`,
+    `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/1778636303293-ui-gallery-input-basic-and-file-long-text/slice.ui-gallery-input-file-control.json`
+  - current screenshot:
+    `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/screenshots/1778636303293-ui-gallery-input-basic-and-file-long-text/window-4294967297-tick-65-frame-65.png`
+- Text-control authoring-surface gate:
+  `apps/fret-ui-gallery/tests/ui_snippets_text_control_test_id_surface.rs`
+  - reads UI Gallery diagnostics scripts under `tools/diag-scripts/ui-gallery`
+  - collects `set_text_value` `test_id` targets and rejects snippet source chains that stamp the
+    same id after `.into_element(cx)`
+  - protects the F59 failure mode where a text-control id resolves to a landed wrapper instead of
+    the editable text-field semantics node
+  - command:
+    `CARGO_TARGET_DIR=target/codex-diag cargo nextest run -p fret-ui-gallery --test ui_snippets_text_control_test_id_surface`
+  - result: passed
+  - Nextest run id: `89607014-877d-49c3-9f92-b3d3d12a68d7`
+- Combobox responsive visible-bounds placement gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json`
+  - Asserts preferred/chosen bottom placement, `side_offset_px=6`, content left alignment with the
+    trigger, and the documented responsive `150px` trigger / `200px` desktop popover width delta.
+  - Popover first-open size-hint fix:
+    `ecosystem/fret-ui-shadcn/src/popover.rs`
+  - Focused tests:
+    `popover_first_open_placement_size_prefers_explicit_hint` and
+    `popover_stable_placement_size_respects_last_bounds_and_hints`
+  - Evidence:
+    `target/fret-diag/combobox-position-fixed/sessions/1778592265006-81796/1778592267296/script.result.json`
+  - Trace verification:
+    `desired.w=200`, `final_rect.w=200`, `chosen_side=bottom`, `side_offset_px=6`
 - Menubar submenu placement gates:
   `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-submenu-placement-trace.json`,
   `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json`
@@ -363,6 +710,19 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-menubar-rtl-submenu-placement-wide/sessions/1778580931311-68804/1778580934010-ui-gallery-menubar-rtl-submenu-placement-trace.layout/layout.taffy.v1.json`
   - RTL screenshot:
     `target/fret-diag-menubar-rtl-submenu-placement-wide/sessions/1778580931311-68804/screenshots/1778580934055-ui-gallery-menubar-rtl-submenu-placement-trace/window-4294967297-tick-40-frame-40.png`
+- Menubar RTL tight-left collision gate:
+  `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-tight-left-collision.json`
+  - Asserts `ui-gallery-menubar-rtl-more` flips back to physical `right` when the preferred RTL
+    inline-end side has insufficient left-room.
+  - Suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - Evidence:
+    `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/script.result.json`
+  - Layout sidecar:
+    `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/1778583599421-ui-gallery-menubar-rtl-submenu-tight-left-collision.layout/layout.taffy.v1.json`
+  - Screenshot:
+    `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/screenshots/1778583599456-ui-gallery-menubar-rtl-submenu-tight-left-collision/window-4294967297-tick-40-frame-40.png`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

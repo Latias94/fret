@@ -1,0 +1,189 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-button-group-input-group-geometry",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "button_group",
+      "FRET_UI_GALLERY_START_SECTION": "Input Group"
+    },
+    "tags": ["ui_gallery", "shadcn", "button_group", "input_group", "geometry"],
+    "target_hints": [
+      "Starts on the Button Group Input Group fixture.",
+      "Asserts the trailing voice button icon is observable, centered, and not clipped.",
+      "Asserts the grouped input keeps meaningful width next to the Add and trailing Voice controls."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 640.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group" },
+        "min_w_px": 410.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "min_w_px": 260.0,
+        "min_h_px": 30.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-add-button" },
+        "min_w_px": 30.0,
+        "min_h_px": 30.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "min_w_px": 23.0,
+        "min_h_px": 23.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "max_w_px": 25.0,
+        "max_h_px": 25.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button.icon" },
+        "min_w_px": 15.0,
+        "min_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button.icon" },
+        "max_w_px": 17.0,
+        "max_h_px": 17.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button.icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button.icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-control" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-input-group-voice-button" },
+        "metric": "right",
+        "comparison": "le",
+        "value_px": -23.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-button-group-input-group-geometry.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-button-group-input-group-geometry"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-button-group-input-group-geometry" }
+  ]
+}

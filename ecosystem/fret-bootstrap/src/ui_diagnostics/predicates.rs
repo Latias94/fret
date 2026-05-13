@@ -106,6 +106,37 @@ fn window_inner_size_approx_equal(
         && (window_bounds.size.height.0 - height_px).abs() <= eps
 }
 
+fn rect_within_rect(inner: Rect, outer: Rect, eps: f32) -> bool {
+    let eps = eps.max(0.0);
+    let inner_left = inner.origin.x.0;
+    let inner_top = inner.origin.y.0;
+    let inner_right = inner.origin.x.0 + inner.size.width.0.max(0.0);
+    let inner_bottom = inner.origin.y.0 + inner.size.height.0.max(0.0);
+
+    let outer_left = outer.origin.x.0;
+    let outer_top = outer.origin.y.0;
+    let outer_right = outer.origin.x.0 + outer.size.width.0.max(0.0);
+    let outer_bottom = outer.origin.y.0 + outer.size.height.0.max(0.0);
+
+    [
+        inner_left,
+        inner_top,
+        inner_right,
+        inner_bottom,
+        outer_left,
+        outer_top,
+        outer_right,
+        outer_bottom,
+        eps,
+    ]
+    .into_iter()
+    .all(f32::is_finite)
+        && inner_left >= outer_left - eps
+        && inner_top >= outer_top - eps
+        && inner_right <= outer_right + eps
+        && inner_bottom <= outer_bottom + eps
+}
+
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
@@ -1097,6 +1128,106 @@ fn eval_predicate(
                 && area_right <= window_right + eps
                 && area_bottom <= window_bottom + eps
         }
+        UiPredicateV1::TextInputImeCursorAreaWithinBounds {
+            target,
+            padding_px,
+            padding_insets_px,
+            eps_px,
+        } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let Some(cursor_area) = text_input_snapshot.and_then(|snapshot| snapshot.ime_cursor_area)
+            else {
+                return false;
+            };
+
+            let pad = padding_px.max(0.0);
+            let pad_insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(0.0));
+            let eps = eps_px.max(0.0);
+
+            let bounds = node.bounds;
+            let bounds_left = bounds.origin.x.0 + pad + pad_insets.left_px.max(0.0);
+            let bounds_top = bounds.origin.y.0 + pad + pad_insets.top_px.max(0.0);
+            let bounds_right =
+                bounds.origin.x.0 + bounds.size.width.0 - pad - pad_insets.right_px.max(0.0);
+            let bounds_bottom =
+                bounds.origin.y.0 + bounds.size.height.0 - pad - pad_insets.bottom_px.max(0.0);
+
+            let area_left = cursor_area.origin.x.0;
+            let area_top = cursor_area.origin.y.0;
+            let area_right = cursor_area.origin.x.0 + cursor_area.size.width.0.max(0.0);
+            let area_bottom = cursor_area.origin.y.0 + cursor_area.size.height.0.max(0.0);
+
+            area_left >= bounds_left - eps
+                && area_top >= bounds_top - eps
+                && area_right <= bounds_right + eps
+                && area_bottom <= bounds_bottom + eps
+        }
+        UiPredicateV1::TextInputVisibleTextWithinViewport { eps_px } => {
+            let Some(visual) = text_input_snapshot.and_then(|snapshot| snapshot.visual) else {
+                return false;
+            };
+            let eps = eps_px.max(0.0);
+
+            let Some(visible_text_bounds) = visual.visible_text_bounds else {
+                return visual.content_width_px.max(0.0) <= eps;
+            };
+
+            rect_within_rect(visible_text_bounds, visual.viewport_bounds, eps)
+        }
+        UiPredicateV1::TextInputHorizontalOffsetInRange { eps_px } => {
+            let Some(visual) = text_input_snapshot.and_then(|snapshot| snapshot.visual) else {
+                return false;
+            };
+            let eps = eps_px.max(0.0);
+            let offset = visual.offset_x_px;
+            let max_offset = visual.max_offset_x_px;
+
+            [
+                visual.content_width_px,
+                visual.viewport_width_px,
+                offset,
+                max_offset,
+                eps,
+            ]
+            .into_iter()
+            .all(f32::is_finite)
+                && visual.content_width_px >= -eps
+                && visual.viewport_width_px >= -eps
+                && max_offset >= -eps
+                && offset >= -eps
+                && offset <= max_offset + eps
+        }
+        UiPredicateV1::TextInputHorizontalOverflowIs {
+            overflowing,
+            eps_px,
+        } => {
+            let Some(visual) = text_input_snapshot.and_then(|snapshot| snapshot.visual) else {
+                return false;
+            };
+            let eps = eps_px.max(0.0);
+            if !visual.content_width_px.is_finite()
+                || !visual.viewport_width_px.is_finite()
+                || !eps.is_finite()
+            {
+                return false;
+            }
+            (visual.content_width_px > visual.viewport_width_px + eps) == *overflowing
+        }
+        UiPredicateV1::TextInputViewportCoversTextHeight { eps_px } => {
+            let Some(visual) = text_input_snapshot.and_then(|snapshot| snapshot.visual) else {
+                return false;
+            };
+            let eps = eps_px.max(0.0);
+            let viewport_h = visual.viewport_bounds.size.height.0.max(0.0);
+            let text_h = visual.unclipped_text_bounds.size.height.0.max(0.0);
+
+            viewport_h.is_finite()
+                && text_h.is_finite()
+                && eps.is_finite()
+                && viewport_h + eps >= text_h
+        }
         UiPredicateV1::BoundsMinSize {
             target,
             min_w_px,
@@ -1203,6 +1334,26 @@ fn eval_predicate(
 
             let delta =
                 bounds_metric_value(a.bounds, *metric) - bounds_metric_value(b.bounds, *metric);
+            compare_px_delta(delta, *comparison, *value_px, eps_px.max(0.0))
+        }
+        UiPredicateV1::BoundsMetricPairDelta {
+            a,
+            b,
+            a_metric,
+            b_metric,
+            comparison,
+            value_px,
+            eps_px,
+        } => {
+            let Some(a) = select_node(a) else {
+                return false;
+            };
+            let Some(b) = select_node(b) else {
+                return false;
+            };
+
+            let delta = bounds_metric_value(a.bounds, *a_metric)
+                - bounds_metric_value(b.bounds, *b_metric);
             compare_px_delta(delta, *comparison, *value_px, eps_px.max(0.0))
         }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {

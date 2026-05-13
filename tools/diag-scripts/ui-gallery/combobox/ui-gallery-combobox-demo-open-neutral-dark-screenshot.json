@@ -145,8 +145,11 @@
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-basic-trigger",
         "content_test_id": "ui-gallery-combobox-basic-listbox",
+        "preferred_side": "bottom",
         "chosen_side": "bottom",
-        "flipped": false
+        "flipped": false,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
       },
       "timeout_frames": 240
     },

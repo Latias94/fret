@@ -82,6 +82,7 @@ pub struct TextInput {
     last_font_stack_key: Option<u64>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
+    last_visual_snapshot: Option<fret_runtime::WindowTextInputVisualSnapshot>,
     pending_clipboard_token: Option<fret_runtime::ClipboardToken>,
     pending_primary_selection_token: Option<fret_runtime::ClipboardToken>,
 

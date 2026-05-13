@@ -92,7 +92,12 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-responsive-trigger",
-        "content_test_id": "ui-gallery-combobox-responsive-content"
+        "content_test_id": "ui-gallery-combobox-responsive-content",
+        "preferred_side": "bottom",
+        "chosen_side": "bottom",
+        "flipped": false,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
       },
       "timeout_frames": 240
     },
@@ -103,6 +108,32 @@
         "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
         "padding_px": 2.0,
         "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+        "metric": "left",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+        "metric": "width",
+        "comparison": "eq",
+        "value_px": 50.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 240
     },

@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.anchored-layout-invalidation.v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["layout", "invalidation", "overlay"],
+  "cases": [
+    {
+      "id": "side-offset-change-recomputes-placement",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "first": {
+          "anchor": {
+            "origin": { "x": 20.0, "y": 20.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "start",
+          "side_offset_px": 0.0
+        },
+        "second": {
+          "anchor": {
+            "origin": { "x": 20.0, "y": 20.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "start",
+          "side_offset_px": 10.0
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "first-panel" },
+            "expected": {
+              "origin": { "x": 20.0, "y": 30.0 },
+              "size": { "width": 50.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "second-panel" },
+            "expected": {
+              "origin": { "x": 20.0, "y": 40.0 },
+              "size": { "width": 50.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "preferred-side-change-recomputes-placement",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "first": {
+          "anchor": {
+            "origin": { "x": 20.0, "y": 20.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "start",
+          "side_offset_px": 0.0
+        },
+        "second": {
+          "anchor": {
+            "origin": { "x": 20.0, "y": 20.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "right",
+          "align": "start",
+          "side_offset_px": 0.0
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "second-panel" },
+            "expected": {
+              "origin": { "x": 40.0, "y": 20.0 },
+              "size": { "width": 50.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.second.side.right",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "align-change-recomputes-placement",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "first": {
+          "anchor": {
+            "origin": { "x": 20.0, "y": 20.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "start",
+          "side_offset_px": 0.0
+        },
+        "second": {
+          "anchor": {
+            "origin": { "x": 20.0, "y": 20.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "center",
+          "side_offset_px": 0.0
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "second-panel" },
+            "expected": {
+              "origin": { "x": 5.0, "y": 30.0 },
+              "size": { "width": 50.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.second.align.center",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "anchor-element-change-recomputes-placement",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 200.0, "height": 200.0 }
+        },
+        "anchor_elements": {
+          "a": {
+            "origin": { "x": 10.0, "y": 10.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          },
+          "b": {
+            "origin": { "x": 70.0, "y": 80.0 },
+            "size": { "width": 20.0, "height": 10.0 }
+          }
+        },
+        "first": {
+          "anchor": {
+            "origin": { "x": 0.0, "y": 0.0 },
+            "size": { "width": 1.0, "height": 1.0 }
+          },
+          "anchor_element": "a",
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "start",
+          "side_offset_px": 0.0
+        },
+        "second": {
+          "anchor": {
+            "origin": { "x": 0.0, "y": 0.0 },
+            "size": { "width": 1.0, "height": 1.0 }
+          },
+          "anchor_element": "b",
+          "content": { "width": 50.0, "height": 20.0 },
+          "side": "bottom",
+          "align": "start",
+          "side_offset_px": 0.0
+        }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "first-panel" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 20.0 },
+              "size": { "width": 50.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "second-panel" },
+            "expected": {
+              "origin": { "x": 70.0, "y": 90.0 },
+              "size": { "width": 50.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    }
+  ]
+}

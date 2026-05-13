@@ -80,21 +80,76 @@ date: 2026-05-12
   into view before click, and make the neutral-dark open screenshot script independently runnable.
 - [x] Fix the Combobox trigger chevron layout regression exposed by screenshot review and lock it
   with a focused geometry test.
+- [x] Harden the Combobox trigger screenshot gate so the nav result is scrolled into view before
+  `click_stable`.
 - [ ] Add default-compatible non-modal click-through activation-status coverage once public pages
   expose stable underlay/status probes.
-- [ ] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
+- [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
+- [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
+- [ ] Promote the Button Group family into an explicit fixture-style matrix for text/icon
+  alignment, truncation, and theme/viewport variants.
+- [x] Add ButtonGroupText prefix/suffix internal label anchors and vertical-centering geometry
+  predicates against the middle input.
+- [x] Add Button Group Input Group trailing button icon-centering and input/trailing-control
+  non-overlap coverage.
+- [x] Add Button Group Input Group constrained long-value bounds, trailing-control non-overlap, and
+  caret/IME-anchor-in-input-bounds coverage.
+- [x] Add Input Group RTL addon-order coverage for logical leading/trailing physical-side mapping.
+- [x] Add Button Group Input Group visible-text viewport, horizontal overflow, and offset-range
+  coverage through TextInput paint-time diagnostics.
+- [x] Add Combobox Input Group long-query TextInput visual coverage and fix the TextInput viewport
+  height drift it exposed.
+- [x] Add Command/CommandPalette search-input TextInput visual coverage.
+- [x] Add plain Input/File control TextInput visual coverage so the oracle covers non-composite
+  input recipes too.
+- [x] Add an authoring-surface lint or focused test that catches shadcn control snippets using
+  `.into_element(cx).test_id(...)` when the builder's `.test_id(...)` is the documented direct
+  control-id path.
 - [x] Add runtime placement traces to the primary Combobox screenshot gates so list placement is
   tracked by both visual evidence and structured overlay-placement data.
 - [x] Harden the Combobox popup-trigger UI Gallery gate with structured collision flip and
   shadcn `sideOffset=6` assertions.
 - [x] Add a companion Combobox popup-trigger bottom-room fixture so the button-trigger/content
   variant is covered for preferred-bottom placement as well as collision flip.
+- [x] Harden Combobox popup-trigger top/bottom runtime gates with visible trigger/content bounds and
+  stable listbox bounds.
+- [x] Add Combobox popup-trigger listbox/option row-height and row-spacing geometry predicates for
+  both collision-flip and bottom-room runtime gates.
+- [x] Add internal `CommandItem` label/checkmark anchors and Combobox popup-trigger text/checkmark
+  size, vertical-centering, and inset predicates for both collision-flip and bottom-room runtime
+  gates.
+- [x] Retarget Combobox popup-trigger placement gates from the internal listbox to the content shell
+  and add cross-metric side-gap oracles for both top-flip and bottom-room placement.
+- [x] Add Combobox long-text truncation/ellipsis coverage for constrained trigger and popup option
+  text, including trigger-label and option-label geometry predicates.
+- [ ] Add a Combobox RTL long-text companion so leading/trailing icon/checkmark ownership is
+  covered in both directions.
+- [x] Tighten the Combobox Responsive desktop placement gate so it asserts preferred/chosen bottom
+  placement and shadcn `sideOffset=6`, and add it to the `ui-gallery-combobox` diagnostics suite.
+- [x] Fix the Popover first-open placement-size bridge so explicit content width hints beat the
+  default 288px estimate, and tighten the Combobox Responsive gate with visible content/trigger
+  bounds predicates.
+- [x] Add a focused Popover component regression for first-open `align=center` placement so explicit
+  content width controls visible x-position, not the default 288px estimate.
 - [x] Add DropdownMenu nested submenu runtime placement traces so submenu side/anchor placement is
   observable from UI Gallery diagnostics.
 - [x] Add ContextMenu submenu safe-corridor runtime placement traces and repair stale/offscreen
   script selectors.
 - [x] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
   bridge once a stable public gallery path is selected.
-- [ ] Add a companion RTL submenu tight-left collision fixture that intentionally keeps the
+- [x] Add a companion RTL submenu tight-left collision fixture that intentionally keeps the
   trigger too close to the left edge and asserts the correct flip back to physical right.
+- [x] Add a synthetic anchored-panel overlay placement fixture matrix for preferred/flip decisions,
+  sized best-fit, collision padding/boundary, RTL logical alignment, skidding, sticky shift, and
+  arrow positioning.
+- [x] Extend the anchored-panel fixture matrix with coordinate-space cases for non-zero and negative
+  outer origins, offset collision boundaries, disabled shift axes, and sized best-fit under a
+  non-zero viewport origin.
+- [x] Add a two-frame declarative `Anchored` layout invalidation fixture for `side_offset`, `side`,
+  `align`, and `anchor_element` changes, and fix the confirmed prop-diff defect in the owning mount
+  layer.
+- [x] Add a focused `Anchored` transformed-anchor gate and fix `anchor_element` placement to use
+  visual bounds under ancestor `render_transform`.
+- [x] Add a focused `Anchored` scroll-transformed-anchor gate and fix scroll geometry invalidation so
+  layout-driven anchored overlays recompute after scroll offset changes.

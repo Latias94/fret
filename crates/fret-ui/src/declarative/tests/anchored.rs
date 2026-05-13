@@ -2,9 +2,12 @@ use super::*;
 
 use std::cell::Cell;
 
-use crate::element::{AnchoredProps, ContainerProps, LayoutStyle, PressableProps, SizeStyle};
+use crate::element::{
+    AnchoredProps, ColumnProps, ContainerProps, LayoutStyle, PressableProps, ScrollAxis,
+    ScrollProps, SizeStyle,
+};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
-use fret_core::{Event, MouseButton, Point, PointerEvent, Rect, Size};
+use fret_core::{Event, MouseButton, Point, PointerEvent, Rect, Size, Transform2D};
 
 #[test]
 fn anchored_places_child_via_render_transform_and_updates_layout_out() {
@@ -257,6 +260,279 @@ fn anchored_can_resolve_anchor_element_bounds_in_layout() {
     // The anchor is laid out before the anchored subtree in the same pass, so the anchor element
     // rect should be available without relying on cross-frame element queries.
     let expected_anchor = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+    let expected = crate::overlay_placement::anchored_panel_layout_sized(
+        bounds,
+        expected_anchor,
+        Size::new(Px(100.0), Px(20.0)),
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions::default(),
+    );
+    assert_eq!(app.models().get_copied(&layout_out), Some(expected));
+}
+
+#[test]
+fn anchored_anchor_element_uses_render_transformed_visual_bounds() {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(200.0)),
+    );
+
+    let layout_out = app.models_mut().insert(AnchoredPanelLayout {
+        rect: Rect::default(),
+        side: Side::Bottom,
+        align: Align::Start,
+        arrow: None,
+    });
+
+    let anchor_element: Cell<Option<u64>> = Cell::new(None);
+    let anchor_element = &anchor_element;
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "anchored-render-transformed-anchor-element",
+        |cx| {
+            let layout_out = layout_out.clone();
+            vec![cx.container(ContainerProps::default(), |cx| {
+                let anchor = cx.render_transform(
+                    Transform2D::translation(Point::new(Px(40.0), Px(0.0))),
+                    |cx| {
+                        vec![
+                            cx.pressable_with_id(PressableProps::default(), |cx, _st, id| {
+                                anchor_element.set(Some(id.0));
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: crate::element::Length::Px(Px(10.0)),
+                                                height: crate::element::Length::Px(Px(10.0)),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )]
+                            }),
+                        ]
+                    },
+                );
+
+                let anchored = cx.anchored_props(
+                    AnchoredProps {
+                        anchor: Rect::new(
+                            Point::new(Px(0.0), Px(0.0)),
+                            Size::new(Px(1.0), Px(1.0)),
+                        ),
+                        anchor_element: anchor_element.get(),
+                        side: Side::Bottom,
+                        align: Align::Start,
+                        side_offset: Px(0.0),
+                        options: AnchoredPanelOptions::default(),
+                        layout_out: Some(layout_out),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: crate::element::Length::Px(Px(100.0)),
+                                        height: crate::element::Length::Px(Px(20.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
+                );
+
+                vec![anchor, anchored]
+            })]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let expected_anchor = Rect::new(Point::new(Px(40.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+    let expected = crate::overlay_placement::anchored_panel_layout_sized(
+        bounds,
+        expected_anchor,
+        Size::new(Px(100.0), Px(20.0)),
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions::default(),
+    );
+    assert_eq!(app.models().get_copied(&layout_out), Some(expected));
+}
+
+#[test]
+fn anchored_anchor_element_uses_scroll_transformed_visual_bounds() {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(200.0)),
+    );
+
+    let layout_out = app.models_mut().insert(AnchoredPanelLayout {
+        rect: Rect::default(),
+        side: Side::Bottom,
+        align: Align::Start,
+        arrow: None,
+    });
+
+    let anchor_element: Cell<Option<u64>> = Cell::new(None);
+    let anchor_element = &anchor_element;
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "anchored-scroll-transformed-anchor-element",
+        |cx| {
+            let layout_out = layout_out.clone();
+            let scroll_handle = scroll_handle.clone();
+            vec![cx.container(ContainerProps::default(), |cx| {
+                let mut scroll_layout = LayoutStyle::default();
+                scroll_layout.size.width = crate::element::Length::Px(Px(100.0));
+                scroll_layout.size.height = crate::element::Length::Px(Px(40.0));
+
+                let scroll = cx.scroll(
+                    ScrollProps {
+                        layout: scroll_layout,
+                        axis: ScrollAxis::Y,
+                        scroll_handle: Some(scroll_handle),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.column(
+                            ColumnProps {
+                                gap: Px(0.0).into(),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                let spacer = cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width =
+                                                crate::element::Length::Px(Px(100.0));
+                                            layout.size.height =
+                                                crate::element::Length::Px(Px(80.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                );
+                                let anchor =
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width =
+                                                    crate::element::Length::Px(Px(10.0));
+                                                layout.size.height =
+                                                    crate::element::Length::Px(Px(10.0));
+                                                layout
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st, id| {
+                                            anchor_element.set(Some(id.0));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+                                let tail = cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width =
+                                                crate::element::Length::Px(Px(100.0));
+                                            layout.size.height =
+                                                crate::element::Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                );
+                                vec![spacer, anchor, tail]
+                            },
+                        )]
+                    },
+                );
+
+                let anchored = cx.anchored_props(
+                    AnchoredProps {
+                        anchor: Rect::new(
+                            Point::new(Px(0.0), Px(0.0)),
+                            Size::new(Px(1.0), Px(1.0)),
+                        ),
+                        anchor_element: anchor_element.get(),
+                        side: Side::Bottom,
+                        align: Align::Start,
+                        side_offset: Px(0.0),
+                        options: AnchoredPanelOptions::default(),
+                        layout_out: Some(layout_out),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = crate::element::Length::Px(Px(100.0));
+                                    layout.size.height = crate::element::Length::Px(Px(20.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
+                );
+
+                vec![scroll, anchored]
+            })]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(60.0)));
+    assert_eq!(scroll_handle.offset().y, Px(60.0));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let expected_anchor = Rect::new(Point::new(Px(0.0), Px(20.0)), Size::new(Px(10.0), Px(10.0)));
     let expected = crate::overlay_placement::anchored_panel_layout_sized(
         bounds,
         expected_anchor,

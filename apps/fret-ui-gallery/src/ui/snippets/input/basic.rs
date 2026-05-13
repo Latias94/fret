@@ -14,7 +14,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .a11y_label("Enter text")
         .placeholder("Enter text")
         .refine_layout(max_w_xs)
+        .test_id("ui-gallery-input-basic-control")
         .into_element(cx)
-        .test_id("ui-gallery-input-basic")
 }
 // endregion: example

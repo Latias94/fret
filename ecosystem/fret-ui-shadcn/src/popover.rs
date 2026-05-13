@@ -302,6 +302,26 @@ fn has_height_constraint_px(hint: SizeHintPx) -> bool {
     hint.max_height.is_some()
 }
 
+fn placement_content_size_from_hint(
+    last_content_size: Option<Size>,
+    hint: SizeHintPx,
+    estimated: Size,
+) -> Size {
+    let width = match (last_content_size.map(|s| s.width), hint.width) {
+        (Some(last), Some(hint)) => Px(last.0.max(hint.0)),
+        (Some(last), None) => last,
+        (None, Some(hint)) => hint,
+        (None, None) => estimated.width,
+    };
+    let height = match (last_content_size.map(|s| s.height), hint.height) {
+        (Some(last), Some(hint)) => Px(last.0.max(hint.0)),
+        (Some(last), None) => last,
+        (None, Some(hint)) => hint,
+        (None, None) => estimated.height,
+    };
+    Size::new(width, height)
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
     Start,
@@ -1096,21 +1116,8 @@ impl Popover {
                         let last_content_size =
                             cx.last_bounds_for_element(measure_id).map(|r| r.size);
                         let estimated = Size::new(Px(288.0), Px(160.0));
-                        let hint_width = hint.width;
-                        let hint_height = hint.height;
-                        let mut width = last_content_size
-                            .map(|s| s.width)
-                            .unwrap_or(estimated.width);
-                        if let Some(hint_width) = hint_width {
-                            width = Px(width.0.max(hint_width.0));
-                        }
-                        let mut height = last_content_size
-                            .map(|s| s.height)
-                            .unwrap_or(estimated.height);
-                        if let Some(hint_height) = hint_height {
-                            height = Px(height.0.max(hint_height.0));
-                        }
-                        let content_size = Size::new(width, height);
+                        let content_size =
+                            placement_content_size_from_hint(last_content_size, hint, estimated);
 
                         let align = match align {
                             PopoverAlign::Start => Align::Start,
@@ -1816,13 +1823,13 @@ mod tests {
     use crate::test_support::render_overlay_frame;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Corners, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId,
-        SvgService,
+        AppWindowId, Corners, MouseButton, PathCommand, Point, Rect, Scene, Size as CoreSize,
+        SvgId, SvgService,
     };
     use fret_core::{
         Axis, Px, SemanticsRole, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
-    use fret_core::{KeyCode, Modifiers};
+    use fret_core::{KeyCode, Modifiers, Transform2D};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
@@ -2344,6 +2351,266 @@ mod tests {
             assert_eq!(trace.chosen_side, Side::Bottom);
             assert!(trace.preferred_fits_without_main_clamp);
         });
+    }
+
+    #[test]
+    fn popover_first_open_placement_size_prefers_explicit_hint() {
+        let estimated = Size::new(Px(288.0), Px(160.0));
+        let hint = SizeHintPx {
+            width: Some(Px(200.0)),
+            height: Some(Px(204.0)),
+            max_height: None,
+        };
+
+        let size = placement_content_size_from_hint(None, hint, estimated);
+
+        assert_eq!(size, Size::new(Px(200.0), Px(204.0)));
+    }
+
+    #[test]
+    fn popover_stable_placement_size_respects_last_bounds_and_hints() {
+        let estimated = Size::new(Px(288.0), Px(160.0));
+        let hint = SizeHintPx {
+            width: Some(Px(200.0)),
+            height: Some(Px(204.0)),
+            max_height: None,
+        };
+        let last = Size::new(Px(220.0), Px(190.0));
+
+        let size = placement_content_size_from_hint(Some(last), hint, estimated);
+
+        assert_eq!(size, Size::new(Px(220.0), Px(204.0)));
+    }
+
+    #[test]
+    fn popover_first_open_center_alignment_uses_explicit_width_for_x() {
+        fn assert_px_close(actual: Px, expected: Px, label: &str) {
+            assert!(
+                (actual.0 - expected.0).abs() <= 0.5,
+                "{label}: expected {expected:?}, got {actual:?}"
+            );
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let trigger_id = trigger_id.clone();
+            let content_id = content_id.clone();
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "popover-first-open-center-explicit-width",
+                |cx| {
+                    let trigger_id = trigger_id.clone();
+                    let content_id = content_id.clone();
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout.inset.left = Some(Px(300.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st, id| {
+                            trigger_id.set(Some(id));
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let popover = Popover::from_open(open.clone())
+                        .align(PopoverAlign::Center)
+                        .side_offset(Px(0.0))
+                        .arrow(false)
+                        .into_element_with(
+                            cx,
+                            |_cx| trigger,
+                            move |cx| {
+                                let probe = cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(200.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                );
+                                let content = PopoverContent::new([probe])
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_px(Px(200.0)).min_w_0(),
+                                    )
+                                    .into_element(cx);
+                                content_id.set(Some(content.id));
+                                content
+                            },
+                        );
+                    vec![popover]
+                },
+            );
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let _ = app.models_mut().update(&open, |is_open| *is_open = true);
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+
+        assert_px_close(content_bounds.size.width, Px(200.0), "content width");
+        let expected_x = Px(
+            trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5
+                - content_bounds.size.width.0 * 0.5,
+        );
+        assert_px_close(content_bounds.origin.x, expected_x, "content x");
+        assert_px_close(content_bounds.origin.y, Px(140.0), "content y");
+    }
+
+    #[test]
+    fn popover_transformed_trigger_uses_visual_anchor_bounds() {
+        fn assert_px_close(actual: Px, expected: Px, label: &str) {
+            assert!(
+                (actual.0 - expected.0).abs() <= 0.5,
+                "{label}: expected {expected:?}, got {actual:?}"
+            );
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let trigger_id = trigger_id.clone();
+            let content_id = content_id.clone();
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "popover-transformed-trigger-visual-anchor",
+                |cx| {
+                    let trigger_id = trigger_id.clone();
+                    let content_id = content_id.clone();
+                    let trigger_id_for_setter = trigger_id.clone();
+                    let trigger = cx.render_transform(
+                        Transform2D::translation(Point::new(Px(40.0), Px(0.0))),
+                        |cx| {
+                            vec![cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = fret_ui::element::PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(300.0)).into();
+                                        layout.inset.top = Some(Px(100.0)).into();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                move |cx, _st, id| {
+                                    trigger_id_for_setter.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )]
+                        },
+                    );
+
+                    let popover = Popover::from_open(open.clone())
+                        .align(PopoverAlign::Start)
+                        .side_offset(Px(0.0))
+                        .arrow(false)
+                        .anchor_element(trigger_id.get().expect("trigger element id"))
+                        .into_element_with(
+                            cx,
+                            |_cx| trigger,
+                            move |cx| {
+                                let content = PopoverContent::new([cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(100.0));
+                                            layout.size.height = Length::Px(Px(20.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )])
+                                .refine_layout(
+                                    LayoutRefinement::default().w_px(Px(100.0)).min_w_0(),
+                                )
+                                .into_element(cx);
+                                content_id.set(Some(content.id));
+                                content
+                            },
+                        );
+                    vec![popover]
+                },
+            );
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let _ = app.models_mut().update(&open, |is_open| *is_open = true);
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+
+        assert_px_close(content_bounds.origin.x, Px(340.0), "content x");
+        assert_px_close(content_bounds.origin.y, Px(140.0), "content y");
     }
 
     #[test]

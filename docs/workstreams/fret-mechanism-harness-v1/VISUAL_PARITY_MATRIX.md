@@ -1,0 +1,56 @@
+---
+title: Fret Mechanism Harness v1 Visual Parity Matrix
+status: active
+date: 2026-05-12
+---
+
+# Visual Parity Matrix
+
+This matrix tracks runtime visual/parity gates that sit above the synthetic mechanism fixtures.
+It is intentionally concrete: a row is useful only when it names the scenario, the stable IDs, the
+runtime gate, the oracle strength, and the remaining gap.
+
+## Combobox
+
+| Scenario | State / viewport / theme | Stable IDs | Gate | Oracle strength | Current gap |
+| --- | --- | --- | --- | --- | --- |
+| Trigger chrome | closed, desktop, zinc dark | `ui-gallery-combobox-multiple-trigger` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-trigger-screenshot-zinc-dark.json` | screenshot, `bounds_within_window`, `bounds_min_size`, layout sidecar | Add chevron x/y runtime predicate once the diagnostics layer exposes child/icon bounds directly. |
+| Basic open | open, desktop, neutral dark | `ui-gallery-combobox-basic-trigger`, `ui-gallery-combobox-basic-listbox`, `ui-gallery-combobox-basic-input` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-open-neutral-dark-screenshot.json` | screenshot, focus predicate, placement trace `bottom`, side offset `6px`, layout sidecar | Add row-height and option text/icon alignment predicates. |
+| Narrow open | open, narrow viewport | `ui-gallery-combobox-demo-trigger`, `ui-gallery-combobox-demo-listbox`, `ui-gallery-combobox-demo-input` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-narrow-open-screenshot.json` | screenshot, bounds-within-window, placement trace, bounds-stable | Add explicit width/clamp predicates and a mobile/drawer shell companion when public shell state is stable. |
+| Responsive desktop open | open, desktop, responsive trigger/content width mismatch | `ui-gallery-combobox-responsive-trigger`, `ui-gallery-combobox-responsive-content`, `ui-gallery-combobox-responsive-listbox` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json` | placement trace `bottom`, side offset `6px`, content-left alignment, content width = trigger width + `50px`, layout sidecar, screenshot | Add compact/mobile breakpoint coverage for the same recipe. |
+| Long text trigger + option | selected long value, constrained desktop trigger, open popup | `ui-gallery-combobox-long-text-trigger`, `ui-gallery-combobox-long-text-trigger.chrome`, `ui-gallery-combobox-long-text-trigger-label`, `ui-gallery-combobox-long-text-trigger-icon`, `ui-gallery-combobox-long-text-item-enterprise-observability-platform.label`, `ui-gallery-combobox-long-text-item-enterprise-observability-platform.checkmark` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json` | trigger chrome max size, trigger label width budget, label-before-chevron right delta, chrome-relative `center_y`, popup placement trace `bottom`, option label max size, option label/checkmark insets and vertical centering, layout sidecar, screenshot | Add RTL long-text companion so leading/trailing affordance ownership is covered in both directions. |
+| Input Group long query | open, constrained desktop, inline search addon | `ui-gallery-combobox-input-group-trigger`, `ui-gallery-combobox-input-group-input` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json` | `value_len_ge`, `bounds_within_window`, `text_input_ime_cursor_area_within_bounds`, `text_input_horizontal_overflow_is`, `text_input_horizontal_offset_in_range`, `text_input_visible_text_within_viewport`, `text_input_viewport_covers_text_height`, layout sidecar, screenshot | Add plain Input/File control companion coverage. |
+| Popup trigger collision | open near bottom, desktop | `ui-gallery-combobox-popup-trigger`, `ui-gallery-combobox-popup-content`, `ui-gallery-combobox-popup-listbox`, `ui-gallery-combobox-popup-item-next`, `ui-gallery-combobox-popup-item-next.label`, `ui-gallery-combobox-popup-item-next.checkmark`, `ui-gallery-combobox-popup-item-svelte` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json` | placement trace `top`, flipped, side offset `6px`, content-shell `bounds_within_window`, content-shell stable bounds, `trigger.top - content.bottom = 6px`, content left/width match trigger, listbox min/max size, option min/max size, label min/max size, label `center_y`, label left inset, checkmark min/max size, checkmark `center_y`, checkmark left inset, first-to-second row `top` delta, layout sidecar, screenshot | Add truncation/ellipsis variants and selected-state opacity coverage for option text/checkmarks. |
+| Popup trigger bottom room | open with enough room below, desktop | `ui-gallery-combobox-popup-trigger`, `ui-gallery-combobox-popup-content`, `ui-gallery-combobox-popup-listbox`, `ui-gallery-combobox-popup-item-next`, `ui-gallery-combobox-popup-item-next.label`, `ui-gallery-combobox-popup-item-next.checkmark`, `ui-gallery-combobox-popup-item-svelte` | `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json` | placement trace `bottom`, not flipped, side offset `6px`, content-shell `bounds_within_window`, content-shell stable bounds, `content.top - trigger.bottom = 6px`, content left/width match trigger, listbox min/max size, option min/max size, label min/max size, label `center_y`, label left inset, checkmark min/max size, checkmark `center_y`, checkmark left inset, first-to-second row `top` delta, layout sidecar, screenshot | Add truncation/ellipsis variants and selected-state opacity coverage for option text/checkmarks. |
+
+## Command
+
+| Scenario | State / viewport / theme | Stable IDs | Gate | Oracle strength | Current gap |
+| --- | --- | --- | --- | --- | --- |
+| Docs demo long query | embedded CommandPalette, constrained desktop | `ui-gallery-command-docs-demo-input`, `ui-gallery-command-docs-demo-listbox`, `ui-gallery-command-docs-demo` | `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json` | `value_len_ge`, `bounds_within_window`, `text_input_ime_cursor_area_within_bounds`, `text_input_horizontal_overflow_is`, `text_input_horizontal_offset_in_range`, `text_input_visible_text_within_viewport`, `text_input_viewport_covers_text_height`, layout sidecar, screenshot | Add renderer-level glyph/ellipsis evidence and CommandDialog overlay companion coverage. |
+
+## Input
+
+| Scenario | State / viewport / theme | Stable IDs | Gate | Oracle strength | Current gap |
+| --- | --- | --- | --- | --- | --- |
+| Basic + File long text | plain Input and file-composition Input, constrained desktop | `ui-gallery-input-basic-control`, `ui-gallery-input-file-control`, `ui-gallery-input-basic-content`, `ui-gallery-input-file-section-content` | `tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json` | `value_len_ge`, editable text-field semantics (`actions.set_value=true`), `bounds_within_window`, `text_input_ime_cursor_area_within_bounds`, `text_input_horizontal_overflow_is`, `text_input_horizontal_offset_in_range`, `text_input_visible_text_within_viewport`, `text_input_viewport_covers_text_height`, layout sidecar, screenshot, test-id slices | Add authoring-surface lint/focused test for misplaced `.into_element(cx).test_id(...)`; add renderer-level glyph/ellipsis evidence. |
+
+## Button Group
+
+| Scenario | State / viewport / theme | Stable IDs | Gate | Oracle strength | Current gap |
+| --- | --- | --- | --- | --- | --- |
+| Size icon-only Add | closed, zinc light/dark | `ui-gallery-button-group-size-small-add`, `ui-gallery-button-group-size-medium-add`, `ui-gallery-button-group-size-large-add` | `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json` | screenshot, `bounds_within_window`, `bounds_min_size`, layout sidecar | Add icon centering and vertical alignment predicates. |
+| Text width fit + inline labels | closed, desktop | `ui-gallery-button-group-text`, `ui-gallery-button-group-text-prefix`, `ui-gallery-button-group-text-prefix-label`, `ui-gallery-button-group-text-control`, `ui-gallery-button-group-text-suffix`, `ui-gallery-button-group-text-suffix.label` | `tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json` | screenshot, `bounds_max_size`, prefix/suffix label size, label-to-segment `center_y`, segment-to-input `center_y` | Add text baseline oracle if diagnostics exposes baseline metrics; add RTL companion for logical prefix/suffix order. |
+| Input Group trailing voice control | closed, desktop | `ui-gallery-button-group-input-group`, `ui-gallery-button-group-input-group-control`, `ui-gallery-button-group-input-group-add-button`, `ui-gallery-button-group-input-group-voice-button`, `ui-gallery-button-group-input-group-voice-button.icon` | `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json` | root/control/button/icon size, voice icon `center_x`/`center_y`, voice button-to-input `center_y`, input-vs-trailing-button non-overlap, layout sidecar, screenshot | Add input text clipping/ellipsis and RTL addon-order companions. |
+| Input Group long value | long text value, constrained desktop | `ui-gallery-button-group-input-group`, `ui-gallery-button-group-input-group-control`, `ui-gallery-button-group-input-group-voice-button` | `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json` | `value_len_ge`, root/control max size, input-vs-trailing-button non-overlap, `ime_cursor_area_is_some`, `text_input_ime_cursor_area_within_bounds`, `text_input_horizontal_overflow_is`, `text_input_horizontal_offset_in_range`, `text_input_visible_text_within_viewport`, layout sidecar, screenshot | Add renderer-level glyph ink/ellipsis evidence and RTL addon-order companion. |
+| Input Group RTL addon order | RTL direction provider, closed, desktop | `ui-gallery-input-group-rtl`, `ui-gallery-input-group-rtl-control`, `ui-gallery-input-group-rtl-leading`, `ui-gallery-input-group-rtl-trailing` | `tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json` | root/control/addon size, leading/control/trailing non-overlap, RTL physical-side order predicates, addon-to-control `center_y`, layout sidecar, screenshot | Add Button Group wrapper companion if wrapper nesting later proves capable of disturbing child logical order. |
+| Input and file fill width | closed, desktop | `ui-gallery-input-file-control`, `ui-gallery-input-button-group-control` | `tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json` | screenshot, `bounds_within_window`, `bounds_min_size` | Add text truncation and inline addon alignment predicates. |
+
+## Matrix Rules
+
+- A screenshot-only row is not complete. It must either gain geometry predicates or explicitly
+  name the remaining visual review gap.
+- A runtime gate is long-lived only after it belongs to a suite manifest.
+- A component family is ready for Material3 reuse when it has at least one closed-state trigger row,
+  one open/overlay row when applicable, one constrained viewport row, and one row with geometry
+  predicates stronger than screenshot review.

@@ -2399,7 +2399,15 @@ fn declarative_instance_change_mask(
         (ElementInstance::Anchored(a), ElementInstance::Anchored(b)) => {
             // Anchored placement is resolved during layout and affects the render transform stack.
             // Treat any meaningful input change as requiring a layout refresh.
-            if a.outer_margin != b.outer_margin || a.anchor != b.anchor || a.options != b.options {
+            if a.outer_margin != b.outer_margin
+                || a.anchor != b.anchor
+                || a.anchor_element != b.anchor_element
+                || a.side != b.side
+                || a.align != b.align
+                || a.side_offset != b.side_offset
+                || a.options != b.options
+                || a.layout_out != b.layout_out
+            {
                 layout_changed = true;
                 paint_changed = true;
             }

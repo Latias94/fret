@@ -1,6 +1,6 @@
 use fret_core::time::Duration;
 use fret_core::{
-    Color, DrawOrder, Event, MouseButton, Paint, Px, Rect, SceneOp, Size, TextConstraints,
+    Color, DrawOrder, Event, MouseButton, Paint, Point, Px, Rect, SceneOp, Size, TextConstraints,
     TextOverflow, TextWrap,
 };
 use fret_runtime::{CommandId, Effect};
@@ -16,6 +16,24 @@ fn text_input_command_mutates_text(command: &str) -> bool {
     matches!(command, "text.cut" | "text.paste" | "text.clear")
         || command.starts_with("text.delete")
         || command.starts_with("text.insert")
+}
+
+fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
+    let left = a.origin.x.0.max(b.origin.x.0);
+    let top = a.origin.y.0.max(b.origin.y.0);
+    let right =
+        (a.origin.x.0 + a.size.width.0.max(0.0)).min(b.origin.x.0 + b.size.width.0.max(0.0));
+    let bottom =
+        (a.origin.y.0 + a.size.height.0.max(0.0)).min(b.origin.y.0 + b.size.height.0.max(0.0));
+
+    if right <= left || bottom <= top {
+        return None;
+    }
+
+    Some(Rect::new(
+        Point::new(Px(left), Px(top)),
+        Size::new(Px(right - left), Px(bottom - top)),
+    ))
 }
 
 impl<H: UiHost> Widget<H> for TextInput {
@@ -93,6 +111,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             selection_utf16: Some((anchor_u16, focus_u16)),
             marked_utf16,
             ime_cursor_area: self.last_sent_cursor,
+            visual: self.last_visual_snapshot,
             surrounding_text: Some({
                 let key = super::ImeSurroundingTextCacheKey {
                     text_revision: self.base_text_revision,
@@ -1732,6 +1751,28 @@ impl<H: UiHost> Widget<H> for TextInput {
             )
         };
 
+        let text_end_x = if show_placeholder {
+            placement_metrics.size.width
+        } else {
+            self.text_blob
+                .map(|blob| {
+                    cx.services
+                        .caret_x(blob, self.base_to_paint_index(self.text.len()))
+                })
+                .unwrap_or(Px(0.0))
+        };
+        let preedit_w = if self.is_ime_composing() && !self.preedit.is_empty() {
+            cx.services
+                .text()
+                .measure_str(self.preedit.as_str(), &self.style, constraints)
+                .size
+                .width
+        } else {
+            Px(0.0)
+        };
+        let content_w = text_end_x + preedit_w;
+        let max_offset = Px((content_w.0 - inner_width.0).max(0.0));
+
         if inner_width.0 <= 0.0 {
             self.offset_x = Px(0.0);
         } else if focused {
@@ -1792,28 +1833,40 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             self.offset_x = Px(desired.0.clamp(0.0, max_offset.0));
         } else {
-            let text_end_x = self
-                .text_blob
-                .map(|blob| {
-                    cx.services
-                        .caret_x(blob, self.base_to_paint_index(self.text.len()))
-                })
-                .unwrap_or(Px(0.0));
-            let preedit_w = if self.is_ime_composing() && !self.preedit.is_empty() {
-                cx.services
-                    .text()
-                    .measure_str(self.preedit.as_str(), &self.style, constraints)
-                    .size
-                    .width
-            } else {
-                Px(0.0)
-            };
-            let content_w = text_end_x + preedit_w;
-            let max_offset = Px((content_w.0 - inner_width.0).max(0.0));
             self.offset_x = Px(self.offset_x.0.clamp(0.0, max_offset.0));
         }
 
-        cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+        let text_viewport_bounds = Rect::new(
+            Point::new(
+                cx.bounds.origin.x + padding_left,
+                cx.bounds.origin.y + padding_top,
+            ),
+            Size::new(inner_width, inner_height),
+        );
+        let text_clip_bounds = rect_intersection(text_viewport_bounds, cx.bounds)
+            .unwrap_or_else(|| Rect::new(text_viewport_bounds.origin, Size::new(Px(0.0), Px(0.0))));
+        let unclipped_text_bounds = Rect::new(
+            Point::new(
+                cx.bounds.origin.x + padding_left - self.offset_x,
+                cx.bounds.origin.y + padding_top + vertical_offset,
+            ),
+            Size::new(Px(content_w.0.max(0.0)), text_height.max(Px(0.0))),
+        );
+        let visible_text_bounds = rect_intersection(unclipped_text_bounds, text_clip_bounds);
+        self.last_visual_snapshot = Some(fret_runtime::WindowTextInputVisualSnapshot {
+            viewport_bounds: cx.visual_rect_aabb(text_viewport_bounds),
+            clip_bounds: cx.visual_rect_aabb(text_clip_bounds),
+            unclipped_text_bounds: cx.visual_rect_aabb(unclipped_text_bounds),
+            visible_text_bounds: visible_text_bounds.map(|bounds| cx.visual_rect_aabb(bounds)),
+            content_width_px: content_w.0.max(0.0),
+            viewport_width_px: inner_width.0.max(0.0),
+            offset_x_px: self.offset_x.0,
+            max_offset_x_px: max_offset.0,
+        });
+
+        cx.scene.push(SceneOp::PushClipRect {
+            rect: text_clip_bounds,
+        });
 
         let window_focused = cx
             .app

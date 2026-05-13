@@ -25,6 +25,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::IconSm)
             .icon(icon_id("lucide.plus"))
+            .test_id("ui-gallery-button-group-size-small-add")
             .into(),
     ])
     .into_element(cx);
@@ -44,6 +45,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Icon)
             .icon(icon_id("lucide.plus"))
+            .test_id("ui-gallery-button-group-size-medium-add")
             .into(),
     ])
     .into_element(cx);
@@ -66,6 +68,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::IconLg)
             .icon(icon_id("lucide.plus"))
+            .test_id("ui-gallery-button-group-size-large-add")
             .into(),
     ])
     .into_element(cx);

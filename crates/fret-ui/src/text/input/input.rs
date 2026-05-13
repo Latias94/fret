@@ -57,6 +57,7 @@ impl TextInput {
             last_font_stack_key: None,
             last_bounds: Rect::default(),
             last_sent_cursor: None,
+            last_visual_snapshot: None,
             pending_clipboard_token: None,
             pending_primary_selection_token: None,
 

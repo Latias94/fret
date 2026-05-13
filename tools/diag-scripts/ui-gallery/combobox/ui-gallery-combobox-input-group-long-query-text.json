@@ -1,0 +1,131 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-combobox-input-group-long-query-text",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "Input Group"
+    },
+    "tags": ["ui_gallery", "shadcn", "combobox", "input_group", "text_input", "long_text"],
+    "target_hints": [
+      "Starts on the Combobox Input Group fixture.",
+      "Opens the searchable combobox input with an inline search addon.",
+      "Injects a long query and asserts TextInput paint-time overflow, offset, and visible viewport clipping."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 760.0, "height_px": 640.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-trigger" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-input" },
+      "text": "enterprise-command-palette-observability-workflow-with-extra-long-search-query",
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_len_ge",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-input" },
+        "min_len_bytes": 70
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-input" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_ime_cursor_area_within_bounds",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-input-group-input" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_horizontal_overflow_is",
+        "overflowing": true,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_horizontal_offset_in_range",
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_visible_text_within_viewport",
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_input_viewport_covers_text_height",
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-combobox-input-group-long-query-text.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-combobox-input-group-long-query-text"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-combobox-input-group-long-query-text" }
+  ]
+}

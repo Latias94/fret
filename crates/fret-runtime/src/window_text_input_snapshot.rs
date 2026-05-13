@@ -81,6 +81,30 @@ impl WindowImeSurroundingText {
     }
 }
 
+/// Paint-time visual geometry for the focused text input.
+///
+/// This is a diagnostics-oriented snapshot. It intentionally describes what the self-drawn
+/// text input is about to paint, rather than platform IME state.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct WindowTextInputVisualSnapshot {
+    /// Padded content viewport used for text visibility checks.
+    pub viewport_bounds: Rect,
+    /// Actual clip rect applied to text/selection/caret painting.
+    pub clip_bounds: Rect,
+    /// Unclipped text content bounds after horizontal scroll offset is applied.
+    pub unclipped_text_bounds: Rect,
+    /// Visible text bounds after intersecting unclipped content with `clip_bounds`.
+    pub visible_text_bounds: Option<Rect>,
+    /// Full single-line text/preedit content width before clipping.
+    pub content_width_px: f32,
+    /// Padded content viewport width.
+    pub viewport_width_px: f32,
+    /// Current horizontal text scroll offset.
+    pub offset_x_px: f32,
+    /// Maximum valid horizontal text scroll offset.
+    pub max_offset_x_px: f32,
+}
+
 /// Window-scoped platform text-input snapshots published by the UI runtime.
 ///
 /// This is a data-only integration seam for platform/runner layers that need to interop with
@@ -102,6 +126,8 @@ pub struct WindowTextInputSnapshot {
     ///
     /// On Windows/winit this is the primary hook for positioning the candidate window.
     pub ime_cursor_area: Option<Rect>,
+    /// Best-effort visual diagnostics for the focused self-drawn text input.
+    pub visual: Option<WindowTextInputVisualSnapshot>,
     /// Best-effort surrounding text excerpt for IME backends that support it.
     pub surrounding_text: Option<WindowImeSurroundingText>,
 }

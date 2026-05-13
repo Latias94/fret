@@ -82,6 +82,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             selection_utf16: Some((anchor_u16, focus_u16)),
             marked_utf16,
             ime_cursor_area: self.last_sent_cursor,
+            visual: None,
             surrounding_text: Some({
                 let key = super::ImeSurroundingTextCacheKey {
                     text_revision: self.base_text_revision,

@@ -257,4 +257,5 @@ pub use window_style::{
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
 pub use window_text_input_snapshot::{
     WindowImeSurroundingText, WindowTextInputSnapshot, WindowTextInputSnapshotService,
+    WindowTextInputVisualSnapshot,
 };
