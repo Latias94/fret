@@ -676,7 +676,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut test_id_by_node: HashMap<NodeId, String> = HashMap::new();
         if let Some(snapshot) = self.semantics_snapshot() {
-            for node in &snapshot.nodes {
+            for node in snapshot.nodes.iter() {
                 if let Some(test_id) = node.test_id.as_deref() {
                     test_id_by_node.insert(node.id, test_id.to_string());
                 }
@@ -749,7 +749,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut test_id_by_node: HashMap<NodeId, String> = HashMap::new();
         if let Some(snapshot) = self.semantics_snapshot() {
-            for node in &snapshot.nodes {
+            for node in snapshot.nodes.iter() {
                 if let Some(test_id) = node.test_id.as_deref() {
                     test_id_by_node.insert(node.id, test_id.to_string());
                 }

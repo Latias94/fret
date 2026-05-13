@@ -161,6 +161,8 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
+        self.invalidate_dispatch_snapshot_cache();
+
         // Structural changes must invalidate paint/hit-testing so routing and rendering see the
         // updated tree, but we intentionally avoid forcing a full ancestor relayout.
         self.invalidate_with_source_and_detail(

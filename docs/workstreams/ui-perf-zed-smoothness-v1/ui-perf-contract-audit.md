@@ -281,6 +281,23 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Conclusion: the hit-test contract remains healthy, and the pointer dispatch tail is now attributed to dispatch
     context/snapshot construction. The next slice should investigate snapshot reuse or lazy focus snapshot
     construction before changing dispatch thresholds.
+- Hit-test torture dispatch snapshot cache:
+  - Implemented a retained-tree/layer-topology dispatch snapshot cache in `fret-ui`, with shared `Arc` snapshot
+    forests for `nodes`, `parent`, `pre`, and `post`.
+  - Validation:
+    `cargo check -p fret-ui`;
+    `cargo nextest run -p fret-ui dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes --no-fail-fast`;
+    `cargo nextest run -p fret-ui -E "test(~focus_scope) | test(~outside_press) | test(~window_input_arbitration_snapshot) | test(~window_command_action_availability_snapshot)" --no-fail-fast`;
+    `cargo build -p fretboard-dev --release`;
+    `cargo build -p fret-ui-gallery --release --features gallery-dev`;
+    `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`.
+  - Evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7/1778636234419/bundle.schema2.json`:
+    pointer max dispatch/hit-test=`97/17us`, `pointer_move_snapshots_with_global_changes=0`;
+    dispatch attribution p50/p95/max `accounted=79/91/91us`, `unattributed=3/6/6us`,
+    `body_unattributed=2/5/5us`, `runtime_wrapper=0/1/1us`.
+  - Conclusion: the prior `~1ms` pointer dispatch tail is fixed for the torture surface; do not promote a formal
+    new dispatch threshold from this single repeat=1 run until the broader contract set is reseeded intentionally.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
@@ -317,10 +334,9 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.
-5. Pointer dispatch context construction is now the measured hit-test torture tail: the current implementation builds
-   active input/focus dispatch snapshots on each pointer move, costing about `0.9-1.0ms` in the 20k-noise torture
-   surface. Keep this as an optimization gap until a snapshot reuse/lazy-focus-context design is implemented and
-   gated.
+5. The hit-test torture pointer dispatch tail has a repeat=1 fix and evidence via dispatch snapshot reuse. The
+   remaining gap is contract promotion: run repeated validation before adding a formal dispatch-tail threshold or
+   baseline for the optimized path.
 
 ## Audit Conclusion
 

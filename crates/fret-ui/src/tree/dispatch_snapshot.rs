@@ -1,5 +1,21 @@
 use super::*;
 
+const DISPATCH_SNAPSHOT_CACHE_CAPACITY: usize = 8;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct UiDispatchSnapshotCacheKey {
+    generation: u64,
+    window: Option<AppWindowId>,
+    active_layer_roots: Vec<NodeId>,
+    barrier_root: Option<NodeId>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct UiDispatchSnapshotCacheEntry {
+    key: UiDispatchSnapshotCacheKey,
+    snapshot: UiDispatchSnapshot,
+}
+
 /// A per-window, per-frame snapshot used to answer correctness-critical containment queries
 /// (outside-press routing, focus containment, tab traversal) without depending on long-lived parent
 /// pointers.
@@ -15,16 +31,16 @@ pub(crate) struct UiDispatchSnapshot {
     pub(crate) barrier_root: Option<NodeId>,
 
     /// Nodes present in the snapshot forest in stable visit order (pre-order).
-    pub(crate) nodes: Vec<NodeId>,
+    pub(crate) nodes: Arc<Vec<NodeId>>,
 
     /// Parent pointers for nodes that are present in this snapshot forest.
-    pub(crate) parent: SecondaryMap<NodeId, Option<NodeId>>,
+    pub(crate) parent: Arc<SecondaryMap<NodeId, Option<NodeId>>>,
 
     /// DFS pre/post indices over the snapshot forest.
     ///
     /// These are only populated for nodes that are present in the snapshot forest.
-    pub(crate) pre: SecondaryMap<NodeId, u32>,
-    pub(crate) post: SecondaryMap<NodeId, u32>,
+    pub(crate) pre: Arc<SecondaryMap<NodeId, u32>>,
+    pub(crate) post: Arc<SecondaryMap<NodeId, u32>>,
 }
 
 #[allow(dead_code)]
@@ -41,6 +57,61 @@ impl UiDispatchSnapshot {
 }
 
 impl<H: UiHost> UiTree<H> {
+    pub(in crate::tree) fn invalidate_dispatch_snapshot_cache(&mut self) {
+        self.dispatch_snapshot_generation = self.dispatch_snapshot_generation.wrapping_add(1);
+        self.dispatch_snapshot_cache.clear();
+        #[cfg(feature = "diagnostics")]
+        {
+            self.debug_dispatch_snapshot = None;
+        }
+    }
+
+    fn dispatch_snapshot_cache_key(
+        &self,
+        active_layer_roots: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> UiDispatchSnapshotCacheKey {
+        UiDispatchSnapshotCacheKey {
+            generation: self.dispatch_snapshot_generation,
+            window: self.window,
+            active_layer_roots: active_layer_roots.to_vec(),
+            barrier_root,
+        }
+    }
+
+    pub(in crate::tree) fn cached_dispatch_snapshot_for_layer_roots(
+        &mut self,
+        frame_id: FrameId,
+        active_layer_roots: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> UiDispatchSnapshot {
+        let key = self.dispatch_snapshot_cache_key(active_layer_roots, barrier_root);
+        if let Some(entry) = self
+            .dispatch_snapshot_cache
+            .iter()
+            .find(|entry| entry.key == key)
+        {
+            let mut snapshot = entry.snapshot.clone();
+            snapshot.frame_id = frame_id;
+            return snapshot;
+        }
+
+        let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            frame_id,
+            active_layer_roots,
+            barrier_root,
+        );
+        if self.dispatch_snapshot_cache.len() >= DISPATCH_SNAPSHOT_CACHE_CAPACITY {
+            self.dispatch_snapshot_cache.remove(0);
+        }
+        self.dispatch_snapshot_cache
+            .push(UiDispatchSnapshotCacheEntry {
+                key,
+                snapshot: snapshot.clone(),
+            });
+        snapshot
+    }
+
     /// Build a dispatch snapshot for the current window and `frame_id`.
     ///
     /// This is a mechanism-layer API. It does not change dispatch behavior by itself.
@@ -121,10 +192,10 @@ impl<H: UiHost> UiTree<H> {
             window: self.window,
             active_layer_roots,
             barrier_root,
-            nodes,
-            parent,
-            pre,
-            post,
+            nodes: Arc::new(nodes),
+            parent: Arc::new(parent),
+            pre: Arc::new(pre),
+            post: Arc::new(post),
         }
     }
 }

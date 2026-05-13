@@ -992,6 +992,9 @@ impl<H: UiHost> UiTree<H> {
                         .remove(pointer_id)
                         && let Some(layer) = self.layers.get(candidate.layer_id)
                     {
+                        let layer_root = layer.root;
+                        let pointer_down_outside_branches =
+                            layer.pointer_down_outside_branches.clone();
                         let foreign_capture_active = self.captured.iter().any(|(pid, node)| {
                             *pid != *pointer_id
                                 && self
@@ -1002,36 +1005,32 @@ impl<H: UiHost> UiTree<H> {
                         if !foreign_capture_active && !candidate.moved {
                             let active_pointer_down_outside_layers =
                                 self.active_pointer_down_outside_layer_roots(barrier_root);
-                            let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                            let snapshot = self.cached_dispatch_snapshot_for_layer_roots(
                                 app.frame_id(),
                                 active_pointer_down_outside_layers.as_slice(),
                                 barrier_root,
                             );
 
-                            let hit_is_inside_layer = hit_layer_root == Some(layer.root)
+                            let hit_is_inside_layer = hit_layer_root == Some(layer_root)
                                 || hit.is_some_and(|hit| {
-                                    if snapshot.pre.get(layer.root).is_some()
+                                    if snapshot.pre.get(layer_root).is_some()
                                         && snapshot.pre.get(hit).is_some()
                                     {
-                                        snapshot.is_descendant(layer.root, hit)
+                                        snapshot.is_descendant(layer_root, hit)
                                     } else {
-                                        self.is_reachable_from_root_via_children(layer.root, hit)
+                                        self.is_reachable_from_root_via_children(layer_root, hit)
                                     }
                                 });
                             let hit_is_inside_branch = hit.is_some_and(|hit| {
-                                layer
-                                    .pointer_down_outside_branches
-                                    .iter()
-                                    .copied()
-                                    .any(|branch| {
-                                        if snapshot.pre.get(branch).is_some()
-                                            && snapshot.pre.get(hit).is_some()
-                                        {
-                                            snapshot.is_descendant(branch, hit)
-                                        } else {
-                                            self.is_reachable_from_root_via_children(branch, hit)
-                                        }
-                                    })
+                                pointer_down_outside_branches.iter().copied().any(|branch| {
+                                    if snapshot.pre.get(branch).is_some()
+                                        && snapshot.pre.get(hit).is_some()
+                                    {
+                                        snapshot.is_descendant(branch, hit)
+                                    } else {
+                                        self.is_reachable_from_root_via_children(branch, hit)
+                                    }
+                                })
                             });
 
                             if !hit_is_inside_layer && !hit_is_inside_branch {

@@ -353,7 +353,7 @@ impl<H: UiHost> UiTree<H> {
                 if hit.is_none() {
                     None
                 } else {
-                    let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                    let snapshot = self.cached_dispatch_snapshot_for_layer_roots(
                         app.frame_id(),
                         roots.as_slice(),
                         Some(barrier_root),

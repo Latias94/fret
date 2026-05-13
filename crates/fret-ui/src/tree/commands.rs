@@ -25,7 +25,7 @@ impl<H: UiHost> UiTree<H> {
         barrier_root: Option<NodeId>,
         reason: &'static str,
     ) {
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let dispatch_snapshot = self.cached_dispatch_snapshot_for_layer_roots(
             frame_id,
             active_focus_layers,
             barrier_root,
@@ -392,7 +392,7 @@ impl<H: UiHost> UiTree<H> {
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let dispatch_snapshot = self.cached_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
             active_focus_layers.as_slice(),
             barrier_root,
@@ -737,7 +737,7 @@ impl<H: UiHost> UiTree<H> {
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let dispatch_snapshot = self.cached_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
             active_focus_layers.as_slice(),
             barrier_root,
@@ -916,7 +916,7 @@ impl<H: UiHost> UiTree<H> {
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
         let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
         let barrier_root = focus_barrier_root.or(input_barrier_root);
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let dispatch_snapshot = self.cached_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
             active_focus_layers.as_slice(),
             barrier_root,
@@ -1094,7 +1094,7 @@ impl<H: UiHost> UiTree<H> {
 
                 if let Some(focus) = requested_focus {
                     let (active_roots, barrier_root) = self.active_input_layers();
-                    let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                    let snapshot = self.cached_dispatch_snapshot_for_layer_roots(
                         app.frame_id(),
                         active_roots.as_slice(),
                         barrier_root,
@@ -1297,7 +1297,7 @@ impl<H: UiHost> UiTree<H> {
         scope_root: Option<NodeId>,
     ) -> bool {
         let dispatch_snapshot =
-            self.build_dispatch_snapshot_for_layer_roots(app.frame_id(), roots, scope_root);
+            self.cached_dispatch_snapshot_for_layer_roots(app.frame_id(), roots, scope_root);
         let (focusables, _) = self.focus_traversal_candidates_for_snapshot(
             app,
             app.frame_id(),

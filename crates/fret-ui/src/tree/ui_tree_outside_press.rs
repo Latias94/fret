@@ -10,7 +10,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
 
-        let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let snapshot = self.cached_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
             params.active_layer_roots,
             params.barrier_root,

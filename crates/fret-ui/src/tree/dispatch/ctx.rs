@@ -35,7 +35,7 @@ impl DispatchCx {
 
 impl<H: UiHost> UiTree<H> {
     pub(in crate::tree::dispatch) fn build_dispatch_cx(
-        &self,
+        &mut self,
         frame_id: FrameId,
         active_input_roots: Vec<NodeId>,
         input_barrier_root: Option<NodeId>,
@@ -44,7 +44,7 @@ impl<H: UiHost> UiTree<H> {
         let active_focus_roots = active_focus_roots;
         let barrier_root = focus_barrier_root.or(input_barrier_root);
 
-        let input_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+        let input_snapshot = self.cached_dispatch_snapshot_for_layer_roots(
             frame_id,
             active_input_roots.as_slice(),
             input_barrier_root,
@@ -53,11 +53,12 @@ impl<H: UiHost> UiTree<H> {
         let focus_snapshot =
             if active_focus_roots == active_input_roots && barrier_root == input_barrier_root {
                 let mut snapshot = input_snapshot.clone();
+                snapshot.frame_id = frame_id;
                 snapshot.active_layer_roots = active_focus_roots.clone();
                 snapshot.barrier_root = barrier_root;
                 snapshot
             } else {
-                self.build_dispatch_snapshot_for_layer_roots(
+                self.cached_dispatch_snapshot_for_layer_roots(
                     frame_id,
                     active_focus_roots.as_slice(),
                     barrier_root,

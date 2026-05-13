@@ -123,7 +123,7 @@ use shortcuts::{
 };
 use small_list::{SmallCopyList, SmallNodeList};
 
-pub(crate) use dispatch_snapshot::UiDispatchSnapshot;
+pub(crate) use dispatch_snapshot::{UiDispatchSnapshot, UiDispatchSnapshotCacheEntry};
 
 fn type_id_sort_key(id: TypeId) -> u64 {
     use std::hash::{Hash, Hasher};
@@ -290,6 +290,8 @@ pub struct UiTree<H: UiHost> {
     pending_barrier_relayouts: Vec<NodeId>,
     pending_declarative_window_snapshot_roots: HashSet<NodeId>,
     pending_post_layout_window_runtime_snapshot_refine: bool,
+    dispatch_snapshot_generation: u64,
+    dispatch_snapshot_cache: Vec<UiDispatchSnapshotCacheEntry>,
     command_availability_revision: u64,
     last_window_command_action_availability_snapshot_signature:
         Option<WindowCommandActionAvailabilitySnapshotSignature>,

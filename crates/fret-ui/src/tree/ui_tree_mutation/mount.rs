@@ -123,6 +123,7 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
+        self.invalidate_dispatch_snapshot_cache();
         self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
 
         if propagate {

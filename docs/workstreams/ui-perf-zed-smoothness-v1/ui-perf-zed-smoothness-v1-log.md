@@ -13211,3 +13211,49 @@ Decision:
 - Do not loosen hit-test thresholds. The next slice should evaluate dispatch context snapshot reuse,
   event-type-specific lazy focus snapshot construction, or a cheaper active-layer membership cache
   before changing pointer dispatch thresholds.
+
+## 2026-05-13 09:38:55 +08:00 (dispatch snapshot cache)
+
+Question:
+- Can the measured hit-test torture dispatch tail be removed by reusing the active dispatch
+  snapshot forest across frames when the retained tree/layer topology is unchanged, without
+  weakening focus-barrier or outside-press correctness?
+
+Change:
+- Added a mechanism-layer dispatch snapshot cache keyed by retained tree/layer topology generation,
+  window, active roots, and barrier root.
+- Made `UiDispatchSnapshot` heavy fields (`nodes`, `parent`, `pre`, `post`) shared via `Arc`, so
+  input/focus snapshots and cached cross-frame snapshots do not deep-copy 20k-node forests.
+- Invalidates the cache on structural child changes, subtree removal, layer root/order/visibility
+  changes, layer hit-testability changes, and focus-barrier changes.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo check -p fret-ui`
+- `cargo nextest run -p fret-ui dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes --no-fail-fast`
+- `cargo nextest run -p fret-ui -E "test(~focus_scope) | test(~outside_press) | test(~window_input_arbitration_snapshot) | test(~window_command_action_availability_snapshot)" --no-fail-fast`
+- `cargo build -p fretboard-dev --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-dev`
+- `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7 --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard-dev.exe diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7/1778636234419/bundle.schema2.json --sort dispatch --top 5`
+
+Evidence:
+- Bundle:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r7/1778636234419/bundle.schema2.json`
+- Gate result stayed within the existing hit-test/global-change contract:
+  `pointer_move_max_hit_test_time_us=17`, `pointer_move_snapshots_with_global_changes=0`.
+- Pointer dispatch max dropped from the r6 attributed top frame `1184us` to `97us`.
+- `dispatch_context_build_time_us` dropped from top-frame `1046us` to `3us`.
+- Dispatch attribution p50/p95/max is now:
+  `accounted=79/91/91us`, `unattributed=3/6/6us`, `body_unattributed=2/5/5us`,
+  and `runtime_wrapper=0/1/1us`.
+- Top dispatch frame `tick=228 frame=228` reports
+  `dispatch_breakdown.us(total/inner_body/accounted/unattributed/body_unattributed/runtime_wrapper/...)=97/96/91/6/5/1/...`
+  with `context_build=3us`, `hit_test=17us`, `bubble=24us`, and `synth_hover=8us`.
+
+Decision:
+- The correct optimization was snapshot reuse, not threshold loosening.
+- Hit-testing remains bounded; the previous `~1ms` dispatch tail was retained-tree snapshot
+  rebuilding and deep-copying, not pointer hit-testing.
+- Keep a future follow-up for a formal dispatch-tail threshold/baseline if repeated runs remain
+  stable across machines, but do not promote a new baseline from a single repeat=1 recovery run.

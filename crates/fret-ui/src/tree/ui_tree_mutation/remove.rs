@@ -201,6 +201,7 @@ impl<H: UiHost> UiTree<H> {
         let mut removed: Vec<NodeId> = Vec::new();
         self.remove_subtree_inner(services, root, &mut removed);
         if !removed.is_empty() {
+            self.invalidate_dispatch_snapshot_cache();
             self.mark_semantics_dirty();
         }
 
