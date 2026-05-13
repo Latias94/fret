@@ -13257,3 +13257,32 @@ Decision:
   rebuilding and deep-copying, not pointer hit-testing.
 - Keep a future follow-up for a formal dispatch-tail threshold/baseline if repeated runs remain
   stable across machines, but do not promote a new baseline from a single repeat=1 recovery run.
+
+## 2026-05-13 09:43:59 +08:00 (dispatch snapshot cache repeat=3 check)
+
+Question:
+- Is the dispatch snapshot cache improvement stable across repeated runs, or was the r7 result a
+  single-run artifact?
+
+Validation:
+- `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r8-repeat3 --repeat 3 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard-dev.exe diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r8-repeat3/1778636608073/bundle.schema2.json --sort dispatch --top 3`
+
+Evidence:
+- Repeat=3 row stats:
+  `pointer_move_max_dispatch_time_us` min/p50/p95/max=`82/89/91/91`.
+- Repeat=3 hit-test/global-change stats:
+  `pointer_move_max_hit_test_time_us` min/p50/p95/max=`14/16/17/17`;
+  `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
+- Worst overall bundle:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r8-repeat3/1778636608073/bundle.schema2.json`.
+- Worst-run `diag stats` reports dispatch attribution p50/p95/max:
+  `accounted=67/87/87us`, `unattributed=3/6/6us`, `body_unattributed=3/6/6us`,
+  `runtime_wrapper=0/1/1us`.
+- Top dispatch frames in the worst run report `context_build=2..3us`, with dispatch total
+  `88..91us`.
+
+Decision:
+- The cache improvement is stable enough to keep as the architectural fix.
+- A formal repeat=7 contract or stricter dispatch-tail threshold should be promoted as a separate
+  baseline/gate slice, so this optimization commit remains focused on mechanism and evidence.

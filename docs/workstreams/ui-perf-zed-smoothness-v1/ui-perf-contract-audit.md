@@ -296,8 +296,13 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     pointer max dispatch/hit-test=`97/17us`, `pointer_move_snapshots_with_global_changes=0`;
     dispatch attribution p50/p95/max `accounted=79/91/91us`, `unattributed=3/6/6us`,
     `body_unattributed=2/5/5us`, `runtime_wrapper=0/1/1us`.
-  - Conclusion: the prior `~1ms` pointer dispatch tail is fixed for the torture surface; do not promote a formal
-    new dispatch threshold from this single repeat=1 run until the broader contract set is reseeded intentionally.
+  - Repeat=3 evidence on
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-snapshot-cache-r8-repeat3/1778636608073/bundle.schema2.json`:
+    `pointer_move_max_dispatch_time_us` min/p50/p95/max=`82/89/91/91`,
+    `pointer_move_max_hit_test_time_us` min/p50/p95/max=`14/16/17/17`, and
+    `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
+  - Conclusion: the prior `~1ms` pointer dispatch tail is fixed for the torture surface; promote a formal repeat=7
+    dispatch-tail threshold or baseline as a separate gate slice rather than mixing it into the mechanism fix.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
@@ -334,9 +339,9 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.
-5. The hit-test torture pointer dispatch tail has a repeat=1 fix and evidence via dispatch snapshot reuse. The
-   remaining gap is contract promotion: run repeated validation before adding a formal dispatch-tail threshold or
-   baseline for the optimized path.
+5. The hit-test torture pointer dispatch tail has repeat=3 evidence via dispatch snapshot reuse. The remaining gap is
+   contract promotion: add a formal repeat=7 dispatch-tail threshold or baseline for the optimized path in a dedicated
+   gate slice.
 
 ## Audit Conclusion
 
