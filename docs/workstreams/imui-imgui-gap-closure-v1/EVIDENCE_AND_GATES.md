@@ -55,6 +55,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
+  - `tools/diag_gate_imui_product_chain.py`
 - Prior status:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
@@ -139,6 +140,7 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --
 Use these when changing the P3 execution-priority read:
 
 ```powershell
+python tools/diag_gate_imui_product_chain.py
 python tools/audit_crate.py --crate fret-imui
 python tools/audit_crate.py --crate fret-ui-kit
 python tools/audit_crate.py --crate fret-ui-editor
@@ -148,6 +150,25 @@ python tools/gate_imui_facade_teaching_source.py
 python tools/check_workstream_catalog.py
 git diff --check
 ```
+
+## P3 Product Chain Gate
+
+Use this gate before treating a Dear ImGui-class gap as widget/API breadth. It validates the current
+product chain's discovery path, promoted script/suite inputs, and source gates across the generic
+IMUI cookbook path, editor-controls cookbook path, editor proof, and workspace shell:
+
+```powershell
+python tools/diag_gate_imui_product_chain.py
+```
+
+Run evidence:
+
+- 2026-05-14: `python tools/diag_gate_imui_product_chain.py` passed locally.
+- The run validated cookbook example discovery, native demo discovery, tool-app discovery,
+  campaign doctor output, all promoted product-chain diagnostics scripts, and both IMUI source
+  gates.
+- This is not a replacement for launched GUI gates. It is the first-open maintenance gate that keeps
+  the cross-app product path visible before opening a new helper or widget follow-on.
 
 ## P0 Gates
 
