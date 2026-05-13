@@ -1587,6 +1587,22 @@ pub(super) fn click_stable_timeout_hit_test_note(
     ))
 }
 
+pub(super) fn selectable_span_timeout_hit_test_note(
+    trace: &[UiHitTestTraceEntryV1],
+    step_index: u32,
+    tag: &str,
+    last_lookup_state: Option<&str>,
+    stable_count: u32,
+    stable_required: u32,
+    remaining_frames: u32,
+) -> Option<String> {
+    let hit_note = click_stable_timeout_hit_test_note(trace, step_index)?;
+    Some(format!(
+        "tag={:?} last_lookup_state={:?} stable_count={} stable_required={} remaining_frames={} {}",
+        tag, last_lookup_state, stable_count, stable_required, remaining_frames, hit_note
+    ))
+}
+
 fn selector_debug_summary(selector: &UiSelectorV1) -> String {
     match selector {
         UiSelectorV1::TestId { id, root_z_index } => {
@@ -1698,6 +1714,54 @@ mod tests {
 
         assert!(note.contains("hit_semantics_test_id=Some(\"new.overlay\")"));
         assert!(!note.contains("step_index=11"));
+    }
+
+    #[test]
+    fn selectable_span_timeout_note_adds_span_lookup_state() {
+        let note = selectable_span_timeout_hit_test_note(
+            &[hit_trace(12)],
+            12,
+            "docs-link",
+            Some("empty_span_bounds"),
+            1,
+            2,
+            0,
+        )
+        .unwrap();
+
+        assert!(note.contains("tag=\"docs-link\""));
+        assert!(note.contains("last_lookup_state=Some(\"empty_span_bounds\")"));
+        assert!(note.contains("stable_count=1"));
+        assert!(note.contains("stable_required=2"));
+        assert!(note.contains("remaining_frames=0"));
+        assert!(note.contains("blocking_reason=Some(\"pointer_occlusion\")"));
+    }
+
+    #[test]
+    fn selectable_span_timeout_note_covers_cached_test_id_fallback() {
+        let mut hit = hit_trace(21);
+        hit.intended_node_id = None;
+        hit.intended_test_id = Some("cached.text".to_string());
+        hit.note = Some("click_selectable_text_span_stable.timeout.no_semantics_match".to_string());
+
+        let note = selectable_span_timeout_hit_test_note(
+            &[hit],
+            21,
+            "inline-action",
+            Some("no_semantics_match"),
+            0,
+            1,
+            0,
+        )
+        .unwrap();
+
+        assert!(note.contains("tag=\"inline-action\""));
+        assert!(note.contains("last_lookup_state=Some(\"no_semantics_match\")"));
+        assert!(note.contains("intended_node_id=None"));
+        assert!(note.contains("intended_test_id=Some(\"cached.text\")"));
+        assert!(note.contains(
+            "note=Some(\"click_selectable_text_span_stable.timeout.no_semantics_match\")"
+        ));
     }
 }
 
@@ -1833,6 +1897,31 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                         Some(node),
                         Some(timeout_note),
                         svc.cfg.max_debug_string_bytes,
+                    );
+                }
+                if let Some(note) = selectable_span_timeout_hit_test_note(
+                    &active.hit_test_trace,
+                    step_index as u32,
+                    tag.as_str(),
+                    state.last_lookup_state,
+                    state.stable_count,
+                    stable_required,
+                    state.remaining_frames,
+                ) {
+                    push_script_event_log(
+                        active,
+                        &svc.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "click_selectable_text_span_stable.timeout_hit_test".to_string(),
+                            step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                            note: Some(note),
+                            bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: None,
+                            frame_id: None,
+                            window_snapshot_seq: None,
+                        },
                     );
                 }
                 *force_dump_label = Some(format!(
@@ -2068,6 +2157,31 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                         None,
                         Some("click_selectable_text_span_stable.timeout.no_semantics_match"),
                         svc.cfg.max_debug_string_bytes,
+                    );
+                }
+                if let Some(note) = selectable_span_timeout_hit_test_note(
+                    &active.hit_test_trace,
+                    step_index as u32,
+                    tag.as_str(),
+                    Some("no_semantics_match"),
+                    state.stable_count,
+                    stable_frames.max(1),
+                    state.remaining_frames,
+                ) {
+                    push_script_event_log(
+                        active,
+                        &svc.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "click_selectable_text_span_stable.timeout_hit_test".to_string(),
+                            step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                            note: Some(note),
+                            bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: None,
+                            frame_id: None,
+                            window_snapshot_seq: None,
+                        },
                     );
                 }
                 *force_dump_label = Some(format!(

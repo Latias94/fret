@@ -781,6 +781,35 @@ Follow-up recommendation:
   Selectable text needs span lookup state plus hit-test blocking evidence; focus needs expected vs
   actual focused node/test id and barrier ownership in the timeout/failure event.
 
+## Phase 2.24 Selectable-Span Hit-Test Timeout Explainability
+
+Selectable text span clicks add another mechanism layer on top of normal `click_stable`: the script
+must first find runtime span bounds for a tagged inline region, wait for those bounds to settle, and
+then prove the chosen point routes to the intended text node. The existing timeout paths already
+distinguished `no_semantics_match`, `no_runtime_state`, and `empty_span_bounds` in the failure
+reason, and they recorded hit-test traces, but the script result still did not summarize both the
+span lookup state and the final routing evidence in one place.
+
+Fixes:
+
+- `click_selectable_text_span_stable` timeout now emits
+  `click_selectable_text_span_stable.timeout_hit_test` for both the normal semantics path and the
+  cached-test-id fallback path.
+- The note includes the requested tag, `last_lookup_state`, stable-frame counters, remaining
+  frames, and the same intended/hit/blocking/pointer-capture summary used by `click_stable`.
+- This makes inline editor/link failures distinguishable as span-generation bugs, stale semantics
+  bugs, or hit-test routing bugs without opening raw traces first.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" selectable_span_timeout_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Add the focus failure summary next: `focus` should report expected node/test id, actual focused
+  node/test id, focus/modal barrier roots, pointer occlusion/capture state, and `matches_expected`
+  directly in the failure event.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -847,6 +876,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" selectable_span_timeout_note -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
