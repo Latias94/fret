@@ -182,6 +182,10 @@
       "command": "rg -n \"row\\\\(|horizontal\\\\(|horizontal_with_options|row_with|id_source|test_id|push_id\" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
     },
     {
+      "name": "fret-imui runtime boundary",
+      "command": "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py"
+    },
+    {
       "name": "imui diagnostics devtools first-open",
       "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
     },
@@ -208,6 +212,7 @@
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "ecosystem/fret-imui/Cargo.toml",
     "ecosystem/fret-imui/src/lib.rs",
     "ecosystem/fret-imui/src/frontend.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",

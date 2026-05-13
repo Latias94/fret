@@ -171,6 +171,30 @@ Run evidence:
 - This is not a replacement for launched GUI gates. It is the first-open maintenance gate that keeps
   the cross-app product path visible before opening a new helper or widget follow-on.
 
+## Runtime Boundary Gate
+
+Use this gate to protect the core architectural constraint for this lane: `fret-imui` stays a thin
+immediate facade over `fret-authoring` + `fret-ui`; policy-heavy IMUI helpers stay in
+`fret-ui-kit::imui`, editor controls stay in `fret-ui-editor`, and docking/workspace behavior stays
+outside the runtime facade.
+
+```powershell
+python tools/gate_imui_workstream_source.py
+python tools/audit_crate.py --crate fret-imui
+python tools/check_layering.py
+```
+
+Run evidence:
+
+- 2026-05-14: `python tools/audit_crate.py --crate fret-imui` passed and reported direct runtime
+  dependencies only on `fret-authoring` and `fret-ui`; `fret-ui-kit` remains dev-only for focused
+  behavior tests.
+- 2026-05-14: `python tools/check_layering.py` passed.
+- 2026-05-14: `python tools/gate_imui_workstream_source.py` now validates
+  `ecosystem/fret-imui/Cargo.toml` `[dependencies]` and rejects policy/runtime drift such as
+  `fret-ui-kit`, `fret-ui-editor`, `fret-docking`, `fret-workspace`, `fret-ui-shadcn`, `winit`, or
+  `wgpu` in the runtime dependency section.
+
 ## P3 Diagnostics / DevTools First-Open Gate
 
 Use this gate for the current Dear ImGui-class diagnostics discoverability read. It verifies the

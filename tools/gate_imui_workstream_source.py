@@ -33,6 +33,43 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
             failures.append(f"{check.path.as_posix()}: forbidden {marker}")
 
 
+def dependency_section(source: str, section: str) -> str:
+    marker = f"[{section}]"
+    start = source.find(marker)
+    if start == -1:
+        return ""
+    body_start = start + len(marker)
+    next_section = source.find("\n[", body_start)
+    if next_section == -1:
+        return source[body_start:]
+    return source[body_start:next_section]
+
+
+def check_fret_imui_runtime_dependencies(failures: list[str]) -> None:
+    path = Path("ecosystem/fret-imui/Cargo.toml")
+    source = read_source(path)
+    deps = dependency_section(source, "dependencies")
+    required = [
+        "fret-authoring = { path = \"../fret-authoring\" }",
+        "fret-ui = { path = \"../../crates/fret-ui\" }",
+    ]
+    forbidden = [
+        "fret-ui-kit",
+        "fret-ui-editor",
+        "fret-docking",
+        "fret-workspace",
+        "fret-ui-shadcn",
+        "winit",
+        "wgpu",
+    ]
+    for marker in required:
+        if marker not in deps:
+            failures.append(f"{path.as_posix()} [dependencies]: missing {marker}")
+    for marker in forbidden:
+        if marker in deps:
+            failures.append(f"{path.as_posix()} [dependencies]: forbidden {marker}")
+
+
 def main() -> None:
     checks = [
         SourceCheck(
@@ -54,6 +91,8 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer",
+                "ecosystem/fret-imui/Cargo.toml",
+                "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py",
                 "python tools/gate_imui_editor_collection_source.py",
                 "python tools/gate_imui_facade_teaching_source.py",
                 "python tools/gate_imui_workstream_source.py",
@@ -245,6 +284,14 @@ def main() -> None:
                 "`tools/diag_gate_imui_p2_devtools_first_open.py`",
                 "`tools/diag_gate_imui_product_chain.py`",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer",
+                "## Runtime Boundary Gate",
+                "`fret-imui` stays a thin",
+                "python tools/audit_crate.py --crate fret-imui",
+                "reported direct runtime",
+                "dependencies only on `fret-authoring` and `fret-ui`",
+                "validates",
+                "`ecosystem/fret-imui/Cargo.toml` `[dependencies]`",
+                "`fret-ui-kit`, `fret-ui-editor`, `fret-docking`, `fret-workspace`, `fret-ui-shadcn`, `winit`, or",
                 "## P3 Product Chain Gate",
                 "Use this gate before treating a Dear ImGui-class gap as widget/API breadth.",
                 "python tools/diag_gate_imui_product_chain.py",
@@ -5407,6 +5454,7 @@ def main() -> None:
     failures: list[str] = []
     for check in checks:
         check_source(check, failures)
+    check_fret_imui_runtime_dependencies(failures)
 
     if failures:
         fail(GATE_NAME, f"{len(failures)} source marker problem(s):\n  - " + "\n  - ".join(failures))
