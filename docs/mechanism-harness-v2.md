@@ -647,6 +647,26 @@ Validation:
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
 - `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-narrow-open-screenshot.json --dir target/fret-diag/codex-combobox-content-shell-sweep-20260513-1745 --session-auto --launch -- cargo run -p fret-ui-gallery`
 
+## Phase 2.19 Cross-Family Overlay Trace Selector Sweep
+
+After the combobox-only sweep, the remaining UI Gallery overlay-trace corpus was audited for the
+same "inner listbox as overlay content" drift. The only remaining occurrence was in
+`tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json`, whose combobox
+segment still queried `ui-gallery-combobox-demo-listbox` as the placement content.
+
+Fixes:
+
+- The popup/menu narrow sweep now queries `ui-gallery-combobox-demo-content` for the overlay
+  placement trace and still checks `ui-gallery-combobox-demo-listbox` for inner list geometry.
+- `popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace` locks that split.
+
+Validation:
+
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json`
+- Full UI Gallery overlay-trace script audit found zero `*-listbox` `content_test_id` queries across
+  68 overlay trace gates.
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -708,6 +728,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" script_steps_scroll::tests -- --nocapture`
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

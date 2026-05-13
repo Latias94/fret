@@ -23,6 +23,7 @@ fn popup_menu_narrow_sweep_covers_select_combobox_context_menu_and_dropdown_menu
         "\"select-scroll-viewport\"",
         "\"ui-gallery-combobox-demo-trigger\"",
         "\"ui-gallery-combobox-demo-input\"",
+        "\"ui-gallery-combobox-demo-content\"",
         "\"ui-gallery-combobox-demo-listbox\"",
         "\"type\": \"click_stable\"",
         "\"type\": \"wait_overlay_placement_trace\"",
@@ -64,6 +65,27 @@ fn select_and_combobox_demo_snippets_clamp_width_inside_narrow_doc_columns() {
     assert!(
         !combobox_demo.contains(".width_px(Px(260.0))"),
         "combobox conformance demo should not force a fixed-width trigger that can overflow the narrow docs column",
+    );
+}
+
+#[test]
+fn popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json"
+    );
+
+    assert!(
+        script.contains("\"content_test_id\": \"ui-gallery-combobox-demo-content\""),
+        "popup/menu narrow sweep should query combobox overlay placement on the positioned content shell",
+    );
+    assert!(
+        script.contains("\"kind\": \"bounds_within_window\"")
+            && script.contains("\"id\": \"ui-gallery-combobox-demo-listbox\""),
+        "popup/menu narrow sweep should still check inner combobox listbox geometry separately",
+    );
+    assert!(
+        !script.contains("\"content_test_id\": \"ui-gallery-combobox-demo-listbox\""),
+        "combobox listbox is an inner geometry target, not the overlay placement content shell",
     );
 }
 fn normalize_ws(source: &str) -> String {
