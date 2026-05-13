@@ -32,6 +32,15 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
   - Snapshot availability is dispatch-path scoped (current focus/default route plus explicit
     `focus.next` / `focus.previous` and `focus.menu_bar` hooks); it intentionally does not scan
     unfocused subtrees.
+  - View/app-owned typed action handlers that are intentionally outside the focused widget route
+    must publish an explicit action-route fallback root. Snapshot publication and dispatch both
+    consult those roots before the no-focus subtree fallback, which keeps menus, command palettes,
+    overlays, and cached `AppUi` view handlers aligned without turning availability into an
+    arbitrary whole-tree scan.
+    - Evidence: `ElementContext::action_route_fallback_root`,
+      `UiTree::command_availability_in_action_route_fallback_roots`,
+      `install_app_ui_action_handlers_for_owner`,
+      `app_ui_unit_action_handler_publishes_available_snapshot_when_focus_exists`.
   - Providers should use `CommandAvailability::Blocked` (not `NotHandled`) for "owned but currently
     unavailable" states (e.g. `text.copy` with an empty selection) so menus/palettes can disable
     commands deterministically.

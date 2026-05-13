@@ -434,6 +434,8 @@ pub struct WindowElementState {
     view_cache_key_mismatch_roots: HashSet<GlobalElementId>,
     pub(super) view_cache_elements_rendered: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_elements_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
+    action_route_fallback_roots_rendered: HashSet<GlobalElementId>,
+    action_route_fallback_roots_next: HashSet<GlobalElementId>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
     view_cache_last_reused_frame: HashMap<GlobalElementId, FrameId>,
     view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
@@ -725,6 +727,12 @@ impl WindowElementState {
         );
         self.view_cache_elements_next.clear();
 
+        std::mem::swap(
+            &mut self.action_route_fallback_roots_rendered,
+            &mut self.action_route_fallback_roots_next,
+        );
+        self.action_route_fallback_roots_next.clear();
+
         self.view_cache_reuse_roots.clear();
         self.view_cache_transitioned_reuse_roots.clear();
         self.view_cache_stack.clear();
@@ -855,6 +863,22 @@ impl WindowElementState {
             || self
                 .node_entry(element)
                 .is_some_and(|entry| entry.last_seen_frame == self.prepared_frame)
+    }
+
+    pub(crate) fn record_action_route_fallback_root(&mut self, element: GlobalElementId) {
+        self.action_route_fallback_roots_next.insert(element);
+    }
+
+    pub(crate) fn action_route_fallback_roots(&self) -> Vec<GlobalElementId> {
+        let mut roots: Vec<GlobalElementId> = self
+            .action_route_fallback_roots_next
+            .iter()
+            .chain(self.action_route_fallback_roots_rendered.iter())
+            .copied()
+            .collect();
+        roots.sort_by_key(|root| root.0);
+        roots.dedup();
+        roots
     }
 
     pub(crate) fn take_transient_event(&mut self, element: GlobalElementId, key: u64) -> bool {

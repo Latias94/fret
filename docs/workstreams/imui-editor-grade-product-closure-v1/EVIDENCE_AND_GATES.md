@@ -526,6 +526,18 @@ The captured first-contact editor-control artifacts are:
 - roughness typing bundle:
   `target/fret-diag/1778653344759-cookbook-imui-editor-controls-roughness-typing/bundle.schema2.json`
 
+Latest launched generic-action evidence (2026-05-14): `PASS (run_id=1778703206445)`, packed at
+`target/imui-product-chain-launched-2026-05-14-generic-action-action-route-fallback/1778702675441/generic-action/1778702675548/i/share/1778703206445.zip`.
+This run exercises command palette, declarative, GenUI DropdownMenu, and IMUI triggers through the
+same typed action handler after `fret-ui` began honoring explicit action-route fallback roots for
+view/app-owned action handlers. The source gate is:
+
+```text
+cargo nextest run -p fret-ui action_availability_snapshot_does_not_scan_unfocused_subtree action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback --no-fail-fast --jobs 1
+cargo nextest run -p fret --lib app_ui_unit_action_handler_publishes_available_command_snapshot_by_default app_ui_unit_action_handler_publishes_available_snapshot_when_focus_exists locals_with_runtime_dispatch_updates_locals_and_rerenders_cached_view --no-fail-fast --jobs 1
+python tools/diag_gate_imui_product_chain.py --launched --only generic-action --release --out-dir target/imui-product-chain-launched-2026-05-14-generic-action-action-route-fallback
+```
+
 ### Product-chain discovery gate
 
 Status: landed as a lightweight maintainer gate.
