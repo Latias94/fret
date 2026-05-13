@@ -810,6 +810,32 @@ Follow-up recommendation:
   node/test id, focus/modal barrier roots, pointer occlusion/capture state, and `matches_expected`
   directly in the failure event.
 
+## Phase 2.25 Focus Trace Summary Events
+
+The focus audit showed that `Focus` is an immediate procedural step rather than a multi-frame
+`wait_*` gate. It calls `ui.set_focus`, publishes runtime snapshots, and advances. The existing
+focus trace type already carried the useful mechanism evidence, but the step did not emit a compact
+event-log summary, so focus-owner or barrier mismatches could remain buried in the raw evidence.
+
+Fixes:
+
+- `Focus` now records a `UiFocusTraceEntryV1` immediately after `ui.set_focus` and publishes either
+  `focus.trace` or `focus.trace_mismatch` in the script event log.
+- The note summarizes expected node/test id, actual focused element/node/test id, focused role,
+  `matches_expected`, modal/focus barrier roots, pointer occlusion/capture state, and text-input
+  focus state.
+- This reuses existing focus trace protocol fields and does not add a protocol migration.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" focus_trace_summary_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Extend the same summary helper to the multi-phase text-input steps (`paste_text_into`,
+  `type_text_into`, `set_text_value`) when they fail waiting for focus or clipboard/IME state. Those
+  are the next highest risk editor-grade focus paths.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -877,6 +903,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" selectable_span_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" focus_trace_summary_note -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
