@@ -1037,6 +1037,54 @@ Follow-up recommendation:
   expected content height before the wait step, so the gate can verify available space from actual
   anchor geometry rather than using a conservative viewport threshold.
 
+## Phase 2.32 Combobox Responsive Overlay Source-Axis Gate
+
+The responsive combobox desktop diagnostic run exposed a diagnostics gate defect rather than a
+runtime placement defect. `ui-gallery-combobox-responsive-open` asserted `side_offset_px=6`, but the
+measured overlay trace reported `side_offset_px=4`.
+
+Findings:
+
+- The upstream responsive example is authored with `PopoverContent` + `Command`, not the v4
+  `ComboboxContent` component. `ComboboxContent` defaults to `sideOffset=6`; `PopoverContent`
+  defaults to `sideOffset=4`.
+- Fret's `device_shell_responsive(true)` path already models this split through
+  `combobox_effective_side_offset(true, Px(6.0)) == Px(4.0)`, so the component recipe was correct.
+- The script had drifted across source axes and was treating the responsive Popover/Button/Command
+  example as if it used the generic `ComboboxContent` default.
+
+Fixes:
+
+- Updated `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json` to assert
+  `side_offset_px=4.0`.
+- Added a UI Gallery surface test that parses the responsive desktop script and locks this source
+  axis decision, instead of relying on a broad string check.
+
+Evidence:
+
+- Failing run:
+  `target/fret-diag-combobox-responsive-probe/sessions/1778683486763-54568`,
+  `run_id=1778683489586`, `stage=failed`, reason `wait_overlay_placement_trace_timeout`.
+- Failure note:
+  `wait_overlay_placement_trace.candidate_mismatch`, expected side offset `6+/-0.25`, actual `4`.
+- Passing run:
+  `target/fret-diag-combobox-responsive-fixed/sessions/1778684914836-122188`,
+  `run_id=1778684917709`, `stage=passed`.
+- Share artifact:
+  `target/fret-diag-combobox-responsive-fixed/sessions/1778684914836-122188/share/1778684917709.zip`.
+
+Validation:
+
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_responsive_diag_scripts_pin_exact_viewport_variants -- --nocapture`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json --dir target/fret-diag-combobox-responsive-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+
+Follow-up recommendation:
+
+- Add a source-axis preflight for overlay scripts that compares the component/example family against
+  the expected default offset (`PopoverContent=4`, `ComboboxContent=6`, `DropdownMenuContent=4`,
+  `MenubarContent=8`) so future diagnostics do not silently mix component-default and example-local
+  parity truths.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust

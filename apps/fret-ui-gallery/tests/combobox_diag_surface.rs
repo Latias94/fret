@@ -49,6 +49,29 @@ fn combobox_responsive_diag_scripts_pin_exact_viewport_variants() {
         desktop.contains("\"type\": \"wait_overlay_placement_trace\""),
         "desktop responsive diag script should wait for anchored-panel overlay trace on the content shell",
     );
+    {
+        let desktop_json: serde_json::Value =
+            serde_json::from_str(desktop).expect("desktop responsive combobox script json");
+        let trace_query = desktop_json
+            .get("steps")
+            .and_then(serde_json::Value::as_array)
+            .and_then(|steps| {
+                steps.iter().find_map(|step| {
+                    (step.get("type").and_then(serde_json::Value::as_str)
+                        == Some("wait_overlay_placement_trace"))
+                    .then(|| step.get("query"))
+                    .flatten()
+                })
+            })
+            .expect("desktop responsive combobox overlay trace query");
+        assert_eq!(
+            trace_query
+                .get("side_offset_px")
+                .and_then(serde_json::Value::as_f64),
+            Some(4.0),
+            "responsive combobox desktop script should follow the upstream PopoverContent path; ComboboxContent's v4 default sideOffset=6 is a different source axis",
+        );
+    }
     assert!(
         !mobile.contains("\"type\": \"wait_overlay_placement_trace\""),
         "mobile responsive diag script should stay on the drawer/layout-surface lane instead of waiting for anchored-panel overlay trace",
