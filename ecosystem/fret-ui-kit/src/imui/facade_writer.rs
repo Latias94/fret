@@ -7,6 +7,7 @@ mod boolean_wrappers;
 mod button_actions;
 mod container_wrappers;
 mod disclosure;
+mod floating_popup;
 mod menu_items;
 mod selection_combo;
 mod text_models;
@@ -474,8 +475,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element = self.with_cx_mut(|cx| floating_layer_element(cx, id, f));
-        self.add(element);
+        floating_popup::floating_layer(self, id, f);
     }
 
     /// Render a minimal in-window floating area primitive.
@@ -505,10 +505,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: FloatingAreaOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>, FloatingAreaContext),
     ) -> FloatingAreaResponse {
-        let (element, response) =
-            self.with_cx_mut(|cx| floating_area_element(cx, id, initial_position, options, f));
-        self.add(element);
-        response
+        floating_popup::floating_area_with_options(self, id, initial_position, options, f)
     }
 
     /// Build a drag surface that moves a floating area (ImGui-style).
@@ -521,9 +518,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
-        self.with_cx_mut(|cx| {
-            floating_area_drag_surface_element(cx, area, props, None, true, true, setup, f)
-        })
+        floating_popup::floating_area_drag_surface(self, area, props, setup, f)
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -531,7 +526,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// This is intended to support ImGui-like `OpenPopup` / `BeginPopup` splits without forcing
     /// callers to allocate a dedicated `Model<bool>` per popup.
     fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
-        popup_overlay::popup_open_model(self, id)
+        floating_popup::popup_open_model(self, id)
     }
 
     /// Drops all internal state for a named popup scope.
@@ -540,19 +535,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// without bound (e.g. popups keyed by user-generated strings). Dropping a scope will close the
     /// popup (if open) and release the internal models if no other references exist.
     fn drop_popup_scope(&mut self, id: &str) {
-        popup_overlay::drop_popup_scope(self, id);
+        floating_popup::drop_popup_scope(self, id);
     }
 
     fn open_popup(&mut self, id: &str) {
-        popup_overlay::open_popup(self, id);
+        floating_popup::open_popup(self, id);
     }
 
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
-        popup_overlay::open_popup_at(self, id, anchor);
+        floating_popup::open_popup_at(self, id, anchor);
     }
 
     fn close_popup(&mut self, id: &str) {
-        popup_overlay::close_popup(self, id);
+        floating_popup::close_popup(self, id);
     }
 
     fn begin_popup_menu(
@@ -571,7 +566,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_menu_with_options(self, id, trigger, options, false, f)
+        floating_popup::begin_popup_menu_with_options(self, id, trigger, options, f)
     }
 
     fn begin_popup_modal(
@@ -590,7 +585,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupModalOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_modal_with_options(self, id, trigger, options, f)
+        floating_popup::begin_popup_modal_with_options(self, id, trigger, options, f)
     }
 
     /// Build a generic immediate collapsing header with explicit stable identity.
@@ -651,7 +646,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         text: impl Into<Arc<str>>,
         options: TooltipOptions,
     ) -> bool {
-        tooltip_overlay::tooltip_text_with_options(self, id, trigger, text.into(), options)
+        floating_popup::tooltip_text_with_options(self, id, trigger, text, options)
     }
 
     fn tooltip(
@@ -670,7 +665,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: TooltipOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        tooltip_overlay::tooltip_with_options(self, id, trigger, options, f)
+        floating_popup::tooltip_with_options(self, id, trigger, options, f)
     }
 
     /// Publish a typed payload for the trigger's existing pressable drag gesture.
@@ -695,7 +690,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         payload: T,
         options: DragSourceOptions,
     ) -> DragSourceResponse {
-        drag_drop::drag_source_with_options(self, trigger, payload, options)
+        floating_popup::drag_source_with_options(self, trigger, payload, options)
     }
 
     /// Resolve a typed drop target against the trigger's existing pressable surface.
@@ -711,7 +706,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         trigger: ResponseExt,
         options: DropTargetOptions,
     ) -> DropTargetResponse<T> {
-        drag_drop::drop_target_with_options(self, trigger, options)
+        floating_popup::drop_target_with_options(self, trigger, options)
     }
 
     fn menu_separator(&mut self) {
@@ -914,7 +909,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_context_menu_with_options(self, id, trigger, options, f)
+        floating_popup::begin_popup_context_menu_with_options(self, id, trigger, options, f)
     }
 
     fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
@@ -1219,7 +1214,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        floating_window::floating_window_show(self, id, title, initial_position, f)
+        floating_popup::window(self, id, title, initial_position, f)
     }
 
     /// Render a floating window with explicit state and behavior options.
@@ -1231,14 +1226,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: WindowOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        floating_window::floating_window_show_with_options(
-            self,
-            id,
-            title,
-            initial_position,
-            options,
-            f,
-        )
+        floating_popup::window_with_options(self, id, title, initial_position, options, f)
     }
 }
 

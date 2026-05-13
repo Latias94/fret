@@ -85,6 +85,15 @@ Tracker highlights:
   `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
   `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/TODO.md`, and
   `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade floating/popup owner-split follow-on (closed narrow structural lane for moving
+  floating/popup/tooltip/drag-drop/window trait default implementation bodies without public
+  API/runtime widening):
+  `docs/workstreams/imui-facade-floating-popup-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M0_BASELINE_AUDIT_2026-05-14.md`,
+  `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M1_FLOATING_POPUP_FACADE_OWNER_SPLIT_2026-05-14.md`,
+  `docs/workstreams/imui-facade-floating-popup-owner-split-v1/CLOSEOUT_AUDIT_2026-05-14.md`,
+  `docs/workstreams/imui-facade-floating-popup-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-facade-floating-popup-owner-split-v1/EVIDENCE_AND_GATES.md`.
 - ImUi debug draw owner-split follow-on (closed narrow structural lane for splitting
   `debug_draw_controls.rs` private command/paint/path owners without public API widening; see the
   closeout audit for the private test-owner verdict):

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Evidence Anchors
 
@@ -34,6 +34,7 @@ Last updated: 2026-05-13
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`

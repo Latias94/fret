@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 368
+- Dedicated directories: 369
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -220,9 +220,28 @@ Current source of truth for the in-tree immediate-mode stack:
   - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
-  - Scope: closed structural container wrapper owner split; future popup/floating wrappers,
-    trait-surface reshaping, docking, multi-window, and additive table/child behavior work stay in
-    separate follow-ons.
+  - Scope: closed structural container wrapper owner split; future trait-surface reshaping,
+    docking, multi-window, and additive table/child behavior work stay in separate follow-ons.
+
+- Closed facade floating/popup owner split follow-on:
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M0_BASELINE_AUDIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M1_FLOATING_POPUP_FACADE_OWNER_SPLIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/CLOSEOUT_AUDIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
+  - `ecosystem/fret-ui-kit/src/imui/floating_surface.rs`
+  - `ecosystem/fret-ui-kit/src/imui/floating_window.rs`
+  - `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs`
+  - `ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs`
+  - `ecosystem/fret-ui-kit/src/imui/drag_drop.rs`
+  - Scope: closed floating/popup/tooltip/drag-drop/window trait-default owner split; future
+    trait-surface reshaping, additive popup/floating behavior, docking, and multi-window work stay
+    in separate follow-ons.
 
 - Closed debug draw private owner split follow-on:
   - `docs/workstreams/imui-debug-draw-owner-split-v1/WORKSTREAM.json`
@@ -2063,6 +2082,7 @@ Rule:
 - `docs/workstreams/imui-facade-text-model-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for text and textarea model facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-value-model-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for slider/combo model facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for structural container facade wrapper owner split without public API or runtime contract widening)
+- `docs/workstreams/imui-facade-floating-popup-owner-split-v1/` — first 2026-05-14, latest 2026-05-14, 7 markdown docs (closed narrow follow-on for floating/popup trait-default owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-debug-draw-owner-split-v1/` — first 2026-05-06, latest 2026-05-06, 10 markdown docs (closed narrow follow-on for splitting IMUI debug draw private owners without public API or behavior changes; includes a closeout audit and private test owner)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-13, 22 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)

@@ -175,8 +175,20 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/WORKSTREAM.json`
   - Scope: closed container/table/tab/virtual-list/child-region wrapper owner split; keep
-    popup/floating wrappers, trait-surface reshaping, docking, multi-window, and additive container
-    behavior work in separate follow-ons.
+    trait-surface reshaping, docking, multi-window, and additive container behavior work in
+    separate follow-ons.
+- Closed facade floating/popup owner-split follow-on:
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M0_BASELINE_AUDIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M1_FLOATING_POPUP_FACADE_OWNER_SPLIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/CLOSEOUT_AUDIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed floating/popup/tooltip/drag-drop/window trait-default owner split; keep
+    trait-surface reshaping, additive popup/floating behavior, docking, and multi-window work in
+    separate follow-ons.
 - Closed debug draw owner-split follow-on:
   - `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`
   - `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`

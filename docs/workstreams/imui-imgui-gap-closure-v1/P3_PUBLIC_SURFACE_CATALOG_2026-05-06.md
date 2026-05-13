@@ -1,7 +1,7 @@
 # P3 Public Surface Catalog - 2026-05-06
 
 Status: public surface audit; no API refactor opened yet
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Decision
 
@@ -45,8 +45,10 @@ The main rule for future growth is stricter than the current Rust visibility:
   policy-heavy surface: `ImUiFacade`, `UiWriterImUiFacadeExt`, response types, options, debug draw,
   child regions, tables, text, drag/drop, floating, and `ImUiMultiSelectState`.
 - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` is no longer the only facade owner file: focused
-  inherent `ImUiFacade` wrappers now live under `src/imui/facade_writer/`, while the public trait
-  surface and central writer glue stay in the root file.
+  inherent `ImUiFacade` wrappers now live under `src/imui/facade_writer/`, and the
+  floating/popup trait default implementation bodies now live under the private
+  `src/imui/facade_writer/floating_popup.rs` owner. The public trait surface and central writer
+  glue stay in the root file.
 - `ecosystem/fret-ui-editor/src/imui.rs` is a thin adapter layer. Every public function accepts a
   declarative editor control/composite and calls its `into_element(...)`; it must not become a
   parallel widget implementation.
@@ -137,7 +139,8 @@ cargo check -p fret --no-default-features --features imui
 - `python tools/audit_crate.py --crate fret-ui-kit` passed and identified
   `src/imui/facade_writer.rs` as a large policy-heavy surface; the 2026-05-13 owner splits reduced
   that risk by moving focused inherent wrappers, including structural container wrappers, into
-  `src/imui/facade_writer/` modules.
+  `src/imui/facade_writer/` modules. The 2026-05-14 floating/popup owner split moved trait default
+  implementation bodies behind a private owner without changing public method names.
 - `python tools/audit_crate.py --crate fret-ui-editor` passed and identified editor controls plus
   `src/imui.rs` as the thin adapter surface.
 - `python tools/audit_crate.py --crate fret` passed and confirmed the wide facade shape.

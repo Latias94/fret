@@ -1,7 +1,7 @@
 # P3 Component Surface Catalog - 2026-05-06
 
 Status: component surface audit; no implementation lane opened yet
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Decision
 
@@ -76,7 +76,9 @@ public helper widening:
 - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` remains the public immediate authoring hub for
   the trait, text, popups, drag/drop, windows, and debug draw; the inherent `ImUiFacade` wrappers
   for button/actions, menu items, selection/combo, disclosure, text/value/boolean models, and
-  structural containers now live in `ecosystem/fret-ui-kit/src/imui/facade_writer/`.
+  structural containers now live in `ecosystem/fret-ui-kit/src/imui/facade_writer/`. The
+  floating/popup trait default implementation bodies now live in
+  `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,
