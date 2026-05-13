@@ -317,40 +317,40 @@ its report-only `top_cache_roots[].boundary` summary from that canonical list.
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:
-  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514`
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514`
 - Threshold report:
-  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/check.perf_thresholds.json`
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/check.perf_thresholds.json`
 - Worst bundle:
-  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json`
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/1778700500609/bundle.schema2.json`
 
 Observed result:
 
 - gate failures: `[]`,
-- total p50/p95/max: `1138/1544/1544us`,
-- layout p50/p95/max: `310/348/348us`,
-- prepaint p50/p95/max: `225/349/349us`,
-- paint p50/p95/max: `674/847/847us`,
+- total p50/p95/max: `1205/1396/1396us`,
+- layout p50/p95/max: `231/320/320us`,
+- prepaint p50/p95/max: `243/339/339us`,
+- paint p50/p95/max: `710/839/839us`,
 - row scene replay hit rate: `99-100%`,
 - renderer prepare/encode/upload counters stayed at `0`.
 
 Worst-bundle attribution:
 
-- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json --sort time --top 15`
-- time sum: total `11488us`, layout `1026us`, prepaint `2997us`, paint `7465us`
-- time p50/p95: total `1177/1544us`, layout `34/348us`, prepaint `285/349us`,
-  paint `666/897us`
-- hot p50/p95: `layout.engine_solve=0/133us`, `paint.widget=466/689us`,
-  `paint.text_prepare=9/12us`
+- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/1778700500609/bundle.schema2.json --sort time --top 15`
+- time sum: total `11285us`, layout `1009us`, prepaint `2905us`, paint `7371us`
+- time p50/p95: total `1151/1396us`, layout `34/337us`, prepaint `255/375us`,
+  paint `661/875us`
+- hot p50/p95: `layout.engine_solve=0/132us`, `paint.widget=443/650us`,
+  `paint.text_prepare=9/11us`
 - `code_editor.paint_perf` planned/used replay entries: `2090/2090`
 - `code_editor.paint_perf` rows replayed: `2885`
 - `code_editor.paint_perf` p50/p95 `us_row_text`: `0/13us`
-- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `58/103us`
-- `code_editor.paint_perf` p50/p95 total: `191/419us`
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `54/86us`
+- `code_editor.paint_perf` p50/p95 total: `182/385us`
 
 Compared with the M1 boundary-diagnostics bottleneck evidence (`paint.widget` p95 `1494us`, paint
-p95 `1737us`), the latest closeout run shows `paint.widget` p95 `689us` and paint p95 `897us`.
+p95 `1737us`), the latest closeout run shows `paint.widget` p95 `650us` and paint p95 `875us`.
 That exceeds the required 20-30% improvement for the selected paint-side bottleneck. Total p95
-improved from `1811us` to `1544us`; useful, but below the primary target threshold.
+improved from `1811us` to `1396us`, also exceeding the 20% threshold.
 
 ## Correctness Gates
 

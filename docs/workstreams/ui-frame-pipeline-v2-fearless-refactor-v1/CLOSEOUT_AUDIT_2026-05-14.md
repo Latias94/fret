@@ -23,7 +23,7 @@ work and must not be mistaken for missing evidence in this vertical slice.
 | Delete or retire v2-replaced private paths and migration env knobs. | Deleted/retired in-scope paths: node-owned prepaint output storage, code-editor-owned row replay-plan carrier, `dirty_cache_roots` / `dirty_cache_root_reasons` / `mark_cache_root_dirty(...)`, serialized `debug.cache_roots[].boundary`, and `UiBoundaryCacheRootDiagnosticsV1`. `rg` confirms no live `UiBoundaryCacheRootDiagnosticsV1`, `pub boundary:`, or `r.get("boundary")` producer/consumer path remains. | Complete for in-scope replaced paths. No migration-only env knob was introduced by this slice. Existing paint-cache/layout diagnostic env knobs are explicitly out-of-scope retained mechanisms with separate evidence and follow-on ownership. |
 | Update ADR 0327 alignment and workstream TODO/MILESTONES/EVIDENCE. | `docs/adr/IMPLEMENTATION_ALIGNMENT.md` row for ADR 0327 updated on 2026-05-14; `TODO.md`, `MILESTONES.md`, `EVIDENCE_AND_GATES.md`, `WORKSTREAM.json`, and M4B slice note updated. | Complete. |
 | Prove correctness and performance with focused tests, layering, cargo check, perf gate, and worst-bundle stats. | Correctness and check gates are listed below. Perf closeout evidence is in `EVIDENCE_AND_GATES.md` and M4B. Worst bundle stats were rerun with current `fretboard-dev`. | Complete. |
-| Reach 20-30% improvement on selected bottleneck. | Selected bottleneck: paint-side `paint.widget` p95 after M1 made paint dominant. M1 evidence: `paint.widget` p95 `1494us`, paint p95 `1737us`. Closeout evidence: `paint.widget` p95 `689us`, paint p95 `897us`. | Complete on selected paint-side bottleneck. Total p95 improved from `1811us` to `1544us`, which is useful but not the primary target claim. |
+| Reach 20-30% improvement on selected bottleneck. | Selected bottleneck: paint-side `paint.widget` p95 after M1 made paint dominant. M1 evidence: `paint.widget` p95 `1494us`, paint p95 `1737us`. Closeout evidence: `paint.widget` p95 `650us`, paint p95 `875us`. | Complete. Both selected paint-side bottleneck p95 and total p95 exceed the 20-30% improvement target. |
 | Keep `fret-ui` mechanism-only and ecosystem policy outside core. | `crates/fret-ui` owns boundary stores, typed prepaint outputs, scene-fragment carrier mechanics, dirty state, and diagnostics. Code-editor validation/replay policy remains in `ecosystem/fret-code-editor`. No shadcn/Radix/component policy moved into `crates/fret-ui`. `python3 tools/check_layering.py` passed. | Complete. |
 
 ## Final Gate Evidence
@@ -78,7 +78,7 @@ target/release/fretboard-dev diag perf ui-code-editor-resize-probes \
   --top 15 \
   --json \
   --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json \
-  --dir target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514 \
+  --dir target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514 \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
@@ -89,16 +89,16 @@ target/release/fretboard-dev diag perf ui-code-editor-resize-probes \
 
 Evidence:
 
-- `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/check.perf_thresholds.json`
-- `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json`
+- `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/check.perf_thresholds.json`
+- `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/1778700500609/bundle.schema2.json`
 
 Observed result:
 
 - gate failures: `[]`,
-- total p50/p95/max: `1138/1544/1544us`,
-- layout p50/p95/max: `310/348/348us`,
-- prepaint p50/p95/max: `225/349/349us`,
-- paint p50/p95/max: `674/847/847us`,
+- total p50/p95/max: `1205/1396/1396us`,
+- layout p50/p95/max: `231/320/320us`,
+- prepaint p50/p95/max: `243/339/339us`,
+- paint p50/p95/max: `710/839/839us`,
 - row scene replay hit rate: `99-100%`,
 - renderer prepare/encode/upload counters stayed at `0`.
 
@@ -106,23 +106,23 @@ Worst-bundle attribution, rerun with current `fretboard-dev`:
 
 ```bash
 cargo run -p fretboard-dev --release -- diag stats \
-  target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json \
+  target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/1778700500609/bundle.schema2.json \
   --sort time \
   --top 15
 ```
 
 Observed result:
 
-- time sum: total `11488us`, layout `1026us`, prepaint `2997us`, paint `7465us`,
-- time p50/p95: total `1177/1544us`, layout `34/348us`, prepaint `285/349us`,
-  paint `666/897us`,
-- hot p50/p95: `layout.engine_solve=0/133us`, `paint.widget=466/689us`,
-  `paint.text_prepare=9/12us`,
+- time sum: total `11285us`, layout `1009us`, prepaint `2905us`, paint `7371us`,
+- time p50/p95: total `1151/1396us`, layout `34/337us`, prepaint `255/375us`,
+  paint `661/875us`,
+- hot p50/p95: `layout.engine_solve=0/132us`, `paint.widget=443/650us`,
+  `paint.text_prepare=9/11us`,
 - `code_editor.paint_perf` planned/used replay entries: `2090/2090`,
 - `code_editor.paint_perf` rows replayed: `2885`,
 - `code_editor.paint_perf` p50/p95 `us_row_text`: `0/13us`,
-- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `58/103us`,
-- `code_editor.paint_perf` p50/p95 total: `191/419us`.
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `54/86us`,
+- `code_editor.paint_perf` p50/p95 total: `182/385us`.
 
 ## Deletion Audit
 

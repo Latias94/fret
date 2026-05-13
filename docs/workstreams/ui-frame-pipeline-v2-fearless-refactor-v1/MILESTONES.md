@@ -108,10 +108,10 @@ Status on 2026-05-14:
 
 - Boundary fragment diagnostics now report owner, slot count, total entries, used entries,
   rejected entries, and reject reason through `debug.boundaries[]`.
-- The latest closeout perf run shows `paint.widget` p95 at `689us` versus the M1 selected
+- The latest closeout perf run shows `paint.widget` p95 at `650us` versus the M1 selected
   bottleneck evidence at `1494us`, exceeding the required 20-30% improvement for the paint-side
-  bottleneck. Total p95 improved from `1811us` to `1544us`; that is useful but is not the primary
-  closeout claim.
+  bottleneck. Total p95 improved from `1811us` to `1396us`, also exceeding
+  the 20% threshold.
 - M3 is complete for the code-editor vertical slice. Broader renderer-side fragment/replay
   unification remains future work outside this vertical closeout.
 

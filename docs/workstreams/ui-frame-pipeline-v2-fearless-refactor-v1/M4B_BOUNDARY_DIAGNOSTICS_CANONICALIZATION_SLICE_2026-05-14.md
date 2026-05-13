@@ -94,49 +94,48 @@ Still intentionally not deleted:
 
 This slice changes diagnostics shape only. It does not make a new optimization claim.
 
-The latest closeout perf evidence remains:
+The latest closeout perf evidence is:
 
 - Perf output directory:
-  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514`
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514`
 - Threshold report:
-  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/check.perf_thresholds.json`
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/check.perf_thresholds.json`
 - Worst bundle:
-  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json`
+  `target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/1778700500609/bundle.schema2.json`
 
 Observed result from the latest closeout run:
 
 - gate failures: `[]`,
-- total p50/p95/max: `1138/1544/1544us`,
-- layout p50/p95/max: `310/348/348us`,
-- prepaint p50/p95/max: `225/349/349us`,
-- paint p50/p95/max: `674/847/847us`,
+- total p50/p95/max: `1205/1396/1396us`,
+- layout p50/p95/max: `231/320/320us`,
+- prepaint p50/p95/max: `243/339/339us`,
+- paint p50/p95/max: `710/839/839us`,
 - row scene replay hit rate: `99-100%`,
 - renderer prepare/encode/upload counters stayed at `0`.
 
 Worst-bundle attribution:
 
-- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-frame-v2-closeout-cargo-20260514/1778697247258/bundle.schema2.json --sort time --top 15`
-- time sum: total `11488us`, layout `1026us`, prepaint `2997us`, paint `7465us`
-- time p50/p95: total `1177/1544us`, layout `34/348us`, prepaint `285/349us`,
-  paint `666/897us`
-- hot p50/p95: `layout.engine_solve=0/133us`, `paint.widget=466/689us`,
-  `paint.text_prepare=9/12us`
+- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-frame-v2-closeout-final-20260514/1778700500609/bundle.schema2.json --sort time --top 15`
+- time sum: total `11285us`, layout `1009us`, prepaint `2905us`, paint `7371us`
+- time p50/p95: total `1151/1396us`, layout `34/337us`, prepaint `255/375us`,
+  paint `661/875us`
+- hot p50/p95: `layout.engine_solve=0/132us`, `paint.widget=443/650us`,
+  `paint.text_prepare=9/11us`
 - `code_editor.paint_perf` planned/used replay entries: `2090/2090`
 - `code_editor.paint_perf` rows replayed: `2885`
 - `code_editor.paint_perf` p50/p95 `us_row_text`: `0/13us`
-- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `58/103us`
-- `code_editor.paint_perf` p50/p95 total: `191/419us`
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `54/86us`
+- `code_editor.paint_perf` p50/p95 total: `182/385us`
 
 Compared with the M1 boundary-diagnostics bottleneck evidence (`paint.widget` p95 `1494us`,
 paint p95 `1737us`), the latest closeout run shows the selected paint-side bottleneck has moved to
-`paint.widget` p95 `689us` and paint p95 `897us`, which exceeds the target 20-30% improvement on
-the selected bottleneck. Total p95 improved from `1811us` to `1544us`; that is useful but below the
-20% target, so the closeout claim should be phrased against the paint-side bottleneck.
+`paint.widget` p95 `650us` and paint p95 `875us`, which exceeds the target 20-30% improvement on
+the selected bottleneck. Total p95 also improved from `1811us` to `1396us`, exceeding the 20% threshold.
 
 ## Remaining Gaps
 
-- A completion audit still needs to map every ADR 0327 workstream requirement to live evidence.
+- The completion audit is recorded in `CLOSEOUT_AUDIT_2026-05-14.md`.
 - Broader view-cache/build-boundary consolidation remains future work beyond the code-editor
   vertical slice.
-- The workstream should not be marked closed until the final audit confirms no v2-replaced private
-  path or migration env knob remains in this slice's scope.
+- The broader ADR 0327 lane remains active for follow-on build-boundary/view-cache/paint-cache
+  consolidation.
