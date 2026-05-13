@@ -226,7 +226,6 @@ where
                 );
             }
 
-            // Radix Select scroll buttons participate in layout, shifting the viewport when present.
             // Track the scroll-up button visibility so item-aligned placement can model Radix's
             // follow-up scroll after the button mounts.
             set_scroll_up_visible(has_scroll && allow_hover_scroll_arrows && show_up);
@@ -454,9 +453,24 @@ where
                     WheelRegionProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
+                            layout.position = PositionStyle::Absolute;
+                            layout.inset = if dir < 0.0 {
+                                InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: None.into(),
+                                    left: Some(Px(0.0)).into(),
+                                }
+                            } else {
+                                InsetStyle {
+                                    top: None.into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
+                                }
+                            };
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Px(scroll_button_h);
-                            layout.flex.shrink = 0.0;
                             layout
                         },
                         axis: ScrollAxis::Y,
@@ -601,6 +615,7 @@ where
             }
 
             let mut out = Vec::with_capacity(3);
+            out.push(scroll);
             if has_scroll && allow_hover_scroll_arrows
                 && let Some(btn) = scroll_button(
                     cx,
@@ -611,7 +626,6 @@ where
                 ) {
                     out.push(btn);
                 }
-            out.push(scroll);
             if has_scroll && allow_hover_scroll_arrows
                 && let Some(btn) = scroll_button(
                     cx,
