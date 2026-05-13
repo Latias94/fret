@@ -23,10 +23,10 @@ use fret_diag_protocol::{
     UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
     UiScriptResultV1, UiScriptStageV1, UiScrollMotionCheckV1, UiScrollMotionTraceEntryV1,
     UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1,
-    UiSizeV1, UiTaskbarVisibilityV1, UiTextInputSnapshotV1, UiTextInputVisualSnapshotV1,
-    UiWebImeTraceEntryV1, UiWindowBackgroundMaterialRequestV1, UiWindowDecorationsRequestV1,
-    UiWindowHitTestRequestV1, UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
+    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTaskbarVisibilityV1,
+    UiTextInputSnapshotV1, UiTextInputVisualSnapshotV1, UiWebImeTraceEntryV1,
+    UiWindowBackgroundMaterialRequestV1, UiWindowDecorationsRequestV1, UiWindowHitTestRequestV1,
+    UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;

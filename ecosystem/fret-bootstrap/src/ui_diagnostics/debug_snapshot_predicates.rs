@@ -12,13 +12,35 @@ pub(super) fn eval_debug_snapshot_predicate_from_recent_snapshot(
     if age_ms > max_age_ms {
         return None;
     }
+    if let Some(ok) = eval_debug_snapshot_predicate_from_ring(ring, predicate) {
+        return Some(ok);
+    }
     eval_debug_snapshot_predicate(&snapshot.debug, predicate)
+}
+
+fn eval_debug_snapshot_predicate_from_ring(
+    ring: &WindowRing,
+    predicate: &UiPredicateV1,
+) -> Option<bool> {
+    match predicate {
+        UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max } => {
+            let samples = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
+                total.saturating_add(snapshot.debug.virtual_list_window_shift_samples.len() as u64)
+            });
+            Some(samples <= *max)
+        }
+        _ => None,
+    }
 }
 
 pub(super) fn eval_debug_snapshot_predicate(
     debug: &UiTreeDebugSnapshotV1,
     predicate: &UiPredicateV1,
 ) -> Option<bool> {
+    if let Some(ok) = eval_virtual_list_predicate_from_debug_snapshot(debug, predicate) {
+        return Some(ok);
+    }
+
     if let Some(ok) = debug
         .docking_interaction
         .as_ref()
@@ -33,6 +55,18 @@ pub(super) fn eval_debug_snapshot_predicate(
         .and_then(|resource_loading| {
             eval_resource_loading_predicate_from_debug_snapshot(resource_loading, predicate)
         })
+}
+
+fn eval_virtual_list_predicate_from_debug_snapshot(
+    debug: &UiTreeDebugSnapshotV1,
+    predicate: &UiPredicateV1,
+) -> Option<bool> {
+    match predicate {
+        UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max } => {
+            Some((debug.virtual_list_window_shift_samples.len() as u64) <= *max)
+        }
+        _ => None,
+    }
 }
 
 fn eval_docking_predicate_from_debug_snapshot(
@@ -268,5 +302,87 @@ fn eval_resource_loading_predicate_from_debug_snapshot(
                 .any(|event| event.revision_transition.as_deref() == Some(transition.as_str())),
         ),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn snapshot_with_virtual_list_shift_samples(samples: usize) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug.virtual_list_window_shift_samples = (0..samples)
+            .map(|idx| UiVirtualListWindowShiftSampleV1 {
+                frame_id: idx as u64,
+                source: UiVirtualListWindowSourceV1::Layout,
+                node: idx as u64 + 1,
+                element: idx as u64 + 10,
+                window_shift_kind: UiVirtualListWindowShiftKindV1::Escape,
+                window_shift_reason: UiVirtualListWindowShiftReasonV1::ScrollOffset,
+                window_shift_apply_mode: UiVirtualListWindowShiftApplyModeV1::RetainedReconcile,
+                window_shift_invalidation_detail: None,
+                prev_window_range: None,
+                window_range: None,
+                render_window_range: None,
+            })
+            .collect();
+
+        UiDiagnosticsSnapshotV1 {
+            schema_version: 1,
+            tick_id: 0,
+            frame_id: 0,
+            window_snapshot_seq: 0,
+            window: 1,
+            timestamp_unix_ms: unix_ms_now(),
+            frame_clock: None,
+            scale_factor: 1.0,
+            window_bounds: RectV1 {
+                x: 0.0,
+                y: 0.0,
+                w: 100.0,
+                h: 100.0,
+            },
+            scene_ops: 0,
+            scene_fingerprint: 0,
+            semantics_fingerprint: None,
+            changed_models: Vec::new(),
+            changed_globals: Vec::new(),
+            changed_model_sources_top: Vec::new(),
+            resource_caches: None,
+            app_snapshot: None,
+            safe_area_insets: None,
+            occlusion_insets: None,
+            focus_is_text_input: None,
+            is_composing: None,
+            clipboard: None,
+            primary_pointer_type: None,
+            caps: None,
+            wgpu_adapter: None,
+            debug,
+        }
+    }
+
+    #[test]
+    fn virtual_list_window_shift_samples_predicate_counts_ring_snapshots() {
+        let mut ring = WindowRing::default();
+        ring.snapshots
+            .push_back(snapshot_with_virtual_list_shift_samples(0));
+        ring.snapshots
+            .push_back(snapshot_with_virtual_list_shift_samples(1));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 0 },
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 1 },
+            ),
+            Some(true)
+        );
     }
 }

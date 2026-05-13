@@ -9602,12 +9602,23 @@
     {
       "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-vlist-no-window-shifts-small-scroll"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Small wheel deltas on the retained virtual list must not emit any virtual-list window-shift samples after the script resets diagnostics on the settled page."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-torture",

@@ -2386,6 +2386,15 @@ pub enum UiPredicateV1 {
     EventKindSeen {
         event_kind: String,
     },
+    /// True when the latest debug snapshot reports no more than `max` virtual-list window-shift
+    /// samples.
+    ///
+    /// This turns virtual-list telemetry into a script-level gate: small scrolls that should stay
+    /// inside the retained window can assert `max = 0`, while boundary-crossing scripts can use a
+    /// higher threshold and inspect the captured bundle for the reason/apply mode.
+    VirtualListWindowShiftSamplesLenLe {
+        max: u64,
+    },
     /// True when the app snapshot field addressed by JSON Pointer `pointer` equals `value`.
     ///
     /// This predicate reads the best-effort `app_snapshot` payload published by the app into
@@ -4231,6 +4240,27 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_virtual_list_window_shift_samples_len_le_serializes() {
+        let value =
+            serde_json::to_value(UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 0 })
+                .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "virtual_list_window_shift_samples_len_le",
+                "max": 0,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 0 }
         ));
     }
 

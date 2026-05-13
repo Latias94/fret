@@ -1048,7 +1048,8 @@ fn eval_predicate(
         | UiPredicateV1::AssetReloadEpochGe { .. }
         | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
         | UiPredicateV1::AssetReloadActiveBackendIs { .. }
-        | UiPredicateV1::AssetReloadFallbackReasonIs { .. } => false,
+        | UiPredicateV1::AssetReloadFallbackReasonIs { .. }
+        | UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. } => false,
         UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::WindowInnerSizeApproxEqual {
             width_px,

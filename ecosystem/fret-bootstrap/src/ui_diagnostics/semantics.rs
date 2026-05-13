@@ -480,7 +480,6 @@ mod tests {
             set_size: None,
             label: None,
             value: Some("Open Settings to continue.".to_string()),
-            extra: fret_core::SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: fret_core::SemanticsActions::default(),
