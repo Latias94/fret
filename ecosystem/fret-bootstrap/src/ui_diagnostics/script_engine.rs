@@ -612,6 +612,7 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitOverlayPlacementTrace { .. } => {
             let handled = script_steps_wait::handle_wait_overlay_placement_trace_step(
+                &service.cfg,
                 window,
                 step_index,
                 step,

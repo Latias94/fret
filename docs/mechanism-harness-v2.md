@@ -693,6 +693,34 @@ Validation:
   overlay trace gates.
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
 
+## Phase 2.21 Overlay Trace Timeout Explainability
+
+The combobox content-shell fixes exposed a diagnostics mechanism gap: a failed
+`wait_overlay_placement_trace` gate only reported `wait_overlay_placement_trace_timeout`, even when
+the bundle already contained a near-match trace. That made selector drift such as
+`*-listbox` vs `*-content` look like a missing overlay instead of a mismatched query.
+
+Fixes:
+
+- On `wait_overlay_placement_trace` timeout, diagnostics now appends a
+  `wait_overlay_placement_trace.candidate_mismatch` event-log entry when any recorded overlay trace
+  exists but does not satisfy the query.
+- The event note includes the query, trace count, best candidate trace, and mismatched fields such
+  as `anchor_test_id`, `content_test_id`, `chosen_side`, `flipped`, `align`, `sticky`, and
+  `side_offset_px`.
+- This stays inside `fret-bootstrap` diagnostics and reuses the existing event-log schema; no
+  protocol migration is needed.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Apply the same "timeout with candidate mismatch evidence" pattern to shortcut-routing,
+  command-dispatch, hit-test, focus, and bounds-stability waits where a near-match trace can turn a
+  generic timeout into a mechanism or selector diagnosis.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -756,6 +784,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

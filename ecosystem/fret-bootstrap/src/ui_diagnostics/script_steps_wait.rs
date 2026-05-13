@@ -490,6 +490,7 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
 }
 
 pub(super) fn handle_wait_overlay_placement_trace_step(
+    cfg: &UiDiagnosticsConfig,
     window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
@@ -565,6 +566,25 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
         .is_some_and(|deadline| unix_ms_now() >= deadline)
         || state.remaining_frames == 0
     {
+        if let Some(note) =
+            overlay_placement_trace_timeout_note(&active.overlay_placement_trace, &query)
+        {
+            push_script_event_log(
+                active,
+                cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "wait_overlay_placement_trace.candidate_mismatch".to_string(),
+                    step_index: Some(step_index_u32),
+                    note: Some(note),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: None,
+                    frame_id: None,
+                    window_snapshot_seq: None,
+                },
+            );
+        }
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-wait_overlay_placement_trace-timeout"
         ));
@@ -582,6 +602,392 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
     }
 
     true
+}
+
+pub(super) fn overlay_placement_trace_timeout_note(
+    trace: &[UiOverlayPlacementTraceEntryV1],
+    query: &UiOverlayPlacementTraceQueryV1,
+) -> Option<String> {
+    let (candidate, mismatches) = trace
+        .iter()
+        .enumerate()
+        .filter_map(|(index, entry)| {
+            let mismatches = overlay_placement_trace_query_mismatches(entry, query);
+            if mismatches.is_empty() {
+                None
+            } else {
+                let score = overlay_placement_trace_candidate_score(query, mismatches.len());
+                Some(((score, index), entry, mismatches))
+            }
+        })
+        .max_by_key(|(rank, _, _)| *rank)
+        .map(|(_, entry, mismatches)| (entry, mismatches))?;
+
+    Some(format!(
+        "query={} trace_count={} best_candidate={} mismatches={}",
+        overlay_placement_query_summary(query),
+        trace.len(),
+        overlay_placement_trace_candidate_summary(candidate),
+        mismatches.join("; ")
+    ))
+}
+
+fn overlay_placement_trace_candidate_score(
+    query: &UiOverlayPlacementTraceQueryV1,
+    mismatch_count: usize,
+) -> i32 {
+    overlay_placement_trace_query_field_count(query) as i32 - mismatch_count as i32
+}
+
+fn overlay_placement_trace_query_field_count(query: &UiOverlayPlacementTraceQueryV1) -> usize {
+    query.kind.is_some() as usize
+        + query.overlay_root_name.is_some() as usize
+        + query.anchor_test_id.is_some() as usize
+        + query.content_test_id.is_some() as usize
+        + query.preferred_side.is_some() as usize
+        + query.chosen_side.is_some() as usize
+        + query.side_offset_px.is_some() as usize
+        + query.flipped.is_some() as usize
+        + query.align.is_some() as usize
+        + query.sticky.is_some() as usize
+}
+
+fn overlay_placement_trace_query_mismatches(
+    entry: &UiOverlayPlacementTraceEntryV1,
+    query: &UiOverlayPlacementTraceQueryV1,
+) -> Vec<String> {
+    match entry {
+        UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            side_offset_px,
+            preferred_side,
+            chosen_side,
+            align,
+            sticky,
+            ..
+        } => {
+            let mut mismatches = Vec::new();
+            if let Some(kind) = query.kind
+                && kind != UiOverlayPlacementTraceKindV1::AnchoredPanel
+            {
+                mismatches.push(format!(
+                    "kind expected {kind:?} actual {:?}",
+                    UiOverlayPlacementTraceKindV1::AnchoredPanel
+                ));
+            }
+            push_option_string_mismatch(
+                &mut mismatches,
+                "overlay_root_name",
+                query.overlay_root_name.as_deref(),
+                overlay_root_name.as_deref(),
+            );
+            push_option_string_mismatch(
+                &mut mismatches,
+                "anchor_test_id",
+                query.anchor_test_id.as_deref(),
+                anchor_test_id.as_deref(),
+            );
+            push_option_string_mismatch(
+                &mut mismatches,
+                "content_test_id",
+                query.content_test_id.as_deref(),
+                content_test_id.as_deref(),
+            );
+            if let Some(expected) = query.preferred_side
+                && *preferred_side != expected
+            {
+                mismatches.push(format!(
+                    "preferred_side expected {expected:?} actual {preferred_side:?}"
+                ));
+            }
+            if let Some(expected) = query.chosen_side
+                && *chosen_side != expected
+            {
+                mismatches.push(format!(
+                    "chosen_side expected {expected:?} actual {chosen_side:?}"
+                ));
+            }
+            if let Some(expected) = query.side_offset_px {
+                let eps = query.side_offset_eps_px.unwrap_or(0.001).max(0.0);
+                if (*side_offset_px - expected).abs() > eps {
+                    mismatches.push(format!(
+                        "side_offset_px expected {expected}+/-{eps} actual {side_offset_px}"
+                    ));
+                }
+            }
+            if let Some(expected) = query.flipped {
+                let actual = *chosen_side != *preferred_side;
+                if actual != expected {
+                    mismatches.push(format!("flipped expected {expected} actual {actual}"));
+                }
+            }
+            if let Some(expected) = query.align
+                && *align != expected
+            {
+                mismatches.push(format!("align expected {expected:?} actual {align:?}"));
+            }
+            if let Some(expected) = query.sticky
+                && *sticky != expected
+            {
+                mismatches.push(format!("sticky expected {expected:?} actual {sticky:?}"));
+            }
+            mismatches
+        }
+        UiOverlayPlacementTraceEntryV1::PlacedRect {
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            side,
+            ..
+        } => {
+            let mut mismatches = Vec::new();
+            if let Some(kind) = query.kind
+                && kind != UiOverlayPlacementTraceKindV1::PlacedRect
+            {
+                mismatches.push(format!(
+                    "kind expected {kind:?} actual {:?}",
+                    UiOverlayPlacementTraceKindV1::PlacedRect
+                ));
+            }
+            push_option_string_mismatch(
+                &mut mismatches,
+                "overlay_root_name",
+                query.overlay_root_name.as_deref(),
+                overlay_root_name.as_deref(),
+            );
+            push_option_string_mismatch(
+                &mut mismatches,
+                "anchor_test_id",
+                query.anchor_test_id.as_deref(),
+                anchor_test_id.as_deref(),
+            );
+            push_option_string_mismatch(
+                &mut mismatches,
+                "content_test_id",
+                query.content_test_id.as_deref(),
+                content_test_id.as_deref(),
+            );
+            if let Some(expected) = query.chosen_side
+                && *side != Some(expected)
+            {
+                mismatches.push(format!("chosen_side expected {expected:?} actual {side:?}"));
+            }
+            mismatches
+        }
+    }
+}
+
+fn push_option_string_mismatch(
+    mismatches: &mut Vec<String>,
+    field: &str,
+    expected: Option<&str>,
+    actual: Option<&str>,
+) {
+    if let Some(expected) = expected
+        && actual != Some(expected)
+    {
+        mismatches.push(format!(
+            "{field} expected {:?} actual {:?}",
+            Some(expected),
+            actual
+        ));
+    }
+}
+
+fn overlay_placement_query_summary(query: &UiOverlayPlacementTraceQueryV1) -> String {
+    format!(
+        "kind={:?} overlay_root={:?} anchor={:?} content={:?} preferred_side={:?} chosen_side={:?} side_offset_px={:?} side_offset_eps_px={:?} flipped={:?} align={:?} sticky={:?}",
+        query.kind,
+        query.overlay_root_name.as_deref(),
+        query.anchor_test_id.as_deref(),
+        query.content_test_id.as_deref(),
+        query.preferred_side,
+        query.chosen_side,
+        query.side_offset_px,
+        query.side_offset_eps_px,
+        query.flipped,
+        query.align,
+        query.sticky
+    )
+}
+
+fn overlay_placement_trace_candidate_summary(entry: &UiOverlayPlacementTraceEntryV1) -> String {
+    match entry {
+        UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+            step_index,
+            frame_id,
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            preferred_side,
+            chosen_side,
+            side_offset_px,
+            align,
+            sticky,
+            final_rect,
+            ..
+        } => format!(
+            "kind=anchored_panel step_index={step_index} frame_id={frame_id} overlay_root={:?} anchor={:?} content={:?} preferred_side={preferred_side:?} chosen_side={chosen_side:?} side_offset_px={side_offset_px} flipped={} align={align:?} sticky={sticky:?} final_rect={}",
+            overlay_root_name.as_deref(),
+            anchor_test_id.as_deref(),
+            content_test_id.as_deref(),
+            preferred_side != chosen_side,
+            overlay_rect_summary(final_rect)
+        ),
+        UiOverlayPlacementTraceEntryV1::PlacedRect {
+            step_index,
+            frame_id,
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            side,
+            placed,
+            ..
+        } => format!(
+            "kind=placed_rect step_index={step_index} frame_id={frame_id} overlay_root={:?} anchor={:?} content={:?} chosen_side={side:?} placed_rect={}",
+            overlay_root_name.as_deref(),
+            anchor_test_id.as_deref(),
+            content_test_id.as_deref(),
+            overlay_rect_summary(placed)
+        ),
+    }
+}
+
+fn overlay_rect_summary(rect: &UiRectV1) -> String {
+    format!(
+        "x={} y={} w={} h={}",
+        rect.x_px, rect.y_px, rect.w_px, rect.h_px
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> UiRectV1 {
+        UiRectV1 {
+            x_px: x,
+            y_px: y,
+            w_px: w,
+            h_px: h,
+        }
+    }
+
+    fn anchored_trace(
+        anchor_test_id: &str,
+        content_test_id: &str,
+        preferred_side: UiOverlaySideV1,
+        chosen_side: UiOverlaySideV1,
+    ) -> UiOverlayPlacementTraceEntryV1 {
+        let outer = rect(0.0, 0.0, 240.0, 160.0);
+        let anchor = rect(40.0, 60.0, 120.0, 32.0);
+        let desired = UiSizeV1 {
+            w_px: 180.0,
+            h_px: 120.0,
+        };
+        let placed = rect(32.0, 92.0, 180.0, 120.0);
+        UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+            step_index: 18,
+            note: None,
+            frame_id: 44,
+            overlay_root_name: Some("overlay-root".to_string()),
+            anchor_element: Some(1),
+            anchor_test_id: Some(anchor_test_id.to_string()),
+            content_element: Some(2),
+            content_test_id: Some(content_test_id.to_string()),
+            outer_input: outer,
+            outer_collision: outer,
+            anchor,
+            desired,
+            side_offset_px: 4.0,
+            preferred_side,
+            align: UiOverlayAlignV1::Start,
+            direction: UiLayoutDirectionV1::Ltr,
+            sticky: UiOverlayStickyModeV1::Partial,
+            offset: UiOverlayOffsetV1 {
+                main_axis_px: 4.0,
+                cross_axis_px: 0.0,
+                alignment_axis_px: None,
+            },
+            shift: UiOverlayShiftV1 {
+                main_axis: true,
+                cross_axis: true,
+            },
+            collision_padding: UiEdgesV1 {
+                top_px: 0.0,
+                right_px: 0.0,
+                bottom_px: 0.0,
+                left_px: 0.0,
+            },
+            collision_boundary: None,
+            gap_px: 0.0,
+            preferred_rect: placed,
+            flipped_rect: placed,
+            preferred_fits_without_main_clamp: true,
+            flipped_fits_without_main_clamp: false,
+            preferred_available_main_px: 120.0,
+            flipped_available_main_px: 20.0,
+            chosen_side,
+            chosen_rect: placed,
+            rect_after_shift: placed,
+            shift_delta: UiPointV1 {
+                x_px: 0.0,
+                y_px: 0.0,
+            },
+            final_rect: placed,
+            arrow: None,
+        }
+    }
+
+    #[test]
+    fn overlay_trace_timeout_note_names_content_selector_mismatch() {
+        let trace = vec![anchored_trace(
+            "ui-gallery-combobox-demo-trigger",
+            "ui-gallery-combobox-demo-content",
+            UiOverlaySideV1::Bottom,
+            UiOverlaySideV1::Bottom,
+        )];
+        let query = UiOverlayPlacementTraceQueryV1 {
+            kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+            anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+            content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+            chosen_side: Some(UiOverlaySideV1::Bottom),
+            ..Default::default()
+        };
+
+        let note = overlay_placement_trace_timeout_note(&trace, &query).unwrap();
+
+        assert!(note.contains("trace_count=1"));
+        assert!(note.contains("content_test_id"));
+        assert!(note.contains("ui-gallery-combobox-demo-listbox"));
+        assert!(note.contains("ui-gallery-combobox-demo-content"));
+    }
+
+    #[test]
+    fn overlay_trace_timeout_note_names_side_and_flip_mismatches() {
+        let trace = vec![anchored_trace(
+            "trigger",
+            "content",
+            UiOverlaySideV1::Bottom,
+            UiOverlaySideV1::Top,
+        )];
+        let query = UiOverlayPlacementTraceQueryV1 {
+            kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+            anchor_test_id: Some("trigger".to_string()),
+            content_test_id: Some("content".to_string()),
+            chosen_side: Some(UiOverlaySideV1::Bottom),
+            flipped: Some(false),
+            ..Default::default()
+        };
+
+        let note = overlay_placement_trace_timeout_note(&trace, &query).unwrap();
+
+        assert!(note.contains("chosen_side expected Bottom actual Top"));
+        assert!(note.contains("flipped expected false actual true"));
+        assert!(note.contains("best_candidate=kind=anchored_panel"));
+    }
 }
 
 pub(super) fn handle_wait_until_step(
