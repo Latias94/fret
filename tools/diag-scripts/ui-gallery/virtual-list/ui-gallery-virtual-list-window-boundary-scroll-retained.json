@@ -7,7 +7,7 @@
     "target_hints": [
       "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
       "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
-      "Crossing the retained virtual-list window boundary must emit a prepaint shift attributed to scroll_offset and applied by retained_reconcile."
+      "Crossing the retained virtual-list window boundary must emit a prepaint escape shift attributed to scroll_offset and applied by retained_reconcile."
     ]
   },
   "steps": [
@@ -98,15 +98,9 @@
     { "type": "reset_diagnostics" },
     { "type": "wait_frames", "n": 2 },
     {
-      "target": {
-        "id": "ui-gallery-virtual-list-root",
-        "kind": "test_id"
-      },
-      "type": "move_pointer"
-    },
-    {
       "delta_x": 0.0,
       "delta_y": -720.0,
+      "pointer_kind": "touch",
       "target": {
         "id": "ui-gallery-virtual-list-root",
         "kind": "test_id"
@@ -132,7 +126,7 @@
       "predicate": {
         "kind": "virtual_list_windows_matching_ge",
         "min": 1,
-        "shift_kind": "prefetch",
+        "shift_kind": "escape",
         "reason": "scroll_offset",
         "apply_mode": "retained_reconcile",
         "source": "prepaint"
