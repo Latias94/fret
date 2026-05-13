@@ -9774,7 +9774,7 @@
       "target_hints": [
         "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
         "Run with env: FRET_UI_GALLERY_VLIST_RETAINED=0.",
-        "Crossing the non-retained virtual-list window boundary must emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
+        "Crossing the non-retained virtual-list window boundary must move the scroll handle and emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
       ]
     },
     {
@@ -9799,7 +9799,7 @@
       "target_hints": [
         "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
         "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
-        "Crossing the retained virtual-list window boundary must emit a prepaint escape shift attributed to scroll_offset and applied by retained_reconcile."
+        "Crossing the retained virtual-list window boundary must move the scroll handle and schedule an escape retained-host reconcile that attaches and detaches row items."
       ]
     },
     {

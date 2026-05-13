@@ -1051,7 +1051,9 @@ fn eval_predicate(
         | UiPredicateV1::AssetReloadFallbackReasonIs { .. }
         | UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. }
         | UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { .. }
-        | UiPredicateV1::VirtualListWindowsMatchingGe { .. } => false,
+        | UiPredicateV1::VirtualListWindowsMatchingGe { .. }
+        | UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { .. }
+        | UiPredicateV1::ScrollHandleChangesMatchingGe { .. } => false,
         UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::WindowInnerSizeApproxEqual {
             width_px,

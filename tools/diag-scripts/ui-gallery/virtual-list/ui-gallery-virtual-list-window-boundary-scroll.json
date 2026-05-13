@@ -4,10 +4,10 @@
     "name": "ui-gallery-virtual-list-window-boundary-scroll",
     "required_capabilities": ["diag.script_v2"],
     "tags": ["ui_gallery", "scroll", "virtual_list", "mechanism_harness", "feature:gallery-dev"],
-    "target_hints": [
-      "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
-      "Run with env: FRET_UI_GALLERY_VLIST_RETAINED=0.",
-      "Crossing the non-retained virtual-list window boundary must emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Run with env: FRET_UI_GALLERY_VLIST_RETAINED=0.",
+        "Crossing the non-retained virtual-list window boundary must move the scroll handle and emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
     ]
   },
   "steps": [
@@ -111,14 +111,13 @@
     {
       "type": "assert",
       "predicate": {
-        "kind": "semantics_scroll_not_approx_eq",
-        "target": {
-          "id": "ui-gallery-virtual-list-root",
-          "kind": "test_id"
-        },
-        "field": "y",
-        "value": 0.0,
-        "eps": 0.01
+        "kind": "scroll_handle_changes_matching_ge",
+        "min": 1,
+        "change_kind": "hit_test_only",
+        "offset_y_min": 720.0,
+        "prev_offset_y_max": 0.0,
+        "offset_changed": true,
+        "upgraded_to_layout_bindings_min": 1
       }
     },
     {

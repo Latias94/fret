@@ -2459,6 +2459,44 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         source: Option<String>,
     },
+    /// True when the recent debug snapshot ring contains at least `min` retained virtual-list
+    /// reconcile records matching the provided telemetry fields.
+    ///
+    /// This is the retained-host counterpart to `virtual_list_windows_matching_ge`: retained
+    /// boundary scrolls can update row membership through a host reconcile without recording a
+    /// prepaint window-shift sample.
+    RetainedVirtualListReconcilesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reconcile_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        attached_items_min: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        detached_items_min: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reused_from_keep_alive_items_min: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        kept_alive_items_min: Option<u64>,
+    },
+    /// True when the recent debug snapshot ring contains at least `min` scroll-handle change
+    /// records matching the provided telemetry fields.
+    ///
+    /// This is a mechanism-level predicate for self-drawn scroll surfaces: it proves that the
+    /// framework scroll handle actually changed even when the semantics tree does not expose a
+    /// stable scroll field for the target widget.
+    ScrollHandleChangesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        change_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset_y_min: Option<f64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        prev_offset_y_max: Option<f64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset_changed: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        upgraded_to_layout_bindings_min: Option<u64>,
+    },
     /// True when the app snapshot field addressed by JSON Pointer `pointer` equals `value`.
     ///
     /// This predicate reads the best-effort `app_snapshot` payload published by the app into
@@ -4409,6 +4447,69 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::VirtualListWindowsMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_retained_virtual_list_reconciles_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+            min: 1,
+            reconcile_kind: Some("escape".to_string()),
+            attached_items_min: Some(1),
+            detached_items_min: Some(1),
+            reused_from_keep_alive_items_min: Some(1),
+            kept_alive_items_min: None,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "retained_virtual_list_reconciles_matching_ge",
+                "min": 1,
+                "reconcile_kind": "escape",
+                "attached_items_min": 1,
+                "detached_items_min": 1,
+                "reused_from_keep_alive_items_min": 1,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_scroll_handle_changes_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::ScrollHandleChangesMatchingGe {
+            min: 1,
+            change_kind: Some("hit_test_only".to_string()),
+            offset_y_min: Some(720.0),
+            prev_offset_y_max: Some(0.0),
+            offset_changed: Some(true),
+            upgraded_to_layout_bindings_min: Some(1),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "scroll_handle_changes_matching_ge",
+                "min": 1,
+                "change_kind": "hit_test_only",
+                "offset_y_min": 720.0,
+                "prev_offset_y_max": 0.0,
+                "offset_changed": true,
+                "upgraded_to_layout_bindings_min": 1,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::ScrollHandleChangesMatchingGe { min: 1, .. }
         ));
     }
 

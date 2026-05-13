@@ -777,10 +777,11 @@ impl<H: UiHost> UiTree<H> {
                                 fret_core::Axis::Horizontal => state.offset_x = offset_axis,
                             }
 
-                            state.window_range =
-                                state
-                                    .metrics
-                                    .visible_range(offset_axis, viewport, props.overscan);
+                            // Keep scroll offset observable for consumers of `VirtualListState`,
+                            // but leave the rendered/window range untouched. Window-boundary
+                            // shifts are owned by prepaint (ADR 0175); eagerly committing a new
+                            // range here hides the "old rendered window + new offset" transition
+                            // and prevents prepaint from recording/scheduling the escape update.
                         },
                     );
 
@@ -812,16 +813,11 @@ impl<H: UiHost> UiTree<H> {
                             // `render_root` can reconcile row subtrees in the next frame.
                             self.request_redraw_coalesced(app);
                         } else {
-                            // Do not force a layout pass just to discover that the visible window
-                            // is outside the previously rendered overscan window. Instead, treat
-                            // it as a prepaint-windowed "ephemeral update" signal (ADR 0175):
-                            // mark the nearest view-cache root dirty and request a redraw so the
-                            // next frame rerenders the virtual surface children.
-                            self.mark_nearest_view_cache_root_needs_rerender(
-                                node,
-                                UiDebugInvalidationSource::Other,
-                                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-                            );
+                            // Do not dirty the cache root from the scroll-handle binding pass.
+                            // Window-boundary shifts are owned by prepaint (ADR 0175): this pass
+                            // only schedules a frame where prepaint can compare the latest handle
+                            // offset against the still-rendered window and record/schedule the
+                            // escape update.
                             self.request_redraw_coalesced(app);
                         }
                     }

@@ -65,6 +65,46 @@ fn eval_debug_snapshot_predicate_from_ring(
             });
             Some(windows >= *min)
         }
+        UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+            min,
+            reconcile_kind,
+            attached_items_min,
+            detached_items_min,
+            reused_from_keep_alive_items_min,
+            kept_alive_items_min,
+        } => {
+            let reconciles = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
+                total.saturating_add(count_matching_retained_virtual_list_reconciles(
+                    &snapshot.debug,
+                    reconcile_kind.as_deref(),
+                    *attached_items_min,
+                    *detached_items_min,
+                    *reused_from_keep_alive_items_min,
+                    *kept_alive_items_min,
+                ))
+            });
+            Some(reconciles >= *min)
+        }
+        UiPredicateV1::ScrollHandleChangesMatchingGe {
+            min,
+            change_kind,
+            offset_y_min,
+            prev_offset_y_max,
+            offset_changed,
+            upgraded_to_layout_bindings_min,
+        } => {
+            let changes = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
+                total.saturating_add(count_matching_scroll_handle_changes(
+                    &snapshot.debug,
+                    change_kind.as_deref(),
+                    *offset_y_min,
+                    *prev_offset_y_max,
+                    *offset_changed,
+                    *upgraded_to_layout_bindings_min,
+                ))
+            });
+            Some(changes >= *min)
+        }
         _ => None,
     }
 }
@@ -131,6 +171,40 @@ fn eval_virtual_list_predicate_from_debug_snapshot(
                 source.as_deref(),
             ) >= *min,
         ),
+        UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+            min,
+            reconcile_kind,
+            attached_items_min,
+            detached_items_min,
+            reused_from_keep_alive_items_min,
+            kept_alive_items_min,
+        } => Some(
+            count_matching_retained_virtual_list_reconciles(
+                debug,
+                reconcile_kind.as_deref(),
+                *attached_items_min,
+                *detached_items_min,
+                *reused_from_keep_alive_items_min,
+                *kept_alive_items_min,
+            ) >= *min,
+        ),
+        UiPredicateV1::ScrollHandleChangesMatchingGe {
+            min,
+            change_kind,
+            offset_y_min,
+            prev_offset_y_max,
+            offset_changed,
+            upgraded_to_layout_bindings_min,
+        } => Some(
+            count_matching_scroll_handle_changes(
+                debug,
+                change_kind.as_deref(),
+                *offset_y_min,
+                *prev_offset_y_max,
+                *offset_changed,
+                *upgraded_to_layout_bindings_min,
+            ) >= *min,
+        ),
         _ => None,
     }
 }
@@ -189,11 +263,80 @@ fn count_matching_virtual_list_windows(
         .count() as u64
 }
 
+fn count_matching_retained_virtual_list_reconciles(
+    debug: &UiTreeDebugSnapshotV1,
+    reconcile_kind: Option<&str>,
+    attached_items_min: Option<u64>,
+    detached_items_min: Option<u64>,
+    reused_from_keep_alive_items_min: Option<u64>,
+    kept_alive_items_min: Option<u64>,
+) -> u64 {
+    debug
+        .retained_virtual_list_reconciles
+        .iter()
+        .filter(|reconcile| {
+            optional_matches_optional(
+                reconcile_kind,
+                reconcile
+                    .reconcile_kind
+                    .map(retained_virtual_list_reconcile_kind_name),
+            ) && min_matches_optional(attached_items_min, reconcile.attached_items)
+                && min_matches_optional(detached_items_min, reconcile.detached_items)
+                && min_matches_optional(
+                    reused_from_keep_alive_items_min,
+                    reconcile.reused_from_keep_alive_items,
+                )
+                && min_matches_optional(kept_alive_items_min, reconcile.kept_alive_items)
+        })
+        .count() as u64
+}
+
+fn count_matching_scroll_handle_changes(
+    debug: &UiTreeDebugSnapshotV1,
+    change_kind: Option<&str>,
+    offset_y_min: Option<f64>,
+    prev_offset_y_max: Option<f64>,
+    offset_changed: Option<bool>,
+    upgraded_to_layout_bindings_min: Option<u64>,
+) -> u64 {
+    debug
+        .scroll_handle_changes
+        .iter()
+        .filter(|change| {
+            matches_optional(change_kind, scroll_handle_change_kind_name(change.kind))
+                && min_matches_optional_f64(offset_y_min, change.offset_y.into())
+                && max_matches_optional_f64(prev_offset_y_max, change.prev_offset_y)
+                && optional_matches_optional_bool(offset_changed, Some(change.offset_changed))
+                && min_matches_optional(
+                    upgraded_to_layout_bindings_min,
+                    change.upgraded_to_layout_bindings.into(),
+                )
+        })
+        .count() as u64
+}
+
 fn matches_optional(expected: Option<&str>, actual: &str) -> bool {
     expected.is_none_or(|expected| expected == actual)
 }
 
 fn optional_matches_optional(expected: Option<&str>, actual: Option<&str>) -> bool {
+    expected.is_none_or(|expected| actual == Some(expected))
+}
+
+fn min_matches_optional(expected_min: Option<u64>, actual: u64) -> bool {
+    expected_min.is_none_or(|expected_min| actual >= expected_min)
+}
+
+fn min_matches_optional_f64(expected_min: Option<f64>, actual: f64) -> bool {
+    expected_min.is_none_or(|expected_min| actual >= expected_min)
+}
+
+fn max_matches_optional_f64(expected_max: Option<f64>, actual: Option<f32>) -> bool {
+    expected_max
+        .is_none_or(|expected_max| actual.is_some_and(|actual| (actual as f64) <= expected_max))
+}
+
+fn optional_matches_optional_bool(expected: Option<bool>, actual: Option<bool>) -> bool {
     expected.is_none_or(|expected| actual == Some(expected))
 }
 
@@ -222,6 +365,22 @@ fn virtual_list_shift_apply_mode_name(
     match apply_mode {
         UiVirtualListWindowShiftApplyModeV1::RetainedReconcile => "retained_reconcile",
         UiVirtualListWindowShiftApplyModeV1::NonRetainedRerender => "non_retained_rerender",
+    }
+}
+
+fn retained_virtual_list_reconcile_kind_name(
+    kind: UiRetainedVirtualListReconcileKindV1,
+) -> &'static str {
+    match kind {
+        UiRetainedVirtualListReconcileKindV1::Prefetch => "prefetch",
+        UiRetainedVirtualListReconcileKindV1::Escape => "escape",
+    }
+}
+
+fn scroll_handle_change_kind_name(kind: UiScrollHandleChangeKindV1) -> &'static str {
+    match kind {
+        UiScrollHandleChangeKindV1::Layout => "layout",
+        UiScrollHandleChangeKindV1::HitTestOnly => "hit_test_only",
     }
 }
 
@@ -532,6 +691,69 @@ mod tests {
         snapshot_with_debug(debug)
     }
 
+    fn snapshot_with_retained_virtual_list_reconcile(
+        reconcile_kind: UiRetainedVirtualListReconcileKindV1,
+        attached_items: u64,
+        detached_items: u64,
+        reused_from_keep_alive_items: u64,
+    ) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug
+            .retained_virtual_list_reconciles
+            .push(UiRetainedVirtualListReconcileV1 {
+                node: 1,
+                element: 10,
+                reconcile_kind: Some(reconcile_kind),
+                prev_items: 25,
+                next_items: 35,
+                preserved_items: 11,
+                attached_items,
+                detached_items,
+                reused_from_keep_alive_items,
+                kept_alive_items: detached_items,
+                evicted_keep_alive_items: 0,
+                keep_alive_pool_len_before: 0,
+                keep_alive_pool_len_after: detached_items,
+            });
+
+        snapshot_with_debug(debug)
+    }
+
+    fn snapshot_with_scroll_handle_change(
+        change_kind: UiScrollHandleChangeKindV1,
+        offset_y: f32,
+        prev_offset_y: Option<f32>,
+        upgraded_to_layout_bindings: u32,
+    ) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug.scroll_handle_changes.push(UiScrollHandleChangeV1 {
+            handle_key: 1,
+            kind: change_kind,
+            revision: 1,
+            prev_revision: Some(0),
+            offset_x: 0.0,
+            offset_y,
+            prev_offset_x: None,
+            prev_offset_y,
+            viewport_w: 1080.0,
+            viewport_h: 700.0,
+            prev_viewport_w: Some(1080.0),
+            prev_viewport_h: Some(700.0),
+            content_w: 1080.0,
+            content_h: 10_000.0,
+            prev_content_w: Some(1080.0),
+            prev_content_h: Some(10_000.0),
+            offset_changed: true,
+            viewport_changed: false,
+            content_changed: false,
+            bound_elements: 1,
+            bound_nodes_sample: vec![1],
+            upgraded_to_layout_bindings,
+        });
+
+        snapshot_with_debug(debug)
+    }
+
     fn snapshot_with_debug(debug: UiTreeDebugSnapshotV1) -> UiDiagnosticsSnapshotV1 {
         UiDiagnosticsSnapshotV1 {
             schema_version: 1,
@@ -660,6 +882,100 @@ mod tests {
                     reason: Some("viewport_resize".to_string()),
                     apply_mode: Some("retained_reconcile".to_string()),
                     source: Some("prepaint".to_string()),
+                },
+            ),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots() {
+        let mut ring = WindowRing::default();
+        ring.snapshots
+            .push_back(snapshot_with_retained_virtual_list_reconcile(
+                UiRetainedVirtualListReconcileKindV1::Prefetch,
+                2,
+                1,
+                0,
+            ));
+        ring.snapshots
+            .push_back(snapshot_with_retained_virtual_list_reconcile(
+                UiRetainedVirtualListReconcileKindV1::Escape,
+                24,
+                14,
+                8,
+            ));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+                    min: 1,
+                    reconcile_kind: Some("escape".to_string()),
+                    attached_items_min: Some(1),
+                    detached_items_min: Some(1),
+                    reused_from_keep_alive_items_min: Some(1),
+                    kept_alive_items_min: None,
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+                    min: 1,
+                    reconcile_kind: Some("escape".to_string()),
+                    attached_items_min: Some(25),
+                    detached_items_min: Some(1),
+                    reused_from_keep_alive_items_min: None,
+                    kept_alive_items_min: None,
+                },
+            ),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn scroll_handle_changes_matching_predicate_counts_ring_snapshots() {
+        let mut ring = WindowRing::default();
+        ring.snapshots.push_back(snapshot_with_scroll_handle_change(
+            UiScrollHandleChangeKindV1::HitTestOnly,
+            720.0,
+            Some(0.0),
+            1,
+        ));
+        ring.snapshots.push_back(snapshot_with_scroll_handle_change(
+            UiScrollHandleChangeKindV1::Layout,
+            0.0,
+            Some(0.0),
+            0,
+        ));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::ScrollHandleChangesMatchingGe {
+                    min: 1,
+                    change_kind: Some("hit_test_only".to_string()),
+                    offset_y_min: Some(720.0),
+                    prev_offset_y_max: Some(0.0),
+                    offset_changed: Some(true),
+                    upgraded_to_layout_bindings_min: Some(1),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::ScrollHandleChangesMatchingGe {
+                    min: 2,
+                    change_kind: Some("hit_test_only".to_string()),
+                    offset_y_min: Some(720.0),
+                    prev_offset_y_max: Some(0.0),
+                    offset_changed: Some(true),
+                    upgraded_to_layout_bindings_min: Some(1),
                 },
             ),
             Some(false)

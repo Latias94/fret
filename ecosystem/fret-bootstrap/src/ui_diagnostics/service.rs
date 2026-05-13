@@ -484,6 +484,8 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. }
                 | UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { .. }
                 | UiPredicateV1::VirtualListWindowsMatchingGe { .. }
+                | UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { .. }
+                | UiPredicateV1::ScrollHandleChangesMatchingGe { .. }
                 | UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { .. }
                 | UiPredicateV1::AssetLoadStaleManifestRequestsGe { .. }
                 | UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { .. }
