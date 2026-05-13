@@ -924,6 +924,46 @@ Follow-up recommendation:
 - Add this registry check to any local shadcn diagnostics preflight bundle so promoted scripts cannot
   disappear from discovery after fixture or suite edits.
 
+## Phase 2.29 Real UI Gallery Input Evidence Run
+
+The first attempt to run `ui-gallery-input-basic-and-file-long-text` through `cargo run -p
+fret-ui-gallery` timed out before the script stage because the app build/startup path dominated the
+diagnostics timeout. The same script passed once the already-built UI Gallery binary was launched
+directly, proving the promoted input evidence script is viable as a real recipe-consumer gate.
+
+Findings:
+
+- The script exercises both `type_text_into` and `set_text_value` on the real UI Gallery Input page.
+- The run produced a passing `script.result.json` with event log, focus trace, selector resolution
+  trace, layout sidecar, screenshot, bundle, share zip, and AI packet.
+- The passing run observed 204 unique test ids and 813 semantics nodes in the considered window.
+- The main operational gap is startup hygiene: long-running diagnostics should prefer a prebuilt
+  binary or a higher launch timeout instead of wrapping expensive app builds in the script timeout.
+
+Evidence:
+
+- Command:
+  `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- Session:
+  `target/fret-diag-input-evidence-bin/sessions/1778674220354-122916`
+- Share artifact:
+  `target/fret-diag-input-evidence-bin/sessions/1778674220354-122916/share/1778674223664.zip`
+- AI packet:
+  `target/fret-diag-input-evidence-bin/sessions/1778674220354-122916/1778674223664/ai.packet`
+- Result:
+  `stage=passed`, `run_id=1778674223664`, `step_index=31`,
+  `last_bundle_dir=1778674231617-ui-gallery-input-basic-and-file-long-text`.
+
+Validation:
+
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag meta target/fret-diag-input-evidence-bin/sessions/1778674220354-122916/1778674223664 --json`
+
+Follow-up recommendation:
+
+- Add a documented prebuilt-binary diagnostics lane for promoted UI Gallery gates so CI/local agents
+  do not conflate build time with script execution time.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -996,6 +1036,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
 - `python tools/check_diag_scripts_registry.py`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
