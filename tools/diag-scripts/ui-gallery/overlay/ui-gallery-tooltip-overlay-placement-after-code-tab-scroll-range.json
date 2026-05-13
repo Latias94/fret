@@ -141,7 +141,9 @@
     {
       "type": "wait_overlay_placement_trace",
       "query": {
-        "kind": "anchored_panel"
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-tooltip-demo-trigger",
+        "content_test_id": "ui-gallery-tooltip-demo-panel"
       },
       "timeout_frames": 600
     },
@@ -255,7 +257,9 @@
     {
       "type": "wait_overlay_placement_trace",
       "query": {
-        "kind": "anchored_panel"
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-tooltip-rtl-top-trigger",
+        "content_test_id": "ui-gallery-tooltip-rtl-top-panel"
       },
       "timeout_frames": 600
     },

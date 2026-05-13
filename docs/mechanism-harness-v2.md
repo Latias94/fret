@@ -667,6 +667,32 @@ Validation:
   68 overlay trace gates.
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
 
+## Phase 2.20 Overlay Trace Selector Strictness Sweep
+
+The cross-family selector audit then checked whether any UI Gallery `wait_overlay_placement_trace`
+step could match an unrelated overlay because it only queried `kind=anchored_panel`. Four such gates
+remained:
+
+- `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+- `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
+
+Fixes:
+
+- Tooltip placement gates now name both trigger and panel selectors for the main demo and the RTL
+  top demo.
+- Popover placement gates now name both `ui-gallery-popover-align-start-trigger` and
+  `ui-gallery-popover-align-start-content` before and after the code-tab scroll round trip.
+- `ui_gallery_overlay_trace_steps_use_stable_selectors` scans the UI Gallery script corpus and fails
+  any future overlay trace step that omits both `anchor_test_id` and `content_test_id`.
+
+Validation:
+
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
+- Full UI Gallery overlay-trace script audit found zero unscoped overlay trace gates across 68
+  overlay trace gates.
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -729,6 +755,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

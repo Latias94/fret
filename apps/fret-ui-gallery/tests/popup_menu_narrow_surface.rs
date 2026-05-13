@@ -88,6 +88,66 @@ fn popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace() {
         "combobox listbox is an inner geometry target, not the overlay placement content shell",
     );
 }
+
+#[test]
+fn ui_gallery_overlay_trace_steps_use_stable_selectors() {
+    use serde_json::Value;
+    use std::fs;
+    use std::path::Path;
+
+    fn visit_scripts(dir: &Path, checked: &mut usize) {
+        for entry in fs::read_dir(dir).expect("diag script directory") {
+            let entry = entry.expect("diag script entry");
+            let path = entry.path();
+            if path.is_dir() {
+                visit_scripts(&path, checked);
+                continue;
+            }
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+
+            let text = fs::read_to_string(&path).expect("diag script text");
+            let script: Value = serde_json::from_str(&text).unwrap_or_else(|err| {
+                panic!("invalid diag script JSON: path={} err={err}", path.display())
+            });
+            let Some(steps) = script.get("steps").and_then(Value::as_array) else {
+                continue;
+            };
+
+            for (index, step) in steps.iter().enumerate() {
+                if step.get("type").and_then(Value::as_str) != Some("wait_overlay_placement_trace")
+                {
+                    continue;
+                }
+
+                *checked += 1;
+                let query = step.get("query").unwrap_or_else(|| {
+                    panic!(
+                        "overlay trace step should have a query object: path={} step={index}",
+                        path.display()
+                    )
+                });
+                let anchor = query.get("anchor_test_id").and_then(Value::as_str);
+                let content = query.get("content_test_id").and_then(Value::as_str);
+                assert!(
+                    anchor.is_some() || content.is_some(),
+                    "overlay trace step should name anchor_test_id or content_test_id so it cannot match an unrelated overlay: path={} step={index}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    let scripts_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tools/diag-scripts/ui-gallery");
+    let mut checked = 0usize;
+    visit_scripts(&scripts_dir, &mut checked);
+    assert!(
+        checked >= 50,
+        "UI Gallery should keep a broad overlay placement trace corpus; checked={checked}",
+    );
+}
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
 }
