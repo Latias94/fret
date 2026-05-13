@@ -751,6 +751,36 @@ Follow-up recommendation:
   value interaction surfaces where a wrong target, blocking root, or stale focus owner can still
   collapse into a generic timeout.
 
+## Phase 2.23 Click-Stable Hit-Test Timeout Explainability
+
+The next interaction audit showed that focus and hit-test evidence is not a standalone
+`wait_*_trace` gate. It is recorded during procedural steps such as `click_stable`,
+`click_selectable_text_span_stable`, pointer moves, wheels, and slider drags. The highest value
+timeout path was `click_stable`: it already recorded a final hit-test trace on timeout, but the
+script result still surfaced only `click_stable_timeout`, forcing maintainers to inspect the raw
+evidence to learn whether the target moved, missed, hit an overlay, or was blocked by pointer
+capture/occlusion.
+
+Fixes:
+
+- `click_stable` timeout now emits a `click_stable.timeout_hit_test` event-log entry when a
+  hit-test trace exists for that step.
+- The note summarizes the selector, click position, intended node/test id, actual hit node/test id,
+  `includes_intended`, `hit_path_contains_intended`, `blocking_reason`, barrier roots, pointer
+  occlusion, pointer capture, and the existing human-readable `routing_explain`.
+- This keeps the detailed hit-test trace unchanged while making the failure summary directly useful
+  for UI Gallery and harness triage.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Apply the same failure-summary pattern to `click_selectable_text_span_stable` and focus steps.
+  Selectable text needs span lookup state plus hit-test blocking evidence; focus needs expected vs
+  actual focused node/test id and barrier ownership in the timeout/failure event.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -816,6 +846,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

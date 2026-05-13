@@ -1353,6 +1353,25 @@ pub(super) fn handle_click_stable_step(
                         svc.cfg.max_debug_string_bytes,
                     );
                 }
+                if let Some(note) =
+                    click_stable_timeout_hit_test_note(&active.hit_test_trace, step_index as u32)
+                {
+                    push_script_event_log(
+                        active,
+                        &svc.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "click_stable.timeout_hit_test".to_string(),
+                            step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                            note: Some(note),
+                            bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
+                        },
+                    );
+                }
                 *force_dump_label =
                     Some(format!("script-step-{step_index:04}-click_stable-timeout"));
                 *stop_script = true;
@@ -1530,6 +1549,156 @@ pub(super) fn handle_click_stable_step(
     }
 
     true
+}
+
+pub(super) fn click_stable_timeout_hit_test_note(
+    trace: &[UiHitTestTraceEntryV1],
+    step_index: u32,
+) -> Option<String> {
+    let hit = trace
+        .iter()
+        .rev()
+        .find(|entry| entry.step_index == step_index)?;
+
+    Some(format!(
+        "hit_test={} position={} intended_node_id={:?} intended_test_id={:?} hit_node_id={:?} hit_semantics_node_id={:?} hit_semantics_test_id={:?} includes_intended={:?} hit_path_contains_intended={:?} blocking_reason={:?} blocking_root={:?} blocking_layer_id={:?} routing_explain={:?} barrier_root={:?} focus_barrier_root={:?} pointer_occlusion={:?} pointer_occlusion_layer_id={:?} pointer_occlusion_test_id={:?} pointer_capture_active={:?} pointer_capture_layer_id={:?} pointer_capture_test_id={:?} note={:?}",
+        selector_debug_summary(&hit.selector),
+        point_summary(hit.position),
+        hit.intended_node_id,
+        hit.intended_test_id.as_deref(),
+        hit.hit_node_id,
+        hit.hit_semantics_node_id,
+        hit.hit_semantics_test_id.as_deref(),
+        hit.includes_intended,
+        hit.hit_path_contains_intended,
+        hit.blocking_reason.as_deref(),
+        hit.blocking_root,
+        hit.blocking_layer_id,
+        hit.routing_explain.as_deref(),
+        hit.barrier_root,
+        hit.focus_barrier_root,
+        hit.pointer_occlusion.as_deref(),
+        hit.pointer_occlusion_layer_id,
+        hit.pointer_occlusion_test_id.as_deref(),
+        hit.pointer_capture_active,
+        hit.pointer_capture_layer_id,
+        hit.pointer_capture_test_id.as_deref(),
+        hit.note.as_deref()
+    ))
+}
+
+fn selector_debug_summary(selector: &UiSelectorV1) -> String {
+    match selector {
+        UiSelectorV1::TestId { id, root_z_index } => {
+            format!("test_id={id:?} root_z_index={root_z_index:?}")
+        }
+        UiSelectorV1::RoleAndName { role, name, .. } => {
+            format!("role={role:?} name={name:?}")
+        }
+        UiSelectorV1::GlobalElementId {
+            element,
+            root_z_index,
+        } => {
+            format!("global_element_id={element} root_z_index={root_z_index:?}")
+        }
+        other => format!("{other:?}"),
+    }
+}
+
+fn point_summary(point: UiPointV1) -> String {
+    format!("x={} y={}", point.x_px, point.y_px)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hit_trace(step_index: u32) -> UiHitTestTraceEntryV1 {
+        UiHitTestTraceEntryV1 {
+            step_index,
+            selector: UiSelectorV1::TestId {
+                id: "button.primary".to_string(),
+                root_z_index: Some(3),
+            },
+            position: UiPointV1 {
+                x_px: 42.0,
+                y_px: 24.0,
+            },
+            intended_node_id: Some(10),
+            intended_test_id: Some("button.primary".to_string()),
+            intended_bounds: Some(UiRectV1 {
+                x_px: 10.0,
+                y_px: 8.0,
+                w_px: 64.0,
+                h_px: 32.0,
+            }),
+            hit_node_id: Some(90),
+            hit_node_path: vec![1, 5, 90],
+            hit_semantics_node_id: Some(90),
+            hit_semantics_test_id: Some("modal.backdrop".to_string()),
+            includes_intended: Some(false),
+            hit_path_contains_intended: Some(false),
+            blocking_reason: Some("pointer_occlusion".to_string()),
+            blocking_root: Some(88),
+            blocking_layer_id: Some(7),
+            routing_explain: Some(
+                "pointer occlusion layer=7 root=88 blocks intended=10".to_string(),
+            ),
+            barrier_root: Some(88),
+            focus_barrier_root: None,
+            pointer_occlusion: Some("blocks_underlay_input".to_string()),
+            pointer_occlusion_layer_id: Some(7),
+            pointer_occlusion_node_id: Some(90),
+            pointer_occlusion_test_id: Some("modal.backdrop".to_string()),
+            pointer_occlusion_role: Some("panel".to_string()),
+            pointer_occlusion_bounds: None,
+            pointer_capture_active: Some(true),
+            pointer_capture_layer_id: Some(7),
+            pointer_capture_multiple_layers: Some(false),
+            pointer_capture_node_id: Some(90),
+            pointer_capture_test_id: Some("modal.backdrop".to_string()),
+            pointer_capture_role: Some("panel".to_string()),
+            pointer_capture_bounds: None,
+            pointer_capture_element: Some(123),
+            pointer_capture_element_path: Some("Root/Overlay/Backdrop".to_string()),
+            scope_roots: vec![UiHitTestScopeRootEvidenceV1 {
+                kind: "layer_root".to_string(),
+                root: 88,
+                layer_id: Some(7),
+                pointer_occlusion: Some("blocks_underlay_input".to_string()),
+                blocks_underlay_input: Some(true),
+                hit_testable: Some(true),
+            }],
+            note: Some("click_stable.timeout".to_string()),
+        }
+    }
+
+    #[test]
+    fn click_stable_timeout_hit_test_note_names_blocking_evidence() {
+        let note = click_stable_timeout_hit_test_note(&[hit_trace(12)], 12).unwrap();
+
+        assert!(note.contains("test_id=\"button.primary\""));
+        assert!(note.contains("intended_test_id=Some(\"button.primary\")"));
+        assert!(note.contains("hit_semantics_test_id=Some(\"modal.backdrop\")"));
+        assert!(note.contains("blocking_reason=Some(\"pointer_occlusion\")"));
+        assert!(note.contains("blocking_layer_id=Some(7)"));
+        assert!(note.contains("pointer_capture_active=Some(true)"));
+        assert!(note.contains("pointer_capture_test_id=Some(\"modal.backdrop\")"));
+        assert!(note.contains("routing_explain=Some(\"pointer occlusion layer=7"));
+    }
+
+    #[test]
+    fn click_stable_timeout_hit_test_note_uses_latest_step_entry() {
+        let old = hit_trace(11);
+        let mut latest = hit_trace(12);
+        latest.hit_semantics_test_id = Some("new.overlay".to_string());
+        latest.pointer_capture_test_id = Some("new.overlay".to_string());
+
+        let note = click_stable_timeout_hit_test_note(&[old, latest], 12).unwrap();
+
+        assert!(note.contains("hit_semantics_test_id=Some(\"new.overlay\")"));
+        assert!(!note.contains("step_index=11"));
+    }
 }
 
 pub(super) fn handle_click_selectable_text_span_stable_step(
