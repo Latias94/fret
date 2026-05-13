@@ -24,7 +24,8 @@ Last updated: 2026-05-13
   equivalent.
 - [x] Make UI Gallery code-editor content root report boundary-level reuse/reject reasons through
   transitional `debug.cache_roots[].boundary` diagnostics.
-- [ ] Move code-editor frame-derived row state toward shared prepaint ownership.
+- [x] Move code-editor frame-derived row state toward shared prepaint ownership for the
+  windowed-rows/editor prefetch slice.
 - [ ] Split code-editor paint attribution into boundary prepaint, paint replay, and renderer payload
   buckets.
 - [ ] Add or promote a stricter code-editor paint stressor if resize probes are no longer sensitive

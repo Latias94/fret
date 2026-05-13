@@ -1381,6 +1381,7 @@ fn debug_draw_canvas_element<H: UiHost>(
     let mut props = CanvasProps {
         layout,
         cache_policy: CanvasCachePolicy::smooth_default(),
+        prepaint: false,
     };
     props.cache_policy.shared_text.keep_frames = 30;
     props.cache_policy.path.keep_frames = 30;

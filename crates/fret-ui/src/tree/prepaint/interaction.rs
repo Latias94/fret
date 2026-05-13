@@ -53,7 +53,8 @@ impl<H: UiHost> UiTree<H> {
                 // Their prepaint hooks drive live runtime state (for example chart engine
                 // stepping, dock drag routes, or cull-window updates), so gating them behind
                 // `view_cache_active()` breaks correctness in the default no-cache mode.
-                n.view_cache.enabled && (self.view_cache_active() || n.element.is_none()),
+                n.widget_prepaint_enabled
+                    || (n.view_cache.enabled && (self.view_cache_active() || n.element.is_none())),
             ),
             None => return,
         };

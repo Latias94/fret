@@ -27,7 +27,9 @@ use crate::action::{
     PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
     SelectableTextActionHooks, TimerActionHooks,
 };
-use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
+use crate::canvas::{
+    CanvasPaintHooks, CanvasPainter, CanvasPrepaintCx, OnCanvasPaint, OnCanvasPrepaint,
+};
 use crate::element::{
     AnyElement, BackdropSourceGroupProps, CanvasProps, ColumnProps, CompositeGroupProps,
     ContainerProps, EffectLayerProps, ElementKind, FlexProps, FocusTraversalGateProps,
@@ -3676,6 +3678,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.state_for(id, CanvasPaintHooks::default, |hooks| {
+                hooks.on_paint = Some(on_paint.clone());
+            });
+            cx.new_any_element(id, ElementKind::Canvas(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn canvas_with_prepaint(
+        &mut self,
+        mut props: CanvasProps,
+        prepaint: impl for<'p> Fn(&mut CanvasPrepaintCx<'p>) + 'static,
+        paint: impl for<'p> Fn(&mut CanvasPainter<'p>) + 'static,
+    ) -> AnyElement {
+        props.prepaint = true;
+        let on_prepaint: OnCanvasPrepaint = Arc::new(prepaint);
+        let on_paint: OnCanvasPaint = Arc::new(paint);
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.state_for(id, CanvasPaintHooks::default, |hooks| {
+                hooks.on_prepaint = Some(on_prepaint.clone());
                 hooks.on_paint = Some(on_paint.clone());
             });
             cx.new_any_element(id, ElementKind::Canvas(props), Vec::new())

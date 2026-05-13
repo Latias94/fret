@@ -85,6 +85,29 @@ Observed result from that run:
 - `code_editor.paint_perf` p50/p95 total: `302/743us`,
 - renderer prepare/encode/upload counters stayed at zero.
 
+Most recent prepaint-ownership slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2_CANVAS_PREPAINT_WINDOWED_ROWS_SLICE_2026-05-13.md`
+- Perf output directory:
+  `target/fret-diag-code-editor-resize-probes-canvas-prepaint-20260513`
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-canvas-prepaint-20260513/1778671598958/bundle.schema2.json`
+
+Observed result from that run:
+
+- time p50/p95: total `1117/1356us`, layout `33/335us`, prepaint `168/291us`,
+  paint `722/897us`,
+- hot p50/p95: `layout.engine_solve=0/129us`, `paint.widget=523/695us`,
+  `paint.text_prepare=9/12us`,
+- `code_editor.paint_perf` p50/p95 total: `261/433us`,
+- `code_editor.paint_perf.us_frame_overlay` sum: `0`,
+- row scene replay hit rate: `99%`,
+- renderer prepare/encode/upload counters stayed at zero.
+
+This slice moved editor frame-derived ownership out of paint attribution and into prepaint, but it
+did not yet finish the full boundary migration or the final 20-30% end-to-end improvement target.
+
 ## Correctness Gates
 
 Use focused tests first:

@@ -1511,6 +1511,10 @@ fn mount_element<H: UiHost + 'static>(
             node
         });
     ui.set_node_element(node, Some(id));
+    ui.set_node_widget_prepaint_enabled(
+        node,
+        matches!(&element.kind, ElementKind::Canvas(props) if props.prepaint),
+    );
 
     window_state.set_node_entry(
         id,

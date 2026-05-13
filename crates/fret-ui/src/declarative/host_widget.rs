@@ -1,7 +1,7 @@
 use super::frame::ElementInstance;
 use super::frame::with_element_record_for_node;
 use super::prelude::*;
-use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx};
+use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx, PrepaintCx};
 use fret_runtime::CommandId;
 
 mod event;
@@ -1003,6 +1003,34 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         self.semantics_impl(cx);
+    }
+
+    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        let Some(window) = cx.window else {
+            return;
+        };
+        let canvas_has_prepaint = matches!(
+            self.instance(cx.app, window, cx.node),
+            Some(ElementInstance::Canvas(props)) if props.prepaint
+        );
+        if !canvas_has_prepaint {
+            return;
+        }
+
+        let on_prepaint = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::canvas::CanvasPaintHooks::default,
+            |hooks| hooks.on_prepaint.clone(),
+        );
+        let Some(on_prepaint) = on_prepaint else {
+            return;
+        };
+
+        let mut host = crate::canvas::UiCanvasPrepaintHostAdapter::new(cx);
+        let mut canvas_cx = crate::canvas::CanvasPrepaintCx::new(&mut host);
+        (on_prepaint)(&mut canvas_cx);
     }
 
     fn measure(&mut self, cx: &mut MeasureCx<'_, H>) -> Size {

@@ -41,8 +41,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::windowed_rows_surface::{
     OnWindowedRowsPaintFrame, OnWindowedRowsPointerCancel, OnWindowedRowsPointerDown,
-    OnWindowedRowsPointerMove, OnWindowedRowsPointerUp, WindowedRowsPaintFrame,
-    WindowedRowsSurfacePointerHandlers, WindowedRowsSurfaceProps,
+    OnWindowedRowsPointerMove, OnWindowedRowsPointerUp, OnWindowedRowsPrepaintFrame,
+    WindowedRowsPaintFrame, WindowedRowsSurfacePointerHandlers, WindowedRowsSurfaceProps,
     windowed_rows_surface_with_pointer_region,
 };
 use fret_undo::{CoalesceKey, InvertibleTransaction, UndoHistory, UndoRecord};
@@ -1024,7 +1024,7 @@ impl CodeEditor {
             #[cfg(feature = "syntax")]
             let syntax_prefetch_hook = {
                 let editor_state = editor_state.clone();
-                let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
+                let hook: OnWindowedRowsPrepaintFrame = Arc::new(move |_cx, frame| {
                     self::syntax::schedule_syntax_prefetch_for_frame(
                         &mut editor_state.borrow_mut(),
                         frame,
@@ -1035,12 +1035,12 @@ impl CodeEditor {
                 Some(hook)
             };
             #[cfg(not(feature = "syntax"))]
-            let syntax_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
+            let syntax_prefetch_hook: Option<OnWindowedRowsPrepaintFrame> = None;
             #[cfg(feature = "syntax")]
             let row_rich_prefetch_hook = {
                 let editor_state = editor_state.clone();
-                let hook: OnWindowedRowsPaintFrame = Arc::new(move |painter, frame| {
-                    let theme = painter.theme().clone();
+                let hook: OnWindowedRowsPrepaintFrame = Arc::new(move |cx, frame| {
+                    let theme = cx.theme().clone();
                     paint::schedule_row_rich_prefetch_for_frame(
                         &mut editor_state.borrow_mut(),
                         frame,
@@ -1052,10 +1052,10 @@ impl CodeEditor {
                 Some(hook)
             };
             #[cfg(not(feature = "syntax"))]
-            let row_rich_prefetch_hook: Option<OnWindowedRowsPaintFrame> = None;
+            let row_rich_prefetch_hook: Option<OnWindowedRowsPrepaintFrame> = None;
             let paint_frame_hook = {
                 let editor_state = editor_state.clone();
-                let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
+                let hook: OnWindowedRowsPrepaintFrame = Arc::new(move |_cx, frame| {
                     editor_state.borrow_mut().begin_paint_frame(frame);
                 });
                 hook
@@ -1271,8 +1271,8 @@ impl CodeEditor {
                 hook
             });
 
-            surface_props.on_paint_frame = {
-                let mut hooks: Vec<OnWindowedRowsPaintFrame> = Vec::new();
+            surface_props.on_prepaint_frame = {
+                let mut hooks: Vec<OnWindowedRowsPrepaintFrame> = Vec::new();
                 hooks.push(paint_frame_hook);
                 if let Some(hook) = syntax_prefetch_hook {
                     hooks.push(hook);
@@ -1280,19 +1280,17 @@ impl CodeEditor {
                 if let Some(hook) = row_rich_prefetch_hook {
                     hooks.push(hook);
                 }
-                if let Some(hook) = torture_hook {
-                    hooks.push(hook);
-                }
                 match hooks.len() {
                     0 => None,
                     1 => hooks.pop(),
-                    _ => Some(Arc::new(move |painter, frame| {
+                    _ => Some(Arc::new(move |cx, frame| {
                         for hook in &hooks {
-                            hook(painter, frame);
+                            hook(cx, frame);
                         }
                     })),
                 }
             };
+            surface_props.on_paint_frame = torture_hook;
 
             cx.text_input_region(region_props, |cx| {
                 // `TextInputRegion` creates its own element id scope. All focus/key/command hooks

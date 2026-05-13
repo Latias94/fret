@@ -34,6 +34,10 @@
     {
       "role": "implementation",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2_CANVAS_PREPAINT_WINDOWED_ROWS_SLICE_2026-05-13.md"
     }
   ],
   "repro": {
@@ -56,6 +60,7 @@
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2_CANVAS_PREPAINT_WINDOWED_ROWS_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
   ],
@@ -65,6 +70,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration."
+    "notes": "Continue this lane until Frame Pipeline v2 is implemented for the code-editor vertical slice, old internal paths are deleted or explicitly retired, and closeout evidence proves the migration. M2 prepaint ownership is landed as a partial slice, but the final ViewBoundary store and deletion audit are still pending."
   }
 }

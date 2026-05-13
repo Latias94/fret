@@ -931,6 +931,10 @@ pub struct PrepaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
     pub fn set_output<T: std::any::Any>(&mut self, value: T) {
         self.tree.set_prepaint_output(self.node, value);
     }

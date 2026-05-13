@@ -45,6 +45,15 @@ Exit criteria:
 - Paint consumes prepaint state for the migrated path.
 - Tests prove stale prepaint state cannot be replayed across dependency changes.
 
+Status on 2026-05-13:
+
+- The first M2 vertical slice landed through `Canvas` prepaint + `windowed_rows_surface`
+  prepaint ownership.
+- `ecosystem/fret-code-editor` now schedules frame-derived prefetch/bookkeeping in prepaint.
+- A focused helper test locks prepaint-before-paint ordering for the windowed rows surface.
+- The final `ViewBoundary` owner and stale-state replay guard are still pending, so M2 remains a
+  partial migration rather than a closeout.
+
 ## M3: Scene Fragment Replay
 
 Exit criteria:

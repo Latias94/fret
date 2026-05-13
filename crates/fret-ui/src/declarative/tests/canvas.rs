@@ -143,6 +143,56 @@ fn canvas_resolved_passive_text_style_prefers_explicit_over_inherited() {
 }
 
 #[test]
+fn canvas_prepaint_hook_runs_before_paint_without_view_cache_root() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let prepaints = Arc::new(AtomicUsize::new(0));
+    let paints = Arc::new(AtomicUsize::new(0));
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-prepaint-hook",
+        |cx| {
+            let prepaints_for_prepaint = prepaints.clone();
+            let prepaints_for_paint = prepaints.clone();
+            let paints = paints.clone();
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                move |cx| {
+                    assert_eq!(cx.bounds().size, bounds.size);
+                    prepaints_for_prepaint.fetch_add(1, Ordering::SeqCst);
+                },
+                move |_p| {
+                    assert_eq!(prepaints_for_paint.load(Ordering::SeqCst), 1);
+                    paints.fetch_add(1, Ordering::SeqCst);
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(prepaints.load(Ordering::SeqCst), 1);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+}
+
+#[test]
 fn canvas_hosts_text_and_releases_on_cleanup() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

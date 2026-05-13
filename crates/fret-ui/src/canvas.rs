@@ -19,6 +19,7 @@ use crate::widget::Invalidation;
 use crate::{SvgSource, UiHost, widget::PaintCx};
 
 pub type OnCanvasPaint = Arc<dyn for<'a> Fn(&mut CanvasPainter<'a>) + 'static>;
+pub type OnCanvasPrepaint = Arc<dyn for<'a> Fn(&mut CanvasPrepaintCx<'a>) + 'static>;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct CanvasHostedResourceTouchCounts {
@@ -118,6 +119,77 @@ impl From<u64> for CanvasKey {
 #[derive(Default)]
 pub(crate) struct CanvasPaintHooks {
     pub on_paint: Option<OnCanvasPaint>,
+    pub on_prepaint: Option<OnCanvasPrepaint>,
+}
+
+pub(crate) trait UiCanvasPrepaintHost {
+    fn bounds(&self) -> Rect;
+    fn scale_factor(&self) -> f32;
+    fn theme(&self) -> &Theme;
+    fn request_redraw(&mut self);
+    fn request_animation_frame(&mut self);
+}
+
+pub(crate) struct UiCanvasPrepaintHostAdapter<'a, 'b, H: UiHost> {
+    cx: &'a mut crate::widget::PrepaintCx<'b, H>,
+}
+
+impl<'a, 'b, H: UiHost> UiCanvasPrepaintHostAdapter<'a, 'b, H> {
+    pub(crate) fn new(cx: &'a mut crate::widget::PrepaintCx<'b, H>) -> Self {
+        Self { cx }
+    }
+}
+
+impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a, 'b, H> {
+    fn bounds(&self) -> Rect {
+        self.cx.bounds
+    }
+
+    fn scale_factor(&self) -> f32 {
+        self.cx.scale_factor
+    }
+
+    fn theme(&self) -> &Theme {
+        self.cx.theme()
+    }
+
+    fn request_redraw(&mut self) {
+        self.cx.request_redraw();
+    }
+
+    fn request_animation_frame(&mut self) {
+        self.cx.request_animation_frame();
+    }
+}
+
+pub struct CanvasPrepaintCx<'a> {
+    host: &'a mut dyn UiCanvasPrepaintHost,
+}
+
+impl<'a> CanvasPrepaintCx<'a> {
+    pub(crate) fn new(host: &'a mut dyn UiCanvasPrepaintHost) -> Self {
+        Self { host }
+    }
+
+    pub fn bounds(&self) -> Rect {
+        self.host.bounds()
+    }
+
+    pub fn scale_factor(&self) -> f32 {
+        self.host.scale_factor()
+    }
+
+    pub fn theme(&self) -> &Theme {
+        self.host.theme()
+    }
+
+    pub fn request_redraw(&mut self) {
+        self.host.request_redraw();
+    }
+
+    pub fn request_animation_frame(&mut self) {
+        self.host.request_animation_frame();
+    }
 }
 
 /// Object-safe paint surface for declarative canvas paint handlers.

@@ -24,7 +24,7 @@ use std::panic::Location;
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::FrameId;
 use fret_ui::action::{ActionCx, OnTimer, PointerDownCx, PointerMoveCx, UiPointerActionHost};
-use fret_ui::canvas::CanvasPainter;
+use fret_ui::canvas::{CanvasPainter, CanvasPrepaintCx};
 use fret_ui::element::{
     AnyElement, CanvasProps, Length, PointerRegionProps, ScrollAxis, ScrollProps,
 };
@@ -43,6 +43,8 @@ pub struct WindowedRowsPaintFrame {
 
 pub type OnWindowedRowsPaintFrame =
     std::sync::Arc<dyn for<'p> Fn(&mut CanvasPainter<'p>, WindowedRowsPaintFrame) + 'static>;
+pub type OnWindowedRowsPrepaintFrame =
+    std::sync::Arc<dyn for<'p> Fn(&mut CanvasPrepaintCx<'p>, WindowedRowsPaintFrame) + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WindowedRowsSurfaceWindowTelemetry {
@@ -122,6 +124,7 @@ pub struct WindowedRowsSurfaceProps {
     pub gap: Px,
     pub scroll_margin: Px,
     pub scroll_handle: ScrollHandle,
+    pub on_prepaint_frame: Option<OnWindowedRowsPrepaintFrame>,
     pub on_paint_frame: Option<OnWindowedRowsPaintFrame>,
 }
 
@@ -155,9 +158,34 @@ impl Default for WindowedRowsSurfaceProps {
             gap: Px(0.0),
             scroll_margin: Px(0.0),
             scroll_handle: ScrollHandle::default(),
+            on_prepaint_frame: None,
             on_paint_frame: None,
         }
     }
+}
+
+fn current_windowed_rows_frame(
+    metrics: &VirtualListMetrics,
+    scroll_handle: &ScrollHandle,
+    overscan: usize,
+) -> Option<WindowedRowsPaintFrame> {
+    let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
+    let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
+    let offset_y = metrics.clamp_offset(offset_y, viewport_h);
+    let visible = metrics.visible_range(offset_y, viewport_h, overscan)?;
+    if visible.count == 0 {
+        return None;
+    }
+
+    let start = visible.start_index.saturating_sub(visible.overscan);
+    let end = (visible.end_index + visible.overscan).min(visible.count.saturating_sub(1));
+
+    Some(WindowedRowsPaintFrame {
+        viewport_height: viewport_h,
+        offset_y,
+        visible_start: start,
+        visible_end: end,
+    })
 }
 
 /// Build a fixed-row-height scroll surface that paints only the visible row window.
@@ -186,6 +214,7 @@ pub fn windowed_rows_surface<H: UiHost>(
         gap,
         scroll_margin,
         scroll_handle,
+        on_prepaint_frame,
         on_paint_frame,
     } = props;
 
@@ -265,13 +294,14 @@ pub fn windowed_rows_surface<H: UiHost>(
         let scroll_handle = scroll_handle.clone();
         let metrics = metrics.clone();
         let paint_row = std::sync::Arc::new(paint_row);
+        let on_prepaint_frame = on_prepaint_frame.clone();
         let on_paint_frame = on_paint_frame.clone();
+        let prepaint_scroll_handle = scroll_handle.clone();
+        let prepaint_metrics = metrics.clone();
 
-        vec![cx.canvas(canvas, move |painter| {
-            let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
-            let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
-            let offset_y = metrics.clamp_offset(offset_y, viewport_h);
-            let Some(visible) = metrics.visible_range(offset_y, viewport_h, overscan) else {
+        let paint = move |painter: &mut CanvasPainter<'_>| {
+            let Some(frame) = current_windowed_rows_frame(&metrics, &scroll_handle, overscan)
+            else {
                 return;
             };
 
@@ -279,27 +309,12 @@ pub fn windowed_rows_surface<H: UiHost>(
             let origin_x = bounds.origin.x;
             let origin_y = bounds.origin.y;
             let width = Px(bounds.size.width.0.max(0.0));
-            let count = visible.count;
-            if count == 0 {
-                return;
-            }
-
-            let start = visible.start_index.saturating_sub(visible.overscan);
-            let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
 
             if let Some(on_paint_frame) = &on_paint_frame {
-                on_paint_frame(
-                    painter,
-                    WindowedRowsPaintFrame {
-                        viewport_height: viewport_h,
-                        offset_y,
-                        visible_start: start,
-                        visible_end: end,
-                    },
-                );
+                on_paint_frame(painter, frame);
             }
 
-            for index in start..=end {
+            for index in frame.visible_start..=frame.visible_end {
                 let y = metrics.offset_for_index(index);
                 let h = metrics.height_at(index);
                 let rect = Rect::new(
@@ -308,7 +323,27 @@ pub fn windowed_rows_surface<H: UiHost>(
                 );
                 paint_row(painter, index, rect);
             }
-        })]
+        };
+
+        let canvas = if let Some(on_prepaint_frame) = on_prepaint_frame {
+            cx.canvas_with_prepaint(
+                canvas,
+                move |cx| {
+                    if let Some(frame) = current_windowed_rows_frame(
+                        &prepaint_metrics,
+                        &prepaint_scroll_handle,
+                        overscan,
+                    ) {
+                        on_prepaint_frame(cx, frame);
+                    }
+                },
+                paint,
+            )
+        } else {
+            cx.canvas(canvas, paint)
+        };
+
+        vec![canvas]
     })
 }
 
@@ -429,6 +464,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         gap,
         scroll_margin,
         scroll_handle,
+        on_prepaint_frame,
         on_paint_frame,
     } = props;
 
@@ -513,6 +549,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         let on_pointer_up = on_pointer_up.clone();
         let on_pointer_cancel = on_pointer_cancel.clone();
         let content_semantics = content_semantics.clone();
+        let on_prepaint_frame = on_prepaint_frame.clone();
         let on_paint_frame = on_paint_frame.clone();
 
         vec![cx.pointer_region(pointer, move |cx| {
@@ -576,11 +613,11 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                 cx.pointer_region_on_pointer_cancel(on_pointer_cancel);
             }
 
-            let canvas_children = vec![cx.canvas(canvas, move |painter| {
-                let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
-                let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
-                let offset_y = metrics.clamp_offset(offset_y, viewport_h);
-                let Some(visible) = metrics.visible_range(offset_y, viewport_h, overscan) else {
+            let prepaint_scroll_handle = scroll_handle.clone();
+            let prepaint_metrics = metrics.clone();
+            let paint = move |painter: &mut CanvasPainter<'_>| {
+                let Some(frame) = current_windowed_rows_frame(&metrics, &scroll_handle, overscan)
+                else {
                     return;
                 };
 
@@ -588,27 +625,12 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                 let origin_x = bounds.origin.x;
                 let origin_y = bounds.origin.y;
                 let width = Px(bounds.size.width.0.max(0.0));
-                let count = visible.count;
-                if count == 0 {
-                    return;
-                }
-
-                let start = visible.start_index.saturating_sub(visible.overscan);
-                let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
 
                 if let Some(on_paint_frame) = &on_paint_frame {
-                    on_paint_frame(
-                        painter,
-                        WindowedRowsPaintFrame {
-                            viewport_height: viewport_h,
-                            offset_y,
-                            visible_start: start,
-                            visible_end: end,
-                        },
-                    );
+                    on_paint_frame(painter, frame);
                 }
 
-                for index in start..=end {
+                for index in frame.visible_start..=frame.visible_end {
                     let y = metrics.offset_for_index(index);
                     let h = metrics.height_at(index);
                     let rect = Rect::new(
@@ -617,7 +639,27 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                     );
                     paint_row(painter, index, rect);
                 }
-            })];
+            };
+
+            let canvas = if let Some(on_prepaint_frame) = on_prepaint_frame.clone() {
+                cx.canvas_with_prepaint(
+                    canvas,
+                    move |cx| {
+                        if let Some(frame) = current_windowed_rows_frame(
+                            &prepaint_metrics,
+                            &prepaint_scroll_handle,
+                            overscan,
+                        ) {
+                            on_prepaint_frame(cx, frame);
+                        }
+                    },
+                    paint,
+                )
+            } else {
+                cx.canvas(canvas, paint)
+            };
+
+            let canvas_children = vec![canvas];
 
             if let Some(semantics) = content_semantics.clone() {
                 vec![cx.semantics(semantics, |_cx| canvas_children)]
@@ -631,11 +673,137 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Scene, Size};
+    use fret_ui::{UiTree, declarative::render_root};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(10.0), Px(16.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
 
     #[test]
     fn default_props_enable_windowed_paint() {
         let props = WindowedRowsSurfaceProps::default();
         assert_eq!(props.scroll.axis, ScrollAxis::Y);
         assert!(props.scroll.windowed_paint);
+    }
+
+    #[test]
+    fn on_prepaint_frame_runs_before_on_paint_frame_for_windowed_rows_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(48.0)));
+        let scroll_handle = fret_ui::scroll::ScrollHandle::default();
+        scroll_handle.set_viewport_size(Size::new(Px(160.0), Px(48.0)));
+        scroll_handle.set_content_size(Size::new(Px(160.0), Px(96.0)));
+
+        let prepaint_calls = Arc::new(AtomicUsize::new(0));
+        let paint_calls = Arc::new(AtomicUsize::new(0));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "windowed-rows",
+            |cx| {
+                let prepaint_calls = Arc::clone(&prepaint_calls);
+                let prepaint_calls_for_paint = Arc::clone(&prepaint_calls);
+                let paint_calls = Arc::clone(&paint_calls);
+
+                let mut props = WindowedRowsSurfaceProps::default();
+                props.len = 4;
+                props.row_height = Px(24.0);
+                props.overscan = 0;
+                props.scroll_handle = scroll_handle.clone();
+                props.on_prepaint_frame = Some(Arc::new(move |cx, frame| {
+                    assert_eq!(frame.visible_start, 0);
+                    assert!(frame.visible_end >= frame.visible_start);
+                    let _ = cx;
+                    prepaint_calls.fetch_add(1, Ordering::SeqCst);
+                }));
+                props.on_paint_frame = Some(Arc::new(move |_painter, _frame| {
+                    assert_eq!(prepaint_calls_for_paint.load(Ordering::SeqCst), 1);
+                    paint_calls.fetch_add(1, Ordering::SeqCst);
+                }));
+
+                vec![windowed_rows_surface(
+                    cx,
+                    props,
+                    move |_painter, _index, _rect| {},
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        assert_eq!(prepaint_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(paint_calls.load(Ordering::SeqCst), 1);
     }
 }

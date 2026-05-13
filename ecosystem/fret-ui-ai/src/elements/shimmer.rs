@@ -225,6 +225,7 @@ impl Shimmer {
                     CanvasProps {
                         layout: canvas_layout,
                         cache_policy: Default::default(),
+                        prepaint: false,
                     },
                     move |painter| {
                         painter.request_animation_frame();
@@ -601,6 +602,7 @@ mod tests {
                                 CanvasProps {
                                     layout: canvas_layout,
                                     cache_policy: Default::default(),
+                                    prepaint: false,
                                 },
                                 move |painter| {
                                     let bounds = painter.bounds();

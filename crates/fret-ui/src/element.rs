@@ -2197,6 +2197,12 @@ impl ViewportSurfaceProps {
 pub struct CanvasProps {
     pub layout: LayoutStyle,
     pub cache_policy: CanvasCachePolicy,
+    /// Whether this canvas has a prepaint hook registered in element-local state.
+    ///
+    /// The hook itself is not stored here so `CanvasProps` stays `Copy + Debug`; this flag only
+    /// lets the retained tree schedule the canvas widget's prepaint pass without probing element
+    /// state for every node.
+    pub prepaint: bool,
 }
 
 /// Cache tuning for a single hosted resource kind (text/path/svg) within a declarative `Canvas`.
@@ -2271,6 +2277,7 @@ impl Default for CanvasProps {
         Self {
             layout,
             cache_policy: CanvasCachePolicy::default(),
+            prepaint: false,
         }
     }
 }
