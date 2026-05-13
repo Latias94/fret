@@ -896,6 +896,34 @@ Follow-up recommendation:
   `type_text_into`, then captures a bundle. That will connect the semantics/action failure summaries
   to a real recipe-consumer page instead of only pure helper coverage.
 
+## Phase 2.28 Diagnostics Script Registry Drift
+
+The promoted UI Gallery input evidence script already existed and was listed in the shadcn
+conformance suite, but the generated diagnostics script registry had drifted. That meant
+`check_diag_scripts_registry.py` failed on a clean worktree, and discovery surfaces could miss or
+misclassify recently promoted text-input, button-group, and combobox evidence scripts.
+
+Fixes:
+
+- Refreshed `tools/diag-scripts/index.json` with the canonical registry generator.
+- Verified the refreshed index contains the promoted text-input and geometry scripts used by this
+  harness lane, including:
+  - `ui-gallery-input-basic-and-file-long-text`;
+  - `ui-gallery-button-group-input-group-geometry`;
+  - `ui-gallery-button-group-input-group-long-text`;
+  - `ui-gallery-combobox-input-group-long-query-text`;
+  - `ui-gallery-combobox-long-text-geometry`;
+  - `ui-gallery-combobox-popup-trigger-bottom-room`.
+
+Validation:
+
+- `python tools/check_diag_scripts_registry.py`
+
+Follow-up recommendation:
+
+- Add this registry check to any local shadcn diagnostics preflight bundle so promoted scripts cannot
+  disappear from discovery after fixture or suite edits.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -967,6 +995,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" text_input_timeout_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
+- `python tools/check_diag_scripts_registry.py`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
