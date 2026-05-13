@@ -116,6 +116,8 @@ deletion:
 - separate view-cache root and paint-cache root bookkeeping when a boundary can own both,
 - env-only perf knobs that become unnecessary once boundary diagnostics are explicit,
 - code-editor-local prepaint-like staging that can move to the shared prepaint phase,
+- the transitional node-scoped `PrepaintOutputs` carrier currently used for code-editor replay
+  plans,
 - duplicate cache rejection counters that can become boundary diagnostics.
 
 ## Public Surface Stance

@@ -2,6 +2,12 @@
 
 Status: landed; transitional row-scene replay plans move resize-frame cache validation out of paint.
 
+Status note (2026-05-13): this slice is now partially superseded by
+`M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md`. The replay plan carrier no longer
+lives on `CodeEditorState`; it now flows through node-scoped canvas prepaint output. The material
+below is still useful as the proof that prepaint owns replay-plan construction and paint consumes a
+validated plan.
+
 ## Scope
 
 This slice keeps the code-editor row scene cache editor-owned, but moves the resize-frame replay
@@ -130,10 +136,13 @@ What changed:
   row,
 - row-scene op storage no longer requires a fresh `Vec<SceneOp>` clone when a prepaint plan points at
   cached ops.
+- the replay-plan carrier is no longer editor-state-owned; the new carrier lives in node-scoped
+  prepaint output.
 
 What is still intentionally old or transitional:
 
-- `RowSceneReplayPlan` is editor-owned state, not the final `ViewBoundary` fragment store.
+- `RowSceneReplayPlan` is still transitional replay-plan state, but it is now carried through
+  node-scoped prepaint output rather than `CodeEditorState`.
 - Row rect reconstruction in prepaint was originally editor-local in this slice; this specific
   assumption was removed by `M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md`, which moved
   rect ownership to `WindowedRowsPaintFrame::row_rect(...)`.

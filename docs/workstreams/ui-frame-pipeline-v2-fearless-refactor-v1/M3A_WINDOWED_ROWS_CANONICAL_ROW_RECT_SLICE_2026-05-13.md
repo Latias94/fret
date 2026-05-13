@@ -3,6 +3,11 @@
 Status: landed; row rect ownership moved from code-editor replay planning into the windowed rows
 surface frame contract.
 
+Status note (2026-05-13): partially superseded by
+`M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md`. The row-rect ownership result below
+remains current, but references to editor-owned `RowSceneReplayPlan` storage should now be read as
+historical; the live carrier is node-scoped canvas prepaint output.
+
 ## Scope
 
 This slice removes one transitional assumption from the M3 row-scene replay plan:
@@ -106,8 +111,8 @@ What is still transitional:
 
 - `WindowedRowsPaintFrame` is still an ecosystem helper contract, not the final runtime
   `ViewBoundary` state.
-- `RowSceneReplayPlan` is still editor-owned and must still move into boundary-owned fragment state
-  or be deleted after a narrower final replay contract exists.
+- `RowSceneReplayPlan` is still transitional replay-plan state, but it is now carried through
+  node-scoped prepaint output rather than `CodeEditorState`.
 - `rows_scene_prepaint_*` counters are still migration diagnostics and should merge into boundary
   fragment diagnostics or be deleted after closeout.
 

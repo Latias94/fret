@@ -39,13 +39,15 @@ Last updated: 2026-05-13
 - [ ] Convert paint replay into boundary-owned scene-fragment reuse where possible.
 - [ ] Make prepaint diagnostics first-class per boundary.
 - [ ] Remove duplicated or superseded debug counters after boundary diagnostics cover them.
-- [ ] Replace code-editor-owned `RowSceneReplayPlan` with boundary-owned fragment state or delete it
-  if a narrower direct replay contract replaces it.
+- [x] Replace code-editor-owned `RowSceneReplayPlan` with a transitional node-scoped prepaint output
+  carrier.
+- [ ] Move the transitional replay-plan carrier into boundary-owned fragment state or delete it if a
+  narrower direct replay contract replaces it.
 - [ ] Keep `fret-ui` mechanism-only; move any policy decisions back to ecosystem crates.
 
 ## P3 Delete Old Paths
 
-- [ ] Write a deletion audit before closeout.
+- [x] Write a deletion audit before closeout.
 - [ ] Delete or retire old private paths that v2 replaces.
 - [ ] Remove migration-only env knobs that no longer have a diagnostic purpose.
 - [ ] Update first-party examples and docs if public authoring guidance changes.

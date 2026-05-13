@@ -49,8 +49,12 @@ Status on 2026-05-13:
 
 - The first M2 vertical slice landed through `Canvas` prepaint + `windowed_rows_surface`
   prepaint ownership.
+- The latest canvas-output slice now carries the row-scene replay plan through node-scoped
+  `PrepaintOutputs`, so the prepaint phase owns a concrete output carrier instead of only the
+  scheduling hook.
 - `ecosystem/fret-code-editor` now schedules frame-derived prefetch/bookkeeping in prepaint.
-- A focused helper test locks prepaint-before-paint ordering for the windowed rows surface.
+- A focused helper test locks prepaint-before-paint ordering and output visibility for the windowed
+  rows surface.
 - The final `ViewBoundary` owner and stale-state replay guard are still pending, so M2 remains a
   partial migration rather than a closeout.
 
@@ -64,12 +68,17 @@ Exit criteria:
 
 Status on 2026-05-13:
 
-- A transitional editor-owned replay-plan slice landed in
+- A transitional replay-plan slice landed in
   `M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md`.
-- Prepaint now validates cached row scene replay candidates and paint consumes matching plan entries.
+- A follow-up carrier slice moved the replay-plan payload out of `CodeEditorState` and into
+  node-scoped canvas prepaint output in
+  `M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md`.
+- Prepaint now validates cached row scene replay candidates and paint consumes matching plan
+  entries from prepaint output.
 - Diagnostics expose planned vs used replay entries plus prepaint planning cost.
-- The current evidence shows the expected phase move: paint-side `us_row_text` is `0/6us`
-  p50/p95 in the worst bundle, while prepaint planning is visible as `65/123us` p50/p95.
+- The latest evidence shows the expected phase move: paint-side `us_row_text` is `0/5us`
+  p50/p95 in the latest canvas-output bundle, while prepaint planning remains visible as
+  `55/77us` p50/p95.
 - The follow-up row-rect slice in
   `M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md` removes the code-editor-local
   fixed-row rect reconstruction from replay planning; `WindowedRowsPaintFrame::row_rect(...)` now

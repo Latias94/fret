@@ -173,6 +173,42 @@ This slice removes code-editor-local fixed-row rect reconstruction from replay p
 the replay plan editor-owned, so it is still a transition step before the final boundary fragment
 store.
 
+Most recent canvas prepaint-output slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md`
+- Focused correctness gate:
+  `cargo nextest run -p fret-ui declarative::tests::canvas::canvas_prepaint_output_is_visible_to_canvas_paint --no-fail-fast`
+- Perf output directory:
+  `target/fret-diag-code-editor-resize-probes-canvas-prepaint-output-20260513`
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-canvas-prepaint-output-20260513/1778685213875/bundle.schema2.json`
+
+Observed result from that run:
+
+- time p50/p95/max: total `1103/1576/1576us`,
+  layout `35/344/344us`,
+  prepaint `251/360/360us`,
+  paint `659/877/877us`
+- hot p50/p95: `layout.engine_solve=0/133us`, `paint.widget=445/661us`,
+  `paint.text_prepare=10/13us`
+- `code_editor.paint_perf` p50/p95 total: `175/403us`
+- `code_editor.paint_perf.us_row_text` p50/p95: `0/5us`
+- planned/used replay entries still matched `2090/2090`
+- row scene replay hit rate remained `99%`
+- renderer prepare/encode/upload counters stayed at zero
+
+Worst-bundle attribution:
+
+- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-canvas-prepaint-output-20260513/1778685213875/bundle.schema2.json --sort time --top 15`
+- time p50/p95: total `1103/1576us`, layout `35/344us`, prepaint `251/360us`,
+  paint `659/877us`
+- hot p50/p95: `layout.engine_solve=0/133us`, `paint.widget=445/661us`,
+  `paint.text_prepare=10/13us`
+- `code_editor.paint_perf` sum planned/used replay entries: `2090/2090`
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `55/77us`
+- `code_editor.paint_perf` p50/p95 `us_row_text`: `0/5us`
+
 ## Correctness Gates
 
 Use focused tests first:
