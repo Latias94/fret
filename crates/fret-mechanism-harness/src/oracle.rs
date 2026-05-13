@@ -389,7 +389,7 @@ pub fn evaluate_predicate(
             flag,
             expected,
         } => {
-            let node = tree.select_best(target).map_err(fail)?;
+            let node = tree.select_best_unfiltered(target).map_err(fail)?;
             let Some(actual) = semantics_flag_value(node, *flag) else {
                 return Err(failure(format!(
                     "semantics_flag_is target has no observed flag target={target:?} flag={flag:?}"

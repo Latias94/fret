@@ -604,6 +604,88 @@ mod tests {
     }
 
     #[test]
+    fn default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        ));
+
+        let mut visible = ObservedNode::new(
+            "visible",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        visible.node_id = Some(1);
+
+        let mut hidden_parent = ObservedNode::new(
+            "hidden-parent",
+            Rect::new(
+                Point::new(Px(0.0), Px(30.0)),
+                Size::new(Px(120.0), Px(60.0)),
+            ),
+        );
+        hidden_parent.node_id = Some(2);
+        hidden_parent.hidden = Some(true);
+
+        let mut hidden_child = ObservedNode::new(
+            "hidden-child",
+            Rect::new(Point::new(Px(4.0), Px(34.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        hidden_child.node_id = Some(3);
+        hidden_child.parent_node_id = Some(2);
+        hidden_child.hidden = Some(false);
+
+        tree.push_node(visible);
+        tree.push_node(hidden_parent);
+        tree.push_node(hidden_child);
+
+        let hidden_parent_selector = UiSelectorV1::TestId {
+            id: "hidden-parent".to_string(),
+            root_z_index: None,
+        };
+        let hidden_child_selector = UiSelectorV1::TestId {
+            id: "hidden-child".to_string(),
+            root_z_index: None,
+        };
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::NotExists {
+                    target: hidden_parent_selector.clone(),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::NotExists {
+                    target: hidden_child_selector.clone(),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsFlagIs {
+                target: hidden_parent_selector,
+                flag: ObservedSemanticsFlag::Hidden,
+                expected: true,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsFlagIs {
+                target: hidden_child_selector,
+                flag: ObservedSemanticsFlag::Hidden,
+                expected: false,
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
     fn active_item_none_rejects_roving_focus_descendants() {
         let mut tree = ObservedTree::new(Rect::new(
             Point::new(Px(0.0), Px(0.0)),

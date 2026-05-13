@@ -23,6 +23,7 @@ enum SemanticsRelationScenario {
     TextInputRegionValueAndEditingMetadata,
     PressableCollectionMetadata,
     SemanticsWrapperLiveAndStructuredMetadata,
+    HiddenSubtreePolicy,
 }
 
 #[test]
@@ -308,6 +309,40 @@ fn build_scenario(
             );
 
             vec![live, range, viewport]
+        }
+        SemanticsRelationScenario::HiddenSubtreePolicy => {
+            let visible = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Button,
+                    label: Some(Arc::from("Visible")),
+                    test_id: Some(Arc::from("visible-button")),
+                    ..Default::default()
+                },
+                |_cx, _id| Vec::new(),
+            );
+
+            let hidden = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    label: Some(Arc::from("Hidden Group")),
+                    test_id: Some(Arc::from("hidden-group")),
+                    hidden: true,
+                    ..Default::default()
+                },
+                |cx, _id| {
+                    vec![cx.semantics_with_id(
+                        crate::element::SemanticsProps {
+                            role: fret_core::SemanticsRole::Button,
+                            label: Some(Arc::from("Hidden Child")),
+                            test_id: Some(Arc::from("hidden-child-button")),
+                            ..Default::default()
+                        },
+                        |_cx, _id| Vec::new(),
+                    )]
+                },
+            );
+
+            vec![visible, hidden]
         }
     }
 }

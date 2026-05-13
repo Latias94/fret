@@ -344,6 +344,51 @@
         "upstream_ref": "ARIA live region plus structured range/scroll metadata",
         "note": "SemanticsProps is the mechanism layer surface for non-recipe semantic metadata; harness must prove it is observable through the shared oracle."
       }
+    },
+    {
+      "id": "hidden-subtree-policy-excludes-default-selectors-but-keeps-diagnostics",
+      "scenario": { "kind": "hidden_subtree_policy" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "exists",
+              "target": { "kind": "test_id", "id": "visible-button" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "hidden-group" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "hidden-child-button" }
+            }
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "hidden-group" },
+            "flag": "hidden",
+            "expected": true
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "hidden-child-button" },
+            "flag": "hidden",
+            "expected": false
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ADR 0293 a11y hidden semantics",
+        "note": "Default harness selectors model the filtered AT tree and exclude a hidden subtree, while unfiltered diagnostics can still observe the hidden flag and retained child nodes."
+      }
     }
   ]
 }

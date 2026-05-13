@@ -69,7 +69,7 @@ date: 2026-05-12
 - [x] Add dropdown-menu, context-menu, and menubar submenu fixture coverage for ArrowRight open
   and ArrowLeft restore parity.
 - [x] Extend recipe-level typeahead parity beyond the current mechanism matrices.
-- [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
+- [x] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
 - [x] Add modal-barrier root lifecycle runtime coverage on a default-compatible page.

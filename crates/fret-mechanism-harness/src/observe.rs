@@ -430,12 +430,29 @@ impl ObservedTree {
         if !node.visible {
             return false;
         }
+        if node
+            .node_id
+            .and_then(|id| self.nearest_semantics_hidden_ancestor_or_self(id))
+            .is_some()
+        {
+            return false;
+        }
         let Some(barrier) = self.barrier_root_node_id else {
             return true;
         };
         node.node_id
             .map(|id| self.is_descendant_of_or_self(id, barrier))
             .unwrap_or(false)
+    }
+
+    fn nearest_semantics_hidden_ancestor_or_self(&self, mut id: u64) -> Option<u64> {
+        loop {
+            let node = self.nodes.iter().find(|node| node.node_id == Some(id))?;
+            if node.hidden == Some(true) {
+                return Some(id);
+            }
+            id = node.parent_node_id?;
+        }
     }
 
     pub fn node_is_descendant_of_or_self(&self, id: u64, ancestor: u64) -> bool {

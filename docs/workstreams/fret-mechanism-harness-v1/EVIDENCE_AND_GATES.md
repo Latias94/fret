@@ -95,6 +95,7 @@ cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
 
 ```powershell
 cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
+cargo test --profile dev-fast -p fret-mechanism-harness --lib default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_controls_element_is_exposed -- --nocapture
@@ -459,6 +460,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
 - Semantics relation runner:
   `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+- Hidden-subtree selector/oracle fix:
+  `crates/fret-mechanism-harness/src/observe.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`
+- Hidden-subtree focused gate:
+  `default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable`
 - Combobox active-descendant interaction fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/combobox_active_descendant_interaction_v1.json`
 - Combobox active-descendant interaction runner:
