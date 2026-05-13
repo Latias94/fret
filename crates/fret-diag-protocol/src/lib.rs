@@ -2426,6 +2426,39 @@ pub enum UiPredicateV1 {
     VirtualListWindowShiftSamplesLenLe {
         max: u64,
     },
+    /// True when the recent debug snapshot ring contains at least `min` virtual-list
+    /// window-shift samples matching the provided telemetry fields.
+    ///
+    /// Field values use the diagnostics JSON spelling, for example
+    /// `shift_kind = "escape"`, `reason = "scroll_offset"`,
+    /// `apply_mode = "non_retained_rerender"`, and `source = "layout"`.
+    VirtualListWindowShiftSamplesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        shift_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        apply_mode: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<String>,
+    },
+    /// True when the recent debug snapshot ring contains at least `min` virtual-list
+    /// window records matching the provided telemetry fields.
+    ///
+    /// This covers retained virtual-list reconciliation, where the latest window record carries
+    /// the shift kind/reason/apply mode even when no non-retained shift sample is emitted.
+    VirtualListWindowsMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        shift_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        apply_mode: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<String>,
+    },
     /// True when the app snapshot field addressed by JSON Pointer `pointer` equals `value`.
     ///
     /// This predicate reads the best-effort `app_snapshot` payload published by the app into
@@ -4317,6 +4350,65 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 0 }
+        ));
+    }
+
+    #[test]
+    fn predicate_virtual_list_window_shift_samples_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe {
+            min: 1,
+            shift_kind: Some("escape".to_string()),
+            reason: Some("scroll_offset".to_string()),
+            apply_mode: Some("non_retained_rerender".to_string()),
+            source: Some("layout".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "virtual_list_window_shift_samples_matching_ge",
+                "min": 1,
+                "shift_kind": "escape",
+                "reason": "scroll_offset",
+                "apply_mode": "non_retained_rerender",
+                "source": "layout",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_virtual_list_windows_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::VirtualListWindowsMatchingGe {
+            min: 1,
+            shift_kind: Some("prefetch".to_string()),
+            reason: Some("scroll_offset".to_string()),
+            apply_mode: Some("retained_reconcile".to_string()),
+            source: None,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "virtual_list_windows_matching_ge",
+                "min": 1,
+                "shift_kind": "prefetch",
+                "reason": "scroll_offset",
+                "apply_mode": "retained_reconcile",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::VirtualListWindowsMatchingGe { min: 1, .. }
         ));
     }
 

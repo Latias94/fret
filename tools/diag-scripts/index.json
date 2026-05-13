@@ -9708,25 +9708,49 @@
     {
       "id": "ui-gallery-virtual-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-vlist-window-boundary",
-        "ui-gallery-vlist-window-boundary-retained"
+      "required_capabilities": [
+        "diag.script_v2"
       ],
-      "tags": [],
-      "target_hints": []
+      "suite_memberships": [
+        "ui-gallery-vlist-window-boundary"
+      ],
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Run with env: FRET_UI_GALLERY_VLIST_RETAINED=0.",
+        "Crossing the non-retained virtual-list window boundary must emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-window-boundary-scroll-retained",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-virt-retained",
-        "ui-gallery-virt-retained-measured"
+        "ui-gallery-virt-retained-measured",
+        "ui-gallery-vlist-window-boundary-retained"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
+        "Crossing the retained virtual-list window boundary must emit a prepaint shift attributed to scroll_offset and applied by retained_reconcile."
+      ]
     },
     {
       "id": "ui-gallery-wheel-burst-coalescing",

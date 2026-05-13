@@ -29,6 +29,42 @@ fn eval_debug_snapshot_predicate_from_ring(
             });
             Some(samples <= *max)
         }
+        UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe {
+            min,
+            shift_kind,
+            reason,
+            apply_mode,
+            source,
+        } => {
+            let samples = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
+                total.saturating_add(count_matching_virtual_list_shift_samples(
+                    &snapshot.debug,
+                    shift_kind.as_deref(),
+                    reason.as_deref(),
+                    apply_mode.as_deref(),
+                    source.as_deref(),
+                ))
+            });
+            Some(samples >= *min)
+        }
+        UiPredicateV1::VirtualListWindowsMatchingGe {
+            min,
+            shift_kind,
+            reason,
+            apply_mode,
+            source,
+        } => {
+            let windows = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
+                total.saturating_add(count_matching_virtual_list_windows(
+                    &snapshot.debug,
+                    shift_kind.as_deref(),
+                    reason.as_deref(),
+                    apply_mode.as_deref(),
+                    source.as_deref(),
+                ))
+            });
+            Some(windows >= *min)
+        }
         _ => None,
     }
 }
@@ -65,7 +101,134 @@ fn eval_virtual_list_predicate_from_debug_snapshot(
         UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max } => {
             Some((debug.virtual_list_window_shift_samples.len() as u64) <= *max)
         }
+        UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe {
+            min,
+            shift_kind,
+            reason,
+            apply_mode,
+            source,
+        } => Some(
+            count_matching_virtual_list_shift_samples(
+                debug,
+                shift_kind.as_deref(),
+                reason.as_deref(),
+                apply_mode.as_deref(),
+                source.as_deref(),
+            ) >= *min,
+        ),
+        UiPredicateV1::VirtualListWindowsMatchingGe {
+            min,
+            shift_kind,
+            reason,
+            apply_mode,
+            source,
+        } => Some(
+            count_matching_virtual_list_windows(
+                debug,
+                shift_kind.as_deref(),
+                reason.as_deref(),
+                apply_mode.as_deref(),
+                source.as_deref(),
+            ) >= *min,
+        ),
         _ => None,
+    }
+}
+
+fn count_matching_virtual_list_shift_samples(
+    debug: &UiTreeDebugSnapshotV1,
+    shift_kind: Option<&str>,
+    reason: Option<&str>,
+    apply_mode: Option<&str>,
+    source: Option<&str>,
+) -> u64 {
+    debug
+        .virtual_list_window_shift_samples
+        .iter()
+        .filter(|sample| {
+            matches_optional(
+                shift_kind,
+                virtual_list_shift_kind_name(sample.window_shift_kind),
+            ) && matches_optional(
+                reason,
+                virtual_list_shift_reason_name(sample.window_shift_reason),
+            ) && matches_optional(
+                apply_mode,
+                virtual_list_shift_apply_mode_name(sample.window_shift_apply_mode),
+            ) && matches_optional(source, virtual_list_window_source_name(sample.source))
+        })
+        .count() as u64
+}
+
+fn count_matching_virtual_list_windows(
+    debug: &UiTreeDebugSnapshotV1,
+    shift_kind: Option<&str>,
+    reason: Option<&str>,
+    apply_mode: Option<&str>,
+    source: Option<&str>,
+) -> u64 {
+    debug
+        .virtual_list_windows
+        .iter()
+        .filter(|window| {
+            matches_optional(
+                shift_kind,
+                virtual_list_shift_kind_name(window.window_shift_kind),
+            ) && optional_matches_optional(
+                reason,
+                window
+                    .window_shift_reason
+                    .map(virtual_list_shift_reason_name),
+            ) && optional_matches_optional(
+                apply_mode,
+                window
+                    .window_shift_apply_mode
+                    .map(virtual_list_shift_apply_mode_name),
+            ) && matches_optional(source, virtual_list_window_source_name(window.source))
+        })
+        .count() as u64
+}
+
+fn matches_optional(expected: Option<&str>, actual: &str) -> bool {
+    expected.is_none_or(|expected| expected == actual)
+}
+
+fn optional_matches_optional(expected: Option<&str>, actual: Option<&str>) -> bool {
+    expected.is_none_or(|expected| actual == Some(expected))
+}
+
+fn virtual_list_shift_kind_name(kind: UiVirtualListWindowShiftKindV1) -> &'static str {
+    match kind {
+        UiVirtualListWindowShiftKindV1::None => "none",
+        UiVirtualListWindowShiftKindV1::Prefetch => "prefetch",
+        UiVirtualListWindowShiftKindV1::Escape => "escape",
+    }
+}
+
+fn virtual_list_shift_reason_name(reason: UiVirtualListWindowShiftReasonV1) -> &'static str {
+    match reason {
+        UiVirtualListWindowShiftReasonV1::ScrollOffset => "scroll_offset",
+        UiVirtualListWindowShiftReasonV1::ViewportResize => "viewport_resize",
+        UiVirtualListWindowShiftReasonV1::ItemsRevision => "items_revision",
+        UiVirtualListWindowShiftReasonV1::ScrollToItem => "scroll_to_item",
+        UiVirtualListWindowShiftReasonV1::InputsChange => "inputs_change",
+        UiVirtualListWindowShiftReasonV1::Unknown => "unknown",
+    }
+}
+
+fn virtual_list_shift_apply_mode_name(
+    apply_mode: UiVirtualListWindowShiftApplyModeV1,
+) -> &'static str {
+    match apply_mode {
+        UiVirtualListWindowShiftApplyModeV1::RetainedReconcile => "retained_reconcile",
+        UiVirtualListWindowShiftApplyModeV1::NonRetainedRerender => "non_retained_rerender",
+    }
+}
+
+fn virtual_list_window_source_name(source: UiVirtualListWindowSourceV1) -> &'static str {
+    match source {
+        UiVirtualListWindowSourceV1::Prepaint => "prepaint",
+        UiVirtualListWindowSourceV1::Layout => "layout",
     }
 }
 
@@ -327,6 +490,49 @@ mod tests {
             })
             .collect();
 
+        snapshot_with_debug(debug)
+    }
+
+    fn snapshot_with_virtual_list_window(
+        shift_kind: UiVirtualListWindowShiftKindV1,
+        reason: Option<UiVirtualListWindowShiftReasonV1>,
+        apply_mode: Option<UiVirtualListWindowShiftApplyModeV1>,
+        source: UiVirtualListWindowSourceV1,
+    ) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug.virtual_list_windows.push(UiVirtualListWindowV1 {
+            node: 1,
+            element: 10,
+            source,
+            axis: UiAxisV1::Vertical,
+            is_probe_layout: false,
+            items_len: 10_000,
+            items_revision: 1,
+            prev_items_revision: 1,
+            measure_mode: UiVirtualListMeasureModeV1::Fixed,
+            overscan: 4,
+            policy_key: 1,
+            inputs_key: 1,
+            viewport: 640.0,
+            prev_viewport: 640.0,
+            offset: 240.0,
+            prev_offset: 0.0,
+            window_range: None,
+            prev_window_range: None,
+            render_window_range: None,
+            deferred_scroll_to_item: false,
+            deferred_scroll_consumed: false,
+            window_mismatch: false,
+            window_shift_kind: shift_kind,
+            window_shift_reason: reason,
+            window_shift_apply_mode: apply_mode,
+            window_shift_invalidation_detail: None,
+        });
+
+        snapshot_with_debug(debug)
+    }
+
+    fn snapshot_with_debug(debug: UiTreeDebugSnapshotV1) -> UiDiagnosticsSnapshotV1 {
         UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: 0,
@@ -383,6 +589,80 @@ mod tests {
                 &UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 1 },
             ),
             Some(true)
+        );
+    }
+
+    #[test]
+    fn virtual_list_window_shift_samples_matching_predicate_counts_ring_snapshots() {
+        let mut ring = WindowRing::default();
+        ring.snapshots
+            .push_back(snapshot_with_virtual_list_shift_samples(0));
+        ring.snapshots
+            .push_back(snapshot_with_virtual_list_shift_samples(2));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe {
+                    min: 2,
+                    shift_kind: Some("escape".to_string()),
+                    reason: Some("scroll_offset".to_string()),
+                    apply_mode: Some("retained_reconcile".to_string()),
+                    source: Some("layout".to_string()),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe {
+                    min: 1,
+                    shift_kind: Some("prefetch".to_string()),
+                    reason: Some("scroll_offset".to_string()),
+                    apply_mode: Some("retained_reconcile".to_string()),
+                    source: Some("layout".to_string()),
+                },
+            ),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn virtual_list_windows_matching_predicate_counts_ring_snapshots() {
+        let mut ring = WindowRing::default();
+        ring.snapshots.push_back(snapshot_with_virtual_list_window(
+            UiVirtualListWindowShiftKindV1::Prefetch,
+            Some(UiVirtualListWindowShiftReasonV1::ScrollOffset),
+            Some(UiVirtualListWindowShiftApplyModeV1::RetainedReconcile),
+            UiVirtualListWindowSourceV1::Prepaint,
+        ));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::VirtualListWindowsMatchingGe {
+                    min: 1,
+                    shift_kind: Some("prefetch".to_string()),
+                    reason: Some("scroll_offset".to_string()),
+                    apply_mode: Some("retained_reconcile".to_string()),
+                    source: Some("prepaint".to_string()),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::VirtualListWindowsMatchingGe {
+                    min: 1,
+                    shift_kind: Some("prefetch".to_string()),
+                    reason: Some("viewport_resize".to_string()),
+                    apply_mode: Some("retained_reconcile".to_string()),
+                    source: Some("prepaint".to_string()),
+                },
+            ),
+            Some(false)
         );
     }
 }

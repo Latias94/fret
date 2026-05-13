@@ -481,6 +481,9 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockGraphSignatureIs { .. }
                 | UiPredicateV1::DockGraphSignatureContains { .. }
                 | UiPredicateV1::DockGraphSignatureFingerprint64Is { .. }
+                | UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. }
+                | UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { .. }
+                | UiPredicateV1::VirtualListWindowsMatchingGe { .. }
                 | UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { .. }
                 | UiPredicateV1::AssetLoadStaleManifestRequestsGe { .. }
                 | UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { .. }

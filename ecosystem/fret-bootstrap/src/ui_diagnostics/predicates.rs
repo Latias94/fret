@@ -1049,7 +1049,9 @@ fn eval_predicate(
         | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
         | UiPredicateV1::AssetReloadActiveBackendIs { .. }
         | UiPredicateV1::AssetReloadFallbackReasonIs { .. }
-        | UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. } => false,
+        | UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. }
+        | UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { .. }
+        | UiPredicateV1::VirtualListWindowsMatchingGe { .. } => false,
         UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::WindowInnerSizeApproxEqual {
             width_px,
