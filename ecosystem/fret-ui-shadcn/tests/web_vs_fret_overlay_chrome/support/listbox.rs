@@ -288,13 +288,8 @@ pub(crate) fn assert_listbox_focused_option_chrome_matches_web(
         }
 
         let (snap2, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
-        if let Some(text_field) = snap2
-            .nodes
-            .iter()
-            .filter(|n| n.role == SemanticsRole::TextField)
-            .max_by(|a, b| rect_area(a.bounds).total_cmp(&rect_area(b.bounds)))
-        {
-            ui.set_focus(Some(text_field.id));
+        if let Some(controller) = fret_find_listbox_controller(&snap2) {
+            ui.set_focus(Some(controller.id));
             render_frame(
                 &mut ui,
                 &mut app,
@@ -306,6 +301,16 @@ pub(crate) fn assert_listbox_focused_option_chrome_matches_web(
                 |cx| vec![build(cx, &open)],
             );
             dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                FrameId(4 + settle_frames + settle_frames),
+                true,
+                |cx| vec![build(cx, &open)],
+            );
         }
 
         (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);

@@ -1463,11 +1463,13 @@ fn combobox_with_patch<H: UiHost>(
             .map(|m| m.resolve(&theme))
             .unwrap_or(Px(1.0));
 
+        let effective_trigger_width = combobox_effective_trigger_width(device_shell_responsive, width);
+
         let mut trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
                 .min_h(min_h)
-                .merge(if let Some(w) = width {
+                .merge(if let Some(w) = effective_trigger_width {
                     LayoutRefinement::default().w_px(w)
                 } else {
                     LayoutRefinement::default().w_full()
@@ -2448,7 +2450,10 @@ fn combobox_with_patch<H: UiHost>(
                 popper::Align::Center => PopoverAlign::Center,
                 popper::Align::End => PopoverAlign::End,
             })
-            .side_offset(content_side_offset)
+            .side_offset(combobox_effective_side_offset(
+                device_shell_responsive,
+                content_side_offset,
+            ))
             .align_offset(content_align_offset)
             .on_dismiss_request(Some(
                 kit_combobox::set_open_change_reason_on_dismiss_request(
@@ -2823,8 +2828,12 @@ fn combobox_with_patch<H: UiHost>(
 	                    .metric_by_key("component.combobox.max_list_height")
 	                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
 	                    .unwrap_or(Px(280.0));
-	                let desired_w =
-	                    combobox_desired_content_width(width, content_width, anchor.size.width);
+                    let desired_w = combobox_effective_content_width(
+                        device_shell_responsive,
+                        effective_trigger_width,
+                        content_width,
+                        anchor.size.width,
+                    );
 	                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 	                let mut items = Some(items);
 	                let mut groups = Some(groups);
@@ -3216,6 +3225,34 @@ fn combobox_desired_content_width(
         .unwrap_or_else(|| Px(anchor_width.0.max(180.0)))
 }
 
+fn combobox_effective_trigger_width(
+    device_shell_responsive: bool,
+    trigger_width: Option<Px>,
+) -> Option<Px> {
+    trigger_width.or((device_shell_responsive && trigger_width.is_none()).then_some(Px(150.0)))
+}
+
+fn combobox_effective_content_width(
+    device_shell_responsive: bool,
+    trigger_width: Option<Px>,
+    content_width: Option<Px>,
+    anchor_width: Px,
+) -> Px {
+    if device_shell_responsive && content_width.is_none() {
+        Px(200.0)
+    } else {
+        combobox_desired_content_width(trigger_width, content_width, anchor_width)
+    }
+}
+
+fn combobox_effective_side_offset(device_shell_responsive: bool, content_side_offset: Px) -> Px {
+    if device_shell_responsive && content_side_offset == Px(6.0) {
+        Px(4.0)
+    } else {
+        content_side_offset
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3248,6 +3285,35 @@ mod tests {
         assert_eq!(placement.align_offset, Px(12.0));
         assert!(placement.shift_cross_axis);
         assert_eq!(placement.sticky, popper::StickyMode::Partial);
+    }
+
+    #[test]
+    fn responsive_combobox_uses_shadcn_popover_demo_defaults() {
+        assert_eq!(
+            combobox_effective_trigger_width(true, None),
+            Some(Px(150.0))
+        );
+        assert_eq!(
+            combobox_effective_content_width(true, Some(Px(150.0)), None, Px(150.0)),
+            Px(200.0)
+        );
+        assert_eq!(combobox_effective_side_offset(true, Px(6.0)), Px(4.0));
+
+        assert_eq!(
+            combobox_effective_trigger_width(false, None),
+            None,
+            "ordinary combobox triggers still fill by default"
+        );
+        assert_eq!(
+            combobox_effective_content_width(false, Some(Px(150.0)), None, Px(150.0)),
+            Px(150.0),
+            "ordinary ComboboxContent still inherits the trigger width"
+        );
+        assert_eq!(
+            combobox_effective_side_offset(false, Px(6.0)),
+            Px(6.0),
+            "ordinary ComboboxContent keeps the Base UI sideOffset default"
+        );
     }
 
     #[test]

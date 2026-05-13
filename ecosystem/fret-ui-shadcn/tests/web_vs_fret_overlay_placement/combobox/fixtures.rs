@@ -72,7 +72,7 @@ fn build_combobox_responsive_overlay(
         .items(items)
         .into_element_parts(cx, |_cx| {
             vec![shadcn::ComboboxPart::from(
-                shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
+                shadcn::ComboboxTrigger::new().width_px(Px(150.0)),
             )]
         })
 }

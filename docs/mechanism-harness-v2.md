@@ -478,6 +478,43 @@ Validation:
 - `cargo nextest run -p fret-mechanism-harness`
 - `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
 
+## Phase 2.15 Combobox Overlay Placement and Chrome Sweep
+
+The combobox web-golden overlay sweep is still an ecosystem parity surface rather than a core
+mechanism fixture, but it now acts as an active defect-discovery lane for overlay positioning,
+controller semantics, and option chrome.
+
+It covers:
+
+- desktop and mobile `combobox-demo`, `combobox-popover`, and `combobox-responsive` listbox sizing,
+  option height, option insets, and overlay placement;
+- highlighted and focused command-item chrome across light/dark themes and desktop/mobile
+  viewports;
+- the `device_shell_responsive` desktop Popover shell versus mobile Drawer shell split.
+
+Findings from this sweep:
+
+- `combobox-responsive.overlay_placement` exposed a recipe source drift: Fret used the Base UI
+  `ComboboxContent` default `sideOffset=6` and a 200px trigger, while the upstream shadcn responsive
+  example is a Popover/Button/Command recipe with a 150px trigger, 200px content, and Popover
+  `sideOffset=4`. Responsive mode now keeps those demo-owned defaults separate from ordinary
+  `ComboboxContent`.
+- `combobox-demo.focus-first` exposed a harness driver gap: overlay chrome fallback logic only
+  searched for `TextField` controllers, but Fret correctly exposes the cmdk input as a `ComboBox`
+  controller with `aria-activedescendant` semantics. The chrome harness now finds the node that
+  controls the listbox and renders once after ArrowDown before reading the semantics snapshot.
+
+Validation:
+
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement combobox::fixtures::web_vs_fret_combobox_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome combobox::fixtures::web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox::tests::responsive_combobox_uses_shadcn_popover_demo_defaults -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --test combobox_responsive_breakpoint -- --nocapture`
+
+Next uncovered combobox slice: add fixture-visible assertions for trigger text truncation and
+chevron slot geometry so responsive/content width fixes cannot regress into the gallery-only
+symptoms that originally looked like isolated visual bugs.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -533,6 +570,8 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles`
 - `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement combobox::fixtures::web_vs_fret_combobox_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome combobox::fixtures::web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures -- --exact --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
