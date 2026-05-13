@@ -3043,6 +3043,94 @@ fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
 }
 
 #[test]
+fn bundle_stats_preserves_cache_root_boundary_summary() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 50,
+                                "layout_time_us": 10,
+                                "prepaint_time_us": 5,
+                                "paint_time_us": 35
+                            },
+                            "cache_roots": [
+                                {
+                                    "root": 42,
+                                    "reused": false,
+                                    "contained_layout": true,
+                                    "paint_replayed_ops": 0,
+                                    "reuse_reason": "needs_rerender",
+                                    "boundary": {
+                                        "schema_version": 1,
+                                        "id": 42,
+                                        "kind": "view_cache_root",
+                                        "build_outcome": "rebuilt",
+                                        "reuse_reason": "needs_rerender",
+                                        "layout_outcome": "contained_clean",
+                                        "prepaint_owner": "node_prepaint_output",
+                                        "paint_outcome": "not_replayed"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        1,
+        BundleStatsSort::Time,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    let cache_root = report.top[0]
+        .top_cache_roots
+        .first()
+        .expect("top cache root");
+    assert_eq!(cache_root.boundary_kind.as_deref(), Some("view_cache_root"));
+    assert_eq!(
+        cache_root.boundary_build_outcome.as_deref(),
+        Some("rebuilt")
+    );
+    assert_eq!(
+        cache_root.boundary_reuse_reason.as_deref(),
+        Some("needs_rerender")
+    );
+    assert_eq!(
+        cache_root.boundary_layout_outcome.as_deref(),
+        Some("contained_clean")
+    );
+    assert_eq!(
+        cache_root.boundary_prepaint_owner.as_deref(),
+        Some("node_prepaint_output")
+    );
+    assert_eq!(
+        cache_root.boundary_paint_outcome.as_deref(),
+        Some("not_replayed")
+    );
+
+    let json = report.to_json();
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/boundary/reuse_reason")
+            .and_then(|v| v.as_str()),
+        Some("needs_rerender")
+    );
+}
+
+#[test]
 fn bundle_stats_reports_dispatch_unattributed_time() {
     let bundle = json!({
         "schema_version": 1,

@@ -1,3 +1,5 @@
+use serde_json::{Map, Value};
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsReport {
     sort: BundleStatsSort,
@@ -1091,6 +1093,97 @@ pub(super) struct BundleStatsCacheRoot {
     pub(super) root_in_semantics: Option<bool>,
     pub(super) root_role: Option<String>,
     pub(super) root_test_id: Option<String>,
+    pub(super) boundary_kind: Option<String>,
+    pub(super) boundary_build_outcome: Option<String>,
+    pub(super) boundary_reuse_reason: Option<String>,
+    pub(super) boundary_layout_outcome: Option<String>,
+    pub(super) boundary_prepaint_owner: Option<String>,
+    pub(super) boundary_paint_outcome: Option<String>,
+}
+
+fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
+    let has_boundary = c.boundary_kind.is_some()
+        || c.boundary_build_outcome.is_some()
+        || c.boundary_reuse_reason.is_some()
+        || c.boundary_layout_outcome.is_some()
+        || c.boundary_prepaint_owner.is_some()
+        || c.boundary_paint_outcome.is_some();
+    if !has_boundary {
+        return;
+    }
+
+    s.push_str(" boundary(");
+    s.push_str(c.boundary_kind.as_deref().unwrap_or("?"));
+    if let Some(value) = c.boundary_build_outcome.as_deref() {
+        s.push_str(&format!(" build={value}"));
+    }
+    if let Some(value) = c.boundary_reuse_reason.as_deref() {
+        s.push_str(&format!(" reuse_reason={value}"));
+    }
+    if let Some(value) = c.boundary_layout_outcome.as_deref() {
+        s.push_str(&format!(" layout={value}"));
+    }
+    if let Some(value) = c.boundary_prepaint_owner.as_deref() {
+        s.push_str(&format!(" prepaint={value}"));
+    }
+    if let Some(value) = c.boundary_paint_outcome.as_deref() {
+        s.push_str(&format!(" paint={value}"));
+    }
+    s.push(')');
+}
+
+fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleStatsCacheRoot) {
+    let has_boundary = c.boundary_kind.is_some()
+        || c.boundary_build_outcome.is_some()
+        || c.boundary_reuse_reason.is_some()
+        || c.boundary_layout_outcome.is_some()
+        || c.boundary_prepaint_owner.is_some()
+        || c.boundary_paint_outcome.is_some();
+    if !has_boundary {
+        return;
+    }
+
+    let mut boundary = Map::new();
+    boundary.insert(
+        "kind".to_string(),
+        c.boundary_kind.clone().map(Value::from).unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "build_outcome".to_string(),
+        c.boundary_build_outcome
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "reuse_reason".to_string(),
+        c.boundary_reuse_reason
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "layout_outcome".to_string(),
+        c.boundary_layout_outcome
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "prepaint_owner".to_string(),
+        c.boundary_prepaint_owner
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "paint_outcome".to_string(),
+        c.boundary_paint_outcome
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    c_obj.insert("boundary".to_string(), Value::Object(boundary));
 }
 
 #[derive(Debug, Default, Clone)]
@@ -2465,6 +2558,7 @@ impl BundleStatsReport {
                         if let Some(in_sem) = c.root_in_semantics {
                             s.push_str(&format!(" root_in_semantics={in_sem}"));
                         }
+                        push_cache_root_boundary_summary(&mut s, c);
                         s
                     })
                     .collect();
@@ -2505,6 +2599,7 @@ impl BundleStatsReport {
                         if let Some(in_sem) = c.root_in_semantics {
                             s.push_str(&format!(" root_in_semantics={in_sem}"));
                         }
+                        push_cache_root_boundary_summary(&mut s, c);
                         s
                     })
                     .collect();
@@ -4822,6 +4917,7 @@ impl BundleStatsReport {
                                 .map(Value::from)
                                 .unwrap_or(Value::Null),
                         );
+                        insert_cache_root_boundary_json(&mut c_obj, c);
                         Value::Object(c_obj)
                     })
                     .collect::<Vec<_>>();
@@ -4879,6 +4975,7 @@ impl BundleStatsReport {
                                 .map(Value::from)
                                 .unwrap_or(Value::Null),
                         );
+                        insert_cache_root_boundary_json(&mut c_obj, c);
                         Value::Object(c_obj)
                     })
                     .collect::<Vec<_>>();

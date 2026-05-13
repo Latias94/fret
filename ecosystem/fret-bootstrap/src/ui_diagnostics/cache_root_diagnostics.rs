@@ -35,6 +35,20 @@ pub struct UiCacheRootStatsV1 {
     pub children_last_set_frame_id: Option<u64>,
     #[serde(default)]
     pub reuse_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boundary: Option<UiBoundaryCacheRootDiagnosticsV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiBoundaryCacheRootDiagnosticsV1 {
+    pub schema_version: u32,
+    pub id: u64,
+    pub kind: String,
+    pub build_outcome: String,
+    pub reuse_reason: String,
+    pub layout_outcome: String,
+    pub prepaint_owner: String,
+    pub paint_outcome: String,
 }
 
 impl UiCacheRootStatsV1 {
@@ -150,6 +164,25 @@ impl UiCacheRootStatsV1 {
             children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
+            boundary: Some(UiBoundaryCacheRootDiagnosticsV1 {
+                schema_version: 1,
+                id: stats.root.data().as_ffi(),
+                kind: "view_cache_root".to_string(),
+                build_outcome: cache_root_boundary_build_outcome(
+                    stats.reused,
+                    stats.reuse_reason,
+                )
+                .to_string(),
+                reuse_reason: stats.reuse_reason.as_str().to_string(),
+                layout_outcome: cache_root_boundary_layout_outcome(
+                    stats.contained_layout,
+                    contained_relayout_in_frame,
+                )
+                .to_string(),
+                prepaint_owner: "node_prepaint_output".to_string(),
+                paint_outcome: cache_root_boundary_paint_outcome(stats.paint_replayed_ops)
+                    .to_string(),
+            }),
         };
 
         truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
@@ -163,7 +196,106 @@ impl UiCacheRootStatsV1 {
             max_debug_string_bytes,
         );
         truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
+        if let Some(boundary) = out.boundary.as_mut() {
+            truncate_string_bytes(&mut boundary.kind, max_debug_string_bytes);
+            truncate_string_bytes(&mut boundary.build_outcome, max_debug_string_bytes);
+            truncate_string_bytes(&mut boundary.reuse_reason, max_debug_string_bytes);
+            truncate_string_bytes(&mut boundary.layout_outcome, max_debug_string_bytes);
+            truncate_string_bytes(&mut boundary.prepaint_owner, max_debug_string_bytes);
+            truncate_string_bytes(&mut boundary.paint_outcome, max_debug_string_bytes);
+        }
 
         out
+    }
+}
+
+fn cache_root_boundary_build_outcome(
+    reused: bool,
+    reason: fret_ui::tree::UiDebugCacheRootReuseReason,
+) -> &'static str {
+    if reused {
+        return "reused";
+    }
+
+    match reason {
+        fret_ui::tree::UiDebugCacheRootReuseReason::FirstMount => "mounted",
+        fret_ui::tree::UiDebugCacheRootReuseReason::NodeRecreated => "node_recreated",
+        fret_ui::tree::UiDebugCacheRootReuseReason::ViewCacheDisabled
+        | fret_ui::tree::UiDebugCacheRootReuseReason::InspectionActive => "reuse_disabled",
+        fret_ui::tree::UiDebugCacheRootReuseReason::ManualCacheRoot => "manual",
+        fret_ui::tree::UiDebugCacheRootReuseReason::MarkedReuseRoot
+        | fret_ui::tree::UiDebugCacheRootReuseReason::NotMarkedReuseRoot
+        | fret_ui::tree::UiDebugCacheRootReuseReason::CacheKeyMismatch
+        | fret_ui::tree::UiDebugCacheRootReuseReason::NeedsRerender
+        | fret_ui::tree::UiDebugCacheRootReuseReason::LayoutInvalidated => "rebuilt",
+    }
+}
+
+fn cache_root_boundary_layout_outcome(
+    contained_layout: bool,
+    contained_relayout_in_frame: bool,
+) -> &'static str {
+    if contained_relayout_in_frame {
+        "contained_relayout"
+    } else if contained_layout {
+        "contained_clean"
+    } else {
+        "parent_dependent"
+    }
+}
+
+fn cache_root_boundary_paint_outcome(paint_replayed_ops: u32) -> &'static str {
+    if paint_replayed_ops > 0 {
+        "scene_ops_replayed"
+    } else {
+        "not_replayed"
+    }
+}
+
+#[cfg(test)]
+mod cache_root_boundary_tests {
+    use super::*;
+    use fret_ui::tree::UiDebugCacheRootReuseReason;
+
+    #[test]
+    fn cache_root_boundary_build_outcome_tracks_reuse_and_reject_reason() {
+        assert_eq!(
+            cache_root_boundary_build_outcome(true, UiDebugCacheRootReuseReason::NeedsRerender),
+            "reused"
+        );
+        assert_eq!(
+            cache_root_boundary_build_outcome(false, UiDebugCacheRootReuseReason::FirstMount),
+            "mounted"
+        );
+        assert_eq!(
+            cache_root_boundary_build_outcome(false, UiDebugCacheRootReuseReason::LayoutInvalidated),
+            "rebuilt"
+        );
+        assert_eq!(
+            cache_root_boundary_build_outcome(false, UiDebugCacheRootReuseReason::InspectionActive),
+            "reuse_disabled"
+        );
+    }
+
+    #[test]
+    fn cache_root_boundary_layout_outcome_reports_containment_state() {
+        assert_eq!(
+            cache_root_boundary_layout_outcome(true, true),
+            "contained_relayout"
+        );
+        assert_eq!(
+            cache_root_boundary_layout_outcome(true, false),
+            "contained_clean"
+        );
+        assert_eq!(
+            cache_root_boundary_layout_outcome(false, false),
+            "parent_dependent"
+        );
+    }
+
+    #[test]
+    fn cache_root_boundary_paint_outcome_reports_replay_state() {
+        assert_eq!(cache_root_boundary_paint_outcome(0), "not_replayed");
+        assert_eq!(cache_root_boundary_paint_outcome(1), "scene_ops_replayed");
     }
 }

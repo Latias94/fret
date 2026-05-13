@@ -2898,6 +2898,7 @@ fn snapshot_cache_root_stats(
             replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
 
             let (role, test_id) = semantics_index.lookup_for_cache_root(root_node);
+            let boundary = r.get("boundary");
             BundleStatsCacheRoot {
                 root_node,
                 element: r.get("element").and_then(|v| v.as_u64()),
@@ -2919,6 +2920,30 @@ fn snapshot_cache_root_stats(
                 root_in_semantics: r.get("root_in_semantics").and_then(|v| v.as_bool()),
                 root_role: role,
                 root_test_id: test_id,
+                boundary_kind: boundary
+                    .and_then(|v| v.get("kind"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_build_outcome: boundary
+                    .and_then(|v| v.get("build_outcome"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_reuse_reason: boundary
+                    .and_then(|v| v.get("reuse_reason"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_layout_outcome: boundary
+                    .and_then(|v| v.get("layout_outcome"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_prepaint_owner: boundary
+                    .and_then(|v| v.get("prepaint_owner"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_paint_outcome: boundary
+                    .and_then(|v| v.get("paint_outcome"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
             }
         })
         .collect();
