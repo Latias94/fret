@@ -521,6 +521,8 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) rows_painted: u64,
     pub(super) rows_drew_rich: u64,
     pub(super) rows_scene_replayed: u64,
+    pub(super) rows_scene_prepaint_planned: u64,
+    pub(super) rows_scene_prepaint_plan_used: u64,
     pub(super) rows_scene_stored: u64,
     pub(super) row_scene_ops_stored: u64,
     pub(super) quads_selection: u64,
@@ -541,6 +543,7 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_row_scene_full_key_compare: u64,
     pub(super) us_row_scene_replay_touch: u64,
     pub(super) us_row_scene_replay_ops: u64,
+    pub(super) us_row_scene_prepaint_plan: u64,
     pub(super) us_row_scene_capture_ops: u64,
     pub(super) us_row_scene_store: u64,
     pub(super) us_row_scene_fast_path: u64,
@@ -574,6 +577,8 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     rows_painted: u64,
     rows_drew_rich: u64,
     rows_scene_replayed: u64,
+    rows_scene_prepaint_planned: u64,
+    rows_scene_prepaint_plan_used: u64,
     rows_scene_stored: u64,
     row_scene_ops_stored: u64,
     quads_selection: u64,
@@ -594,6 +599,7 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     us_row_scene_full_key_compare: u64,
     us_row_scene_replay_touch: u64,
     us_row_scene_replay_ops: u64,
+    us_row_scene_prepaint_plan: u64,
     us_row_scene_capture_ops: u64,
     us_row_scene_store: u64,
     us_row_scene_fast_path: u64,
@@ -620,6 +626,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.rows_scene_replayed = self
             .rows_scene_replayed
             .saturating_add(p.rows_scene_replayed);
+        self.rows_scene_prepaint_planned = self
+            .rows_scene_prepaint_planned
+            .saturating_add(p.rows_scene_prepaint_planned);
+        self.rows_scene_prepaint_plan_used = self
+            .rows_scene_prepaint_plan_used
+            .saturating_add(p.rows_scene_prepaint_plan_used);
         self.rows_scene_stored = self.rows_scene_stored.saturating_add(p.rows_scene_stored);
         self.row_scene_ops_stored = self
             .row_scene_ops_stored
@@ -664,6 +676,9 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_row_scene_replay_ops = self
             .us_row_scene_replay_ops
             .saturating_add(p.us_row_scene_replay_ops);
+        self.us_row_scene_prepaint_plan = self
+            .us_row_scene_prepaint_plan
+            .saturating_add(p.us_row_scene_prepaint_plan);
         self.us_row_scene_capture_ops = self
             .us_row_scene_capture_ops
             .saturating_add(p.us_row_scene_capture_ops);
@@ -707,6 +722,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.rows_painted = self.rows_painted.max(p.rows_painted);
         self.rows_drew_rich = self.rows_drew_rich.max(p.rows_drew_rich);
         self.rows_scene_replayed = self.rows_scene_replayed.max(p.rows_scene_replayed);
+        self.rows_scene_prepaint_planned = self
+            .rows_scene_prepaint_planned
+            .max(p.rows_scene_prepaint_planned);
+        self.rows_scene_prepaint_plan_used = self
+            .rows_scene_prepaint_plan_used
+            .max(p.rows_scene_prepaint_plan_used);
         self.rows_scene_stored = self.rows_scene_stored.max(p.rows_scene_stored);
         self.row_scene_ops_stored = self.row_scene_ops_stored.max(p.row_scene_ops_stored);
         self.quads_selection = self.quads_selection.max(p.quads_selection);
@@ -741,6 +762,9 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             .us_row_scene_replay_touch
             .max(p.us_row_scene_replay_touch);
         self.us_row_scene_replay_ops = self.us_row_scene_replay_ops.max(p.us_row_scene_replay_ops);
+        self.us_row_scene_prepaint_plan = self
+            .us_row_scene_prepaint_plan
+            .max(p.us_row_scene_prepaint_plan);
         self.us_row_scene_capture_ops = self
             .us_row_scene_capture_ops
             .max(p.us_row_scene_capture_ops);
@@ -769,6 +793,8 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "rows_painted": self.rows_painted,
             "rows_drew_rich": self.rows_drew_rich,
             "rows_scene_replayed": self.rows_scene_replayed,
+            "rows_scene_prepaint_planned": self.rows_scene_prepaint_planned,
+            "rows_scene_prepaint_plan_used": self.rows_scene_prepaint_plan_used,
             "rows_scene_stored": self.rows_scene_stored,
             "row_scene_ops_stored": self.row_scene_ops_stored,
             "quads_selection": self.quads_selection,
@@ -789,6 +815,7 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "us_row_scene_full_key_compare": self.us_row_scene_full_key_compare,
             "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
             "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
+            "us_row_scene_prepaint_plan": self.us_row_scene_prepaint_plan,
             "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
             "us_row_scene_store": self.us_row_scene_store,
             "us_row_scene_fast_path": self.us_row_scene_fast_path,
@@ -841,6 +868,8 @@ impl BundleStatsCodeEditorPaintPerf {
             "rows_painted": self.rows_painted,
             "rows_drew_rich": self.rows_drew_rich,
             "rows_scene_replayed": self.rows_scene_replayed,
+            "rows_scene_prepaint_planned": self.rows_scene_prepaint_planned,
+            "rows_scene_prepaint_plan_used": self.rows_scene_prepaint_plan_used,
             "rows_scene_stored": self.rows_scene_stored,
             "row_scene_ops_stored": self.row_scene_ops_stored,
             "quads_selection": self.quads_selection,
@@ -861,6 +890,7 @@ impl BundleStatsCodeEditorPaintPerf {
             "us_row_scene_full_key_compare": self.us_row_scene_full_key_compare,
             "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
             "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
+            "us_row_scene_prepaint_plan": self.us_row_scene_prepaint_plan,
             "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
             "us_row_scene_store": self.us_row_scene_store,
             "us_row_scene_fast_path": self.us_row_scene_fast_path,
@@ -1395,10 +1425,12 @@ impl BundleStatsReport {
         }
 
         println!(
-            "code_editor.paint_perf frames={} sum.rows(painted/replayed/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{} sum.quads(selection/caret)={}/{} max.rows(painted/replayed/stored/row_ops)={}/{}/{}/{}",
+            "code_editor.paint_perf frames={} sum.rows(painted/replayed/prepaint_planned/prepaint_used/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{}/{}/{} sum.quads(selection/caret)={}/{} max.rows(painted/replayed/prepaint_planned/prepaint_used/stored/row_ops)={}/{}/{}/{}/{}/{}",
             p.frames,
             p.sum.rows_painted,
             p.sum.rows_scene_replayed,
+            p.sum.rows_scene_prepaint_planned,
+            p.sum.rows_scene_prepaint_plan_used,
             p.sum.rows_scene_stored,
             p.sum.row_scene_ops_stored,
             p.sum.rows_drew_rich,
@@ -1407,6 +1439,8 @@ impl BundleStatsReport {
             p.sum.quads_caret,
             p.max.rows_painted,
             p.max.rows_scene_replayed,
+            p.max.rows_scene_prepaint_planned,
+            p.max.rows_scene_prepaint_plan_used,
             p.max.rows_scene_stored,
             p.max.row_scene_ops_stored,
         );
@@ -1426,8 +1460,9 @@ impl BundleStatsReport {
             p.sum.us_row_scene_full_path,
         );
         println!(
-            "code_editor.paint_perf sum.us(total/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "code_editor.paint_perf sum.us(total/prepaint_plan/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.sum.us_total,
+            p.sum.us_row_scene_prepaint_plan,
             p.sum.us_row_scene_replay_touch,
             p.sum.us_row_scene_replay_ops,
             p.sum.us_row_scene_capture_ops,
@@ -1440,9 +1475,11 @@ impl BundleStatsReport {
             p.sum.us_frame_overlay_prepare,
         );
         println!(
-            "code_editor.paint_perf p50/p95.us(total/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
             p.p50.us_total,
             p.p95.us_total,
+            p.p50.us_row_scene_prepaint_plan,
+            p.p95.us_row_scene_prepaint_plan,
             p.p50.us_row_content_resolve,
             p.p95.us_row_content_resolve,
             p.p50.us_row_text,
@@ -1468,7 +1505,7 @@ impl BundleStatsReport {
         };
 
         println!(
-            "    code_editor.paint_perf frame_seq={} visible(start/end/rows)={}/{}/{} cache(base/min/effective)={}/{}/{} rows(painted/replayed/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{} quads(selection/caret)={}/{}",
+            "    code_editor.paint_perf frame_seq={} visible(start/end/rows)={}/{}/{} cache(base/min/effective)={}/{}/{} rows(painted/replayed/prepaint_planned/prepaint_used/stored/row_ops/rich/syntax_stored)={}/{}/{}/{}/{}/{}/{}/{} quads(selection/caret)={}/{}",
             p.frame_seq,
             p.visible_start,
             p.visible_end,
@@ -1478,6 +1515,8 @@ impl BundleStatsReport {
             p.cache_effective_entries,
             p.rows_painted,
             p.rows_scene_replayed,
+            p.rows_scene_prepaint_planned,
+            p.rows_scene_prepaint_plan_used,
             p.rows_scene_stored,
             p.row_scene_ops_stored,
             p.rows_drew_rich,
@@ -1486,8 +1525,9 @@ impl BundleStatsReport {
             p.quads_caret,
         );
         println!(
-            "    code_editor.paint_perf.us(total/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "    code_editor.paint_perf.us(total/prepaint_plan/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.us_total,
+            p.us_row_scene_prepaint_plan,
             p.us_row_content_resolve,
             p.us_row_text,
             p.us_text_draw,

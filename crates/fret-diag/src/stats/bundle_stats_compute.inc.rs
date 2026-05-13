@@ -32,6 +32,8 @@ fn snapshot_code_editor_paint_perf(
         rows_painted: u64_field!("rows_painted"),
         rows_drew_rich: u64_field!("rows_drew_rich"),
         rows_scene_replayed: u64_field!("rows_scene_replayed"),
+        rows_scene_prepaint_planned: u64_field!("rows_scene_prepaint_planned"),
+        rows_scene_prepaint_plan_used: u64_field!("rows_scene_prepaint_plan_used"),
         rows_scene_stored: u64_field!("rows_scene_stored"),
         row_scene_ops_stored: u64_field!("row_scene_ops_stored"),
         quads_selection: u64_field!("quads_selection"),
@@ -72,6 +74,10 @@ fn snapshot_code_editor_paint_perf(
         us_row_scene_replay_ops: us_field!(
             "us_row_scene_replay_ops",
             "ns_row_scene_replay_ops"
+        ),
+        us_row_scene_prepaint_plan: us_field!(
+            "us_row_scene_prepaint_plan",
+            "ns_row_scene_prepaint_plan"
         ),
         us_row_scene_capture_ops: us_field!(
             "us_row_scene_capture_ops",
@@ -2231,6 +2237,8 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_painted: metric!(rows_painted),
             rows_drew_rich: metric!(rows_drew_rich),
             rows_scene_replayed: metric!(rows_scene_replayed),
+            rows_scene_prepaint_planned: metric!(rows_scene_prepaint_planned),
+            rows_scene_prepaint_plan_used: metric!(rows_scene_prepaint_plan_used),
             rows_scene_stored: metric!(rows_scene_stored),
             row_scene_ops_stored: metric!(row_scene_ops_stored),
             quads_selection: metric!(quads_selection),
@@ -2251,6 +2259,7 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_full_key_compare: metric!(us_row_scene_full_key_compare),
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
+            us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),
             us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
             us_row_scene_store: metric!(us_row_scene_store),
             us_row_scene_fast_path: metric!(us_row_scene_fast_path),

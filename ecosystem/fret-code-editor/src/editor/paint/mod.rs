@@ -79,6 +79,45 @@ pub(super) fn frame_cache_max_entries(st: &CodeEditorState, max_entries: usize) 
 }
 
 #[allow(clippy::too_many_arguments)]
+pub(super) fn prepaint_row_scene_replay_plan_for_frame(
+    st: &mut CodeEditorState,
+    frame: WindowedRowsPaintFrame,
+    row_h: Px,
+    content_origin: Point,
+    width: Px,
+    cell_w: Px,
+    text_cache_max_entries: usize,
+    text_style: &TextStyle,
+    fg: Color,
+    theme_revision: u64,
+    scale_factor: f32,
+) {
+    let stable_max_width = if cell_w.0 > 0.01 {
+        Px((cell_w.0 * 512.0).max(width.0))
+    } else {
+        width
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(stable_max_width),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    scene::replay_row_scene_plan_candidates_for_frame(
+        st,
+        frame,
+        row_h,
+        content_origin,
+        width,
+        text_cache_max_entries,
+        text_style,
+        fg,
+        theme_revision,
+        constraints,
+        scale_factor,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_row(
     painter: &mut fret_ui::canvas::CanvasPainter<'_>,
     st: &mut CodeEditorState,
@@ -105,7 +144,20 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
-    let (row_range, line, row_folds, row_preedit_range, row_spans) = if perf_enabled {
+    let replay_plan_entry = st.take_row_scene_replay_plan_entry(row);
+    let (row_range, line, row_folds, row_preedit_range, row_spans) = if let Some(entry) =
+        replay_plan_entry
+            .as_ref()
+            .filter(|entry| entry.rect == rect)
+    {
+        (
+            entry.row_range.clone(),
+            Arc::clone(&entry.line),
+            entry.row_folds.clone(),
+            entry.row_preedit_range.clone(),
+            Arc::clone(&entry.row_spans),
+        )
+    } else if perf_enabled {
         let started = Instant::now();
         let out = cached_row_text_with_range(st, row, text_cache_max_entries);
         add_paint_perf_elapsed(
@@ -223,7 +275,19 @@ pub(super) fn paint_row(
     let overlay = st.paint_frame_overlay;
 
     let row_content_resolve_started = perf_enabled.then(Instant::now);
-    if let Some(preedit) = st.preedit.clone() {
+    if let Some(entry) = replay_plan_entry.as_ref() {
+        if entry.rect == rect {
+            row_scene_key = None;
+            row_scene_is_rich = entry.is_rich;
+            row_scene_replayed = true;
+            drew_rich = entry.is_rich;
+            row_preedit = entry.geom.preedit;
+            fresh_geom = Some(entry.geom.clone());
+            scene::replay_row_scene_plan_entry(painter, st, entry, origin);
+        }
+    }
+
+    if !row_scene_replayed && let Some(preedit) = st.preedit.clone() {
         if compose_inline_preedit {
             if let Some(range) = row_preedit_range.clone() {
                 let rich = materialize_preedit_rich_text_for_range(

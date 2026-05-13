@@ -86,6 +86,7 @@ pub(super) struct CodeEditorState {
     pub(super) row_scene_cache: HashMap<usize, (RowSceneCacheEntry, u64)>,
     pub(super) row_scene_cache_queue: VecDeque<(usize, u64)>,
     pub(super) row_scene_cache_scene_ops_len_total: u64,
+    pub(super) row_scene_replay_plan: RowSceneReplayPlan,
     pub(super) paint_frame_visible_window: Option<(usize, usize)>,
     pub(super) paint_frame_cache_min_entries: usize,
     pub(super) ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
@@ -238,10 +239,33 @@ pub(super) struct RowSceneCacheEntry {
     pub(super) origin: Point,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
-    pub(super) ops: Vec<SceneOp>,
+    pub(super) ops: Arc<[SceneOp]>,
     pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
     #[cfg(feature = "syntax")]
     pub(super) syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct RowSceneReplayPlanEntry {
+    pub(super) row: usize,
+    pub(super) rect: Rect,
+    pub(super) row_range: Range<usize>,
+    pub(super) line: Arc<str>,
+    pub(super) row_folds: Option<geom::RowFoldMap>,
+    pub(super) row_preedit_range: Option<Range<usize>>,
+    pub(super) row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    pub(super) scene_origin: Point,
+    pub(super) geom: geom::RowGeom,
+    pub(super) is_rich: bool,
+    pub(super) ops: Arc<[SceneOp]>,
+    pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct RowSceneReplayPlan {
+    pub(super) frame_seq: u64,
+    pub(super) visible_window: Option<(usize, usize)>,
+    pub(super) entries: VecDeque<RowSceneReplayPlanEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -333,6 +357,7 @@ impl CodeEditorState {
             row_scene_cache: HashMap::new(),
             row_scene_cache_queue: VecDeque::new(),
             row_scene_cache_scene_ops_len_total: 0,
+            row_scene_replay_plan: RowSceneReplayPlan::default(),
             paint_frame_visible_window: None,
             paint_frame_cache_min_entries: 0,
             ime_surrounding_text_cache: None,
@@ -400,6 +425,7 @@ impl CodeEditorState {
         self.row_scene_cache.clear();
         self.row_scene_cache_queue.clear();
         self.row_scene_cache_scene_ops_len_total = 0;
+        self.row_scene_replay_plan = RowSceneReplayPlan::default();
         self.cache_stats.row_scene_resets = self.cache_stats.row_scene_resets.saturating_add(1);
     }
 
@@ -422,6 +448,47 @@ impl CodeEditorState {
     pub(super) fn invalidate_row_scene_cache(&mut self) {
         self.sync_row_scene_cache_epoch();
         self.clear_row_scene_cache();
+    }
+
+    pub(super) fn reset_row_scene_replay_plan(&mut self, frame_seq: u64) {
+        self.row_scene_replay_plan.frame_seq = frame_seq;
+        self.row_scene_replay_plan.visible_window = self.paint_frame_visible_window;
+        self.row_scene_replay_plan.entries.clear();
+    }
+
+    #[cfg(feature = "syntax")]
+    pub(super) fn push_row_scene_replay_plan_entry(&mut self, entry: RowSceneReplayPlanEntry) {
+        self.row_scene_replay_plan.entries.push_back(entry);
+    }
+
+    pub(super) fn take_row_scene_replay_plan_entry(
+        &mut self,
+        row: usize,
+    ) -> Option<RowSceneReplayPlanEntry> {
+        if self.row_scene_replay_plan.frame_seq != self.paint_perf_frame.frame_seq {
+            self.row_scene_replay_plan.entries.clear();
+            return None;
+        }
+
+        while self
+            .row_scene_replay_plan
+            .entries
+            .front()
+            .is_some_and(|entry| entry.row < row)
+        {
+            let _ = self.row_scene_replay_plan.entries.pop_front();
+        }
+
+        if self
+            .row_scene_replay_plan
+            .entries
+            .front()
+            .is_some_and(|entry| entry.row == row)
+        {
+            return self.row_scene_replay_plan.entries.pop_front();
+        }
+
+        None
     }
 
     pub(super) fn invalidate_feature_payload_paint_caches(&mut self) {

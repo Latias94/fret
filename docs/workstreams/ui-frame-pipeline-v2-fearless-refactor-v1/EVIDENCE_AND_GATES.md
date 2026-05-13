@@ -108,6 +108,38 @@ Observed result from that run:
 This slice moved editor frame-derived ownership out of paint attribution and into prepaint, but it
 did not yet finish the full boundary migration or the final 20-30% end-to-end improvement target.
 
+Most recent row-scene prepaint replay-plan slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md`
+- Perf output directory:
+  `target/fret-diag-code-editor-resize-probes-row-scene-prepaint-plan-20260513`
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-row-scene-prepaint-plan-20260513/1778679317011/bundle.schema2.json`
+
+Observed result from that run:
+
+- gate failures: `[]`,
+- total p50/p95/max: `1443/1712/1712us`,
+- layout p50/p95/max: `387/388/388us`,
+- prepaint p50/p95/max: `282/382/382us`,
+- paint p50/p95/max: `814/943/943us`,
+- row scene replay hit rate: `99-100%`,
+- renderer prepare/encode/upload counters stayed at `0`.
+
+Worst-bundle attribution:
+
+- time p50/p95: total `1170/1712`, layout `37/387`, prepaint `324/382`, paint `710/958`
+- hot p50/p95: `layout.engine_solve=0/146`, `paint.widget=499/745`,
+  `paint.text_prepare=10/12`
+- `code_editor.paint_perf` sum planned/used replay entries: `2090/2090`
+- max planned/used replay entries per frame: `289/289`
+- `code_editor.paint_perf` p50/p95 `us_row_scene_prepaint_plan`: `65/123us`
+- `code_editor.paint_perf` p50/p95 `us_row_text`: `0/6us`
+
+This slice proves the planned phase split for cached row scene replay. It does not yet complete the
+final `ViewBoundary` store or the final 20-30% end-to-end improvement target.
+
 ## Correctness Gates
 
 Use focused tests first:

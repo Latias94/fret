@@ -1060,6 +1060,31 @@ impl CodeEditor {
                 });
                 hook
             };
+            let row_scene_replay_plan_hook = {
+                let editor_state = editor_state.clone();
+                let text_style = text_style.clone();
+                let cell_w = cell_w.clone();
+                let hook: OnWindowedRowsPrepaintFrame = Arc::new(move |cx, frame| {
+                    let bounds = cx.bounds();
+                    let theme_revision = cx.theme().revision();
+                    let cell_w = cell_w.get();
+                    let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+                    paint::prepaint_row_scene_replay_plan_for_frame(
+                        &mut editor_state.borrow_mut(),
+                        frame,
+                        row_h,
+                        bounds.origin,
+                        Px(bounds.size.width.0.max(0.0)),
+                        cell_w,
+                        text_cache_max_entries,
+                        &text_style,
+                        fg,
+                        theme_revision,
+                        cx.scale_factor(),
+                    );
+                });
+                hook
+            };
 
             let torture_hook = torture.map(|torture| {
                 let scroll_handle = scroll_handle.clone();
@@ -1280,6 +1305,7 @@ impl CodeEditor {
                 if let Some(hook) = row_rich_prefetch_hook {
                     hooks.push(hook);
                 }
+                hooks.push(row_scene_replay_plan_hook);
                 match hooks.len() {
                     0 => None,
                     1 => hooks.pop(),

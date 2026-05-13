@@ -65,7 +65,7 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(89);
+    let mut out = serde_json::Map::with_capacity(95);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
@@ -83,6 +83,14 @@ fn code_editor_paint_perf_json(
     insert_u64!("rows_painted", frame.rows_painted);
     insert_u64!("rows_drew_rich", frame.rows_drew_rich);
     insert_u64!("rows_scene_replayed", frame.rows_scene_replayed);
+    insert_u64!(
+        "rows_scene_prepaint_planned",
+        frame.rows_scene_prepaint_planned
+    );
+    insert_u64!(
+        "rows_scene_prepaint_plan_used",
+        frame.rows_scene_prepaint_plan_used
+    );
     insert_u64!("rows_scene_stored", frame.rows_scene_stored);
     insert_u64!("row_scene_ops_stored", frame.row_scene_ops_stored);
     insert_u64!("quads_selection", frame.quads_selection);
@@ -102,6 +110,10 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_row_scene_full_key_compare", frame.us_row_scene_full_key_compare);
     insert_u64!("us_row_scene_replay_touch", frame.us_row_scene_replay_touch);
     insert_u64!("us_row_scene_replay_ops", frame.us_row_scene_replay_ops);
+    insert_u64!(
+        "us_row_scene_prepaint_plan",
+        frame.us_row_scene_prepaint_plan
+    );
     insert_u64!("us_row_scene_capture_ops", frame.us_row_scene_capture_ops);
     insert_u64!("us_row_scene_store", frame.us_row_scene_store);
     insert_u64!("us_row_scene_fast_path", frame.us_row_scene_fast_path);
@@ -138,6 +150,10 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_row_scene_full_key_compare", frame.ns_row_scene_full_key_compare);
     insert_u64!("ns_row_scene_replay_touch", frame.ns_row_scene_replay_touch);
     insert_u64!("ns_row_scene_replay_ops", frame.ns_row_scene_replay_ops);
+    insert_u64!(
+        "ns_row_scene_prepaint_plan",
+        frame.ns_row_scene_prepaint_plan
+    );
     insert_u64!("ns_row_scene_capture_ops", frame.ns_row_scene_capture_ops);
     insert_u64!("ns_row_scene_store", frame.ns_row_scene_store);
     insert_u64!("ns_row_scene_fast_path", frame.ns_row_scene_fast_path);

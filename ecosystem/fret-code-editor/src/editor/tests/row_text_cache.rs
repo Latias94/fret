@@ -136,6 +136,98 @@ fn begin_paint_frame_sets_cache_floor_from_actual_visible_rows() {
     assert_eq!(perf_frame.cache_frame_min_entries, 299);
 }
 
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
+    let text = "fn main() {\n    let x = 1;\n}\n".repeat(64);
+    let handle = CodeEditorHandle::new(text);
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = editor_ui_bounds();
+    let mut services = FakeServices::default();
+
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+
+    let after_seed = handle.cache_size_snapshot();
+    #[cfg(feature = "syntax")]
+    let syntax_replayable_seed_entries = {
+        let st = handle.state.borrow();
+        st.row_scene_cache
+            .values()
+            .filter(|(entry, _)| entry.syntax_replay_key.is_some())
+            .count()
+    };
+    assert!(
+        after_seed.row_scene_cache_entries > 0,
+        "expected first frame to seed replayable row scene cache"
+    );
+    #[cfg(feature = "syntax")]
+    assert!(
+        syntax_replayable_seed_entries > 0,
+        "expected first frame to seed syntax-replayable row scene cache; sizes={after_seed:?}"
+    );
+
+    let before = handle.cache_stats();
+    let resized_bounds = Rect::new(bounds.origin, Size::new(Px(704.0), bounds.size.height));
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        resized_bounds,
+    );
+    let after = handle.cache_stats();
+
+    let row_text_delta = after
+        .row_text_get_calls
+        .saturating_sub(before.row_text_get_calls);
+    let scene_hits_delta = after
+        .row_scene_hits
+        .saturating_sub(before.row_scene_hits)
+        .saturating_add(
+            after
+                .row_scene_fast_hits
+                .saturating_sub(before.row_scene_fast_hits),
+        );
+    let perf = handle
+        .paint_perf_frame()
+        .expect("paint perf frame should be enabled in tests that set the env");
+
+    assert!(
+        perf.rows_scene_prepaint_planned > 0,
+        "expected prepaint to create row scene replay plans"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
+        "paint should consume the prepaint replay plan for each planned row"
+    );
+    assert_eq!(
+        perf.us_row_text, 0,
+        "paint should not redo row text work for planned rows"
+    );
+    assert!(
+        row_text_delta >= perf.rows_scene_prepaint_planned,
+        "prepaint planning should account for row text work before paint"
+    );
+    assert!(
+        scene_hits_delta >= perf.rows_scene_prepaint_planned,
+        "prepaint planning should account for row scene cache hits"
+    );
+}
+
 #[test]
 fn row_text_cache_stats_tracks_hits_and_misses() {
     let handle = CodeEditorHandle::new("hello\nworld");

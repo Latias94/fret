@@ -26,11 +26,12 @@ Last updated: 2026-05-13
   transitional `debug.cache_roots[].boundary` diagnostics.
 - [x] Move code-editor frame-derived row state toward shared prepaint ownership for the
   windowed-rows/editor prefetch slice.
-- [ ] Split code-editor paint attribution into boundary prepaint, paint replay, and renderer payload
-  buckets.
+- [x] Split code-editor paint attribution into transitional prepaint plan, paint replay, and renderer
+  payload buckets for the row scene replay-plan slice.
 - [ ] Add or promote a stricter code-editor paint stressor if resize probes are no longer sensitive
   enough.
-- [ ] Prove `paint.widget` or total p95/max improves by at least 20-30% on the selected bottleneck.
+- [ ] Prove `paint.widget` or total p95/max improves by at least 20-30% on the selected bottleneck
+  after the final boundary-owned scene-fragment store replaces the transitional editor-owned plan.
 
 ## P2 Runtime Migration
 
@@ -38,6 +39,8 @@ Last updated: 2026-05-13
 - [ ] Convert paint replay into boundary-owned scene-fragment reuse where possible.
 - [ ] Make prepaint diagnostics first-class per boundary.
 - [ ] Remove duplicated or superseded debug counters after boundary diagnostics cover them.
+- [ ] Replace code-editor-owned `RowSceneReplayPlan` with boundary-owned fragment state or delete it
+  if a narrower direct replay contract replaces it.
 - [ ] Keep `fret-ui` mechanism-only; move any policy decisions back to ecosystem crates.
 
 ## P3 Delete Old Paths

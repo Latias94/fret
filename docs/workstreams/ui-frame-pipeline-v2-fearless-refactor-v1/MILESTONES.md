@@ -62,6 +62,17 @@ Exit criteria:
 - Reuse/reject diagnostics explain fragment decisions.
 - Perf evidence shows the selected paint/widget bottleneck improves by at least 20-30%.
 
+Status on 2026-05-13:
+
+- A transitional editor-owned replay-plan slice landed in
+  `M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md`.
+- Prepaint now validates cached row scene replay candidates and paint consumes matching plan entries.
+- Diagnostics expose planned vs used replay entries plus prepaint planning cost.
+- The current evidence shows the expected phase move: paint-side `us_row_text` is `0/6us`
+  p50/p95 in the worst bundle, while prepaint planning is visible as `65/123us` p50/p95.
+- M3 is not complete: the final `ViewBoundary` fragment store and the 20-30% end-to-end bottleneck
+  improvement proof are still pending.
+
 ## M4: Runtime Consolidation
 
 Exit criteria:
