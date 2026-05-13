@@ -205,6 +205,79 @@ fn combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes() {
 }
 
 #[test]
+fn combobox_overlay_trace_scripts_use_family_default_side_offsets() {
+    use serde_json::Value;
+    use std::fs;
+
+    let scripts_dir = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tools/diag-scripts/ui-gallery/combobox"
+    );
+    let mut checked = 0usize;
+
+    for entry in fs::read_dir(scripts_dir).expect("combobox diag script directory") {
+        let entry = entry.expect("combobox diag script entry");
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+
+        let text = fs::read_to_string(&path).expect("combobox diag script text");
+        let script: Value = serde_json::from_str(&text).unwrap_or_else(|err| {
+            panic!(
+                "invalid combobox diag script JSON: path={} err={err}",
+                path.display()
+            )
+        });
+        let Some(steps) = script.get("steps").and_then(Value::as_array) else {
+            continue;
+        };
+
+        for (index, step) in steps.iter().enumerate() {
+            if step.get("type").and_then(Value::as_str) != Some("wait_overlay_placement_trace") {
+                continue;
+            }
+
+            let Some(query) = step.get("query") else {
+                continue;
+            };
+            let Some(side_offset_px) = query.get("side_offset_px").and_then(Value::as_f64) else {
+                continue;
+            };
+
+            let content_test_id = query
+                .get("content_test_id")
+                .and_then(Value::as_str)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "combobox overlay trace should name content_test_id when pinning side_offset_px: path={} step={index}",
+                        path.display()
+                    )
+                });
+
+            checked += 1;
+            let expected_side_offset_px =
+                if content_test_id == "ui-gallery-combobox-responsive-content" {
+                    4.0
+                } else {
+                    6.0
+                };
+            assert_eq!(
+                side_offset_px,
+                expected_side_offset_px,
+                "combobox overlay trace should keep family-specific side offsets explicit: path={} step={index} content_test_id={content_test_id}",
+                path.display()
+            );
+        }
+    }
+
+    assert!(
+        checked >= 6,
+        "combobox diag surface should keep a broad family-default side-offset corpus; checked={checked}",
+    );
+}
+
+#[test]
 fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command_parts() {
     use serde_json::Value;
     use std::fs;
