@@ -1010,6 +1010,33 @@ Follow-up recommendation:
   `flipped=false`, its viewport/scroll setup should leave at least `content_height + side_offset`
   available below the anchor, or the script should explicitly be a collision/flip test.
 
+## Phase 2.31 Bottom Overlay Placement Script Preflight
+
+After fixing the combobox long-text geometry gate, the next harness gap was preventing the same class
+of script drift from coming back. The diagnostics corpus now has a UI Gallery surface test that scans
+overlay-placement scripts and checks that any `wait_overlay_placement_trace` query asserting
+`chosen_side=bottom` and `flipped=false` also declares a non-colliding viewport via
+`set_window_inner_size`.
+
+Fixes:
+
+- Added `ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport` to
+  `apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs`.
+- The test is case-addressable by script path and step index, so future failures point directly at
+  the script that is mixing geometry assertions with collision/flip conditions.
+- The current corpus has bottom/no-flip coverage in combobox, context-menu, and hover-card scripts;
+  each now uses an explicit viewport height of at least `700px`.
+
+Validation:
+
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport -- --nocapture`
+
+Follow-up recommendation:
+
+- Promote this from a height heuristic to a sidecar-backed preflight when overlay traces expose
+  expected content height before the wait step, so the gate can verify available space from actual
+  anchor geometry rather than using a conservative viewport threshold.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -1085,6 +1112,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
 - `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-evidence-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
 - `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json --dir target/fret-diag-combobox-input-group-evidence --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

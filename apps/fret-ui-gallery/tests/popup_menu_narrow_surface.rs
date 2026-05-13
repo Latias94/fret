@@ -109,7 +109,10 @@ fn ui_gallery_overlay_trace_steps_use_stable_selectors() {
 
             let text = fs::read_to_string(&path).expect("diag script text");
             let script: Value = serde_json::from_str(&text).unwrap_or_else(|err| {
-                panic!("invalid diag script JSON: path={} err={err}", path.display())
+                panic!(
+                    "invalid diag script JSON: path={} err={err}",
+                    path.display()
+                )
             });
             let Some(steps) = script.get("steps").and_then(Value::as_array) else {
                 continue;
@@ -139,13 +142,99 @@ fn ui_gallery_overlay_trace_steps_use_stable_selectors() {
         }
     }
 
-    let scripts_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tools/diag-scripts/ui-gallery");
+    let scripts_dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/diag-scripts/ui-gallery");
     let mut checked = 0usize;
     visit_scripts(&scripts_dir, &mut checked);
     assert!(
         checked >= 50,
         "UI Gallery should keep a broad overlay placement trace corpus; checked={checked}",
+    );
+}
+
+#[test]
+fn ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport() {
+    use serde_json::Value;
+    use std::fs;
+    use std::path::Path;
+
+    fn visit_scripts(dir: &Path, checked: &mut usize, violations: &mut Vec<String>) {
+        for entry in fs::read_dir(dir).expect("diag script directory") {
+            let entry = entry.expect("diag script entry");
+            let path = entry.path();
+            if path.is_dir() {
+                visit_scripts(&path, checked, violations);
+                continue;
+            }
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+
+            let text = fs::read_to_string(&path).expect("diag script text");
+            let script: Value = serde_json::from_str(&text).unwrap_or_else(|err| {
+                panic!(
+                    "invalid diag script JSON: path={} err={err}",
+                    path.display()
+                )
+            });
+            let Some(steps) = script.get("steps").and_then(Value::as_array) else {
+                continue;
+            };
+
+            let mut latest_window_height: Option<f64> = None;
+            for (index, step) in steps.iter().enumerate() {
+                if step.get("type").and_then(Value::as_str) == Some("set_window_inner_size") {
+                    latest_window_height = step.get("height_px").and_then(Value::as_f64);
+                    continue;
+                }
+
+                if step.get("type").and_then(Value::as_str) != Some("wait_overlay_placement_trace")
+                {
+                    continue;
+                }
+
+                let Some(query) = step.get("query") else {
+                    continue;
+                };
+                let expects_bottom =
+                    query.get("chosen_side").and_then(Value::as_str) == Some("bottom");
+                let expects_no_flip = query.get("flipped").and_then(Value::as_bool) == Some(false);
+                if !expects_bottom || !expects_no_flip {
+                    continue;
+                }
+
+                *checked += 1;
+                let Some(height) = latest_window_height else {
+                    violations.push(format!(
+                        "{} step={index} asserts bottom/no-flip without set_window_inner_size",
+                        path.display()
+                    ));
+                    continue;
+                };
+                if height < 700.0 {
+                    violations.push(format!(
+                        "{} step={index} asserts bottom/no-flip with a short viewport height={height}",
+                        path.display()
+                    ));
+                }
+            }
+        }
+    }
+
+    let scripts_dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/diag-scripts/ui-gallery");
+    let mut checked = 0usize;
+    let mut violations = Vec::new();
+    visit_scripts(&scripts_dir, &mut checked, &mut violations);
+
+    assert!(
+        checked >= 4,
+        "UI Gallery should keep explicit bottom/no-flip overlay trace coverage; checked={checked}",
+    );
+    assert!(
+        violations.is_empty(),
+        "bottom/no-flip overlay trace scripts must declare a non-colliding viewport; {}",
+        violations.join("; ")
     );
 }
 fn normalize_ws(source: &str) -> String {
