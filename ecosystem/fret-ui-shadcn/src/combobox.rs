@@ -179,10 +179,10 @@ type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 /// combobox is triggered from a button-like control.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ComboboxTriggerVariant {
-    /// Default Fret shadcn combobox trigger (medium weight).
+    /// Default Fret shadcn combobox trigger (input-like weight).
     #[default]
     Default,
-    /// Button-like trigger (normal weight).
+    /// Button-like trigger (`font-medium`, matching shadcn Button).
     Button,
 }
 
@@ -1454,8 +1454,8 @@ fn combobox_with_patch<H: UiHost>(
             font: FontId::default(),
             size: size.control_text_px(Theme::global(&*cx.app)),
             weight: match trigger_variant {
-                ComboboxTriggerVariant::Default => FontWeight::MEDIUM,
-                ComboboxTriggerVariant::Button => FontWeight::NORMAL,
+                ComboboxTriggerVariant::Default => FontWeight::NORMAL,
+                ComboboxTriggerVariant::Button => FontWeight::MEDIUM,
             },
             line_height: theme
                 .metric_by_key("font.line_height")

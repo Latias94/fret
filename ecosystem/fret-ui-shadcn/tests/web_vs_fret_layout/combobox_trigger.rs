@@ -21,6 +21,7 @@ struct LayoutComboboxTriggerCase {
     id: String,
     web_name: String,
     recipe: LayoutComboboxTriggerRecipe,
+    label: String,
     icon: LayoutComboboxTriggerIconExpectation,
 }
 
@@ -64,7 +65,7 @@ fn web_vs_fret_layout_combobox_trigger_slots_match_web_fixtures() {
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
         );
-        let snap = render_fret_combobox_trigger(bounds, case.recipe);
+        let (snap, services) = render_fret_combobox_trigger(bounds, case.recipe);
 
         let trigger = find_by_test_id(&snap, "combobox-trigger-fixture-trigger");
         assert_close_px(
@@ -81,6 +82,22 @@ fn web_vs_fret_layout_combobox_trigger_slots_match_web_fixtures() {
         );
 
         let label = find_by_test_id(&snap, "combobox-trigger-fixture-trigger-label");
+        let expected_font_weight = web_css_u16(web_trigger, "fontWeight");
+        let prepared_label = services
+            .prepared
+            .iter()
+            .find(|record| record.text == case.label)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{} missing prepared label text {:?}; prepared={:?}",
+                    case.id, case.label, services.prepared
+                )
+            });
+        assert_eq!(
+            prepared_label.style.weight.0, expected_font_weight,
+            "{} label font weight should match web trigger",
+            case.id
+        );
         assert!(
             fret_rect_contains(trigger.bounds, label.bounds),
             "{} label should stay inside trigger: trigger={:?} label={:?}",
@@ -183,8 +200,9 @@ fn web_combobox_trigger(theme: &WebGoldenTheme, recipe: LayoutComboboxTriggerRec
 fn render_fret_combobox_trigger(
     bounds: Rect,
     recipe: LayoutComboboxTriggerRecipe,
-) -> fret_core::SemanticsSnapshot {
-    let snap = run_fret_root(bounds, |cx| {
+) -> (fret_core::SemanticsSnapshot, StyleAwareServices) {
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         use std::sync::Arc;
 
         let model = match recipe {
@@ -208,7 +226,11 @@ fn render_fret_combobox_trigger(
         combobox = match recipe {
             LayoutComboboxTriggerRecipe::DemoTrigger => combobox
                 .items(framework_items())
-                .trigger(shadcn::ComboboxTrigger::new().width_px(Px(200.0)))
+                .trigger(
+                    shadcn::ComboboxTrigger::new()
+                        .variant(shadcn::ComboboxTriggerVariant::Button)
+                        .width_px(Px(200.0)),
+                )
                 .input(shadcn::ComboboxInput::new().placeholder("Select framework...")),
             LayoutComboboxTriggerRecipe::ResponsiveTrigger => combobox
                 .device_shell_responsive(true)
@@ -224,14 +246,18 @@ fn render_fret_combobox_trigger(
                     "enterprise-observability-platform",
                     "Enterprise Observability Platform With Extremely Long Label",
                 )])
-                .trigger(shadcn::ComboboxTrigger::new().width_px(Px(200.0)))
+                .trigger(
+                    shadcn::ComboboxTrigger::new()
+                        .variant(shadcn::ComboboxTriggerVariant::Button)
+                        .width_px(Px(200.0)),
+                )
                 .input(shadcn::ComboboxInput::new().placeholder("Select framework...")),
         };
 
         vec![combobox.into_element(cx)]
     });
 
-    snap
+    (snap, services)
 }
 
 fn framework_items() -> Vec<shadcn::ComboboxItem> {

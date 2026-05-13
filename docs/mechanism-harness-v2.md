@@ -527,6 +527,8 @@ It covers:
   label owns the full content lane and no icon slot is rendered;
 - a long selected-label case that keeps truncation pressure visible while asserting the label does
   not overlap the icon slot.
+- trigger label `fontWeight` against the web golden's computed style, so chrome drift can be caught
+  without relying on screenshots.
 
 Finding from this sweep:
 
@@ -537,12 +539,20 @@ Finding from this sweep:
   ellipsis" or "arrow positioning looks wrong". Responsive Button triggers now hide the trigger icon
   by default, while an explicit `ComboboxInput::show_trigger(true)` still restores it for callers
   that intentionally want the icon.
+- The font-weight extension exposed a second recipe chrome drift. Upstream shadcn Button triggers
+  compute to `fontWeight=500`, but Fret's `ComboboxTriggerVariant::Button` rendered the label at
+  `400`. Button-like combobox triggers now use `FontWeight::MEDIUM`, while the default input-like
+  trigger stays normal-weight.
+- UI Gallery docs-surface inspection exposed a diagnostics coverage gap: the Combobox page had
+  `Long Text` and `RTL Long Text` follow-up sections, but the docs smoke script did not wait for
+  them. The smoke gate now includes both truncation-oriented sections.
 
 Validation:
 
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
 - `cargo test -p fret-ui-shadcn --lib responsive_button_trigger_hides_icon_unless_explicit -- --nocapture`
 - `cargo test -p fret-ui-shadcn --lib combobox_show_trigger_hides_chevron_icon -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_docs_surface -- --nocapture`
 
 Next uncovered combobox slice: add a screenshot/paint-level or icon-identity gate for the
 `combobox-demo` custom `ChevronsUpDown` trigger icon. Geometry now proves the slot is in the right
