@@ -36,19 +36,10 @@ pub struct UiDirtyViewV1 {
 
 impl UiDirtyViewV1 {
     fn from_dirty_view(dirty: &fret_ui::tree::UiDebugDirtyView) -> Self {
-        let source = match dirty.source {
-            fret_ui::tree::UiDebugInvalidationSource::ModelChange => "model_change",
-            fret_ui::tree::UiDebugInvalidationSource::GlobalChange => "global_change",
-            fret_ui::tree::UiDebugInvalidationSource::Notify => "notify",
-            fret_ui::tree::UiDebugInvalidationSource::Hover => "hover",
-            fret_ui::tree::UiDebugInvalidationSource::Focus => "focus",
-            fret_ui::tree::UiDebugInvalidationSource::Other => "other",
-        };
-
         Self {
             root_node: key_to_u64(dirty.view.0),
             root_element: dirty.element.map(|e| e.0),
-            source: Some(source.to_string()),
+            source: Some(invalidation_source_as_str(dirty.source).to_string()),
             detail: dirty.detail.as_str().map(|s| s.to_string()),
         }
     }

@@ -150,14 +150,13 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if should_mark_contained_cache_root_dirty {
-            self.mark_cache_root_dirty(
+            self.mark_boundary_layout_dirty(
                 node,
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::LocalInvalidation,
             );
         } else if !value {
-            self.dirty_cache_roots.remove(&node);
-            self.dirty_cache_root_reasons.remove(&node);
+            self.clear_boundary_layout_dirty(node);
         }
     }
 

@@ -60,6 +60,7 @@ pub(super) struct ViewBoundaryState {
     pub(super) parent: Option<BoundaryId>,
     pub(super) kind: ViewBoundaryKind,
     pub(super) layout_dependencies: BoundaryLayoutDependencies,
+    pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
     pub(super) scene_fragment: BoundarySceneFragmentState,
 }
@@ -75,6 +76,7 @@ impl ViewBoundaryState {
                 ViewBoundaryKind::Node
             },
             layout_dependencies: BoundaryLayoutDependencies::from_view_cache_flags(flags),
+            dirty: BoundaryDirtyState::default(),
             prepaint: BoundaryPrepaintState::default(),
             scene_fragment: BoundarySceneFragmentState::default(),
         }
@@ -88,6 +90,33 @@ impl ViewBoundaryState {
             ViewBoundaryKind::Node
         };
         self.layout_dependencies = BoundaryLayoutDependencies::from_view_cache_flags(flags);
+    }
+}
+
+#[derive(Default)]
+pub(super) struct BoundaryDirtyState {
+    reason: Option<(UiDebugInvalidationSource, UiDebugInvalidationDetail)>,
+}
+
+impl BoundaryDirtyState {
+    pub(super) fn mark(
+        &mut self,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        self.reason = Some((source, detail));
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.reason = None;
+    }
+
+    pub(super) fn is_dirty(&self) -> bool {
+        self.reason.is_some()
+    }
+
+    pub(super) fn reason(&self) -> Option<(UiDebugInvalidationSource, UiDebugInvalidationDetail)> {
+        self.reason
     }
 }
 
@@ -325,6 +354,43 @@ impl<H: UiHost> UiTree<H> {
 
     pub(in crate::tree) fn remove_view_boundary_state(&mut self, node: NodeId) {
         self.view_boundaries.remove(node);
+        self.dirty_boundaries.remove(&node);
+    }
+
+    pub(in crate::tree) fn mark_boundary_layout_dirty(
+        &mut self,
+        node: NodeId,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary.dirty.mark(source, detail);
+        self.dirty_boundaries.insert(node);
+    }
+
+    pub(in crate::tree) fn clear_boundary_layout_dirty(&mut self, node: NodeId) {
+        if let Some(boundary) = self.view_boundaries.get_mut(node) {
+            boundary.dirty.clear();
+        }
+        self.dirty_boundaries.remove(&node);
+    }
+
+    #[cfg(test)]
+    pub(in crate::tree) fn boundary_layout_dirty(&self, node: NodeId) -> bool {
+        self.view_boundaries
+            .get(node)
+            .is_some_and(|state| state.dirty.is_dirty())
+    }
+
+    pub(in crate::tree) fn boundary_layout_dirty_reason(
+        &self,
+        node: NodeId,
+    ) -> Option<(UiDebugInvalidationSource, UiDebugInvalidationDetail)> {
+        self.view_boundaries
+            .get(node)
+            .and_then(|state| state.dirty.reason())
     }
 
     fn nearest_parent_view_boundary(&self, node: NodeId) -> Option<BoundaryId> {
@@ -396,6 +462,9 @@ impl<H: UiHost> UiTree<H> {
                     }
                 },
                 layout_definite: state.layout_dependencies.layout_definite,
+                layout_dirty: state.dirty.is_dirty(),
+                layout_dirty_source: state.dirty.reason().map(|(source, _)| source),
+                layout_dirty_detail: state.dirty.reason().map(|(_, detail)| detail),
             })
             .collect();
         out.sort_by_key(|stats| stats.id.data().as_ffi());
@@ -425,5 +494,10 @@ impl<H: UiHost> UiTree<H> {
         self.view_boundaries
             .get(node)
             .is_some_and(|state| state.layout_dependencies.allows_contained_relayout())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_view_boundary_layout_dirty(&self, node: NodeId) -> bool {
+        self.boundary_layout_dirty(node)
     }
 }

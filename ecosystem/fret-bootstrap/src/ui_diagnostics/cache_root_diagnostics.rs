@@ -63,6 +63,11 @@ pub struct UiBoundaryDiagnosticsV1 {
     pub source: String,
     pub layout_dependency: String,
     pub layout_definite: bool,
+    pub layout_dirty: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_dirty_source: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_dirty_detail: Option<String>,
     pub prepaint_owner: String,
     pub scene_fragment_owner: String,
     pub scene_fragment_slots: usize,
@@ -103,6 +108,13 @@ impl UiBoundaryDiagnosticsV1 {
             source: boundary.source.to_string(),
             layout_dependency: boundary.layout_dependency.to_string(),
             layout_definite: boundary.layout_definite,
+            layout_dirty: boundary.layout_dirty,
+            layout_dirty_source: boundary
+                .layout_dirty_source
+                .map(|source| invalidation_source_as_str(source).to_string()),
+            layout_dirty_detail: boundary
+                .layout_dirty_detail
+                .and_then(|detail| detail.as_str().map(str::to_string)),
             prepaint_owner: boundary.prepaint_owner.to_string(),
             scene_fragment_owner: boundary.scene_fragment_owner.to_string(),
             scene_fragment_slots: boundary.scene_fragment_slots,
@@ -122,6 +134,8 @@ impl UiBoundaryDiagnosticsV1 {
         truncate_string_bytes(&mut out.kind, max_debug_string_bytes);
         truncate_string_bytes(&mut out.source, max_debug_string_bytes);
         truncate_string_bytes(&mut out.layout_dependency, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.layout_dirty_source, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.layout_dirty_detail, max_debug_string_bytes);
         truncate_string_bytes(&mut out.prepaint_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.scene_fragment_owner, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.scene_fragment_reject_reason, max_debug_string_bytes);
@@ -435,6 +449,11 @@ mod cache_root_boundary_tests {
             scene_fragment_reject_reason: Some("rect_mismatch"),
             layout_dependency: "contained_when_bounds_known",
             layout_definite: true,
+            layout_dirty: true,
+            layout_dirty_source: Some(fret_ui::tree::UiDebugInvalidationSource::Other),
+            layout_dirty_detail: Some(
+                fret_ui::tree::UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+            ),
         };
 
         let boundary = UiBoundaryDiagnosticsV1::from_boundary_stats(
@@ -450,6 +469,12 @@ mod cache_root_boundary_tests {
         assert_eq!(boundary.kind, "view_cache_root");
         assert_eq!(boundary.layout_dependency, "contained_when_bounds_known");
         assert!(boundary.layout_definite);
+        assert!(boundary.layout_dirty);
+        assert_eq!(boundary.layout_dirty_source.as_deref(), Some("other"));
+        assert_eq!(
+            boundary.layout_dirty_detail.as_deref(),
+            Some("subtree_layout_dirty_repair")
+        );
         assert_eq!(boundary.prepaint_owner, "view_boundary_prepaint_state");
         assert_eq!(
             boundary.scene_fragment_owner,

@@ -76,12 +76,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let total = self.node_subtree_layout_dirty_count(node);
-        if total == 0 || self.dirty_cache_roots.is_empty() {
+        if total == 0 || self.dirty_boundaries.is_empty() {
             return false;
         }
 
         let mut contained_roots: Vec<NodeId> = Vec::new();
-        for &root in &self.dirty_cache_roots {
+        for &root in &self.dirty_boundaries {
             let Some(entry) = self.nodes.get(root) else {
                 continue;
             };
@@ -140,15 +140,15 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        // Always keep view-cache dirty roots discoverable, even if subtree aggregation is
-        // disabled. Contained view-cache relayouts use `dirty_cache_roots` as their entry set.
+        // Always keep boundary dirty roots discoverable, even if subtree aggregation is
+        // disabled. Contained view-cache relayouts use `dirty_boundaries` as their entry set.
         if after
             && self.view_cache_active()
             && let Some(n) = self.nodes.get(node)
             && n.view_cache.enabled
             && n.view_cache.contained_layout
         {
-            self.mark_cache_root_dirty(
+            self.mark_boundary_layout_dirty(
                 node,
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
@@ -177,7 +177,7 @@ impl<H: UiHost> UiTree<H> {
             && n.view_cache.contained_layout
             && n.invalidation.layout
         {
-            self.mark_cache_root_dirty(
+            self.mark_boundary_layout_dirty(
                 root,
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,

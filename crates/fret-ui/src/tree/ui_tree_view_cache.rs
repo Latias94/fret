@@ -76,16 +76,6 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
-    pub(in crate::tree) fn mark_cache_root_dirty(
-        &mut self,
-        root: NodeId,
-        source: UiDebugInvalidationSource,
-        detail: UiDebugInvalidationDetail,
-    ) {
-        self.dirty_cache_roots.insert(root);
-        self.dirty_cache_root_reasons.insert(root, (source, detail));
-    }
-
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
         if !self.view_cache_active() {
             return false;
@@ -150,19 +140,17 @@ impl<H: UiHost> UiTree<H> {
             n.view_cache_needs_rerender = needs;
         }
         if !needs {
-            self.dirty_cache_roots.remove(&node);
-            self.dirty_cache_root_reasons.remove(&node);
+            self.clear_boundary_layout_dirty(node);
         }
     }
 
-    pub(in crate::tree) fn clear_cache_root_dirty_tracking_if_clean(&mut self, node: NodeId) {
+    pub(in crate::tree) fn clear_boundary_dirty_tracking_if_clean(&mut self, node: NodeId) {
         let should_clear = self
             .nodes
             .get(node)
             .is_none_or(|n| !n.view_cache_needs_rerender && !n.invalidation.layout);
         if should_clear {
-            self.dirty_cache_roots.remove(&node);
-            self.dirty_cache_root_reasons.remove(&node);
+            self.clear_boundary_layout_dirty(node);
         }
     }
 
@@ -188,7 +176,7 @@ impl<H: UiHost> UiTree<H> {
                 && n.view_cache.enabled
             {
                 n.view_cache_needs_rerender = true;
-                self.mark_cache_root_dirty(id, source, detail);
+                self.mark_boundary_layout_dirty(id, source, detail);
             }
 
             current = next;
@@ -226,7 +214,7 @@ impl<H: UiHost> UiTree<H> {
                 && n.view_cache.enabled
             {
                 n.view_cache_needs_rerender = true;
-                self.mark_cache_root_dirty(id, source, detail);
+                self.mark_boundary_layout_dirty(id, source, detail);
             }
             current = next_parent;
         }

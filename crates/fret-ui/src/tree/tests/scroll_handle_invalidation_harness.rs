@@ -578,7 +578,13 @@ fn append_metrics(
                 observed,
                 prefix,
                 format!("node.{}.dirty_cache_root", node.id),
-                bool_metric(ui.dirty_cache_roots.contains(&id)),
+                bool_metric(ui.boundary_layout_dirty(id)),
+            );
+            set_metric(
+                observed,
+                prefix,
+                format!("node.{}.dirty_boundary", node.id),
+                bool_metric(ui.boundary_layout_dirty(id)),
             );
             set_metric(
                 observed,

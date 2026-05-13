@@ -26,6 +26,9 @@ pub struct UiDebugBoundaryStats {
     pub scene_fragment_reject_reason: Option<&'static str>,
     pub layout_dependency: &'static str,
     pub layout_definite: bool,
+    pub layout_dirty: bool,
+    pub layout_dirty_source: Option<UiDebugInvalidationSource>,
+    pub layout_dirty_detail: Option<UiDebugInvalidationDetail>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

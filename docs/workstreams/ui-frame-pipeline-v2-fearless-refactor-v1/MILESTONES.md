@@ -114,8 +114,15 @@ Status on 2026-05-13:
   `should_reuse_view_cache_node(...)` uses it for contained-relayout eligibility.
 - `debug.boundaries[]` exists as a first-class bundle field and is directly enumerated from
   `ViewBoundaryState`, with matching cache-root outcome fields joined in when present.
-- Broader dirty-set migration, view-cache/paint-cache consolidation, and old-path deletion are still
-  pending.
+
+Status on 2026-05-14:
+
+- M4A moved contained-relayout dirty reasons into `ViewBoundaryState::dirty` and replaced the
+  old `dirty_cache_roots` / `dirty_cache_root_reasons` owner with a `dirty_boundaries` fast index.
+- `debug.boundaries[]` now reports boundary layout dirty state through `layout_dirty`,
+  `layout_dirty_source`, and `layout_dirty_detail`.
+- Broader view-cache/paint-cache consolidation, compatibility diagnostic cleanup, and old-path
+  deletion are still pending.
 
 ## M5: Closeout and Deletion Audit
 

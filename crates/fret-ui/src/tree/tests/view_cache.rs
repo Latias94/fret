@@ -171,8 +171,8 @@ fn descendant_layout_invalidation_marks_contained_view_cache_root_dirty() {
         ui.test_clear_node_invalidations(id);
     }
     assert!(
-        ui.dirty_cache_roots.is_empty(),
-        "stable frames must not carry contained-relayout candidates from the initial mount"
+        ui.dirty_boundaries.is_empty(),
+        "stable frames must not carry contained-relayout boundary candidates from the initial mount"
     );
 
     ui.invalidate(leaf, Invalidation::Layout);
@@ -180,8 +180,22 @@ fn descendant_layout_invalidation_marks_contained_view_cache_root_dirty() {
     assert!(ui.nodes[leaf].invalidation.layout);
     assert!(ui.nodes[boundary].invalidation.layout);
     assert!(
-        ui.dirty_cache_roots.contains(&boundary),
-        "contained cache roots with descendant layout invalidations must remain discoverable for the contained relayout pass"
+        ui.test_view_boundary_layout_dirty(boundary),
+        "contained boundaries with descendant layout invalidations must remain discoverable for the contained relayout pass"
+    );
+    let dirty_boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|stats| stats.id == boundary)
+        .expect("expected contained cache root boundary stats");
+    assert!(dirty_boundary.layout_dirty);
+    assert_eq!(
+        dirty_boundary.layout_dirty_source,
+        Some(UiDebugInvalidationSource::Other)
+    );
+    assert_eq!(
+        dirty_boundary.layout_dirty_detail,
+        Some(UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair)
     );
     assert!(
         !ui.nodes[boundary].view_cache_needs_rerender,

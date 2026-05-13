@@ -366,9 +366,7 @@ pub struct UiTree<H: UiHost> {
     interaction_cache: prepaint::InteractionCacheState,
     view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
 
-    dirty_cache_roots: HashSet<NodeId>,
-    dirty_cache_root_reasons:
-        HashMap<NodeId, (UiDebugInvalidationSource, UiDebugInvalidationDetail)>,
+    dirty_boundaries: HashSet<NodeId>,
     last_redraw_request_tick: Option<TickId>,
 
     propagation_depth_generation: u32,

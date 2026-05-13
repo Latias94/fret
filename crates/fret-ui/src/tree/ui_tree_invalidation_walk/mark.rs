@@ -273,7 +273,7 @@ impl<H: UiHost> UiTree<H> {
 
             if did_stop {
                 if mark_dirty || mark_dirty_for_contained_layout {
-                    self.mark_cache_root_dirty(id, source, detail);
+                    self.mark_boundary_layout_dirty(id, source, detail);
                 }
                 invalidation_active = false;
             }
@@ -357,7 +357,7 @@ impl<H: UiHost> UiTree<H> {
                     self.update_invalidation_counters(prev, next);
                 }
                 if mark_dirty || mark_dirty_for_contained_layout {
-                    self.mark_cache_root_dirty(id, source, detail);
+                    self.mark_boundary_layout_dirty(id, source, detail);
                 }
                 parent = next_parent;
             }
@@ -536,7 +536,7 @@ impl<H: UiHost> UiTree<H> {
 
             if did_stop {
                 if mark_dirty || mark_dirty_for_contained_layout {
-                    self.mark_cache_root_dirty(id, source, detail);
+                    self.mark_boundary_layout_dirty(id, source, detail);
                 }
                 invalidation_active = false;
             }
@@ -630,7 +630,7 @@ impl<H: UiHost> UiTree<H> {
                         self.update_invalidation_counters(prev, next);
                     }
                     if mark_dirty || mark_dirty_for_contained_layout {
-                        self.mark_cache_root_dirty(id, source, detail);
+                        self.mark_boundary_layout_dirty(id, source, detail);
                     }
                     visited.set_mask(id, already | needed);
                 }

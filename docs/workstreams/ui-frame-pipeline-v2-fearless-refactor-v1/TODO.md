@@ -36,6 +36,7 @@ Last updated: 2026-05-14
 ## P2 Runtime Migration
 
 - [x] Convert layout containment from a standalone flag into boundary dependency metadata.
+- [x] Move contained-relayout dirty reasons from cache-root side maps into `ViewBoundaryState`.
 - [x] Convert the code-editor row-scene replay carrier into boundary-owned scene-fragment state.
 - [ ] Promote boundary-owned scene-fragment reuse diagnostics and perf closeout evidence.
 - [x] Make prepaint diagnostics first-class per boundary.
@@ -49,7 +50,9 @@ Last updated: 2026-05-14
 ## P3 Delete Old Paths
 
 - [x] Write a deletion audit before closeout.
-- [ ] Delete or retire old private paths that v2 replaces.
+- [ ] Delete or retire old private paths that v2 replaces. M4A removed
+  `dirty_cache_roots` / `dirty_cache_root_reasons`, but broader view-cache/paint-cache compatibility
+  views remain.
 - [ ] Remove migration-only env knobs that no longer have a diagnostic purpose.
 - [ ] Update first-party examples and docs if public authoring guidance changes.
 - [ ] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` when ADR 0327 is implemented or superseded.

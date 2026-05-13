@@ -261,6 +261,33 @@ carrier from generic canvas prepaint output into `ViewBoundaryState::scene_fragm
 slot count, and fragment entry count for debug-aware carriers. Fragment hit/reject reasons,
 dirty-set migration, and the 20-30% p95/max closeout proof are still pending.
 
+Most recent boundary dirty-set slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4A_BOUNDARY_DIRTY_SET_SLICE_2026-05-14.md`
+- Focused correctness gates:
+  `cargo nextest run -p fret-ui view_cache::view_cache_runs_contained_relayout_for_invalidated_boundaries view_cache::view_cache_contained_relayout_does_not_force_next_frame_rerender layout_dirty_invalidation_harness scroll_handle_invalidation_harness --no-fail-fast`
+  and
+  `cargo nextest run -p fret-ui view_cache_runs_contained_relayout_for_invalidated_boundaries --no-fail-fast`
+  and
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes --no-fail-fast`
+- Compile gate:
+  `cargo check -p fret-ui -p fret-ui-kit -p fret-code-editor -p fret-bootstrap --features syntax-rust,diagnostics`
+
+Observed result:
+
+- first `fret-ui` focused run: `3 passed, 929 skipped`; the first namespaced filter did not match
+  and was rerun explicitly.
+- explicit contained-relayout run: `1 passed, 931 skipped`.
+- `fret-bootstrap` boundary diagnostics run: `4 passed, 97 skipped`.
+- `cargo check`: passed with no new warnings.
+
+This slice is a correctness/ownership step, not a new perf claim. It removes
+`dirty_cache_roots`, `dirty_cache_root_reasons`, and `mark_cache_root_dirty(...)` from the runtime
+owner path, keeps `dirty_boundaries` as the hot-path scheduling index, and emits boundary-owned
+layout dirty source/detail through `debug.boundaries[]`. The final perf closeout proof and broader
+view-cache/paint-cache compatibility cleanup are still pending.
+
 ## Correctness Gates
 
 Use focused tests first:
