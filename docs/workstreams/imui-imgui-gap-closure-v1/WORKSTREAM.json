@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-13",
+  "updated": "2026-05-14",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -182,6 +182,10 @@
       "command": "rg -n \"row\\\\(|horizontal\\\\(|horizontal_with_options|row_with|id_source|test_id|push_id\" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
     },
     {
+      "name": "imui diagnostics devtools first-open",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
+    },
+    {
       "name": "imui product chain",
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
@@ -226,6 +230,7 @@
     "apps/fret-cookbook/examples/imui_action_basics.rs",
     "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
     "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "tools/diag_gate_imui_p2_devtools_first_open.py",
     "tools/diag_gate_imui_product_chain.py",
     "apps/fret-demo/src/bin/imui_editor_proof_demo.rs",
     "tools/gate_imui_editor_collection_source.py",

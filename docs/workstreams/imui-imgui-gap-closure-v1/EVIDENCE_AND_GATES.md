@@ -56,6 +56,7 @@ Last updated: 2026-05-14
   - `apps/fret-examples/src/editor_notes_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
   - `tools/diag_gate_imui_product_chain.py`
+  - `tools/diag_gate_imui_p2_devtools_first_open.py`
 - Prior status:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
@@ -169,6 +170,30 @@ Run evidence:
   gates.
 - This is not a replacement for launched GUI gates. It is the first-open maintenance gate that keeps
   the cross-app product path visible before opening a new helper or widget follow-on.
+
+## P3 Diagnostics / DevTools First-Open Gate
+
+Use this gate for the current Dear ImGui-class diagnostics discoverability read. It verifies the
+shared CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle
+capture, latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare,
+campaign execution, `diag summarize`, and `diag dashboard`.
+
+```powershell
+python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke
+```
+
+Run evidence:
+
+- 2026-05-14: `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun --timeout-ms 240000` passed locally.
+- Direct script result:
+  `target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun/1778714082990/direct/sessions/1778714086733-135148/script.result.json`
+  reports `stage=passed`, `run_id=1778714090298`, and `last_bundle_dir=1778714090682-todo-after-remove`.
+- Campaign summary:
+  `target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun/1778714082990/campaign/campaigns/devtools-first-open-smoke/1778714091193/regression.summary.json`
+  reports `items_total=1`, `passed=1`, and zero deterministic/flaky/tooling/timeout failures.
+- Suite summary:
+  `target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun/1778714082990/campaign/campaigns/devtools-first-open-smoke/1778714091193/script-results/01-tools-diag-scripts-tooling-todo-todo-baseline.json/suite.summary.json`
+  reports `status=passed` and `stage_counts.passed=1`.
 
 ## P0 Gates
 
