@@ -866,6 +866,36 @@ Follow-up recommendation:
 - Extend the same failure-event pattern to `set_text_value` selector/action failures and then add a
   promoted UI Gallery editor fixture that captures focus + Web IME traces for a real text field.
 
+## Phase 2.27 Set Text Value Failure Evidence Events
+
+The accessibility text-input audit showed that `set_text_value` is the narrow scripted path that
+tests the semantics/accessibility action contract directly. It does not inject keyboard input; it
+requires a resolvable semantics node with `actions.set_value=true` and a live `UiTree`. Before this
+slice, failures collapsed into `set_text_value_timeout`, `set_text_value_disabled`,
+`set_text_value_unsupported`, or `set_text_value_no_ui` without a compact event-log explanation.
+
+Fixes:
+
+- `set_text_value` now publishes `set_text_value.no_semantics_timeout` when no semantics snapshot is
+  available before timeout.
+- Selector misses now publish `set_text_value.selector_timeout` with selector resolution evidence:
+  match count, chosen node id, trace note, and candidate role/name/test-id summaries.
+- Disabled, unsupported, and no-UI-tree action failures now publish `set_text_value.disabled`,
+  `set_text_value.unsupported`, or `set_text_value.no_ui_tree` with node role/test id, disabled,
+  read-only, focused state, value length, text selection, and supported actions.
+- This makes semantics contract failures distinguishable from harness targeting mistakes and from
+  component recipes that forgot to expose the portable set-value action.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Promote one UI Gallery text-field/editor diagnostic script that uses both `set_text_value` and
+  `type_text_into`, then captures a bundle. That will connect the semantics/action failure summaries
+  to a real recipe-consumer page instead of only pure helper coverage.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -936,6 +966,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" focus_trace_summary_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" text_input_timeout_note -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
