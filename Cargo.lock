@@ -3167,6 +3167,7 @@ dependencies = [
  "fret-core",
  "fret-executor",
  "fret-icons",
+ "fret-icons-lucide",
  "fret-mechanism-harness",
  "fret-query",
  "fret-runtime",

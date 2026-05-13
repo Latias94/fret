@@ -529,6 +529,8 @@ It covers:
   not overlap the icon slot.
 - trigger label `fontWeight` against the web golden's computed style, so chrome drift can be caught
   without relying on screenshots.
+- trigger icon SVG identity for icon-bearing Button examples, so the harness can distinguish an
+  upstream `ChevronsUpDown` glyph from a geometrically-correct but visually-wrong `ChevronDown`.
 
 Finding from this sweep:
 
@@ -552,6 +554,14 @@ Finding from this sweep:
   `ComboboxTriggerVariant::Button` as text-only unless `ComboboxInput::show_trigger(true)` is
   explicitly set, and the Usage/Long Text follow-ups opt into the icon where their examples need
   truncation-plus-icon coverage.
+- The icon-identity extension first exposed a harness setup gap: the web-vs-Fret layout test app
+  applied shadcn theme tokens but did not install the lucide icon pack, so painted SVG assertions
+  observed `MISSING_ICON_SVG`. The shared layout harness now installs lucide semantic aliases like
+  real gallery/bootstrap paths.
+- After the harness installed real icons, the same fixture exposed a recipe glyph drift: explicit
+  Button trigger icons rendered `ChevronDown`, while upstream `combobox-demo` authors
+  `ChevronsUpDown`. `ComboboxTriggerVariant::Button` now uses the semantic double-chevron icon for
+  its explicit trigger slot; the default input-like trigger keeps `ChevronDown`.
 
 Validation:
 
@@ -561,9 +571,52 @@ Validation:
 - `cargo test -p fret-ui-shadcn --lib combobox_trigger_long_label_stays_before_chevron -- --nocapture`
 - `cargo test -p fret-ui-gallery --test combobox_docs_surface -- --nocapture`
 
-Next uncovered combobox slice: add a screenshot/paint-level or icon-identity gate for the
-`combobox-demo` custom `ChevronsUpDown` trigger icon. Geometry now proves the slot is in the right
-place, but it does not distinguish a single chevron from the upstream double-chevron glyph.
+## Phase 2.17 RTL Combobox Scroll Settle and Overlay Gate
+
+The runtime RTL combobox gate is
+`tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json`.
+
+This slice started from a user-visible symptom: after scrolling the UI Gallery Combobox page near
+the RTL demo in a tight window, the page appeared to move up and down. The first failing run showed
+two separate harness defects:
+
+- `scroll_into_view` drove the page with a fixed 40px wheel delta even when the target was only
+  about 5px outside the padded visible region. That made the script overshoot and bounce between
+  adjacent offsets instead of converging.
+- The RTL flip script waited for an anchored-panel placement trace whose `content_test_id` was the
+  internal listbox. Runtime traces correctly report the positioned panel shell
+  (`ui-gallery-combobox-rtl-content`), while the listbox remains the inner geometry target.
+
+Fixes:
+
+- Diagnostics `scroll_into_view` now caps each axis delta to the remaining visibility gap and treats
+  subpixel target/container jitter as stable progress.
+- The RTL flip script targets `ui-gallery-content-viewport` as the scroll viewport, waits for the
+  trigger bounds to settle after scrolling, queries overlay placement with
+  `ui-gallery-combobox-rtl-content`, and then waits for the content bounds to settle before checking
+  the visible listbox.
+- `combobox_diag_surface` now locks the content/listbox split so future script edits do not regress
+  the panel-vs-inner-listbox contract.
+
+Evidence:
+
+- Failing artifact:
+  `target/fret-diag/codex-combobox-rtl-scroll-20260513-1619/sessions/1778660392387-48984/1778660666632-script-step-0018-wait_overlay_placement_trace-timeout`
+- Passing artifact:
+  `target/fret-diag/codex-combobox-rtl-scroll-fix-20260513-1650/sessions/1778662143311-113768/1778662380264-ui-gallery-combobox-flip-tight-window`
+
+Validation:
+
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" script_steps_scroll::tests -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
+- `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json --dir target/fret-diag/codex-combobox-rtl-scroll-fix-20260513-1650 --session-auto --launch -- cargo run -p fret-ui-gallery`
+
+Follow-up recommendation:
+
+- Promote "scroll to target, then prove target/content bounds stability before interaction" as the
+  default pattern for tight-window overlay scripts. This should be swept across combobox, select,
+  dropdown menu, popover, hover card, and future Material 3 anchored surfaces.
 
 ## Diagnostics Reuse
 
@@ -623,6 +676,8 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement combobox::fixtures::web_vs_fret_combobox_cases_match_web_fixtures -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome combobox::fixtures::web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" script_steps_scroll::tests -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

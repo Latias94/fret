@@ -6,7 +6,8 @@
       "web_name": "combobox-demo",
       "recipe": "demo_trigger",
       "label": "Select framework...",
-      "icon": "present"
+      "icon": "present",
+      "icon_svg_contains": ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]
     },
     {
       "id": "combobox-responsive.trigger_text_only",
@@ -27,7 +28,8 @@
       "web_name": "combobox-demo",
       "recipe": "demo_long_selected_trigger",
       "label": "Enterprise Observability Platform With Extremely Long Label",
-      "icon": "present"
+      "icon": "present",
+      "icon_svg_contains": ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]
     }
   ]
 }

@@ -89,6 +89,39 @@ fn combobox_responsive_diag_scripts_pin_exact_viewport_variants() {
 }
 
 #[test]
+fn combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-content-viewport\"",
+        "\"ui-gallery-combobox-rtl-trigger\"",
+        "\"ui-gallery-combobox-rtl-content\"",
+        "\"ui-gallery-combobox-rtl-listbox\"",
+        "\"type\": \"scroll_into_view\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"type\": \"wait_overlay_placement_trace\"",
+        "\"flipped\": true",
+    ] {
+        assert!(
+            script.contains(needle),
+            "combobox RTL flip diag script should keep shell/listbox selectors and the scroll/placement gates stable; missing `{needle}`",
+        );
+    }
+
+    assert!(
+        script.contains("\"content_test_id\": \"ui-gallery-combobox-rtl-content\""),
+        "overlay placement traces are recorded for the anchored panel shell, not the internal listbox",
+    );
+    assert!(
+        script.contains("\"kind\": \"bounds_within_window\"")
+            && script.contains("\"id\": \"ui-gallery-combobox-rtl-listbox\""),
+        "the visible listbox geometry should still be checked separately after the panel placement trace",
+    );
+}
+
+#[test]
 fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command_parts() {
     use serde_json::Value;
     use std::fs;

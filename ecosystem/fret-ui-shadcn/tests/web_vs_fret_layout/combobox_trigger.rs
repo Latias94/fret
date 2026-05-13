@@ -24,6 +24,8 @@ struct LayoutComboboxTriggerCase {
     recipe: LayoutComboboxTriggerRecipe,
     label: String,
     icon: LayoutComboboxTriggerIconExpectation,
+    #[serde(default)]
+    icon_svg_contains: Vec<String>,
 }
 
 #[test]
@@ -66,7 +68,7 @@ fn web_vs_fret_layout_combobox_trigger_slots_match_web_fixtures() {
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
         );
-        let (snap, services) = render_fret_combobox_trigger(bounds, case.recipe);
+        let (snap, scene, services) = render_fret_combobox_trigger(bounds, case.recipe);
 
         let trigger = find_by_test_id(&snap, "combobox-trigger-fixture-trigger");
         assert_close_px(
@@ -175,6 +177,29 @@ fn web_vs_fret_layout_combobox_trigger_slots_match_web_fixtures() {
                     label.bounds,
                     icon.bounds
                 );
+
+                if !case.icon_svg_contains.is_empty() {
+                    let (_rect, svg) = find_scene_svg_with_rect_close(&scene, icon.bounds, 1.0)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "{} missing painted SVG for trigger icon bounds {:?}",
+                                case.id, icon.bounds
+                            )
+                        });
+                    let bytes = services.svg_bytes(svg).unwrap_or_else(|| {
+                        panic!("{} missing registered SVG bytes for {svg:?}", case.id)
+                    });
+                    let svg_text = std::str::from_utf8(bytes)
+                        .unwrap_or_else(|err| panic!("{} SVG bytes not utf8: {err}", case.id));
+                    for expected in &case.icon_svg_contains {
+                        assert!(
+                            svg_text.contains(expected),
+                            "{} trigger icon SVG should contain {:?}; svg={svg_text}",
+                            case.id,
+                            expected
+                        );
+                    }
+                }
             }
             (LayoutComboboxTriggerIconExpectation::Present, None, Some(_)) => {
                 panic!("{} Fret trigger should render an icon slot", case.id);
@@ -202,9 +227,9 @@ fn web_combobox_trigger(theme: &WebGoldenTheme, recipe: LayoutComboboxTriggerRec
 fn render_fret_combobox_trigger(
     bounds: Rect,
     recipe: LayoutComboboxTriggerRecipe,
-) -> (fret_core::SemanticsSnapshot, StyleAwareServices) {
+) -> (fret_core::SemanticsSnapshot, Scene, StyleAwareServices) {
     let mut services = StyleAwareServices::default();
-    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+    let (snap, scene) = render_and_paint_in_bounds_with_services(bounds, &mut services, |cx| {
         use std::sync::Arc;
 
         let model = match recipe {
@@ -276,7 +301,7 @@ fn render_fret_combobox_trigger(
         vec![combobox.into_element(cx)]
     });
 
-    (snap, services)
+    (snap, scene, services)
 }
 
 fn framework_items() -> Vec<shadcn::ComboboxItem> {

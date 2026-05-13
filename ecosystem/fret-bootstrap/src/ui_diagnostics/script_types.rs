@@ -255,6 +255,7 @@ pub(super) struct V2ScrollIntoViewState {
     pub(super) remaining_frames: u32,
     pub(super) no_progress_frames: u32,
     pub(super) last_target_bounds: Option<fret_core::Rect>,
+    pub(super) last_container_bounds: Option<fret_core::Rect>,
 }
 
 #[derive(Debug, Clone)]

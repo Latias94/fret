@@ -186,6 +186,13 @@ pub enum ComboboxTriggerVariant {
     Button,
 }
 
+fn combobox_trigger_icon_id(trigger_variant: ComboboxTriggerVariant) -> fret_icons::IconId {
+    match trigger_variant {
+        ComboboxTriggerVariant::Default => ids::ui::CHEVRON_DOWN,
+        ComboboxTriggerVariant::Button => ids::ui::CHEVRONS_UP_DOWN,
+    }
+}
+
 /// shadcn/ui `ComboboxValue` (v4).
 ///
 /// Upstream renders whatever children are passed (a string label in the simple case, chips in
@@ -1986,10 +1993,10 @@ fn combobox_with_patch<H: UiHost>(
                                                         clear
                                                     };
                                                     out.push(clear);
-                                                    } else if show_trigger {
-                                                        let mut icon = decl_icon::icon_with(
-                                                            cx,
-                                                        ids::ui::CHEVRON_DOWN,
+                                                } else if show_trigger {
+                                                    let mut icon = decl_icon::icon_with(
+                                                        cx,
+                                                        combobox_trigger_icon_id(trigger_variant),
                                                         Some(Px(16.0)),
                                                         Some(ColorRef::Color(icon_fg)),
                                                     );
@@ -1999,26 +2006,24 @@ fn combobox_with_patch<H: UiHost>(
                                                         icon = icon.test_id(format!(
                                                             "{prefix}-trigger-icon"
                                                         ));
-                                                        }
-                                                        out.push(icon);
                                                     }
-                                                    if let Some(inline_end) = inline_end {
-                                                        out.push(inline_end);
-                                                    }
-                                                    out
-                                                },
-                                            )
-                                        });
-                                        let mut children =
-                                            crate::rtl::vec_main_with_inline_end(
-                                                dir, label_el, right,
-                                            );
-                                        if let Some(inline_start) = inline_start {
-                                            children.push(inline_start);
-                                        }
-                                        children
-                                    },
-                                );
+                                                    out.push(icon);
+                                                }
+                                                if let Some(inline_end) = inline_end {
+                                                    out.push(inline_end);
+                                                }
+                                                out
+                                            },
+                                        )
+                                    });
+                                    let mut children =
+                                        crate::rtl::vec_main_with_inline_end(dir, label_el, right);
+                                    if let Some(inline_start) = inline_start {
+                                        children.push(inline_start);
+                                    }
+                                    children
+                                },
+                            );
                                 vec![row]
                             })
                         })
@@ -2799,7 +2804,7 @@ fn combobox_with_patch<H: UiHost>(
                                         } else if show_trigger {
                                             let mut icon = decl_icon::icon_with(
                                                 cx,
-                                                ids::ui::CHEVRON_DOWN,
+                                                combobox_trigger_icon_id(trigger_variant),
                                                 Some(Px(16.0)),
                                                 Some(ColorRef::Color(icon_fg)),
                                             );
