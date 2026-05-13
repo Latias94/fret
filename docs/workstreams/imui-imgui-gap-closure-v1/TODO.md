@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## P0 - Source Baseline
 
@@ -43,6 +43,14 @@ Last updated: 2026-05-06
       Audit result: `debug_draw_controls.rs` was split in the dedicated
       `imui-debug-draw-owner-split-v1` follow-on and that lane is now closed. Future additive debug
       draw capabilities still need separate follow-ons.
+      2026-05-13 rebase: `imui-kit-owner-split-v1`,
+      `imui-facade-disclosure-owner-split-v1`, and
+      `imui-facade-text-model-owner-split-v1` are also closed. The subsequent
+      `imui-facade-boolean-wrapper-owner-split-v1` and
+      `imui-facade-value-model-owner-split-v1` lanes are closed as well. The later
+      `imui-facade-container-wrapper-owner-split-v1` lane is closed too. These lanes moved focused
+      facade wrappers and shared pressable response assembly into private owners without public API
+      or runtime contract widening.
 
 ## P2 - User-Usable Golden Path
 

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## M0 - Current Source Baseline
 
@@ -74,8 +74,10 @@ Exit criteria:
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
-  debug draw. List-box, plotting, image item, style-editor, advanced-table, and child-flag work
-  should be narrow proof-led follow-ons.
+  debug draw. The 2026-05-13 owner splits changed private file ownership for focused facade wrappers
+  and pressable response assembly, including the container wrapper owner split, but did not widen
+  the public surface. List-box, plotting, image item, style-editor, advanced-table, and child-flag
+  work should be narrow proof-led follow-ons.
   Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
   outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.

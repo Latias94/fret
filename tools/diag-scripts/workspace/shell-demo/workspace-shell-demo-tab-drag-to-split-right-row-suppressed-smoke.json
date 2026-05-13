@@ -28,19 +28,14 @@
     },
 
     {
-      "type": "pointer_down",
+      "type": "drag_pointer_until",
       "window": { "kind": "current" },
       "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
-      "button": "left"
-    },
-
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 420.0, "delta_y": 0.0, "steps": 42 },
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 1050.0, "y_px": 160.0 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": -1.0, "delta_y": 0.0, "steps": 1 },
-    { "type": "wait_frames", "n": 4 },
-
-    {
-      "type": "wait_until",
+      "button": "left",
+      "release_on_success": false,
+      "delta_x": 110.0,
+      "delta_y": 146.0,
+      "steps": 80,
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.center" } },
       "timeout_frames": 240
     },

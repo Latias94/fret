@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-12
+Catalog updated: 2026-05-13
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 361
+- Dedicated directories: 368
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -117,6 +117,113 @@ Current source of truth for the in-tree immediate-mode stack:
     deciding which IMUI gaps are still real, which old parity claims are stale, and which cleanup or
     follow-on should be split next.
 
+- Closed kit private owner split follow-on:
+  - `docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-kit-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M1_BUTTON_ACTIONS_SLICE_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M2_PRESSABLE_RESPONSE_ASSEMBLY_SLICE_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M3_MENU_ITEMS_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M4_SELECTION_COMBO_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_support.rs`
+  - `ecosystem/fret-ui-kit/src/imui/interaction_runtime.rs`
+  - `ecosystem/fret-ui-kit/src/imui/interaction_runtime/pressable_response.rs`
+  - `ecosystem/fret-ui-kit/src/imui/response/hover.rs`
+  - Scope: closed narrow follow-on for splitting private `fret-ui-kit::imui` owners and deleting
+    local duplication where proven, while keeping `fret-imui` thin, preserving public IMUI names,
+    and avoiding runtime contract widening. Start `imui-facade-disclosure-owner-split-v1` for
+    disclosure-wrapper work.
+
+- Closed facade disclosure owner split follow-on:
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/M1_DISCLOSURE_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure.rs`
+  - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
+  - Scope: closed disclosure wrapper owner split; future text, boolean/model, table, docking,
+    multi-window, and additive widget work stay in separate follow-ons.
+
+- Closed facade text model owner split follow-on:
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/M1_TEXT_MODEL_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/text_models.rs`
+  - `ecosystem/fret-ui-kit/src/imui/text_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs`
+  - Scope: closed text and textarea model wrapper owner split; future boolean/model, table,
+    docking, multi-window, and additive text behavior work stay in separate follow-ons.
+
+- Closed facade boolean wrapper owner split follow-on:
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/M1_BOOLEAN_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs`
+  - `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs`
+  - Scope: closed checkbox/radio/switch wrapper owner split; future slider/combo model, table,
+    docking, multi-window, and additive boolean behavior work stay in separate follow-ons.
+
+- Closed facade value model owner split follow-on:
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/M1_VALUE_MODEL_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
+  - `ecosystem/fret-ui-kit/src/imui/slider_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs`
+  - Scope: closed slider/combo model wrapper owner split; future table, docking, multi-window, and
+    additive value-editing behavior work stay in separate follow-ons.
+
+- Closed facade container wrapper owner split follow-on:
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/M1_CONTAINER_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
+  - Scope: closed structural container wrapper owner split; future popup/floating wrappers,
+    trait-surface reshaping, docking, multi-window, and additive table/child behavior work stay in
+    separate follow-ons.
+
 - Closed debug draw private owner split follow-on:
   - `docs/workstreams/imui-debug-draw-owner-split-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`
@@ -150,6 +257,8 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
@@ -1548,6 +1657,8 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -1555,9 +1666,10 @@ Current source of truth for the in-tree immediate-mode stack:
     keeping the v1 window-style opacity capability explicit, and continuing with the remaining
     platform-specific acceptance slices rather than reopening the umbrella lane. As of 2026-04-29,
     non-Linux local continuation is limited to source-policy gates, campaign validation, diagnostics
-    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-04, the local
-    non-interactive gate refresh is green, but the launched bounded campaign is still not counted as
-    passing evidence.
+    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-13, the latest
+    local non-interactive gate refresh is green and the launched bounded P3 campaign is green after
+    the diagnostics runner no-frame pointer-move repair. Platform-specific real-host acceptance,
+    especially the Wayland compositor runbook, remains open.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
   - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
@@ -1777,7 +1889,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-04, 15 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-13, 17 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
@@ -1945,8 +2057,14 @@ Rule:
 - `docs/workstreams/imui-identity-browser-visual-gate-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for offline HTML identity browser smoke gates)
 - `docs/workstreams/imui-identity-browser-fixture-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for committed identity browser sample bundles)
 - `docs/workstreams/imui-imgui-gap-closure-v1/` — first 2026-05-06, latest 2026-05-06, 5 markdown docs (active source-audit lane for rebaselining the Dear ImGui gap against current Fret sources and `repo-ref/imgui` before further fearless cleanup or helper widening)
+- `docs/workstreams/imui-kit-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 10 markdown docs (closed narrow follow-on for private `fret-ui-kit::imui` owner splits and proven duplication deletion without public API or runtime contract widening)
+- `docs/workstreams/imui-facade-disclosure-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for disclosure facade wrapper owner split without public API or runtime contract widening)
+- `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for checkbox/radio/switch facade wrapper owner split without public API or runtime contract widening)
+- `docs/workstreams/imui-facade-text-model-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for text and textarea model facade wrapper owner split without public API or runtime contract widening)
+- `docs/workstreams/imui-facade-value-model-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for slider/combo model facade wrapper owner split without public API or runtime contract widening)
+- `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for structural container facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-debug-draw-owner-split-v1/` — first 2026-05-06, latest 2026-05-06, 10 markdown docs (closed narrow follow-on for splitting IMUI debug draw private owners without public API or behavior changes; includes a closeout audit and private test owner)
-- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
+- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-13, 22 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private active-trigger behavior follow-on for deleting switch/menu/tab trigger response and lifecycle duplication without widening `fret-imui` or runtime contracts by default)

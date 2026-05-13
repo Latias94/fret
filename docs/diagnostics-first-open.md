@@ -175,6 +175,18 @@ Use it for:
 
 ### DevTools GUI branch
 
+Discover the repo-maintainer tool apps with:
+
+```bash
+cargo run -p fretboard-dev -- list tool-apps
+```
+
+Use the JSON form when another tool needs the same entrypoints:
+
+```bash
+cargo run -p fretboard-dev -- list tool-apps --json
+```
+
 Open:
 
 - `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`
@@ -184,6 +196,18 @@ Use it for:
 - GUI inspect/pick over the same selector contract,
 - GUI summarize/regression reading over the same aggregate artifacts,
 - GUI evidence packing over the same artifact root.
+
+Launch the GUI directly with:
+
+```bash
+cargo run -p fret-devtools
+```
+
+Launch the MCP adapter directly with:
+
+```bash
+cargo run -p fret-devtools-mcp
+```
 
 ### Maintainer/workstream branch
 

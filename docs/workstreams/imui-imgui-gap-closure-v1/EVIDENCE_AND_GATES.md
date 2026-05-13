@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## Evidence Anchors
 
@@ -26,6 +26,14 @@ Last updated: 2026-05-06
   - `ecosystem/fret-imui/src/frontend.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/text_models.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
@@ -38,6 +46,7 @@ Last updated: 2026-05-06
   - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
   - `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`
   - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+  - `tools/gate_imui_editor_collection_source.py`
   - `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`
   - `apps/fret-examples/src/workspace_shell_demo.rs`
   - `ecosystem/fret-ui-kit/src/imui/multi_select.rs`
@@ -76,7 +85,7 @@ Use these for the current component-surface catalog note:
 ```powershell
 rg --files ecosystem/fret-ui-kit/src/imui ecosystem/fret-ui-kit/tests
 rg -n "pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls" ecosystem/fret-ui-kit/src/imui.rs
-rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs
+rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer
 rg -n "pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)" ecosystem/fret-ui-editor/src/imui.rs
 rg -n "Widgets: Text|Widgets: Main|Widgets: Combo Box|Widgets: Trees|Widgets: Selectables|Widgets: List Boxes|Widgets: Data Plotting|Widgets: Menus|Tooltips|Popups, Modals|Tables|Tab Bars|Drag and Drop|Debug Utilities" repo-ref/imgui/imgui.h
 cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast
@@ -101,7 +110,7 @@ Use these for the current porting-sugar readiness note:
 
 ```powershell
 rg -n "SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp
-rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
+rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
 cargo check -p fret-demo --bin imui_editor_proof_demo
 ```
 
@@ -120,7 +129,7 @@ cargo check -p fret-demo --bin workspace_shell_demo
 Use these for the current collection-helper readiness note:
 
 ```powershell
-cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast
+python tools/gate_imui_editor_collection_source.py
 cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast
 ```
 
@@ -172,7 +181,7 @@ cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --
 Use these to validate the current editor-panel proof surface:
 
 ```powershell
-cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast
+python tools/gate_imui_editor_collection_source.py
 cargo check -p fret-demo --bin imui_editor_proof_demo
 rg -n "imui_editor_proof_demo|state, command actions|command/action dispatch" apps/fret-cookbook/README.md apps/fret-cookbook/EXAMPLES.md docs/examples/README.md
 ```

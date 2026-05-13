@@ -34,9 +34,8 @@ use crate::commands::{
     tab_pin_command, tab_unpin_command,
 };
 use crate::tab_drag::{
-    DRAG_KIND_WORKSPACE_TAB, WorkspacePaneDragGeometry, WorkspaceTabDragState,
-    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
-    resolve_workspace_tab_drop_intent,
+    DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropIntent, WorkspaceTabDropZone,
+    WorkspaceTabInsertionSide, resolve_workspace_tab_drop_intent, workspace_tab_drop_zone_for_pane,
 };
 
 mod consts;
@@ -1242,8 +1241,6 @@ impl WorkspaceTabStrip {
 
                                                                                     let mut target_pane: Option<Arc<str>> =
                                                                                         None;
-                                                                                    let mut target_geom: Option<WorkspacePaneDragGeometry> =
-                                                                                        None;
                                                                                     for (pane_id, geom) in
                                                                                         &st.pane_geometry
                                                                                     {
@@ -1256,7 +1253,6 @@ impl WorkspaceTabStrip {
                                                                                         {
                                                                                             target_pane =
                                                                                                 Some(pane_id.clone());
-                                                                                            target_geom = Some(*geom);
                                                                                             break;
                                                                                         }
                                                                                     }
@@ -1266,28 +1262,12 @@ impl WorkspaceTabStrip {
                                                                                         return WorkspaceTabDropIntent::None;
                                                                                     };
 
-                                                                                    let mut zone = st
-                                                                                        .hovered_zone
-                                                                                        .unwrap_or(WorkspaceTabDropZone::Center);
-                                                                                    if zone != WorkspaceTabDropZone::Center
-                                                                                        && let Some(geom) = target_geom
-                                                                                    {
-                                                                                        // Docks/splits should be mediated by the pane drop
-                                                                                        // surface. If the pointer is within the tab-strip
-                                                                                        // band, force a center drop so "drop on the tabstrip"
-                                                                                        // does not accidentally request a split.
-                                                                                        let tab_strip_max_y = geom
-                                                                                            .bounds
-                                                                                            .origin
-                                                                                            .y
-                                                                                            .0
-                                                                                            + 48.0;
-                                                                                        if pointer_pos_window.y.0
-                                                                                            <= tab_strip_max_y
-                                                                                        {
-                                                                                            zone = WorkspaceTabDropZone::Center;
-                                                                                        }
-                                                                                    }
+                                                                                    let zone =
+                                                                                        workspace_tab_drop_zone_for_pane(
+                                                                                            st,
+                                                                                            target_pane.as_ref(),
+                                                                                            pointer_pos_window,
+                                                                                        );
 
                                                                                     let intent =
                                                                                         resolve_workspace_tab_drop_intent(
@@ -2123,6 +2103,7 @@ impl WorkspaceTabStrip {
                                     InternalDragRegionProps {
                                         layout,
                                         enabled: true,
+                                        route_kind: None,
                                     },
                                     |cx| {
                                         cx.internal_drag_region_on_internal_drag(on_internal_drag);

@@ -55,6 +55,16 @@ fn json_value_contains_string(value: &serde_json::Value, needle: &str) -> bool {
     }
 }
 
+fn no_frame_pointer_move_can_drive(app: &App, active: &ActiveScript) -> bool {
+    active.pointer_session.is_some()
+        && app.drag(fret_core::PointerId(0)).is_some_and(|drag| {
+            (drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && drag.dragging
+                && drag.cross_window_hover
+        })
+}
+
 pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     if active.wait_until.is_some() {
         return true;
@@ -2281,6 +2291,34 @@ impl UiDiagnosticsService {
                     &mut failure_reason,
                 );
             }
+            step @ UiActionStepV2::PointerMove { .. }
+                if no_frame_pointer_move_can_drive(app, &active) =>
+            {
+                handled = script_steps_pointer_session::handle_pointer_move_step(
+                    self,
+                    app,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                if !output.events.is_empty() {
+                    for event in output.events.drain(..) {
+                        output
+                            .effects
+                            .push(Effect::DiagInjectEvent { window, event });
+                    }
+                    output.effects.push(Effect::Redraw(window));
+                    output.effects.push(Effect::RequestAnimationFrame(window));
+                    output.request_redraw = true;
+                }
+            }
             _ => {}
         }
 
@@ -2667,11 +2705,118 @@ fn rect_from_v1(r: RectV1) -> Rect {
 mod tests {
     use super::*;
 
+    fn app_window(ffi: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(ffi))
+    }
+
     fn test_id_selector(id: &str) -> UiSelectorV1 {
         UiSelectorV1::TestId {
             id: id.to_string(),
             root_z_index: None,
         }
+    }
+
+    fn active_pointer_move_script() -> ActiveScript {
+        ActiveScript {
+            steps: vec![UiActionStepV2::PointerMove {
+                window: None,
+                pointer_kind: None,
+                delta_x: 8.0,
+                delta_y: 0.0,
+                steps: 1,
+            }],
+            run_id: 1,
+            anchor_window: app_window(1),
+            started_unix_ms: 0,
+            next_step: 0,
+            base_ref: None,
+            event_log: Vec::new(),
+            event_log_dropped: 0,
+            event_log_active_step: None,
+            last_injected_step: None,
+            last_injected_pointer_source_step: None,
+            last_injected_pointer_source_test_id: None,
+            wait_frames_remaining: 0,
+            wait_ms_deadline_unix_ms: None,
+            wait_until: None,
+            wait_shortcut_routing_trace: None,
+            wait_command_dispatch_trace: None,
+            wait_overlay_placement_trace: None,
+            screenshot_wait: None,
+            v2_step_state: None,
+            pointer_session: Some(V2PointerSessionState {
+                window: app_window(2),
+                button: UiMouseButtonV1::Left,
+                pointer_type: PointerType::Mouse,
+                modifiers: Modifiers::default(),
+                position: Point::default(),
+            }),
+            pending_cancel_cross_window_drag: None,
+            last_reported_step: None,
+            last_reported_unix_ms: 0,
+            selector_resolution_trace: Vec::new(),
+            hit_test_trace: Vec::new(),
+            click_stable_trace: Vec::new(),
+            bounds_stable_trace: Vec::new(),
+            focus_trace: Vec::new(),
+            last_clipboard_write_completion: None,
+            shortcut_routing_trace: Vec::new(),
+            last_shortcut_routing_seq: 0,
+            command_dispatch_trace: Vec::new(),
+            last_command_dispatch_seq: 0,
+            overlay_placement_trace: Vec::new(),
+            web_ime_trace: Vec::new(),
+            ime_event_trace: Vec::new(),
+            last_explicit_cursor_override: None,
+            last_explicit_cursor_override_pos: None,
+        }
+    }
+
+    fn app_with_drag(kind: fret_runtime::DragKindId, cross_window: bool, dragging: bool) -> App {
+        let mut app = App::new();
+        if cross_window {
+            app.begin_cross_window_drag_with_kind(
+                PointerId(0),
+                kind,
+                app_window(1),
+                Point::default(),
+                (),
+            );
+        } else {
+            app.begin_drag_with_kind(PointerId(0), kind, app_window(1), Point::default(), ());
+        }
+        app.drag_mut(PointerId(0)).unwrap().dragging = dragging;
+        app
+    }
+
+    #[test]
+    fn no_frame_pointer_move_can_drive_active_cross_window_dock_drag() {
+        let active = active_pointer_move_script();
+        let panel_drag = app_with_drag(fret_runtime::DRAG_KIND_DOCK_PANEL, true, true);
+        let tabs_drag = app_with_drag(fret_runtime::DRAG_KIND_DOCK_TABS, true, true);
+
+        assert!(no_frame_pointer_move_can_drive(&panel_drag, &active));
+        assert!(no_frame_pointer_move_can_drive(&tabs_drag, &active));
+    }
+
+    #[test]
+    fn no_frame_pointer_move_rejects_non_dock_or_inactive_drag_state() {
+        let active = active_pointer_move_script();
+        let non_dock_drag = app_with_drag(fret_runtime::DragKindId(99), true, true);
+        let not_dragging = app_with_drag(fret_runtime::DRAG_KIND_DOCK_PANEL, true, false);
+        let local_drag = app_with_drag(fret_runtime::DRAG_KIND_DOCK_PANEL, false, true);
+        let no_drag = App::new();
+        let mut no_pointer_session = active.clone();
+        no_pointer_session.pointer_session = None;
+
+        assert!(!no_frame_pointer_move_can_drive(&non_dock_drag, &active));
+        assert!(!no_frame_pointer_move_can_drive(&not_dragging, &active));
+        assert!(!no_frame_pointer_move_can_drive(&local_drag, &active));
+        assert!(!no_frame_pointer_move_can_drive(&no_drag, &active));
+        assert!(!no_frame_pointer_move_can_drive(
+            &local_drag,
+            &no_pointer_session
+        ));
     }
 
     #[test]

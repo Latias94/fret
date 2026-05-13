@@ -13,7 +13,7 @@
       "gate"
     ],
     "target_hints": [
-      "Activates doc-a-1 (pane A) so MRU is deterministic.",
+      "Activates doc-a-1 (pane A) via the tab overflow menu so the hidden tab is revealed before closing.",
       "Closes doc-a-1 via the close button.",
       "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
     ]
@@ -47,7 +47,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
           "kind": "test_id"
         }
       },
@@ -56,35 +56,36 @@
     },
     {
       "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
         "kind": "test_id"
       },
-      "type": "move_pointer"
+      "type": "click"
     },
     {
-      "n": 1,
+      "n": 6,
       "type": "wait_frames"
     },
     {
-      "button": "left",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-1",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
       "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-1",
         "kind": "test_id"
       },
-      "type": "pointer_down",
-      "window": {
-        "kind": "current"
-      }
+      "type": "click"
     },
     {
-      "n": 1,
+      "n": 10,
       "type": "wait_frames"
-    },
-    {
-      "type": "pointer_up",
-      "window": {
-        "kind": "current"
-      }
     },
     {
       "predicate": {
@@ -94,6 +95,15 @@
           "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
           "kind": "test_id"
         }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_visible_is",
+        "pane_id": "pane-a",
+        "visible": true
       },
       "timeout_frames": 240,
       "type": "wait_until"

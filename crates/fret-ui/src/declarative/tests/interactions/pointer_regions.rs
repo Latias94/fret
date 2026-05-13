@@ -1080,6 +1080,49 @@ fn declarative_internal_drag_region_can_handle_internal_drag_events() {
 }
 
 #[test]
+fn declarative_internal_drag_region_can_install_route_anchor() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let drag_kind = fret_runtime::DragKindId(0x465245545F524F55); // "FRET_ROU"
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "internal-drag-region-route-anchor",
+        |cx| {
+            let mut props = crate::element::InternalDragRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.route_kind = Some(drag_kind);
+            vec![cx.internal_drag_region(props, |_cx| Vec::new())]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let route = crate::internal_drag::route(&app, window, drag_kind);
+    assert_eq!(
+        route,
+        ui.children(root).first().copied(),
+        "expected the internal-drag region to refresh its route anchor during prepaint"
+    );
+}
+
+#[test]
 fn internal_drag_after_raw_rebuild_does_not_route_to_detached_stale_frame_region() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

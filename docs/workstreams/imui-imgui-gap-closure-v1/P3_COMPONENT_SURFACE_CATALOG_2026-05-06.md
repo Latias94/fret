@@ -1,7 +1,7 @@
 # P3 Component Surface Catalog - 2026-05-06
 
 Status: component surface audit; no implementation lane opened yet
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## Decision
 
@@ -73,9 +73,10 @@ public helper widening:
 - `ecosystem/fret-ui-kit/src/imui.rs` owns the large policy-heavy re-export surface: options,
   response types, debug draw, floating/window helpers, virtual-list types, tables, tabs, and
   multi-select state.
-- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` contains the public immediate authoring methods
-  for controls, containers, menus, popups, tables, tabs, drag/drop, text, child regions, and debug
-  draw.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` remains the public immediate authoring hub for
+  the trait, text, popups, drag/drop, windows, and debug draw; the inherent `ImUiFacade` wrappers
+  for button/actions, menu items, selection/combo, disclosure, text/value/boolean models, and
+  structural containers now live in `ecosystem/fret-ui-kit/src/imui/facade_writer/`.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,
@@ -109,7 +110,7 @@ Suggested audit/gate commands:
 ```powershell
 rg --files ecosystem/fret-ui-kit/src/imui ecosystem/fret-ui-kit/tests
 rg -n "pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls" ecosystem/fret-ui-kit/src/imui.rs
-rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs
+rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer
 rg -n "pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)" ecosystem/fret-ui-editor/src/imui.rs
 rg -n "Widgets: Text|Widgets: Main|Widgets: Combo Box|Widgets: Trees|Widgets: Selectables|Widgets: List Boxes|Widgets: Data Plotting|Widgets: Menus|Tooltips|Popups, Modals|Tables|Tab Bars|Drag and Drop|Debug Utilities" repo-ref/imgui/imgui.h
 cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast
@@ -124,8 +125,8 @@ cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --
   current IMUI source/test module set.
 - `rg -n "pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls" ecosystem/fret-ui-kit/src/imui.rs`
   passed and found the kit-level re-export anchors.
-- `rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
-  passed and found the current facade method anchors.
+- `rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer`
+  passed and found the current facade method anchors across the root file and split owner modules.
 - `rg -n "pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)" ecosystem/fret-ui-editor/src/imui.rs`
   passed and found the editor adapter anchors.
 - `rg -n "Widgets: Text|Widgets: Main|Widgets: Combo Box|Widgets: Trees|Widgets: Selectables|Widgets: List Boxes|Widgets: Data Plotting|Widgets: Menus|Tooltips|Popups, Modals|Tables|Tab Bars|Drag and Drop|Debug Utilities" repo-ref/imgui/imgui.h`

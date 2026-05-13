@@ -12,7 +12,7 @@
     ],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Activates a different tab so the drag source tab is inactive.",
+      "Activates doc-a-1 through the overflow menu so the drag source tab is inactive and visible.",
       "Drags the inactive tab toward pane B's right edge until the split preview appears.",
       "Drops to split and asserts the tab moved into the new pane."
     ]
@@ -46,7 +46,25 @@
       "timeout_frames": 240
     },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-1" } },
     { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
@@ -55,6 +73,11 @@
         "selected": true,
         "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
       },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "workspace_tab_strip_active_visible_is", "pane_id": "pane-a", "visible": true },
       "timeout_frames": 240
     },
     {
@@ -68,23 +91,20 @@
     },
 
     {
-      "type": "pointer_down",
+      "type": "drag_pointer_until",
       "window": { "kind": "current" },
       "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
-      "button": "left"
-    },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 420.0, "delta_y": 0.0, "steps": 42 },
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 1278.0, "y_px": 160.0 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": -1.0, "delta_y": 0.0, "steps": 1 },
-    {
-      "type": "wait_until",
+      "button": "left",
+      "release_on_success": true,
+      "delta_x": 1200.0,
+      "delta_y": 140.0,
+      "steps": 160,
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
       },
       "timeout_frames": 480
     },
-    { "type": "pointer_up", "window": { "kind": "current" } },
 
     { "type": "wait_frames", "n": 10 },
     {

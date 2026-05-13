@@ -429,6 +429,7 @@ where
         let value_width = self.options.value_width;
         let allow_typing = self.options.allow_typing;
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let active_typing_test_id = if typing { typing_test_id.clone() } else { None };
         let value_display_test_id = derived_test_id(self.options.test_id.as_ref(), "value_display");
 
         let interactive_enabled = enabled && !typing;
@@ -886,7 +887,7 @@ where
                 prefix: prefix.clone(),
                 suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
-                test_id: typing_test_id,
+                test_id: active_typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.
                 error_display: NumericInputErrorDisplay::TrailingIcon,

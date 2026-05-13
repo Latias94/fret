@@ -107,8 +107,8 @@ use interaction_runtime::{
     mark_active_item_on_left_pointer_down, mark_lifecycle_activated_on_left_pointer_down,
     mark_lifecycle_deactivated_on_left_pointer_up, mark_lifecycle_edit,
     mark_lifecycle_instant_if_inactive, pointer_click_modifiers_model_for,
-    populate_pressable_drag_response, populate_response_lifecycle_from_active_state,
-    populate_response_lifecycle_transients, prepare_pointer_region_drag_on_left_down,
+    populate_pressable_drag_response, populate_pressable_response,
+    populate_response_lifecycle_from_active_state, prepare_pointer_region_drag_on_left_down,
     prepare_pressable_drag_on_pointer_down, sanitize_response_for_enabled,
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};

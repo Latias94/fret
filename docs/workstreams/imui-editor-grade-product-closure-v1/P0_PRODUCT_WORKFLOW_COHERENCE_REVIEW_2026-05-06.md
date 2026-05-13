@@ -1,7 +1,7 @@
 # P0 Product Workflow Coherence Review - 2026-05-06
 
 Status: maintenance review; no new implementation-heavy lane opened from this note
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## Decision
 
@@ -40,7 +40,7 @@ This review does not justify broad IMUI API widening. The current product chain 
 | Product editor proof | `imui_editor_proof_demo` carries stable identity, app-owned collection depth, commands, editor controls, menus/popups, and `test_id` anchors | Keep as product proof |
 | Workbench shell proof | `workspace_shell_demo` and `editor_notes_demo` own shell-mounted workflow proof | Keep out of generic IMUI backlog |
 | Diagnostics loop | CLI-first diagnostics path and DevTools/MCP owner split are documented; DevTools discoverability remains a productization priority | Continue in diagnostics lanes |
-| Multi-window hand-feel | Active execution lives in `docking-multiwindow-imgui-parity`; local Linux coverage is still bounded by available hosts | Continue in docking lane |
+| Multi-window hand-feel | Active execution lives in `docking-multiwindow-imgui-parity`; `M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md` is the latest local non-interactive refresh, and `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records a green launched bounded P3 campaign while leaving platform-specific real-host acceptance open | Continue in docking lane |
 | First-open command clarity | Public `fretboard --bin imui_hello_demo` is ambiguous without `--package fret-demo` | Fix docs now; consider CLI guidance only if this repeats |
 
 ## Follow-On Routing
@@ -61,5 +61,14 @@ python tools/gate_imui_workstream_source.py
 python tools/gate_imui_facade_teaching_source.py
 python tools/check_workstream_catalog.py
 python -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json
+git diff --check
+```
+
+2026-05-13 local status-chain refresh:
+
+```powershell
+python -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
 git diff --check
 ```

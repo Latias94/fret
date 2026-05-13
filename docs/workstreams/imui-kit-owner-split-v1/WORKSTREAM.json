@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "slug": "imui-kit-owner-split-v1",
+  "title": "ImUi Kit Owner Split v1",
+  "status": "closed",
+  "updated": "2026-05-13",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-imgui-gap-closure-v1",
+  "problem": "Reduce the structural risk in `fret-ui-kit::imui` by splitting large policy owners and deleting local duplication while keeping `fret-imui` thin, preserving the current app-facing `fret::imui` surface, and avoiding runtime contract widening.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/M1_BUTTON_ACTIONS_SLICE_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/M2_PRESSABLE_RESPONSE_ASSEMBLY_SLICE_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/M3_MENU_ITEMS_FACADE_OWNER_SPLIT_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/M4_SELECTION_COMBO_FACADE_OWNER_SPLIT_2026-05-13.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use the current `fret-ui-kit::imui` smoke and focused source gates to prove owner motion did not widen public APIs or change the app-facing IMUI story.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast",
+      "python tools/gate_imui_facade_teaching_source.py",
+      "python tools/gate_imui_workstream_source.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "imui-facade-teaching-source",
+      "command": "python tools/gate_imui_facade_teaching_source.py"
+    },
+    {
+      "name": "imui-workstream-source",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "fret-ui-kit-imui-smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "format-fret-ui-kit",
+      "command": "cargo fmt --package fret-ui-kit -- --check"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-kit-owner-split-v1/DESIGN.md",
+    "docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md",
+    "docs/workstreams/imui-kit-owner-split-v1/M1_BUTTON_ACTIONS_SLICE_2026-05-13.md",
+    "docs/workstreams/imui-kit-owner-split-v1/M2_PRESSABLE_RESPONSE_ASSEMBLY_SLICE_2026-05-13.md",
+    "docs/workstreams/imui-kit-owner-split-v1/M3_MENU_ITEMS_FACADE_OWNER_SPLIT_2026-05-13.md",
+    "docs/workstreams/imui-kit-owner-split-v1/M4_SELECTION_COMBO_FACADE_OWNER_SPLIT_2026-05-13.md",
+    "docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md",
+    "docs/workstreams/imui-kit-owner-split-v1/TODO.md",
+    "docs/workstreams/imui-kit-owner-split-v1/MILESTONES.md",
+    "docs/workstreams/imui-kit-owner-split-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_support.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime/pressable_response.rs",
+    "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/item_behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/hover.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "Treat this lane as closed history for the private `fret-ui-kit::imui` owner splits landed in M1-M4. Start `imui-facade-disclosure-owner-split-v1` for disclosure wrappers, and separate follow-ons for additive widgets, debug draw feature growth, docking/multi-window behavior, or runtime public API changes."
+  }
+}

@@ -32,12 +32,23 @@ fn dispatch_list(args: ListCommandArgs) -> Result<(), String> {
         ListTargetContract::CookbookExamples(args) => {
             crate::demos::list_cookbook_examples(list_all_args(args.all))
         }
+        ListTargetContract::ToolApps(args) => {
+            crate::demos::list_tool_apps(list_tool_app_args(args.json))
+        }
     }
 }
 
 fn list_all_args(all: bool) -> Vec<String> {
     if all {
         vec!["--all".to_string()]
+    } else {
+        Vec::new()
+    }
+}
+
+fn list_tool_app_args(json: bool) -> Vec<String> {
+    if json {
+        vec!["--json".to_string()]
     } else {
         Vec::new()
     }

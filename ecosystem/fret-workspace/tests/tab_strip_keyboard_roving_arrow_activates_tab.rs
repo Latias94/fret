@@ -1,8 +1,8 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
-    PathService, PathStyle, Point, Px, Rect, Size as CoreSize, SvgId, SvgService, TextBlobId,
-    TextConstraints, TextMetrics, TextService,
+    AppWindowId, Event, FrameId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+    PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType, Px, Rect,
+    Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
 };
 use fret_runtime::{CommandId, Effect};
 use fret_ui::tree::UiTree;
@@ -110,6 +110,50 @@ fn find_node_by_test_id(ui: &UiTree<App>, test_id: &str) -> fret_core::NodeId {
         .unwrap_or_else(|| panic!("expected semantics node with test_id={test_id}"))
 }
 
+fn find_bounds_by_test_id(ui: &UiTree<App>, test_id: &str) -> Rect {
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    snap.nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(test_id))
+        .map(|n| n.bounds)
+        .unwrap_or_else(|| panic!("expected semantics node with test_id={test_id}"))
+}
+
+fn center(bounds: Rect) -> Point {
+    Point::new(
+        Px(bounds.origin.x.0 + bounds.size.width.0 / 2.0),
+        Px(bounds.origin.y.0 + bounds.size.height.0 / 2.0),
+    )
+}
+
+fn click(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices, p: Point) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: p,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position: p,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+}
+
 fn take_dispatched_commands(app: &mut App) -> Vec<CommandId> {
     app.flush_effects()
         .into_iter()
@@ -121,6 +165,38 @@ fn take_dispatched_commands(app: &mut App) -> Vec<CommandId> {
             _ => None,
         })
         .collect()
+}
+
+#[test]
+fn pointer_click_on_inactive_tab_dispatches_activate() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(360.0), Px(120.0)),
+    );
+
+    let mut tabs = WorkspaceTabs::new();
+    tabs.open_and_activate(Arc::from("a"));
+    tabs.open_and_activate(Arc::from("b"));
+    tabs.open_and_activate(Arc::from("c"));
+    assert!(tabs.activate(Arc::from("c")));
+
+    render_frame(&mut ui, &mut app, &mut services, window, bounds, &tabs);
+
+    let a_bounds = find_bounds_by_test_id(&ui, "tabstrip-tab-a");
+    click(&mut ui, &mut app, &mut services, center(a_bounds));
+
+    let cmds = take_dispatched_commands(&mut app);
+    assert!(
+        cmds.iter()
+            .any(|c| c.as_str() == tab_activate_command("a").unwrap().as_str()),
+        "expected tab body click to dispatch workspace.tab.activate.a"
+    );
 }
 
 #[test]

@@ -141,6 +141,7 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
     `fret::imui::kit`
 - Product proof:
   - `cargo run -p fret-demo --bin imui_editor_proof_demo`
+  - discover product proofs with `cargo run -p fretboard-dev -- list native-demos --all`
   - `imui_editor_proof_demo` is the heavier proof where explicit stable identity is already visible
   - use it when you need the intended generic/editor owner split plus state, command/action
     dispatch, editor controls, menu/popup behavior, and diagnostic `test_id` anchors

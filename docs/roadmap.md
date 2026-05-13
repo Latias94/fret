@@ -32,6 +32,59 @@ Tracker highlights:
   `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`,
   `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`, and
   `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`.
+- ImUi kit owner-split follow-on (closed narrow structural lane for private `fret-ui-kit::imui`
+  owner splits and proven duplication deletion while keeping `fret-imui` thin and avoiding public
+  API/runtime widening; next disclosure-wrapper work belongs in `imui-facade-disclosure-owner-split-v1`):
+  `docs/workstreams/imui-kit-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/M1_BUTTON_ACTIONS_SLICE_2026-05-13.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/M2_PRESSABLE_RESPONSE_ASSEMBLY_SLICE_2026-05-13.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/M3_MENU_ITEMS_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/M4_SELECTION_COMBO_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-kit-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-kit-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade disclosure owner-split follow-on (closed narrow structural lane for moving
+  `collapsing_header` / `tree_node` facade wrappers without public API/runtime widening):
+  `docs/workstreams/imui-facade-disclosure-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-disclosure-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-disclosure-owner-split-v1/M1_DISCLOSURE_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-disclosure-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-disclosure-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-facade-disclosure-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade text model owner-split follow-on (closed narrow structural lane for moving text and
+  textarea model facade wrappers without public API/runtime widening):
+  `docs/workstreams/imui-facade-text-model-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-text-model-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-text-model-owner-split-v1/M1_TEXT_MODEL_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-text-model-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-text-model-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-facade-text-model-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade boolean wrapper owner-split follow-on (closed narrow structural lane for moving
+  checkbox/radio/switch facade wrappers without public API/runtime widening):
+  `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/M1_BOOLEAN_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade value model owner-split follow-on (closed narrow structural lane for moving
+  slider/combo model facade wrappers without public API/runtime widening):
+  `docs/workstreams/imui-facade-value-model-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-value-model-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-value-model-owner-split-v1/M1_VALUE_MODEL_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-value-model-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-value-model-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-facade-value-model-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade container wrapper owner-split follow-on (closed narrow structural lane for moving
+  container/table/tab/virtual-list/child-region facade wrappers without public API/runtime
+  widening):
+  `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/M1_CONTAINER_FACADE_OWNER_SPLIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`,
+  `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/TODO.md`, and
+  `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`.
 - ImUi debug draw owner-split follow-on (closed narrow structural lane for splitting
   `debug_draw_controls.rs` private command/paint/path owners without public API widening; see the
   closeout audit for the private test-owner verdict):
@@ -905,7 +958,7 @@ next default non-multi-window priority to broader app-owned command-package dept
 - Iconify presentation-defaults report closeout record (closed narrow follow-on for optional versioned review-report output from `icons suggest presentation-defaults`, keeping derivation evidence committed without changing import defaults): `docs/workstreams/iconify-presentation-defaults-report-v1/DESIGN.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/TODO.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/MILESTONES.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/EVIDENCE_AND_GATES.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/M2_PROOF_SURFACE_2026-04-09.md`, and `docs/workstreams/iconify-presentation-defaults-report-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 - SVG presentation analysis scaffolding closeout record (closed narrow follow-on for local SVG-directory analysis that scaffolds conservative per-icon `original-colors` overrides and an optional review report without inferring pack-level defaults or changing import behavior): `docs/workstreams/svg-presentation-analysis-scaffolding-v1/DESIGN.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/TODO.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/MILESTONES.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/EVIDENCE_AND_GATES.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/M1_CONTRACT_FREEZE_2026-04-09.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/M2_PROOF_SURFACE_2026-04-09.md`, and `docs/workstreams/svg-presentation-analysis-scaffolding-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 - Icon system closeout + follow-on map: `docs/workstreams/standalone/icon-system-status.md`.
-- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` (overview: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`; mixed-DPI acceptance: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`; local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`; current TODOs: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`).
+- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` (overview: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`; mixed-DPI acceptance: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`; latest local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`; launched bounded-campaign repair: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`; current TODOs: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`).
 - Diagnostics monitor-topology environment closeout record (closed narrow follow-on that turns the
   docking mixed-DPI automation gap into a runner-owned host monitor-topology fingerprint without
   pretending that `scale_factors_seen` or drag evidence are host-environment predicates):

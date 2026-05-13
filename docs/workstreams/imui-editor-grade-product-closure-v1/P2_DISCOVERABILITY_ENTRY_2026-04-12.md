@@ -63,7 +63,10 @@ That page must do one job well:
 2. name the default CLI-first loop:
    inspect -> selector -> script -> launched run -> bounded evidence -> compare/summarize/dashboard,
 3. keep GUI and MCP as branches after the shared artifacts root exists,
-4. tell the reader exactly which deeper note to open next for each branch.
+4. expose the repo-maintainer DevTools entrypoints through
+   `cargo run -p fretboard-dev -- list tool-apps`,
+   with `cargo run -p fretboard-dev -- list tool-apps --json` for tools that need the same map,
+5. tell the reader exactly which deeper note to open next for each branch.
 
 ## Frozen branch map
 
@@ -143,5 +146,9 @@ For this lane:
 
 - route first-open diagnostics readers through `docs/diagnostics-first-open.md`,
 - keep `docs/README.md` and the branch docs aligned with that entry,
+- keep `cargo run -p fretboard-dev -- list tool-apps` as the discoverable tool-app index for the
+  DevTools GUI and MCP entrypoints,
+- keep `cargo run -p fretboard-dev -- list tool-apps --json` as the machine-readable form for the
+  same `fretboard_tool_apps` schema,
 - and treat future discoverability edits as branch clarity work rather than as permission to
   recreate another competing "start here" page.
