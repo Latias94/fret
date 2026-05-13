@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::spec::{
     BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO, PageContentCachePolicy,
-    page_content_cache_policy,
+    page_content_cache_contained_layout, page_content_cache_policy,
 };
 use crate::ui;
 
@@ -162,6 +162,7 @@ pub(super) fn content_view(
                 layout.flex.grow = 1.0;
                 ViewCacheProps {
                     layout,
+                    contained_layout: page_content_cache_contained_layout(selected.as_ref()),
                     ..Default::default()
                 }
             },

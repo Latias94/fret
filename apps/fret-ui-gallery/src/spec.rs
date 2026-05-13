@@ -230,6 +230,16 @@ mod tests {
             page_content_cache_policy(PAGE_MATERIAL3_TABS),
             PageContentCachePolicy::Uncached
         );
+        assert!(!page_content_cache_contained_layout(PAGE_MATERIAL3_TABS));
+    }
+
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn code_editor_pages_use_contained_layout_content_cache() {
+        assert!(page_content_cache_contained_layout(PAGE_CODE_EDITOR_MVP));
+        assert!(page_content_cache_contained_layout(
+            PAGE_CODE_EDITOR_TORTURE
+        ));
     }
 }
 
@@ -851,6 +861,14 @@ pub(crate) fn page_content_cache_policy(id: &str) -> PageContentCachePolicy {
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_TABS => PageContentCachePolicy::Uncached,
         _ => PageContentCachePolicy::Cacheable,
+    }
+}
+
+pub(crate) fn page_content_cache_contained_layout(id: &str) -> bool {
+    match id {
+        #[cfg(feature = "gallery-dev")]
+        PAGE_CODE_EDITOR_MVP | PAGE_CODE_EDITOR_TORTURE => true,
+        _ => false,
     }
 }
 

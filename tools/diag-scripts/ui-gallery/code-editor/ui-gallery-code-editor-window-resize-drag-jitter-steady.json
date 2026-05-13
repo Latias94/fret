@@ -31,7 +31,7 @@
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
     },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_shortcut", "shortcut": "primary+a" },
     { "type": "press_key", "key": "backspace" },
     { "type": "type_text", "text": "code_editor_torture" },
     { "type": "wait_frames", "n": 2 },

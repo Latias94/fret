@@ -47,6 +47,7 @@ fn paint_publishes_window_text_input_snapshot_for_focused_text_widget() {
                 selection_utf16: Some((1, 3)),
                 marked_utf16: Some((3, 5)),
                 ime_cursor_area: self.ime_cursor_area,
+                visual: None,
                 surrounding_text: None,
             })
         }
@@ -145,6 +146,7 @@ fn snapshot_resets_when_focus_is_not_text_input() {
                 selection_utf16: Some((0, 1)),
                 marked_utf16: None,
                 ime_cursor_area: None,
+                visual: None,
                 surrounding_text: None,
             })
         }

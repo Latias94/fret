@@ -227,6 +227,13 @@ def main() -> int:
             "FRET_DIAG_SCRIPT_AUTO_DUMP=0",
             "--env",
             "FRET_DIAG_SEMANTICS=0",
+        ]
+        if suite == "ui-code-editor-resize-probes":
+            cmd += [
+                "--env",
+                "FRET_CODE_EDITOR_DIAG_PAINT_PERF=1",
+            ]
+        cmd += [
             "--launch",
             "--",
             str(launch_bin_path),
