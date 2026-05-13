@@ -27,7 +27,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Full formal gates are green after the helper changes. | `target/fret-diag/codex-resize-flex-patch-gate-r7-v2-headroom30/summary.json`: Windows `ui-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=3`. `target/fret-diag-code-editor-resize-probes-windows-rtx4090-v2-gate-r7/summary.json`: `ui-code-editor-resize-probes` v2 passed attempts=3 repeat=7 with `pass_attempts=2`. | Covered for both resize gates. |
 | Zed/GPUI and egui comparison remains explicit. | `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md` plus the contract matrix reference pressure column. | Covered as a design map; still needs updates when new gaps close. |
 | Churn reduction is evidence-led. | Perf log entries show measured view-cache harness virtualization, code editor resize attribution, and decisions not to start broad root-solve quantization or `WindowedRowsSurface` rewrites without evidence. | Covered for recent work. |
-| Pointer-move hit-test torture remains runnable as a contract surface. | `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` restores the `ui-gallery-hit-test-torture-root` surface; `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` promotes the via-nav script; `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json` passed `--max-pointer-move-hit-test-us 100` and `--max-pointer-move-global-changes 0`; follow-up attribution in `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json` identifies `dispatch_context_build_time_us` as the pointer dispatch tail. | Covered as a hit-test gate smoke; dispatch context/snapshot reuse remains the next optimization gap. |
+| Pointer-move hit-test torture remains runnable as a contract surface. | `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs` restores the `ui-gallery-hit-test-torture-root` surface; `tools/diag-scripts/suites/perf-ui-gallery-hit-test-torture-steady/suite.json` promotes the via-nav script; `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-smoke-r7/1778623477502/bundle.schema2.json` passed `--max-pointer-move-hit-test-us 100` and `--max-pointer-move-global-changes 0`; follow-up attribution in `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-attrib-r6/1778634174688/bundle.schema2.json` identified `dispatch_context_build_time_us` as the pointer dispatch tail; repeat=7 dispatch gate `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json` passed dispatch/hit-test/global-change thresholds `250us/100us/0`. | Covered as a formal pointer-move dispatch + hit-test gate for the optimized snapshot-cache path. |
 | Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, no-silent-threshold-loosening guard, and review checklist. | Covered. |
 | Completion criteria are unambiguous. | This audit maps requirements to evidence and gaps. | Covered, with open gaps below. |
 
@@ -301,8 +301,22 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `pointer_move_max_dispatch_time_us` min/p50/p95/max=`82/89/91/91`,
     `pointer_move_max_hit_test_time_us` min/p50/p95/max=`14/16/17/17`, and
     `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
-  - Conclusion: the prior `~1ms` pointer dispatch tail is fixed for the torture surface; promote a formal repeat=7
-    dispatch-tail threshold or baseline as a separate gate slice rather than mixing it into the mechanism fix.
+  - Repeat=7 formal gate:
+    `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7 --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-dispatch-us 250 --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+  - Repeat=7 threshold report:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json`
+    has `failures=[]` with thresholds dispatch/hit-test/global-change=`250us/100us/0`.
+  - Worst repeat=7 bundle:
+    `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/1778636886432/bundle.schema2.json`.
+  - Repeat=7 evidence:
+    `pointer_move_max_dispatch_time_us` min/p50/p95/max=`79/87/112/112`,
+    `pointer_move_max_hit_test_time_us` min/p50/p95/max=`13/16/20/20`, and
+    `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
+  - Worst-bundle `diag stats --sort dispatch --top 5` reports dispatch/hit-test p50/p95=`86/112us` and
+    `16/17us`, derived pointer max dispatch/hit-test=`112/17us`, dispatch attribution
+    `accounted=79/105/105us`, `unattributed=4/7/7us`, and top-frame `context_build=3us`.
+  - Conclusion: the prior `~1ms` pointer dispatch tail is fixed and now protected by a formal repeat=7
+    dispatch-tail threshold gate.
 - Complex editor wheel frame-overlay cache:
   - Before bundle:
     `target/fret-diag/perf-complex-editor-wheel-paint-detail-v1/1778490773008/bundle.schema2.json`.
@@ -339,10 +353,6 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.
-5. The hit-test torture pointer dispatch tail has repeat=3 evidence via dispatch snapshot reuse. The remaining gap is
-   contract promotion: add a formal repeat=7 dispatch-tail threshold or baseline for the optimized path in a dedicated
-   gate slice.
-
 ## Audit Conclusion
 
 The goal is not complete. The Windows `ui-resize-probes` and `ui-code-editor-resize-probes` contracts now have
@@ -350,6 +360,7 @@ checked-in `measured_p50` evidence and green formal repeat=7 gates, the code-edi
 typical, and complex wheel contracts now have payload-aware baselines with explicit UI threshold modes, and
 `ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
-v1 contracts. The next work should only start a `WindowedRowsSurface` display-list rewrite from a near-threshold or
-failing editor paint stressor, and keep non-Windows machine profiles explicit rather than inferring them from the
-Windows RTX 4090 contract set.
+v1 contracts. The hit-test torture pointer-move path now also has a formal repeat=7 dispatch/hit-test threshold gate
+for the optimized dispatch snapshot cache path. The next work should only start a `WindowedRowsSurface` display-list
+rewrite from a near-threshold or failing editor paint stressor, and keep non-Windows machine profiles explicit rather
+than inferring them from the Windows RTX 4090 contract set.

@@ -13286,3 +13286,39 @@ Decision:
 - The cache improvement is stable enough to keep as the architectural fix.
 - A formal repeat=7 contract or stricter dispatch-tail threshold should be promoted as a separate
   baseline/gate slice, so this optimization commit remains focused on mechanism and evidence.
+
+## 2026-05-13 09:56:27 +08:00 (dispatch snapshot cache repeat=7 gate)
+
+Question:
+- Can the optimized hit-test torture path pass a formal repeat=7 dispatch-tail gate, so the
+  snapshot-cache fix is protected by a durable pointer-move contract instead of only repeat=1/3
+  evidence?
+
+Validation:
+- `target/release/fretboard-dev.exe diag perf perf-ui-gallery-hit-test-torture-steady --dir target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7 --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort dispatch --top 5 --json --reuse-launch --max-pointer-move-dispatch-us 250 --max-pointer-move-hit-test-us 100 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard-dev.exe diag stats target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/1778636886432/bundle.schema2.json --sort dispatch --top 5`
+
+Evidence:
+- Threshold report:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/check.perf_thresholds.json`
+  has `failures=[]` with thresholds dispatch/hit-test/global-change=`250us/100us/0`.
+- Worst bundle:
+  `target/fret-diag/perf-ui-gallery-hit-test-torture-steady-dispatch-gate-r9-repeat7/1778636886432/bundle.schema2.json`.
+- Repeat=7 pointer stats:
+  `pointer_move_max_dispatch_time_us` min/p50/p95/max=`79/87/112/112`,
+  `pointer_move_max_hit_test_time_us` min/p50/p95/max=`13/16/20/20`, and
+  `pointer_move_snapshots_with_global_changes` min/p50/p95/max=`0/0/0/0`.
+- Worst-bundle stats report dispatch/hit-test p50/p95=`86/112us` and `16/17us`.
+  The derived pointer max is dispatch/hit-test=`112/17us`, and dispatch attribution remains small:
+  `accounted=79/105/105us`, `unattributed=4/7/7us`, `body_unattributed=4/6/6us`,
+  `runtime_wrapper=0/1/1us`.
+- The top dispatch frame reports `context_build=3us` and `hit_test=17us`, confirming the prior
+  `~1ms` context-build tail remains removed under repeat=7 validation.
+
+Decision:
+- Promote the hit-test torture path to a formal pointer-move dispatch contract: dispatch <= `250us`,
+  hit-test <= `100us`, and global-change snapshots == `0` for the current Windows RTX 4090
+  gate surface.
+- Keep this direct threshold gate instead of a checked-in baseline for now, because the purpose is
+  protecting the architectural invariant that stable topology must not rebuild 20k-node dispatch
+  snapshot forests on every pointer move.
