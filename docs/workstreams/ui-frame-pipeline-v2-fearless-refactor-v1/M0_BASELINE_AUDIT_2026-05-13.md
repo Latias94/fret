@@ -2,6 +2,10 @@
 
 Status: baseline recorded; first code slice is boundary diagnostics for the code-editor content root.
 
+Status note (2026-05-14): the source inventory remains valid historical baseline evidence. The ADR
+review gap mentioned below is now closed by `M0_CONTRACT_FREEZE_2026-05-14.md`, which accepts ADR
+0327 as the target contract while keeping global implementation work active.
+
 Related:
 
 - `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md`
@@ -393,5 +397,5 @@ one phase at a time:
 4. layout containment dependency metadata,
 5. deletion audit and removal of replaced private paths.
 
-M0 is not complete until ADR 0327 is accepted or superseded, but the source inventory and first
-slice direction are now recorded.
+M0 source inventory is complete here. The later contract-freeze note
+`M0_CONTRACT_FREEZE_2026-05-14.md` closes the ADR acceptance gap.

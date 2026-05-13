@@ -3,6 +3,12 @@
 Status: Code-editor vertical slice complete; broader ADR 0327 lane active
 Last updated: 2026-05-14
 
+First-open progress ledger:
+
+- `PROGRESS.md` summarizes the global refactor state. It is the quickest way to distinguish the
+  closed code-editor vertical slice from the still-active ADR 0327 follow-on work.
+- `PROGRESS.md#completion-contract` is the final acceptance contract for this global refactor.
+
 ## M0: Contract Lock
 
 Exit criteria:
@@ -10,13 +16,26 @@ Exit criteria:
 - ADR 0327 is reviewed and accepted, or replaced by a better accepted ADR.
 - Target interface state is updated to match the accepted ADR.
 - The old-path inventory exists.
+- The progress ledger explains the current global state and next follow-on without reopening the
+  closed vertical slice.
 - The first code-editor repro and gate commands are current.
 
 Status on 2026-05-13:
 
 - Baseline/source inventory exists in `M0_BASELINE_AUDIT_2026-05-13.md`.
 - First repro and gate commands are current in `EVIDENCE_AND_GATES.md`.
-- ADR 0327 still needs review/acceptance or a superseding accepted ADR before broad migration.
+- Historical state at the time: ADR 0327 still needed review/acceptance or a superseding accepted
+  ADR before broad migration. This is now closed by `M0_CONTRACT_FREEZE_2026-05-14.md`.
+
+Status on 2026-05-14:
+
+- `PROGRESS.md` now acts as the compact progress ledger for the global refactor. It records that
+  the code-editor vertical slice is complete while global ADR 0327 implementation remains active
+  follow-on work.
+- `M0_CONTRACT_FREEZE_2026-05-14.md` accepts ADR 0327 as the target contract while keeping
+  implementation status partial globally.
+- M0 is complete as a contract lock. The workstream remains active for the M6 global completion
+  contract.
 
 ## M1: Code Editor Boundary Pilot
 
@@ -162,4 +181,27 @@ Status on 2026-05-14:
 - Deletion audit is complete for paths replaced by this vertical slice.
 - Perf/correctness/layering/check evidence is documented in `EVIDENCE_AND_GATES.md` and the
   closeout audit.
-- The broader ADR 0327 lane remains active for architecture follow-ons and ADR acceptance/review.
+- The broader ADR 0327 lane remains active for architecture follow-ons. ADR acceptance/review is
+  closed by `M0_CONTRACT_FREEZE_2026-05-14.md`.
+
+## M6: Global Frame Pipeline v2 Completion
+
+Exit criteria:
+
+- The completion contract in `PROGRESS.md` is satisfied.
+- ADR 0327 is no longer proposed-only; it is accepted, revised into an accepted ADR, or superseded by
+  an accepted equivalent.
+- The final boundary model owns the runtime state needed for build/layout/prepaint/paint reuse and
+  diagnostics across the selected proof surfaces.
+- At least two proof surfaces pass: code-editor resize/paint and one broader non-code-editor
+  view-cache or paint-cache surface.
+- Replaced old private paths are deleted, and retained paths are justified by an accepted
+  ADR/workstream decision.
+- A final closeout audit names the final runtime path, retained exceptions, deleted paths, gates,
+  perf evidence, and remaining work that is outside Frame Pipeline v2.
+
+Status on 2026-05-14:
+
+- Open. The code-editor vertical slice is complete, but the global contract is not complete while
+  broader view-cache/paint-cache consolidation, the final boundary-hint decision, old env-knob
+  ownership, and the second non-code-editor proof surface remain open.

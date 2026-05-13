@@ -2,14 +2,18 @@
 
 Status: code-editor vertical slice complete; broader ADR 0327 lane remains active.
 
+Status note (2026-05-14): this audit closed the code-editor vertical slice before the ADR contract
+freeze. ADR 0327 is now accepted as the target contract in
+`M0_CONTRACT_FREEZE_2026-05-14.md`; the broader implementation follow-ons below still remain open.
+
 ## Scope
 
 This audit closes the current goal's code-editor vertical slice, not the full ADR 0327 program.
 
-ADR 0327 remains `Proposed` and still describes a broader architecture direction: future
-build-boundary consolidation, public naming review, wider paint-cache/view-cache unification, and
-eventual ADR acceptance or supersession. Those broader items stay in this workstream as follow-on
-work and must not be mistaken for missing evidence in this vertical slice.
+ADR 0327 now describes the accepted broader architecture direction: future build-boundary
+consolidation, public naming review, wider paint-cache/view-cache unification, and final global
+closeout. Those broader items stay in this workstream as follow-on work and must not be mistaken for
+missing evidence in this vertical slice.
 
 ## Prompt-to-Artifact Checklist
 
@@ -163,7 +167,7 @@ Retained intentionally:
 
 These are real architecture follow-ons, but they are outside the current code-editor closeout goal:
 
-- accept or supersede ADR 0327 after review,
+- continue implementation against accepted ADR 0327,
 - design a public/non-page-specific boundary hint API that can eventually replace direct
   `contained_layout` authoring hints,
 - consolidate broader view-cache rendered/next maps and paint-cache previous-op-range replay into

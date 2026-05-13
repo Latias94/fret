@@ -45,6 +45,14 @@ The summary must mention:
 
 ## Current Baseline Evidence
 
+Progress ledger:
+
+- `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md`
+- Global completion contract:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md#completion-contract`
+- Contract freeze:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_CONTRACT_FREEZE_2026-05-14.md`
+
 Most recent pre-lane evidence:
 
 - M0 baseline/source audit:
@@ -377,6 +385,24 @@ code-editor paint stressor before continuing:
 - keep `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`,
 - stress row replay/content resolution without unrelated gallery setup noise,
 - and seed a baseline/policy only after the script is deterministic.
+
+## Global Closeout Gate Shape
+
+The final global closeout must include:
+
+- ADR gate: ADR 0327 accepted, revised into an accepted ADR, or superseded by an accepted
+  equivalent.
+- Correctness gates for the migrated boundary state, selected view-cache path, selected paint-cache
+  path, and diagnostics schema.
+- Perf gates for:
+  - code-editor resize/paint,
+  - one broader non-code-editor view-cache or paint-cache proof surface.
+- Worst-bundle `diag stats` attribution for every perf claim.
+- `python3 tools/check_layering.py`.
+- Relevant `cargo check` commands for changed crates.
+- `cargo fmt`.
+- `git diff --check`.
+- A final closeout audit with deletion/retention decisions for old runtime paths.
 
 ## Closeout Evidence
 

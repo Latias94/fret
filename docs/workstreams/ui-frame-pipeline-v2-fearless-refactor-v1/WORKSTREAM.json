@@ -5,7 +5,7 @@
   "status": "active-follow-on",
   "updated": "2026-05-14",
   "scope_kind": "execution",
-  "problem": "Fret's current retained UiTree, declarative mounting, view-cache, paint-cache, and editor-specific hot paths are correct enough to optimize locally but do not yet form one direct, phase-attributable execution model. This lane owns the migration to explicit build/layout/prepaint/paint/render boundaries, complete old-path cleanup, and perf-gated editor-grade validation.",
+  "problem": "Fret's current retained UiTree, declarative mounting, view-cache, paint-cache, and editor-specific hot paths are correct enough to optimize locally but do not yet form one direct, phase-attributable execution model. This lane owns the documented, evidence-driven migration to explicit build/layout/prepaint/paint/render boundaries, complete old-path cleanup, and perf-gated editor-grade validation until the completion contract in PROGRESS.md is satisfied.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -14,6 +14,10 @@
     {
       "role": "target",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "progress",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md"
     },
     {
       "role": "execution",
@@ -30,6 +34,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_CONTRACT_FREEZE_2026-05-14.md"
     },
     {
       "role": "implementation",
@@ -90,6 +98,7 @@
   ],
   "evidence": [
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_CONTRACT_FREEZE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2_CANVAS_PREPAINT_WINDOWED_ROWS_SLICE_2026-05-13.md",
@@ -101,6 +110,7 @@
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4A_BOUNDARY_DIRTY_SET_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
   ],
@@ -109,7 +119,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue_follow_on",
-    "notes": "The ADR 0327 code-editor vertical slice is closed in CLOSEOUT_AUDIT_2026-05-14.md. M2 prepaint ownership includes a minimal ViewBoundaryState owner for typed prepaint outputs, diagnostics expose a top-level debug.boundaries[] list, M3 row-scene replay plans use ViewBoundaryState::scene_fragment via CanvasSceneFragment<RowSceneFragmentPayload>, M4A moved contained-relayout dirty reasons into ViewBoundaryState::dirty with a dirty_boundaries fast index, and M4B retired the nested debug.cache_roots[].boundary compatibility schema. The code-editor closeout perf run proves the selected paint-side bottleneck target. Continue this lane only for broader ADR 0327 follow-ons such as ADR review/acceptance, public boundary hint design, wider view-cache/paint-cache consolidation, and older env-knob ownership decisions."
+    "default_action": "continue_until_completion_contract",
+    "notes": "ADR 0327 is accepted as the Frame Pipeline v2 target contract in M0_CONTRACT_FREEZE_2026-05-14.md, and the code-editor vertical slice is closed in CLOSEOUT_AUDIT_2026-05-14.md, but the global refactor is not complete. PROGRESS.md is the first-open progress ledger and completion contract. Continue this lane through small evidence-backed slices until the final boundary model owns the canonical build/layout/prepaint/paint diagnostics and reuse path across at least two proof surfaces, broader view-cache/paint-cache ownership is resolved, direct contained_layout has a final boundary-hint decision, replaced old runtime paths are deleted, and final correctness/perf/layering/deletion evidence is recorded."
   }
 }

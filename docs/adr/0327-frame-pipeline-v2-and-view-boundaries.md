@@ -1,6 +1,13 @@
 # ADR 0327: Frame Pipeline v2 and View Boundaries
 
-Status: Proposed
+Status: Accepted (contract freeze; implementation in progress)
+
+Acceptance note (2026-05-14): this ADR is accepted as the target contract for the Frame Pipeline v2
+global refactor after the code-editor vertical slice proved the direction with boundary-owned
+prepaint/scene-fragment state, first-class boundary diagnostics, deletion of replaced private paths,
+and perf evidence. Acceptance does not mean the global migration is complete; implementation status
+is tracked in `docs/adr/IMPLEMENTATION_ALIGNMENT.md` and
+`docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md`.
 
 ## Context
 

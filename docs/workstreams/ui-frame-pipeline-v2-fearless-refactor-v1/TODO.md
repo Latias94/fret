@@ -3,11 +3,45 @@
 Status: Code-editor vertical slice complete; broader ADR 0327 lane active
 Last updated: 2026-05-14
 
+Progress ledger:
+
+- `PROGRESS.md` is the first-open status summary for the global refactor. It records why the
+  refactor exists, the target execution model, what is complete, and what remains open after the
+  code-editor vertical slice closeout.
+- `PROGRESS.md#completion-contract` is the authoritative completion definition for the global
+  refactor. Do not mark this workstream complete until that contract is satisfied by evidence.
+
+## Global Completion Contract
+
+- [x] ADR 0327 is accepted, revised into an accepted ADR, or superseded by an accepted equivalent.
+  ADR 0327 is accepted as the contract freeze in `M0_CONTRACT_FREEZE_2026-05-14.md`.
+- [ ] The final `ViewBoundary` or renamed equivalent is the canonical runtime owner for
+  build/layout/prepaint/paint reuse and diagnostics.
+- [ ] Broader view-cache rendered/next maps are consolidated into boundary-owned state or retained
+  behind an accepted ADR/workstream reason.
+- [ ] Broader paint-cache replay stores are consolidated into boundary-owned scene-fragment state or
+  retained behind an accepted ADR/workstream reason.
+- [ ] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
+  boundary-hint API, or explicitly retained by accepted decision.
+- [ ] Replaced old runtime paths and compatibility diagnostics are deleted, with retained paths
+  named in a deletion/retention audit.
+- [ ] Boundary diagnostics remain the canonical bundle truth for boundary reuse/rejection; any
+  cache-root summaries are derived report views.
+- [ ] At least two proof surfaces validate the final model: code-editor resize/paint plus one
+  broader non-code-editor view-cache or paint-cache surface.
+- [ ] Correctness gates, perf gates, worst-bundle attribution, `python3 tools/check_layering.py`,
+  relevant `cargo check`, and `git diff --check` pass for the final closeout batch.
+- [ ] A final closeout audit states what was deleted, what intentionally remains, and why no old path
+  is still required for the Frame Pipeline v2 contract.
+
 ## P0 Contract Setup
 
 - [x] Create workstream lane for Frame Pipeline v2.
+- [x] Add a first-open global progress ledger that distinguishes the completed code-editor
+  vertical slice from the broader active ADR 0327 lane: `PROGRESS.md`.
 - [x] Add ADR 0327 as the proposed frame-pipeline and boundary contract.
-- [ ] Review ADR 0327 and either accept it or revise it before broad code migration.
+- [x] Review ADR 0327 and either accept it or revise it before broad code migration.
+  ADR 0327 is accepted as the target contract; implementation remains partial globally.
 - [x] Add an assumptions-first baseline audit of current `UiTree` build/layout/prepaint/paint paths:
   `M0_BASELINE_AUDIT_2026-05-13.md`.
 - [x] Add a source map of old paths that are migration candidates:
@@ -74,7 +108,8 @@ Last updated: 2026-05-14
 
 ## Follow-On ADR 0327 Lane Work
 
-- [ ] Review ADR 0327 and either accept it or revise/supersede it before broad migration.
+- [x] Review ADR 0327 and either accept it or revise/supersede it before broad migration.
+  Closed by `M0_CONTRACT_FREEZE_2026-05-14.md`.
 - [ ] Design a non-page-specific boundary hint API that can eventually replace direct
   `contained_layout` authoring hints.
 - [ ] Consolidate broader view-cache rendered/next maps and paint-cache previous-op-range replay

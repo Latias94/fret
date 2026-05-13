@@ -3,7 +3,9 @@
 Status: Draft target
 Last updated: 2026-05-13
 
-This file describes the target shape. Names are provisional until ADR 0327 is accepted.
+This file describes the target shape. ADR 0327 is accepted as the contract freeze; internal and
+public names may still evolve through follow-on ADR/workstream notes while preserving the accepted
+phase and boundary outcomes.
 
 ## Runtime Pipeline
 
