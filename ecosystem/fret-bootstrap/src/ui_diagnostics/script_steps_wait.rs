@@ -344,7 +344,9 @@ pub(super) fn handle_wait_semantics_scroll_stable_step(
 }
 
 pub(super) fn handle_wait_shortcut_routing_trace_step(
+    cfg: &UiDiagnosticsConfig,
     app: &App,
+    window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     active: &mut ActiveScript,
@@ -396,6 +398,27 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
         .is_some_and(|deadline| unix_ms_now() >= deadline)
         || state.remaining_frames == 0
     {
+        if let Some(note) = shortcut_routing_trace_timeout_note(
+            &active.shortcut_routing_trace,
+            &query,
+            state.start_frame_id,
+        ) {
+            push_script_event_log(
+                active,
+                cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "wait_shortcut_routing_trace.candidate_mismatch".to_string(),
+                    step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                    note: Some(note),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+        }
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-wait_shortcut_routing_trace-timeout"
         ));
@@ -417,7 +440,9 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
 }
 
 pub(super) fn handle_wait_command_dispatch_trace_step(
+    cfg: &UiDiagnosticsConfig,
     app: &App,
+    window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     active: &mut ActiveScript,
@@ -469,6 +494,27 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
         .is_some_and(|deadline| unix_ms_now() >= deadline)
         || state.remaining_frames == 0
     {
+        if let Some(note) = command_dispatch_trace_timeout_note(
+            &active.command_dispatch_trace,
+            &query,
+            state.start_frame_id,
+        ) {
+            push_script_event_log(
+                active,
+                cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "wait_command_dispatch_trace.candidate_mismatch".to_string(),
+                    step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                    note: Some(note),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+        }
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-wait_command_dispatch_trace-timeout"
         ));
@@ -487,6 +533,303 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
     }
 
     true
+}
+
+pub(super) fn shortcut_routing_trace_timeout_note(
+    trace: &[UiShortcutRoutingTraceEntryV1],
+    query: &UiShortcutRoutingTraceQueryV1,
+    start_frame_id: u64,
+) -> Option<String> {
+    let (candidate, mismatches) = trace
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.frame_id >= start_frame_id)
+        .filter_map(|(index, entry)| {
+            let mismatches = shortcut_routing_trace_query_mismatches(entry, query);
+            if mismatches.is_empty() {
+                None
+            } else {
+                let score = shortcut_routing_trace_query_field_count(query) as i32
+                    - mismatches.len() as i32;
+                Some(((score, index), entry, mismatches))
+            }
+        })
+        .max_by_key(|(rank, _, _)| *rank)
+        .map(|(_, entry, mismatches)| (entry, mismatches))?;
+
+    Some(format!(
+        "query={} start_frame_id={} trace_count={} best_candidate={} mismatches={}",
+        shortcut_routing_query_summary(query),
+        start_frame_id,
+        trace
+            .iter()
+            .filter(|entry| entry.frame_id >= start_frame_id)
+            .count(),
+        shortcut_routing_trace_candidate_summary(candidate),
+        mismatches.join("; ")
+    ))
+}
+
+fn shortcut_routing_trace_query_field_count(query: &UiShortcutRoutingTraceQueryV1) -> usize {
+    query.phase.is_some() as usize
+        + query.outcome.is_some() as usize
+        + query.key.is_some() as usize
+        + query.command.is_some() as usize
+        + query.ime_composing.is_some() as usize
+        + query.focus_is_text_input.is_some() as usize
+        + query.key_context.is_some() as usize
+}
+
+fn shortcut_routing_trace_query_mismatches(
+    entry: &UiShortcutRoutingTraceEntryV1,
+    query: &UiShortcutRoutingTraceQueryV1,
+) -> Vec<String> {
+    let mut mismatches = Vec::new();
+    push_string_mismatch(
+        &mut mismatches,
+        "phase",
+        query.phase.as_deref(),
+        Some(entry.phase.as_str()),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "outcome",
+        query.outcome.as_deref(),
+        Some(entry.outcome.as_str()),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "key",
+        query.key.as_deref(),
+        Some(entry.key.as_str()),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "command",
+        query.command.as_deref(),
+        entry.command.as_deref(),
+    );
+    push_bool_mismatch(
+        &mut mismatches,
+        "ime_composing",
+        query.ime_composing,
+        entry.ime_composing,
+    );
+    push_bool_mismatch(
+        &mut mismatches,
+        "focus_is_text_input",
+        query.focus_is_text_input,
+        entry.focus_is_text_input,
+    );
+    if let Some(expected) = query.key_context.as_deref()
+        && !entry.key_contexts.iter().any(|ctx| ctx == expected)
+    {
+        mismatches.push(format!(
+            "key_context expected {:?} actual {:?}",
+            Some(expected),
+            entry.key_contexts
+        ));
+    }
+    mismatches
+}
+
+fn shortcut_routing_query_summary(query: &UiShortcutRoutingTraceQueryV1) -> String {
+    format!(
+        "phase={:?} outcome={:?} key={:?} command={:?} ime_composing={:?} focus_is_text_input={:?} key_context={:?}",
+        query.phase.as_deref(),
+        query.outcome.as_deref(),
+        query.key.as_deref(),
+        query.command.as_deref(),
+        query.ime_composing,
+        query.focus_is_text_input,
+        query.key_context.as_deref(),
+    )
+}
+
+fn shortcut_routing_trace_candidate_summary(entry: &UiShortcutRoutingTraceEntryV1) -> String {
+    format!(
+        "step_index={} frame_id={} phase={:?} outcome={:?} key={:?} command={:?} ime_composing={} focus_is_text_input={} key_contexts={:?} deferred={} repeat={} command_enabled={:?} pending_sequence_len={:?}",
+        entry.step_index,
+        entry.frame_id,
+        entry.phase,
+        entry.outcome,
+        entry.key,
+        entry.command.as_deref(),
+        entry.ime_composing,
+        entry.focus_is_text_input,
+        entry.key_contexts,
+        entry.deferred,
+        entry.repeat,
+        entry.command_enabled,
+        entry.pending_sequence_len
+    )
+}
+
+pub(super) fn command_dispatch_trace_timeout_note(
+    trace: &[UiScriptCommandDispatchTraceEntryV1],
+    query: &UiScriptCommandDispatchTraceQueryV1,
+    start_frame_id: u64,
+) -> Option<String> {
+    let (candidate, mismatches) = trace
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.frame_id >= start_frame_id)
+        .filter_map(|(index, entry)| {
+            let mismatches = command_dispatch_trace_query_mismatches(entry, query);
+            if mismatches.is_empty() {
+                None
+            } else {
+                let score = command_dispatch_trace_query_field_count(query) as i32
+                    - mismatches.len() as i32;
+                Some(((score, index), entry, mismatches))
+            }
+        })
+        .max_by_key(|(rank, _, _)| *rank)
+        .map(|(_, entry, mismatches)| (entry, mismatches))?;
+
+    Some(format!(
+        "query={} start_frame_id={} trace_count={} best_candidate={} mismatches={}",
+        command_dispatch_query_summary(query),
+        start_frame_id,
+        trace
+            .iter()
+            .filter(|entry| entry.frame_id >= start_frame_id)
+            .count(),
+        command_dispatch_trace_candidate_summary(candidate),
+        mismatches.join("; ")
+    ))
+}
+
+fn command_dispatch_trace_query_field_count(query: &UiScriptCommandDispatchTraceQueryV1) -> usize {
+    query.command.is_some() as usize
+        + query.source_kind.is_some() as usize
+        + query.source_test_id.is_some() as usize
+        + query.handled.is_some() as usize
+        + query.handled_by_scope.is_some() as usize
+        + query.handled_by_driver.is_some() as usize
+        + query.handled_by_test_id.is_some() as usize
+        + query.started_from_focus.is_some() as usize
+        + query.used_default_root_fallback.is_some() as usize
+}
+
+fn command_dispatch_trace_query_mismatches(
+    entry: &UiScriptCommandDispatchTraceEntryV1,
+    query: &UiScriptCommandDispatchTraceQueryV1,
+) -> Vec<String> {
+    let mut mismatches = Vec::new();
+    push_string_mismatch(
+        &mut mismatches,
+        "command",
+        query.command.as_deref(),
+        Some(entry.command.as_str()),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "source_kind",
+        query.source_kind.as_deref(),
+        Some(entry.source_kind.as_str()),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "source_test_id",
+        query.source_test_id.as_deref(),
+        entry.source_test_id.as_deref(),
+    );
+    push_bool_mismatch(&mut mismatches, "handled", query.handled, entry.handled);
+    push_string_mismatch(
+        &mut mismatches,
+        "handled_by_scope",
+        query.handled_by_scope.as_deref(),
+        entry.handled_by_scope.as_deref(),
+    );
+    push_bool_mismatch(
+        &mut mismatches,
+        "handled_by_driver",
+        query.handled_by_driver,
+        entry.handled_by_driver,
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "handled_by_test_id",
+        query.handled_by_test_id.as_deref(),
+        entry.handled_by_test_id.as_deref(),
+    );
+    push_bool_mismatch(
+        &mut mismatches,
+        "started_from_focus",
+        query.started_from_focus,
+        entry.started_from_focus,
+    );
+    push_bool_mismatch(
+        &mut mismatches,
+        "used_default_root_fallback",
+        query.used_default_root_fallback,
+        entry.used_default_root_fallback,
+    );
+    mismatches
+}
+
+fn command_dispatch_query_summary(query: &UiScriptCommandDispatchTraceQueryV1) -> String {
+    format!(
+        "command={:?} source_kind={:?} source_test_id={:?} handled={:?} handled_by_scope={:?} handled_by_driver={:?} handled_by_test_id={:?} started_from_focus={:?} used_default_root_fallback={:?}",
+        query.command.as_deref(),
+        query.source_kind.as_deref(),
+        query.source_test_id.as_deref(),
+        query.handled,
+        query.handled_by_scope.as_deref(),
+        query.handled_by_driver,
+        query.handled_by_test_id.as_deref(),
+        query.started_from_focus,
+        query.used_default_root_fallback,
+    )
+}
+
+fn command_dispatch_trace_candidate_summary(entry: &UiScriptCommandDispatchTraceEntryV1) -> String {
+    format!(
+        "step_index={} frame_id={} command={:?} source_kind={:?} source_test_id={:?} handled={} handled_by_scope={:?} handled_by_driver={} handled_by_test_id={:?} stopped={} started_from_focus={} used_default_root_fallback={}",
+        entry.step_index,
+        entry.frame_id,
+        entry.command,
+        entry.source_kind,
+        entry.source_test_id.as_deref(),
+        entry.handled,
+        entry.handled_by_scope.as_deref(),
+        entry.handled_by_driver,
+        entry.handled_by_test_id.as_deref(),
+        entry.stopped,
+        entry.started_from_focus,
+        entry.used_default_root_fallback
+    )
+}
+
+fn push_string_mismatch(
+    mismatches: &mut Vec<String>,
+    field: &str,
+    expected: Option<&str>,
+    actual: Option<&str>,
+) {
+    if let Some(expected) = expected
+        && actual != Some(expected)
+    {
+        mismatches.push(format!(
+            "{field} expected {:?} actual {:?}",
+            Some(expected),
+            actual
+        ));
+    }
+}
+
+fn push_bool_mismatch(
+    mismatches: &mut Vec<String>,
+    field: &str,
+    expected: Option<bool>,
+    actual: bool,
+) {
+    if let Some(expected) = expected
+        && actual != expected
+    {
+        mismatches.push(format!("{field} expected {expected} actual {actual}"));
+    }
 }
 
 pub(super) fn handle_wait_overlay_placement_trace_step(
@@ -866,6 +1209,15 @@ fn overlay_rect_summary(rect: &UiRectV1) -> String {
 mod tests {
     use super::*;
 
+    fn key_modifiers() -> UiKeyModifiersV1 {
+        UiKeyModifiersV1 {
+            ctrl: false,
+            alt: false,
+            shift: false,
+            meta: false,
+        }
+    }
+
     fn rect(x: f32, y: f32, w: f32, h: f32) -> UiRectV1 {
         UiRectV1 {
             x_px: x,
@@ -987,6 +1339,93 @@ mod tests {
         assert!(note.contains("chosen_side expected Bottom actual Top"));
         assert!(note.contains("flipped expected false actual true"));
         assert!(note.contains("best_candidate=kind=anchored_panel"));
+    }
+
+    #[test]
+    fn shortcut_routing_timeout_note_names_query_mismatches() {
+        let trace = vec![UiShortcutRoutingTraceEntryV1 {
+            step_index: 7,
+            note: None,
+            frame_id: 120,
+            phase: "dispatch".to_string(),
+            deferred: false,
+            focus_is_text_input: true,
+            ime_composing: true,
+            key_contexts: vec!["editor".to_string()],
+            key: "Enter".to_string(),
+            modifiers: key_modifiers(),
+            repeat: false,
+            outcome: "ignored".to_string(),
+            command: Some("editor.submit".to_string()),
+            command_enabled: Some(false),
+            pending_sequence_len: Some(0),
+        }];
+        let query = UiShortcutRoutingTraceQueryV1 {
+            phase: Some("dispatch".to_string()),
+            outcome: Some("handled".to_string()),
+            key: Some("Enter".to_string()),
+            command: Some("editor.accept".to_string()),
+            ime_composing: Some(false),
+            focus_is_text_input: Some(true),
+            key_context: Some("global".to_string()),
+        };
+
+        let note = shortcut_routing_trace_timeout_note(&trace, &query, 100).unwrap();
+
+        assert!(note.contains("trace_count=1"));
+        assert!(note.contains("outcome expected Some(\"handled\") actual Some(\"ignored\")"));
+        assert!(
+            note.contains(
+                "command expected Some(\"editor.accept\") actual Some(\"editor.submit\")"
+            )
+        );
+        assert!(note.contains("ime_composing expected false actual true"));
+        assert!(note.contains("key_context expected Some(\"global\") actual [\"editor\"]"));
+    }
+
+    #[test]
+    fn command_dispatch_timeout_note_names_query_mismatches() {
+        let trace = vec![UiScriptCommandDispatchTraceEntryV1 {
+            step_index: 9,
+            frame_id: 201,
+            command: "menu.open".to_string(),
+            handled: false,
+            handled_by_scope: Some("window".to_string()),
+            handled_by_driver: true,
+            stopped: false,
+            source_kind: "pointer".to_string(),
+            source_element: Some(10),
+            source_test_id: Some("toolbar-menu-trigger".to_string()),
+            handled_by_element: Some(11),
+            handled_by_test_id: Some("window-shell".to_string()),
+            started_from_focus: false,
+            used_default_root_fallback: true,
+        }];
+        let query = UiScriptCommandDispatchTraceQueryV1 {
+            command: Some("menu.open".to_string()),
+            source_kind: Some("keyboard".to_string()),
+            source_test_id: Some("palette-trigger".to_string()),
+            handled: Some(true),
+            handled_by_scope: Some("widget".to_string()),
+            handled_by_driver: Some(false),
+            handled_by_test_id: Some("menu-button".to_string()),
+            started_from_focus: Some(true),
+            used_default_root_fallback: Some(false),
+        };
+
+        let note = command_dispatch_trace_timeout_note(&trace, &query, 200).unwrap();
+
+        assert!(note.contains("trace_count=1"));
+        assert!(note.contains("source_kind expected Some(\"keyboard\") actual Some(\"pointer\")"));
+        assert!(note.contains(
+            "source_test_id expected Some(\"palette-trigger\") actual Some(\"toolbar-menu-trigger\")"
+        ));
+        assert!(note.contains("handled expected true actual false"));
+        assert!(note.contains("handled_by_driver expected false actual true"));
+        assert!(note.contains(
+            "handled_by_test_id expected Some(\"menu-button\") actual Some(\"window-shell\")"
+        ));
+        assert!(note.contains("used_default_root_fallback expected false actual true"));
     }
 }
 

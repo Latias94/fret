@@ -586,7 +586,9 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitShortcutRoutingTrace { .. } => {
             let handled = script_steps_wait::handle_wait_shortcut_routing_trace_step(
+                &service.cfg,
                 app,
+                window,
                 step_index,
                 step,
                 active,
@@ -599,7 +601,9 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitCommandDispatchTrace { .. } => {
             let handled = script_steps_wait::handle_wait_command_dispatch_trace_step(
+                &service.cfg,
                 app,
+                window,
                 step_index,
                 step,
                 active,

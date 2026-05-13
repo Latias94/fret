@@ -721,6 +721,36 @@ Follow-up recommendation:
   command-dispatch, hit-test, focus, and bounds-stability waits where a near-match trace can turn a
   generic timeout into a mechanism or selector diagnosis.
 
+## Phase 2.22 Routing Trace Timeout Explainability
+
+After overlay timeout explainability, shortcut-routing and command-dispatch gates still had the same
+blind spot: `wait_shortcut_routing_trace_timeout` and `wait_command_dispatch_trace_timeout` did not
+say whether a near-match trace existed. This is a routing harness problem because command and
+shortcut regressions often look like "nothing happened" unless the evidence names the route that was
+actually observed.
+
+Fixes:
+
+- `wait_shortcut_routing_trace` now emits
+  `wait_shortcut_routing_trace.candidate_mismatch` when a trace at or after the wait start frame
+  exists but misses the query.
+- `wait_command_dispatch_trace` now emits
+  `wait_command_dispatch_trace.candidate_mismatch` with the same start-frame scoping.
+- The notes include the query, scoped trace count, best candidate, and mismatched fields such as
+  shortcut `outcome`, `command`, `ime_composing`, `key_context`, and command-dispatch
+  `source_kind`, `source_test_id`, `handled`, `handled_by_scope`, `handled_by_driver`,
+  `handled_by_test_id`, and `used_default_root_fallback`.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
+
+Follow-up recommendation:
+
+- Extend candidate-mismatch evidence to focus and hit-test waits next. Those are the remaining high
+  value interaction surfaces where a wrong target, blocking root, or stale focus owner can still
+  collapse into a generic timeout.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -785,6 +815,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
 - `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 
