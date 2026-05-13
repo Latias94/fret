@@ -130,7 +130,7 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-long-text-trigger",
-        "content_test_id": "ui-gallery-combobox-long-text-listbox",
+        "content_test_id": "ui-gallery-combobox-long-text-content",
         "preferred_side": "bottom",
         "chosen_side": "bottom",
         "flipped": false,

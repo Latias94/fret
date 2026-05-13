@@ -618,6 +618,35 @@ Follow-up recommendation:
   default pattern for tight-window overlay scripts. This should be swept across combobox, select,
   dropdown menu, popover, hover card, and future Material 3 anchored surfaces.
 
+## Phase 2.18 Combobox Overlay Content-Shell Sweep
+
+The Phase 2.17 RTL fix exposed a family-level diagnostics drift: many older combobox scripts waited
+for `wait_overlay_placement_trace` using the inner `*-listbox` as `content_test_id`. The current
+Combobox recipe derives `*-content` from `test_id_prefix` and records overlay placement against that
+positioned content shell; `*-listbox` is the inner list geometry target.
+
+Fixes:
+
+- All UI Gallery Combobox overlay trace scripts now query the positioned `*-content` shell.
+- Existing `bounds_within_window` and `wait_bounds_stable` checks stay on `*-listbox` where they are
+  checking visible list geometry rather than overlay placement.
+- `combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes` scans the whole
+  combobox script directory and fails if a future overlay trace query regresses to `*-listbox`.
+
+Evidence:
+
+- Runtime proof:
+  `target/fret-diag/codex-combobox-content-shell-sweep-20260513-1745/sessions/1778665071077-117228/1778665303231-ui-gallery-combobox-demo-open-narrow`
+- The representative legacy script now records
+  `anchor=ui-gallery-combobox-demo-trigger`, `content=ui-gallery-combobox-demo-content`, and
+  `chosen_side=top` in the passing run.
+
+Validation:
+
+- All combobox scripts passed `target/debug/fretboard-dev.exe diag script validate`.
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
+- `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-narrow-open-screenshot.json --dir target/fret-diag/codex-combobox-content-shell-sweep-20260513-1745 --session-auto --launch -- cargo run -p fret-ui-gallery`
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -678,6 +707,7 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
 - `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" script_steps_scroll::tests -- --nocapture`
 - `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

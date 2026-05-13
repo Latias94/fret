@@ -122,6 +122,66 @@ fn combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry()
 }
 
 #[test]
+fn combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes() {
+    use serde_json::Value;
+    use std::fs;
+
+    let scripts_dir = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tools/diag-scripts/ui-gallery/combobox"
+    );
+    let mut checked = 0usize;
+
+    for entry in fs::read_dir(scripts_dir).expect("combobox diag scripts dir") {
+        let entry = entry.expect("combobox diag script entry");
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+
+        let text = fs::read_to_string(&path).expect("combobox diag script text");
+        let script: Value = serde_json::from_str(&text).unwrap_or_else(|err| {
+            panic!(
+                "invalid combobox diag script JSON: path={} err={err}",
+                path.display()
+            )
+        });
+        let Some(steps) = script.get("steps").and_then(Value::as_array) else {
+            continue;
+        };
+
+        for (index, step) in steps.iter().enumerate() {
+            if step.get("type").and_then(Value::as_str) != Some("wait_overlay_placement_trace") {
+                continue;
+            }
+
+            checked += 1;
+            let content_test_id = step
+                .get("query")
+                .and_then(|query| query.get("content_test_id"))
+                .and_then(Value::as_str)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "combobox overlay trace step should name content_test_id: path={} step={index}",
+                        path.display()
+                    )
+                });
+
+            assert!(
+                !content_test_id.ends_with("-listbox"),
+                "combobox overlay placement trace should target the positioned content shell, not the inner listbox: path={} step={index} content_test_id={content_test_id}",
+                path.display()
+            );
+        }
+    }
+
+    assert!(
+        checked >= 10,
+        "combobox diag surface should keep a broad overlay placement trace corpus; checked={checked}",
+    );
+}
+
+#[test]
 fn combobox_responsive_reports_isolate_shell_and_effective_viewport_from_command_parts() {
     use serde_json::Value;
     use std::fs;

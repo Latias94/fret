@@ -72,7 +72,7 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-groups-separator-trigger",
-        "content_test_id": "ui-gallery-combobox-groups-separator-listbox"
+        "content_test_id": "ui-gallery-combobox-groups-separator-content"
       },
       "timeout_frames": 240
     },

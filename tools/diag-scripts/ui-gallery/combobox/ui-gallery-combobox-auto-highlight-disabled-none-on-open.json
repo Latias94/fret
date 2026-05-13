@@ -48,7 +48,7 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-basic-trigger",
-        "content_test_id": "ui-gallery-combobox-basic-listbox"
+        "content_test_id": "ui-gallery-combobox-basic-content"
       },
       "timeout_frames": 240
     },
@@ -91,4 +91,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-combobox-auto-highlight-disabled-none-on-open" }
   ]
 }
-
