@@ -181,10 +181,17 @@ Discover the repo-maintainer tool apps with:
 cargo run -p fretboard-dev -- list tool-apps
 ```
 
-Use the JSON form when another tool needs the same entrypoints:
+This index also names the repo-owned campaign manifest preflight:
+
+```bash
+cargo run -p fretboard-dev -- diag doctor campaigns
+```
+
+Use JSON forms when another tool needs the same entrypoints or preflight payload:
 
 ```bash
 cargo run -p fretboard-dev -- list tool-apps --json
+cargo run -p fretboard-dev -- diag doctor campaigns --json
 ```
 
 Open:

@@ -33,6 +33,7 @@ const ROOT_EXAMPLES: &str = r#"  fretboard-dev assets manifest write --dir asset
   fretboard-dev diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release
   fretboard-dev diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release
   fretboard-dev diag campaign list --lane smoke --tag ui-gallery --platform native
+  fretboard-dev diag doctor campaigns
   fretboard-dev list tool-apps
   fretboard-dev list tool-apps --json
   cargo run -p fret-devtools              # DevTools GUI over shared diagnostics artifacts
@@ -68,6 +69,7 @@ mod tests {
         let help = render_root_help().expect("root help should render");
         assert!(help.contains("diag"));
         assert!(help.contains("fretboard-dev diag perf ui-gallery"));
+        assert!(help.contains("fretboard-dev diag doctor campaigns"));
         assert!(help.contains("fretboard-dev list tool-apps"));
         assert!(help.contains("fretboard-dev list tool-apps --json"));
         assert!(help.contains("cargo run -p fret-devtools"));

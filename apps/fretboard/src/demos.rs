@@ -68,6 +68,13 @@ pub(crate) fn list_cookbook_examples(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+const DIAG_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
+const DIAG_GUI_BRANCH_DOC: &str =
+    "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md";
+const DIAG_REPO_PREFLIGHT_COMMAND: &str = "cargo run -p fretboard-dev -- diag doctor campaigns";
+const DIAG_REPO_PREFLIGHT_JSON_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag doctor campaigns --json";
+
 pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
     let output_json = parse_tool_apps_json_flag(args)?;
     if output_json {
@@ -76,10 +83,10 @@ pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
             serde_json::to_string_pretty(&tool_apps_json_value()).map_err(|err| err.to_string())?
         );
     } else {
-        println!("first-open: docs/diagnostics-first-open.md");
-        println!(
-            "gui branch: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
-        );
+        println!("first-open: {DIAG_FIRST_OPEN_DOC}");
+        println!("repo preflight: {DIAG_REPO_PREFLIGHT_COMMAND}");
+        println!("repo preflight json: {DIAG_REPO_PREFLIGHT_JSON_COMMAND}");
+        println!("gui branch: {DIAG_GUI_BRANCH_DOC}");
         for tool in tool_apps() {
             println!(
                 "{}    # {} | best for: {} | run: {} | docs: {} | gate: {}",
@@ -94,8 +101,13 @@ fn tool_apps_json_value() -> serde_json::Value {
     serde_json::json!({
         "kind": "fretboard_tool_apps",
         "schema_version": 1,
-        "first_open_doc": "docs/diagnostics-first-open.md",
-        "branch_doc": "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md",
+        "first_open_doc": DIAG_FIRST_OPEN_DOC,
+        "branch_doc": DIAG_GUI_BRANCH_DOC,
+        "repo_preflight": {
+            "purpose": "Read-only maintainer preflight for checked-in diagnostics campaign manifests.",
+            "command": DIAG_REPO_PREFLIGHT_COMMAND,
+            "json_command": DIAG_REPO_PREFLIGHT_JSON_COMMAND,
+        },
         "tool_apps": tool_apps().iter().map(|tool| {
             serde_json::json!({
                 "id": tool.id,
@@ -448,6 +460,18 @@ mod tests {
     }
 
     #[test]
+    fn tool_apps_list_names_repo_preflight_entrypoints() {
+        assert_eq!(
+            DIAG_REPO_PREFLIGHT_COMMAND,
+            "cargo run -p fretboard-dev -- diag doctor campaigns"
+        );
+        assert_eq!(
+            DIAG_REPO_PREFLIGHT_JSON_COMMAND,
+            "cargo run -p fretboard-dev -- diag doctor campaigns --json"
+        );
+    }
+
+    #[test]
     fn tool_apps_json_flag_parser_is_explicit() {
         assert!(!parse_tool_apps_json_flag(Vec::new()).unwrap());
         assert!(parse_tool_apps_json_flag(vec!["--json".to_string()]).unwrap());
@@ -463,6 +487,14 @@ mod tests {
         assert_eq!(
             value["branch_doc"],
             "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        );
+        assert_eq!(
+            value["repo_preflight"]["command"],
+            "cargo run -p fretboard-dev -- diag doctor campaigns"
+        );
+        assert_eq!(
+            value["repo_preflight"]["json_command"],
+            "cargo run -p fretboard-dev -- diag doctor campaigns --json"
         );
 
         let tools = value["tool_apps"].as_array().expect("tool_apps array");
