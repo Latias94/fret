@@ -200,8 +200,8 @@ fn vec_edit_axis_label(axis: VecEditAxis) -> &'static str {
 fn vec_edit_axis_outcome_label(outcome: VecEditAxisOutcome) -> String {
     format!(
         "{} {}",
-        vec_edit_axis_label(outcome.axis),
-        edit_session_outcome_label(outcome.outcome)
+        vec_edit_axis_label(outcome.axis()),
+        edit_session_outcome_label(outcome.outcome())
     )
 }
 
@@ -216,9 +216,9 @@ fn transform_edit_section_label(section: TransformEditSection) -> &'static str {
 fn transform_edit_axis_outcome_label(outcome: TransformEditAxisOutcome) -> String {
     format!(
         "{}.{} {}",
-        transform_edit_section_label(outcome.section),
-        vec_edit_axis_label(outcome.axis),
-        edit_session_outcome_label(outcome.outcome)
+        transform_edit_section_label(outcome.section()),
+        vec_edit_axis_label(outcome.axis()),
+        edit_session_outcome_label(outcome.outcome())
     )
 }
 

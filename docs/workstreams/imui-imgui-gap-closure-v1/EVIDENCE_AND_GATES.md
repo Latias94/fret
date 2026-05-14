@@ -225,6 +225,11 @@ Run evidence:
   for the sealed IMUI response/context/summary records. The gate now parses each listed public
   output struct body and fails on any externally public field, so new response-surface cleanup does
   not depend only on per-field string markers.
+- 2026-05-14: made `VecEditAxisOutcome` and `TransformEditAxisOutcome` accessor-first in
+  `fret-ui-editor`. Axis edit events still carry the same section/axis/session-close values, but
+  storage and construction are internal to the editor controls. The editor proof reads them through
+  `section()`, `axis()`, and `outcome()`, and the source gate covers the records with the reusable
+  opaque-output-struct check.
 
 ## P3 Design Surface Readiness Gates
 

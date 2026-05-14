@@ -46,8 +46,22 @@ pub enum VecEditAxis {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VecEditAxisOutcome {
-    pub axis: VecEditAxis,
-    pub outcome: AxisDragValueOutcome,
+    axis: VecEditAxis,
+    outcome: AxisDragValueOutcome,
+}
+
+impl VecEditAxisOutcome {
+    pub(crate) fn new(axis: VecEditAxis, outcome: AxisDragValueOutcome) -> Self {
+        Self { axis, outcome }
+    }
+
+    pub fn axis(self) -> VecEditAxis {
+        self.axis
+    }
+
+    pub fn outcome(self) -> AxisDragValueOutcome {
+        self.outcome
+    }
 }
 
 pub type OnVecEditAxisOutcome =
@@ -135,7 +149,7 @@ where
             move |host: &mut dyn UiActionHost,
                   action_cx: ActionCx,
                   outcome: AxisDragValueOutcome| {
-                on_axis_outcome(host, action_cx, VecEditAxisOutcome { axis, outcome });
+                on_axis_outcome(host, action_cx, VecEditAxisOutcome::new(axis, outcome));
             },
         );
         handler
@@ -991,8 +1005,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::Vec3Edit;
-    use crate::primitives::NumericPresentation;
+    use super::{Vec3Edit, VecEditAxis, VecEditAxisOutcome};
+    use crate::primitives::{EditSessionOutcome, NumericPresentation};
     use fret_app::App;
     use std::sync::Arc;
 
@@ -1012,5 +1026,13 @@ mod tests {
         assert_eq!((edit.parse)("1.25"), Some(1.25));
         assert_eq!(edit.options.prefix, Some(Arc::from("$")));
         assert_eq!(edit.options.suffix, Some(Arc::from("ms")));
+    }
+
+    #[test]
+    fn vec_edit_axis_outcome_exposes_read_only_signals() {
+        let outcome = VecEditAxisOutcome::new(VecEditAxis::Z, EditSessionOutcome::Committed);
+
+        assert_eq!(outcome.axis(), VecEditAxis::Z);
+        assert_eq!(outcome.outcome(), EditSessionOutcome::Committed);
     }
 }

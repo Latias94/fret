@@ -131,6 +131,9 @@ Exit criteria:
   2026-05-14 source-gate hardening result: `tools/gate_imui_workstream_source.py` now has a
   reusable opaque-output-struct check for the sealed IMUI response/context/summary records instead
   of relying only on one-off public-field marker strings.
+  2026-05-14 editor axis-outcome follow-up result: vector and transform axis edit outcome records
+  are accessor-first too, so proof/app code can observe edit events without constructing or
+  mutating invalid section/axis/outcome triples.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

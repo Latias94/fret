@@ -160,6 +160,14 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs"),
             ["DragValueCoreResponse"],
         ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/vec_edit.rs"),
+            ["VecEditAxisOutcome"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/transform_edit.rs"),
+            ["TransformEditAxisOutcome"],
+        ),
     ]
     checks = [
         SourceCheck(
@@ -3396,6 +3404,56 @@ def main() -> None:
                 "hovered: resp.hovered,",
                 "pressed: resp.dragging || resp.pressed,",
                 "focused: resp.focused || cx.is_focused_element(scrub_id),",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/vec_edit.rs"),
+            required=[
+                "pub struct VecEditAxisOutcome {\n    axis: VecEditAxis,\n    outcome: AxisDragValueOutcome,\n}",
+                "pub(crate) fn new(axis: VecEditAxis, outcome: AxisDragValueOutcome) -> Self",
+                "pub fn axis(self) -> VecEditAxis",
+                "pub fn outcome(self) -> AxisDragValueOutcome",
+                "VecEditAxisOutcome::new(axis, outcome)",
+                "vec_edit_axis_outcome_exposes_read_only_signals",
+            ],
+            forbidden=[
+                "pub struct VecEditAxisOutcome {\n    pub axis",
+                "pub struct VecEditAxisOutcome {\n    axis: VecEditAxis,\n    pub outcome",
+                "VecEditAxisOutcome { axis, outcome }",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/transform_edit.rs"),
+            required=[
+                "pub struct TransformEditAxisOutcome {\n    section: TransformEditSection,\n    axis: VecEditAxis,\n    outcome: AxisDragValueOutcome,\n}",
+                "pub(crate) fn new(",
+                "pub fn section(self) -> TransformEditSection",
+                "pub fn axis(self) -> VecEditAxis",
+                "pub fn outcome(self) -> AxisDragValueOutcome",
+                "TransformEditAxisOutcome::new(",
+                "outcome.axis()",
+                "outcome.outcome()",
+                "transform_edit_axis_outcome_exposes_read_only_signals",
+            ],
+            forbidden=[
+                "pub struct TransformEditAxisOutcome {\n    pub section",
+                "pub struct TransformEditAxisOutcome {\n    section: TransformEditSection,\n    pub axis",
+                "pub struct TransformEditAxisOutcome {\n    section: TransformEditSection,\n    axis: VecEditAxis,\n    pub outcome",
+                "axis: outcome.axis",
+                "outcome: outcome.outcome",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
+            required=[
+                "vec_edit_axis_label(outcome.axis())",
+                "edit_session_outcome_label(outcome.outcome())",
+                "transform_edit_section_label(outcome.section())",
+            ],
+            forbidden=[
+                "vec_edit_axis_label(outcome.axis)",
+                "edit_session_outcome_label(outcome.outcome)",
+                "transform_edit_section_label(outcome.section)",
             ],
         ),
         SourceCheck(

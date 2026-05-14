@@ -145,6 +145,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
    opaque-output-struct check for sealed response/context/summary records, so public output fields
    cannot return by simply changing field names.
+   2026-05-14 editor axis-outcome follow-up: `VecEditAxisOutcome` and
+   `TransformEditAxisOutcome` now keep section/axis/outcome storage private. Public proof code reads
+   axis edit events through explicit accessors.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
