@@ -2535,6 +2535,32 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/floating.rs"),
+            required=[
+                "pub struct FloatingAreaResponse",
+                "pub(crate) id: GlobalElementId",
+                "pub(crate) rect: Option<Rect>",
+                "pub(crate) position: Point",
+                "pub(crate) dragging: bool",
+                "pub(crate) drag_kind: fret_runtime::DragKindId",
+                "pub fn id(self) -> GlobalElementId",
+                "pub fn drag_kind(self) -> fret_runtime::DragKindId",
+                "pub struct FloatingWindowResponse",
+                "pub(crate) area: FloatingAreaResponse",
+                "pub fn area(self) -> FloatingAreaResponse",
+            ],
+            forbidden=[
+                "pub id: GlobalElementId",
+                "pub rect: Option<Rect>",
+                "pub position: Point",
+                "pub dragging: bool",
+                "pub drag_kind: fret_runtime::DragKindId",
+                "pub area: FloatingAreaResponse",
+                "pub resizing: bool",
+                "pub collapsed: bool",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/theme.rs"),
             required=[
                 "pub fn apply_editor_theme_preset_v1<H: UiHost>",

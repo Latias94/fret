@@ -88,6 +88,8 @@ Readiness order for the next locally testable review slices:
    2026-05-14 cleanup: `FloatingAreaContext` now exposes accessors instead of public identity /
    drag-kind fields, so callers can read the facade-created context without constructing invalid
    contexts.
+   2026-05-14 follow-up: floating responses now follow the same accessor-first shape; tests use
+   `resp.id()` rather than reaching through `resp.area.id`.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

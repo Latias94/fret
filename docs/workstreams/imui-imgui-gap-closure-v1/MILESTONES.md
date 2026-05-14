@@ -73,6 +73,8 @@ Exit criteria:
   focused gate before they become default authoring vocabulary.
   2026-05-14 cleanup result: `FloatingAreaContext` is now externally opaque, with read-only
   accessors for facade-created area id, position, and drag kind.
+  2026-05-14 follow-up result: floating responses now expose area/window state through accessors
+  instead of public fields.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

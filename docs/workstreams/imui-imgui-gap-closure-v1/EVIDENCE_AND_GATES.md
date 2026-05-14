@@ -125,6 +125,9 @@ Run evidence:
   with `id()`, `position()`, and `drag_kind()` accessors, but external code can no longer construct
   or mutate area identity / drag-kind fields. `tools/gate_imui_workstream_source.py` rejects public
   fields from returning.
+- 2026-05-14: made `FloatingAreaResponse` / `FloatingWindowResponse` accessor-first too. Floating
+  response identity, geometry, drag, resize, and collapse state now stay behind methods instead of
+  public fields, and the floating tests use `resp.id()` instead of `resp.area.id`.
 
 ## P3 Design Surface Readiness Gates
 
