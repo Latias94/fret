@@ -176,6 +176,8 @@ reopen.
       `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
       Maintenance: the selected-summary inspector mirrors that latest follow-up result JSON inline,
       so pass/fail/error/timing metadata is visible without opening the artifact manually.
+      Maintenance: the selected-summary inspector now adds a structured follow-up result summary
+      above the raw JSON, keeping status, command, duration, and error preview readable in the GUI.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

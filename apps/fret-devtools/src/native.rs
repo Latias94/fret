@@ -3389,6 +3389,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
     let selected_followup_status_text = cx.text(followup_status_line);
+    let selected_followup_result_summary_blob = text_blob_sized(
+        cx,
+        followup::followup_result_summary_lines(&followup_last_result_json).join("\r\n"),
+        Px(96.0),
+    );
     let selected_followup_result_json_blob = text_blob_sized(
         cx,
         if followup_last_result_json.trim().is_empty() {
@@ -3430,6 +3435,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Follow-up Run Status",
         "Runnable follow-up commands execute through the shared diagnostics engine and report status here.",
         vec![selected_followup_status_text],
+    );
+    let selected_followup_result_summary_section = diag_section(
+        cx,
+        "Follow-up Result Summary",
+        "Status, command, duration, and error preview from the latest GUI-launched follow-up result.",
+        vec![selected_followup_result_summary_blob],
     );
     let selected_followup_result_json_section = diag_section(
         cx,
@@ -3494,6 +3505,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_overview_section,
             selected_actions_section,
             selected_followup_run_status_section,
+            selected_followup_result_summary_section,
             selected_followup_result_json_section,
             selected_followup_commands_section,
             selected_runnable_followup_commands_section,

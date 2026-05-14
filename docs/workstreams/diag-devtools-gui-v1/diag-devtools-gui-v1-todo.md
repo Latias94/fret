@@ -114,6 +114,8 @@ Conventions:
         latest result path for copying.
   - [x] GUI selected-summary inspector mirrors the latest follow-up result JSON inline for
         pass/fail/error/timing triage.
+  - [x] GUI selected-summary inspector shows a structured follow-up result summary above raw JSON
+        for status, command, duration, and error preview.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

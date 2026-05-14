@@ -51,6 +51,52 @@ pub(crate) fn runnable_diag_args_for_followup_command(
     Ok(command.diag_args.clone())
 }
 
+pub(crate) fn followup_result_summary_lines(result_json: &str) -> Vec<String> {
+    if result_json.trim().is_empty() {
+        return vec!["follow-up result: <none>".to_string()];
+    }
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(result_json) else {
+        return vec!["follow-up result: <invalid json>".to_string()];
+    };
+
+    let field = |key: &str| {
+        value
+            .get(key)
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or("-")
+            .to_string()
+    };
+    let mut lines = vec![
+        format!("status: {}", field("status")),
+        format!("id: {}", field("id")),
+        format!("label: {}", field("label")),
+    ];
+    if let Some(duration_ms) = value
+        .get("finished_unix_ms")
+        .and_then(|value| value.as_u64())
+        .zip(value.get("started_unix_ms").and_then(|value| value.as_u64()))
+        .map(|(finished, started)| finished.saturating_sub(started))
+    {
+        lines.push(format!("duration_ms: {duration_ms}"));
+    }
+    if let Some(args) = value.get("diag_args").and_then(|value| value.as_array()) {
+        lines.push(format!("diag_args_count: {}", args.len()));
+    }
+    if let Some(error) = value
+        .get("error")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+    {
+        lines.push(format!("error: {error}"));
+    }
+    let command_line = field("command_line");
+    if command_line != "-" {
+        lines.push(format!("command: {command_line}"));
+    }
+    lines
+}
+
 pub(crate) fn poll_followup_jobs(app: &mut App, st: &mut State) {
     while let Ok(msg) = st.followup_rx.try_recv() {
         let _ = app
@@ -318,5 +364,31 @@ mod tests {
         let record = build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
         let json = followup_result_record_json(&record).expect("record json text");
         assert!(json.contains("\"status\": \"passed\""));
+    }
+
+    #[test]
+    fn regression_followup_result_summary_lines_project_status_and_duration() {
+        let json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_regression_followup_result",
+            "id": "stats",
+            "label": "diag stats",
+            "command_line": "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-a --json",
+            "diag_args": ["stats", "target/fret-diag/run-a", "--json"],
+            "status": "failed",
+            "error": "boom",
+            "started_unix_ms": 10,
+            "finished_unix_ms": 25
+        })
+        .to_string();
+
+        let lines = followup_result_summary_lines(&json);
+        let text = lines.join("\n");
+        assert!(text.contains("status: failed"));
+        assert!(text.contains("id: stats"));
+        assert!(text.contains("label: diag stats"));
+        assert!(text.contains("duration_ms: 15"));
+        assert!(text.contains("diag_args_count: 3"));
+        assert!(text.contains("error: boom"));
     }
 }

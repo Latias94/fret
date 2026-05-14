@@ -81,6 +81,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   latest result path for copying, so the GUI path leaves a lightweight evidence artifact.
 - The selected-summary inspector also mirrors the latest follow-up result JSON inline, making
   pass/fail/error/timing metadata visible without leaving the DevTools surface.
+- The same inspector projects that latest follow-up result into a structured summary above the raw
+  JSON, keeping status, command, duration, and error preview readable at scan speed.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.

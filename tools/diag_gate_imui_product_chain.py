@@ -50,6 +50,7 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
 DEVTOOLS_MCP_SOURCE = "apps/fret-devtools-mcp/src/native.rs"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -372,6 +373,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "followup_in_flight",
         "followup_last_result_path",
         "followup_last_result_json",
+        "followup::followup_result_summary_lines(&followup_last_result_json)",
         "Demo / Metrics / Debug Routes",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "Gate Commands",
@@ -407,6 +409,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "Run triage",
         "Run hotspots",
         "Copy follow-up result",
+        "Follow-up Result Summary",
+        "Status, command, duration, and error preview from the latest GUI-launched follow-up result.",
         "Follow-up Result JSON",
         "The latest GUI-launched follow-up result artifact is mirrored here for quick triage.",
         "last_followup_result={result}",
@@ -430,6 +434,34 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}",
         "product workflow artifacts: {}",
         "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
+    ):
+        _assert_contains(source, marker, name)
+
+
+def _validate_devtools_gui_followup_source(repo_root: Path) -> None:
+    name = "devtools gui followup source"
+    path = repo_root / DEVTOOLS_GUI_FOLLOWUP_SOURCE
+    print(f"[diag-gate-imui-product-chain] {name}", flush=True)
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError as err:
+        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
+
+    for marker in (
+        "pub(crate) fn runnable_diag_args_for_followup_command",
+        "pub(crate) fn followup_result_summary_lines",
+        "fret_devtools_regression_followup_result",
+        "follow-up result: <invalid json>",
+        "followup_result_record_json",
+        "write_followup_result_record",
+        "command.requires_baseline",
+        "follow-up command already in progress",
+        "fret_diag::diag_cmd(args)",
+        "follow-up started: {label} ({id})",
+        "regression_followup_command_rejects_baseline_required_commands",
+        "regression_followup_command_returns_direct_diag_args",
+        "regression_followup_result_record_has_stable_shape",
+        "regression_followup_result_summary_lines_project_status_and_duration",
     ):
         _assert_contains(source, marker, name)
 
@@ -564,6 +596,7 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     )
     _validate_tool_apps_json(_parse_json_stdout("list tool apps json", tool_apps_json))
     _validate_devtools_gui_product_workflow_source(repo_root)
+    _validate_devtools_gui_followup_source(repo_root)
     _validate_devtools_mcp_product_workflow_source(repo_root)
 
     doctor = _run_capture_checked(
