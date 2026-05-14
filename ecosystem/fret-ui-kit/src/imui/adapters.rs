@@ -46,7 +46,7 @@ pub fn report_adapter_signal(
             identity: response.id(),
             response,
             metadata: AdapterSignalMetadata {
-                rect: response.core.rect,
+                rect: response.rect(),
                 focus_restore_target: options.focus_restore_target,
             },
         });

@@ -16,16 +16,16 @@ pub(in super::super) fn populate_pressable_response<H: UiHost>(
     enabled: bool,
     response: &mut super::super::ResponseExt,
 ) {
-    response.core.hovered = state.hovered;
-    response.core.pressed = state.pressed;
-    response.core.focused = state.focused;
+    response.set_core_hovered(state.hovered);
+    response.set_core_pressed(state.pressed);
+    response.set_core_focused(state.focused);
     response.set_nav_highlighted(
         state.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
     );
     response.set_id(Some(id));
-    response.core.clicked = clicked;
-    response.core.changed = changed;
-    response.core.rect = cx.last_bounds_for_element(id);
+    response.set_core_clicked(clicked);
+    response.set_core_changed(changed);
+    response.set_core_rect(cx.last_bounds_for_element(id));
     response.set_pointer_hovered_raw(state.hovered_raw);
     response.set_pointer_hovered_raw_below_barrier(state.hovered_raw_below_barrier);
     response.set_hover_stationary_met(hover_delay.stationary_met);

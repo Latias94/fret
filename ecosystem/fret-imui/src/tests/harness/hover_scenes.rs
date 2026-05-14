@@ -32,7 +32,7 @@ pub(crate) fn render_imui_disabled_scope_overlay_scene(
                 );
                 over_id.set(over.id());
                 over_clicked.set(over.clicked());
-                over_hovered.set(over.core.hovered);
+                over_hovered.set(over.hovered());
                 over_hovered_like_imgui.set(over.hovered_like_imgui());
                 over_hovered_allow_when_disabled
                     .set(over.is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED));
@@ -98,7 +98,7 @@ pub(crate) fn render_imui_popup_modal_barrier_hover_scene(
                     ..Default::default()
                 },
             );
-            under_hovered_default.set(under.core.hovered);
+            under_hovered_default.set(under.hovered());
             under_hovered_allow_when_blocked
                 .set(under.is_hovered(ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_POPUP));
             under_hovered_raw.set(under.pointer_hovered_raw());
@@ -184,8 +184,8 @@ pub(crate) fn render_imui_active_item_blocks_hover_scene(
                         ..Default::default()
                     },
                 );
-                a_hovered.set(a.core.hovered);
-                a_focused.set(a.core.focused);
+                a_hovered.set(a.hovered());
+                a_focused.set(a.focused());
 
                 let b = ui.menu_item_with_options(
                     "B",
@@ -195,7 +195,7 @@ pub(crate) fn render_imui_active_item_blocks_hover_scene(
                     },
                 );
 
-                b_core_hovered.set(b.core.hovered);
+                b_core_hovered.set(b.hovered());
                 b_blocked_by_active_item.set(b.hover_blocked_by_active_item());
                 let flags = ImUiHoveredFlags::NO_NAV_OVERRIDE;
                 b_hovered_default.set(b.is_hovered(flags));

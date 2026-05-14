@@ -2178,7 +2178,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                                                     );
                                                                 let anchor = trigger
                                                                     .context_menu_anchor()
-                                                                    .or(trigger.core.rect.map(|rect| rect.origin));
+                                                                    .or(trigger.rect().map(|rect| rect.origin));
                                                                 let _ = ui
                                                                     .cx_mut()
                                                                     .app
@@ -2422,7 +2422,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                                                         ui.cx_mut()
                                                                             .last_visual_bounds_for_element(element_id)
                                                                     })
-                                                                    .or(trigger.core.rect)
+                                                                    .or(trigger.rect())
                                                             {
                                                                 rendered_items_for_grid.borrow_mut().push(
                                                                     ProofCollectionRenderedItem {

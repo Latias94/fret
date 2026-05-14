@@ -185,7 +185,7 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
     if enabled && trigger.clicked() {
         if open_before {
             ui.close_popup(id);
-        } else if let Some(anchor) = trigger.core.rect {
+        } else if let Some(anchor) = trigger.rect() {
             ui.open_popup_at(id, anchor);
         }
     }

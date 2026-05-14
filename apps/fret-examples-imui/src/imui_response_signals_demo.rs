@@ -178,7 +178,7 @@ impl View for ImUiResponseSignalsView {
 
             let drag_delta = drag.drag_delta();
             let drag_total = drag.drag_total();
-            let drag_rect: Option<Rect> = drag.core.rect;
+            let drag_rect: Option<Rect> = drag.rect();
             let drag_details = fret_ui_kit::ui::text(format!(
                 "drag delta=({:.1},{:.1}) total=({:.1},{:.1}) rect={}",
                 drag_delta.x.0,

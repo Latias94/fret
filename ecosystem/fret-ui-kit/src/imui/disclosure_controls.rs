@@ -243,16 +243,16 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         PressablePointerUpResult::Continue
                     }));
 
-                    trigger_response.core.hovered = state.hovered;
-                    trigger_response.core.pressed = state.pressed;
-                    trigger_response.core.focused = state.focused;
+                    trigger_response.set_core_hovered(state.hovered);
+                    trigger_response.set_core_pressed(state.pressed);
+                    trigger_response.set_core_focused(state.focused);
                     trigger_response.set_nav_highlighted(
                         state.focused
                             && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
                     );
                     trigger_response.set_id(Some(trigger_id));
-                    trigger_response.core.clicked =
-                        cx.take_transient_for(trigger_id, super::KEY_CLICKED);
+                    trigger_response
+                        .set_core_clicked(cx.take_transient_for(trigger_id, super::KEY_CLICKED));
                     trigger_response.set_secondary_clicked(
                         cx.take_transient_for(trigger_id, super::KEY_SECONDARY_CLICKED),
                     );
@@ -270,7 +270,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         )
                         .unwrap_or(None),
                     );
-                    trigger_response.core.rect = cx.last_bounds_for_element(trigger_id);
+                    trigger_response.set_core_rect(cx.last_bounds_for_element(trigger_id));
                     let hover_delay = super::install_hover_query_hooks_for_pressable(
                         cx,
                         trigger_id,

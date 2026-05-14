@@ -189,6 +189,13 @@ Run evidence:
   accessor-only migration. The same compile sweep also migrated stale `apps/fret-examples-imui`
   demo reads for previously sealed floating/disclosure/combo/table response fields back onto their
   accessor APIs.
+- 2026-05-14: made `ResponseExt.core` storage private too after the separate contract audit. Public
+  callers keep the shared authoring-response bridge through `core()` and `from_core(...)`, plus
+  focused signal accessors such as `rect()`, `focused()`, `hovered()`, and `pressed()`. Runtime
+  pressable/disclosure/text/disabled/combo/multi-select/text-picker assembly writes through
+  crate-local core setters and merge helpers, and `tools/gate_imui_workstream_source.py` rejects
+  public `core` field access or direct `.core` reads/writes from returning in the covered IMUI
+  surfaces.
 
 ## P3 Design Surface Readiness Gates
 

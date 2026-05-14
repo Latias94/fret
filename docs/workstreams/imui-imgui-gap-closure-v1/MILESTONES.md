@@ -108,9 +108,12 @@ Exit criteria:
   use `enabled()` and runtime/text-control assembly uses crate-local `set_enabled(...)`. `core`
   stayed out of that slice pending a separate contract audit.
   2026-05-14 identity follow-up result: `ResponseExt.id` storage is private too; public readers use
-  `id()` and response assembly uses crate-local `set_id(...)`. `core` intentionally stays out of
-  this slice because it is the shared `fret_authoring::Response` compatibility surface and needs its
-  own contract audit before any accessor-only migration.
+  `id()` and response assembly uses crate-local `set_id(...)`.
+  2026-05-14 shared-response follow-up result: `ResponseExt.core` storage is private too; public
+  readers use `core()`, `from_core(...)`, and the small signal accessors (`rect()`, `focused()`,
+  `hovered()`, `pressed()`, `clicked()`, `changed()`), while response assembly uses crate-local core
+  setters. This preserves the shared `fret_authoring::Response` compatibility surface without
+  keeping public field mutation.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

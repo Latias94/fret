@@ -2643,6 +2643,20 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/response/hover.rs"),
             required=[
                 "pub struct ResponseExt",
+                "core: Response",
+                "pub fn core(self) -> Response",
+                "pub fn from_core(core: Response) -> Self",
+                "pub fn rect(self) -> Option<fret_core::Rect>",
+                "pub fn hovered(self) -> bool",
+                "pub fn pressed(self) -> bool",
+                "pub fn focused(self) -> bool",
+                "pub(crate) fn set_core_hovered(&mut self, hovered: bool)",
+                "pub(crate) fn set_core_pressed(&mut self, pressed: bool)",
+                "pub(crate) fn set_core_focused(&mut self, focused: bool)",
+                "pub(crate) fn set_core_clicked(&mut self, clicked: bool)",
+                "pub(crate) fn set_core_changed(&mut self, changed: bool)",
+                "pub(crate) fn merge_core_changed(&mut self, changed: bool)",
+                "pub(crate) fn set_core_rect(&mut self, rect: Option<fret_core::Rect>)",
                 "id: Option<GlobalElementId>",
                 "pub(crate) fn set_id(&mut self, id: Option<GlobalElementId>)",
                 "pub fn id(self) -> Option<GlobalElementId>",
@@ -2724,6 +2738,8 @@ def main() -> None:
                 "self.drag.total()",
             ],
             forbidden=[
+                "pub core: Response",
+                "pub(crate) fn core_mut",
                 "pub id: Option<GlobalElementId>",
                 "pub enabled: bool",
                 "pub activated: bool",
@@ -2787,9 +2803,11 @@ def main() -> None:
             required=[
                 "combo_resp.response().activated()",
                 "combo_resp.response().deactivated()",
+                "drag.rect()",
             ],
             forbidden=[
                 "combo_resp.trigger.",
+                "drag.core.",
             ],
         ),
         SourceCheck(
@@ -2816,9 +2834,11 @@ def main() -> None:
             Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs"),
             required=[
                 "let Some(focus_target) = trigger.id()",
+                "trigger.rect()",
                 ".id()\n                                                                    .and_then(|element_id|",
             ],
             forbidden=[
+                "trigger.core.",
                 "let Some(focus_target) = trigger.id\n",
                 ".id\n                                                                    .and_then(|element_id|",
             ],
@@ -2898,6 +2918,12 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/interaction_runtime/pressable_response.rs"),
             required=[
+                "response.set_core_hovered(state.hovered);",
+                "response.set_core_pressed(state.pressed);",
+                "response.set_core_focused(state.focused);",
+                "response.set_core_clicked(clicked);",
+                "response.set_core_changed(changed);",
+                "response.set_core_rect(cx.last_bounds_for_element(id));",
                 "response.set_id(Some(id));",
                 "response.set_nav_highlighted(",
                 "response.set_pointer_hovered_raw(state.hovered_raw);",
@@ -2910,6 +2936,7 @@ def main() -> None:
                 "response.set_hover_blocked_by_active_item(",
             ],
             forbidden=[
+                "response.core.",
                 "response.id =",
                 "response.nav_highlighted =",
                 "response.pointer_hovered_raw =",
@@ -2925,6 +2952,11 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs"),
             required=[
+                "trigger_response.set_core_hovered(state.hovered);",
+                "trigger_response.set_core_pressed(state.pressed);",
+                "trigger_response.set_core_focused(state.focused);",
+                "set_core_clicked(cx.take_transient_for(trigger_id, super::KEY_CLICKED));",
+                "trigger_response.set_core_rect(cx.last_bounds_for_element(trigger_id));",
                 "trigger_response.set_id(Some(trigger_id));",
                 "trigger_response.set_nav_highlighted(",
                 "trigger_response.set_secondary_clicked(",
@@ -2941,6 +2973,7 @@ def main() -> None:
                 "trigger_response.set_hover_blocked_by_active_item(",
             ],
             forbidden=[
+                "trigger_response.core.",
                 "trigger_response.id =",
                 "trigger_response.nav_highlighted =",
                 "trigger_response.secondary_clicked =",
@@ -2970,14 +3003,29 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/interaction_runtime/disabled.rs"),
+            required=[
+                "response.set_core_hovered(false);",
+                "response.set_core_pressed(false);",
+                "response.set_core_focused(false);",
+                "response.set_core_clicked(false);",
+                "response.set_core_changed(false);",
+            ],
+            forbidden=[
+                "response.core.",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs"),
             required=[
                 "let Some(trigger_id) = trigger.id()",
+                "trigger.rect()",
                 "begin_popup_menu_with_options(\n        ui,\n        id,\n        trigger.id(),",
                 "select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id());",
                 "clear_imui_submenu(ui, policy, submenu_value.as_ref(), trigger.id(), true);",
             ],
             forbidden=[
+                "trigger.core.",
                 "let Some(trigger_id) = trigger.id\n",
                 "begin_popup_menu_with_options(\n        ui,\n        id,\n        trigger.id,",
                 "select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id)",
@@ -2989,9 +3037,13 @@ def main() -> None:
             required=[
                 "response.set_id(Some(id));",
                 "response.id().is_some()",
+                "response.set_core_focused(focused);",
+                "response.set_core_changed(changed);",
+                "response.set_core_rect(cx.last_bounds_for_element(id));",
                 "response.set_enabled(enabled);",
             ],
             forbidden=[
+                "response.core.",
                 "response.id =",
                 "response.id.is_some()",
                 "response.enabled = enabled",
@@ -3002,10 +3054,14 @@ def main() -> None:
             required=[
                 "input.id()",
                 "response.id()",
+                "input.focused()",
+                "input.rect()",
+                "input.merge_core_changed(picked_changed);",
                 "if input.enabled()",
                 "let enabled = input.enabled();",
             ],
             forbidden=[
+                "input.core.",
                 "input.id,",
                 "input.id.is_some",
                 "response.id)",
@@ -3054,9 +3110,12 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs"),
             required=[
                 "let Some(trigger_id) = trigger.id() else",
+                "trigger.focused()",
+                "trigger.rect()",
                 "trigger.pointer_hovered_raw()",
             ],
             forbidden=[
+                "trigger.core.",
                 "let Some(trigger_id) = trigger.id else",
                 "trigger.pointer_hovered_raw,",
                 "trigger.pointer_hovered_raw\n",
@@ -3065,6 +3124,11 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/harness/hover_scenes.rs"),
             required=[
+                "over.hovered()",
+                "under.hovered()",
+                "a.hovered()",
+                "a.focused()",
+                "b.hovered()",
                 "resp.pointer_hovered_raw()",
                 "resp.hover_stationary_met()",
                 "resp.hover_delay_short_met()",
@@ -3075,6 +3139,7 @@ def main() -> None:
                 "b.hover_blocked_by_active_item()",
             ],
             forbidden=[
+                ".core.",
                 "resp.pointer_hovered_raw)",
                 "resp.hover_stationary_met)",
                 "under.pointer_hovered_raw)",
@@ -3085,10 +3150,12 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover.rs"),
             required=[
+                "history.response().hovered()",
                 "history.response().pointer_hovered_raw()",
                 "history.response().pointer_hovered_raw_below_barrier()",
             ],
             forbidden=[
+                "history.response().core.",
                 "history.response().pointer_hovered_raw)",
                 "history.response().pointer_hovered_raw_below_barrier)",
             ],
@@ -3097,11 +3164,13 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/combo_controls.rs"),
             required=[
                 "trigger.id()",
+                "trigger.rect()",
                 "trigger.set_activated(toggled && open_after);",
                 "trigger.set_deactivated(toggled && !open_after);",
                 "trigger.set_deactivated_after_edit(false);",
             ],
             forbidden=[
+                "trigger.core.",
                 "trigger.id,",
                 "trigger.id.is_some",
                 "trigger.activated =",
@@ -3114,15 +3183,64 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs"),
             required=[
                 "response.id().is_some_and",
+                "response.set_core_changed(changed);",
                 "response.merge_edited(changed);",
                 "response.merge_deactivated_after_edit(changed && combo.toggled && !combo.open);",
             ],
             forbidden=[
+                "response.core.",
                 "response.id.is_some",
                 "response.edited |=",
                 "response.deactivated_after_edit |=",
                 "response.edited =",
                 "response.deactivated_after_edit =",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/multi_select.rs"),
+            required=[
+                "response.set_core_changed(changed);",
+            ],
+            forbidden=[
+                "response.core.",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/adapters.rs"),
+            required=[
+                "rect: response.rect()",
+            ],
+            forbidden=[
+                "response.core.",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs"),
+            required=[
+                "self.response.rect()",
+            ],
+            forbidden=[
+                "self.response.core.",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/recipes/imui_sortable.rs"),
+            required=[
+                "let rect = trigger.rect()?;",
+            ],
+            forbidden=[
+                "trigger.core.",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs"),
+            required=[
+                "response.core()",
+                "ResponseExt::from_core(Response {",
+            ],
+            forbidden=[
+                "response.core =",
+                "response.core\n",
             ],
         ),
         SourceCheck(

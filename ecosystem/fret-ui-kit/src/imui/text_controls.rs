@@ -379,25 +379,21 @@ pub(super) fn input_text_model_element_with_options_and_semantics<H: UiHost>(
 
         response.set_id(Some(id));
         response.set_enabled(enabled);
-        response.core.focused = enabled && cx.is_focused_element(id);
-        response.core.changed = enabled && text_model_changed_for(cx, id, &current);
-        response.core.rect = cx.last_bounds_for_element(id);
-        super::populate_response_lifecycle_from_active_state(
-            cx,
-            id,
-            response.core.focused,
-            response.core.changed,
-            response,
-        );
+        let focused = enabled && cx.is_focused_element(id);
+        let changed = enabled && text_model_changed_for(cx, id, &current);
+        response.set_core_focused(focused);
+        response.set_core_changed(changed);
+        response.set_core_rect(cx.last_bounds_for_element(id));
+        super::populate_response_lifecycle_from_active_state(cx, id, focused, changed, response);
         sync_select_all_on_focus(
             cx,
             id,
-            response.core.focused,
+            focused,
             !current.is_empty(),
             options.select_all_on_focus,
         );
         let select_all_requested = cx.take_transient_for(id, super::KEY_SELECT_ALL_ON_FOCUS);
-        if select_all_requested && options.select_all_on_focus && response.core.focused {
+        if select_all_requested && options.select_all_on_focus && focused {
             cx.app.push_effect(Effect::Command {
                 window: Some(cx.window),
                 command: CommandId::from("edit.select_all"),
@@ -466,25 +462,27 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
 
             response.set_id(Some(id));
             response.set_enabled(enabled);
-            response.core.focused = enabled && cx.is_focused_element(id);
-            response.core.changed = enabled && text_model_changed_for(cx, id, &current);
-            response.core.rect = cx.last_bounds_for_element(id);
+            let focused = enabled && cx.is_focused_element(id);
+            let changed = enabled && text_model_changed_for(cx, id, &current);
+            response.set_core_focused(focused);
+            response.set_core_changed(changed);
+            response.set_core_rect(cx.last_bounds_for_element(id));
             super::populate_response_lifecycle_from_active_state(
                 cx,
                 id,
-                response.core.focused,
-                response.core.changed,
+                focused,
+                changed,
                 &mut response,
             );
             sync_select_all_on_focus(
                 cx,
                 id,
-                response.core.focused,
+                focused,
                 !current.is_empty(),
                 options.select_all_on_focus,
             );
             let select_all_requested = cx.take_transient_for(id, super::KEY_SELECT_ALL_ON_FOCUS);
-            if select_all_requested && options.select_all_on_focus && response.core.focused {
+            if select_all_requested && options.select_all_on_focus && focused {
                 cx.app.push_effect(Effect::Command {
                     window: Some(cx.window),
                     command: CommandId::from("edit.select_all"),

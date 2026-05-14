@@ -126,7 +126,7 @@ impl DebugDrawResponse {
     }
 
     pub fn rect(&self) -> Option<Rect> {
-        self.response.core.rect
+        self.response.rect()
     }
 }
 

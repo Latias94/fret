@@ -49,11 +49,11 @@ pub(in super::super) fn sanitize_response_for_enabled(
         return;
     }
     response.clear_lifecycle_signals();
-    response.core.hovered = false;
-    response.core.pressed = false;
-    response.core.focused = false;
-    response.core.clicked = false;
-    response.core.changed = false;
+    response.set_core_hovered(false);
+    response.set_core_pressed(false);
+    response.set_core_focused(false);
+    response.set_core_clicked(false);
+    response.set_core_changed(false);
     response.set_nav_highlighted(false);
     response.clear_press_context_signals();
     *response.drag_mut() = super::super::DragResponse::default();

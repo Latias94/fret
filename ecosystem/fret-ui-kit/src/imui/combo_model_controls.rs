@@ -93,7 +93,7 @@ pub(super) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
                 super::model_value_changed_for(cx, element_id, selected_now.clone())
             })
         });
-    response.core.changed = changed;
+    response.set_core_changed(changed);
     response.merge_edited(changed);
     response.merge_deactivated_after_edit(changed && combo.toggled && !combo.open);
     response

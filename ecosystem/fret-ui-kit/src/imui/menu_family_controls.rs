@@ -294,7 +294,7 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             let _ = cx.app.models_mut().update(&row_open, |value| *value = true);
         });
     }
-    if open_requested && let Some(anchor) = trigger.core.rect {
+    if open_requested && let Some(anchor) = trigger.rect() {
         ui.open_popup_at(id, anchor);
     }
 
@@ -437,7 +437,7 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
                     policy,
                     submenu_value.as_ref(),
                     trigger.id(),
-                    trigger.core.rect.is_none(),
+                    trigger.rect().is_none(),
                 );
             } else if !is_selected_before {
                 select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id());
@@ -463,7 +463,7 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
 
         if should_close {
             ui.close_popup(id);
-        } else if should_open && let Some(anchor) = trigger.core.rect {
+        } else if should_open && let Some(anchor) = trigger.rect() {
             ui.open_popup_at(id, anchor);
         }
     }

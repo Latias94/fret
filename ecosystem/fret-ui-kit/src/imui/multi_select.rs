@@ -71,7 +71,7 @@ pub(super) fn multi_selectable_with_options<
                 changed = apply_click(state, all_keys, &key, modifiers);
             })
         });
-        response.core.changed = changed;
+        response.set_core_changed(changed);
     }
 
     response
