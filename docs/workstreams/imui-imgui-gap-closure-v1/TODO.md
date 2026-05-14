@@ -93,6 +93,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 response follow-up: disclosure and combo responses now keep trigger/open/toggle
    fields crate-local, remove external default construction, and expose read-only `response()`,
    `open()`, and `toggled()` methods for callers.
+   2026-05-14 tab follow-up: tab-bar aggregate and tab-trigger responses now follow the same
+   accessor-first shape; tab response storage stays crate-local and `TabBarResponse` no longer
+   exposes external default construction.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

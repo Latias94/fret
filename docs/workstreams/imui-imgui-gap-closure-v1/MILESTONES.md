@@ -78,6 +78,9 @@ Exit criteria:
   2026-05-14 response follow-up result: disclosure and combo responses now expose trigger state
   through `response()`, keep trigger/open/toggle storage crate-local, and no longer allow external
   default construction.
+  2026-05-14 tab follow-up result: tab-bar aggregate and tab-trigger responses now keep selection /
+  trigger storage crate-local while preserving `selected_id()`, `selected_changed()`, `trigger(...)`,
+  and trigger edge accessors.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

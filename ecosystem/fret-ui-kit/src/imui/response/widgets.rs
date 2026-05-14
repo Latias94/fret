@@ -30,19 +30,19 @@ pub struct InputTextPickerResponse {
 }
 
 /// Aggregated response surface for helper-owned tab bars.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TabBarResponse {
-    pub selected: Option<Arc<str>>,
-    pub selected_changed: bool,
-    pub triggers: Vec<TabTriggerResponse>,
+    pub(crate) selected: Option<Arc<str>>,
+    pub(crate) selected_changed: bool,
+    pub(crate) triggers: Vec<TabTriggerResponse>,
 }
 
 /// Outward trigger response for a single helper-owned tab item.
 #[derive(Debug, Clone)]
 pub struct TabTriggerResponse {
-    pub id: Arc<str>,
-    pub selected: bool,
-    pub trigger: ResponseExt,
+    pub(crate) id: Arc<str>,
+    pub(crate) selected: bool,
+    pub(crate) trigger: ResponseExt,
 }
 
 /// Aggregated response surface for helper-owned table headers.

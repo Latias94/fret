@@ -133,6 +133,10 @@ Run evidence:
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
   `tools/gate_imui_workstream_source.py` rejects public fields from returning.
+- 2026-05-14: made `TabBarResponse` / `TabTriggerResponse` accessor-first for selection and trigger
+  state. Existing tab tests already use `selected_id()`, `selected_changed()`, `trigger(...)`, and
+  trigger edge helpers; the source gate now rejects public tab response fields and public
+  `TabBarResponse` default construction from returning.
 
 ## P3 Design Surface Readiness Gates
 
