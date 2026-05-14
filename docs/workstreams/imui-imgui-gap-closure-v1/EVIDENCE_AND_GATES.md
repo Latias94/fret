@@ -24,6 +24,8 @@ Last updated: 2026-05-14
 - Current Fret IMUI source:
   - `ecosystem/fret-imui/src/lib.rs`
   - `ecosystem/fret-imui/src/frontend.rs`
+  - `ecosystem/fret-imui/src/tests/mod.rs`
+  - `ecosystem/fret-imui/src/tests/harness.rs`
   - `ecosystem/fret-imui/src/tests/composition/mod.rs`
   - `ecosystem/fret-imui/src/tests/floating/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_drag/mod.rs`
@@ -234,6 +236,10 @@ git diff --check
 
 Run evidence:
 
+- 2026-05-14: moved the shared IMUI test host, fake text/path/svg/material service, event
+  dispatch helpers, geometry helpers, and floating overlay harness from
+  `ecosystem/fret-imui/src/tests/mod.rs` into `ecosystem/fret-imui/src/tests/harness.rs`.
+  `mod.rs` now only imports the harness and owns the test-module index.
 - 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/composition.rs` file into
   `mount_smoke`, `control_geometry`, and `layout_collections` test owners under
   `ecosystem/fret-imui/src/tests/composition/`.
