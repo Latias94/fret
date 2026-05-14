@@ -62,6 +62,10 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`.
 - A product/UX-focused follow-up track now lives in
   `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md`.
+- The GUI first-open shell now also surfaces a `Gate Commands` block for stale paint/scene,
+  pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints. This keeps the
+  gate vocabulary visible in the product surface without moving gate policy into `fret-ui` or
+  `fret-imui`.
 
 ## Goals (v1)
 

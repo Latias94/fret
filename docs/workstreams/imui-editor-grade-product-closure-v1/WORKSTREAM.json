@@ -426,6 +426,10 @@
       "command": "cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast"
     },
     {
+      "name": "imui-p2-devtools-gate-command-source",
+      "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast"
+    },
+    {
       "name": "imui-p2-devtools-perf-evidence-drilldown",
       "command": "cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast"
     },
@@ -602,6 +606,7 @@
     "docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md",
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
+    "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md",

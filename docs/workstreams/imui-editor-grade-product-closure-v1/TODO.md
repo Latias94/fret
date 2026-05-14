@@ -155,6 +155,10 @@ reopen.
       demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
       and `diag hotspots` entrypoints. This improves Dear ImGui-style demo/metrics/debug
       discoverability without widening `fret-imui`.
+      Maintenance: the same GUI shell now surfaces a `Gate Commands` block for stale paint/scene,
+      pixels-changed, perf-threshold, and resource-footprint diagnostics command templates. This is
+      tracked in `docs/workstreams/diag-devtools-gui-v1/`, keeping gate UX in the diagnostics owner
+      lane rather than the IMUI runtime.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

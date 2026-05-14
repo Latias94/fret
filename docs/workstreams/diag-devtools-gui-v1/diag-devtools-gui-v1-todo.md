@@ -102,6 +102,8 @@ Conventions:
 ### M6: Quality gates + “real-time inspect” polish
 
 - [ ] First-class UI for gates:
+  - [x] First-open `Gate Commands` block for existing stale paint/scene, pixels-changed,
+        perf-threshold, and resource-footprint diagnostics command templates.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

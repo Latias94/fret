@@ -293,6 +293,10 @@ Current status:
   notes/device shell demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`,
   `diag triage`, and `diag hotspots` entrypoints. This is a productization step for
   always-available demo/metrics/debug discoverability, not a `fret-imui` API expansion.
+- 2026-05-15 DevTools GUI gate-command projection adds a first-open `Gate Commands` block for
+  stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints.
+  The owner remains `docs/workstreams/diag-devtools-gui-v1/`; this umbrella records the evidence
+  only to keep the broader Dear ImGui-class product goal honest.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

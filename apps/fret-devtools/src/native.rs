@@ -102,6 +102,16 @@ const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
 const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
+const DEVTOOLS_GATE_STALE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json";
+const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json";
+const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json";
+const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>";
+const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -820,6 +830,16 @@ fn header_bar(
         "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
         demo_metrics_debug_rows,
     );
+    let mut gate_command_rows = Vec::new();
+    for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
+        gate_command_rows.push(cx.text(line));
+    }
+    let gate_commands_panel = diag_section(
+        cx,
+        "Gate Commands",
+        "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
+        gate_command_rows,
+    );
 
     let connection_actions = ui::h_row(|cx| {
         [
@@ -893,6 +913,7 @@ fn header_bar(
             workspace_line,
             first_open_panel,
             demo_metrics_debug_panel,
+            gate_commands_panel,
             connection_actions,
             quick_actions,
         ])
@@ -5187,6 +5208,29 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     ]
 }
 
+fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        "gate route: first-class-gates".to_string(),
+        format!("artifacts root: {artifacts_root}"),
+        format!("stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}"),
+        format!("pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}"),
+        format!("perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}"),
+        format!(
+            "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}"
+        ),
+        format!(
+            "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}"
+        ),
+        "gate evidence files: check.pixels_changed.json, check.perf_thresholds.json, resource.footprint.json".to_string(),
+    ]
+}
+
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
     if is_abs_path(raw) {
         PathBuf::from(raw)
@@ -5324,6 +5368,32 @@ mod tests {
         assert!(
             text.contains("debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json")
         );
+    }
+
+    #[test]
+    fn devtools_gate_command_lines_surface_first_class_gates() {
+        let lines = devtools_gate_command_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("gate route: first-class-gates"));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains(
+            "stale paint/scene: cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json"
+        ));
+        assert!(text.contains(
+            "pixels changed: cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json"
+        ));
+        assert!(text.contains(
+            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json"
+        ));
+        assert!(text.contains(
+            "resource footprint capture: cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>"
+        ));
+        assert!(text.contains(
+            "resource footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json"
+        ));
+        assert!(text.contains("check.pixels_changed.json"));
+        assert!(text.contains("check.perf_thresholds.json"));
+        assert!(text.contains("resource.footprint.json"));
     }
 
     #[test]
