@@ -202,6 +202,10 @@
       "command": "cargo nextest run -p fret-imui floating --no-fail-fast"
     },
     {
+      "name": "fret-imui drag ownership tests",
+      "command": "cargo nextest run -p fret-imui interaction_drag --no-fail-fast"
+    },
+    {
       "name": "fret-imui menu tab ownership tests",
       "command": "cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast"
     },
@@ -282,7 +286,8 @@
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/mod.rs",
-    "ecosystem/fret-imui/src/tests/models_combo/mod.rs"
+    "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/mod.rs"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",

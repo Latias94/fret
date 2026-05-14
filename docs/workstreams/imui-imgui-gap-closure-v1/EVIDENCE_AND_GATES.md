@@ -26,6 +26,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-imui/src/frontend.rs`
   - `ecosystem/fret-imui/src/tests/composition/mod.rs`
   - `ecosystem/fret-imui/src/tests/floating/mod.rs`
+  - `ecosystem/fret-imui/src/tests/interaction_drag/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs`
   - `ecosystem/fret-imui/src/tests/models_combo/mod.rs`
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
@@ -209,6 +210,7 @@ mechanics that can accidentally make diagnostics bounds diverge from visual colu
 ```powershell
 cargo nextest run -p fret-imui composition --no-fail-fast
 cargo nextest run -p fret-imui floating --no-fail-fast
+cargo nextest run -p fret-imui interaction_drag --no-fail-fast
 cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast
 cargo nextest run -p fret-imui models_combo --no-fail-fast
 cargo nextest run -p fret-imui popup_hover --no-fail-fast
@@ -230,6 +232,11 @@ Run evidence:
   `ecosystem/fret-imui/src/tests/floating/`.
 - 2026-05-14: `cargo nextest run -p fret-imui floating --no-fail-fast` passed locally with 25
   tests.
+- 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/interaction_drag.rs` file
+  into `multi_select`, `collection_drag`, `drag_core`, `drag_preview`, and `sortable` test owners
+  under `ecosystem/fret-imui/src/tests/interaction_drag/`.
+- 2026-05-14: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` passed locally with
+  8 tests.
 - 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
   file into `menu_activation`, `submenu_hover`, `submenu_shortcuts`, and `tabs` test owners under
   `ecosystem/fret-imui/src/tests/interaction_menu_tabs/`.
