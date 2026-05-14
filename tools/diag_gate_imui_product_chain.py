@@ -25,6 +25,7 @@ EDITOR_PROOF = "editor-proof"
 EDITOR_NOTES = "editor-notes"
 EDITOR_NOTES_DEVICE_SHELL = "editor-notes-device-shell"
 WORKSPACE_SHELL = "workspace-shell"
+DOCKING = "docking"
 SOURCE_GATES = "source-gates"
 
 ALL_GATES = [
@@ -35,6 +36,7 @@ ALL_GATES = [
     EDITOR_NOTES,
     EDITOR_NOTES_DEVICE_SHELL,
     WORKSPACE_SHELL,
+    DOCKING,
     SOURCE_GATES,
 ]
 
@@ -43,6 +45,7 @@ ALL_GATES = [
 class ProductSurface:
     name: str
     suite: str | None = None
+    campaign: str | None = None
     scripts: tuple[str, ...] = ()
 
 
@@ -72,6 +75,10 @@ PRODUCT_SURFACES = [
     ProductSurface(
         name=WORKSPACE_SHELL,
         suite="tools/diag-scripts/suites/diag-hardening-smoke-workspace/suite.json",
+    ),
+    ProductSurface(
+        name=DOCKING,
+        campaign="tools/diag-campaigns/imui-p3-multiwindow-parity.json",
     ),
 ]
 
@@ -226,12 +233,35 @@ def _validate_script(repo_root: Path, fretboard_exe: Path, script_path: str) -> 
         raise SystemExit(f"script validation failed: {script_path}")
 
 
+def _validate_campaign(repo_root: Path, fretboard_exe: Path, campaign_path: str) -> None:
+    proc = _run_capture_checked(
+        f"diag campaign validate {campaign_path}",
+        [str(fretboard_exe), "diag", "campaign", "validate", campaign_path, "--json"],
+        cwd=repo_root,
+    )
+    payload = _parse_json_stdout(f"diag campaign validate {campaign_path}", proc)
+    if payload.get("kind") != "diag_campaign_validate_result" or payload.get("count") != 1:
+        raise SystemExit(f"campaign validation failed: {campaign_path}")
+    campaigns = payload.get("campaigns")
+    if not isinstance(campaigns, list) or len(campaigns) != 1:
+        raise SystemExit(f"campaign validation returned unexpected campaign list: {campaign_path}")
+    campaign = campaigns[0]
+    expected_id = Path(campaign_path).stem
+    if campaign.get("id") != expected_id:
+        raise SystemExit(f"campaign validation returned unexpected campaign id: {campaign_path}")
+    scripts = campaign.get("scripts")
+    if not isinstance(scripts, list) or len(scripts) < 4:
+        raise SystemExit(f"campaign validation returned too few scripts: {campaign_path}")
+
+
 def _validate_product_surface(repo_root: Path, fretboard_exe: Path, surface: ProductSurface) -> None:
     scripts = list(surface.scripts)
     if surface.suite is not None:
         scripts.extend(_suite_scripts(repo_root, surface.suite))
     for script in scripts:
         _validate_script(repo_root, fretboard_exe, script)
+    if surface.campaign is not None:
+        _validate_campaign(repo_root, fretboard_exe, surface.campaign)
 
 
 def _run_source_gates(repo_root: Path) -> None:

@@ -598,9 +598,10 @@ python tools/diag_gate_imui_product_chain.py --launched --only generic-action --
 
 Status: landed as a lightweight maintainer gate.
 
-The default product-chain gate validates discovery plus promoted script/suite inputs across
+The default product-chain gate validates discovery plus promoted script/suite/campaign inputs across
 `imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`,
 `editor_notes_demo`, `editor_notes_device_shell_demo`, `workspace_shell_demo`,
+`docking_arbitration_demo` through the `imui-p3-multiwindow-parity` campaign manifest,
 DevTools/diagnostics first-open, and the IMUI source gates. It does not
 replace the individual launched gates; it keeps the cross-app product chain discoverable and
 validated without forcing a single `diag campaign` launch target onto unrelated apps.
@@ -610,6 +611,15 @@ Focused command:
 ```text
 python tools/diag_gate_imui_product_chain.py
 ```
+
+Latest local default product-chain evidence (2026-05-14):
+
+- Command: `python tools/diag_gate_imui_product_chain.py`
+- Result: passed.
+- Added coverage: the default gate now runs
+  `diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`, so the
+  discovered docking proof surface has a manifest-shape check in the same maintainer command as the
+  cookbook, editor proof, editor notes, workspace shell, DevTools discovery, and IMUI source gates.
 
 Use `--launched` when the local machine should also execute the existing launched proof commands
 sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:

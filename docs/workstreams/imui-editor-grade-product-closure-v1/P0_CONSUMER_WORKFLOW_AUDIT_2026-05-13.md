@@ -108,6 +108,12 @@ The product-chain gate also supports `--reuse-built` for launched `fret-demo` su
 editor/workbench diagnostics can run against existing binaries without turning build-lock timing
 into product-chain signal.
 
+Follow-up source-gate refresh on 2026-05-14: `tools/diag_gate_imui_product_chain.py` now treats
+`docking_arbitration_demo` as a campaign-backed product surface and runs
+`diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json` in the default
+lightweight maintainer gate. This keeps the product chain honest about the discovered docking
+surface without running the launched multi-window campaign by default.
+
 Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed
