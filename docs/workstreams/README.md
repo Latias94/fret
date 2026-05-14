@@ -1679,6 +1679,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -1689,8 +1690,9 @@ Current source of truth for the in-tree immediate-mode stack:
     drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-13, the launched
     bounded P3 campaign is green after the diagnostics runner no-frame pointer-move repair. As of
     2026-05-14, the local Wayland-boundary refresh is green for source policy, capability posture,
-    fallback behavior, and campaign manifests. Platform-specific real-host acceptance, especially
-    the Wayland compositor runbook, remains open.
+    fallback behavior, and campaign manifests, and the source-drift guard now validates docking
+    suite membership plus stale standalone-note drift. Platform-specific real-host acceptance,
+    especially the Wayland compositor runbook, remains open.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
   - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
@@ -1910,7 +1912,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-13, 17 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-14, 18 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs

@@ -1,0 +1,234 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from _gate_lib import WORKSPACE_ROOT, fail, ok
+
+
+GATE_NAME = "docking multiwindow workstream source"
+
+
+COMMON_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/common/suite.json")
+WINDOWS_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/windows/suite.json")
+ROOT_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/suite.json")
+SMOKE_SUITE = Path("tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json")
+
+REQUIRED_COMMON_SCRIPTS = [
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json",
+    "tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json",
+    "tools/diag-scripts/docking-arbitration-demo-tab-bar-edge-autoscroll.json",
+]
+
+REQUIRED_WINDOWS_SCRIPTS = [
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json",
+]
+
+REQUIRED_SMOKE_SCRIPTS = [
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json",
+]
+
+EXISTENCE_ONLY_SCRIPTS = [
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-button-is-not-drop-surface.json",
+]
+
+
+def _read_text(path: Path, failures: list[str]) -> str:
+    try:
+        return (WORKSPACE_ROOT / path).read_text(encoding="utf-8")
+    except OSError as exc:
+        failures.append(f"{path.as_posix()}: failed to read: {exc}")
+        return ""
+
+
+def _read_json(path: Path, failures: list[str]) -> Any:
+    source = _read_text(path, failures)
+    if not source:
+        return None
+    try:
+        return json.loads(source)
+    except json.JSONDecodeError as exc:
+        failures.append(f"{path.as_posix()}: invalid JSON: {exc}")
+        return None
+
+
+def _suite_scripts(path: Path, failures: list[str]) -> list[str]:
+    payload = _read_json(path, failures)
+    if not isinstance(payload, dict):
+        return []
+    if payload.get("kind") != "diag_script_suite_manifest":
+        failures.append(f"{path.as_posix()}: expected diag_script_suite_manifest")
+    scripts = payload.get("scripts")
+    if not isinstance(scripts, list) or not all(isinstance(item, str) for item in scripts):
+        failures.append(f"{path.as_posix()}: expected string scripts list")
+        return []
+    return scripts
+
+
+def _require_markers(
+    path: Path,
+    *,
+    required: list[str],
+    forbidden: list[str] | None = None,
+    failures: list[str],
+) -> None:
+    source = _read_text(path, failures)
+    for marker in required:
+        if marker not in source:
+            failures.append(f"{path.as_posix()}: missing marker {marker}")
+    for marker in forbidden or []:
+        if marker in source:
+            failures.append(f"{path.as_posix()}: forbidden stale marker {marker}")
+
+
+def _require_suite_members(
+    path: Path,
+    *,
+    required: list[str],
+    failures: list[str],
+    max_len: int | None = None,
+) -> list[str]:
+    scripts = _suite_scripts(path, failures)
+    script_set = set(scripts)
+    for script in required:
+        if script not in script_set:
+            failures.append(f"{path.as_posix()}: missing suite script {script}")
+    if max_len is not None and len(scripts) > max_len:
+        failures.append(f"{path.as_posix()}: expected at most {max_len} scripts, found {len(scripts)}")
+    return scripts
+
+
+def _require_script_paths(scripts: list[str], failures: list[str]) -> None:
+    for script in scripts:
+        path = Path(script)
+        absolute = WORKSPACE_ROOT / path
+        if not absolute.exists():
+            failures.append(f"{script}: script path does not exist")
+            continue
+        payload = _read_json(path, failures)
+        if isinstance(payload, dict) and set(payload.keys()) == {"to"}:
+            target = payload.get("to")
+            if not isinstance(target, str):
+                failures.append(f"{script}: redirect target must be a string")
+                continue
+            if not (WORKSPACE_ROOT / target).exists():
+                failures.append(f"{script}: redirect target does not exist: {target}")
+
+
+def _check_docs(failures: list[str]) -> None:
+    _require_markers(
+        Path("docs/workstreams/standalone/docking-multi-window-imgui-alignment-v1.md"),
+        required=[
+            "Status: Active reference (partially superseded by `docs/workstreams/docking-multiwindow-imgui-parity/`)",
+            "Status note (2026-05-14): current execution state lives in `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`",
+            "Tab overflow + scrolling: delivered for the current docking arbitration tab-bar scope",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-edge-autoscroll.json`",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json`",
+            "`tools/diag-scripts/suites/docking-arbitration/common/suite.json`",
+            "`tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`",
+            "Keep the docking suite split honest",
+        ],
+        forbidden=[
+            "Tab overflow + scrolling: ensure overflow behavior is predictable and stable under resize (and ideally gate it).",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md"),
+        required=[
+            "Status: source drift guard; no behavior change.",
+            "python tools/gate_docking_multiwindow_workstream_source.py",
+            "The standalone behavior-first note no longer teaches tab overflow as an ungated gap.",
+            "`tools/diag-scripts/suites/docking-arbitration/common/suite.json`",
+            "`tools/diag-scripts/suites/docking-arbitration/windows/suite.json`",
+            "`tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
+        required=[
+            "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "python tools/gate_docking_multiwindow_workstream_source.py",
+            "tools/gate_docking_multiwindow_workstream_source.py",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md"),
+        required=[
+            "Latest source-drift guard:",
+            "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"),
+        required=[
+            "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "source drift guard now validates docking suite membership",
+        ],
+        failures=failures,
+    )
+
+
+def _check_suites(failures: list[str]) -> None:
+    common = _require_suite_members(
+        COMMON_SUITE,
+        required=REQUIRED_COMMON_SCRIPTS,
+        failures=failures,
+    )
+    windows = _require_suite_members(
+        WINDOWS_SUITE,
+        required=REQUIRED_WINDOWS_SCRIPTS,
+        failures=failures,
+    )
+    root = _require_suite_members(
+        ROOT_SUITE,
+        required=REQUIRED_COMMON_SCRIPTS + REQUIRED_WINDOWS_SCRIPTS,
+        failures=failures,
+    )
+    _require_suite_members(
+        SMOKE_SUITE,
+        required=REQUIRED_SMOKE_SCRIPTS,
+        failures=failures,
+        max_len=12,
+    )
+    if root and common and windows and root != common + windows:
+        failures.append(
+            f"{ROOT_SUITE.as_posix()}: expected root scripts to equal common + windows suite scripts"
+        )
+    _require_script_paths(
+        REQUIRED_COMMON_SCRIPTS
+        + REQUIRED_WINDOWS_SCRIPTS
+        + REQUIRED_SMOKE_SCRIPTS
+        + EXISTENCE_ONLY_SCRIPTS,
+        failures,
+    )
+
+
+def collect_failures() -> list[str]:
+    failures: list[str] = []
+    _check_docs(failures)
+    _check_suites(failures)
+    return failures
+
+
+def main() -> None:
+    failures = collect_failures()
+    if failures:
+        fail(GATE_NAME, f"{len(failures)} source marker problem(s):\n  - " + "\n  - ".join(failures))
+    ok(GATE_NAME)
+
+
+if __name__ == "__main__":
+    main()

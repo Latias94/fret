@@ -5,6 +5,9 @@ from pathlib import Path
 import re
 
 from _gate_lib import WORKSPACE_ROOT, fail, ok
+from gate_docking_multiwindow_workstream_source import (
+    collect_failures as collect_docking_multiwindow_failures,
+)
 
 
 GATE_NAME = "imui workstream source"
@@ -6994,6 +6997,8 @@ def main() -> None:
     for check in opaque_struct_checks:
         check_opaque_structs(check, failures)
     check_fret_imui_runtime_dependencies(failures)
+    for failure in collect_docking_multiwindow_failures():
+        failures.append(f"docking multiwindow source: {failure}")
 
     if failures:
         fail(GATE_NAME, f"{len(failures)} source marker problem(s):\n  - " + "\n  - ".join(failures))

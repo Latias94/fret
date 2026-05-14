@@ -72,7 +72,7 @@ Use this note as the first stop when deciding whether new icon work should conti
 - `command-gating-surface-alignment-v2-todo-input-dispatch-v2.md` — first 2026-01-25, latest 2026-02-11 (history: `docs/workstreams/command-gating-surface-alignment-v2-todo-input-dispatch-v2.md`)
 - `default-actions-v2-todo-input-dispatch-v2.md` — first 2026-01-25, latest 2026-02-11 (history: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`)
 - `diag-devtools-gui-refresh-v1.md` — first 2026-03-06, latest 2026-03-06 (history: `docs/workstreams/diag-devtools-gui-refresh-v1.md`)
-- `docking-multi-window-imgui-alignment-v1.md` — first 2026-02-18, latest 2026-03-04 (history: `docs/workstreams/docking-multi-window-imgui-alignment-v1.md`)
+- `docking-multi-window-imgui-alignment-v1.md` — first 2026-02-18, latest 2026-05-14 (history: `docs/workstreams/docking-multi-window-imgui-alignment-v1.md`; current execution state lives in `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`)
 - `ecosystem-status.md` — first 2026-01-13, latest 2026-03-12 (history: `docs/workstreams/ecosystem-status.md`)
 - `execution-concurrency-surface-v1.md` — first 2026-01-26, latest 2026-02-11 (history: `docs/workstreams/execution-concurrency-surface-v1.md`)
 - `font-catalog-refresh-policy-v1.md` — first 2026-02-11, latest 2026-02-11 (history: `docs/workstreams/font-catalog-refresh-policy-v1.md`)

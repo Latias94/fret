@@ -140,6 +140,11 @@ Each TODO is labeled:
   - Notes:
     - Scripted input isolation ignores external pointer events, but does not freeze the OS cursor. Avoid moving the
       physical mouse during multi-window docking diag runs to prevent OS-level hover routing from diverging.
+  - Progress:
+    - [x] The source drift guard now validates docking suite membership and the standalone
+      behavior-first note:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+      - `tools/gate_docking_multiwindow_workstream_source.py`
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
