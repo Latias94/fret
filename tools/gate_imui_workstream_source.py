@@ -1375,6 +1375,35 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_drag/mod.rs"),
+            required=[
+                "selection\n        .selected()\n        .iter()",
+            ],
+            forbidden=[
+                "selection\n        .selected\n        .iter()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_drag/collection_drag.rs"),
+            required=[
+                "selected_out.replace(state.selected().to_vec());",
+            ],
+            forbidden=[
+                "selected_out.replace(state.selected);",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_drag/multi_select.rs"),
+            required=[
+                "selected_out.replace(state.selected().to_vec());",
+                "anchor_out.replace(state.anchor().cloned());",
+            ],
+            forbidden=[
+                "state.selected.clone()",
+                "state.anchor.clone()",
+            ],
+        ),
+        SourceCheck(
             Path("docs/workstreams/imui-collection-pane-proof-v1/M2_COLLECTION_PROOF_CLOSURE_2026-04-21.md"),
             required=[
                 "Keep `apps/fret-examples/src/imui_editor_proof_demo.rs` as the collection-first M2 proof surface.",

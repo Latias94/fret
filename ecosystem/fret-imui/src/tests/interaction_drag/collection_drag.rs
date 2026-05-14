@@ -112,7 +112,7 @@ fn collection_drag_payload_preserves_selected_keys_across_order_flip() {
                 .models()
                 .get_cloned(&selection_model)
                 .unwrap_or_default();
-            selected_out.replace(state.selected);
+            selected_out.replace(state.selected().to_vec());
         })
     };
 
