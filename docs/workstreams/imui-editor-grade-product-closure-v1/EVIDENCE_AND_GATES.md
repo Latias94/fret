@@ -524,7 +524,8 @@ This package currently proves:
 - the product-chain perf entrypoint now runs `diag perf perf-docking-arbitration-steady` against
   `docking_arbitration_demo` and verifies `regression.summary.json` records two passing
   `perf_case` items with readable bundle artifacts and a readable shared `layout.perf.summary.v1.json`
-  artifact plus curated `evidence.extra.metrics` rather than trusting process exit alone,
+  artifact, a readable shared `check.perf_thresholds.json` artifact, empty threshold failures, and
+  curated `evidence.extra.metrics` rather than trusting process exit alone,
 - and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
   IMUI lane's new umbrella package.
 
@@ -559,6 +560,24 @@ Latest local docking perf entrypoint evidence (2026-05-14):
   `evidence.extra.metrics` fields such as `top_total_time_us`, pointer-move dispatch/hit-test, and
   renderer encode/instance metrics (`top_renderer_encode_scene_us`,
   `top_renderer_instance_bytes`).
+
+Latest local docking perf threshold evidence (2026-05-15):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-threshold-gate-2026-05-15`
+- `target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/regression.summary.json`
+  reports `items_total=2`, `passed=2`, `failed_tooling=0`, and `wants_perf_thresholds=true`.
+- `target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/check.perf_thresholds.json`
+  reports `kind=perf_thresholds`, `observed_aggregate=max`, and `failures=[]`.
+- The product-chain gate now launches `diag perf` with conservative CPU/layout/pointer thresholds:
+  `--max-top-total-us 20000`, `--max-top-layout-us 10000`, `--max-top-solve-us 10000`,
+  `--max-pointer-move-dispatch-us 5000`, `--max-pointer-move-hit-test-us 5000`, and
+  `--max-pointer-move-global-changes 0`.
+- The gate validates that each regression item exposes readable `compare_json` evidence, that both
+  rows in `check.perf_thresholds.json` match
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, and that all row
+  threshold sources are `cli`. This turns the previous readable metric projection into a conservative
+  product-chain perf threshold gate.
 
 The 2026-05-13 launched bounded campaign result is `campaign: ok` at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
@@ -676,7 +695,8 @@ Latest local default product-chain evidence (2026-05-14):
 - Added coverage: the default lightweight gate now validates the
   `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` scripts, while the
   explicit launched `perf-docking` product-chain slice verifies the perf regression summary shape,
-  item bundle artifacts, shared layout perf summary artifact, and lightweight summary metrics.
+  item bundle artifacts, shared layout perf summary artifact, shared `check.perf_thresholds.json`
+  artifact, conservative CLI thresholds, empty threshold failures, and lightweight summary metrics.
 
 Use `--launched` when the local machine should also execute the existing launched proof commands
 sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:

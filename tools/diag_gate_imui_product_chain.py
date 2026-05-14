@@ -29,6 +29,15 @@ DOCKING = "docking"
 PERF_DOCKING = "perf-docking"
 SOURCE_GATES = "source-gates"
 
+DOCKING_PERF_THRESHOLDS: tuple[tuple[str, str, int], ...] = (
+    ("--max-top-total-us", "max_top_total_us", 20_000),
+    ("--max-top-layout-us", "max_top_layout_us", 10_000),
+    ("--max-top-solve-us", "max_top_solve_us", 10_000),
+    ("--max-pointer-move-dispatch-us", "max_pointer_move_dispatch_us", 5_000),
+    ("--max-pointer-move-hit-test-us", "max_pointer_move_hit_test_us", 5_000),
+    ("--max-pointer-move-global-changes", "max_pointer_move_global_changes", 0),
+)
+
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
@@ -166,6 +175,17 @@ def _path_from_json(value: object) -> Path | None:
     if not isinstance(value, str) or not value:
         return None
     return Path(value)
+
+
+def _docking_perf_threshold_args() -> list[str]:
+    args: list[str] = []
+    for flag, _json_key, value in DOCKING_PERF_THRESHOLDS:
+        args.extend([flag, str(value)])
+    return args
+
+
+def _docking_perf_threshold_values() -> dict[str, int]:
+    return {json_key: value for _flag, json_key, value in DOCKING_PERF_THRESHOLDS}
 
 
 def _selected_gate_names(raw_only: list[str]) -> set[str]:
@@ -375,6 +395,52 @@ def _validate_product_surface(repo_root: Path, fretboard_exe: Path, surface: Pro
         _validate_campaign(repo_root, fretboard_exe, surface.campaign)
 
 
+def _validate_docking_perf_thresholds(
+    threshold_path: Path,
+    expected_scripts: set[str],
+) -> None:
+    thresholds = _read_json_file(threshold_path)
+    if thresholds.get("kind") != "perf_thresholds" or thresholds.get("schema_version") != 1:
+        raise SystemExit(f"docking perf thresholds JSON has unexpected shape: {threshold_path}")
+    if thresholds.get("observed_aggregate") != "max":
+        raise SystemExit(f"docking perf thresholds JSON has unexpected aggregate: {threshold_path}")
+    if thresholds.get("failures") != []:
+        raise SystemExit(f"docking perf thresholds JSON recorded failures: {threshold_path}")
+
+    expected_thresholds = _docking_perf_threshold_values()
+    threshold_values = thresholds.get("thresholds")
+    if not isinstance(threshold_values, dict):
+        raise SystemExit(f"docking perf thresholds JSON is missing thresholds: {threshold_path}")
+    for key, expected in expected_thresholds.items():
+        if threshold_values.get(key) != expected:
+            raise SystemExit(
+                f"docking perf thresholds JSON has unexpected {key}: {threshold_path}"
+            )
+
+    rows = thresholds.get("rows")
+    if not isinstance(rows, list) or len(rows) != len(expected_scripts):
+        raise SystemExit(f"docking perf thresholds JSON did not record both rows: {threshold_path}")
+    seen_scripts: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise SystemExit(f"docking perf thresholds JSON contains a non-object row: {threshold_path}")
+        script = row.get("script")
+        if not isinstance(script, str):
+            raise SystemExit(f"docking perf thresholds row is missing script: {threshold_path}")
+        seen_scripts.add(script)
+        row_thresholds = row.get("thresholds")
+        row_sources = row.get("threshold_sources")
+        if not isinstance(row_thresholds, dict) or not isinstance(row_sources, dict):
+            raise SystemExit(f"docking perf thresholds row is missing threshold metadata: {script}")
+        for key, expected in expected_thresholds.items():
+            if row_thresholds.get(key) != expected:
+                raise SystemExit(f"docking perf thresholds row has unexpected {key}: {script}")
+            if row_sources.get(key) != "cli":
+                raise SystemExit(f"docking perf thresholds row did not source {key} from CLI: {script}")
+    if seen_scripts != expected_scripts:
+        raise SystemExit("docking perf thresholds rows do not match the promoted suite")
+
+
 def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
     summary_path = out_dir / "regression.summary.json"
     summary = _read_json_file(summary_path)
@@ -388,6 +454,9 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
         raise SystemExit("docking perf regression summary is missing totals")
     if totals.get("items_total") != 2 or totals.get("passed") != 2 or totals.get("failed_tooling") != 0:
         raise SystemExit("docking perf regression summary did not pass both perf cases")
+    filters = summary.get("campaign", {}).get("filters")
+    if not isinstance(filters, dict) or filters.get("wants_perf_thresholds") is not True:
+        raise SystemExit("docking perf regression summary did not record threshold gating")
 
     expected_scripts = set(
         _suite_scripts(
@@ -398,6 +467,7 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
     seen_scripts: set[str] = set()
     seen_bundles: set[Path] = set()
     seen_perf_summaries: set[Path] = set()
+    seen_thresholds: set[Path] = set()
     items = summary.get("items")
     if not isinstance(items, list) or len(items) != len(expected_scripts):
         raise SystemExit("docking perf regression summary did not record both perf scripts")
@@ -417,6 +487,8 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
         metrics = extra.get("metrics")
         if not isinstance(metrics, dict):
             raise SystemExit(f"docking perf item is missing summary metrics: {script}")
+        if extra.get("threshold_failures") != []:
+            raise SystemExit(f"docking perf item recorded threshold failures: {script}")
         for metric_key in (
             "top_total_time_us",
             "top_layout_time_us",
@@ -439,9 +511,17 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
         if perf_summary_path is None or not perf_summary_path.is_file():
             raise SystemExit(f"docking perf item has no readable perf summary artifact: {script}")
         seen_perf_summaries.add(perf_summary_path)
+        threshold_path = _path_from_json(evidence.get("compare_json"))
+        if threshold_path is None or not threshold_path.is_file():
+            raise SystemExit(f"docking perf item has no readable threshold artifact: {script}")
+        seen_thresholds.add(threshold_path)
 
     if seen_scripts != expected_scripts:
         raise SystemExit("docking perf regression summary scripts do not match the promoted suite")
+    if len(seen_thresholds) != 1:
+        raise SystemExit("docking perf regression summary should point at one shared threshold artifact")
+    for threshold_path in seen_thresholds:
+        _validate_docking_perf_thresholds(threshold_path, expected_scripts)
     for perf_summary_path in seen_perf_summaries:
         perf_summary = _read_json_file(perf_summary_path)
         if perf_summary.get("kind") != "layout_perf_summary":
@@ -697,6 +777,7 @@ def _run_launched_gates(
             "1",
             "--warmup-frames",
             "5",
+            *_docking_perf_threshold_args(),
             "--reuse-launch",
             "--env",
             "FRET_DOCK_ARB_PRESET=large",

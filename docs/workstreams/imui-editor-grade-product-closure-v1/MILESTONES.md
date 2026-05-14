@@ -331,6 +331,12 @@ Current status:
   slice that verifies `diag perf` writes passing `perf_case` rows, readable item bundle artifacts,
   a readable shared `layout.perf.summary.v1.json` artifact, and lightweight summary metrics to the
   regression evidence chain.
+- 2026-05-15 perf threshold refresh:
+  the same launched `perf-docking` product-chain slice now passes conservative `diag perf`
+  thresholds (`--max-top-total-us`, `--max-top-layout-us`, `--max-top-solve-us`,
+  `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, and
+  `--max-pointer-move-global-changes`) and verifies the shared `check.perf_thresholds.json`
+  artifact before accepting the summary.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

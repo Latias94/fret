@@ -161,3 +161,15 @@ as `bundle_artifact` evidence, and
 `evidence.extra.metrics`. The repaired local run at
 `target/imui-product-chain-perf-docking-metrics-gate-2026-05-14/1778775354481/perf-docking/regression.summary.json`
 reports two passing `perf_case` rows and `failed_tooling=0`.
+
+Follow-up docking perf threshold refresh on 2026-05-15: the product-chain `perf-docking` slice now
+passes conservative `diag perf` thresholds before accepting the IMUI docking smoothness entrypoint.
+The gate launches with `--max-top-total-us 20000`, `--max-top-layout-us 10000`,
+`--max-top-solve-us 10000`, `--max-pointer-move-dispatch-us 5000`,
+`--max-pointer-move-hit-test-us 5000`, and `--max-pointer-move-global-changes 0`; it then verifies
+that each `perf_case` item exposes readable `compare_json` evidence and empty
+`threshold_failures`. The local threshold artifact at
+`target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/check.perf_thresholds.json`
+reports `kind=perf_thresholds`, `observed_aggregate=max`, and `failures=[]`, while
+`target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/regression.summary.json`
+reports two passing rows with `wants_perf_thresholds=true`.

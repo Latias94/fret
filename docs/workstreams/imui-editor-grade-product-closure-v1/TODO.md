@@ -164,7 +164,10 @@ reopen.
       `perf-docking` slice explicitly. The slice also repaired `diag perf` summary evidence so
       human stdout mode still writes `perf_case` rows into `regression.summary.json`, and the
       product-chain gate now requires readable item bundle artifacts plus a readable shared layout
-      perf summary artifact and lightweight summary metrics.
+      perf summary artifact and lightweight summary metrics. The 2026-05-15 follow-up turns those
+      metrics into a conservative threshold gate by requiring shared `check.perf_thresholds.json`
+      evidence, empty `threshold_failures`, and CLI-sourced `--max-top-total-us` /
+      `--max-pointer-move-dispatch-us` / `--max-pointer-move-global-changes` thresholds.
 
 ## Closeout / follow-on management
 
