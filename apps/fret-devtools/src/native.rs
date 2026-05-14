@@ -9,8 +9,8 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
-    RegressionSummaryV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    RegressionSummaryV1, regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -5013,143 +5013,6 @@ struct RegressionSummaryDrilldownData {
     perf_evidence_lines: Vec<String>,
 }
 
-const PERF_DRILLDOWN_METRIC_KEYS: &[&str] = &[
-    "top_total_time_us",
-    "top_layout_time_us",
-    "top_layout_engine_solve_time_us",
-    "pointer_move_max_dispatch_time_us",
-    "pointer_move_max_hit_test_time_us",
-    "pointer_move_snapshots_with_global_changes",
-    "top_renderer_encode_scene_us",
-    "top_renderer_prepare_text_us",
-    "top_renderer_draw_calls",
-    "top_renderer_instance_bytes",
-    "top_renderer_encode_scene_text_ops",
-];
-
-fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
-    if let Some(path) = value.get("path").and_then(|value| value.as_str())
-        && !path.trim().is_empty()
-    {
-        return Some(path.to_string());
-    }
-    if let Some(label) = value.get("label").and_then(|value| value.as_str())
-        && !label.trim().is_empty()
-    {
-        return Some(label.to_string());
-    }
-    let transport = value.get("transport").and_then(|value| value.as_str());
-    let session_id = value.get("session_id").and_then(|value| value.as_str());
-    match (transport, session_id) {
-        (Some(transport), Some(session_id))
-            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
-        {
-            Some(format!("{transport}:{session_id}"))
-        }
-        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
-        _ => None,
-    }
-}
-
-fn regression_item_capability_source_display(
-    item: &fret_diag::regression_summary::RegressionItemSummaryV1,
-) -> Option<String> {
-    item.evidence
-        .as_ref()
-        .and_then(|evidence| evidence.extra.as_ref())
-        .and_then(|extra| extra.get("capability_source"))
-        .and_then(capability_source_display_from_value)
-        .or_else(|| {
-            item.source
-                .as_ref()
-                .and_then(|source| source.metadata.as_ref())
-                .and_then(|metadata| metadata.get("capability_source"))
-                .and_then(capability_source_display_from_value)
-        })
-        .or_else(|| {
-            item.evidence
-                .as_ref()
-                .and_then(|evidence| evidence.extra.as_ref())
-                .and_then(|extra| extra.get("capabilities_source_path"))
-                .and_then(|value| value.as_str())
-                .filter(|value| !value.trim().is_empty())
-                .map(ToString::to_string)
-        })
-}
-
-fn regression_status_label(status: RegressionStatusV1) -> &'static str {
-    match status {
-        RegressionStatusV1::Passed => "passed",
-        RegressionStatusV1::FailedDeterministic => "failed_deterministic",
-        RegressionStatusV1::FailedFlaky => "failed_flaky",
-        RegressionStatusV1::FailedTooling => "failed_tooling",
-        RegressionStatusV1::FailedTimeout => "failed_timeout",
-        RegressionStatusV1::SkippedPolicy => "skipped_policy",
-        RegressionStatusV1::Quarantined => "quarantined",
-    }
-}
-
-fn push_unique_line(lines: &mut Vec<String>, line: String) {
-    if !lines.iter().any(|existing| existing == &line) {
-        lines.push(line);
-    }
-}
-
-fn regression_item_perf_evidence_lines(
-    item: &fret_diag::regression_summary::RegressionItemSummaryV1,
-) -> Vec<String> {
-    let Some(evidence) = item.evidence.as_ref() else {
-        return Vec::new();
-    };
-    let label = if item.name.trim().is_empty() {
-        item.item_id.as_str()
-    } else {
-        item.name.as_str()
-    };
-    let prefix = format!("{} [{}]", label, regression_status_label(item.status));
-    let mut lines = Vec::new();
-    if let Some(path) = evidence
-        .perf_summary_json
-        .as_deref()
-        .filter(|path| !path.trim().is_empty())
-    {
-        lines.push(format!("{prefix} perf_summary_json: {path}"));
-    }
-    if let Some(path) = evidence
-        .compare_json
-        .as_deref()
-        .filter(|path| !path.trim().is_empty())
-    {
-        lines.push(format!("{prefix} compare_json: {path}"));
-    }
-    let Some(extra) = evidence.extra.as_ref() else {
-        return lines;
-    };
-    if let Some(metrics) = extra.get("metrics").and_then(|value| value.as_object()) {
-        for key in PERF_DRILLDOWN_METRIC_KEYS {
-            if let Some(value) = metrics.get(*key) {
-                lines.push(format!("{prefix} metric {key}: {value}"));
-            }
-        }
-        if let Some(stats) = metrics.get("stats") {
-            lines.push(format!("{prefix} metrics.stats: {stats}"));
-        }
-    }
-    if let Some(threshold_failures) = extra.get("threshold_failures") {
-        let count = threshold_failures
-            .as_array()
-            .map(Vec::len)
-            .unwrap_or_else(|| usize::from(!threshold_failures.is_null()));
-        lines.push(format!("{prefix} threshold_failures: {count}"));
-        if count > 0 {
-            lines.push(format!(
-                "{prefix} threshold_failures_json: {threshold_failures}"
-            ));
-        }
-    }
-    lines
-}
-
 fn regression_failing_summary_rows(
     index_json: &str,
     top: usize,
@@ -5175,51 +5038,13 @@ fn load_regression_summary_drilldown(
     let summary_json = std::fs::read_to_string(summary_path).map_err(|e| e.to_string())?;
     let summary: RegressionSummaryV1 =
         serde_json::from_str(&summary_json).map_err(|e| e.to_string())?;
-    let mut bundle_dirs: Vec<String> = Vec::new();
-    let mut capability_sources: Vec<String> = Vec::new();
-    let mut capabilities_check_paths: Vec<String> = Vec::new();
-    let mut perf_evidence_lines: Vec<String> = Vec::new();
-    for item in summary.items {
-        for line in regression_item_perf_evidence_lines(&item) {
-            push_unique_line(&mut perf_evidence_lines, line);
-        }
-        if item.status == RegressionStatusV1::Passed {
-            continue;
-        }
-        if let Some(source) = regression_item_capability_source_display(&item)
-            && !capability_sources
-                .iter()
-                .any(|existing| existing == &source)
-        {
-            capability_sources.push(source);
-        }
-        if let Some(evidence) = item.evidence {
-            if let Some(dir) = evidence.bundle_dir
-                && !dir.trim().is_empty()
-                && !bundle_dirs.iter().any(|existing| existing == &dir)
-            {
-                bundle_dirs.push(dir);
-            }
-            if let Some(path) = evidence
-                .extra
-                .as_ref()
-                .and_then(|extra| extra.get("capabilities_check_path"))
-                .and_then(|value| value.as_str())
-                && !path.trim().is_empty()
-                && !capabilities_check_paths
-                    .iter()
-                    .any(|existing| existing == path)
-            {
-                capabilities_check_paths.push(path.to_string());
-            }
-        }
-    }
+    let drilldown = regression_summary_drilldown(&summary);
     Ok(RegressionSummaryDrilldownData {
         summary_json,
-        bundle_dirs,
-        capability_sources,
-        capabilities_check_paths,
-        perf_evidence_lines,
+        bundle_dirs: drilldown.bundle_dirs,
+        capability_sources: drilldown.capability_sources,
+        capabilities_check_paths: drilldown.capabilities_check_paths,
+        perf_evidence_lines: drilldown.perf_evidence_lines,
     })
 }
 

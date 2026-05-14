@@ -542,12 +542,16 @@ DevTools GUI perf-evidence drill-down follow-up (2026-05-15):
 
 - `apps/fret-devtools/src/native.rs` now extracts selected regression summary perf evidence into a
   dedicated `Perf Evidence` section above raw JSON.
+- The shared projection owner is now `crates/fret-diag/src/regression_summary.rs`
+  (`regression_summary_drilldown`); the GUI only reads the summary JSON and renders the shared
+  drill-down fields.
 - The drill-down surfaces `perf_summary_json`, `compare_json`, curated metrics such as
   `top_total_time_us`, `top_renderer_encode_scene_us`, `top_renderer_instance_bytes`, and
   `threshold_failures` counts/JSON for selected summaries.
 - Focused source gates:
 
 ```text
+cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence --no-fail-fast
 cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
 python tools/gate_imui_workstream_source.py
 ```

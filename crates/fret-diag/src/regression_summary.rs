@@ -39,6 +39,181 @@ impl RegressionSummaryV1 {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RegressionSummaryDrilldownV1 {
+    pub bundle_dirs: Vec<String>,
+    pub capability_sources: Vec<String>,
+    pub capabilities_check_paths: Vec<String>,
+    pub perf_evidence_lines: Vec<String>,
+}
+
+pub const REGRESSION_PERF_DRILLDOWN_METRIC_KEYS: &[&str] = &[
+    "top_total_time_us",
+    "top_layout_time_us",
+    "top_layout_engine_solve_time_us",
+    "pointer_move_max_dispatch_time_us",
+    "pointer_move_max_hit_test_time_us",
+    "pointer_move_snapshots_with_global_changes",
+    "top_renderer_encode_scene_us",
+    "top_renderer_prepare_text_us",
+    "top_renderer_draw_calls",
+    "top_renderer_instance_bytes",
+    "top_renderer_encode_scene_text_ops",
+];
+
+pub fn regression_summary_drilldown(summary: &RegressionSummaryV1) -> RegressionSummaryDrilldownV1 {
+    let mut drilldown = RegressionSummaryDrilldownV1::default();
+    for item in &summary.items {
+        for line in regression_item_perf_evidence_lines(item) {
+            push_unique_line(&mut drilldown.perf_evidence_lines, line);
+        }
+        if item.status == RegressionStatusV1::Passed {
+            continue;
+        }
+        if let Some(source) = regression_item_capability_source_display(item) {
+            push_unique_line(&mut drilldown.capability_sources, source);
+        }
+        if let Some(evidence) = item.evidence.as_ref() {
+            if let Some(dir) = evidence
+                .bundle_dir
+                .as_deref()
+                .filter(|dir| !dir.trim().is_empty())
+            {
+                push_unique_line(&mut drilldown.bundle_dirs, dir.to_string());
+            }
+            if let Some(path) = evidence
+                .extra
+                .as_ref()
+                .and_then(|extra| extra.get("capabilities_check_path"))
+                .and_then(|value| value.as_str())
+                .filter(|path| !path.trim().is_empty())
+            {
+                push_unique_line(&mut drilldown.capabilities_check_paths, path.to_string());
+            }
+        }
+    }
+    drilldown
+}
+
+fn push_unique_line(lines: &mut Vec<String>, line: String) {
+    if !lines.iter().any(|existing| existing == &line) {
+        lines.push(line);
+    }
+}
+
+fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
+    if let Some(path) = value.get("path").and_then(|value| value.as_str())
+        && !path.trim().is_empty()
+    {
+        return Some(path.to_string());
+    }
+    if let Some(label) = value.get("label").and_then(|value| value.as_str())
+        && !label.trim().is_empty()
+    {
+        return Some(label.to_string());
+    }
+    let transport = value.get("transport").and_then(|value| value.as_str());
+    let session_id = value.get("session_id").and_then(|value| value.as_str());
+    match (transport, session_id) {
+        (Some(transport), Some(session_id))
+            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
+        {
+            Some(format!("{transport}:{session_id}"))
+        }
+        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
+        _ => None,
+    }
+}
+
+fn regression_item_capability_source_display(item: &RegressionItemSummaryV1) -> Option<String> {
+    item.evidence
+        .as_ref()
+        .and_then(|evidence| evidence.extra.as_ref())
+        .and_then(|extra| extra.get("capability_source"))
+        .and_then(capability_source_display_from_value)
+        .or_else(|| {
+            item.source
+                .as_ref()
+                .and_then(|source| source.metadata.as_ref())
+                .and_then(|metadata| metadata.get("capability_source"))
+                .and_then(capability_source_display_from_value)
+        })
+        .or_else(|| {
+            item.evidence
+                .as_ref()
+                .and_then(|evidence| evidence.extra.as_ref())
+                .and_then(|extra| extra.get("capabilities_source_path"))
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+                .map(ToString::to_string)
+        })
+}
+
+fn regression_status_label(status: RegressionStatusV1) -> &'static str {
+    match status {
+        RegressionStatusV1::Passed => "passed",
+        RegressionStatusV1::FailedDeterministic => "failed_deterministic",
+        RegressionStatusV1::FailedFlaky => "failed_flaky",
+        RegressionStatusV1::FailedTooling => "failed_tooling",
+        RegressionStatusV1::FailedTimeout => "failed_timeout",
+        RegressionStatusV1::SkippedPolicy => "skipped_policy",
+        RegressionStatusV1::Quarantined => "quarantined",
+    }
+}
+
+fn regression_item_perf_evidence_lines(item: &RegressionItemSummaryV1) -> Vec<String> {
+    let Some(evidence) = item.evidence.as_ref() else {
+        return Vec::new();
+    };
+    let label = if item.name.trim().is_empty() {
+        item.item_id.as_str()
+    } else {
+        item.name.as_str()
+    };
+    let prefix = format!("{} [{}]", label, regression_status_label(item.status));
+    let mut lines = Vec::new();
+    if let Some(path) = evidence
+        .perf_summary_json
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+    {
+        lines.push(format!("{prefix} perf_summary_json: {path}"));
+    }
+    if let Some(path) = evidence
+        .compare_json
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+    {
+        lines.push(format!("{prefix} compare_json: {path}"));
+    }
+    let Some(extra) = evidence.extra.as_ref() else {
+        return lines;
+    };
+    if let Some(metrics) = extra.get("metrics").and_then(|value| value.as_object()) {
+        for key in REGRESSION_PERF_DRILLDOWN_METRIC_KEYS {
+            if let Some(value) = metrics.get(*key) {
+                lines.push(format!("{prefix} metric {key}: {value}"));
+            }
+        }
+        if let Some(stats) = metrics.get("stats") {
+            lines.push(format!("{prefix} metrics.stats: {stats}"));
+        }
+    }
+    if let Some(threshold_failures) = extra.get("threshold_failures") {
+        let count = threshold_failures
+            .as_array()
+            .map(Vec::len)
+            .unwrap_or_else(|| usize::from(!threshold_failures.is_null()));
+        lines.push(format!("{prefix} threshold_failures: {count}"));
+        if count > 0 {
+            lines.push(format!(
+                "{prefix} threshold_failures_json: {threshold_failures}"
+            ));
+        }
+    }
+    lines
+}
+
 impl RegressionTotalsV1 {
     pub fn record_status(&mut self, status: RegressionStatusV1) {
         self.items_total = self.items_total.saturating_add(1);
@@ -416,6 +591,90 @@ pub struct RegressionNotesV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn regression_summary_drilldown_projects_perf_evidence() {
+        let summary: RegressionSummaryV1 = serde_json::from_value(serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "perf-docking", "lane": "perf" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "fretboard-dev diag perf" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 1, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 0, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "perf-case",
+                    "kind": "perf_case",
+                    "name": "docking steady drag",
+                    "status": "failed_deterministic",
+                    "lane": "perf",
+                    "evidence": {
+                        "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "perf_summary_json": "target/fret-diag/perf-docking/layout.perf.summary.v1.json",
+                        "compare_json": "target/fret-diag/perf-docking/check.perf_thresholds.json",
+                        "extra": {
+                            "capability_source": {
+                                "kind": "filesystem",
+                                "path": "target/fret-diag/capabilities.json",
+                                "label": "filesystem:target/fret-diag/capabilities.json",
+                                "transport": "filesystem",
+                                "session_id": null
+                            },
+                            "capabilities_check_path": "target/fret-diag/perf-docking/check.capabilities.json",
+                            "metrics": {
+                                "top_total_time_us": 24000,
+                                "top_renderer_encode_scene_us": 6000,
+                                "top_renderer_instance_bytes": 700000,
+                                "stats": {
+                                    "total_time_us": 24000,
+                                    "top_renderer_encode_scene_us": 6000
+                                }
+                            },
+                            "threshold_failures": [
+                                {
+                                    "metric": "top_total_time_us",
+                                    "observed": 24000,
+                                    "threshold": 20000
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }))
+        .expect("summary should parse");
+
+        let drilldown = regression_summary_drilldown(&summary);
+        assert_eq!(
+            drilldown.bundle_dirs,
+            vec!["target/fret-diag/perf-docking/run-a".to_string()]
+        );
+        assert_eq!(
+            drilldown.capability_sources,
+            vec!["target/fret-diag/capabilities.json".to_string()]
+        );
+        assert_eq!(
+            drilldown.capabilities_check_paths,
+            vec!["target/fret-diag/perf-docking/check.capabilities.json".to_string()]
+        );
+        let text = drilldown.perf_evidence_lines.join("\n");
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] perf_summary_json: target/fret-diag/perf-docking/layout.perf.summary.v1.json"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] compare_json: target/fret-diag/perf-docking/check.perf_thresholds.json"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_total_time_us: 24000"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_renderer_encode_scene_us: 6000"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_renderer_instance_bytes: 700000"
+        ));
+        assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
+        assert!(text.contains("threshold_failures_json"));
+    }
 
     #[test]
     fn regression_summary_new_sets_kind_and_schema_version() {

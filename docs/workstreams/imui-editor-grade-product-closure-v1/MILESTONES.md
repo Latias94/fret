@@ -296,6 +296,10 @@ Current status:
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.
+- 2026-05-15 shared regression drill-down projection moves that selected-summary parsing into
+  `crates/fret-diag/src/regression_summary.rs`; `apps/fret-devtools/src/native.rs` now consumes
+  `regression_summary_drilldown(&summary)` instead of owning GUI-private perf/capability parsing.
+  The source gate now checks the shared projection and the GUI call site together.
 - 2026-05-15 DevTools MCP product-workflow projection adds a sessionless
   `fret-diag://first-open.md` resource in `apps/fret-devtools-mcp/src/native.rs` and points the MCP
   server instructions at it. That resource mirrors the same `imui-product-chain` command/focused

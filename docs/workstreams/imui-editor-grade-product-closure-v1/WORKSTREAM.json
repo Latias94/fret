@@ -430,6 +430,10 @@
       "command": "cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast"
     },
     {
+      "name": "imui-p2-shared-regression-drilldown-projection",
+      "command": "cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence --no-fail-fast"
+    },
+    {
       "name": "imui-p2-devtools-mcp-product-workflow-source",
       "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
     },
@@ -673,6 +677,7 @@
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/src/editor_notes_device_shell_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "crates/fret-diag/src/regression_summary.rs",
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools/src/native.rs",
     "apps/fret-devtools-mcp/src/main.rs",

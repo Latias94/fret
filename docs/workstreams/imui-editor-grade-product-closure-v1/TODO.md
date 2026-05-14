@@ -158,6 +158,11 @@ reopen.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.
+      Maintenance: the selected-summary drill-down projection now lives in
+      `crates/fret-diag/src/regression_summary.rs` as shared diagnostics contract code, while
+      `apps/fret-devtools/src/native.rs` only loads the JSON and renders the shared projection.
+      This prevents GUI, MCP, and future CLI consumers from growing parallel regression-summary
+      parsing rules.
       Maintenance: `apps/fret-devtools-mcp/src/native.rs` now exposes a sessionless
       `fret-diag://first-open.md` resource and mirrors the same shared IMUI product-chain route in
       its server instructions/resource text, so the MCP adapter does not invent a parallel
