@@ -137,7 +137,7 @@ impl<H: UiHost> UiTree<H> {
                     return None;
                 }
 
-                if !self.paint_cache.previous_frame.is_entry_replayable(prev) {
+                if !self.paint_cache.is_entry_replayable_in_previous_frame(prev) {
                     return None;
                 }
 
@@ -208,8 +208,7 @@ impl<H: UiHost> UiTree<H> {
                     |span| {
                         let replayed_ops = self
                             .paint_cache
-                            .previous_frame
-                            .replay_entry_translated(scene, entry, delta)
+                            .replay_previous_frame_entry_translated(scene, entry, delta)
                             .expect("entry was validated before paint-cache replay");
                         span.record("ops", replayed_ops as u64);
                         replayed_ops

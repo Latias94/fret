@@ -551,7 +551,7 @@ Observed result:
 
 - `cargo check -p fret-ui --all-targets`: passed;
 - `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
-- paint-cache regression gate: `12 passed, 930 skipped`;
+- paint-cache regression gate: `12 passed, 929 skipped`;
 - scroll-offset anti-replay gate: `1 passed, 940 skipped`;
 - layering check: passed;
 - workstream catalog: passed;
@@ -564,6 +564,41 @@ dedicated probe evidence from `ui-perf-zed-smoothness-v1` proved the local path 
 mixed to neutral on latency; M4J makes the correctness-checked local path canonical, prevents
 descendant-originated hit-test-only dirtiness from replaying ancestors, and keeps the counters as
 diagnostic evidence.
+
+Most recent previous-frame recording retention slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4K_PREVIOUS_FRAME_RECORDING_RETENTION_SLICE_2026-05-14.md`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source-boundary check:
+  `rg -n "paint_cache\\.previous_frame" crates/fret-ui/src -g '*.rs'`
+
+Observed result:
+
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- paint-cache regression gate: `12 passed, 929 skipped`;
+- layering check: passed;
+- workstream catalog: passed;
+- `WORKSTREAM.json` validation: passed;
+- `git diff --check`: passed;
+- source-boundary check: no direct `paint_cache.previous_frame` access remains outside
+  `PaintCacheState`.
+
+This slice is an owner-retention decision, not a new perf claim. It makes
+`PaintCacheState::previous_frame` private and records that `PreviousFramePaintRecording` remains the
+per-tree previous-frame linear scene recording source while boundary `PaintCacheEntry` metadata
+continues to own the replay decision.
 
 Most recent code-editor closeout perf evidence:
 

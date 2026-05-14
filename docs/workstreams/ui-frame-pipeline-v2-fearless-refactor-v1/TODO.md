@@ -25,8 +25,9 @@ Progress ledger:
   ownership into `ViewBoundaryState::paint_cache`; M4F deletes the remaining node-owned
   `PaintCacheEntry` fallback and introduces a plain-node boundary-shaped side store; M4G splits the
   previous-frame scene recording into `PreviousFramePaintRecording`; M4H moves replay range
-  validation and text side-index replay into that recording carrier; final recording ownership
-  remains open.
+  validation and text side-index replay into that recording carrier; M4K explicitly retains the
+  previous-frame recording source inside `PaintCacheState` because the current `Scene` contract is
+  a per-tree linear display list while boundary entries own replay metadata.
 - [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
   boundary-hint API. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces
   `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring.
@@ -138,9 +139,10 @@ Progress ledger:
   - [x] Move previous-frame replay range validation, op slicing, and text side-index replay into
     `PreviousFramePaintRecording`
     (`M4H_PREVIOUS_FRAME_PAINT_REPLAY_SPAN_SLICE_2026-05-14.md`).
-  - [ ] Decide whether `PreviousFramePaintRecording` migrates into `ViewBoundaryState`, becomes a
+  - [x] Decide whether `PreviousFramePaintRecording` migrates into `ViewBoundaryState`, becomes a
     boundary-owned scene-fragment source, or remains as an explicitly retained per-tree recording
-    mechanism.
+    mechanism. M4K retains it inside `PaintCacheState` as the per-tree previous-frame linear scene
+    recording source and makes direct access private.
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.
   - [x] Delete the obsolete `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch
     (`M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md`).

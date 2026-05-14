@@ -197,21 +197,21 @@ fn previous_frame_paint_recording_ingests_scene_and_clears_when_recording_invali
 
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(scene.ops_len(), 1);
-    assert_eq!(ui.test_previous_frame_paint_recording_ops_len(), 0);
+    assert_eq!(ui.test_retained_paint_recording_ops_len(), 0);
 
     ui.ingest_paint_cache_source(&mut scene);
     assert_eq!(
-        ui.test_previous_frame_paint_recording_ops_len(),
+        ui.test_retained_paint_recording_ops_len(),
         1,
-        "ingest should move scene ops into the previous-frame paint recording owner"
+        "ingest should move scene ops into the retained previous-frame paint replay source"
     );
 
     ui.set_paint_cache_enabled(false);
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(
-        ui.test_previous_frame_paint_recording_ops_len(),
+        ui.test_retained_paint_recording_ops_len(),
         0,
-        "disabling paint cache should clear the previous-frame paint recording owner"
+        "disabling paint cache should clear the retained previous-frame paint replay source"
     );
 }
 

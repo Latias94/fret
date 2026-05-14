@@ -91,7 +91,7 @@ pub enum PaintCachePolicy {
 #[derive(Debug, Default)]
 pub(super) struct PaintCacheState {
     pub(super) generation: u64,
-    pub(super) previous_frame: PreviousFramePaintRecording,
+    previous_frame: PreviousFramePaintRecording,
     pub(super) source_generation: u64,
     pub(super) target_generation: u64,
     pub(super) hits: u32,
@@ -187,5 +187,28 @@ impl PaintCacheState {
     pub(super) fn invalidate_recording(&mut self) {
         self.previous_frame.clear();
         self.generation = self.generation.saturating_add(1);
+    }
+
+    pub(super) fn ingest_previous_frame_scene(&mut self, scene: &mut Scene) {
+        self.previous_frame.ingest_scene(scene);
+    }
+
+    pub(super) fn is_entry_replayable_in_previous_frame(&self, entry: PaintCacheEntry) -> bool {
+        self.previous_frame.is_entry_replayable(entry)
+    }
+
+    pub(super) fn replay_previous_frame_entry_translated(
+        &self,
+        scene: &mut Scene,
+        entry: PaintCacheEntry,
+        delta: Point,
+    ) -> Option<usize> {
+        self.previous_frame
+            .replay_entry_translated(scene, entry, delta)
+    }
+
+    #[cfg(test)]
+    pub(super) fn retained_recording_ops_len(&self) -> usize {
+        self.previous_frame.ops_len()
     }
 }

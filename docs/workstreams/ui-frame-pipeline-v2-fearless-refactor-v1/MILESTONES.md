@@ -240,9 +240,25 @@ Status after M4J on 2026-05-14:
 - Stable local `HitTestOnly` invalidation now replays cached paint when the cache key and
   previous-frame entry checks match; descendant-originated `HitTestOnly` dirtiness, key mismatches,
   and non-hit-test paint invalidations still force repaint.
-- This resolves the paint-cache env-knob cleanup item. M4 remains open for layout
-  aggregation/sweep knob decisions, final previous-frame recording ownership, and the second
-  non-code-editor proof surface.
+- This resolves the paint-cache env-knob cleanup item. At this point M4 still remained open for
+  layout aggregation/sweep knob decisions, the previous-frame recording-owner decision, and the
+  second non-code-editor proof surface. M4K resolves the recording-owner decision below.
+
+Status after M4K on 2026-05-14:
+
+- `M4K_PREVIOUS_FRAME_RECORDING_RETENTION_SLICE_2026-05-14.md` records the final owner decision for
+  `PreviousFramePaintRecording`.
+- `PreviousFramePaintRecording` is explicitly retained inside `PaintCacheState` as the per-tree
+  previous-frame linear scene recording source because the current `Scene` contract records one
+  tree-wide display list.
+- `PaintCacheState::previous_frame` is now private; `paint_node` and `UiTree` must go through
+  `PaintCacheState` methods for ingestion, replayability checks, and translated replay.
+- Boundary ownership still holds for the reuse decision: `ViewBoundaryState::paint_cache` owns
+  boundary `PaintCacheEntry` metadata and diagnostics, while the retained recording source only
+  provides replay bytes for those entries.
+- M4 remains open for the plain `UiTree::boundary_paint_cache_entries` side-store decision,
+  `ViewCacheBuildBoundaryStore` final ownership/retention, layout aggregation/sweep knob
+  decisions, and the second non-code-editor proof surface.
 
 Status after closeout audit on 2026-05-14:
 

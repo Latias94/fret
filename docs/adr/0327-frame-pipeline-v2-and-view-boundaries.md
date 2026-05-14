@@ -146,6 +146,10 @@ nodes.
 M4J promoted local hit-test-only paint-cache replay to the canonical paint-cache path, prevented
 descendant-originated hit-test-only dirtiness from replaying ancestors, and deleted
 `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`.
+M4K explicitly retains `PreviousFramePaintRecording` inside `PaintCacheState` as the per-tree
+previous-frame linear scene recording source. Boundary `PaintCacheEntry` metadata remains
+boundary-owned, but the recording source is intentionally not duplicated into every
+`ViewBoundaryState` while the current `Scene` contract is one tree-wide display list.
 
 ### 3. Layout containment is a dependency contract
 
