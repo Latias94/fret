@@ -85,6 +85,23 @@ const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/regression.summary.json",
     "perf-docking/check.perf_thresholds.json",
 ];
+const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =
+    "cargo run -p fret-demo --bin imui_editor_proof_demo";
+const DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND: &str =
+    "cargo run -p fret-demo --bin editor_notes_demo";
+const DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND: &str =
+    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
+const DEVTOOLS_METRICS_STATS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
+const DEVTOOLS_METRICS_MEMORY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json";
+const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
+const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -789,6 +806,16 @@ fn header_bar(
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         first_open_rows,
     );
+    let mut demo_metrics_debug_rows = Vec::new();
+    for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
+        demo_metrics_debug_rows.push(cx.text(line));
+    }
+    let demo_metrics_debug_panel = diag_section(
+        cx,
+        "Demo / Metrics / Debug Routes",
+        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        demo_metrics_debug_rows,
+    );
 
     let connection_actions = ui::h_row(|cx| {
         [
@@ -861,6 +888,7 @@ fn header_bar(
             endpoint_line,
             workspace_line,
             first_open_panel,
+            demo_metrics_debug_panel,
             connection_actions,
             quick_actions,
         ])
@@ -5134,6 +5162,27 @@ fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
     ]
 }
 
+fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        format!("route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}"),
+        format!("artifacts root: {artifacts_root}"),
+        format!("demo editor proof: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
+        format!("demo editor notes: {DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND}"),
+        format!("demo device shell: {DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND}"),
+        format!("metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}"),
+        format!("metrics layout perf: {DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND}"),
+        format!("metrics memory: {DEVTOOLS_METRICS_MEMORY_COMMAND}"),
+        format!("debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}"),
+        format!("debug hotspots: {DEVTOOLS_DEBUG_HOTSPOTS_COMMAND}"),
+    ]
+}
+
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
     if is_abs_path(raw) {
         PathBuf::from(raw)
@@ -5243,6 +5292,34 @@ mod tests {
         assert!(text.contains(
             "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
         ));
+    }
+
+    #[test]
+    fn devtools_demo_metrics_debug_lines_surface_canonical_routes() {
+        let lines = devtools_demo_metrics_debug_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("route: demo-metrics-debug"));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains("demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo"));
+        assert!(text.contains("demo editor notes: cargo run -p fret-demo --bin editor_notes_demo"));
+        assert!(text.contains(
+            "demo device shell: cargo run -p fret-demo --bin editor_notes_device_shell_demo"
+        ));
+        assert!(
+            text.contains("metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json")
+        );
+        assert!(text.contains(
+            "metrics layout perf: cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json"
+        ));
+        assert!(
+            text.contains("metrics memory: cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json")
+        );
+        assert!(
+            text.contains("debug triage: cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json")
+        );
+        assert!(
+            text.contains("debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json")
+        );
     }
 
     #[test]

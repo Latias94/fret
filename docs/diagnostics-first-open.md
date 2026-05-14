@@ -225,6 +225,10 @@ Launch the GUI directly with:
 cargo run -p fret-devtools
 ```
 
+The GUI shell keeps both the `First-open Evidence Path` and the `demo-metrics-debug` route visible:
+editor proof demos, current metrics commands, and debug drill-down commands stay discoverable from
+the same top-level workspace.
+
 Launch the MCP adapter directly with:
 
 ```bash

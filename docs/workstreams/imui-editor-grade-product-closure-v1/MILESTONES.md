@@ -288,6 +288,11 @@ Current status:
   `imui-product-chain` command, focused discovery command, launched `perf-docking` command, suite,
   docs, and expected perf artifacts from the shared product-chain vocabulary. The default
   product-chain discovery gate now source-checks that GUI projection.
+- 2026-05-15 DevTools GUI demo/metrics/debug route projection adds a persistent
+  `demo-metrics-debug` route in `apps/fret-devtools/src/native.rs`, naming the editor proof/editor
+  notes/device shell demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`,
+  `diag triage`, and `diag hotspots` entrypoints. This is a productization step for
+  always-available demo/metrics/debug discoverability, not a `fret-imui` API expansion.
 - 2026-05-15 DevTools MCP product-workflow projection adds a sessionless
   `fret-diag://first-open.md` resource in `apps/fret-devtools-mcp/src/native.rs` and points the MCP
   server instructions at it. That resource mirrors the same `imui-product-chain` command/focused

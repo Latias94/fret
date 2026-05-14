@@ -40,7 +40,7 @@ architecture intact:
 | Product workflow is coherent | `tools/diag_gate_imui_product_chain.py` validates cookbook, editor controls, editor proof, editor notes, workspace shell, docking campaign manifest, DevTools/tool-app discovery, and the perf-docking entrypoint metadata. | Partially met |
 | First-contact editor-control evidence exists | `P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md` records the launched `imui_editor_controls_basics` smoke and roughness typing suite evidence. | Met for first-contact editor controls |
 | Editor-notes/workbench product evidence exists | `editor_notes_demo` and `editor_notes_device_shell_demo` suites are promoted into the product-chain gate, including the selection-sync and device-shell a11y repair evidence. | Met for current promoted scripts |
-| DevTools/Demo/Metrics discoverability is closed | `fretboard-dev --help`, `fretboard-dev list --help`, `list tool-apps`, `list tool-apps --json`, and `product_workflows.imui-product-chain` are now gated, but GUI productization is still not complete. | Partially met |
+| DevTools/Demo/Metrics discoverability is closed | `fretboard-dev --help`, `fretboard-dev list --help`, `list tool-apps`, `list tool-apps --json`, `product_workflows.imui-product-chain`, and the GUI `demo-metrics-debug` route are now gated, but broader GUI productization is still not complete. | Partially met |
 | Docking bounded campaign is green | `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records the launched bounded P3 campaign passing 4/4 scripts. | Met for generic bounded campaign |
 | Wayland source/admission posture is current | `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, and `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md` cover local source policy, manifest/script drift, and non-Wayland `skipped_policy` behavior. | Met for local policy gates |
 | Full platform-specific hand-feel is closed | `DW-P1-linux-003` still requires a real Linux Wayland compositor run from `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`. | Not met |
@@ -67,8 +67,8 @@ architecture intact:
 - **Real-host multi-window hand-feel remains open.** Local campaign validation, source drift guards,
   and policy-skip probes do not replace a Linux Wayland compositor acceptance run.
 - **DevTools GUI productization remains partial.** The CLI/tool-app/product-workflow discovery path
-  is now gated, but Dear ImGui-style always-available demo/metrics/debug discoverability still needs
-  GUI/product work in diagnostics lanes.
+  and a GUI `demo-metrics-debug` route are now gated, but Dear ImGui-style always-available
+  demo/metrics/debug discoverability still needs deeper GUI/product work in diagnostics lanes.
 - **Performance is guarded, not closed.** The `perf-docking` product-chain entrypoint now enforces
   conservative thresholds, but that is not the same as full smoothness attribution or broad editor
   workload acceptance.

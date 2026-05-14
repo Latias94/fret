@@ -150,6 +150,11 @@ reopen.
       perf artifacts. This keeps GUI discoverability aligned with `fretboard-dev list tool-apps`
       instead of making the GUI a second source of truth. The default product-chain discovery gate
       now also source-checks that GUI projection.
+      Maintenance: `apps/fret-devtools/src/native.rs` now also surfaces a persistent
+      `demo-metrics-debug` route in the GUI shell, naming the editor proof/editor notes/device shell
+      demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
+      and `diag hotspots` entrypoints. This improves Dear ImGui-style demo/metrics/debug
+      discoverability without widening `fret-imui`.
       Maintenance: `apps/fret-devtools-mcp/src/native.rs` now exposes a sessionless
       `fret-diag://first-open.md` resource and mirrors the same shared IMUI product-chain route in
       its server instructions/resource text, so the MCP adapter does not invent a parallel

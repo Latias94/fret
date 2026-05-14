@@ -422,6 +422,10 @@
       "command": "cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast"
     },
     {
+      "name": "imui-p2-devtools-demo-metrics-debug-source",
+      "command": "cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast"
+    },
+    {
       "name": "imui-p2-devtools-mcp-product-workflow-source",
       "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
     },

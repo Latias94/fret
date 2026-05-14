@@ -521,6 +521,23 @@ python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/gate_imui_workstream_source.py
 ```
 
+DevTools GUI demo/metrics/debug route follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now surfaces a persistent `demo-metrics-debug` route in the
+  GUI shell, separate from runtime/API work in `fret-imui`.
+- The route names the current editor demos (`imui_editor_proof_demo`, `editor_notes_demo`, and
+  `editor_notes_device_shell_demo`) plus existing diagnostics metrics/debug entrypoints:
+  `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, and
+  `diag hotspots`.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
 DevTools MCP product-workflow projection follow-up (2026-05-15):
 
 - `apps/fret-devtools-mcp/src/native.rs` now exposes `fret-diag://first-open.md` as a sessionless
