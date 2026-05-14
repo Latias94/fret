@@ -142,6 +142,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 debug-draw summary follow-up: `DebugDrawCommandSummary` and
    `DebugDrawListSummary` now keep diagnostic storage private as well. Public callers read command
    kind/channel/clip/count metrics through explicit accessors instead of copying fields.
+   2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
+   opaque-output-struct check for sealed response/context/summary records, so public output fields
+   cannot return by simply changing field names.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

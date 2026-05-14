@@ -128,6 +128,9 @@ Exit criteria:
   2026-05-14 debug-draw summary follow-up result: `DebugDrawCommandSummary` and
   `DebugDrawListSummary` are accessor-first too. Debug-draw diagnostic metrics remain public to
   read, but construction and mutation stay internal to the list/response pipeline.
+  2026-05-14 source-gate hardening result: `tools/gate_imui_workstream_source.py` now has a
+  reusable opaque-output-struct check for the sealed IMUI response/context/summary records instead
+  of relying only on one-off public-field marker strings.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

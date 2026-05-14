@@ -221,6 +221,10 @@ Run evidence:
   accessors, but storage, default construction, and final-clip-depth mutation stay internal to
   `debug_draw_controls`. Cookbook, smoke tests, and debug-draw owner tests now use accessor reads,
   and the source gate rejects public summary fields or external default construction from returning.
+- 2026-05-14: hardened `tools/gate_imui_workstream_source.py` with an opaque-output-struct check
+  for the sealed IMUI response/context/summary records. The gate now parses each listed public
+  output struct body and fails on any externally public field, so new response-surface cleanup does
+  not depend only on per-field string markers.
 
 ## P3 Design Surface Readiness Gates
 

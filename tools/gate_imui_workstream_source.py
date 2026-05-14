@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from _gate_lib import WORKSPACE_ROOT, fail, ok
 
@@ -14,6 +15,12 @@ class SourceCheck:
     path: Path
     required: list[str]
     forbidden: list[str]
+
+
+@dataclass(frozen=True)
+class OpaqueStructCheck:
+    path: Path
+    struct_names: list[str]
 
 
 def read_source(path: Path) -> str:
@@ -31,6 +38,41 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
     for marker in check.forbidden:
         if marker in source:
             failures.append(f"{check.path.as_posix()}: forbidden {marker}")
+
+
+def find_struct_body(source: str, struct_name: str) -> str | None:
+    match = re.search(rf"\bpub\s+struct\s+{re.escape(struct_name)}(?:<[^>]+>)?\s*\{{", source)
+    if match is None:
+        return None
+
+    start = match.end()
+    depth = 1
+    idx = start
+    while idx < len(source):
+        char = source[idx]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start:idx]
+        idx += 1
+    return None
+
+
+def check_opaque_output_structs(check: OpaqueStructCheck, failures: list[str]) -> None:
+    source = read_source(check.path)
+    for struct_name in check.struct_names:
+        body = find_struct_body(source, struct_name)
+        if body is None:
+            failures.append(f"{check.path.as_posix()}: missing public struct {struct_name}")
+            continue
+        for line_no, line in enumerate(body.splitlines(), start=1):
+            stripped = line.strip()
+            if re.match(r"^pub\s+[A-Za-z_][A-Za-z0-9_]*\s*:", stripped):
+                failures.append(
+                    f"{check.path.as_posix()} {struct_name}: public field still exposed: {stripped}"
+                )
 
 
 def dependency_section(source: str, section: str) -> str:
@@ -71,6 +113,54 @@ def check_fret_imui_runtime_dependencies(failures: list[str]) -> None:
 
 
 def main() -> None:
+    opaque_output_checks = [
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/adapters.rs"),
+            ["AdapterSignalMetadata", "AdapterSignalRecord"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs"),
+            ["DebugDrawResponse"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs"),
+            ["DebugDrawCommandSummary", "DebugDrawListSummary"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_options.rs"),
+            ["FloatingAreaContext"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
+            ["DragResponse", "DragSourceResponse", "DropTargetResponse"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/floating.rs"),
+            ["FloatingAreaResponse", "FloatingWindowResponse"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/hover.rs"),
+            ["ResponseExt"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/widgets.rs"),
+            [
+                "DisclosureResponse",
+                "ComboResponse",
+                "InputTextPickerResponse",
+                "TabBarResponse",
+                "TabTriggerResponse",
+                "TableResponse",
+                "TableHeaderResponse",
+                "TableColumnResizeResponse",
+                "VirtualListResponse",
+            ],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs"),
+            ["DragValueCoreResponse"],
+        ),
+    ]
     checks = [
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json"),
@@ -6654,6 +6744,8 @@ def main() -> None:
     failures: list[str] = []
     for check in checks:
         check_source(check, failures)
+    for check in opaque_output_checks:
+        check_opaque_output_structs(check, failures)
     check_fret_imui_runtime_dependencies(failures)
 
     if failures:
