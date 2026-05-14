@@ -23,13 +23,13 @@ class OpaqueStructCheck:
     struct_names: list[str]
 
 
-OUTPUT_STRUCT_SCAN_ROOTS = (
+OPAQUE_STRUCT_SCAN_ROOTS = (
     Path("ecosystem/fret-imui/src"),
     Path("ecosystem/fret-ui-editor/src"),
     Path("ecosystem/fret-ui-kit/src/imui"),
 )
 
-OUTPUT_STRUCT_SUFFIXES = (
+OPAQUE_STRUCT_SUFFIXES = (
     "Context",
     "Drop",
     "Outcome",
@@ -38,6 +38,7 @@ OUTPUT_STRUCT_SUFFIXES = (
     "Request",
     "Response",
     "Signal",
+    "State",
     "Summary",
 )
 
@@ -79,42 +80,42 @@ def find_struct_body(source: str, struct_name: str) -> str | None:
     return None
 
 
-def public_output_struct_names(source: str) -> list[str]:
+def public_opaque_struct_names(source: str) -> list[str]:
     names: list[str] = []
     for match in re.finditer(
         r"\bpub\s+struct\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*<[^{};]+>)?\s*\{",
         source,
     ):
         name = match.group(1)
-        if name.endswith(OUTPUT_STRUCT_SUFFIXES):
+        if name.endswith(OPAQUE_STRUCT_SUFFIXES):
             names.append(name)
     return names
 
 
-def check_opaque_output_struct_catalog(
+def check_opaque_struct_catalog(
     checks: list[OpaqueStructCheck], failures: list[str]
 ) -> None:
     covered: dict[Path, set[str]] = {}
     for check in checks:
         covered.setdefault(check.path, set()).update(check.struct_names)
 
-    for root in OUTPUT_STRUCT_SCAN_ROOTS:
+    for root in OPAQUE_STRUCT_SCAN_ROOTS:
         scan_root = WORKSPACE_ROOT / root
         if not scan_root.exists():
-            failures.append(f"{root.as_posix()}: missing opaque-output scan root")
+            failures.append(f"{root.as_posix()}: missing opaque-struct scan root")
             continue
 
         for source_path in sorted(scan_root.rglob("*.rs")):
             path = source_path.relative_to(WORKSPACE_ROOT)
             source = read_source(path)
-            for struct_name in public_output_struct_names(source):
+            for struct_name in public_opaque_struct_names(source):
                 if struct_name not in covered.get(path, set()):
                     failures.append(
-                        f"{path.as_posix()} {struct_name}: public output struct is not covered by opaque-output-struct check"
+                        f"{path.as_posix()} {struct_name}: public opaque struct is not covered by opaque-struct check"
                     )
 
 
-def check_opaque_output_structs(check: OpaqueStructCheck, failures: list[str]) -> None:
+def check_opaque_structs(check: OpaqueStructCheck, failures: list[str]) -> None:
     source = read_source(check.path)
     for struct_name in check.struct_names:
         body = find_struct_body(source, struct_name)
@@ -167,7 +168,7 @@ def check_fret_imui_runtime_dependencies(failures: list[str]) -> None:
 
 
 def main() -> None:
-    opaque_output_checks = [
+    opaque_struct_checks = [
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/adapters.rs"),
             ["AdapterSignalMetadata", "AdapterSignalRecord"],
@@ -183,6 +184,10 @@ def main() -> None:
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_options.rs"),
             ["FloatingAreaContext"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/multi_select.rs"),
+            ["ImUiMultiSelectState"],
         ),
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
@@ -407,6 +412,8 @@ def main() -> None:
                 "2026-05-14 editor drag-value follow-up: `DragValueCoreResponse`",
                 "2026-05-14 editor color-event follow-up: `ColorEditPaletteSlotDrop`,",
                 "`ColorEditEyedropperRequest`, and `ColorEditDragDropPayload`",
+                "2026-05-14 state-catalog gate follow-up: the source gate now treats public `*State` structs",
+                "`ImUiMultiSelectState` is now covered by the reusable",
             ],
             forbidden=[],
         ),
@@ -489,6 +496,8 @@ def main() -> None:
                 "made `DragValueCoreResponse` accessor-first",
                 "made editor `ColorEdit` event/request/payload records accessor-first too.",
                 "suffix scan now includes `*Request`, `*Payload`, and `*Drop` records",
+                "extended the opaque public-struct gate from output records to shared public state",
+                "the reusable opaque public-struct gate now includes `*State` and covers",
             ],
             forbidden=[],
         ),
@@ -6979,9 +6988,9 @@ def main() -> None:
     failures: list[str] = []
     for check in checks:
         check_source(check, failures)
-    check_opaque_output_struct_catalog(opaque_output_checks, failures)
-    for check in opaque_output_checks:
-        check_opaque_output_structs(check, failures)
+    check_opaque_struct_catalog(opaque_struct_checks, failures)
+    for check in opaque_struct_checks:
+        check_opaque_structs(check, failures)
     check_fret_imui_runtime_dependencies(failures)
 
     if failures:

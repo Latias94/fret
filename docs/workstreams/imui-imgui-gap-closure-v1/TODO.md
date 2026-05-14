@@ -156,6 +156,9 @@ Readiness order for the next locally testable review slices:
    `ColorEditEyedropperRequest`, and `ColorEditDragDropPayload` now follow the same accessor-first
    rule. The opaque-output catalog now covers `*Request`, `*Payload`, and `*Drop` records in the
    IMUI/editor scan roots.
+   2026-05-14 state-catalog gate follow-up: the source gate now treats public `*State` structs as
+   opaque IMUI structs too and registers `ImUiMultiSelectState`, so future shared state helpers
+   cannot expose mutable storage by bypassing the one-off multi-select field checks.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
@@ -201,6 +204,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 request-vocabulary audit: `P3_COLLECTION_HELPER_READINESS_2026-05-06.md` now records
    that this storage extraction is not enough evidence to add `BeginMultiSelect`/`EndMultiSelect`
    or an `ImUiMultiSelectIO` runtime surface.
+   2026-05-14 state-catalog gate follow-up: `ImUiMultiSelectState` is now covered by the reusable
+   opaque-struct catalog because shared collection state is part of the public policy-layer
+   contract, not a freely mutable data bag.
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned

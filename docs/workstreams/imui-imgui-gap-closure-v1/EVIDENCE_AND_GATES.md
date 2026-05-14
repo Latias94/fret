@@ -242,6 +242,10 @@ Run evidence:
   roots. Focused gates passed locally: `cargo nextest run -p fret-ui-editor color_edit
   --no-fail-fast`, `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke
   --test imui_surface_policy --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-14: extended the opaque public-struct gate from output records to shared public state
+  helpers by scanning `*State` names and registering `ImUiMultiSelectState`. This keeps future
+  IMUI/editor state helpers accessor-first by default while leaving explicit options/input bags
+  outside the catalog.
 
 ## P3 Design Surface Readiness Gates
 
@@ -339,6 +343,14 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --
   request/IO vocabulary candidate-only. `tools/gate_imui_workstream_source.py` now rejects
   `BeginMultiSelect`/`EndMultiSelect`-style runtime names from the current `fret-ui-kit::imui`
   storage helper.
+- 2026-05-14: the reusable opaque public-struct gate now includes `*State` and covers
+  `ImUiMultiSelectState`, so the collection helper storage contract cannot regress to public
+  `selected` / `anchor` fields by slipping outside the previous output-record catalog. Focused
+  gates passed locally: `python tools/gate_imui_workstream_source.py`,
+  `python tools/check_workstream_catalog.py`, `cargo nextest run -p fret-imui interaction_drag
+  --no-fail-fast`, `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast`, and
+  `git diff --check`.
 
 ## P3 Execution Priority Review Gates
 
