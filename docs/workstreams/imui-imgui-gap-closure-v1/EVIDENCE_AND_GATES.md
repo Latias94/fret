@@ -24,6 +24,7 @@ Last updated: 2026-05-14
 - Current Fret IMUI source:
   - `ecosystem/fret-imui/src/lib.rs`
   - `ecosystem/fret-imui/src/frontend.rs`
+  - `ecosystem/fret-imui/src/tests/composition/mod.rs`
   - `ecosystem/fret-imui/src/tests/floating/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs`
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
@@ -205,6 +206,7 @@ Use this gate when changing menu/tab interaction ownership, table cell semantics
 mechanics that can accidentally make diagnostics bounds diverge from visual column layout.
 
 ```powershell
+cargo nextest run -p fret-imui composition --no-fail-fast
 cargo nextest run -p fret-imui floating --no-fail-fast
 cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast
 cargo nextest run -p fret-imui popup_hover --no-fail-fast
@@ -216,6 +218,11 @@ git diff --check
 
 Run evidence:
 
+- 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/composition.rs` file into
+  `mount_smoke`, `control_geometry`, and `layout_collections` test owners under
+  `ecosystem/fret-imui/src/tests/composition/`.
+- 2026-05-14: `cargo nextest run -p fret-imui composition --no-fail-fast` passed locally with 19
+  tests.
 - 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/floating.rs` file into
   `movement_z_order`, `input_modes`, `layer_dismissal`, and `window_options` test owners under
   `ecosystem/fret-imui/src/tests/floating/`.

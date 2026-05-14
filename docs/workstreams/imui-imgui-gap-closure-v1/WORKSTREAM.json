@@ -194,6 +194,10 @@
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
     {
+      "name": "fret-imui composition ownership tests",
+      "command": "cargo nextest run -p fret-imui composition --no-fail-fast"
+    },
+    {
       "name": "fret-imui floating ownership tests",
       "command": "cargo nextest run -p fret-imui floating --no-fail-fast"
     },
@@ -272,7 +276,8 @@
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
-    "ecosystem/fret-imui/src/tests/popup_hover/mod.rs"
+    "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
+    "ecosystem/fret-imui/src/tests/composition/mod.rs"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
