@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## Evidence Anchors
 
@@ -19,6 +19,7 @@ Last updated: 2026-05-14
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
 - Current Fret IMUI source:
@@ -367,6 +368,27 @@ python tools/gate_imui_facade_teaching_source.py
 python tools/check_workstream_catalog.py
 git diff --check
 ```
+
+## P4 Performance Alignment Review Gates
+
+Use these when changing the Dear ImGui / Zed / egui performance interpretation:
+
+```powershell
+rg -n "FrameArenaScratch|bounds-tree|diag perf|diag stats|renderer churn|Zed|egui" docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Run evidence:
+
+- 2026-05-15: registered `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md` in
+  `WORKSTREAM.json`, `TODO.md`, `MILESTONES.md`, and this evidence file so performance discipline
+  remains part of the active Dear ImGui gap read.
+- The review keeps perf work in `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the
+  product-chain docking perf gate. It explicitly rejects turning egui's full-layout-every-frame
+  model or Dear ImGui's widget breadth into a `fret-imui` runtime/API widening target.
 
 ## P3 Product Chain Gate
 

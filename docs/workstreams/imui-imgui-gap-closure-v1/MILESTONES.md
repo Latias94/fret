@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## M0 - Current Source Baseline
 
@@ -186,3 +186,8 @@ Exit criteria:
   implementation queue. Product/golden workflow coherence, runner/backend multi-window hand-feel,
   and diagnostics/DevTools discoverability remain higher-value Dear ImGui-grade closure work than
   blind widget/API mirroring.
+  Current performance-alignment review result: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
+  belongs in the active gap lane's evidence set. Keep runtime smoothness work in
+  `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;
+  do not use Dear ImGui/egui performance pressure as a reason to widen `fret-imui` or start a
+  broad widget/API backlog.

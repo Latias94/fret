@@ -30,6 +30,7 @@ Tracker highlights:
   which parity notes are stale, and which fearless cleanup or follow-on should be split next):
   `docs/workstreams/imui-imgui-gap-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`,
+  `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`,
   `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`, and
   `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`.
 - ImUi kit owner-split follow-on (closed narrow structural lane for private `fret-ui-kit::imui`

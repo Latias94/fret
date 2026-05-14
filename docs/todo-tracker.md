@@ -99,13 +99,14 @@ It complements (but does not replace) ADRs:
 - Current gap-closure source audit and prioritization lane:
   - `docs/workstreams/imui-imgui-gap-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`
-  - Scope: rebase the Dear ImGui gap read from current source before any next fearless cleanup or
-    helper widening. Treat the old v2 parity audit as historical evidence unless this lane
-    revalidates it.
+  - Scope: rebase the Dear ImGui gap read from current source before any next fearless cleanup,
+    perf-discipline work, or helper widening. Treat the old v2 parity audit as historical evidence
+    unless this lane revalidates it.
 - Closed kit owner-split follow-on:
   - `docs/workstreams/imui-kit-owner-split-v1/DESIGN.md`
   - `docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`

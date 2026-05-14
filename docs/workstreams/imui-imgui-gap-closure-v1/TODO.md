@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## P0 - Source Baseline
 
@@ -213,6 +213,11 @@ Readiness order for the next locally testable review slices:
    collection behavior. The next credible follow-on is behavior-specific, with `ResizeY` first if a
    proof needs it; do not open a generic `BeginChild()` flag-mirror lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
+9. Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes and
+   product-chain perf gates, not in a broad widget/API backlog.
+   Current review: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`. The useful comparison axis is
+   Zed-style attribution and reuse discipline plus egui-style integration/repaint clarity; do not
+   treat egui's full-layout-every-frame model as an IMUI architecture target.
 
 These slices should stay Windows/Web-verifiable first; Linux-specific validation is not a gate for
 opening the slice.
