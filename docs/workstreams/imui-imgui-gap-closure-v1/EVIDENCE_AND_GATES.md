@@ -336,17 +336,28 @@ Run evidence:
 
 ## P3 Diagnostics / DevTools First-Open Gate
 
-Use this gate for the current Dear ImGui-class diagnostics discoverability read. It verifies the
-shared CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle
-capture, latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare,
-campaign execution, `diag summarize`, and `diag dashboard`.
+Use these gates for the current Dear ImGui-class diagnostics discoverability read. The fast gate
+verifies the first-open DevTools/tool-app discovery index and repo-owned campaign preflight that a
+maintainer should find before opening the GUI/MCP branch. The launched gate verifies the shared
+CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle capture,
+latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare, campaign
+execution, `diag summarize`, and `diag dashboard`.
 
 ```powershell
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke
 ```
 
 Run evidence:
 
+- 2026-05-14: `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only` passed
+  locally. The gate now validates `fretboard-dev list tool-apps` human and JSON output, the
+  `docs/diagnostics-first-open.md` first-open anchor, the DevTools GUI and MCP launch/docs/gate
+  entries, and `fretboard-dev diag doctor campaigns --json` with `ok=true`.
+- 2026-05-14: a full launched rerun with
+  `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-discovery-gate --timeout-ms 240000`
+  exceeded the local 10 minute command timeout before returning a result. Keep the launched gate as
+  the full CLI-first smoke, but treat this slice's new evidence as the bounded discovery-path gate.
 - 2026-05-14: `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun --timeout-ms 240000` passed locally.
 - Direct script result:
   `target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun/1778714082990/direct/sessions/1778714086733-135148/script.result.json`

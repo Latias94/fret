@@ -17,6 +17,11 @@ SCRIPT_PATH = "tools/diag-scripts/tooling/todo/todo-baseline.json"
 LABEL_AFTER_ADD = "todo-after-add"
 LABEL_AFTER_TOGGLE = "todo-after-toggle-done"
 LABEL_AFTER_REMOVE = "todo-after-remove"
+FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
+DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
+REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
 
 
 def _repo_root() -> Path:
@@ -84,6 +89,13 @@ def _run_compare_expect_diff(
     return payload
 
 
+def _json_stdout(name: str, proc: subprocess.CompletedProcess[str]) -> dict:
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as err:
+        raise SystemExit(f"Step failed: {name} (invalid JSON: {err})") from err
+
+
 def _read_json(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -111,34 +123,130 @@ def _find_bundle_dir(session_root: Path, label: str) -> Path:
     return matches[0]
 
 
+def _assert_text_contains(name: str, text: str, marker: str) -> None:
+    if marker not in text:
+        raise SystemExit(f"Step failed: {name} (missing marker: {marker})")
+
+
+def _validate_tool_app_discovery(fretboard_exe: Path, *, cwd: Path) -> None:
+    human = _run_capture_checked(
+        "list tool-apps first-open human index",
+        [str(fretboard_exe), "list", "tool-apps"],
+        cwd=cwd,
+    )
+    human_text = human.stdout + human.stderr
+    for marker in (
+        f"first-open: {FIRST_OPEN_DOC}",
+        f"repo preflight: {REPO_PREFLIGHT_COMMAND}",
+        f"repo preflight json: {REPO_PREFLIGHT_JSON_COMMAND}",
+        f"gui branch: {DEVTOOLS_GUI_DOC}",
+        "fret-devtools",
+        "cargo run -p fret-devtools",
+        DEVTOOLS_GUI_DOC,
+        "fret-devtools-mcp",
+        "cargo run -p fret-devtools-mcp",
+        DEVTOOLS_MCP_DOC,
+    ):
+        _assert_text_contains("list tool-apps first-open human index", human_text, marker)
+
+    json_proc = _run_capture_checked(
+        "list tool-apps first-open json index",
+        [str(fretboard_exe), "list", "tool-apps", "--json"],
+        cwd=cwd,
+    )
+    payload = _json_stdout("list tool-apps first-open json index", json_proc)
+    if payload.get("kind") != "fretboard_tool_apps":
+        raise SystemExit("list tool-apps --json should emit kind=fretboard_tool_apps")
+    if payload.get("first_open_doc") != FIRST_OPEN_DOC:
+        raise SystemExit("list tool-apps --json should expose the diagnostics first-open doc")
+    if payload.get("branch_doc") != DEVTOOLS_GUI_DOC:
+        raise SystemExit("list tool-apps --json should expose the DevTools GUI branch doc")
+    repo_preflight = payload.get("repo_preflight")
+    if not isinstance(repo_preflight, dict):
+        raise SystemExit("list tool-apps --json should expose repo_preflight")
+    if repo_preflight.get("command") != REPO_PREFLIGHT_COMMAND:
+        raise SystemExit("list tool-apps --json should expose the repo preflight command")
+    if repo_preflight.get("json_command") != REPO_PREFLIGHT_JSON_COMMAND:
+        raise SystemExit("list tool-apps --json should expose the repo preflight JSON command")
+    tool_apps = payload.get("tool_apps")
+    if not isinstance(tool_apps, list):
+        raise SystemExit("list tool-apps --json should expose a tool_apps array")
+    expected_tools = {
+        "fret-devtools": ("cargo run -p fret-devtools", DEVTOOLS_GUI_DOC, "cargo build -p fret-devtools"),
+        "fret-devtools-mcp": (
+            "cargo run -p fret-devtools-mcp",
+            DEVTOOLS_MCP_DOC,
+            "cargo build -p fret-devtools-mcp",
+        ),
+    }
+    for tool_id, (command, docs, gate) in expected_tools.items():
+        tool = next(
+            (item for item in tool_apps if isinstance(item, dict) and item.get("id") == tool_id),
+            None,
+        )
+        if tool is None:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id}")
+        if tool.get("command") != command:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} command")
+        if tool.get("docs") != docs:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} docs")
+        if tool.get("gate") != gate:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} gate")
+        if not isinstance(tool.get("best_for"), str) or not tool["best_for"]:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} best_for text")
+
+    doctor = _run_capture_checked(
+        "diag doctor campaigns first-open preflight",
+        [str(fretboard_exe), "diag", "doctor", "campaigns", "--json"],
+        cwd=cwd,
+    )
+    doctor_payload = _json_stdout("diag doctor campaigns first-open preflight", doctor)
+    if doctor_payload.get("ok") is not True:
+        raise SystemExit("diag doctor campaigns --json should report ok=true")
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="target/imui-p2-devtools-first-open-smoke")
     parser.add_argument("--timeout-ms", type=int, default=180000)
     parser.add_argument("--poll-ms", type=int, default=50)
     parser.add_argument("--release", action="store_true")
+    parser.add_argument(
+        "--discovery-only",
+        action="store_true",
+        help="Validate only the first-open DevTools/tool-app discovery index and repo preflight.",
+    )
     args = parser.parse_args(argv)
 
     repo_root = _repo_root()
     profile_dir = "release" if args.release else "debug"
+
+    fretboard_build = ["cargo", "build", "-j", "1", "-p", "fretboard-dev"]
+    if args.release:
+        fretboard_build.append("--release")
+
+    _run_checked("cargo build -p fretboard-dev", fretboard_build, cwd=repo_root)
+
+    fretboard_exe = repo_root / "target" / profile_dir / _exe_name("fretboard-dev")
+    if not fretboard_exe.exists():
+        raise SystemExit(f"fretboard-dev exe not found: {fretboard_exe}")
+
+    _validate_tool_app_discovery(fretboard_exe, cwd=repo_root)
+    if args.discovery_only:
+        print("[diag-gate-imui-p2-devtools] discovery done")
+        return 0
+
     run_id = str(int(time.time() * 1000))
     root = (repo_root / args.out_dir / run_id).resolve()
     direct_root = root / "direct"
     campaign_base = root / "campaign"
 
-    fretboard_build = ["cargo", "build", "-j", "1", "-p", "fretboard-dev"]
     demo_build = ["cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "todo_demo"]
     if args.release:
-        fretboard_build.append("--release")
         demo_build.append("--release")
-
-    _run_checked("cargo build -p fretboard-dev", fretboard_build, cwd=repo_root)
     _run_checked("cargo build -p fret-demo --bin todo_demo", demo_build, cwd=repo_root)
 
-    fretboard_exe = repo_root / "target" / profile_dir / _exe_name("fretboard-dev")
     demo_exe = repo_root / "target" / profile_dir / _exe_name("todo_demo")
-    if not fretboard_exe.exists():
-        raise SystemExit(f"fretboard-dev exe not found: {fretboard_exe}")
     if not demo_exe.exists():
         raise SystemExit(f"todo demo exe not found: {demo_exe}")
 
