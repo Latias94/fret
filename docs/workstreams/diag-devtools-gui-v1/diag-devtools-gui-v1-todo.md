@@ -110,6 +110,8 @@ Conventions:
         baseline-required manual compare commands for GUI and MCP consumers.
   - [x] GUI selected-summary inspector can launch bundle-local runnable follow-ups and records
         in-flight/error status without treating baseline-required compare commands as runnable.
+  - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
+        latest result path for copying.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

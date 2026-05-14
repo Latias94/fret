@@ -68,6 +68,7 @@ const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =
 const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.followup.memory";
 const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
 const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
+const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -191,6 +192,7 @@ struct State {
     summarize_last_error: Model<Option<Arc<str>>>,
     followup_in_flight: Model<bool>,
     followup_last_command_line: Model<Option<Arc<str>>>,
+    followup_last_result_path: Model<Option<Arc<str>>>,
     followup_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
@@ -367,6 +369,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let summarize_last_error = app.models_mut().insert(None::<Arc<str>>);
     let followup_in_flight = app.models_mut().insert(false);
     let followup_last_command_line = app.models_mut().insert(None::<Arc<str>>);
+    let followup_last_result_path = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
@@ -500,6 +503,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         summarize_last_error,
         followup_in_flight,
         followup_last_command_line,
+        followup_last_result_path,
         followup_last_error,
         viewer_url,
         last_pick_json,
@@ -647,6 +651,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.summarize_last_error, Invalidation::Paint);
     cx.observe_model(&st.followup_in_flight, Invalidation::Paint);
     cx.observe_model(&st.followup_last_command_line, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_result_path, Invalidation::Paint);
     cx.observe_model(&st.followup_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
@@ -2511,6 +2516,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .read(&st.followup_last_command_line, |v| v.clone())
         .ok()
         .flatten();
+    let followup_last_result_path = cx
+        .app
+        .models()
+        .read(&st.followup_last_result_path, |v| v.clone())
+        .ok()
+        .flatten();
     let followup_last_error = cx
         .app
         .models()
@@ -2539,12 +2550,16 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             .as_deref()
             .map(|s| s.to_string())
             .unwrap_or_else(|| "-".to_string());
+        let result = followup_last_result_path
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
         let err = followup_last_error
             .as_deref()
             .map(|s| s.to_string())
             .unwrap_or_else(|| "-".to_string());
         format!(
-            "followup_in_flight={} last_followup_command={command} followup_last_error={err}",
+            "followup_in_flight={} last_followup_command={command} last_followup_result={result} followup_last_error={err}",
             if followup_in_flight { "true" } else { "false" }
         )
     };
@@ -3031,6 +3046,15 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .size(shadcn::ButtonSize::Sm)
                     .disabled(followup_in_flight)
                     .on_click(CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS)
+                    .into_element(cx),
+            );
+        }
+        if followup_last_result_path.is_some() {
+            out.push(
+                shadcn::Button::new("Copy follow-up result")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_RESULT_PATH)
                     .into_element(cx),
             );
         }
@@ -3989,6 +4013,27 @@ fn on_command(
         CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS => {
             run_selected_regression_followup(app, st, "hotspots");
             app.request_redraw(window);
+        }
+        CMD_COPY_FOLLOWUP_RESULT_PATH => {
+            let Some(path) = app
+                .models()
+                .read(&st.followup_last_result_path, |v| v.clone())
+                .ok()
+                .flatten()
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy follow-up result refused (no result artifact yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: path.to_string(),
+            });
         }
         CMD_SCRIPT_FORK => {
             fork_loaded_script(app, window, st);

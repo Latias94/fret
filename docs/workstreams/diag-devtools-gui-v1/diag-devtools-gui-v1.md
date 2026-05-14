@@ -77,6 +77,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - Bundle-local runnable follow-ups can now be launched from the selected-summary inspector through
   the shared diagnostics engine, with in-flight/error status recorded in the GUI; baseline-required
   compare commands remain manual until the user supplies a baseline.
+- Each GUI-launched follow-up now writes a result JSON under `.fret/diag/followups/` and exposes the
+  latest result path for copying, so the GUI path leaves a lightweight evidence artifact.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.

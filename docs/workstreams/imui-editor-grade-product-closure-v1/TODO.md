@@ -172,6 +172,8 @@ reopen.
       Maintenance: the DevTools GUI selected-summary inspector can now launch bundle-local
       runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`)
       through the shared diagnostics engine and records in-flight/error status in the GUI.
+      Maintenance: each GUI-launched follow-up now writes a lightweight
+      `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

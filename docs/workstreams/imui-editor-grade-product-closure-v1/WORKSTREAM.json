@@ -435,7 +435,7 @@
     },
     {
       "name": "imui-p2-devtools-runnable-followup-actions",
-      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args --no-fail-fast"
+      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape --no-fail-fast"
     },
     {
       "name": "imui-p2-devtools-gate-command-source",
