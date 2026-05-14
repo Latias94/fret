@@ -74,6 +74,13 @@ date: 2026-05-12
     declarative retained virtual-list host and asserts retained reconcile metrics. The first draft
     exposed a harness sampling bug: debug reconcile records are frame-scoped and must be captured
     per frame before the next debug frame clears them.
+- [x] Add prepaint virtual-list window-update fixture coverage for viewport/items-revision detail
+  attribution.
+  - Result: `virtual_list_window_update_v1.json` now covers scroll offset, viewport resize, items
+    revision, and scroll-to-item window shifts. The fixture exposed a confirmed mechanism defect:
+    debug telemetry recorded the specific viewport/items-revision reason, but actual cache-root
+    dirty attribution fell back to the generic prefetch/window-update detail. Prepaint now shares
+    one classifier for debug telemetry and dirty cache-root attribution.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes

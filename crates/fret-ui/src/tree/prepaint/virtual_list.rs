@@ -319,6 +319,14 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let (window_shift_reason, window_shift_apply_mode, window_shift_invalidation_detail) =
+            classify_virtual_list_window_shift(
+                self.view_cache_active(),
+                retained_host,
+                inputs.items_revision,
+                &update,
+            );
+
         if self.debug_enabled {
             let policy_key = {
                 let mut b = CacheKeyBuilder::new();
@@ -340,69 +348,6 @@ impl<H: UiHost> UiTree<H> {
                 b.write_px(update.content_extent);
                 b.finish()
             };
-            let (window_shift_reason, window_shift_apply_mode, window_shift_invalidation_detail) =
-                if update.window_shift_kind != crate::tree::UiDebugVirtualListWindowShiftKind::None
-                {
-                    let reason = if update.deferred_scroll_to_item {
-                        crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
-                    } else if inputs.items_revision != update.prev_items_revision {
-                        crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
-                    } else if (update.viewport.0 - update.prev_viewport.0).abs() > 0.01 {
-                        crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize
-                    } else if (update.offset.0 - update.prev_offset.0).abs() > 0.01 {
-                        crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
-                    } else if let (Some(rendered), Some(visible)) =
-                        (update.render_window_range, update.visible_range)
-                    {
-                        let rendered_start = rendered.start_index.saturating_sub(rendered.overscan);
-                        let rendered_end = (rendered.end_index + rendered.overscan)
-                            .min(rendered.count.saturating_sub(1));
-                        if visible.start_index < rendered_start || visible.end_index > rendered_end
-                        {
-                            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
-                        } else {
-                            crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
-                        }
-                    } else if update.prev_window_range.map(|r| (r.count, r.overscan))
-                        != update.window_range.map(|r| (r.count, r.overscan))
-                    {
-                        crate::tree::UiDebugVirtualListWindowShiftReason::InputsChange
-                    } else {
-                        crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
-                    };
-                    let mode = if retained_host {
-                        crate::tree::UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile
-                    } else {
-                        crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
-                    };
-                    let invalidation_detail = if self.view_cache_active() && !retained_host {
-                        match reason {
-                            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem => Some(
-                                crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate,
-                            ),
-                            crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize => Some(
-                                crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate,
-                            ),
-                            crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => Some(
-                                crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate,
-                            ),
-                            _ => match update.window_shift_kind {
-                                crate::tree::UiDebugVirtualListWindowShiftKind::None => None,
-                                crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch => Some(
-                                    crate::tree::UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate,
-                                ),
-                                crate::tree::UiDebugVirtualListWindowShiftKind::Escape => Some(
-                                    crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-                                ),
-                            },
-                        }
-                    } else {
-                        None
-                    };
-                    (Some(reason), Some(mode), invalidation_detail)
-                } else {
-                    (None, None, None)
-                };
 
             if update.window_shift_kind != crate::tree::UiDebugVirtualListWindowShiftKind::None {
                 self.debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
@@ -472,28 +417,98 @@ impl<H: UiHost> UiTree<H> {
                 });
                 self.request_redraw_coalesced(app);
             } else {
-                let detail = match update.window_shift_kind {
-                    crate::tree::UiDebugVirtualListWindowShiftKind::None => {
-                        unreachable!("window_shift_kind checked above")
-                    }
-                    crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch => {
-                        UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
-                    }
-                    crate::tree::UiDebugVirtualListWindowShiftKind::Escape => {
-                        UiDebugInvalidationDetail::ScrollHandleWindowUpdate
-                    }
-                };
                 self.mark_nearest_view_cache_root_needs_rerender(
                     record.node,
                     UiDebugInvalidationSource::Other,
-                    if update.deferred_scroll_to_item {
-                        UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
-                    } else {
-                        detail
-                    },
+                    window_shift_invalidation_detail.unwrap_or_else(|| {
+                        fallback_virtual_list_window_shift_detail(update.window_shift_kind)
+                    }),
                 );
                 self.request_redraw_coalesced(app);
             }
+        }
+    }
+}
+
+fn classify_virtual_list_window_shift(
+    view_cache_active: bool,
+    retained_host: bool,
+    items_revision: u64,
+    update: &VirtualListPrepaintWindowUpdate,
+) -> (
+    Option<crate::tree::UiDebugVirtualListWindowShiftReason>,
+    Option<crate::tree::UiDebugVirtualListWindowShiftApplyMode>,
+    Option<crate::tree::UiDebugInvalidationDetail>,
+) {
+    if update.window_shift_kind == crate::tree::UiDebugVirtualListWindowShiftKind::None {
+        return (None, None, None);
+    }
+
+    let reason = if update.deferred_scroll_to_item {
+        crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
+    } else if items_revision != update.prev_items_revision {
+        crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
+    } else if (update.viewport.0 - update.prev_viewport.0).abs() > 0.01 {
+        crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize
+    } else if (update.offset.0 - update.prev_offset.0).abs() > 0.01 {
+        crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
+    } else if let (Some(rendered), Some(visible)) =
+        (update.render_window_range, update.visible_range)
+    {
+        let rendered_start = rendered.start_index.saturating_sub(rendered.overscan);
+        let rendered_end =
+            (rendered.end_index + rendered.overscan).min(rendered.count.saturating_sub(1));
+        if visible.start_index < rendered_start || visible.end_index > rendered_end {
+            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
+        } else {
+            crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
+        }
+    } else if update.prev_window_range.map(|r| (r.count, r.overscan))
+        != update.window_range.map(|r| (r.count, r.overscan))
+    {
+        crate::tree::UiDebugVirtualListWindowShiftReason::InputsChange
+    } else {
+        crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
+    };
+
+    let mode = if retained_host {
+        crate::tree::UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile
+    } else {
+        crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
+    };
+
+    let invalidation_detail = if view_cache_active && !retained_host {
+        Some(match reason {
+            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem => {
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+            }
+            crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize => {
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+            }
+            crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => {
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+            }
+            _ => fallback_virtual_list_window_shift_detail(update.window_shift_kind),
+        })
+    } else {
+        None
+    };
+
+    (Some(reason), Some(mode), invalidation_detail)
+}
+
+fn fallback_virtual_list_window_shift_detail(
+    kind: crate::tree::UiDebugVirtualListWindowShiftKind,
+) -> crate::tree::UiDebugInvalidationDetail {
+    match kind {
+        crate::tree::UiDebugVirtualListWindowShiftKind::None => {
+            crate::tree::UiDebugInvalidationDetail::Unknown
+        }
+        crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch => {
+            crate::tree::UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
+        }
+        crate::tree::UiDebugVirtualListWindowShiftKind::Escape => {
+            crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate
         }
     }
 }

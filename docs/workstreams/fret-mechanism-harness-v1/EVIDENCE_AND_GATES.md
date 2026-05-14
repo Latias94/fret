@@ -65,6 +65,7 @@ cargo test --profile dev-fast -p fret-ui --lib view_cache_scroll -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache_virtual_list -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture
 cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles
+cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles
 cargo test --profile dev-fast -p fret-ui --lib scroll_handle_changes_classify -- --nocapture
 cargo test --profile dev-fast -p fret-diag-protocol --lib predicate_virtual_list_window_shift_samples_len_le_serializes -- --nocapture
 cargo test --profile dev-fast -p fret-diag-protocol --lib step_assert_semantics_scroll_idle_stable_deserializes_with_defaults -- --nocapture
@@ -119,6 +120,20 @@ Current runtime evidence anchors:
     `cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles`
   - current result:
     passed, 1 test; Nextest run id `0ab07b84-dfed-4198-8a55-70754688b874`.
+- Synthetic prepaint virtual-list window-update fixture:
+  `crates/fret-ui/src/tree/prepaint/tests/fixtures/virtual_list_window_update_v1.json`
+  - runner:
+    `crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs`
+  - proof:
+    asserts prepaint window-shift kind/reason/detail and dirty cache-root attribution for scroll
+    offset, viewport resize, items revision, and scroll-to-item non-retained paths.
+  - first failed evidence:
+    Nextest run id `7f2de95b-4436-4bd7-ad2e-44e818e389b4`; viewport-resize and items-revision
+    cases had the right prepaint debug detail but no matching cache-root dirty reason.
+  - current command:
+    `cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles`
+  - current result:
+    passed, 1 test; Nextest run id `faf3bf59-56a5-4d09-9bf2-cc1a4c1694a4`.
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:

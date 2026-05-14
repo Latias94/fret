@@ -355,3 +355,8 @@ Status: complete
   invariant without launching UI Gallery. Its first draft exposed another harness issue rather than
   a mechanism defect: retained reconcile debug records are frame-scoped, so the fixture runner must
   accumulate records immediately after each frame.
+- A synthetic prepaint virtual-list window-update fixture now covers scroll-offset, viewport-resize,
+  items-revision, and scroll-to-item reason/detail attribution. Its first run exposed a confirmed
+  mechanism defect: prepaint debug telemetry kept the specific viewport/items-revision reason, but
+  the actual dirty cache-root reason regressed to generic prefetch/window-update detail. The
+  prepaint path now uses one classifier for both debug telemetry and cache-root dirty attribution.
