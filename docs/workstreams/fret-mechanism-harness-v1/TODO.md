@@ -61,14 +61,59 @@ date: 2026-05-12
     and the default Checkbox page now gates post-scroll RTL viewport idle stability.
 - [x] Add boundary-crossing Virtual List runtime gates for non-retained and retained owner paths.
   - Result: the non-retained `ui-gallery-vlist-window-boundary` suite passes after the owner fix.
-    The retained script produced evidence, but the outer suite wrapper still needs a clean-exit
-    follow-up because no `suite.summary.json` was written.
-- [ ] Fix or explain the retained Virtual List boundary suite wrapper clean-exit gap so retained
+    The retained `ui-gallery-vlist-window-boundary-retained` suite now runs a real bounce path,
+    asserts keep-alive reuse, and writes a normal passing `suite.summary.json`.
+- [x] Fix or explain the retained Virtual List boundary suite wrapper clean-exit gap so retained
   boundary-crossing coverage has a normal `suite.summary.json` proof.
+  - Result: the gap was a diagnostics harness issue. The suite finalizer now summarizes success-tail
+    failures, the retained script now bounces back to exercise reuse, and the streaming post-run
+    gate reads current `retained_virtual_list_reconciles[].reused_from_keep_alive_items` schema.
+- [x] Add retained-host synthetic reconcile fixture metrics so keep-alive attach/detach/reuse can
+  be checked without launching UI Gallery.
+  - Result: `retained_virtual_list_reconcile_v1.json` now drives a bounce scenario through the real
+    declarative retained virtual-list host and asserts retained reconcile metrics. The first draft
+    exposed a harness sampling bug: debug reconcile records are frame-scoped and must be captured
+    per frame before the next debug frame clears them.
+- [x] Add prepaint virtual-list window-update fixture coverage for viewport/items-revision detail
+  attribution.
+  - Result: `virtual_list_window_update_v1.json` now covers scroll offset, viewport resize, items
+    revision, and scroll-to-item window shifts. The fixture exposed a confirmed mechanism defect:
+    debug telemetry recorded the specific viewport/items-revision reason, but actual cache-root
+    dirty attribution fell back to the generic prefetch/window-update detail. Prepaint now shares
+    one classifier for debug telemetry and dirty cache-root attribution.
+- [x] Extend prepaint virtual-list window-update fixtures to length-shrink/input-change cases.
+  - Result: a stale render-window count now classifies as `InputsChange` before offset deltas and
+    uses the dedicated `scroll_handle_inputs_change_window_update` invalidation detail. The first
+    run showed the length-shrink case was not exposed as an input change.
+- [x] Add a DataTable retained filter-shrink runtime companion for the virtual-list
+  `InputsChange` mechanism.
+  - Result: `ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json` drives the real
+    DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, applies a global filter,
+    and asserts a layout-sourced retained virtual-list `inputs_change` record. The first runtime
+    pass exposed a component defect: retained DataTable rows were built from raw data instead of the
+    filtered row order. The follow-up exposed a mechanism defect: layout-time virtual-list
+    classification did not share the prepaint `InputsChange` classifier.
+- [x] Add a DataTable view-cache filter-shrink runtime companion for non-retained
+  `InputsChange` invalidation detail.
+  - Result: `ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json` drives the
+    same DataTable torture page with `FRET_UI_GALLERY_VIEW_CACHE=1`, applies a global filter, and
+    asserts `reason=inputs_change`, `apply_mode=non_retained_rerender`, and
+    `invalidation_detail=scroll_handle_inputs_change_window_update`. The first draft exposed a
+    harness precondition issue rather than a mechanism defect: default Gallery runs have
+    `view_cache_active=false`, so no invalidation detail should be expected.
+- [x] Add a DataTable RTL idle-stability runtime companion.
+  - Result: `ui-gallery-data-table-rtl-idle-stability.json` scrolls the public DataTable page to the
+    RTL section, waits for root/footer bounds stability, samples the Gallery content viewport for 60
+    no-input frames, and passes. This did not reproduce a scroll-jitter mechanism defect.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
-- [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
-  test ids for underlay, overlay, and observer/capture state.
+- [x] Add a UI Gallery pointer occlusion diagnostics gate once a stable overlay demo exposes test
+  ids for underlay and overlay state.
+  - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
+    viewport starts at `scroll.y=0`, has a non-zero scroll range, receives a wheel through
+    `BlockMouseExceptScroll`, ends with `scroll.y != 0`, and keeps the context menu mounted.
+- [ ] Add a UI Gallery captured-pointer diagnostics gate once a stable demo exposes pointer-capture
+  owner and underlay probes.
 - [x] Add active-descendant interaction fixture coverage for combobox query-driven active descendant
   selection.
 - [x] Add nested focus scope fixture coverage for inner/outer trapped scope traversal and pointer
@@ -131,8 +176,12 @@ date: 2026-05-12
   and add cross-metric side-gap oracles for both top-flip and bottom-room placement.
 - [x] Add Combobox long-text truncation/ellipsis coverage for constrained trigger and popup option
   text, including trigger-label and option-label geometry predicates.
-- [ ] Add a Combobox RTL long-text companion so leading/trailing icon/checkmark ownership is
+- [x] Add a Combobox RTL long-text companion so leading/trailing icon/checkmark ownership is
   covered in both directions.
+  - Result: `ui-gallery-combobox-rtl-long-text-geometry.json` is already promoted into
+    `ui-gallery-combobox`, `ui-gallery-rtl-smoke`, and `ui-gallery-shadcn-conformance`. The audit
+    rerun passed and proved the physical-left RTL chevron, label-after-chevron spacing,
+    content-shell top collision flip, and physical-right RTL checkmark/label separation.
 - [x] Tighten the Combobox Responsive desktop placement gate so it asserts preferred/chosen bottom
   placement and shadcn `sideOffset=6`, and add it to the `ui-gallery-combobox` diagnostics suite.
 - [x] Fix the Popover first-open placement-size bridge so explicit content width hints beat the

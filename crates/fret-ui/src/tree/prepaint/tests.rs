@@ -1,5 +1,7 @@
 use super::*;
 
+mod prepaint_virtual_list_window_update_harness;
+
 struct NoopWidget;
 impl Widget<crate::test_host::TestHost> for NoopWidget {}
 

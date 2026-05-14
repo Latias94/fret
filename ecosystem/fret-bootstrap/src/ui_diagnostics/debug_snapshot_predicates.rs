@@ -35,6 +35,7 @@ fn eval_debug_snapshot_predicate_from_ring(
             reason,
             apply_mode,
             source,
+            invalidation_detail,
         } => {
             let samples = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
                 total.saturating_add(count_matching_virtual_list_shift_samples(
@@ -43,6 +44,7 @@ fn eval_debug_snapshot_predicate_from_ring(
                     reason.as_deref(),
                     apply_mode.as_deref(),
                     source.as_deref(),
+                    invalidation_detail.as_deref(),
                 ))
             });
             Some(samples >= *min)
@@ -53,6 +55,7 @@ fn eval_debug_snapshot_predicate_from_ring(
             reason,
             apply_mode,
             source,
+            invalidation_detail,
         } => {
             let windows = ring.snapshots.iter().fold(0_u64, |total, snapshot| {
                 total.saturating_add(count_matching_virtual_list_windows(
@@ -61,6 +64,7 @@ fn eval_debug_snapshot_predicate_from_ring(
                     reason.as_deref(),
                     apply_mode.as_deref(),
                     source.as_deref(),
+                    invalidation_detail.as_deref(),
                 ))
             });
             Some(windows >= *min)
@@ -147,6 +151,7 @@ fn eval_virtual_list_predicate_from_debug_snapshot(
             reason,
             apply_mode,
             source,
+            invalidation_detail,
         } => Some(
             count_matching_virtual_list_shift_samples(
                 debug,
@@ -154,6 +159,7 @@ fn eval_virtual_list_predicate_from_debug_snapshot(
                 reason.as_deref(),
                 apply_mode.as_deref(),
                 source.as_deref(),
+                invalidation_detail.as_deref(),
             ) >= *min,
         ),
         UiPredicateV1::VirtualListWindowsMatchingGe {
@@ -162,6 +168,7 @@ fn eval_virtual_list_predicate_from_debug_snapshot(
             reason,
             apply_mode,
             source,
+            invalidation_detail,
         } => Some(
             count_matching_virtual_list_windows(
                 debug,
@@ -169,6 +176,7 @@ fn eval_virtual_list_predicate_from_debug_snapshot(
                 reason.as_deref(),
                 apply_mode.as_deref(),
                 source.as_deref(),
+                invalidation_detail.as_deref(),
             ) >= *min,
         ),
         UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
@@ -215,6 +223,7 @@ fn count_matching_virtual_list_shift_samples(
     reason: Option<&str>,
     apply_mode: Option<&str>,
     source: Option<&str>,
+    invalidation_detail: Option<&str>,
 ) -> u64 {
     debug
         .virtual_list_window_shift_samples
@@ -230,6 +239,10 @@ fn count_matching_virtual_list_shift_samples(
                 apply_mode,
                 virtual_list_shift_apply_mode_name(sample.window_shift_apply_mode),
             ) && matches_optional(source, virtual_list_window_source_name(sample.source))
+                && optional_matches_optional(
+                    invalidation_detail,
+                    sample.window_shift_invalidation_detail.as_deref(),
+                )
         })
         .count() as u64
 }
@@ -240,6 +253,7 @@ fn count_matching_virtual_list_windows(
     reason: Option<&str>,
     apply_mode: Option<&str>,
     source: Option<&str>,
+    invalidation_detail: Option<&str>,
 ) -> u64 {
     debug
         .virtual_list_windows
@@ -259,6 +273,10 @@ fn count_matching_virtual_list_windows(
                     .window_shift_apply_mode
                     .map(virtual_list_shift_apply_mode_name),
             ) && matches_optional(source, virtual_list_window_source_name(window.source))
+                && optional_matches_optional(
+                    invalidation_detail,
+                    window.window_shift_invalidation_detail.as_deref(),
+                )
         })
         .count() as u64
 }
@@ -631,7 +649,10 @@ fn eval_resource_loading_predicate_from_debug_snapshot(
 mod tests {
     use super::*;
 
-    fn snapshot_with_virtual_list_shift_samples(samples: usize) -> UiDiagnosticsSnapshotV1 {
+    fn snapshot_with_virtual_list_shift_samples(
+        samples: usize,
+        invalidation_detail: Option<&str>,
+    ) -> UiDiagnosticsSnapshotV1 {
         let mut debug = UiTreeDebugSnapshotV1::default();
         debug.virtual_list_window_shift_samples = (0..samples)
             .map(|idx| UiVirtualListWindowShiftSampleV1 {
@@ -642,7 +663,7 @@ mod tests {
                 window_shift_kind: UiVirtualListWindowShiftKindV1::Escape,
                 window_shift_reason: UiVirtualListWindowShiftReasonV1::ScrollOffset,
                 window_shift_apply_mode: UiVirtualListWindowShiftApplyModeV1::RetainedReconcile,
-                window_shift_invalidation_detail: None,
+                window_shift_invalidation_detail: invalidation_detail.map(str::to_string),
                 prev_window_range: None,
                 window_range: None,
                 render_window_range: None,
@@ -657,6 +678,7 @@ mod tests {
         reason: Option<UiVirtualListWindowShiftReasonV1>,
         apply_mode: Option<UiVirtualListWindowShiftApplyModeV1>,
         source: UiVirtualListWindowSourceV1,
+        invalidation_detail: Option<&str>,
     ) -> UiDiagnosticsSnapshotV1 {
         let mut debug = UiTreeDebugSnapshotV1::default();
         debug.virtual_list_windows.push(UiVirtualListWindowV1 {
@@ -685,7 +707,7 @@ mod tests {
             window_shift_kind: shift_kind,
             window_shift_reason: reason,
             window_shift_apply_mode: apply_mode,
-            window_shift_invalidation_detail: None,
+            window_shift_invalidation_detail: invalidation_detail.map(str::to_string),
         });
 
         snapshot_with_debug(debug)
@@ -794,9 +816,9 @@ mod tests {
     fn virtual_list_window_shift_samples_predicate_counts_ring_snapshots() {
         let mut ring = WindowRing::default();
         ring.snapshots
-            .push_back(snapshot_with_virtual_list_shift_samples(0));
+            .push_back(snapshot_with_virtual_list_shift_samples(0, None));
         ring.snapshots
-            .push_back(snapshot_with_virtual_list_shift_samples(1));
+            .push_back(snapshot_with_virtual_list_shift_samples(1, None));
 
         assert_eq!(
             eval_debug_snapshot_predicate_from_ring(
@@ -818,9 +840,12 @@ mod tests {
     fn virtual_list_window_shift_samples_matching_predicate_counts_ring_snapshots() {
         let mut ring = WindowRing::default();
         ring.snapshots
-            .push_back(snapshot_with_virtual_list_shift_samples(0));
+            .push_back(snapshot_with_virtual_list_shift_samples(0, None));
         ring.snapshots
-            .push_back(snapshot_with_virtual_list_shift_samples(2));
+            .push_back(snapshot_with_virtual_list_shift_samples(
+                2,
+                Some("scroll_handle_inputs_change_window_update"),
+            ));
 
         assert_eq!(
             eval_debug_snapshot_predicate_from_ring(
@@ -831,6 +856,9 @@ mod tests {
                     reason: Some("scroll_offset".to_string()),
                     apply_mode: Some("retained_reconcile".to_string()),
                     source: Some("layout".to_string()),
+                    invalidation_detail: Some(
+                        "scroll_handle_inputs_change_window_update".to_string(),
+                    ),
                 },
             ),
             Some(true)
@@ -844,6 +872,7 @@ mod tests {
                     reason: Some("scroll_offset".to_string()),
                     apply_mode: Some("retained_reconcile".to_string()),
                     source: Some("layout".to_string()),
+                    invalidation_detail: Some("scroll_handle_prefetch_window_update".to_string(),),
                 },
             ),
             Some(false)
@@ -858,6 +887,7 @@ mod tests {
             Some(UiVirtualListWindowShiftReasonV1::ScrollOffset),
             Some(UiVirtualListWindowShiftApplyModeV1::RetainedReconcile),
             UiVirtualListWindowSourceV1::Prepaint,
+            Some("scroll_handle_prefetch_window_update"),
         ));
 
         assert_eq!(
@@ -869,6 +899,7 @@ mod tests {
                     reason: Some("scroll_offset".to_string()),
                     apply_mode: Some("retained_reconcile".to_string()),
                     source: Some("prepaint".to_string()),
+                    invalidation_detail: Some("scroll_handle_prefetch_window_update".to_string(),),
                 },
             ),
             Some(true)
@@ -882,6 +913,7 @@ mod tests {
                     reason: Some("viewport_resize".to_string()),
                     apply_mode: Some("retained_reconcile".to_string()),
                     source: Some("prepaint".to_string()),
+                    invalidation_detail: Some("scroll_handle_prefetch_window_update".to_string(),),
                 },
             ),
             Some(false)

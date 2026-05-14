@@ -1648,6 +1648,61 @@ fn finalize_suite_script_success_tail(
     Ok(())
 }
 
+fn finalize_suite_script_success_tail_error_and_return(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &mut Vec<serde_json::Value>,
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    script_ctx: &PreparedSuiteScriptContext,
+    result: &crate::stats::ScriptResultSummary,
+    error: &str,
+) -> String {
+    let reason_code = "tooling.suite.success_tail.failed";
+    let mut row = build_suite_script_result_row(
+        &script_ctx.script_key,
+        result,
+        script_ctx.lint_summary.as_ref(),
+        script_ctx.evidence_highlights.as_ref(),
+    );
+    if let Some(row) = row.as_object_mut() {
+        row.insert(
+            "success_tail_reason_code".to_string(),
+            serde_json::Value::String(reason_code.to_string()),
+        );
+        row.insert(
+            "success_tail_error".to_string(),
+            serde_json::Value::String(error.to_string()),
+        );
+    }
+    rows.push(row);
+
+    let mut reason_code_counts = reason_code_counts.clone();
+    *reason_code_counts
+        .entry(reason_code.to_string())
+        .or_default() += 1;
+
+    finalize_suite_failure_and_return(
+        child,
+        stop_demo,
+        resolved_exit_path,
+        poll_ms,
+        summary_ctx,
+        stage_counts,
+        &reason_code_counts,
+        rows,
+        evidence_aggregate,
+        "failed",
+        Some(reason_code),
+        Some("success_tail_failed"),
+        "suite run failed (see suite.summary.json)",
+    )
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -2615,7 +2670,7 @@ fn build_suite_core_default_post_run_checks(
         && script_requires_retained_vlist_keep_alive_reuse_gate)
         || vlist_window_boundary_retained_suite)
         .then_some(if vlist_window_boundary_retained_suite {
-            5u64
+            1u64
         } else {
             1u64
         })
@@ -3815,34 +3870,51 @@ hint: list suites via `fretboard-dev diag list suites`"
             process_exit_on_completion,
         )?;
 
-        finalize_suite_script_success_tail(SuiteScriptSuccessTailRequest {
-            src: &src,
-            idx,
-            script_count,
-            child: &mut child,
-            keep_open,
-            reuse_process,
-            resolved_exit_path: &resolved_exit_path,
-            resolved_out_dir: &resolved_out_dir,
-            poll_ms,
-            suite_lint,
-            bundle_doctor_mode,
-            warmup_frames,
-            lint_all_test_ids_bounds,
-            lint_eps_px,
-            timeout_ms,
-            suite_profile,
-            builtin_suite,
-            checks_for_post_run_template: &checks_for_post_run_template,
-            check_notify_hotspot_file_max: &check_notify_hotspot_file_max,
-            summary_ctx: &summary_ctx,
-            stage_counts: &suite_stage_counts,
-            reason_code_counts: &suite_reason_code_counts,
-            rows: &mut suite_rows,
-            evidence_aggregate: &suite_evidence_agg,
-            script_ctx: &mut script_ctx,
-            result: &result,
-        })?;
+        let success_tail_result =
+            finalize_suite_script_success_tail(SuiteScriptSuccessTailRequest {
+                src: &src,
+                idx,
+                script_count,
+                child: &mut child,
+                keep_open,
+                reuse_process,
+                resolved_exit_path: &resolved_exit_path,
+                resolved_out_dir: &resolved_out_dir,
+                poll_ms,
+                suite_lint,
+                bundle_doctor_mode,
+                warmup_frames,
+                lint_all_test_ids_bounds,
+                lint_eps_px,
+                timeout_ms,
+                suite_profile,
+                builtin_suite,
+                checks_for_post_run_template: &checks_for_post_run_template,
+                check_notify_hotspot_file_max: &check_notify_hotspot_file_max,
+                summary_ctx: &summary_ctx,
+                stage_counts: &suite_stage_counts,
+                reason_code_counts: &suite_reason_code_counts,
+                rows: &mut suite_rows,
+                evidence_aggregate: &suite_evidence_agg,
+                script_ctx: &mut script_ctx,
+                result: &result,
+            });
+        if let Err(err) = success_tail_result {
+            return Err(finalize_suite_script_success_tail_error_and_return(
+                &mut child,
+                !keep_open,
+                &resolved_exit_path,
+                poll_ms,
+                &summary_ctx,
+                &suite_stage_counts,
+                &suite_reason_code_counts,
+                &mut suite_rows,
+                &suite_evidence_agg,
+                &script_ctx,
+                &result,
+                &err,
+            ));
+        }
     }
 
     finalize_suite_success(
@@ -4331,6 +4403,104 @@ mod tests {
                 .map(Vec::len),
             Some(0)
         );
+    }
+
+    #[test]
+    fn finalize_suite_success_tail_error_writes_summary_and_preserves_passed_row() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-suite-success-tail-error-{}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let suite_summary_path = root.join("suite.summary.json");
+        let regression_summary_path = root.join("regression.summary.json");
+        let summary_ctx = SuiteSummaryContext {
+            workspace_root: &root,
+            resolved_out_dir: &root,
+            suite_summary_path: &suite_summary_path,
+            regression_summary_path: &regression_summary_path,
+            suite_name: Some("test-suite"),
+            generated_unix_ms: 7,
+            warmup_frames: 0,
+            reuse_launch: true,
+            wants_screenshots: false,
+        };
+        let mut stage_counts = std::collections::BTreeMap::new();
+        stage_counts.insert("passed".to_string(), 1);
+        let reason_code_counts = std::collections::BTreeMap::new();
+        let evidence_aggregate = suite_summary::SuiteEvidenceAggregate::default();
+        let mut rows = Vec::new();
+        let mut child = None;
+        let script_ctx = PreparedSuiteScriptContext {
+            script_key: "script.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: Some(serde_json::json!({
+                "artifacts": []
+            })),
+        };
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: Some("bundle-dir".to_string()),
+        };
+
+        let err = finalize_suite_script_success_tail_error_and_return(
+            &mut child,
+            true,
+            &root.join("exit.touch"),
+            1,
+            &summary_ctx,
+            &stage_counts,
+            &reason_code_counts,
+            &mut rows,
+            &evidence_aggregate,
+            &script_ctx,
+            &result,
+            "post-run check failed for test",
+        );
+
+        assert_eq!(err, "suite run failed (see suite.summary.json)");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0].get("script").and_then(|value| value.as_str()),
+            Some("script.json")
+        );
+        assert_eq!(
+            rows[0].get("stage").and_then(|value| value.as_str()),
+            Some("passed")
+        );
+        assert_eq!(
+            rows[0]
+                .get("success_tail_reason_code")
+                .and_then(|value| value.as_str()),
+            Some("tooling.suite.success_tail.failed")
+        );
+        let summary = crate::util::read_json_value(&suite_summary_path)
+            .expect("suite summary should be written");
+        assert_eq!(
+            summary.get("status").and_then(|value| value.as_str()),
+            Some("failed")
+        );
+        assert_eq!(
+            summary.get("failure_kind").and_then(|value| value.as_str()),
+            Some("success_tail_failed")
+        );
+        assert_eq!(
+            summary
+                .get("error_reason_code")
+                .and_then(|value| value.as_str()),
+            Some("tooling.suite.success_tail.failed")
+        );
+        assert!(regression_summary_path.is_file());
     }
 
     #[test]

@@ -64,6 +64,8 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_scroll_handle_i
 cargo test --profile dev-fast -p fret-ui --lib view_cache_scroll -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache_virtual_list -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture
+cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles
+cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles
 cargo test --profile dev-fast -p fret-ui --lib scroll_handle_changes_classify -- --nocapture
 cargo test --profile dev-fast -p fret-diag-protocol --lib predicate_virtual_list_window_shift_samples_len_le_serializes -- --nocapture
 cargo test --profile dev-fast -p fret-diag-protocol --lib step_assert_semantics_scroll_idle_stable_deserializes_with_defaults -- --nocapture
@@ -71,10 +73,15 @@ cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-dr
 cargo build -p fret-ui-gallery --release
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json --dir target/fret-diag-virtual-list-harness-commit-check --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary --dir target/fret-diag-vlist-window-boundary-after-reason-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
-$env:FRET_UI_GALLERY_VLIST_RETAINED='1'; cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-after-owner-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
+cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-bounce-script-final --session-auto --launch -- target/debug/fret-ui-gallery.exe
+$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+$env:FRET_UI_GALLERY_VIEW_CACHE='1'
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-view-cache-filter-shrink-inputs-change --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json --dir target/fret-diag-data-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current runtime evidence anchors:
@@ -100,10 +107,71 @@ Current runtime evidence anchors:
   - suite membership:
     `tools/diag-scripts/suites/ui-gallery-vlist-window-boundary-retained/suite.json`
   - current evidence:
-    `target/fret-diag-vlist-window-boundary-retained-after-owner-fix/sessions/1778718929118-137636/script.result.json`
+    `target/fret-diag-vlist-window-boundary-retained-bounce-script-final/sessions/1778726366803-140844/suite.summary.json`
   - status:
-    the retained script produced evidence after the owner fix, but the outer suite command returned
-    non-zero and no `suite.summary.json` was written. Keep this as a follow-up clean-exit gap.
+    suite `status=passed`; the script now bounces back after the boundary-crossing scroll and
+    asserts retained keep-alive reuse before capture.
+  - proof:
+    bundle frame 54 recorded an `escape` retained reconcile with
+    `reused_from_keep_alive_items=9` and `keep_alive_pool_len_after=9`.
+- Synthetic retained-host reconcile fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/retained_virtual_list_reconcile_v1.json`
+  - runner:
+    `crates/fret-ui/src/declarative/tests/retained_virtual_list_reconcile_harness.rs`
+  - proof:
+    asserts the bounce scenario records keep-alive insertion on downward scroll and reuse on the
+    return scroll while avoiding cache-root rerendering after warmup.
+  - current command:
+    `cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles`
+  - current result:
+    passed, 1 test; Nextest run id `0ab07b84-dfed-4198-8a55-70754688b874`.
+- Synthetic prepaint virtual-list window-update fixture:
+  `crates/fret-ui/src/tree/prepaint/tests/fixtures/virtual_list_window_update_v1.json`
+  - runner:
+    `crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs`
+  - proof:
+    asserts prepaint window-shift kind/reason/detail and dirty cache-root attribution for scroll
+    offset, viewport resize, items revision, and scroll-to-item non-retained paths.
+  - first failed evidence:
+    Nextest run id `7f2de95b-4436-4bd7-ad2e-44e818e389b4`; viewport-resize and items-revision
+    cases had the right prepaint debug detail but no matching cache-root dirty reason.
+  - current command:
+    `cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles`
+  - current result:
+    passed, 1 test; Nextest run id `7fd6de79-fd32-421c-88f4-7844cc05ea2f` after adding the
+    length-shrink inputs-change case.
+  - companion focused result:
+    `cargo nextest run -p fret-ui prepaint_detects_render_window_insufficient_for_overscan_policy prepaint_marks_scroll_to_item_window_updates_with_distinct_invalidation_detail prepaint_attributes_window_escape_to_scroll_offset_when_state_offset_was_synced prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape virtual_list_window_shift_detail_classifies_items_revision view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
+    passed, 6 tests; Nextest run id `3f91c35e-f1ff-4e06-8b13-155dc289a493`.
+- DataTable retained filter-shrink input-change runtime gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json`
+  - proof:
+    drives the real DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, scrolls the
+    retained table, applies the global filter `Process 123`, observes `GlobalFilter: Process 123`,
+    and asserts at least one layout-sourced virtual-list window record with
+    `reason=inputs_change` and `apply_mode=retained_reconcile`.
+  - evidence:
+    `target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix/sessions/1778743224380-134968/1778743227800`
+  - share pack:
+    `target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix/sessions/1778743224380-134968/share/1778743227800.zip`
+- DataTable view-cache filter-shrink input-change runtime gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-data-table-view-cache-torture/suite.json`
+  - proof:
+    drives the real DataTable torture page with `FRET_UI_GALLERY_VIEW_CACHE=1`, scrolls the table,
+    applies the global filter `Process 123`, observes `GlobalFilter: Process 123`, and asserts at
+    least one layout-sourced virtual-list window record with `reason=inputs_change`,
+    `apply_mode=non_retained_rerender`, and
+    `invalidation_detail=scroll_handle_inputs_change_window_update`.
+  - first failed precondition evidence:
+    `target/fret-diag-datatable-filter-shrink-nonretained-inputs-change/sessions/1778744865979-149372/1778744869344/ai.packet`
+  - current evidence:
+    `target/fret-diag-datatable-view-cache-filter-shrink-inputs-change/sessions/1778745510540-145220/1778745514577`
+  - share pack:
+    `target/fret-diag-datatable-view-cache-filter-shrink-inputs-change/sessions/1778745510540-145220/share/1778745514577.zip`
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:
@@ -141,6 +209,18 @@ Current runtime evidence anchors:
   - trace proof:
     outer content viewport `sample_count=60`, `baseline_value=1260.0`, `value=1260.0`,
     `frame_delta=0.0`, `total_delta=0.0`.
+- DataTable RTL post-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - proof:
+    scrolls the DataTable page to `ui-gallery-data-table-rtl-root`, waits for the root and footer
+    bounds to settle, then samples `ui-gallery-content-viewport` for 60 no-input frames.
+  - evidence:
+    `target/fret-diag-data-table-rtl-idle-stability/sessions/1778746329247-149040/1778746333478`
+  - share pack:
+    `target/fret-diag-data-table-rtl-idle-stability/sessions/1778746329247-149040/share/1778746333478.zip`
 
 ## Environment View-Cache Gates
 
@@ -156,7 +236,26 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routin
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_occlusion -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json --dir target/fret-diag-context-menu-occlusion-wheel-structured-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
+
+Current runtime evidence:
+
+- Context-menu pointer occlusion wheel pass-through:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
+  - asserts `ui-gallery-content-viewport.scroll.y_max != 0` and `scroll.y == 0` before the wheel,
+    wheels `ui-gallery-overlay-reset` under `BlockMouseExceptScroll`, then asserts
+    `ui-gallery-content-viewport.scroll.y != 0` while `ui-gallery-context-content` still exists.
+  - current run result:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/script.result.json`
+  - current bundle:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/1778749343795-ui-gallery-context-menu-occlusion-wheel-pass-through/bundle.schema2.json`
+  - current share pack:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/share/1778749337977.zip`
+  - current screenshot after wheel:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/screenshots/1778749343662-ui-gallery-context-menu-occlusion-wheel-pass-through-after/window-4294967297-tick-49-frame-49.png`
+  - trace proof from the final bundle: `pointer_occlusion=block_mouse_except_scroll`,
+    `pointer_capture_active=false`, and `ui-gallery-content-viewport.scroll.y=535.3333740234375`.
 
 ## Focus Barrier Gates
 
@@ -240,6 +339,7 @@ target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-ga
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-label-checkmark --session-auto --launch -- target/debug/fret-ui-gallery.exe
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json --dir target/fret-diag-combobox-popup-bottom-room-label-checkmark --session-auto --launch -- target/debug/fret-ui-gallery.exe
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-long-text-geometry-v4 --session-auto --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json --dir target/fret-diag-combobox-rtl-long-text-audit --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current evidence anchors:
@@ -310,6 +410,24 @@ Current evidence anchors:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/script.result.json`
   - bundle with long-text child anchors:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/1778619501160-ui-gallery-combobox-long-text-open/bundle.schema2.json`
+- Combobox RTL long-text trigger/option geometry gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json`
+  - asserts trigger label width budget, physical-left RTL chevron inset, label-after-chevron
+    spacing, chrome-relative vertical centering, content-shell top collision flip with
+    `side_offset_px=6`, option label width budget, physical-right RTL checkmark inset, and
+    label-before-checkmark spacing.
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - current audit evidence:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/1778747711700/script.result.json`
+  - current audit share pack:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/share/1778747711700.zip`
+  - current audit layout sidecar:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/1778747713455-ui-gallery-combobox-rtl-long-text-open.layout/layout.taffy.v1.json`
+  - current audit screenshot:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/screenshots/1778747713519-ui-gallery-combobox-rtl-long-text-open/window-4294967297-tick-34-frame-34.png`
 - Popover first-open explicit-width center alignment gate:
   `ecosystem/fret-ui-shadcn/src/popover.rs`
   - test: `popover_first_open_center_alignment_uses_explicit_width_for_x`
@@ -527,6 +645,8 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json`
 - Pointer occlusion routing runner:
   `crates/fret-ui/src/tree/tests/pointer_occlusion_routing_harness.rs`
+- Pointer occlusion runtime gate:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
 - Focus barrier routing fixture:
   `crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`
 - Focus barrier routing runner:

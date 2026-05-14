@@ -90,6 +90,7 @@ pub enum UiDebugInvalidationDetail {
     ScrollHandleScrollToItemWindowUpdate,
     ScrollHandleViewportResizeWindowUpdate,
     ScrollHandleItemsRevisionWindowUpdate,
+    ScrollHandleInputsChangeWindowUpdate,
     ScrollHandlePrefetchWindowUpdate,
     FocusVisiblePolicy,
     InputModalityPolicy,
@@ -142,6 +143,9 @@ impl UiDebugInvalidationDetail {
             }
             Self::ScrollHandleItemsRevisionWindowUpdate => {
                 Some("scroll_handle_items_revision_window_update")
+            }
+            Self::ScrollHandleInputsChangeWindowUpdate => {
+                Some("scroll_handle_inputs_change_window_update")
             }
             Self::ScrollHandlePrefetchWindowUpdate => Some("scroll_handle_prefetch_window_update"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),

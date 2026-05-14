@@ -24,6 +24,7 @@ impl<H: UiHost> UiTree<H> {
                         | UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
                         | UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
                         | UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+                        | UiDebugInvalidationDetail::ScrollHandleInputsChangeWindowUpdate
                         | UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
                 ))
     }
