@@ -114,15 +114,15 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         node: NodeId,
         enabled: bool,
-        contained_layout: bool,
+        contain_layout_when_bounds_known: bool,
         layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
-            let next = ViewCacheFlags {
+            let next = ViewCacheFlags::from_contain_layout_when_bounds_known(
                 enabled,
-                contained_layout,
+                contain_layout_when_bounds_known,
                 layout_definite,
-            };
+            );
             if n.view_cache == next {
                 return;
             }
@@ -237,7 +237,7 @@ impl<H: UiHost> UiTree<H> {
             .iter()
             .filter_map(|(id, n)| {
                 (n.view_cache.enabled
-                    && n.view_cache.contained_layout
+                    && n.view_cache.layout_contained_when_bounds_known()
                     && !n.view_cache.layout_definite
                     && n.bounds.size == Size::default()
                     && (n.invalidation.layout || n.invalidation.hit_test))

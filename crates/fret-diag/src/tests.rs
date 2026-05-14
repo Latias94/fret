@@ -3066,7 +3066,7 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
                                 {
                                     "root": 42,
                                     "reused": false,
-                                    "contained_layout": true,
+                                    "layout_dependency": "contained_when_bounds_known",
                                     "paint_replayed_ops": 0,
                                     "reuse_reason": "needs_rerender"
                                 }
@@ -3111,7 +3111,15 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
         .top_cache_roots
         .first()
         .expect("top cache root");
+    assert_eq!(
+        cache_root.layout_dependency.as_deref(),
+        Some("contained_when_bounds_known")
+    );
     assert_eq!(cache_root.boundary_kind.as_deref(), Some("view_cache_root"));
+    assert_eq!(
+        cache_root.boundary_layout_dependency.as_deref(),
+        Some("contained_when_bounds_known")
+    );
     assert_eq!(
         cache_root.boundary_build_outcome.as_deref(),
         Some("rebuilt")
@@ -3138,6 +3146,20 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
         json.pointer("/top/0/top_cache_roots/0/boundary/reuse_reason")
             .and_then(|v| v.as_str()),
         Some("needs_rerender")
+    );
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/layout_dependency")
+            .and_then(|v| v.as_str()),
+        Some("contained_when_bounds_known")
+    );
+    assert!(
+        json.pointer("/top/0/top_cache_roots/0/contained_layout")
+            .is_none()
+    );
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/boundary/layout_dependency")
+            .and_then(|v| v.as_str()),
+        Some("contained_when_bounds_known")
     );
 }
 

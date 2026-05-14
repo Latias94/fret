@@ -30,6 +30,15 @@ pub(super) enum BoundaryParentLayoutDependency {
     ContainedWhenBoundsKnown,
 }
 
+impl BoundaryParentLayoutDependency {
+    fn as_debug_str(self) -> &'static str {
+        match self {
+            Self::ParentDependent => "parent_dependent",
+            Self::ContainedWhenBoundsKnown => "contained_when_bounds_known",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct BoundaryLayoutDependencies {
     pub(super) parent: BoundaryParentLayoutDependency,
@@ -38,7 +47,7 @@ pub(super) struct BoundaryLayoutDependencies {
 
 impl BoundaryLayoutDependencies {
     fn from_view_cache_flags(flags: ViewCacheFlags) -> Self {
-        let parent = if flags.contained_layout {
+        let parent = if flags.layout_contained_when_bounds_known() {
             BoundaryParentLayoutDependency::ContainedWhenBoundsKnown
         } else {
             BoundaryParentLayoutDependency::ParentDependent
@@ -549,6 +558,15 @@ impl<H: UiHost> UiTree<H> {
         })
     }
 
+    pub(in crate::tree) fn debug_boundary_layout_dependency_for_node(
+        &self,
+        node: NodeId,
+    ) -> Option<&'static str> {
+        self.view_boundaries
+            .get(node)
+            .map(|state| state.layout_dependencies.parent.as_debug_str())
+    }
+
     pub fn debug_boundary_stats(&self) -> Vec<UiDebugBoundaryStats> {
         if !self.debug_enabled {
             return Vec::new();
@@ -585,12 +603,7 @@ impl<H: UiHost> UiTree<H> {
                 scene_fragment_used_entries: state.scene_fragment.used_entries(),
                 scene_fragment_rejected_entries: state.scene_fragment.rejected_entries(),
                 scene_fragment_reject_reason: state.scene_fragment.last_reject_reason(),
-                layout_dependency: match state.layout_dependencies.parent {
-                    BoundaryParentLayoutDependency::ParentDependent => "parent_dependent",
-                    BoundaryParentLayoutDependency::ContainedWhenBoundsKnown => {
-                        "contained_when_bounds_known"
-                    }
-                },
+                layout_dependency: state.layout_dependencies.parent.as_debug_str(),
                 layout_definite: state.layout_dependencies.layout_definite,
                 layout_dirty: state.dirty.is_dirty(),
                 layout_dirty_source: state.dirty.reason().map(|(source, _)| source),

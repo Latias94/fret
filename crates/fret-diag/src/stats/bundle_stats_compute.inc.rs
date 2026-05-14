@@ -2919,6 +2919,15 @@ fn snapshot_cache_root_stats(
 
             let (role, test_id) = semantics_index.lookup_for_cache_root(root_node);
             let boundary = boundaries_by_id.get(&root_node).copied();
+            let boundary_layout_dependency = boundary
+                .and_then(|v| v.get("layout_dependency"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let layout_dependency = boundary_layout_dependency.clone().or_else(|| {
+                r.get("layout_dependency")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            });
             BundleStatsCacheRoot {
                 root_node,
                 element: r.get("element").and_then(|v| v.as_u64()),
@@ -2927,10 +2936,7 @@ fn snapshot_cache_root_stats(
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
                 reused: reused_flag,
-                contained_layout: r
-                    .get("contained_layout")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false),
+                layout_dependency,
                 contained_relayout_in_frame,
                 paint_replayed_ops,
                 reuse_reason: r
@@ -2944,6 +2950,7 @@ fn snapshot_cache_root_stats(
                     .and_then(|v| v.get("kind"))
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
+                boundary_layout_dependency,
                 boundary_build_outcome: boundary
                     .and_then(|v| v.get("build_outcome"))
                     .and_then(|v| v.as_str())

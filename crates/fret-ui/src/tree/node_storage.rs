@@ -3,13 +3,64 @@ use super::*;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(super) struct ViewCacheFlags {
     pub(super) enabled: bool,
-    pub(super) contained_layout: bool,
+    pub(super) parent_layout_dependency: ViewCacheParentLayoutDependency,
     /// Whether the cache root's own box is layout-definite (i.e. it does not size-to-content).
     ///
     /// This is used to decide whether layout/hit-test invalidations can be truncated at the cache
     /// root when view caching is active. Auto-sized cache roots must allow invalidations to reach
     /// ancestors so the root can be placed before running contained relayouts.
     pub(super) layout_definite: bool,
+}
+
+impl ViewCacheFlags {
+    pub(super) fn from_contain_layout_when_bounds_known(
+        enabled: bool,
+        contain_layout_when_bounds_known: bool,
+        layout_definite: bool,
+    ) -> Self {
+        Self {
+            enabled,
+            parent_layout_dependency:
+                ViewCacheParentLayoutDependency::from_contain_layout_when_bounds_known(
+                    contain_layout_when_bounds_known,
+                ),
+            layout_definite,
+        }
+    }
+
+    pub(super) fn layout_contained_when_bounds_known(self) -> bool {
+        self.parent_layout_dependency == ViewCacheParentLayoutDependency::ContainedWhenBoundsKnown
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_layout_contained_when_bounds_known(&mut self, value: bool) {
+        self.parent_layout_dependency =
+            ViewCacheParentLayoutDependency::from_contain_layout_when_bounds_known(value);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ViewCacheParentLayoutDependency {
+    #[default]
+    ParentDependent,
+    ContainedWhenBoundsKnown,
+}
+
+impl ViewCacheParentLayoutDependency {
+    fn from_contain_layout_when_bounds_known(value: bool) -> Self {
+        if value {
+            Self::ContainedWhenBoundsKnown
+        } else {
+            Self::ParentDependent
+        }
+    }
+
+    pub(super) fn as_debug_str(self) -> &'static str {
+        match self {
+            Self::ParentDependent => "parent_dependent",
+            Self::ContainedWhenBoundsKnown => "contained_when_bounds_known",
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

@@ -20,7 +20,7 @@
             "op": "set_view_cache_flags",
             "node": "cache_root",
             "enabled": true,
-            "contained_layout": true,
+            "layout_contained_when_bounds_known": true,
             "layout_definite": true
           },
           { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
@@ -93,7 +93,7 @@
             "op": "set_view_cache_flags",
             "node": "cache_root",
             "enabled": true,
-            "contained_layout": true,
+            "layout_contained_when_bounds_known": true,
             "layout_definite": true
           },
           { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
@@ -175,7 +175,7 @@
             "op": "set_view_cache_flags",
             "node": "cache_root",
             "enabled": true,
-            "contained_layout": true,
+            "layout_contained_when_bounds_known": true,
             "layout_definite": true
           },
           { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
@@ -242,7 +242,7 @@
             "op": "set_view_cache_flags",
             "node": "cache_root",
             "enabled": true,
-            "contained_layout": true,
+            "layout_contained_when_bounds_known": true,
             "layout_definite": true
           },
           { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },
@@ -332,14 +332,14 @@
             "op": "set_view_cache_flags",
             "node": "live_cache_root",
             "enabled": true,
-            "contained_layout": true,
+            "layout_contained_when_bounds_known": true,
             "layout_definite": true
           },
           {
             "op": "set_view_cache_flags",
             "node": "stale_cache_root",
             "enabled": true,
-            "contained_layout": true,
+            "layout_contained_when_bounds_known": true,
             "layout_definite": true
           },
           { "op": "set_bounds_all", "width": 100.0, "height": 100.0 },

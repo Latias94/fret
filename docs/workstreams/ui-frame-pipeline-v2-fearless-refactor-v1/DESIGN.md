@@ -1,7 +1,12 @@
 # UI Frame Pipeline v2 Fearless Refactor
 
-Status: Active
-Last updated: 2026-05-13
+Status: Closed target design
+Last updated: 2026-05-14
+
+Status note (2026-05-14): this design describes the target that ADR 0327 accepted and the
+workstream implemented for the selected proof surfaces. Current closeout evidence lives in
+`FINAL_CLOSEOUT_AUDIT_2026-05-14.md`; start a narrower follow-on for new surfaces or renderer
+contract changes.
 
 ## Problem
 

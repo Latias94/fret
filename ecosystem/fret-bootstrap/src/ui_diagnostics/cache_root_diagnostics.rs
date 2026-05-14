@@ -5,7 +5,8 @@ pub struct UiCacheRootStatsV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub element_path: Option<String>,
     pub reused: bool,
-    pub contained_layout: bool,
+    #[serde(default = "default_cache_root_layout_dependency")]
+    pub layout_dependency: String,
     #[serde(default)]
     pub contained_relayout_in_frame: bool,
     pub paint_replayed_ops: u32,
@@ -149,7 +150,7 @@ impl UiBoundaryDiagnosticsV1 {
         UiCacheRootBoundaryOutcomeV1 {
             build_outcome: cache_root_boundary_build_outcome(stats.reused, stats.reuse_reason),
             layout_outcome: cache_root_boundary_layout_outcome(
-                stats.contained_layout,
+                stats.layout_dependency,
                 contained_relayout_in_frame,
             ),
             paint_outcome: cache_root_boundary_paint_outcome(stats.paint_replayed_ops),
@@ -196,6 +197,7 @@ impl UiCacheRootStatsV1 {
             snap.nodes.iter().any(|n| n.id == id)
         });
         let contained_relayout_in_frame = contained_relayout_roots.contains(&stats.root);
+        let layout_dependency = stats.layout_dependency.to_string();
 
         let (
             children_last_set_location,
@@ -254,7 +256,7 @@ impl UiCacheRootStatsV1 {
             element: stats.element.map(|id| id.0),
             element_path,
             reused: stats.reused,
-            contained_layout: stats.contained_layout,
+            layout_dependency,
             contained_relayout_in_frame,
             paint_replayed_ops: stats.paint_replayed_ops,
             direct_child_nodes: Some(direct_child_nodes),
@@ -273,6 +275,7 @@ impl UiCacheRootStatsV1 {
         };
 
         truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.layout_dependency, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.children_last_set_location, max_debug_string_bytes);
         truncate_vec_string_bytes(
             &mut out.children_last_set_old_elements_head_paths,
@@ -311,16 +314,24 @@ fn cache_root_boundary_build_outcome(
 }
 
 fn cache_root_boundary_layout_outcome(
-    contained_layout: bool,
+    layout_dependency: &str,
     contained_relayout_in_frame: bool,
 ) -> &'static str {
     if contained_relayout_in_frame {
         "contained_relayout"
-    } else if contained_layout {
+    } else if cache_root_layout_dependency_is_contained(layout_dependency) {
         "contained_clean"
     } else {
         "parent_dependent"
     }
+}
+
+fn cache_root_layout_dependency_is_contained(layout_dependency: &str) -> bool {
+    matches!(layout_dependency, "contained_when_bounds_known")
+}
+
+fn default_cache_root_layout_dependency() -> String {
+    "parent_dependent".to_string()
 }
 
 fn cache_root_boundary_paint_outcome(paint_replayed_ops: u32) -> &'static str {
@@ -359,15 +370,15 @@ mod cache_root_boundary_tests {
     #[test]
     fn cache_root_boundary_layout_outcome_reports_containment_state() {
         assert_eq!(
-            cache_root_boundary_layout_outcome(true, true),
+            cache_root_boundary_layout_outcome("contained_when_bounds_known", true),
             "contained_relayout"
         );
         assert_eq!(
-            cache_root_boundary_layout_outcome(true, false),
+            cache_root_boundary_layout_outcome("contained_when_bounds_known", false),
             "contained_clean"
         );
         assert_eq!(
-            cache_root_boundary_layout_outcome(false, false),
+            cache_root_boundary_layout_outcome("parent_dependent", false),
             "parent_dependent"
         );
     }
@@ -385,7 +396,7 @@ mod cache_root_boundary_tests {
             element: None,
             element_path: None,
             reused: false,
-            contained_layout: true,
+            layout_dependency: "contained_when_bounds_known".to_string(),
             contained_relayout_in_frame: false,
             paint_replayed_ops: 0,
             direct_child_nodes: None,
@@ -405,6 +416,11 @@ mod cache_root_boundary_tests {
 
         let value = serde_json::to_value(cache_root).expect("cache root stats json");
         assert!(value.get("boundary").is_none());
+        assert_eq!(
+            value.get("layout_dependency").and_then(|v| v.as_str()),
+            Some("contained_when_bounds_known")
+        );
+        assert!(value.get("contained_layout").is_none());
     }
 
     #[test]
@@ -416,7 +432,7 @@ mod cache_root_boundary_tests {
             element: None,
             element_path: None,
             reused: true,
-            contained_layout: true,
+            layout_dependency: "contained_when_bounds_known".to_string(),
             contained_relayout_in_frame: false,
             paint_replayed_ops: 3,
             direct_child_nodes: None,

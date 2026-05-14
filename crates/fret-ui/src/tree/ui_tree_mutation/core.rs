@@ -117,7 +117,7 @@ impl<H: UiHost> UiTree<H> {
                 let should_mark_contained_cache_root_dirty = value
                     && view_cache_active
                     && n.view_cache.enabled
-                    && n.view_cache.contained_layout;
+                    && n.view_cache.layout_contained_when_bounds_known();
                 let layout_after = n.invalidation.layout;
                 (
                     layout_before,
@@ -432,23 +432,6 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn subtree_has_pending_layout_work(&self, root: NodeId) -> bool {
-        if self.subtree_layout_dirty_aggregation_enabled() {
-            return self.node_subtree_layout_dirty(root);
-        }
-
-        let mut stack: Vec<NodeId> = vec![root];
-        while let Some(node) = stack.pop() {
-            let Some(entry) = self.nodes.get(node) else {
-                continue;
-            };
-            if entry.invalidation.layout {
-                return true;
-            }
-            if entry.layout_dirty_children_suppressed {
-                continue;
-            }
-            stack.extend(entry.children.iter().copied());
-        }
-        false
+        self.node_subtree_layout_dirty(root)
     }
 }

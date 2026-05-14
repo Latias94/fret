@@ -1116,7 +1116,7 @@ pub(super) struct BundleStatsCacheRoot {
     pub(super) element: Option<u64>,
     pub(super) element_path: Option<String>,
     pub(super) reused: bool,
-    pub(super) contained_layout: bool,
+    pub(super) layout_dependency: Option<String>,
     pub(super) contained_relayout_in_frame: bool,
     pub(super) paint_replayed_ops: u32,
     pub(super) reuse_reason: Option<String>,
@@ -1124,6 +1124,7 @@ pub(super) struct BundleStatsCacheRoot {
     pub(super) root_role: Option<String>,
     pub(super) root_test_id: Option<String>,
     pub(super) boundary_kind: Option<String>,
+    pub(super) boundary_layout_dependency: Option<String>,
     pub(super) boundary_build_outcome: Option<String>,
     pub(super) boundary_reuse_reason: Option<String>,
     pub(super) boundary_layout_outcome: Option<String>,
@@ -1133,6 +1134,7 @@ pub(super) struct BundleStatsCacheRoot {
 
 fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
     let has_boundary = c.boundary_kind.is_some()
+        || c.boundary_layout_dependency.is_some()
         || c.boundary_build_outcome.is_some()
         || c.boundary_reuse_reason.is_some()
         || c.boundary_layout_outcome.is_some()
@@ -1144,6 +1146,9 @@ fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
 
     s.push_str(" boundary(");
     s.push_str(c.boundary_kind.as_deref().unwrap_or("?"));
+    if let Some(value) = c.boundary_layout_dependency.as_deref() {
+        s.push_str(&format!(" dep={value}"));
+    }
     if let Some(value) = c.boundary_build_outcome.as_deref() {
         s.push_str(&format!(" build={value}"));
     }
@@ -1164,6 +1169,7 @@ fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
 
 fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleStatsCacheRoot) {
     let has_boundary = c.boundary_kind.is_some()
+        || c.boundary_layout_dependency.is_some()
         || c.boundary_build_outcome.is_some()
         || c.boundary_reuse_reason.is_some()
         || c.boundary_layout_outcome.is_some()
@@ -1177,6 +1183,13 @@ fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleSta
     boundary.insert(
         "kind".to_string(),
         c.boundary_kind.clone().map(Value::from).unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "layout_dependency".to_string(),
+        c.boundary_layout_dependency
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
     );
     boundary.insert(
         "build_outcome".to_string(),
@@ -2581,6 +2594,11 @@ impl BundleStatsReport {
                         {
                             s.push_str(&format!(" test_id={test_id}"));
                         }
+                        if let Some(value) = c.layout_dependency.as_deref()
+                            && !value.is_empty()
+                        {
+                            s.push_str(&format!(" layout_dependency={value}"));
+                        }
                         if let Some(role) = c.root_role.as_deref()
                             && !role.is_empty()
                         {
@@ -2621,6 +2639,11 @@ impl BundleStatsReport {
                             && !test_id.is_empty()
                         {
                             s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(value) = c.layout_dependency.as_deref()
+                            && !value.is_empty()
+                        {
+                            s.push_str(&format!(" layout_dependency={value}"));
                         }
                         if let Some(role) = c.root_role.as_deref()
                             && !role.is_empty()
@@ -4924,8 +4947,11 @@ impl BundleStatsReport {
                         );
                         c_obj.insert("reused".to_string(), Value::from(c.reused));
                         c_obj.insert(
-                            "contained_layout".to_string(),
-                            Value::from(c.contained_layout),
+                            "layout_dependency".to_string(),
+                            c.layout_dependency
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
                         );
                         c_obj.insert(
                             "contained_relayout_in_frame".to_string(),
@@ -4982,8 +5008,11 @@ impl BundleStatsReport {
                         );
                         c_obj.insert("reused".to_string(), Value::from(c.reused));
                         c_obj.insert(
-                            "contained_layout".to_string(),
-                            Value::from(c.contained_layout),
+                            "layout_dependency".to_string(),
+                            c.layout_dependency
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
                         );
                         c_obj.insert(
                             "contained_relayout_in_frame".to_string(),

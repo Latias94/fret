@@ -1,13 +1,15 @@
 # ADR 0327: Frame Pipeline v2 and View Boundaries
 
-Status: Accepted (contract freeze; implementation in progress)
+Status: Accepted (contract freeze; implementation aligned with known follow-ons)
 
 Acceptance note (2026-05-14): this ADR is accepted as the target contract for the Frame Pipeline v2
 global refactor after the code-editor vertical slice proved the direction with boundary-owned
 prepaint/scene-fragment state, first-class boundary diagnostics, deletion of replaced private paths,
 and perf evidence. Acceptance does not mean the global migration is complete; implementation status
 is tracked in `docs/adr/IMPLEMENTATION_ALIGNMENT.md` and
-`docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md`.
+`docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md`. The global workstream
+closeout is recorded in
+`docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md`.
 
 ## Context
 
@@ -129,8 +131,10 @@ should migrate toward this boundary model rather than expanding as separate one-
 M4C introduced `ViewBoundaryHints` as the first public authoring step away from direct
 `contained_layout` knobs; the remaining migration is internal runtime consolidation.
 M4D consolidated element-runtime view-cache build-time rendered/next side maps into
-`ViewCacheBuildBoundaryStore`; final `ViewBoundaryState` ownership or explicit retention is still
-open.
+`ViewCacheBuildBoundaryStore`, and M4M explicitly retains that store inside `WindowElementState` as
+the `GlobalElementId`-keyed declarative build-boundary mechanism. This is intentionally separate
+from `ViewBoundaryState`, which is keyed by retained `NodeId` runtime boundaries; mount-time
+live-node revalidation bridges recorded build membership to the current retained nodes.
 M4E moved boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`, and M4F
 deleted the remaining node-owned `PaintCacheEntry` fallback. True runtime boundaries now own their
 entries through `ViewBoundaryState::paint_cache`; M4L names
@@ -149,6 +153,26 @@ M4K explicitly retains `PreviousFramePaintRecording` inside `PaintCacheState` as
 previous-frame linear scene recording source. Boundary `PaintCacheEntry` metadata remains
 boundary-owned, but the recording source is intentionally not duplicated into every
 `ViewBoundaryState` while the current `Scene` contract is one tree-wide display list.
+M4N deletes the remaining known layout default-path env branches and promotes subtree dirty
+aggregation, on-demand layout-engine sweep, translation-only request/build skip, and clean
+barrier-child retention to canonical behavior. Validation-only subtree dirty aggregation env knobs
+remain because they audit the canonical path instead of selecting a separate runtime path.
+M4O canonicalizes cache-root containment diagnostics around `layout_dependency`: cache-root bundle
+records now carry that boundary vocabulary, report summaries prefer `debug.boundaries[]`
+`layout_dependency`.
+M4P removes the live retained `ViewCacheFlags::contained_layout` runtime field and stores
+`ViewCacheParentLayoutDependency` instead. Hot paths that still need a boolean use a derived
+`layout_contained_when_bounds_known()` predicate, and cache-root mount/reuse/layout/paint tracing spans now
+emit `layout_dependency`.
+M4Q deletes the remaining live `contained_layout` cache-root compatibility field from new
+diagnostics bundle/report schemas and removes `fret-diag` fallback parsing for old cache-root
+`contained_layout` values. Fixture-driven invalidation scenarios now use
+`layout_contained_when_bounds_known` for the low-level test input that maps into dependency
+metadata.
+M4R validates the second, non-code-editor proof surface through
+`ui-gallery-view-cache-toggle-perf-steady`. That surface exercises shared view-cache reuse and
+paint-cache replay, emits canonical `debug.boundaries[]` plus cache-root `layout_dependency`
+diagnostics, and confirms the live `contained_layout` schema field was not reintroduced.
 
 ### 3. Layout containment is a dependency contract
 
@@ -225,6 +249,12 @@ The first success criteria are not "all of Frame Pipeline v2 exists"; they are:
 - the measured bottleneck moves for the expected reason,
 - the old ad hoc path can be deleted or narrowed,
 - and the perf gate proves at least a 20-30% p95 or max improvement on the selected bottleneck.
+
+The global closeout criteria are stricter and are tracked by the workstream completion contract:
+at least two proof surfaces must pass, including the code-editor resize/paint surface and one
+broader non-code-editor view-cache or paint-cache surface. M4R provides the second proof surface,
+and `FINAL_CLOSEOUT_AUDIT_2026-05-14.md` closes the workstream with the final retained/deleted
+runtime path audit plus the full final gate set.
 
 ## Consequences
 

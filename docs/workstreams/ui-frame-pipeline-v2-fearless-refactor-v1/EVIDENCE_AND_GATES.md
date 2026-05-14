@@ -1,6 +1,6 @@
 # Evidence and Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-14
 
 ## Primary Repro
@@ -372,6 +372,215 @@ element-runtime flat view-cache build-time rendered/next maps and frame-local si
 method surface. The final migration into `ViewBoundaryState`, paint-cache replay ownership, and
 non-code-editor proof surface remain open.
 
+Most recent view-cache build-boundary store retention slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4M_VIEW_CACHE_BUILD_BOUNDARY_STORE_RETENTION_SLICE_2026-05-14.md`
+- Direct runtime store gates:
+  `cargo nextest run -p fret-ui elements::runtime::tests::view_cache_build_boundary_store_advances_rendered_next_and_clears_frame_local_flags elements::runtime::tests::view_cache_build_boundary_store_rebinds_global_membership_to_current_nodes --no-fail-fast`
+- View-cache behavior gates:
+  `cargo nextest run -p fret-ui declarative::tests::core::view_cache_subtree_membership_includes_nested_cache_roots declarative::tests::view_cache::view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements declarative::tests::view_cache::view_cache_inherits_model_observations_on_cache_hit_layout --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Current-state wording check:
+  `rg -n "ViewCacheBuildBoundaryStore.*(still open|remains open)|build-boundary store still needs|final ViewBoundaryState ownership remains open" docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TODO.md docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/MILESTONES.md docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+
+Observed result:
+
+- direct runtime store gates: `2 passed, 940 skipped`;
+- view-cache behavior gates: `3 passed, 939 skipped`;
+- `cargo fmt --check`: passed;
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- `python3 tools/check_layering.py`: passed;
+- `python3 tools/check_workstream_catalog.py`: passed;
+- `WORKSTREAM.json` JSON validation: passed;
+- `git diff --check`: passed;
+- current-state wording check: no stale current-state references to unresolved
+  `ViewCacheBuildBoundaryStore` ownership remain in first-open workstream/ADR docs.
+
+This slice is an owner-retention decision, not a new perf claim. It records
+`ViewCacheBuildBoundaryStore` as the retained `GlobalElementId`-keyed declarative build-boundary
+mechanism inside `WindowElementState`; `ViewBoundaryState` stays focused on retained-node
+`NodeId`-keyed runtime boundary ownership. The new runtime test proves recorded global subtree
+membership can rebind to current live nodes on cache-hit frames.
+
+Most recent layout env-knob canonicalization slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4N_LAYOUT_ENV_KNOB_CANONICALIZATION_SLICE_2026-05-14.md`
+- Focused layout gates:
+  `cargo nextest run -p fret-ui barrier_subtree_layout_dirty_aggregation subtree_layout_dirty_underflow_repair declarative::tests::layout::layout_engine::solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes declarative::tests::layout::scroll::scroll_translation_does_not_force_layout_engine_solves --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `cargo fmt --check`,
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source-deletion check:
+  `rg -n "\"FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION\"|FRET_UI_LAYOUT_ENGINE_SWEEP|FRET_UI_LAYOUT_SKIP_REQUEST_BUILD_TRANSLATION_ONLY|FRET_UI_LAYOUT_FLOW_SKIP_BARRIER_CLEAN_CHILDREN|layout_engine_sweep_policy|layout_skip_request_build_translation_only|layout_flow_skip_barrier_clean_children|subtree_layout_dirty_aggregation_enabled\\(\\)|\\bagg_enabled\\b" crates/fret-ui/src`
+
+Observed result:
+
+- `cargo fmt --check`: passed;
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- focused layout nextest gate: `12 passed, 930 skipped`;
+- `python3 tools/check_layering.py`: passed;
+- `python3 tools/check_workstream_catalog.py`: passed;
+- `WORKSTREAM.json` JSON validation: passed;
+- `git diff --check`: passed;
+- source-deletion check: no live references to the deleted default-path env knobs or helper branches
+  remain in `crates/fret-ui/src`. Validation-only aggregation env knobs remain live.
+
+This slice is an env-knob deletion and canonical behavior promotion step, not a new perf claim. It
+deletes the live layout default-path env branches and makes subtree dirty aggregation, on-demand
+layout-engine sweep, translation-only request/build skip, and clean barrier-child retention the
+only runtime behavior.
+
+Most recent cache-root containment diagnostics canonicalization slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4O_CACHE_ROOT_CONTAINMENT_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md`
+- Focused cache-root/boundary diagnostics gates:
+  `cargo nextest run -p fret-ui tree::tests::view_cache --no-fail-fast`,
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-diag bundle_stats_preserves_cache_root_boundary_summary --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`,
+  `cargo check -p fret-ui --features diagnostics --all-targets`,
+  `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics --all-targets`,
+  `cargo check -p fret-diag --all-targets`,
+  and
+  `cargo check -p fret-ui-gallery --features gallery-full --all-targets`
+- Boundary/lane gates:
+  `cargo fmt --check`,
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+
+Observed result:
+
+- `cargo fmt --check`: passed;
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics --all-targets`: passed;
+- `cargo check -p fret-diag --all-targets`: passed;
+- `cargo check -p fret-ui-gallery --features gallery-full --all-targets`: passed;
+- `fret-ui` view-cache gate: `22 passed, 920 skipped`;
+- `fret-bootstrap` cache-root boundary gate: `5 passed, 125 skipped`;
+- `fret-diag` boundary-summary gate: `1 passed, 818 skipped`;
+- `python3 tools/check_layering.py`: passed;
+- `python3 tools/check_workstream_catalog.py`: passed;
+- `WORKSTREAM.json` JSON validation: passed;
+- `git diff --check`: passed.
+
+This slice is a diagnostics-schema/report cleanup step, not a new perf claim. Cache-root diagnostics
+now carry `layout_dependency`, report summaries prefer the canonical boundary dependency vocabulary,
+and `contained_layout` is retained only as compatibility output derived from that vocabulary for new
+bundles in this slice. M4Q later deletes that compatibility output.
+
+Most recent view-cache layout dependency runtime flag slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4P_VIEW_CACHE_LAYOUT_DEPENDENCY_RUNTIME_FLAG_SLICE_2026-05-14.md`
+- Focused retained-runtime gates:
+  `cargo nextest run -p fret-ui tree::tests::view_cache --no-fail-fast`
+  and
+  `cargo nextest run -p fret-ui barrier_subtree_layout_dirty_aggregation subtree_layout_dirty_underflow_repair --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `cargo fmt --check`,
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source cleanup check:
+  `rg -n "view_cache\\.contained_layout|flags\\.contained_layout|DebugViewCacheRootRecord \\{[^}]*contained_layout|contained_layout = view_cache\\.contained_layout|cache_root\\[.*contained_layout|contained_layout = view_cache_props" crates/fret-ui/src crates/fret-diag/src apps/fret-ui-gallery/src ecosystem/fret-bootstrap/src/ui_diagnostics -g '*.rs'`
+
+Observed result:
+
+- `cargo fmt --check`: passed;
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- `fret-ui` view-cache gate: `22 passed, 920 skipped`;
+- `fret-ui` subtree-layout dirty gate: `10 passed, 932 skipped`;
+- `python3 tools/check_layering.py`: passed;
+- `python3 tools/check_workstream_catalog.py`: passed;
+- `WORKSTREAM.json` JSON validation: passed;
+- `git diff --check`: passed;
+- source cleanup check: no live direct `view_cache.contained_layout` / stale cache-root HUD
+  references remain.
+
+This slice is a retained-runtime field cleanup step, not a new perf claim. It replaces the stored
+`ViewCacheFlags::contained_layout` boolean with dependency metadata and keeps boolean checks as
+derived hot-path predicates.
+
+Most recent cache-root contained-layout schema deletion slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4Q_CACHE_ROOT_CONTAINED_LAYOUT_SCHEMA_DELETION_SLICE_2026-05-14.md`
+- Focused diagnostics gates:
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary --no-fail-fast`
+  and
+  `cargo nextest run -p fret-diag bundle_stats_preserves_cache_root_boundary_summary --no-fail-fast`
+- Fixture vocabulary gates:
+  `cargo nextest run -p fret-ui barrier_subtree_layout_dirty_aggregation subtree_layout_dirty_underflow_repair --no-fail-fast`
+  and
+  `cargo nextest run -p fret-ui scroll_handle_invalidation_harness --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`,
+  `cargo check -p fret-ui --features diagnostics --all-targets`,
+  `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics --all-targets`,
+  and `cargo check -p fret-diag --all-targets`
+- Boundary/lane gates:
+  `cargo fmt --check`,
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source cleanup check:
+  `rg -n "UiDebugCacheRootStats.*contained_layout|UiCacheRootStatsV1.*contained_layout|BundleStatsCacheRoot.*contained_layout|r\\.get\\(\"contained_layout\"\\)|\"contained_layout\"\\.to_string\\(\\)|contained_layout:" crates/fret-ui/src/tree/debug crates/fret-ui/src/tree/ui_tree_debug ecosystem/fret-bootstrap/src/ui_diagnostics crates/fret-diag/src apps/fret-ui-gallery/src crates/fret-ui/src/tree/tests -g '*.rs'`
+
+Observed result:
+
+- `cargo fmt --check`: passed;
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics --all-targets`: passed;
+- `cargo check -p fret-diag --all-targets`: passed;
+- `fret-bootstrap` cache-root diagnostics gate: `5 passed, 125 skipped`;
+- `fret-diag` bundle stats gate: `1 passed, 818 skipped`;
+- `fret-ui` subtree-layout dirty fixture gate: `10 passed, 932 skipped`;
+- `fret-ui` scroll-handle invalidation fixture gate: `1 passed, 941 skipped`;
+- `python3 tools/check_layering.py`: passed;
+- `python3 tools/check_workstream_catalog.py`: passed;
+- `WORKSTREAM.json` JSON validation: passed;
+- `git diff --check`: passed;
+- source cleanup check: no live schema/report fallback or fixture field definitions remain for
+  `contained_layout`.
+
+This slice is a diagnostics-schema/report deletion step, not a new perf claim. New cache-root
+bundle/report output now relies on `layout_dependency` instead of serializing a derived
+`contained_layout` compatibility field, and fixture-driven invalidation scenarios use
+`layout_contained_when_bounds_known` vocabulary for the low-level test input.
+
 Most recent boundary paint-cache entry slice evidence:
 
 - Slice note:
@@ -676,6 +885,94 @@ p95 `1737us`), the latest closeout run shows `paint.widget` p95 `650us` and pain
 That exceeds the required 20-30% improvement for the selected paint-side bottleneck. Total p95
 improved from `1811us` to `1396us`, also exceeding the 20% threshold.
 
+Most recent second proof-surface evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md`
+- Script:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json`
+- Baseline:
+  `docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json`
+- Baseline seed output directory:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-seed-20260514`
+- Baseline validation output directory:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514`
+- Validation threshold report:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/check.perf_thresholds.json`
+- Validation worst bundle:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/1778749774595/bundle.schema2.json`
+- View-cache stable reuse report:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/check.view_cache_reuse_stable.json`
+
+Baseline validation command:
+
+```bash
+target/release/fretboard-dev diag perf \
+  tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json \
+  --dir target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514 \
+  --repeat 3 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --sort time \
+  --top 15 \
+  --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Observed validation result:
+
+- gate failures: `[]`;
+- total p50/p95/max: `559/575/575us`;
+- layout p50/p95/max: `96/96/96us`;
+- prepaint p50/p95/max: `36/36/36us`;
+- paint p50/p95/max: `427/443/443us`;
+- top-frame view-cache roots reused: `2/2`;
+- stable reuse report: `failures=[]`, `reuse_snapshots=10`, `reuse_streak_tail=10`.
+
+Worst-bundle attribution:
+
+```bash
+target/release/fretboard-dev diag stats \
+  target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/1778749774595/bundle.schema2.json \
+  --sort time \
+  --top 15 \
+  --check-view-cache-reuse-min 2 \
+  --check-view-cache-reuse-stable-min 2
+```
+
+Observed attribution result:
+
+- command passed;
+- time sum: total `2820us`, layout `972us`, prepaint `373us`, paint `1475us`;
+- time p50/p95: total `247/575us`, layout `97/99us`, prepaint `36/43us`,
+  paint `114/443us`;
+- hot p50/p95: `layout.engine_solve=0/0us`, `paint.widget=28/181us`,
+  `paint.text_prepare=0/0us`;
+- top frame: total/layout/prepaint/paint `575/96/36/443us`;
+- top frame cache roots: `2`, reused: `2`;
+- top frame paint-cache replayed ops: `519`.
+
+Diagnostics schema check:
+
+- validation worst bundle snapshots: `10`;
+- boundary/cache-root records with `layout_dependency`: `50`;
+- sample boundary outcomes include `build_outcome=reused`,
+  `paint_outcome=scene_ops_replayed`, and `reuse_reason=marked_reuse_root`;
+- sample dependencies include `contained_when_bounds_known` and `parent_dependent`;
+- `contained_layout_count=0`;
+- `rg -n 'contained_layout'` against the validation worst bundle and stats JSON returned no
+  matches.
+
+This surface is a justified neutral result rather than an optimization delta: M4R did not change
+runtime code. It promotes the non-code-editor proof surface to a reproducible macOS M4 contract and
+proves the canonical diagnostics vocabulary on that surface.
+
 ## Correctness Gates
 
 Use focused tests first:
@@ -722,10 +1019,27 @@ The final global closeout must include:
 
 ## Closeout Evidence
 
-Closeout requires:
+Closeout evidence:
 
-- final perf run paths,
-- final worst-bundle attribution,
-- deletion audit path,
-- ADR alignment row,
-- and exact commands for all promoted gates.
+- final audit: `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md`;
+- code-editor final perf directory:
+  `target/fret-diag-final-closeout-code-editor-20260514`;
+- code-editor final worst bundle:
+  `target/fret-diag-final-closeout-code-editor-20260514/1778751374184/bundle.schema2.json`;
+- view-cache toggle final perf directory:
+  `target/fret-diag-final-closeout-view-cache-toggle-20260514`;
+- view-cache toggle final worst bundle:
+  `target/fret-diag-final-closeout-view-cache-toggle-20260514/1778751410837/bundle.schema2.json`;
+- final correctness gates:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache tree::tests::view_cache --no-fail-fast`,
+  `cargo nextest run -p fret-ui barrier_subtree_layout_dirty_aggregation subtree_layout_dirty_underflow_repair scroll_handle_invalidation_harness --no-fail-fast`,
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary --no-fail-fast`,
+  and `cargo nextest run -p fret-diag bundle_stats_preserves_cache_root_boundary_summary --no-fail-fast`;
+- final compile gates:
+  `cargo check -p fret-ui --all-targets`,
+  `cargo check -p fret-ui --features diagnostics --all-targets`,
+  `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics --all-targets`,
+  and `cargo check -p fret-diag --all-targets`;
+- final source/schema deletion checks and exact perf commands are recorded in the final audit;
+- ADR alignment row:
+  `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.

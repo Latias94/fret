@@ -11,8 +11,6 @@ use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
-use crate::runtime_config::{LayoutEngineSweepPolicy, ui_runtime_config};
-
 mod flow;
 pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_if_solved};
 
@@ -323,9 +321,7 @@ impl TaffyLayoutEngine {
     }
 
     pub fn end_frame(&mut self) {
-        if ui_runtime_config().layout_engine_sweep_policy == LayoutEngineSweepPolicy::OnDemand
-            && self.seen_count == self.node_to_layout.len()
-        {
+        if self.seen_count == self.node_to_layout.len() {
             return;
         }
 

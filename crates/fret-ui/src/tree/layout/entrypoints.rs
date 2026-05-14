@@ -1424,10 +1424,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         max_samples: usize,
     ) -> Vec<super::UiDebugLayoutDirtyDescendant> {
-        if !self.debug_enabled
-            || max_samples == 0
-            || !self.subtree_layout_dirty_aggregation_enabled()
-        {
+        if !self.debug_enabled || max_samples == 0 {
             return Vec::new();
         }
 
@@ -1546,7 +1543,7 @@ impl<H: UiHost> UiTree<H> {
             let Some(node) = self.nodes.get(id) else {
                 continue;
             };
-            if !node.view_cache.enabled || !node.view_cache.contained_layout {
+            if !node.view_cache.enabled || !node.view_cache.layout_contained_when_bounds_known() {
                 continue;
             }
             if !node.invalidation.layout {
@@ -1739,7 +1736,6 @@ impl<H: UiHost> UiTree<H> {
 
         let phase1_started = profile_layout.then(Instant::now);
         let reuse_cached_flow = self.interactive_resize_active();
-        let allow_translation_only_skip = runtime_cfg.layout_skip_request_build_translation_only;
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
             for &root in roots {
@@ -1776,8 +1772,7 @@ impl<H: UiHost> UiTree<H> {
             };
             let had_layout_engine_node = engine.layout_id_for_node(root).is_some();
             let needs_layout = layout_invalidated || prev_bounds != bounds;
-            let is_translation_only = allow_translation_only_skip
-                && !layout_invalidated
+            let is_translation_only = !layout_invalidated
                 && prev_bounds.size == bounds.size
                 && prev_bounds.origin != bounds.origin
                 && measured != Size::default();

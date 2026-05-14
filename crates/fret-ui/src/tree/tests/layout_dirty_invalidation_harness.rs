@@ -80,7 +80,7 @@ enum TreeStep {
     SetViewCacheFlags {
         node: String,
         enabled: bool,
-        contained_layout: bool,
+        layout_contained_when_bounds_known: bool,
         layout_definite: bool,
     },
     NoteLayoutInvalidationTransition {
@@ -276,13 +276,13 @@ fn apply_step(
         TreeStep::SetViewCacheFlags {
             node,
             enabled,
-            contained_layout,
+            layout_contained_when_bounds_known,
             layout_definite,
         } => {
             ui.set_node_view_cache_flags(
                 lookup_existing_node(ui, ids, node)?,
                 *enabled,
-                *contained_layout,
+                *layout_contained_when_bounds_known,
                 *layout_definite,
             );
         }
@@ -366,8 +366,11 @@ fn append_metrics(
             set_metric(
                 observed,
                 prefix,
-                format!("node.{}.view_cache_contained_layout", node.id),
-                bool_metric(entry.view_cache.contained_layout),
+                format!(
+                    "node.{}.view_cache_layout_contained_when_bounds_known",
+                    node.id
+                ),
+                bool_metric(entry.view_cache.layout_contained_when_bounds_known()),
             );
             set_metric(
                 observed,

@@ -1,12 +1,13 @@
 # Closeout Audit - 2026-05-14
 
-Status: code-editor vertical slice complete; broader ADR 0327 lane remains active.
+Status: historical code-editor vertical-slice closeout; superseded for global status by
+`FINAL_CLOSEOUT_AUDIT_2026-05-14.md`.
 
 Status note (2026-05-14): this audit closed the code-editor vertical slice before the ADR contract
-freeze. ADR 0327 is now accepted as the target contract in
-`M0_CONTRACT_FREEZE_2026-05-14.md`; the broader implementation follow-ons below still remain open.
-`M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` later closed the public/non-page-specific boundary-hint
-API follow-on, but the global refactor still remains active.
+freeze and before the final global closeout. ADR 0327 is now accepted as the target contract in
+`M0_CONTRACT_FREEZE_2026-05-14.md`, and `FINAL_CLOSEOUT_AUDIT_2026-05-14.md` closes the global
+workstream. References below to still-open broader follow-ons should be read as historical context
+for this vertical-slice audit.
 
 ## Scope
 

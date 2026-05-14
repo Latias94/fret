@@ -72,15 +72,15 @@ impl<H: UiHost> UiTree<H> {
         );
 
         if is_view_cache_root && is_manual_cache_root {
-            let contained_layout = self
+            let layout_dependency = self
                 .nodes
                 .get(node)
-                .map(|n| n.view_cache.contained_layout)
-                .unwrap_or(false);
+                .map(|n| n.view_cache.parent_layout_dependency.as_debug_str())
+                .unwrap_or("parent_dependent");
             self.debug_record_view_cache_root(
                 node,
                 self.should_reuse_view_cache_node(node),
-                contained_layout,
+                layout_dependency,
                 crate::tree::UiDebugCacheRootReuseReason::ManualCacheRoot,
             );
         }

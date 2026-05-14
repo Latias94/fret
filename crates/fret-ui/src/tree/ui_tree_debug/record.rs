@@ -215,7 +215,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         root: NodeId,
         reused: bool,
-        contained_layout: bool,
+        layout_dependency: &'static str,
         reuse_reason: UiDebugCacheRootReuseReason,
     ) {
         if !self.debug_enabled {
@@ -275,7 +275,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_view_cache_roots.push(DebugViewCacheRootRecord {
             root,
             reused,
-            contained_layout,
+            layout_dependency,
             reuse_reason,
         });
     }

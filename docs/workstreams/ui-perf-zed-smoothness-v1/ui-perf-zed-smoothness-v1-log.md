@@ -13439,3 +13439,47 @@ Decision:
   target and is protected by the existing macOS M4 v2 perf baseline. The next optimization loop
   should target code-editor paint/widget row replay/content resolution, not layout solve or
   text prepare, unless a new failing bundle contradicts this attribution.
+
+## 2026-05-14 17:09:32 +08:00 (macOS view-cache toggle second proof surface)
+
+Question:
+- Can `ui-gallery-view-cache-toggle-perf-steady` act as the non-code-editor proof surface for the
+  Frame Pipeline v2 workstream, with a macOS M4 baseline and boundary diagnostics evidence?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json`.
+- Recorded the proof slice in
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md`.
+
+Validation:
+- Seed:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-m4r-view-cache-toggle-baseline-seed-20260514 --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json --perf-baseline-headroom-pct 20 --perf-baseline-threshold-surface ui --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target/release/fret-ui-gallery`
+- Validate:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target/release/fret-ui-gallery`
+- Worst-bundle attribution:
+  `target/release/fretboard-dev diag stats target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/1778749774595/bundle.schema2.json --sort time --top 15 --check-view-cache-reuse-min 2 --check-view-cache-reuse-stable-min 2`
+
+Evidence:
+- Baseline seed worst bundle:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-seed-20260514/1778749752174/bundle.schema2.json`.
+- Seed aggregate p50/p95/max total=`574/600/600us`, layout=`101/109/109us`,
+  prepaint=`39/44/44us`, paint=`431/456/456us`.
+- Baseline validation threshold report:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/check.perf_thresholds.json`
+  has `failures=[]`.
+- Validation aggregate p50/p95/max total=`559/575/575us`, layout=`96/96/96us`,
+  prepaint=`36/36/36us`, paint=`427/443/443us`.
+- Worst-bundle stats: time sum total/layout/prepaint/paint=`2820/972/373/1475us`,
+  time p50/p95 total=`247/575us`, layout=`97/99us`, prepaint=`36/43us`,
+  paint=`114/443us`; hot p50/p95 `layout.engine_solve=0/0us`,
+  `paint.widget=28/181us`, `paint.text_prepare=0/0us`.
+- Reuse gate evidence:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/check.view_cache_reuse_stable.json`
+  has `failures=[]`, `reuse_snapshots=10`, `reuse_streak_tail=10`.
+- Bundle schema evidence: validation worst bundle has `debug.boundaries[]`, cache-root
+  `layout_dependency`, and no live `contained_layout` fields.
+
+Decision:
+- Promote this as the second non-code-editor proof surface for Frame Pipeline v2 M4R.
+- Treat the result as neutral perf evidence because the slice did not change runtime code; the
+  value is the stable contract and canonical boundary diagnostics proof.

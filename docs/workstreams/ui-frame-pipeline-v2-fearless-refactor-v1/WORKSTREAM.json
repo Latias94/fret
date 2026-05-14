@@ -2,10 +2,10 @@
   "schema_version": 1,
   "slug": "ui-frame-pipeline-v2-fearless-refactor-v1",
   "title": "UI Frame Pipeline v2 Fearless Refactor",
-  "status": "active-follow-on",
+  "status": "closed",
   "updated": "2026-05-14",
-  "scope_kind": "execution",
-  "problem": "Fret's current retained UiTree, declarative mounting, view-cache, paint-cache, and editor-specific hot paths are correct enough to optimize locally but do not yet form one direct, phase-attributable execution model. This lane owns the documented, evidence-driven migration to explicit build/layout/prepaint/paint/render boundaries, complete old-path cleanup, and perf-gated editor-grade validation until the completion contract in PROGRESS.md is satisfied.",
+  "scope_kind": "closeout",
+  "problem": "This lane closed the documented, evidence-driven migration to explicit build/layout/prepaint/paint boundaries for the selected proof surfaces, including old-path cleanup, retained-mechanism decisions, and perf-gated editor-grade validation against PROGRESS.md#Completion Contract.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -108,20 +108,61 @@
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md"
     },
     {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4K_PREVIOUS_FRAME_RECORDING_RETENTION_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4L_RETAINED_PAINT_CACHE_ENTRY_STORE_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4M_VIEW_CACHE_BUILD_BOUNDARY_STORE_RETENTION_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4N_LAYOUT_ENV_KNOB_CANONICALIZATION_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4O_CACHE_ROOT_CONTAINMENT_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4P_VIEW_CACHE_LAYOUT_DEPENDENCY_RUNTIME_FLAG_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4Q_CACHE_ROOT_CONTAINED_LAYOUT_SCHEMA_DELETION_SLICE_2026-05-14.md"
+    },
+    {
+      "role": "implementation",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md"
+    },
+    {
       "role": "closeout",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-14.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md"
     }
   ],
   "repro": {
-    "summary": "Start from the code-editor resize/paint path that already exposes layout containment and paint attribution pressure.",
+    "summary": "Use the code-editor resize/paint path as the first proof surface and the UI Gallery view-cache toggle steady script as the broader non-code-editor proof surface.",
     "commands": [
-      "cargo run -p fretboard-dev --release -- diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+      "cargo run -p fretboard-dev --release -- diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full",
+      "target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target/release/fret-ui-gallery"
     ]
   },
   "gates": [
     {
       "name": "macos-code-editor-resize-probes",
       "command": "cargo run -p fretboard-dev --release -- diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    },
+    {
+      "name": "macos-view-cache-toggle-proof-surface",
+      "command": "target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target/release/fret-ui-gallery"
     },
     {
       "name": "runtime-layering",
@@ -151,7 +192,15 @@
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4K_PREVIOUS_FRAME_RECORDING_RETENTION_SLICE_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4L_RETAINED_PAINT_CACHE_ENTRY_STORE_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4M_VIEW_CACHE_BUILD_BOUNDARY_STORE_RETENTION_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4N_LAYOUT_ENV_KNOB_CANONICALIZATION_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4O_CACHE_ROOT_CONTAINMENT_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4P_VIEW_CACHE_LAYOUT_DEPENDENCY_RUNTIME_FLAG_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4Q_CACHE_ROOT_CONTAINED_LAYOUT_SCHEMA_DELETION_SLICE_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md",
+    "docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-14.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
@@ -161,7 +210,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue_until_completion_contract",
-    "notes": "ADR 0327 is accepted as the Frame Pipeline v2 target contract in M0_CONTRACT_FREEZE_2026-05-14.md, and the code-editor vertical slice is closed in CLOSEOUT_AUDIT_2026-05-14.md, but the global refactor is not complete. PROGRESS.md is the first-open progress ledger and completion contract. M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md replaced first-party direct contained_layout authoring with ViewBoundaryHints, so the remaining containment work is internal runtime consolidation rather than public naming design. M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md consolidated element-runtime view-cache build-time rendered/next side maps into ViewCacheBuildBoundaryStore, but final ViewBoundaryState ownership/retention is still open. M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md moved boundary-node PaintCacheEntry ownership into ViewBoundaryState::paint_cache, and M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md deleted the remaining Node::paint_cache fallback by routing plain retained entries through UiTree::retained_paint_cache_entries, with migration into ViewBoundaryState::paint_cache when a node becomes a true runtime boundary. M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md split previous-frame paint recording storage into PreviousFramePaintRecording, M4H_PREVIOUS_FRAME_PAINT_REPLAY_SPAN_SLICE_2026-05-14.md moved replay range validation, op slicing, and text side-index replay into that carrier, and M4K_PREVIOUS_FRAME_RECORDING_RETENTION_SLICE_2026-05-14.md explicitly retained that carrier inside PaintCacheState as the per-tree previous-frame linear scene recording source. M4L_RETAINED_PAINT_CACHE_ENTRY_STORE_SLICE_2026-05-14.md retained UiTree::retained_paint_cache_entries as the final plain-node paint-cache entry store and removed misleading boundary side-store naming. M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md deleted the live FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING branch so view-cache-active paint-cache recording cannot bypass boundary ownership. M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md promoted local hit-test-only paint-cache replay to canonical behavior, prevented descendant-originated hit-test-only dirtiness from replaying ancestors, and deleted FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY. The remaining layout env knobs remain open. Continue this lane through small evidence-backed slices until the final boundary model owns the canonical build/layout/prepaint/paint diagnostics and reuse path across at least two proof surfaces, broader view-cache/paint-cache ownership is resolved, replaced old runtime paths are deleted, and final correctness/perf/layering/deletion evidence is recorded."
+    "default_action": "start_follow_on",
+    "notes": "FINAL_CLOSEOUT_AUDIT_2026-05-14.md closes this lane after the final closeout batch. ADR 0327 is accepted, the code-editor proof surface and the non-code-editor ui-gallery-view-cache-toggle-perf-steady proof surface both pass perf and worst-bundle attribution gates, replaced old runtime paths are deleted or explicitly retained, and diagnostics are canonicalized around debug.boundaries[] plus cache-root layout_dependency. Start a narrower follow-on for additional proof surfaces, renderer Scene recording evolution, Linux-specific performance closure, or component-policy work."
   }
 }

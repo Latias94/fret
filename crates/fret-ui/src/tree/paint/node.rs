@@ -46,7 +46,7 @@ impl<H: UiHost> UiTree<H> {
                 "ui.cache_root.paint",
                 node = ?node,
                 view_cache_active = self.view_cache_active(),
-                contained_layout = view_cache.contained_layout,
+                layout_dependency = view_cache.parent_layout_dependency.as_debug_str(),
                 invalidated = invalidated,
                 frame_id = app.frame_id().0,
             )

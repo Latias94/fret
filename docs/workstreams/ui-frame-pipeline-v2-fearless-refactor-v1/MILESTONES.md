@@ -1,6 +1,6 @@
 # Milestones
 
-Status: Code-editor vertical slice complete; broader ADR 0327 lane active
+Status: Closed; global Frame Pipeline v2 completion contract satisfied
 Last updated: 2026-05-14
 
 First-open progress ledger:
@@ -257,9 +257,9 @@ Status after M4K on 2026-05-14:
 - Boundary ownership still holds for the reuse decision: `ViewBoundaryState::paint_cache` owns
   boundary `PaintCacheEntry` metadata and diagnostics, while the retained recording source only
   provides replay bytes for those entries.
-- M4L resolves the plain-entry store decision. M4 remains open for
-  `ViewCacheBuildBoundaryStore` final ownership/retention, layout aggregation/sweep knob decisions,
-  and the second non-code-editor proof surface.
+- M4L resolves the plain-entry store decision, and M4M below resolves the
+  `ViewCacheBuildBoundaryStore` decision. At this point, before M4M, layout aggregation/sweep knob
+  decisions and the second non-code-editor proof surface still remained open.
 
 Status after M4L on 2026-05-14:
 
@@ -270,8 +270,99 @@ Status after M4L on 2026-05-14:
 - True runtime boundaries continue to own entries in `ViewBoundaryState::paint_cache`.
 - If a plain cached node is promoted to a runtime boundary, the retained entry migrates into
   `ViewBoundaryState::paint_cache` and the retained copy is removed.
-- M4 remains open for `ViewCacheBuildBoundaryStore` final ownership/retention, layout
-  aggregation/sweep knob decisions, and the second non-code-editor proof surface.
+- M4M below resolves the `ViewCacheBuildBoundaryStore` decision. After M4L, layout
+  aggregation/sweep knob decisions and the second non-code-editor proof surface still remained
+  open.
+
+Status after M4M on 2026-05-14:
+
+- `M4M_VIEW_CACHE_BUILD_BOUNDARY_STORE_RETENTION_SLICE_2026-05-14.md` records the final owner
+  decision for `ViewCacheBuildBoundaryStore`.
+- `ViewCacheBuildBoundaryStore` is explicitly retained inside `WindowElementState` as the
+  `GlobalElementId`-keyed declarative build-boundary mechanism.
+- `ViewBoundaryState` remains the retained-node `NodeId`-keyed runtime boundary owner for layout,
+  dirty, prepaint, scene-fragment, and boundary paint-cache entry state.
+- A focused runtime test proves recorded global subtree membership can be revalidated and rebound
+  to current live `NodeId` entries on a cache-hit frame.
+- M4N below resolves the layout env-knob decision. M4 remains open for remaining internal
+  `contained_layout` flag/debug-field consolidation and the second non-code-editor proof surface.
+
+Status after M4N on 2026-05-14:
+
+- `M4N_LAYOUT_ENV_KNOB_CANONICALIZATION_SLICE_2026-05-14.md` deletes or canonicalizes the remaining
+  known layout default-path env knobs.
+- Subtree layout-dirty aggregation is always on; only validation env knobs remain.
+- Layout-engine sweep is on-demand directly, without a runtime policy enum.
+- Translation-only root bounds movement and clean barrier-child retention are canonical layout
+  request/build behavior, not env-selected branches.
+- Focused layout gates prove barrier subtree dirty aggregation, underflow repair, translation-only
+  solve skipping, and scroll translation solve avoidance still hold after removing the fallback
+  branches.
+- M4O below resolves the cache-root diagnostics vocabulary issue. M4P below resolves the live
+  retained runtime flag naming issue. M4 remains open for compatibility-name auditing and the
+  second non-code-editor proof surface.
+
+Status after M4O on 2026-05-14:
+
+- `M4O_CACHE_ROOT_CONTAINMENT_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md` adds
+  `layout_dependency` to cache-root diagnostics and report summaries.
+- `UiTree::debug_cache_root_stats()` derives cache-root `layout_dependency` from
+  `ViewBoundaryState` when the cache root is a boundary, so reports follow the canonical boundary
+  vocabulary.
+- `cache_roots[].contained_layout` remains serialized for compatibility, but new emission derives it
+  from `layout_dependency`; `fret-diag` also prefers boundary `layout_dependency` and falls back to
+  older fields only for old bundles.
+- UI Gallery debug lines and triage JSON now lead with `layout_dependency` instead of
+  `contained_layout`.
+- M4P below resolves the live retained runtime flag naming issue. M4 remains open for
+  compatibility-name auditing and the second non-code-editor proof surface.
+
+Status after M4P on 2026-05-14:
+
+- `M4P_VIEW_CACHE_LAYOUT_DEPENDENCY_RUNTIME_FLAG_SLICE_2026-05-14.md` replaces the retained
+  `ViewCacheFlags::contained_layout` boolean with
+  `ViewCacheParentLayoutDependency::{ParentDependent, ContainedWhenBoundsKnown}`.
+- Hot runtime branches now call `layout_contained_when_bounds_known()` when they need the derived
+  predicate, while the stored state uses dependency vocabulary.
+- Cache-root mount/reuse/layout/paint tracing spans now emit `layout_dependency` instead of
+  `contained_layout`.
+- Focused view-cache and subtree-layout dirty gates prove the retained runtime behavior did not
+  regress after the internal flag rename.
+- M4Q below resolves the live compatibility schema/fixture vocabulary issue. M4 remains open for the
+  second non-code-editor proof surface.
+
+Status after M4Q on 2026-05-14:
+
+- `M4Q_CACHE_ROOT_CONTAINED_LAYOUT_SCHEMA_DELETION_SLICE_2026-05-14.md` deletes the derived
+  `contained_layout` compatibility field from new cache-root diagnostics and `fret-diag` report
+  JSON.
+- `UiDebugCacheRootStats`, `UiCacheRootStatsV1`, and `BundleStatsCacheRoot` no longer carry a
+  `contained_layout` field.
+- `fret-diag stats` no longer falls back to old `cache_roots[].contained_layout` when deriving
+  cache-root summaries; it relies on boundary/cache-root `layout_dependency`.
+- Fixture-driven invalidation harnesses now use `layout_contained_when_bounds_known` for the
+  low-level test input that still maps into dependency metadata.
+- Historical docs and replacement tests may still mention `contained_layout` only as evidence of
+  the retired authoring/schema path or as absence assertions.
+- M4 remains open for the second non-code-editor proof surface.
+
+Status after M4R on 2026-05-14:
+
+- `M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md` adds the second proof surface:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json`.
+- The surface is non-code-editor and exercises shared view-cache reuse and paint-cache replay
+  through first-party UI Gallery composition.
+- A new macOS M4 baseline,
+  `docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json`,
+  was generated and validated.
+- Validation reports `failures=[]`, total p50/p95/max `559/575/575us`, and stable top-frame
+  view-cache reuse `2/2`.
+- Worst-bundle `diag stats` with `--check-view-cache-reuse-min 2` and
+  `--check-view-cache-reuse-stable-min 2` passed.
+- Bundle inspection found `debug.boundaries[]`, cache-root `layout_dependency`, and
+  `contained_layout_count=0`.
+- M4 is complete for the selected proof surfaces. M6 later closes the global lane with final gates
+  and a deletion/retention audit.
 
 Status after closeout audit on 2026-05-14:
 
@@ -294,8 +385,8 @@ Status on 2026-05-14:
 - Deletion audit is complete for paths replaced by this vertical slice.
 - Perf/correctness/layering/check evidence is documented in `EVIDENCE_AND_GATES.md` and the
   closeout audit.
-- The broader ADR 0327 lane remains active for architecture follow-ons. ADR acceptance/review is
-  closed by `M0_CONTRACT_FREEZE_2026-05-14.md`.
+- The global deletion/retention audit is complete in
+  `FINAL_CLOSEOUT_AUDIT_2026-05-14.md`.
 
 ## M6: Global Frame Pipeline v2 Completion
 
@@ -315,8 +406,13 @@ Exit criteria:
 
 Status on 2026-05-14:
 
-- Open. The code-editor vertical slice is complete, but the global contract is not complete while
-  the consolidated view-cache build-boundary store still needs a final `ViewBoundaryState`
-  ownership/retention decision, previous-op paint-cache storage still needs migration or retention
-  decision, internal contained-layout flag cleanup, old env-knob ownership, and the second
-  non-code-editor proof surface remain open.
+- Closed. `FINAL_CLOSEOUT_AUDIT_2026-05-14.md` records the final runtime path, retained
+  mechanisms, deleted paths, proof-surface perf evidence, worst-bundle attribution, source/schema
+  deletion checks, and final gate set. The consolidated view-cache build-boundary store and
+  previous-op paint-cache storage have explicit retention decisions in M4M and M4K; plain-node
+  paint-cache entries have a retained owner in M4L. The known paint-cache/layout default-path env
+  knobs have deletion or canonicalization decisions through M4I/M4J/M4N. M4O-M4Q remove cache-root
+  containment diagnostics as an independent vocabulary by using `layout_dependency` and deleting the
+  live `contained_layout` cache-root schema/report field. M4R and the final closeout proof run prove
+  the selected non-code-editor surface emits canonical boundary/cache-root diagnostics without
+  reintroducing the retired field.

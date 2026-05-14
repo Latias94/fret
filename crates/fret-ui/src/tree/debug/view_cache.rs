@@ -5,7 +5,7 @@ pub struct UiDebugCacheRootStats {
     pub root: NodeId,
     pub element: Option<GlobalElementId>,
     pub reused: bool,
-    pub contained_layout: bool,
+    pub layout_dependency: &'static str,
     pub paint_replayed_ops: u32,
     pub reuse_reason: UiDebugCacheRootReuseReason,
 }
@@ -69,6 +69,6 @@ impl UiDebugCacheRootReuseReason {
 pub(in crate::tree) struct DebugViewCacheRootRecord {
     pub(in crate::tree) root: NodeId,
     pub(in crate::tree) reused: bool,
-    pub(in crate::tree) contained_layout: bool,
+    pub(in crate::tree) layout_dependency: &'static str,
     pub(in crate::tree) reuse_reason: UiDebugCacheRootReuseReason,
 }

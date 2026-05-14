@@ -1484,9 +1484,14 @@ fn mount_element<H: UiHost + 'static>(
             element = ?id,
             node = tracing::field::Empty,
             cache_hit = reuse_view_cache,
-            contained_layout = view_cache_props
+            layout_dependency = if view_cache_props
                 .map(|p| p.boundary_hints.contain_layout_when_bounds_known)
-                .unwrap_or(false),
+                .unwrap_or(false)
+            {
+                "contained_when_bounds_known"
+            } else {
+                "parent_dependent"
+            },
             frame_id = frame_id.0,
         )
     } else {
@@ -1547,6 +1552,11 @@ fn mount_element<H: UiHost + 'static>(
                 && !matches!(props.layout.size.height, crate::element::Length::Auto);
             let contain_layout = props.boundary_hints.contain_layout_when_bounds_known;
             ui.set_node_view_cache_flags(node, true, contain_layout, layout_definite);
+            let layout_dependency = if contain_layout {
+                "contained_when_bounds_known"
+            } else {
+                "parent_dependent"
+            };
             let reuse_reason = if !had_existing_node_entry {
                 crate::tree::UiDebugCacheRootReuseReason::FirstMount
             } else if !had_existing_node {
@@ -1566,7 +1576,12 @@ fn mount_element<H: UiHost + 'static>(
             } else {
                 crate::tree::UiDebugCacheRootReuseReason::NotMarkedReuseRoot
             };
-            ui.debug_record_view_cache_root(node, reuse_view_cache, contain_layout, reuse_reason);
+            ui.debug_record_view_cache_root(
+                node,
+                reuse_view_cache,
+                layout_dependency,
+                reuse_reason,
+            );
             if !reuse_view_cache {
                 ui.set_node_view_cache_needs_rerender(node, false);
             }
@@ -1732,9 +1747,14 @@ fn mount_element<H: UiHost + 'static>(
                 element = ?id,
                 node = ?node,
                 cache_hit = true,
-                contained_layout = view_cache_props
+                layout_dependency = if view_cache_props
                     .map(|p| p.boundary_hints.contain_layout_when_bounds_known)
-                    .unwrap_or(false),
+                    .unwrap_or(false)
+                {
+                    "contained_when_bounds_known"
+                } else {
+                    "parent_dependent"
+                },
                 frame_id = frame_id.0,
                 reason = "marked_reuse_root",
             )
@@ -1857,9 +1877,14 @@ fn mount_element<H: UiHost + 'static>(
                 element = ?id,
                 node = ?node,
                 cache_hit = false,
-                contained_layout = view_cache_props
+                layout_dependency = if view_cache_props
                     .map(|p| p.boundary_hints.contain_layout_when_bounds_known)
-                    .unwrap_or(false),
+                    .unwrap_or(false)
+                {
+                    "contained_when_bounds_known"
+                } else {
+                    "parent_dependent"
+                },
                 frame_id = frame_id.0,
                 reason = "not_marked_reuse_root",
             )

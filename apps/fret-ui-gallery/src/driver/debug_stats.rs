@@ -128,10 +128,10 @@ pub(crate) fn compute_debug_hud_bundle(
                     });
 
                     lines.push(Arc::from(format!(
-                        "cache_root[{index}] node={:?} reused={} contained_layout={} replayed_ops={} el={} {}",
+                        "cache_root[{index}] node={:?} reused={} layout_dependency={} replayed_ops={} el={} {}",
                         root.root,
                         root.reused as u8,
-                        root.contained_layout as u8,
+                        root.layout_dependency,
                         root.paint_replayed_ops,
                         root.element
                             .map(|id| format!("{:#x}", id.0))

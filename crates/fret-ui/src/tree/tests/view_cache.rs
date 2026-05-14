@@ -21,7 +21,9 @@ fn view_cache_invalidation_stops_at_boundary_for_paint() {
         ui.test_clear_node_invalidations(id);
     }
     ui.nodes[b].view_cache.enabled = true;
-    ui.nodes[b].view_cache.contained_layout = true;
+    ui.nodes[b]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     ui.invalidate(c, Invalidation::Paint);
 
@@ -124,7 +126,9 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     let root = ui.create_node(TestStack);
     let boundary = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     ui.set_root(root);
     ui.set_children(root, vec![boundary]);
@@ -161,7 +165,9 @@ fn descendant_layout_invalidation_marks_contained_view_cache_root_dirty() {
     let boundary = ui.create_node(TestStack);
     let leaf = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[boundary].view_cache.layout_definite = true;
 
     ui.set_root(root);
@@ -242,7 +248,9 @@ fn view_cache_contained_relayout_does_not_force_next_frame_rerender() {
     let root = ui.create_node(TestStack);
     let boundary = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[boundary].view_cache.layout_definite = true;
 
     ui.set_root(root);
@@ -302,7 +310,9 @@ fn detached_dirty_view_cache_root_is_pruned_before_layout_followups() {
     let root = ui.create_node(TestStack);
     let boundary = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[boundary].view_cache.layout_definite = true;
 
     ui.set_root(root);
@@ -423,7 +433,9 @@ fn view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known(
     let root = ui.create_node(TestStack);
     let boundary = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[boundary].view_cache.layout_definite = false;
 
     ui.set_root(root);
@@ -472,9 +484,13 @@ fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
         ui.test_clear_node_invalidations(id);
     }
     ui.nodes[outer].view_cache.enabled = true;
-    ui.nodes[outer].view_cache.contained_layout = true;
+    ui.nodes[outer]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[inner].view_cache.enabled = true;
-    ui.nodes[inner].view_cache.contained_layout = true;
+    ui.nodes[inner]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     ui.invalidate(leaf, Invalidation::Paint);
 
@@ -500,7 +516,9 @@ fn view_cache_notify_marks_cache_root_needs_rerender() {
     ui.set_children(boundary, vec![leaf]);
 
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     for id in [root, boundary, leaf] {
         ui.test_clear_node_invalidations(id);
@@ -533,9 +551,13 @@ fn view_cache_notify_propagates_to_ancestor_cache_roots() {
     ui.set_children(inner, vec![leaf]);
 
     ui.nodes[outer].view_cache.enabled = true;
-    ui.nodes[outer].view_cache.contained_layout = true;
+    ui.nodes[outer]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[inner].view_cache.enabled = true;
-    ui.nodes[inner].view_cache.contained_layout = true;
+    ui.nodes[inner]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     for id in [root, outer, mid, inner, leaf] {
         ui.test_clear_node_invalidations(id);
@@ -1353,7 +1375,9 @@ fn widget_request_animation_frame_marks_nearest_view_cache_root_dirty() {
     ui.set_children(boundary, vec![leaf]);
 
     ui.nodes[boundary].view_cache.enabled = true;
-    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     for id in [root, boundary, leaf] {
         ui.test_clear_node_invalidations(id);
@@ -1398,9 +1422,13 @@ fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_root
     ui.set_children(inner, vec![leaf]);
 
     ui.nodes[outer].view_cache.enabled = true;
-    ui.nodes[outer].view_cache.contained_layout = true;
+    ui.nodes[outer]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
     ui.nodes[inner].view_cache.enabled = true;
-    ui.nodes[inner].view_cache.contained_layout = true;
+    ui.nodes[inner]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(

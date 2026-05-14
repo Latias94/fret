@@ -229,6 +229,13 @@ pub struct ViewCacheReuseRootElementsSample {
     pub elements_tail: Vec<GlobalElementId>,
 }
 
+/// Build-time view-cache boundary state keyed by declarative `GlobalElementId`.
+///
+/// This intentionally remains in `WindowElementState` instead of `ViewBoundaryState`: it owns the
+/// rendered/next build identity records that are available before retained-node runtime boundary
+/// state is refreshed. `ViewBoundaryState` is keyed by `NodeId`, while cache-hit subtree liveness is
+/// revalidated during mount and can rebind recorded global element membership to the current live
+/// retained nodes.
 #[derive(Default)]
 struct ViewCacheBuildBoundaryStore {
     rendered: HashMap<GlobalElementId, ViewCacheBuildBoundaryFrame>,
@@ -3033,6 +3040,7 @@ impl DebugIdentitySegment {
 mod tests {
     use super::*;
     use fret_core::{Point, Px, Size};
+    use slotmap::KeyData;
 
     #[test]
     fn primary_pointer_type_defaults_to_unknown_until_observed() {
@@ -3238,6 +3246,71 @@ mod tests {
             state
                 .view_cache_elements_for_root(root)
                 .expect("touched elements should survive another frame"),
+            &[root, child]
+        );
+    }
+
+    #[test]
+    fn view_cache_build_boundary_store_rebinds_global_membership_to_current_nodes() {
+        let mut state = WindowElementState::default();
+        let root = GlobalElementId(1);
+        let child = GlobalElementId(2);
+        let root_node_previous = NodeId::from(KeyData::from_ffi(11));
+        let child_node_previous = NodeId::from(KeyData::from_ffi(12));
+        let root_node_current = NodeId::from(KeyData::from_ffi(21));
+        let child_node_current = NodeId::from(KeyData::from_ffi(22));
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.set_node_entry(
+            root,
+            NodeEntry {
+                node: root_node_previous,
+                last_seen_frame: FrameId(1),
+                root,
+            },
+        );
+        state.set_node_entry(
+            child,
+            NodeEntry {
+                node: child_node_previous,
+                last_seen_frame: FrameId(1),
+                root,
+            },
+        );
+        state.begin_view_cache_scope(root);
+        state.record_view_cache_subtree_elements(root, vec![root, child]);
+        state.end_view_cache_scope(root);
+
+        state.prepare_for_frame(FrameId(2), 0);
+        assert!(state.touch_view_cache_subtree_elements_if_recorded(
+            root,
+            FrameId(2),
+            root,
+            |element, seeded| {
+                assert!(
+                    seeded == Some(root_node_previous) || seeded == Some(child_node_previous),
+                    "build-boundary store should seed revalidation from the previous node entry"
+                );
+                match element {
+                    id if id == root => Some(root_node_current),
+                    id if id == child => Some(child_node_current),
+                    _ => None,
+                }
+            },
+        ));
+
+        assert_eq!(
+            state.node_entry(root).map(|entry| entry.node),
+            Some(root_node_current)
+        );
+        assert_eq!(
+            state.node_entry(child).map(|entry| entry.node),
+            Some(child_node_current)
+        );
+        assert_eq!(
+            state
+                .view_cache_elements_for_root(root)
+                .expect("global membership remains keyed by the view-cache root"),
             &[root, child]
         );
     }

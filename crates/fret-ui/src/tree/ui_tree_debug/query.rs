@@ -9,17 +9,22 @@ impl<H: UiHost> UiTree<H> {
         let mut out: Vec<UiDebugCacheRootStats> = self
             .debug_view_cache_roots
             .iter()
-            .map(|r| UiDebugCacheRootStats {
-                root: r.root,
-                element: self.nodes.get(r.root).and_then(|n| n.element),
-                reused: r.reused,
-                contained_layout: r.contained_layout,
-                paint_replayed_ops: self
-                    .debug_paint_cache_replays
-                    .get(&r.root)
-                    .copied()
-                    .unwrap_or(0),
-                reuse_reason: r.reuse_reason,
+            .map(|r| {
+                let layout_dependency = self
+                    .debug_boundary_layout_dependency_for_node(r.root)
+                    .unwrap_or(r.layout_dependency);
+                UiDebugCacheRootStats {
+                    root: r.root,
+                    element: self.nodes.get(r.root).and_then(|n| n.element),
+                    reused: r.reused,
+                    layout_dependency,
+                    paint_replayed_ops: self
+                        .debug_paint_cache_replays
+                        .get(&r.root)
+                        .copied()
+                        .unwrap_or(0),
+                    reuse_reason: r.reuse_reason,
+                }
             })
             .collect();
 

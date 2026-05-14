@@ -981,12 +981,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             // Barriers are explicit layout systems and must not couple their children into the
             // parent's flow solve, but we still want the engine to retain stable identity for the
             // mounted subtree across frames (GPUI-aligned request/build phase).
-            let skip_clean_children =
-                crate::runtime_config::ui_runtime_config().layout_flow_skip_barrier_clean_children;
             let children = tree.children_ref(node);
             for &child in children {
-                if skip_clean_children
-                    && engine.layout_id_for_node(child).is_some()
+                if engine.layout_id_for_node(child).is_some()
                     && !tree.node_layout_invalidated(child)
                 {
                     mark_seen_ui_subtree(engine, tree, child);
@@ -1021,12 +1018,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             // Barriers are explicit layout systems and must not couple their children into the
             // parent's flow solve, but we still want the engine to retain stable identity for the
             // mounted subtree across frames (GPUI-aligned request/build phase).
-            let skip_clean_children =
-                crate::runtime_config::ui_runtime_config().layout_flow_skip_barrier_clean_children;
             let children = tree.children_ref(node);
             for &child in children {
-                if skip_clean_children
-                    && engine.layout_id_for_node(child).is_some()
+                if engine.layout_id_for_node(child).is_some()
                     && !tree.node_layout_invalidated(child)
                 {
                     mark_seen_ui_subtree(engine, tree, child);

@@ -83,7 +83,7 @@ enum TreeStep {
     SetViewCacheFlags {
         node: String,
         enabled: bool,
-        contained_layout: bool,
+        layout_contained_when_bounds_known: bool,
         layout_definite: bool,
     },
 }
@@ -370,13 +370,13 @@ fn apply_step(
         TreeStep::SetViewCacheFlags {
             node,
             enabled,
-            contained_layout,
+            layout_contained_when_bounds_known,
             layout_definite,
         } => {
             ui.set_node_view_cache_flags(
                 lookup_existing_node(ui, ids, node)?,
                 *enabled,
-                *contained_layout,
+                *layout_contained_when_bounds_known,
                 *layout_definite,
             );
         }
