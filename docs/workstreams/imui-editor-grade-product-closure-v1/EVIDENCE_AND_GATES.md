@@ -503,6 +503,20 @@ Latest DevTools GUI first-open source projection proof (2026-05-14):
 - Campaign root:
   `target/imui-p2-devtools-first-open-gui-source-2026-05-14/1778733748418/campaign/campaigns/devtools-first-open-smoke/1778733762096`.
 
+DevTools GUI product-workflow projection follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now projects the shared `imui-product-chain` route in the
+  GUI first-open evidence panel: default command, focused discovery command, launched
+  `perf-docking` command, `perf-docking-arbitration-steady` suite, product-closure docs, and
+  `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/gate_imui_workstream_source.py
+```
+
 ### Multi-window hand-feel gates
 
 - `python tools/gate_imui_workstream_source.py`

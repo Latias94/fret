@@ -71,6 +71,20 @@ const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
 const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =
     "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke";
 const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "devtools-first-open-smoke";
+const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
+const IMUI_PRODUCT_WORKFLOW_DOC: &str =
+    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
+const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =
+    "python tools/diag_gate_imui_product_chain.py --only discovery";
+const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =
+    "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
+const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
+    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
+const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
+    "perf-docking/regression.summary.json",
+    "perf-docking/check.perf_thresholds.json",
+];
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -772,7 +786,7 @@ fn header_bar(
     let first_open_panel = diag_section(
         cx,
         "First-open Evidence Path",
-        "Canonical docs, repo preflight, artifact roots, and smoke gate stay visible in the GUI shell.",
+        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         first_open_rows,
     );
 
@@ -5107,6 +5121,16 @@ fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
             "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard"
         ),
         format!("gate: {DEVTOOLS_FIRST_OPEN_GATE_COMMAND}"),
+        format!("product workflow: {IMUI_PRODUCT_WORKFLOW_ID}"),
+        format!("product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}"),
+        format!("product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
+        format!("product workflow launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}"),
+        format!("product workflow suite: {IMUI_PRODUCT_WORKFLOW_SUITE}"),
+        format!("product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}"),
+        format!(
+            "product workflow artifacts: {}",
+            IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(", ")
+        ),
     ]
 }
 
@@ -5202,6 +5226,23 @@ mod tests {
             "campaign loop: diag campaign run devtools-first-open-smoke -> diag summarize -> diag dashboard"
         ));
         assert!(text.contains("gate: python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"));
+        assert!(text.contains("product workflow: imui-product-chain"));
+        assert!(text.contains("product workflow command: python tools/diag_gate_imui_product_chain.py"));
+        assert!(text.contains(
+            "product workflow focused: python tools/diag_gate_imui_product_chain.py --only discovery"
+        ));
+        assert!(text.contains(
+            "product workflow launched: python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+        ));
+        assert!(text.contains(
+            "product workflow suite: tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
+        ));
+        assert!(text.contains(
+            "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
+        ));
+        assert!(text.contains(
+            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+        ));
     }
 
     #[test]

@@ -283,6 +283,10 @@ Current status:
   `perf-docking-arbitration-steady` suite, and the expected `regression.summary.json` /
   `check.perf_thresholds.json` perf artifacts. This keeps DevTools-style consumers pointed at the
   shared evidence chain instead of inventing GUI-only product workflow metadata.
+- 2026-05-15 DevTools GUI product-workflow projection mirrors that same route in
+  `apps/fret-devtools/src/native.rs`, so the first-open evidence panel now surfaces the
+  `imui-product-chain` command, focused discovery command, launched `perf-docking` command, suite,
+  docs, and expected perf artifacts from the shared product-chain vocabulary.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,

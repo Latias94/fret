@@ -144,6 +144,11 @@ reopen.
       `imui-product-chain`, including the focused discovery command, the launched `perf-docking`
       command, and the expected perf summary/threshold artifacts, so DevTools-style consumers can
       discover the current product-chain evidence path without owning a GUI-private schema.
+      Maintenance: `apps/fret-devtools/src/native.rs` now mirrors that
+      `imui-product-chain` route in the GUI first-open evidence panel, including the default
+      command, focused discovery command, launched `perf-docking` command, suite, docs, and expected
+      perf artifacts. This keeps GUI discoverability aligned with `fretboard-dev list tool-apps`
+      instead of making the GUI a second source of truth.
 
 ## P3 - Multi-window hand-feel closure
 
