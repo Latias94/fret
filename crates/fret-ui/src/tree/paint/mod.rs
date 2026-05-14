@@ -1,7 +1,3 @@
-fn paint_cache_relax_view_cache_gating() -> bool {
-    crate::runtime_config::ui_runtime_config().paint_cache_relax_view_cache_gating
-}
-
 #[cfg(test)]
 thread_local! {
     static PAINT_CACHE_ALLOW_HIT_TEST_ONLY_TEST_OVERRIDE: std::cell::Cell<Option<bool>> =

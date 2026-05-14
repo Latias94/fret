@@ -96,12 +96,10 @@ impl<H: UiHost> UiTree<H> {
                 child_transform,
             )
         });
-        let relax_view_cache_gating = super::paint_cache_relax_view_cache_gating();
         let allow_hit_test_only = super::paint_cache_allow_hit_test_only();
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
-                || relax_view_cache_gating
                 || self.nodes.get(node).is_some_and(|n| n.view_cache.enabled));
         if let Some(key_elapsed) = key_elapsed {
             self.debug_stats.paint_cache_key_time = self

@@ -222,6 +222,16 @@ Status after M4H on 2026-05-14:
   recording carrier until the workstream decides whether it moves into `ViewBoundaryState`, becomes
   a boundary-owned scene-fragment source, or remains an explicitly retained per-tree mechanism.
 
+Status after M4I on 2026-05-14:
+
+- `M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md` deletes
+  `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` from the live runtime.
+- View-cache-active paint-cache recording is now hard-gated to view-cache boundary nodes instead of
+  being bypassable by an experiment env knob.
+- This closes one env-knob deletion item, but M4 remains open for
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`, layout aggregation/sweep knob decisions, final
+  previous-frame recording ownership, and the second non-code-editor proof surface.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.

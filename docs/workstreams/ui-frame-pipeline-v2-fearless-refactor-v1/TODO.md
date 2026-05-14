@@ -142,3 +142,8 @@ Progress ledger:
     boundary-owned scene-fragment source, or remains as an explicitly retained per-tree recording
     mechanism.
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.
+  - [x] Delete the obsolete `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch
+    (`M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md`).
+  - [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` becomes default, remains an
+    explicitly retained diagnostic/policy switch, or is deleted.
+  - [ ] Decide layout aggregation/sweep env knobs in their owning workstreams.

@@ -495,6 +495,38 @@ text blob side-index spans to `PaintCacheEntry`, makes `PreviousFramePaintRecord
 range validation and replay slicing, and uses the precomputed text blob side index during cache-hit
 replay. The final previous-frame recording owner decision remains open.
 
+Most recent paint-cache relax view-cache gating deletion slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md`
+- View-cache paint-cache gating gate:
+  `cargo nextest run -p fret-ui tree::tests::view_cache::view_cache_disables_paint_cache_for_non_boundary_nodes tree::tests::view_cache::view_cache_allows_paint_cache_for_boundary_nodes --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source-deletion check:
+  `rg -n "PAINT_CACHE_RELAX_VIEW_CACHE_GATING|paint_cache_relax_view_cache_gating|relax_view_cache_gating" crates/fret-ui/src apps/fret-ui-gallery/src -g '*.rs'`
+
+Observed result:
+
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- view-cache paint-cache gating gate: `2 passed, 933 skipped`;
+- layering check: passed;
+- workstream catalog: passed;
+- `WORKSTREAM.json` validation: passed;
+- `git diff --check`: passed;
+- source-deletion check: no live runtime/code references remain.
+
+This slice deletes an obsolete runtime env branch, not a new perf claim. It locks the M4E/M4F owner
+model by making view-cache-active paint-cache recording boundary-gated without an experiment bypass.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

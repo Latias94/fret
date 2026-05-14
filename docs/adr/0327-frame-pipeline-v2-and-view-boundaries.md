@@ -140,6 +140,9 @@ scene recording storage into `PreviousFramePaintRecording`, so the remaining pre
 carrier is now named separately from paint-cache generation and counter control. M4H moved replay
 range validation, op slicing, and text blob side-index replay into that carrier. Its final owner
 remains an open paint-cache replay decision.
+M4I deleted the obsolete `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch, so
+view-cache-active paint-cache recording can no longer bypass boundary ownership for non-boundary
+nodes.
 
 ### 3. Layout containment is a dependency contract
 
