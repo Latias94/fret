@@ -548,6 +548,12 @@ Run evidence:
   locally. The gate now validates `fretboard-dev list tool-apps` human and JSON output, the
   `docs/diagnostics-first-open.md` first-open anchor, the DevTools GUI and MCP launch/docs/gate
   entries, and `fretboard-dev diag doctor campaigns --json` with `ok=true`.
+- 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
+  maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
+  checklist, while preserving the distinction between `capability_source` and
+  `capabilities_check_path`. Focused gates passed locally:
+  `python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
 - 2026-05-14: a full launched rerun with
   `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-discovery-gate --timeout-ms 240000`
   exceeded the local 10 minute command timeout before returning a result. A later short diagnostic

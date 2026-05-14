@@ -144,6 +144,16 @@ This is the shared aggregate contract used by CLI, DevTools GUI, and MCP:
 - `regression.summary.json`
 - `regression.index.json`
 
+If an aggregate or dashboard reports `skipped_policy`, treat it as a non-executed policy outcome,
+not as a deterministic failure. Keep these two fields distinct when reading or presenting evidence:
+
+- `capability_source`: provenance for the available/missing capability view.
+- `capabilities_check_path`: the campaign-local check artifact that explains the skip.
+
+For the short maintainer interpretation checklist, open:
+
+- `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+
 ## Consumer branches after the default loop
 
 Once the artifacts root exists, branch by consumer surface only as needed.

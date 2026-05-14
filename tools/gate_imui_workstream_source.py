@@ -493,6 +493,8 @@ def main() -> None:
                 "last_bundle_dir=1778714090682-todo-after-remove",
                 "items_total=1",
                 "stage_counts.passed=1",
+                "tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link",
+                "policy-skip / capability-provenance",
                 "made `DragValueCoreResponse` accessor-first",
                 "made editor `ColorEdit` event/request/payload records accessor-first too.",
                 "suffix scan now includes `*Request`, `*Payload`, and `*Drop` records",

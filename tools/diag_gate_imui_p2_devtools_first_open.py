@@ -21,6 +21,7 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
 
@@ -325,6 +326,57 @@ def _validate_devtools_gui_first_open_source(
         progress.record("step.pass", name=name, path=str(path))
 
 
+def _validate_first_open_docs(
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
+    name = "diagnostics first-open policy-skip docs"
+    print(f"[diag-gate-imui-p2-devtools] {name}")
+    first_open_path = cwd / FIRST_OPEN_DOC
+    checklist_path = cwd / MAINTAINER_CHECKLIST_DOC
+    if progress is not None:
+        progress.record(
+            "step.start",
+            name=name,
+            first_open_path=str(first_open_path),
+            checklist_path=str(checklist_path),
+        )
+    try:
+        first_open_source = first_open_path.read_text(encoding="utf-8")
+        checklist_source = checklist_path.read_text(encoding="utf-8")
+    except OSError as err:
+        if progress is not None:
+            progress.record("step.fail", name=name, error=str(err))
+        raise SystemExit(f"Step failed: {name} (failed to read docs: {err})") from err
+
+    for marker in (
+        "If an aggregate or dashboard reports `skipped_policy`",
+        "`capability_source`: provenance for the available/missing capability view.",
+        "`capabilities_check_path`: the campaign-local check artifact that explains the skip.",
+        MAINTAINER_CHECKLIST_DOC,
+    ):
+        _assert_text_contains(name, first_open_source, marker)
+    for marker in (
+        "Treat these fields as one contract slice:",
+        "`status = skipped_policy`",
+        "`reason_code = capability.missing`",
+        "`capability_source`",
+        "`capabilities_check_path`",
+        "Do not collapse those two concepts into one field",
+        "Consumer rule:",
+        "GUI, MCP, CLI, and maintainer docs should all preserve this distinction.",
+    ):
+        _assert_text_contains(name, checklist_source, marker)
+    if progress is not None:
+        progress.record(
+            "step.pass",
+            name=name,
+            first_open_path=str(first_open_path),
+            checklist_path=str(checklist_path),
+        )
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="target/imui-p2-devtools-first-open-smoke")
@@ -380,6 +432,7 @@ def main(argv: list[str]) -> int:
 
     _validate_tool_app_discovery(fretboard_exe, cwd=repo_root, progress=progress)
     _validate_devtools_gui_first_open_source(cwd=repo_root, progress=progress)
+    _validate_first_open_docs(cwd=repo_root, progress=progress)
     if args.discovery_only:
         progress.record("gate.pass", mode="discovery")
         print("[diag-gate-imui-p2-devtools] discovery done")
