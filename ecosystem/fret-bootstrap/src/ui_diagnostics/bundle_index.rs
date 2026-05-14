@@ -513,11 +513,12 @@ pub(super) fn build_dock_routing_json(
                     serde_json::to_value(d.moving_window_decoration_offset_physical_px),
                     serde_json::to_value(d.moving_window_client_origin_screen_physical_px),
                     serde_json::to_value(d.moving_window_local_pos_from_screen_logical_px),
-                ] {
-                    if let Ok(value) = value {
-                        let label = serde_json::to_string(&value).unwrap_or_default();
-                        mix(&mut fp, hash_str_64(&label));
-                    }
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    let label = serde_json::to_string(&value).unwrap_or_default();
+                    mix(&mut fp, hash_str_64(&label));
                 }
             }
             if let Some(d) = dock_drop {

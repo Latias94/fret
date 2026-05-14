@@ -155,19 +155,18 @@ fn record_scroll_motion_check(
         }
     }
 
-    if reason.is_none() {
-        if let Some(delta) = target_delta_y {
-            if let Some(sign) = sign_with_epsilon_f32(delta, check.max_target_reverse_px) {
-                if state.motion_target_direction.is_none() {
-                    state.motion_target_direction = Some(sign);
-                } else if state.motion_target_direction != Some(sign) {
-                    note = format!(
-                        "scroll_into_view.motion.target_reversed delta={delta:.3} last_direction={:?}",
-                        state.motion_target_direction
-                    );
-                    reason = Some("scroll_into_view_motion_target_reversed".to_string());
-                }
-            }
+    if reason.is_none()
+        && let Some(delta) = target_delta_y
+        && let Some(sign) = sign_with_epsilon_f32(delta, check.max_target_reverse_px)
+    {
+        if state.motion_target_direction.is_none() {
+            state.motion_target_direction = Some(sign);
+        } else if state.motion_target_direction != Some(sign) {
+            note = format!(
+                "scroll_into_view.motion.target_reversed delta={delta:.3} last_direction={:?}",
+                state.motion_target_direction
+            );
+            reason = Some("scroll_into_view_motion_target_reversed".to_string());
         }
     }
 
@@ -324,8 +323,8 @@ pub(super) fn handle_scroll_into_view_step(
             .unwrap_or(node.bounds)
     });
 
-    if let Some(check) = motion_check.as_ref() {
-        if let Some(reason) = record_scroll_motion_check(
+    if let Some(check) = motion_check.as_ref()
+        && let Some(reason) = record_scroll_motion_check(
             active,
             step_index,
             &container,
@@ -334,14 +333,14 @@ pub(super) fn handle_scroll_into_view_step(
             &mut state,
             scroll_node,
             target_bounds,
-        ) {
-            *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
-            *stop_script = true;
-            *failure_reason = Some(reason);
-            active.v2_step_state = None;
-            output.request_redraw = true;
-            return true;
-        }
+        )
+    {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
+        *stop_script = true;
+        *failure_reason = Some(reason);
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        return true;
     }
 
     // `padding_px` / `padding_insets_px` is a *scroll margin preference* (how much breathing room we
@@ -376,34 +375,35 @@ pub(super) fn handle_scroll_into_view_step(
     };
 
     if visible_ok && container_ok {
-        if let Some(check) = motion_check.as_ref() {
-            if check.require_scroll_progress && !state.motion_saw_scroll_progress {
-                let reason = "scroll_into_view_motion_no_scroll_progress".to_string();
-                push_scroll_motion_trace(
-                    &mut active.scroll_motion_trace,
-                    UiScrollMotionTraceEntryV1 {
-                        step_index: step_index as u32,
-                        container: container.clone(),
-                        scroll_target: check.scroll_target.clone(),
-                        target: target.clone(),
-                        field: check.field,
-                        sample_count: state.motion_sample_count,
-                        scroll_value: state.motion_last_scroll_value,
-                        scroll_delta: None,
-                        target_bounds: target_bounds.map(ui_rect_from_rect),
-                        target_delta_y_px: None,
-                        max_target_reverse_px: Some(check.max_target_reverse_px),
-                        max_scroll_reverse_px: Some(check.max_scroll_reverse_px),
-                        note: Some(reason.clone()),
-                    },
-                );
-                *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
-                *stop_script = true;
-                *failure_reason = Some(reason);
-                active.v2_step_state = None;
-                output.request_redraw = true;
-                return true;
-            }
+        if let Some(check) = motion_check.as_ref()
+            && check.require_scroll_progress
+            && !state.motion_saw_scroll_progress
+        {
+            let reason = "scroll_into_view_motion_no_scroll_progress".to_string();
+            push_scroll_motion_trace(
+                &mut active.scroll_motion_trace,
+                UiScrollMotionTraceEntryV1 {
+                    step_index: step_index as u32,
+                    container: container.clone(),
+                    scroll_target: check.scroll_target.clone(),
+                    target: target.clone(),
+                    field: check.field,
+                    sample_count: state.motion_sample_count,
+                    scroll_value: state.motion_last_scroll_value,
+                    scroll_delta: None,
+                    target_bounds: target_bounds.map(ui_rect_from_rect),
+                    target_delta_y_px: None,
+                    max_target_reverse_px: Some(check.max_target_reverse_px),
+                    max_scroll_reverse_px: Some(check.max_scroll_reverse_px),
+                    note: Some(reason.clone()),
+                },
+            );
+            *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
+            *stop_script = true;
+            *failure_reason = Some(reason);
+            active.v2_step_state = None;
+            output.request_redraw = true;
+            return true;
         }
         active.v2_step_state = None;
         active.next_step = active.next_step.saturating_add(1);

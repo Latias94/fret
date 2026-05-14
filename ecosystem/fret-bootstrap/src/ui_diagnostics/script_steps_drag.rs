@@ -312,7 +312,7 @@ pub(super) fn handle_drag_pointer_until_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     text_font_stack_key_stable_frames: u32,
     font_catalog_populated: bool,
     system_font_rescan_idle: bool,
@@ -794,7 +794,7 @@ pub(super) fn handle_drag_pointer_until_step(
                         svc.cfg.redact_text,
                         &mut active.selector_resolution_trace,
                     ) {
-                        let start = if let Some(ui) = ui.as_deref_mut() {
+                        let start = if let Some(ui) = ui {
                             let start = pointer_position_prefer_intended_hit_routing(
                                 app,
                                 snapshot,

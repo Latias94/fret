@@ -199,7 +199,7 @@ fn observe_virtual_list_prepaint_case(
     );
     observed.set_metric(
         "cache_root.dirty_cache_root",
-        bool_metric(ui.dirty_cache_roots.contains(&cache_root)),
+        bool_metric(ui.dirty_boundaries.contains(&cache_root)),
     );
 
     let last = ui
@@ -275,7 +275,7 @@ fn set_cache_root_dirty_reason_metrics(
     ui: &UiTree<crate::test_host::TestHost>,
     cache_root: NodeId,
 ) {
-    if let Some((_source, detail)) = ui.dirty_cache_root_reasons.get(&cache_root).copied() {
+    if let Some((_source, detail)) = ui.boundary_layout_dirty_reason(cache_root) {
         if let Some(label) = detail.as_str() {
             observed.set_metric(format!("cache_root.dirty_reason.{label}"), 1.0);
         }

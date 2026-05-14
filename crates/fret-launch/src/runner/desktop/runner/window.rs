@@ -333,7 +333,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 
     let hwnd: isize = match window.window_handle() {
         Ok(handle) => match handle.as_raw() {
-            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get(),
             _ => 0,
         },
         Err(_) => 0,
@@ -351,7 +351,7 @@ pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: 
 
     let hwnd: isize = match window.window_handle() {
         Ok(handle) => match handle.as_raw() {
-            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get(),
             _ => 0,
         },
         Err(_) => 0,
@@ -372,7 +372,7 @@ fn set_window_hit_test_passthrough_regions(
 
     let hwnd: isize = match window.window_handle() {
         Ok(handle) => match handle.as_raw() {
-            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get(),
             _ => 0,
         },
         Err(_) => 0,
@@ -463,7 +463,7 @@ pub(super) fn set_window_background_material(
 
     let hwnd: isize = match window.window_handle() {
         Ok(handle) => match handle.as_raw() {
-            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get(),
             _ => 0,
         },
         Err(_) => 0,

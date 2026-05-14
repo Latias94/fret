@@ -2,6 +2,48 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Maintenance gate refresh - 2026-05-15
+
+DevTools full clippy is now a current maintenance gate for the P2 diagnostics/devtools surface:
+
+- Gate restored:
+  - `cargo clippy -p fret-devtools --all-targets -- -D warnings`
+- Evidence anchors:
+  - `crates/fret-launch/src/runner/windows_mf_video.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/mod.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/window.rs`
+  - `crates/fret-ui/src/text/input/widget.rs`
+  - `crates/fret-ui/src/tree/commands.rs`
+  - `crates/fret-ui/src/tree/debug/virtual_list.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_index.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_thread_cpu_time.rs`
+  - `crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs`
+- Structural notes:
+  - Windows MF native-external importer now matches the AVFoundation runner-local ownership shape
+    (`Rc<RefCell<_>>`) instead of using `Arc<Mutex<_>>` without a Send/Sync contract.
+  - DevTools clippy blockers in dependent `fret-ui`, `fret-launch`, and `fret-bootstrap` code are
+    fixed without adding `allow` attributes.
+  - The prepaint fixture harness now reads current view-boundary dirty state
+    (`dirty_boundaries` + `boundary_layout_dirty_reason`) instead of stale `dirty_cache_*` fields.
+- Guardrails run:
+  - `cargo clippy -p fret-devtools --all-targets -- -D warnings` - passed.
+  - `cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles --no-fail-fast` - passed.
+  - `cargo nextest run -p fret-ui -p fret-launch -p fret-bootstrap --no-fail-fast` - ran 1059 tests:
+    1054 passed, 5 failed.
+  - `python tools/check_layering.py` - passed.
+  - `python tools/report_largest_files.py --top 30 --min-lines 800` - passed; this slice did not
+    expand the reported large-file set.
+  - `git diff --check` - passed.
+- Residual full-nextest failures to keep as a follow-on input:
+  - `declarative::tests::core::layout_refines_focus_traversal_availability_after_structural_fallback`
+  - `declarative::tests::layout::scroll::scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative`
+  - `declarative::tests::layout::scroll::scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge`
+  - `declarative::tests::layout::viewport_roots::viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill`
+  - `declarative::tests::virtual_list::caching::virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached`
+
 ## Evidence anchors (current)
 
 - `docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
