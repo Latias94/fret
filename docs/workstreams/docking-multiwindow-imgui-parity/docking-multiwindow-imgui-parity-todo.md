@@ -316,6 +316,10 @@ Each TODO is labeled:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
       - Campaign manifest validation and source-policy tests are the local gates; real Wayland
         compositor acceptance remains the only closure path for this item.
+    - [x] Latest local Wayland-boundary refresh is recorded:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+      - Source policy, Wayland/X11 capability posture, docking fallback behavior, and all four
+        multi-window campaign manifests validated locally.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

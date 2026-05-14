@@ -1678,6 +1678,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -1685,10 +1686,11 @@ Current source of truth for the in-tree immediate-mode stack:
     keeping the v1 window-style opacity capability explicit, and continuing with the remaining
     platform-specific acceptance slices rather than reopening the umbrella lane. As of 2026-04-29,
     non-Linux local continuation is limited to source-policy gates, campaign validation, diagnostics
-    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-13, the latest
-    local non-interactive gate refresh is green and the launched bounded P3 campaign is green after
-    the diagnostics runner no-frame pointer-move repair. Platform-specific real-host acceptance,
-    especially the Wayland compositor runbook, remains open.
+    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-13, the launched
+    bounded P3 campaign is green after the diagnostics runner no-frame pointer-move repair. As of
+    2026-05-14, the local Wayland-boundary refresh is green for source policy, capability posture,
+    fallback behavior, and campaign manifests. Platform-specific real-host acceptance, especially
+    the Wayland compositor runbook, remains open.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
   - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
