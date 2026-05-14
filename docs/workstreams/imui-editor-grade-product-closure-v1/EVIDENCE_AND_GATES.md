@@ -443,6 +443,8 @@ Run evidence:
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
 - `python tools/diag_gate_imui_product_chain.py`
 - `python tools/diag_gate_imui_product_chain.py --only discovery`
+- `cargo run -p fretboard-dev -- --help`
+- `cargo run -p fretboard-dev -- list --help`
 - `cargo build -p fret-devtools`
 - `cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
@@ -472,6 +474,9 @@ This package currently proves:
   repo-maintainer discovery surface,
 - `fretboard-dev list tool-apps --json` exposes the same `fretboard_tool_apps` schema for
   automation and source-gate checks,
+- the default product-chain discovery gate validates that top-level help points to
+  `fretboard-dev list tool-apps` and `fretboard-dev list tool-apps --json`, and that `list --help`
+  names `tool-apps` as the repo-maintainer tool-app index,
 - the default product-chain discovery gate now validates that JSON shape, including `kind`,
   `schema_version`, canonical first-open/GUI docs, repo preflight commands, and GUI/MCP
   command/docs/gate/best-for fields, rather than checking only a few human-text markers,
@@ -627,6 +632,9 @@ Latest local default product-chain evidence (2026-05-14):
 - Added coverage: the discovery step now also validates
   `fretboard-dev list tool-apps --json` as the stable first-open DevTools GUI/MCP machine-readable
   map, including repo preflight and per-tool command/docs/gate/best-for fields.
+- Added coverage: the same discovery step now validates `fretboard-dev --help` and
+  `fretboard-dev list --help`, so the tool-app index itself stays discoverable from the first CLI
+  help screens.
 
 Use `--launched` when the local machine should also execute the existing launched proof commands
 sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:

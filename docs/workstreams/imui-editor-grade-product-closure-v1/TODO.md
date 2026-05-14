@@ -137,7 +137,9 @@ reopen.
       CLI index does not remain the only discoverability anchor.
       Maintenance: `tools/diag_gate_imui_product_chain.py` now also validates
       `fretboard-dev list tool-apps --json` as the stable DevTools GUI/MCP first-open map, so the
-      umbrella product-chain gate catches drift in the machine-readable entrypoint contract.
+      umbrella product-chain gate catches drift in the machine-readable entrypoint contract. The
+      same gate validates `fretboard-dev --help` and `fretboard-dev list --help`, so the tool-apps
+      index itself remains discoverable from the first CLI help screens.
 
 ## P3 - Multi-window hand-feel closure
 

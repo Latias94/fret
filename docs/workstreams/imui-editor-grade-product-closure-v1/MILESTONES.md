@@ -275,7 +275,8 @@ Current status:
 - 2026-05-14 product-chain maintenance also validates `fretboard-dev list tool-apps --json` as the
   stable DevTools GUI/MCP first-open map from `tools/diag_gate_imui_product_chain.py`, so the
   default IMUI product-chain gate catches drift in repo preflight and per-tool command/docs/gate
-  fields.
+  fields. The same discovery gate now covers `fretboard-dev --help` and
+  `fretboard-dev list --help`, so the tool-apps index is reachable from the first CLI help screens.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,

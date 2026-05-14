@@ -322,7 +322,7 @@
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
     {
-      "name": "imui-product-chain-devtools-discovery-json",
+      "name": "imui-product-chain-devtools-discovery-entrypoints",
       "command": "python tools/diag_gate_imui_product_chain.py --only discovery"
     },
     {

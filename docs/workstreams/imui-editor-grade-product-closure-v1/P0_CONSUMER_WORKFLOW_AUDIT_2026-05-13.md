@@ -121,6 +121,10 @@ doc, repo preflight command/JSON command/purpose, and the DevTools GUI/MCP comma
 fields. This is still a gate/productization improvement, not API widening and not a reason to widen
 `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui`.
 
+Follow-up CLI entrypoint refresh on 2026-05-14: the product-chain discovery gate also validates
+`fretboard-dev --help` and `fretboard-dev list --help`, so the `tool-apps` index remains
+discoverable before a maintainer already knows the exact `list tool-apps` subcommand.
+
 Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed

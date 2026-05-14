@@ -245,6 +245,24 @@ def _validate_tool_apps_json(payload: dict) -> None:
 
 
 def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
+    root_help = _run_capture_checked(
+        "fretboard help",
+        [str(fretboard_exe), "--help"],
+        cwd=repo_root,
+    )
+    _assert_contains(root_help.stdout, "fretboard-dev list tool-apps", "fretboard help")
+    _assert_contains(root_help.stdout, "fretboard-dev list tool-apps --json", "fretboard help")
+    _assert_contains(root_help.stdout, "cargo run -p fret-devtools", "fretboard help")
+    _assert_contains(root_help.stdout, "cargo run -p fret-devtools-mcp", "fretboard help")
+
+    list_help = _run_capture_checked(
+        "list help",
+        [str(fretboard_exe), "list", "--help"],
+        cwd=repo_root,
+    )
+    _assert_contains(list_help.stdout, "tool-apps", "list help")
+    _assert_contains(list_help.stdout, "List repo-maintainer tool apps", "list help")
+
     cookbook = _run_capture_checked(
         "list cookbook examples",
         [str(fretboard_exe), "list", "cookbook-examples", "--all"],
