@@ -18,22 +18,22 @@ pub struct DragResponse {
 }
 
 /// Published state for an immediate drag source helper.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct DragSourceResponse {
-    pub active: bool,
-    pub cross_window: bool,
-    pub position: Option<Point>,
-    pub pointer_id: Option<PointerId>,
-    pub session_id: Option<DragSessionId>,
+    pub(crate) active: bool,
+    pub(crate) cross_window: bool,
+    pub(crate) position: Option<Point>,
+    pub(crate) pointer_id: Option<PointerId>,
+    pub(crate) session_id: Option<DragSessionId>,
 }
 
 /// Immediate drag/drop target readout for a typed payload.
 pub struct DropTargetResponse<T: 'static> {
-    pub active: bool,
-    pub over: bool,
-    pub delivered: bool,
-    pub source_id: Option<GlobalElementId>,
-    pub session_id: Option<fret_runtime::DragSessionId>,
+    pub(crate) active: bool,
+    pub(crate) over: bool,
+    pub(crate) delivered: bool,
+    pub(crate) source_id: Option<GlobalElementId>,
+    pub(crate) session_id: Option<fret_runtime::DragSessionId>,
     pub(in super::super) preview_position: Option<Point>,
     pub(in super::super) delivered_position: Option<Point>,
     pub(in super::super) preview_payload: Option<Rc<T>>,
@@ -41,6 +41,31 @@ pub struct DropTargetResponse<T: 'static> {
 }
 
 impl DragSourceResponse {
+    pub(crate) fn inactive() -> Self {
+        Self {
+            active: false,
+            cross_window: false,
+            position: None,
+            pointer_id: None,
+            session_id: None,
+        }
+    }
+
+    pub(crate) fn new(
+        cross_window: bool,
+        position: Point,
+        pointer_id: PointerId,
+        session_id: DragSessionId,
+    ) -> Self {
+        Self {
+            active: true,
+            cross_window,
+            position: Some(position),
+            pointer_id: Some(pointer_id),
+            session_id: Some(session_id),
+        }
+    }
+
     pub fn active(self) -> bool {
         self.active
     }
@@ -84,8 +109,8 @@ impl DragResponse {
     }
 }
 
-impl<T: 'static> Default for DropTargetResponse<T> {
-    fn default() -> Self {
+impl<T: 'static> DropTargetResponse<T> {
+    pub(crate) fn empty() -> Self {
         Self {
             active: false,
             over: false,
@@ -98,9 +123,7 @@ impl<T: 'static> Default for DropTargetResponse<T> {
             delivered_payload: None,
         }
     }
-}
 
-impl<T: 'static> DropTargetResponse<T> {
     pub fn active(&self) -> bool {
         self.active
     }

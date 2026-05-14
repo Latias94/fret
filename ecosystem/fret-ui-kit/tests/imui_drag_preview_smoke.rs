@@ -1,7 +1,7 @@
 #![cfg(feature = "imui")]
 
 use fret_ui::UiHost;
-use fret_ui_kit::imui::{DragSourceResponse, UiWriterImUiFacadeExt};
+use fret_ui_kit::imui::{DragSourceOptions, ResponseExt, UiWriterImUiFacadeExt};
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost, drag_preview_ghost_with_options,
     publish_cross_window_drag_preview_ghost, publish_cross_window_drag_preview_ghost_with_options,
@@ -10,7 +10,14 @@ use fret_ui_kit::recipes::imui_drag_preview::{
 
 #[allow(dead_code)]
 fn drag_preview_recipe_api_compiles<H: UiHost + 'static>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
-    let source = DragSourceResponse::default();
+    let source = ui.drag_source_with_options(
+        ResponseExt::default(),
+        (),
+        DragSourceOptions {
+            cross_window: true,
+            ..Default::default()
+        },
+    );
 
     let _: bool = drag_preview_ghost(
         ui,

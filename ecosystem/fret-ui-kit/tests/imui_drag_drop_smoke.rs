@@ -16,8 +16,8 @@ struct DemoPayload {
 fn drag_drop_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
     let trigger = ResponseExt::default();
 
-    let _: DragSourceResponse = ui.drag_source(trigger, DemoPayload { label: "Cube" });
-    let _: DragSourceResponse = ui.drag_source_with_options(
+    let source: DragSourceResponse = ui.drag_source(trigger, DemoPayload { label: "Cube" });
+    let cross_window_source: DragSourceResponse = ui.drag_source_with_options(
         trigger,
         DemoPayload { label: "Sphere" },
         DragSourceOptions {
@@ -25,10 +25,24 @@ fn drag_drop_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             ..Default::default()
         },
     );
+    assert!(!source.active());
+    assert!(!source.cross_window());
+    assert!(source.position().is_none());
+    assert!(source.pointer_id().is_none());
+    assert!(source.session_id().is_none());
+    assert!(!cross_window_source.active());
 
-    let _: DropTargetResponse<DemoPayload> = ui.drop_target(trigger);
-    let _: DropTargetResponse<DemoPayload> =
+    let target: DropTargetResponse<DemoPayload> = ui.drop_target(trigger);
+    let target_with_options: DropTargetResponse<DemoPayload> =
         ui.drop_target_with_options(trigger, DropTargetOptions::default());
+    assert!(!target.active());
+    assert!(!target.over());
+    assert!(!target.delivered());
+    assert!(target.preview_position().is_none());
+    assert!(target.delivered_position().is_none());
+    assert!(target.preview_payload().is_none());
+    assert!(target.delivered_payload().is_none());
+    assert!(!target_with_options.active());
 }
 
 #[test]
@@ -39,23 +53,4 @@ fn drag_drop_option_defaults_compile() {
 
     let target = DropTargetOptions::default();
     assert!(target.enabled);
-}
-
-#[test]
-fn drag_drop_response_accessors_compile() {
-    let source = DragSourceResponse::default();
-    assert!(!source.active());
-    assert!(!source.cross_window());
-    assert!(source.position().is_none());
-    assert!(source.pointer_id().is_none());
-    assert!(source.session_id().is_none());
-
-    let target = DropTargetResponse::<DemoPayload>::default();
-    assert!(!target.active());
-    assert!(!target.over());
-    assert!(!target.delivered());
-    assert!(target.preview_position().is_none());
-    assert!(target.delivered_position().is_none());
-    assert!(target.preview_payload().is_none());
-    assert!(target.delivered_payload().is_none());
 }
