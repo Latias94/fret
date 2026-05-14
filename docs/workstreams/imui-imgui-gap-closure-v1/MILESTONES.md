@@ -98,6 +98,9 @@ Exit criteria:
   2026-05-14 press/context follow-up result: `ResponseExt` press and context-menu derived signal
   storage is private, with runtime assembly routed through crate-local setters and public use routed
   through accessors.
+  2026-05-14 lifecycle follow-up result: `ResponseExt` activation/edit/deactivation edge storage
+  is private too; runtime lifecycle assembly and combo/text-picker edit merging use crate-local
+  helpers while public callers keep accessor-only reads.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

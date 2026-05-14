@@ -48,10 +48,7 @@ pub(in super::super) fn sanitize_response_for_enabled(
     if enabled {
         return;
     }
-    response.activated = false;
-    response.deactivated = false;
-    response.edited = false;
-    response.deactivated_after_edit = false;
+    response.clear_lifecycle_signals();
     response.core.hovered = false;
     response.core.pressed = false;
     response.core.focused = false;

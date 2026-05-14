@@ -167,6 +167,11 @@ Run evidence:
   `pointer_click_modifiers()`, while `item_behavior`, disclosure headers, and disabled sanitization
   write through crate-local setters/clear helpers. `tools/gate_imui_workstream_source.py` rejects
   public fields or direct runtime writes from returning.
+- 2026-05-14: made `ResponseExt` lifecycle edge storage private too. Public callers keep using
+  `activated()`, `deactivated()`, `edited()`, and `deactivated_after_edit()`, while lifecycle
+  runtime assembly plus combo/text-picker edit merging use crate-local set/merge helpers.
+  `tools/gate_imui_workstream_source.py` rejects public lifecycle fields or direct runtime writes
+  from returning.
 
 ## P3 Design Surface Readiness Gates
 

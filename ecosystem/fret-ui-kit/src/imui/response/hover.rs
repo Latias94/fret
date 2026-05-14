@@ -88,14 +88,14 @@ pub struct ResponseExt {
     pub id: Option<GlobalElementId>,
     pub enabled: bool,
     /// True on the frame an item enters its active or engaged state.
-    pub activated: bool,
+    activated: bool,
     /// True on the frame an item leaves its active or engaged state.
-    pub deactivated: bool,
+    deactivated: bool,
     /// True on the frame an item commits a meaningful value mutation.
-    pub edited: bool,
+    edited: bool,
     /// True on the frame an item deactivates after having been edited during the same active
     /// session.
-    pub deactivated_after_edit: bool,
+    deactivated_after_edit: bool,
     /// Pointer-hover signal without ImGui-style disabled gating.
     ///
     /// When a widget is disabled, `core.hovered` is forced to `false` by
@@ -152,6 +152,45 @@ impl ResponseExt {
 
     pub fn drag(self) -> DragResponse {
         self.drag
+    }
+
+    pub(crate) fn set_activated(&mut self, activated: bool) {
+        self.activated = activated;
+    }
+
+    pub(crate) fn set_deactivated(&mut self, deactivated: bool) {
+        self.deactivated = deactivated;
+    }
+
+    pub(crate) fn set_edited(&mut self, edited: bool) {
+        self.edited = edited;
+    }
+
+    pub(crate) fn set_deactivated_after_edit(&mut self, deactivated_after_edit: bool) {
+        self.deactivated_after_edit = deactivated_after_edit;
+    }
+
+    pub(crate) fn merge_activated(&mut self, activated: bool) {
+        self.activated |= activated;
+    }
+
+    pub(crate) fn merge_deactivated(&mut self, deactivated: bool) {
+        self.deactivated |= deactivated;
+    }
+
+    pub(crate) fn merge_edited(&mut self, edited: bool) {
+        self.edited |= edited;
+    }
+
+    pub(crate) fn merge_deactivated_after_edit(&mut self, deactivated_after_edit: bool) {
+        self.deactivated_after_edit |= deactivated_after_edit;
+    }
+
+    pub(crate) fn clear_lifecycle_signals(&mut self) {
+        self.activated = false;
+        self.deactivated = false;
+        self.edited = false;
+        self.deactivated_after_edit = false;
     }
 
     pub(crate) fn set_secondary_clicked(&mut self, secondary_clicked: bool) {

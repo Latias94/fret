@@ -117,6 +117,9 @@ Readiness order for the next locally testable review slices:
    `long_pressed()`, `press_holding()`, `context_menu_requested()`, `context_menu_anchor()`,
    `pointer_clicked()`, and `pointer_click_modifiers()`, while runtime assemblers use crate-local
    setters.
+   2026-05-14 lifecycle follow-up: `ResponseExt` lifecycle edge storage is private as well. Public
+   callers stay on `activated()`, `deactivated()`, `edited()`, and `deactivated_after_edit()`;
+   runtime lifecycle, combo, text-picker, and disabled paths use crate-local set/merge/clear helpers.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

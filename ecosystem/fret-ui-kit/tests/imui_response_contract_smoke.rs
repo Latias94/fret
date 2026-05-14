@@ -22,13 +22,12 @@ fn shared_and_facade_response_boundary_compiles() {
             Size::new(8.0.into(), 4.0.into()),
         )),
     };
-    response.activated = true;
 
     let shared = to_shared_response(response);
     assert!(shared.clicked());
     assert!(!shared.changed());
 
-    assert!(response.activated());
+    assert!(!response.activated());
     assert!(!response.deactivated());
     assert!(!response.edited());
     assert!(!response.deactivated_after_edit());

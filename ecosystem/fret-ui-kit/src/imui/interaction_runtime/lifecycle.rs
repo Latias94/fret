@@ -118,10 +118,11 @@ pub(in super::super) fn populate_response_lifecycle_transients<H: UiHost>(
     id: GlobalElementId,
     response: &mut super::super::ResponseExt,
 ) {
-    response.activated = cx.take_transient_for(id, super::super::KEY_ACTIVATED);
-    response.deactivated = cx.take_transient_for(id, super::super::KEY_DEACTIVATED);
-    response.deactivated_after_edit =
-        cx.take_transient_for(id, super::super::KEY_DEACTIVATED_AFTER_EDIT);
+    response.set_activated(cx.take_transient_for(id, super::super::KEY_ACTIVATED));
+    response.set_deactivated(cx.take_transient_for(id, super::super::KEY_DEACTIVATED));
+    response.set_deactivated_after_edit(
+        cx.take_transient_for(id, super::super::KEY_DEACTIVATED_AFTER_EDIT),
+    );
 }
 
 pub(in super::super) fn populate_response_lifecycle_from_active_state<H: UiHost>(
@@ -131,7 +132,7 @@ pub(in super::super) fn populate_response_lifecycle_from_active_state<H: UiHost>
     edited_now: bool,
     response: &mut super::super::ResponseExt,
 ) {
-    response.edited = edited_now;
+    response.set_edited(edited_now);
     let (activated, deactivated, deactivated_after_edit) =
         cx.state_for(id, ResponseLifecycleFrameState::default, |st| {
             let activated = active_now && !st.was_active;
@@ -153,7 +154,7 @@ pub(in super::super) fn populate_response_lifecycle_from_active_state<H: UiHost>
             (activated, deactivated, deactivated_after_edit)
         });
 
-    response.activated |= activated;
-    response.deactivated |= deactivated;
-    response.deactivated_after_edit |= deactivated_after_edit;
+    response.merge_activated(activated);
+    response.merge_deactivated(deactivated);
+    response.merge_deactivated_after_edit(deactivated_after_edit);
 }
