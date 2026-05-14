@@ -77,6 +77,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
+  - `tools/gate_imui_workstream_source.py`
   - `tools/diag_gate_imui_product_chain.py`
   - `tools/diag_gate_imui_p2_devtools_first_open.py`
 - Prior status:
@@ -136,8 +137,24 @@ Use these for the current porting-sugar readiness note:
 ```powershell
 rg -n "SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp
 rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
+rg -n "row_cx\\.row_options" apps/fret-examples/src/imui_editor_proof_demo.rs apps/fret-examples/src/editor_notes_demo.rs
 cargo check -p fret-demo --bin imui_editor_proof_demo
 ```
+
+Run evidence:
+
+- 2026-05-14: removed proof-surface calls that manually passed
+  `PropertyRow::new().options(row_cx.row_options.clone())` in
+  `apps/fret-examples/src/imui_editor_proof_demo.rs` and `apps/fret-examples/src/editor_notes_demo.rs`.
+  Default property-row policy now stays centralized in `PropertyGridRowCx::row_with(...)` instead
+  of leaking into app/proof code.
+- 2026-05-14: `tools/gate_imui_workstream_source.py` now rejects `row_cx.row_options` in both
+  proof surfaces so future cleanup cannot regress into ad hoc row-policy wiring.
+- 2026-05-14: `cargo check -p fret-demo --bin imui_editor_proof_demo`,
+  `cargo check -p fret-demo --bin editor_notes_demo`,
+  `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`, `python tools/gate_imui_facade_teaching_source.py`,
+  and `git diff --check` passed locally.
 
 ## P3 Child Region Readiness Gates
 

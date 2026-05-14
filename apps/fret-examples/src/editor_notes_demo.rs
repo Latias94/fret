@@ -609,7 +609,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Name"),
                                         |cx| {
                                             TextField::new(asset.name_model.clone())
@@ -628,7 +628,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Notes"),
                                         |cx| {
                                             TextField::new(asset.notes_model.clone())
@@ -667,7 +667,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Committed"),
                                         |cx| {
                                             cx.text(committed_label.clone())
@@ -678,7 +678,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Last action"),
                                         |cx| {
                                             cx.text(outcome_label.clone())
@@ -689,7 +689,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Draft status"),
                                         |cx| {
                                             cx.text(draft_status_label.clone())
@@ -700,7 +700,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Draft actions"),
                                         |cx| {
                                             ui::h_flex(|cx| {
@@ -800,7 +800,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Summary command"),
                                         |cx| {
                                             shadcn::Button::new("Copy asset summary")
@@ -830,7 +830,7 @@ where
 
                                     rows.push(row_cx.row_with(
                                         cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        PropertyRow::new(),
                                         |cx| cx.text("Summary status"),
                                         |cx| {
                                             cx.text(summary_status.clone())
