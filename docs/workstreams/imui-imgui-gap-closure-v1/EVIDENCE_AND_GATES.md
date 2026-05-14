@@ -33,6 +33,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-imui/src/tests/label_identity/mod.rs`
   - `ecosystem/fret-imui/src/tests/models_combo/mod.rs`
   - `ecosystem/fret-imui/src/tests/models_controls/mod.rs`
+  - `ecosystem/fret-imui/src/tests/models_text_area/mod.rs`
   - `ecosystem/fret-imui/src/tests/models_text_picker/mod.rs`
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
@@ -222,6 +223,7 @@ cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast
 cargo nextest run -p fret-imui label_identity --no-fail-fast
 cargo nextest run -p fret-imui models_combo --no-fail-fast
 cargo nextest run -p fret-imui models_controls --no-fail-fast
+cargo nextest run -p fret-imui models_text_area --no-fail-fast
 cargo nextest run -p fret-imui models_text_picker --no-fail-fast
 cargo nextest run -p fret-imui popup_hover --no-fail-fast
 cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast
@@ -277,6 +279,11 @@ Run evidence:
   `ecosystem/fret-imui/src/tests/models_controls/`.
 - 2026-05-14: `cargo nextest run -p fret-imui models_controls --no-fail-fast` passed locally
   with 6 tests.
+- 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/models_text_area.rs`
+  file into `modes`, `commands`, `model_changed`, and `lifecycle` test owners under
+  `ecosystem/fret-imui/src/tests/models_text_area/`.
+- 2026-05-14: `cargo nextest run -p fret-imui models_text_area --no-fail-fast` passed locally
+  with 8 tests.
 - 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/models_text_picker.rs`
   file into `completion_popup`, `history_popup`, `completion_keyboard`, `history_keyboard`, and
   `empty_keyboard` test owners under `ecosystem/fret-imui/src/tests/models_text_picker/`.

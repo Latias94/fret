@@ -230,6 +230,10 @@
       "command": "cargo nextest run -p fret-imui models_controls --no-fail-fast"
     },
     {
+      "name": "fret-imui textarea ownership tests",
+      "command": "cargo nextest run -p fret-imui models_text_area --no-fail-fast"
+    },
+    {
       "name": "fret-imui text picker ownership tests",
       "command": "cargo nextest run -p fret-imui models_text_picker --no-fail-fast"
     },
@@ -311,6 +315,7 @@
     "ecosystem/fret-imui/src/tests/composition/mod.rs",
     "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
     "ecosystem/fret-imui/src/tests/models_controls/mod.rs",
+    "ecosystem/fret-imui/src/tests/models_text_area/mod.rs",
     "ecosystem/fret-imui/src/tests/models_text_picker/mod.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/mod.rs"
   ],
