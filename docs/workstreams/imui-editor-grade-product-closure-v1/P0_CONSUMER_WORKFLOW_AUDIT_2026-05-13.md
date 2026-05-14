@@ -114,6 +114,13 @@ Follow-up source-gate refresh on 2026-05-14: `tools/diag_gate_imui_product_chain
 lightweight maintainer gate. This keeps the product chain honest about the discovered docking
 surface without running the launched multi-window campaign by default.
 
+Follow-up DevTools discoverability refresh on 2026-05-14: the same product-chain gate now validates
+`fretboard-dev list tool-apps --json` as a stable machine-readable first-open map. The check covers
+the `fretboard_tool_apps` kind, schema version, canonical diagnostics first-open doc, GUI branch
+doc, repo preflight command/JSON command/purpose, and the DevTools GUI/MCP command/docs/gate/best-for
+fields. This is still a gate/productization improvement, not API widening and not a reason to widen
+`fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui`.
+
 Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed

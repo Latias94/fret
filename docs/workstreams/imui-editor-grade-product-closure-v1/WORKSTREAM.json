@@ -322,6 +322,10 @@
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
     {
+      "name": "imui-product-chain-devtools-discovery-json",
+      "command": "python tools/diag_gate_imui_product_chain.py --only discovery"
+    },
+    {
       "name": "imui-product-chain-editor-notes-launched-gate",
       "command": "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes,editor-notes-device-shell"
     },

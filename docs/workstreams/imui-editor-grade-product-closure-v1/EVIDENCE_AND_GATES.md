@@ -442,6 +442,7 @@ Run evidence:
 - `cargo nextest run -p fret-diag identity_browser_html --no-fail-fast`
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
 - `python tools/diag_gate_imui_product_chain.py`
+- `python tools/diag_gate_imui_product_chain.py --only discovery`
 - `cargo build -p fret-devtools`
 - `cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
@@ -471,6 +472,9 @@ This package currently proves:
   repo-maintainer discovery surface,
 - `fretboard-dev list tool-apps --json` exposes the same `fretboard_tool_apps` schema for
   automation and source-gate checks,
+- the default product-chain discovery gate now validates that JSON shape, including `kind`,
+  `schema_version`, canonical first-open/GUI docs, repo preflight commands, and GUI/MCP
+  command/docs/gate/best-for fields, rather than checking only a few human-text markers,
 - and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
 - captured immediate/runtime identity warnings now have a bounded first-open path through
   `diag query identity-warnings --browser --json`,
@@ -620,6 +624,9 @@ Latest local default product-chain evidence (2026-05-14):
   `diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`, so the
   discovered docking proof surface has a manifest-shape check in the same maintainer command as the
   cookbook, editor proof, editor notes, workspace shell, DevTools discovery, and IMUI source gates.
+- Added coverage: the discovery step now also validates
+  `fretboard-dev list tool-apps --json` as the stable first-open DevTools GUI/MCP machine-readable
+  map, including repo preflight and per-tool command/docs/gate/best-for fields.
 
 Use `--launched` when the local machine should also execute the existing launched proof commands
 sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:

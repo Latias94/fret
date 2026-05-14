@@ -28,6 +28,12 @@ WORKSPACE_SHELL = "workspace-shell"
 DOCKING = "docking"
 SOURCE_GATES = "source-gates"
 
+FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
+DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
+REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
+
 ALL_GATES = [
     DISCOVERY,
     GENERIC_ACTION,
@@ -183,6 +189,61 @@ def _assert_contains(haystack: str, needle: str, name: str) -> None:
         raise SystemExit(f"Step failed: {name} (missing marker: {needle})")
 
 
+def _validate_tool_apps_json(payload: dict) -> None:
+    if payload.get("kind") != "fretboard_tool_apps":
+        raise SystemExit("Step failed: list tool apps json (expected kind=fretboard_tool_apps)")
+    if payload.get("schema_version") != 1:
+        raise SystemExit("Step failed: list tool apps json (expected schema_version=1)")
+    if payload.get("first_open_doc") != FIRST_OPEN_DOC:
+        raise SystemExit("Step failed: list tool apps json (missing canonical first-open doc)")
+    if payload.get("branch_doc") != DEVTOOLS_GUI_DOC:
+        raise SystemExit("Step failed: list tool apps json (missing DevTools GUI branch doc)")
+
+    repo_preflight = payload.get("repo_preflight")
+    if not isinstance(repo_preflight, dict):
+        raise SystemExit("Step failed: list tool apps json (missing repo_preflight object)")
+    if repo_preflight.get("command") != REPO_PREFLIGHT_COMMAND:
+        raise SystemExit("Step failed: list tool apps json (unexpected repo preflight command)")
+    if repo_preflight.get("json_command") != REPO_PREFLIGHT_JSON_COMMAND:
+        raise SystemExit("Step failed: list tool apps json (unexpected repo preflight JSON command)")
+    if not isinstance(repo_preflight.get("purpose"), str) or not repo_preflight["purpose"]:
+        raise SystemExit("Step failed: list tool apps json (missing repo preflight purpose)")
+
+    tool_apps = payload.get("tool_apps")
+    if not isinstance(tool_apps, list):
+        raise SystemExit("Step failed: list tool apps json (missing tool_apps array)")
+
+    expected_tools = {
+        "fret-devtools": (
+            "cargo run -p fret-devtools",
+            DEVTOOLS_GUI_DOC,
+            "cargo build -p fret-devtools",
+        ),
+        "fret-devtools-mcp": (
+            "cargo run -p fret-devtools-mcp",
+            DEVTOOLS_MCP_DOC,
+            "cargo build -p fret-devtools-mcp",
+        ),
+    }
+    for tool_id, (command, docs, gate) in expected_tools.items():
+        tool = next(
+            (item for item in tool_apps if isinstance(item, dict) and item.get("id") == tool_id),
+            None,
+        )
+        if tool is None:
+            raise SystemExit(f"Step failed: list tool apps json (missing {tool_id})")
+        if tool.get("command") != command:
+            raise SystemExit(f"Step failed: list tool apps json (unexpected {tool_id} command)")
+        if tool.get("docs") != docs:
+            raise SystemExit(f"Step failed: list tool apps json (unexpected {tool_id} docs)")
+        if tool.get("gate") != gate:
+            raise SystemExit(f"Step failed: list tool apps json (unexpected {tool_id} gate)")
+        if not isinstance(tool.get("purpose"), str) or not tool["purpose"]:
+            raise SystemExit(f"Step failed: list tool apps json (missing {tool_id} purpose)")
+        if not isinstance(tool.get("best_for"), str) or not tool["best_for"]:
+            raise SystemExit(f"Step failed: list tool apps json (missing {tool_id} best_for)")
+
+
 def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     cookbook = _run_capture_checked(
         "list cookbook examples",
@@ -208,9 +269,29 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
         [str(fretboard_exe), "list", "tool-apps"],
         cwd=repo_root,
     )
-    _assert_contains(tool_apps.stdout, "docs/diagnostics-first-open.md", "list tool apps")
-    _assert_contains(tool_apps.stdout, "diag doctor campaigns", "list tool apps")
+    _assert_contains(tool_apps.stdout, f"first-open: {FIRST_OPEN_DOC}", "list tool apps")
+    _assert_contains(tool_apps.stdout, f"repo preflight: {REPO_PREFLIGHT_COMMAND}", "list tool apps")
+    _assert_contains(
+        tool_apps.stdout,
+        f"repo preflight json: {REPO_PREFLIGHT_JSON_COMMAND}",
+        "list tool apps",
+    )
+    _assert_contains(tool_apps.stdout, f"gui branch: {DEVTOOLS_GUI_DOC}", "list tool apps")
     _assert_contains(tool_apps.stdout, "fret-devtools", "list tool apps")
+    _assert_contains(tool_apps.stdout, "cargo run -p fret-devtools", "list tool apps")
+    _assert_contains(tool_apps.stdout, DEVTOOLS_GUI_DOC, "list tool apps")
+    _assert_contains(tool_apps.stdout, "cargo build -p fret-devtools", "list tool apps")
+    _assert_contains(tool_apps.stdout, "fret-devtools-mcp", "list tool apps")
+    _assert_contains(tool_apps.stdout, "cargo run -p fret-devtools-mcp", "list tool apps")
+    _assert_contains(tool_apps.stdout, DEVTOOLS_MCP_DOC, "list tool apps")
+    _assert_contains(tool_apps.stdout, "cargo build -p fret-devtools-mcp", "list tool apps")
+
+    tool_apps_json = _run_capture_checked(
+        "list tool apps json",
+        [str(fretboard_exe), "list", "tool-apps", "--json"],
+        cwd=repo_root,
+    )
+    _validate_tool_apps_json(_parse_json_stdout("list tool apps json", tool_apps_json))
 
     doctor = _run_capture_checked(
         "diag doctor campaigns",

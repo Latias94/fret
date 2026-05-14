@@ -135,6 +135,9 @@ reopen.
       path directly in the DevTools GUI shell, and
       `tools/diag_gate_imui_p2_devtools_first_open.py` checks the GUI source projection so the
       CLI index does not remain the only discoverability anchor.
+      Maintenance: `tools/diag_gate_imui_product_chain.py` now also validates
+      `fretboard-dev list tool-apps --json` as the stable DevTools GUI/MCP first-open map, so the
+      umbrella product-chain gate catches drift in the machine-readable entrypoint contract.
 
 ## P3 - Multi-window hand-feel closure
 

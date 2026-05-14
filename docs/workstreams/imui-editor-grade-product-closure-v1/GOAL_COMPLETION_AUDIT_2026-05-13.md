@@ -41,7 +41,7 @@ architecture intact:
 | Docking local non-interactive gates are current | `M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md` records green campaign manifest validation and non-GUI behavior gates. | Met for local non-interactive gates only |
 | Launched bounded multi-window campaign is green | `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records the repaired launched bounded P3 campaign at `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, plus the post-documentation rerun at `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778656624160`, with `campaign: ok` and `passed: 4`. | Met for the generic bounded campaign only |
 | Full multi-window hand-feel is closed | M14 still does not count as Linux Wayland compositor acceptance or full platform-specific real-host hand-feel closure. | Not met |
-| DevTools/Demo/Metrics-style discoverability is closed | Diagnostics lanes define the first-open CLI/GUI/MCP split, and `fretboard-dev list tool-apps` now exposes GUI/MCP entrypoints with a JSON form; the priority review still names broader DevTools/demo/metrics productization as product work. | Partially met |
+| DevTools/Demo/Metrics-style discoverability is closed | Diagnostics lanes define the first-open CLI/GUI/MCP split; `fretboard-dev list tool-apps --json` exposes GUI/MCP entrypoints with a machine-readable form; and the default product-chain gate now validates that shape. Broader DevTools/demo/metrics productization remains product work. | Partially met |
 | Full Dear ImGui-class editor maturity is closed | Remaining gaps include real-host OS-window hand-feel, DevTools discoverability polish, perf attribution/smoothness, and proof-led helper candidates only after repeated first-party pressure. | Not met |
 
 ## Current Strengths
@@ -60,18 +60,20 @@ architecture intact:
 - **Full OS-window multi-viewport hand-feel remains open.** M14 proves the generic launched bounded
   campaign on the local Windows host, but it still does not prove Linux Wayland acceptance or full
   platform-specific real-host cross-window feel.
-- **DevTools discoverability is only partially productized.** The diagnostics contract is strong,
-  and `fretboard-dev list tool-apps --json` now gives tools one machine-readable GUI/MCP map, but
-  the current priority map still says Dear ImGui-class always-available demo/metrics/debug
-  discoverability needs continued work.
+- **DevTools discoverability is partially productized, with a stronger drift gate.** The
+  diagnostics contract is strong, `fretboard-dev list tool-apps --json` gives tools one
+  machine-readable GUI/MCP map, and `python tools/diag_gate_imui_product_chain.py` now validates
+  that JSON shape as part of the default IMUI product-chain gate. The current priority map still
+  says Dear ImGui-class always-available demo/metrics/debug discoverability needs continued work.
 - **Product workflow coherence is now source-backed, lightly consumer-audited, first-contact
   visually artifact-backed, and editor-notes suite-backed.** `P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   checks docs/tooling discovery, compile paths, and the launched `imui_editor_controls_basics`
   layout/screenshot/bundle smoke. The 2026-05-14 refresh promotes `editor_notes_demo` and
   `editor_notes_device_shell_demo` suite manifests into the product-chain gate; the follow-up
   source-gate refresh also validates `imui-p3-multiwindow-parity` as the docking campaign manifest
-  in the default product-chain command. Broader product workflow closure still needs continued
-  visual/interaction and hand-feel evidence before this goal is complete.
+  and the DevTools GUI/MCP first-open JSON map in the default product-chain command. Broader
+  product workflow closure still needs continued visual/interaction and hand-feel evidence before
+  this goal is complete.
 - **Performance discipline is not proven by this audit.** Smoothness remains routed to the
   dedicated perf workstreams, not closed by IMUI source gates.
 - **Public helper/API growth remains intentionally constrained.** This is correct architecture, but

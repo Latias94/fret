@@ -272,6 +272,10 @@ Current status:
   `apps/fret-devtools/src/native.rs` now renders a first-open evidence panel with the canonical
   diagnostics doc, GUI branch doc, repo preflight, artifacts root, direct run/latest/compare loop,
   campaign summarize/dashboard loop, and the bounded P2 smoke gate.
+- 2026-05-14 product-chain maintenance also validates `fretboard-dev list tool-apps --json` as the
+  stable DevTools GUI/MCP first-open map from `tools/diag_gate_imui_product_chain.py`, so the
+  default IMUI product-chain gate catches drift in repo preflight and per-tool command/docs/gate
+  fields.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,
