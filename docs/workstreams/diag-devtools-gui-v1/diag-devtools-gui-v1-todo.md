@@ -112,6 +112,8 @@ Conventions:
         in-flight/error status without treating baseline-required compare commands as runnable.
   - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
         latest result path for copying.
+  - [x] GUI selected-summary inspector mirrors the latest follow-up result JSON inline for
+        pass/fail/error/timing triage.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

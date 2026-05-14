@@ -14,6 +14,7 @@ pub(crate) struct FollowupJobResult {
     pub label: String,
     pub command_line: String,
     pub result_path: PathBuf,
+    pub result_json: String,
     pub result: Result<(), String>,
 }
 
@@ -63,6 +64,9 @@ pub(crate) fn poll_followup_jobs(app: &mut App, st: &mut State) {
                 msg.result_path.to_string_lossy().to_string(),
             ))
         });
+        let _ = app
+            .models_mut()
+            .update(&st.followup_last_result_json, |v| *v = msg.result_json.clone());
 
         match msg.result {
             Ok(()) => {
@@ -120,13 +124,23 @@ fn build_followup_result_record(
     }
 }
 
-fn write_followup_result_record(
-    out_path: &PathBuf,
-    record: &FollowupResultRecordV1,
-) -> Result<(), String> {
-    let bytes = serde_json::to_vec_pretty(record)
-        .map_err(|err| format!("failed to serialize follow-up result: {err}"))?;
-    std::fs::write(out_path, bytes).map_err(|err| {
+fn followup_result_record_json(record: &FollowupResultRecordV1) -> Result<String, String> {
+    serde_json::to_string_pretty(record)
+        .map_err(|err| format!("failed to serialize follow-up result: {err}"))
+}
+
+fn fallback_followup_result_json(error: &str) -> String {
+    serde_json::json!({
+        "schema_version": 1,
+        "kind": "fret_devtools_regression_followup_result",
+        "status": "failed",
+        "error": error,
+    })
+    .to_string()
+}
+
+fn write_followup_result_record(out_path: &PathBuf, result_json: &str) -> Result<(), String> {
+    std::fs::write(out_path, result_json.as_bytes()).map_err(|err| {
         format!(
             "failed to write follow-up result {}: {err}",
             out_path.to_string_lossy()
@@ -179,7 +193,9 @@ pub(crate) fn start_regression_followup_command(
                 finished_unix_ms,
                 &result,
             );
-            let write_result = write_followup_result_record(&result_path, &record);
+            let result_json = followup_result_record_json(&record)
+                .unwrap_or_else(|err| fallback_followup_result_json(&err));
+            let write_result = write_followup_result_record(&result_path, &result_json);
             let result = match (result, write_result) {
                 (Ok(()), Ok(())) => Ok(()),
                 (Err(err), Ok(())) => Err(err),
@@ -193,6 +209,7 @@ pub(crate) fn start_regression_followup_command(
                 label,
                 command_line,
                 result_path,
+                result_json,
                 result,
             });
         }
@@ -208,6 +225,15 @@ pub(crate) fn start_regression_followup_command(
         *v = Some(Arc::<str>::from(
             result_path.to_string_lossy().to_string(),
         ))
+    });
+    let _ = app.models_mut().update(&st.followup_last_result_json, |v| {
+        *v = serde_json::to_string_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_regression_followup_result",
+            "status": "running",
+            "id": id.as_str(),
+        }))
+        .unwrap_or_else(|err| fallback_followup_result_json(&err.to_string()))
     });
     let _ = app
         .models_mut()
@@ -284,5 +310,13 @@ mod tests {
         assert_eq!(value["error"], "boom");
         assert_eq!(value["started_unix_ms"], 10);
         assert_eq!(value["finished_unix_ms"], 20);
+
+        let command = regression_bundle_followup_commands(["target/fret-diag/run-a"])
+            .into_iter()
+            .find(|command| command.id == "stats")
+            .expect("stats command");
+        let record = build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
+        let json = followup_result_record_json(&record).expect("record json text");
+        assert!(json.contains("\"status\": \"passed\""));
     }
 }

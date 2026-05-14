@@ -193,6 +193,7 @@ struct State {
     followup_in_flight: Model<bool>,
     followup_last_command_line: Model<Option<Arc<str>>>,
     followup_last_result_path: Model<Option<Arc<str>>>,
+    followup_last_result_json: Model<String>,
     followup_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
@@ -370,6 +371,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let followup_in_flight = app.models_mut().insert(false);
     let followup_last_command_line = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_result_path = app.models_mut().insert(None::<Arc<str>>);
+    let followup_last_result_json = app.models_mut().insert(String::new());
     let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
@@ -504,6 +506,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         followup_in_flight,
         followup_last_command_line,
         followup_last_result_path,
+        followup_last_result_json,
         followup_last_error,
         viewer_url,
         last_pick_json,
@@ -652,6 +655,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.followup_in_flight, Invalidation::Paint);
     cx.observe_model(&st.followup_last_command_line, Invalidation::Paint);
     cx.observe_model(&st.followup_last_result_path, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_result_json, Invalidation::Paint);
     cx.observe_model(&st.followup_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
@@ -2522,6 +2526,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .read(&st.followup_last_result_path, |v| v.clone())
         .ok()
         .flatten();
+    let followup_last_result_json = cx
+        .app
+        .models()
+        .read(&st.followup_last_result_json, |v| v.clone())
+        .unwrap_or_default();
     let followup_last_error = cx
         .app
         .models()
@@ -3380,6 +3389,15 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
     let selected_followup_status_text = cx.text(followup_status_line);
+    let selected_followup_result_json_blob = text_blob_sized(
+        cx,
+        if followup_last_result_json.trim().is_empty() {
+            "<no follow-up result yet>".to_string()
+        } else {
+            followup_last_result_json
+        },
+        Px(140.0),
+    );
     let selected_bundle_dirs_blob =
         text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
     let selected_capability_sources_blob =
@@ -3412,6 +3430,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Follow-up Run Status",
         "Runnable follow-up commands execute through the shared diagnostics engine and report status here.",
         vec![selected_followup_status_text],
+    );
+    let selected_followup_result_json_section = diag_section(
+        cx,
+        "Follow-up Result JSON",
+        "The latest GUI-launched follow-up result artifact is mirrored here for quick triage.",
+        vec![selected_followup_result_json_blob],
     );
     let selected_followup_commands_section = diag_section(
         cx,
@@ -3470,6 +3494,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_overview_section,
             selected_actions_section,
             selected_followup_run_status_section,
+            selected_followup_result_json_section,
             selected_followup_commands_section,
             selected_runnable_followup_commands_section,
             selected_manual_followup_commands_section,

@@ -557,6 +557,8 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 - Each launched follow-up writes a lightweight `.fret/diag/followups/*.json` result record with
   schema/kind, command metadata, `diag_args`, pass/fail status, optional error, and timing fields.
   The GUI exposes the latest result path so the evidence can be copied without hunting through logs.
+- The selected-summary inspector mirrors the latest result JSON inline in a `Follow-up Result JSON`
+  section, keeping the quick pass/fail/error/timing read inside the DevTools surface.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
 - Focused source gates:

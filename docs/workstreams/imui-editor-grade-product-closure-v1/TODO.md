@@ -174,6 +174,8 @@ reopen.
       through the shared diagnostics engine and records in-flight/error status in the GUI.
       Maintenance: each GUI-launched follow-up now writes a lightweight
       `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
+      Maintenance: the selected-summary inspector mirrors that latest follow-up result JSON inline,
+      so pass/fail/error/timing metadata is visible without opening the artifact manually.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.
