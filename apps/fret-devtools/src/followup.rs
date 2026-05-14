@@ -191,6 +191,32 @@ pub(crate) fn followup_result_history_selected_or_latest_entry<'a>(
         .cloned()
 }
 
+pub(crate) fn followup_result_history_entry_detail_lines(
+    entry: Option<&FollowupResultHistoryEntry>,
+) -> Vec<String> {
+    let Some(entry) = entry else {
+        return vec!["selected follow-up result: <none>".to_string()];
+    };
+    let mut lines = vec![
+        format!("status: {}", entry.status),
+        format!("id: {}", entry.id),
+        format!("label: {}", entry.label),
+        format!("result_path: {}", entry.result_path),
+    ];
+    if let Some(bundle_dir) = entry
+        .bundle_dir
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        lines.push(format!("bundle_dir: {bundle_dir}"));
+    }
+    lines.push(format!("command: {}", entry.command_line));
+    if let Some(error) = entry.error.as_deref().filter(|value| !value.trim().is_empty()) {
+        lines.push(format!("error: {error}"));
+    }
+    lines
+}
+
 pub(crate) fn poll_followup_jobs(app: &mut App, st: &mut State) {
     while let Ok(msg) = st.followup_rx.try_recv() {
         let result_path_text = msg.result_path.to_string_lossy().to_string();
@@ -723,6 +749,31 @@ mod tests {
             )
             .map(|entry| entry.result_path),
             Some(".fret/diag/followups/30-triage.json".to_string())
+        );
+    }
+
+    #[test]
+    fn regression_followup_result_history_entry_detail_lines_surface_repro_fields() {
+        let entry = history_entry(
+            "triage",
+            "cargo run -p fretboard-dev -- diag triage target/fret-diag/run-a --json",
+            ".fret/diag/followups/30-triage.json",
+            "target/fret-diag/run-a",
+            "failed",
+            Some("boom"),
+        );
+
+        let text = followup_result_history_entry_detail_lines(Some(&entry)).join("\n");
+
+        assert!(text.contains("status: failed"));
+        assert!(text.contains("id: triage"));
+        assert!(text.contains("result_path: .fret/diag/followups/30-triage.json"));
+        assert!(text.contains("bundle_dir: target/fret-diag/run-a"));
+        assert!(text.contains("command: cargo run -p fretboard-dev -- diag triage"));
+        assert!(text.contains("error: boom"));
+        assert_eq!(
+            followup_result_history_entry_detail_lines(None),
+            vec!["selected follow-up result: <none>".to_string()]
         );
     }
 }

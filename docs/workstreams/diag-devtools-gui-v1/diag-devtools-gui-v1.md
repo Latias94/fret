@@ -88,6 +88,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   selected-summary evidence.
 - That selected-bundle history is now rendered as selectable result entries, allowing authors to
   switch the summary/raw JSON/copy target between recent follow-up artifacts.
+- The selected result now has a details block with status, path, command, bundle, and error preview,
+  plus a copy action for the exact command that produced that artifact.
 - The copy action now uses the selected bundle's latest follow-up history entry rather than the
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue

@@ -120,6 +120,8 @@ Conventions:
         selected bundle, preventing stale global-last results from masquerading as current evidence.
   - [x] GUI selected-summary inspector renders selected-bundle follow-up history as selectable
         result entries that switch the summary/raw JSON/copy target.
+  - [x] GUI selected-summary inspector shows selected follow-up result details and can copy the
+        exact command that produced the selected artifact.
   - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
         the global last result artifact.
   - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.

@@ -326,6 +326,8 @@ Current status:
   launched follow-up.
 - 2026-05-15 selected-bundle follow-up history now renders as selectable result entries, allowing
   authors to switch the summary/raw JSON/copy target between recent artifacts.
+- 2026-05-15 selected follow-up results now have a details block with status, path, command,
+  bundle, and error preview, and the exact producing command can be copied from the inspector.
 - 2026-05-15 the follow-up result copy action now resolves the selected bundle's latest history
   path instead of the global last result artifact, keeping copied evidence aligned with selection.
 - 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping

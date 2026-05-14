@@ -70,6 +70,8 @@ const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.follo
 const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
 const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
 const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.copy_result_json";
+const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
+    "fret.devtools.regression.followup.copy_result_command";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -3110,6 +3112,15 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if selected_followup_result_entry.is_some() {
+            out.push(
+                shadcn::Button::new("Copy selected follow-up command")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_RESULT_COMMAND)
+                    .into_element(cx),
+            );
+        }
         if !selected_followup_result_json.trim().is_empty() {
             out.push(
                 shadcn::Button::new("Copy selected follow-up JSON")
@@ -3441,6 +3452,14 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
     let selected_followup_status_text = cx.text(followup_status_line);
+    let selected_followup_result_detail_blob = text_blob_sized(
+        cx,
+        followup::followup_result_history_entry_detail_lines(
+            selected_followup_result_entry.as_ref(),
+        )
+        .join("\r\n"),
+        Px(120.0),
+    );
     let selected_followup_result_summary_blob = text_blob_sized(
         cx,
         followup::followup_result_summary_lines(&selected_followup_result_json).join("\r\n"),
@@ -3504,6 +3523,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Follow-up Run Status",
         "Runnable follow-up commands execute through the shared diagnostics engine and report status here.",
         vec![selected_followup_status_text],
+    );
+    let selected_followup_result_detail_section = diag_section(
+        cx,
+        "Follow-up Result Details",
+        "Selected result status, path, command, bundle, and error preview for reproduction.",
+        vec![selected_followup_result_detail_blob],
     );
     let selected_followup_result_summary_section = diag_section(
         cx,
@@ -3583,6 +3608,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_overview_section,
             selected_actions_section,
             selected_followup_run_status_section,
+            selected_followup_result_detail_section,
             selected_followup_result_summary_section,
             selected_followup_result_history_section,
             selected_followup_result_json_section,
@@ -4088,6 +4114,10 @@ fn selected_followup_result_path_from_state(app: &App, st: &State) -> Option<Str
     selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_path)
 }
 
+fn selected_followup_result_command_from_state(app: &App, st: &State) -> Option<String> {
+    selected_followup_result_entry_from_state(app, st).map(|entry| entry.command_line)
+}
+
 fn selected_followup_result_json_from_state(app: &App, st: &State) -> Option<String> {
     selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_json)
 }
@@ -4277,6 +4307,22 @@ fn on_command(
                 window,
                 token,
                 text: path,
+            });
+        }
+        CMD_COPY_FOLLOWUP_RESULT_COMMAND => {
+            let Some(command_line) = selected_followup_result_command_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected follow-up command refused (no selected-bundle result command yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: command_line,
             });
         }
         CMD_COPY_FOLLOWUP_RESULT_JSON => {
