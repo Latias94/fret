@@ -813,11 +813,23 @@ impl<H: UiHost> UiTree<H> {
                             // `render_root` can reconcile row subtrees in the next frame.
                             self.request_redraw_coalesced(app);
                         } else {
-                            // Do not dirty the cache root from the scroll-handle binding pass.
-                            // Window-boundary shifts are owned by prepaint (ADR 0175): this pass
-                            // only schedules a frame where prepaint can compare the latest handle
-                            // offset against the still-rendered window and record/schedule the
-                            // escape update.
+                            if commit_scroll_handle_baselines {
+                                // Final scroll-handle consumption can happen without a later
+                                // prepaint owner (for example a revision-only bump observed before
+                                // paint). At that point the cached non-retained window must be
+                                // invalidated directly to avoid stale rows.
+                                self.mark_nearest_view_cache_root_needs_rerender(
+                                    node,
+                                    UiDebugInvalidationSource::Other,
+                                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                                );
+                            } else {
+                                // Pre-render peeks should not dirty the cache root. Window-boundary
+                                // shifts are owned by prepaint (ADR 0175): this pass only schedules
+                                // a frame where prepaint can compare the latest handle offset
+                                // against the still-rendered window and record/schedule the escape
+                                // update.
+                            }
                             self.request_redraw_coalesced(app);
                         }
                     }

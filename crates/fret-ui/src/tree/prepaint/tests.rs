@@ -139,6 +139,115 @@ fn prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape() {
 }
 
 #[test]
+fn prepaint_attributes_window_escape_to_scroll_offset_when_state_offset_was_synced() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let cache_root = ui.create_node(NoopWidget);
+    ui.nodes[cache_root].view_cache.enabled = true;
+    ui.set_root(cache_root);
+
+    let element = GlobalElementId(1);
+    let vlist_node = ui.create_node_for_element(element, NoopWidget);
+    ui.add_child(cache_root, vlist_node);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(40.0)),
+    );
+    ui.nodes[vlist_node].bounds = bounds;
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |frame| {
+        frame.instances.insert(
+            vlist_node,
+            crate::declarative::frame::ElementRecord {
+                element,
+                instance: crate::declarative::frame::ElementInstance::VirtualList(
+                    crate::element::VirtualListProps {
+                        layout: crate::element::LayoutStyle::default(),
+                        axis: fret_core::Axis::Vertical,
+                        len: 1000,
+                        items_revision: 1,
+                        estimate_row_height: Px(10.0),
+                        measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+                        key_cache: crate::element::VirtualListKeyCacheMode::VisibleOnly,
+                        overscan: 10,
+                        keep_alive: 0,
+                        scroll_margin: Px(0.0),
+                        gap: Px(0.0),
+                        scroll_handle: scroll_handle.clone(),
+                        visible_items: Vec::new(),
+                    },
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: None,
+            },
+        );
+    });
+
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(620.0)));
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        element,
+        crate::element::VirtualListState::default,
+        |state| {
+            state.metrics.ensure_with_mode(
+                crate::element::VirtualListMeasureMode::Fixed,
+                1000,
+                Px(10.0),
+                Px(0.0),
+                Px(0.0),
+            );
+            state.items_revision = 1;
+            state.offset_y = Px(620.0);
+            state.viewport_h = bounds.size.height;
+            state.render_window_range = Some(crate::virtual_list::VirtualRange {
+                start_index: 0,
+                end_index: 20,
+                overscan: 10,
+                count: 1000,
+            });
+        },
+    );
+
+    let record = InteractionRecord {
+        node: vlist_node,
+        bounds,
+        render_transform_inv: None,
+        children_render_transform_inv: None,
+        clips_hit_test: true,
+        clip_hit_test_corner_radii: None,
+        is_focusable: false,
+        focus_traversal_children: true,
+        can_scroll_descendant_into_view: true,
+    };
+
+    ui.prepaint_virtual_list_window_from_interaction_record(&mut app, &record);
+    let last = ui
+        .debug_virtual_list_windows()
+        .last()
+        .expect("expected a debug virtual list window record");
+    assert!(
+        last.window_mismatch,
+        "expected the synced offset to escape the stale render window"
+    );
+    assert_eq!(
+        last.window_shift_reason,
+        Some(crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset),
+        "prepaint should still attribute stale-window escapes to scroll offset when an earlier binding pass already synced VirtualListState.offset_y"
+    );
+}
+
+#[test]
 fn prepaint_detects_render_window_insufficient_for_overscan_policy() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();

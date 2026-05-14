@@ -93,10 +93,19 @@ impl<T> WorkspacePaneContentFocusTarget<T> {
         };
         let id = child.id;
 
-        let _ = cx
+        // Avoid no-op registry writes during render: `ModelStore::update` always marks the model
+        // dirty, so callers must read first when the mapping is unchanged.
+        let needs_update = cx
             .app
             .models_mut()
-            .update(&registry, |reg| reg.set_if_changed(key, id));
+            .read(&registry, |reg| reg.get(&key) != Some(id))
+            .unwrap_or(true);
+        if needs_update {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&registry, |reg| reg.set_if_changed(key, id));
+        }
 
         child
     }
