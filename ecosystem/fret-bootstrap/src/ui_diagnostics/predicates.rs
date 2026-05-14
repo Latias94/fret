@@ -58,6 +58,31 @@ fn semantics_scroll_field_value(
     }
 }
 
+fn semantics_live_from_protocol(
+    live: fret_diag_protocol::UiSemanticsLiveV1,
+) -> fret_core::SemanticsLive {
+    match live {
+        fret_diag_protocol::UiSemanticsLiveV1::Off => fret_core::SemanticsLive::Off,
+        fret_diag_protocol::UiSemanticsLiveV1::Polite => fret_core::SemanticsLive::Polite,
+        fret_diag_protocol::UiSemanticsLiveV1::Assertive => fret_core::SemanticsLive::Assertive,
+    }
+}
+
+fn semantics_action_value(
+    actions: fret_core::SemanticsActions,
+    action: fret_diag_protocol::UiSemanticsActionV1,
+) -> bool {
+    match action {
+        fret_diag_protocol::UiSemanticsActionV1::Focus => actions.focus,
+        fret_diag_protocol::UiSemanticsActionV1::Invoke => actions.invoke,
+        fret_diag_protocol::UiSemanticsActionV1::SetValue => actions.set_value,
+        fret_diag_protocol::UiSemanticsActionV1::Decrement => actions.decrement,
+        fret_diag_protocol::UiSemanticsActionV1::Increment => actions.increment,
+        fret_diag_protocol::UiSemanticsActionV1::ScrollBy => actions.scroll_by,
+        fret_diag_protocol::UiSemanticsActionV1::SetTextSelection => actions.set_text_selection,
+    }
+}
+
 fn app_snapshot_field_equals(
     app_snapshot: Option<&serde_json::Value>,
     pointer: &str,
@@ -154,6 +179,7 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::AppSnapshotFieldEquals { pointer, value } => {
             app_snapshot_field_equals(app_snapshot, pointer, value)
         }
+        UiPredicateV1::RawSemanticsHiddenIs { .. } => None,
         UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
         UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
@@ -259,6 +285,12 @@ fn eval_predicate_without_semantics(
                 None => !*active,
             })
         }
+        UiPredicateV1::DockViewportCaptureActiveIs { active } => Some(
+            docking
+                .and_then(|d| d.viewport_capture)
+                .is_some()
+                == *active,
+        ),
         UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
             let preview = docking
                 .and_then(|d| d.dock_drop_resolve.as_ref())
@@ -619,6 +651,9 @@ fn eval_predicate(
     let select_node = |target: &UiSelectorV1| {
         select_semantics_node_scoped(snapshot, window, element_runtime, target, scope_root)
     };
+    let select_raw_node = |target: &UiSelectorV1| {
+        select_raw_semantics_node_scoped(snapshot, window, element_runtime, target, scope_root)
+    };
 
     match pred {
         UiPredicateV1::AppSnapshotFieldEquals { pointer, value } => {
@@ -626,6 +661,14 @@ fn eval_predicate(
         }
         UiPredicateV1::Exists { target } => select_node(target).is_some(),
         UiPredicateV1::NotExists { target } => select_node(target).is_none(),
+        UiPredicateV1::RawSemanticsHiddenIs { target, hidden } => {
+            let Some(node) = select_raw_node(target) else {
+                return false;
+            };
+            let index = SemanticsIndex::new(snapshot);
+            let node_id = node.id.data().as_ffi();
+            index.nearest_semantics_hidden_ancestor_or_self(node_id).is_some() == *hidden
+        }
         UiPredicateV1::ExistsUnder { scope, target } => {
             let Some(scope_node) = select_node(scope) else {
                 return false;
@@ -775,17 +818,67 @@ fn eval_predicate(
             };
             node.set_size == Some(*set_size)
         }
+        UiPredicateV1::LevelIs { target, level } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.extra.level == Some(*level)
+        }
         UiPredicateV1::CheckedIs { target, checked } => {
             let Some(node) = select_node(target) else {
                 return false;
             };
             node.flags.checked == Some(*checked)
         }
+        UiPredicateV1::ExpandedIs { target, expanded } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.expanded == *expanded
+        }
+        UiPredicateV1::SemanticsLiveIs { target, live } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.live == live.map(semantics_live_from_protocol)
+        }
+        UiPredicateV1::SemanticsLiveAtomicIs {
+            target,
+            live_atomic,
+        } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.live_atomic == *live_atomic
+        }
         UiPredicateV1::SelectedIs { target, selected } => {
             let Some(node) = select_node(target) else {
                 return false;
             };
             node.flags.selected == *selected
+        }
+        UiPredicateV1::DisabledIs { target, disabled } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.disabled == *disabled
+        }
+        UiPredicateV1::SemanticsActionIs {
+            target,
+            action,
+            enabled,
+        } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            semantics_action_value(node.actions, *action) == *enabled
+        }
+        UiPredicateV1::CapturedIs { target, captured } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let is_captured = snapshot.captured == Some(node.id) || node.flags.captured;
+            is_captured == *captured
         }
         UiPredicateV1::SemanticsNumericApproxEq {
             target,
@@ -1587,6 +1680,9 @@ fn eval_predicate(
                 None => !*active,
             }
         }
+        UiPredicateV1::DockViewportCaptureActiveIs { active } => {
+            docking.and_then(|d| d.viewport_capture).is_some() == *active
+        }
         UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
             let Some(preview) = docking
                 .and_then(|d| d.dock_drop_resolve.as_ref())
@@ -1760,10 +1856,49 @@ fn eval_predicate(
 #[cfg(test)]
 mod predicate_tests {
     use super::*;
+    use fret_core::{
+        NodeId, Point, PointerId, Px, Rect, RenderTargetId, SemanticsActions, SemanticsFlags,
+        SemanticsLive, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
+    };
     use slotmap::KeyData;
+
+    fn node_id(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
 
     fn window_id(id: u64) -> AppWindowId {
         AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+
+    fn semantics_node(id: u64, test_id: &str, captured: bool) -> SemanticsNode {
+        SemanticsNode {
+            id: node_id(id),
+            parent: None,
+            role: SemanticsRole::ScrollBar,
+            bounds: rect(0.0, 0.0, 10.0, 50.0),
+            flags: SemanticsFlags {
+                captured,
+                ..Default::default()
+            },
+            test_id: Some(test_id.to_string()),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            extra: Default::default(),
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+        }
     }
 
     #[test]
@@ -1821,6 +1956,712 @@ mod predicate_tests {
         );
 
         assert_eq!(ok, Some(false));
+    }
+
+    #[test]
+    fn dock_viewport_capture_active_matches_docking_snapshot() {
+        let docking = fret_runtime::DockingInteractionDiagnostics {
+            viewport_capture: Some(fret_runtime::ViewportCaptureDiagnostics {
+                pointer_id: PointerId(1),
+                target: RenderTargetId::default(),
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            eval_predicate_without_semantics(
+                window_id(1),
+                &[],
+                1,
+                None,
+                None,
+                None,
+                None,
+                Some(&docking),
+                None,
+                None,
+                &UiPredicateV1::DockViewportCaptureActiveIs { active: true },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_predicate_without_semantics(
+                window_id(1),
+                &[],
+                1,
+                None,
+                None,
+                None,
+                None,
+                Some(&docking),
+                None,
+                None,
+                &UiPredicateV1::DockViewportCaptureActiveIs { active: false },
+            ),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn captured_is_matches_semantics_capture_owner() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Generic;
+        let mut scrollbar = semantics_node(2, "scrollbar", false);
+        scrollbar.parent = Some(node_id(1));
+        let mut viewport = semantics_node(3, "viewport", false);
+        viewport.parent = Some(node_id(1));
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: Some(node_id(2)),
+            nodes: vec![root, scrollbar, viewport],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::CapturedIs {
+                target: UiSelectorV1::TestId {
+                    id: "scrollbar".to_string(),
+                    root_z_index: None,
+                },
+                captured: true,
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::CapturedIs {
+                target: UiSelectorV1::TestId {
+                    id: "viewport".to_string(),
+                    root_z_index: None,
+                },
+                captured: false,
+            },
+        ));
+    }
+
+    #[test]
+    fn expanded_is_matches_semantics_expanded_flag() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut trigger = semantics_node(2, "accordion-trigger", false);
+        trigger.parent = Some(root.id);
+        trigger.role = SemanticsRole::Button;
+        trigger.flags.expanded = true;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, trigger],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::ExpandedIs {
+                target: UiSelectorV1::TestId {
+                    id: "accordion-trigger".to_string(),
+                    root_z_index: None,
+                },
+                expanded: true,
+            },
+        ));
+    }
+
+    #[test]
+    fn collection_metadata_predicates_match_semantics_position_fields() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut item = semantics_node(2, "command-item-code-editor", false);
+        item.parent = Some(root.id);
+        item.role = SemanticsRole::ListBoxOption;
+        item.pos_in_set = Some(23);
+        item.set_size = Some(23);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, item],
+        };
+        let target = UiSelectorV1::TestId {
+            id: "command-item-code-editor".to_string(),
+            root_z_index: None,
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::PosInSetIs {
+                target: target.clone(),
+                pos_in_set: 23,
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::SetSizeIs {
+                target,
+                set_size: 23,
+            },
+        ));
+    }
+
+    #[test]
+    fn level_is_matches_semantics_hierarchy_level() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut item = semantics_node(2, "tree-row-folder", false);
+        item.parent = Some(root.id);
+        item.role = SemanticsRole::TreeItem;
+        item.extra.level = Some(2);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, item],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::LevelIs {
+                target: UiSelectorV1::TestId {
+                    id: "tree-row-folder".to_string(),
+                    root_z_index: None,
+                },
+                level: 2,
+            },
+        ));
+    }
+
+    #[test]
+    fn disabled_is_matches_semantics_disabled_flag() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut button = semantics_node(2, "pagination-prev", false);
+        button.parent = Some(root.id);
+        button.role = SemanticsRole::Button;
+        button.flags.disabled = true;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, button],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::DisabledIs {
+                target: UiSelectorV1::TestId {
+                    id: "pagination-prev".to_string(),
+                    root_z_index: None,
+                },
+                disabled: true,
+            },
+        ));
+    }
+
+    #[test]
+    fn semantics_action_is_matches_all_exported_action_flags() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut slider = semantics_node(2, "volume", false);
+        slider.parent = Some(root.id);
+        slider.role = SemanticsRole::Slider;
+        slider.actions = SemanticsActions {
+            focus: true,
+            invoke: false,
+            set_value: true,
+            decrement: true,
+            increment: true,
+            scroll_by: false,
+            set_text_selection: false,
+        };
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, slider],
+        };
+
+        for (action, enabled) in [
+            (fret_diag_protocol::UiSemanticsActionV1::Focus, true),
+            (fret_diag_protocol::UiSemanticsActionV1::Invoke, false),
+            (fret_diag_protocol::UiSemanticsActionV1::SetValue, true),
+            (fret_diag_protocol::UiSemanticsActionV1::Decrement, true),
+            (fret_diag_protocol::UiSemanticsActionV1::Increment, true),
+            (fret_diag_protocol::UiSemanticsActionV1::ScrollBy, false),
+            (
+                fret_diag_protocol::UiSemanticsActionV1::SetTextSelection,
+                false,
+            ),
+        ] {
+            assert!(
+                eval_predicate(
+                    &snapshot,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    window,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    &[],
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    0,
+                    false,
+                    true,
+                    &UiPredicateV1::SemanticsActionIs {
+                        target: UiSelectorV1::TestId {
+                            id: "volume".to_string(),
+                            root_z_index: None,
+                        },
+                        action,
+                        enabled,
+                    },
+                ),
+                "expected {action:?} to be {enabled}"
+            );
+        }
+    }
+
+    #[test]
+    fn semantics_live_predicates_match_semantics_live_flags() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut status = semantics_node(2, "toast-viewport", false);
+        status.parent = Some(root.id);
+        status.role = SemanticsRole::Viewport;
+        status.flags.live = Some(SemanticsLive::Polite);
+        status.flags.live_atomic = false;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, status],
+        };
+        let target = UiSelectorV1::TestId {
+            id: "toast-viewport".to_string(),
+            root_z_index: None,
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::SemanticsLiveIs {
+                target: target.clone(),
+                live: Some(fret_diag_protocol::UiSemanticsLiveV1::Polite),
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::SemanticsLiveAtomicIs {
+                target,
+                live_atomic: false,
+            },
+        ));
+    }
+
+    #[test]
+    fn default_predicates_exclude_semantics_hidden_subtrees_but_flags_remain_observable() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut hidden_parent = semantics_node(2, "hidden-parent", false);
+        hidden_parent.parent = Some(root.id);
+        hidden_parent.flags.hidden = true;
+        let mut hidden_child = semantics_node(3, "hidden-child", false);
+        hidden_child.parent = Some(hidden_parent.id);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, hidden_parent, hidden_child],
+        };
+        let hidden_parent_selector = UiSelectorV1::TestId {
+            id: "hidden-parent".to_string(),
+            root_z_index: None,
+        };
+        let hidden_child_selector = UiSelectorV1::TestId {
+            id: "hidden-child".to_string(),
+            root_z_index: None,
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::NotExists {
+                target: hidden_parent_selector.clone(),
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::NotExists {
+                target: hidden_child_selector.clone(),
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::RawSemanticsHiddenIs {
+                target: hidden_parent_selector,
+                hidden: true,
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::RawSemanticsHiddenIs {
+                target: hidden_child_selector,
+                hidden: true,
+            },
+        ));
     }
 
     #[test]

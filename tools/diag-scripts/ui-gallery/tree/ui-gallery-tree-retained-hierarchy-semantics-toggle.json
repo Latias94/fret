@@ -1,0 +1,480 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-tree-retained-hierarchy-semantics-toggle",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "ui_gallery",
+      "tree",
+      "retained",
+      "semantics",
+      "hierarchy",
+            "selected",
+            "disabled",
+            "invoke",
+            "action_state"
+        ],
+        "target_hints": [
+            "Proves retained Tree row hierarchy semantics across collapse/expand detach and reattach.",
+            "Also proves row selected state, dynamic disabled state, focus/invoke action availability, and disabled pointer suppression mutate correctly across retained row reuse."
+        ]
+    },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "tree (torture)",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-tree-torture" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-tree-torture" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-torture-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "role": "tree_item"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "level": 1
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "expanded": true
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "level": 2
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "disabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "selected": false
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "level": 3
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0-toggle" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "expanded": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" }
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0-toggle" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-0" },
+        "expanded": true
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "level": 2
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "disabled": false
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "level": 3
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": false
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "selected": false
+      }
+    },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "activate",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-toggle-target-disabled" }
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "action": "focus",
+        "enabled": false
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "selected": false
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-toggle-target-disabled" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "disabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-2000000" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tree-row-1000000" },
+        "selected": false
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-tree-retained-hierarchy-and-action-state"
+    }
+  ]
+}

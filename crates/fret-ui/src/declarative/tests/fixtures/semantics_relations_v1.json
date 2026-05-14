@@ -247,10 +247,27 @@
             }
           },
           {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "disabled_is",
+              "target": { "kind": "test_id", "id": "option-disabled" },
+              "disabled": true
+            }
+          },
+          {
             "kind": "semantics_action_is",
             "target": { "kind": "test_id", "id": "option-two" },
             "action": "invoke",
             "expected": true
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "semantics_action_is",
+              "target": { "kind": "test_id", "id": "option-disabled" },
+              "action": "invoke",
+              "enabled": false
+            }
           }
         ]
       },
@@ -343,6 +360,58 @@
       "evidence": {
         "upstream_ref": "ARIA live region plus structured range/scroll metadata",
         "note": "SemanticsProps is the mechanism layer surface for non-recipe semantic metadata; harness must prove it is observable through the shared oracle."
+      }
+    },
+    {
+      "id": "semantics-wrapper-hierarchy-metadata",
+      "scenario": { "kind": "semantics_wrapper_hierarchy_metadata" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "role_is",
+              "target": { "kind": "test_id", "id": "tree-root" },
+              "role": "tree_item"
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "level_is",
+              "target": { "kind": "test_id", "id": "tree-root" },
+              "level": 1
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "expanded_is",
+              "target": { "kind": "test_id", "id": "tree-root" },
+              "expanded": true
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "level_is",
+              "target": { "kind": "test_id", "id": "tree-child" },
+              "level": 2
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "expanded_is",
+              "target": { "kind": "test_id", "id": "tree-child" },
+              "expanded": false
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA treeitem aria-level and aria-expanded hierarchy metadata",
+        "note": "Tree-like semantics need structured hierarchy predicates; layout indentation is not a valid accessibility oracle."
       }
     },
     {

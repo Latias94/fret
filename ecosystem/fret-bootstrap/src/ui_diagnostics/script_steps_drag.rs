@@ -699,13 +699,16 @@ pub(super) fn handle_drag_pointer_until_step(
                     }
 
                     if !state.release_on_success {
-                        active.pointer_session = Some(V2PointerSessionState {
-                            window: state.playback.window,
-                            button: state.playback.button,
-                            pointer_type,
-                            modifiers: Modifiers::default(),
-                            position: release_pos,
-                        });
+                        active.insert_pointer_session(
+                            PointerId(0),
+                            V2PointerSessionState {
+                                window: state.playback.window,
+                                button: state.playback.button,
+                                pointer_type,
+                                modifiers: Modifiers::default(),
+                                position: release_pos,
+                            },
+                        );
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;

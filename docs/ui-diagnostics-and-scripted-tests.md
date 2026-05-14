@@ -1275,7 +1275,11 @@ Predicates (v1 MVP):
 - `{"kind":"pos_in_set_is","target":<selector>,"pos_in_set":2}`
 - `{"kind":"set_size_is","target":<selector>,"set_size":10}`
 - `{"kind":"checked_is","target":<selector>,"checked":true}`
+- `{"kind":"expanded_is","target":<selector>,"expanded":true}` (target exists and its semantics expanded flag matches; useful for Accordion/Disclosure style mutation gates)
 - `{"kind":"selected_is","target":<selector>,"selected":true}`
+- `{"kind":"semantics_live_is","target":<selector>,"live":"polite"}` (target exists and its semantics live-region mode matches; allowed values are `off`, `polite`, and `assertive`)
+- `{"kind":"semantics_live_atomic_is","target":<selector>,"live_atomic":false}` (target exists and its semantics live-region atomic flag matches)
+- `{"kind":"raw_semantics_hidden_is","target":<selector>,"hidden":true}` (raw diagnostics-only semantics lookup; checks effective hidden including ancestors, and proves hidden/decorative nodes remain inspectable while default `exists`/`not_exists` stay filtered)
 - `{"kind":"window_inner_size_approx_equal","width_px":375,"height_px":240,"eps_px":1}` (effective window-local layout viewport must match; use after `set_window_inner_size` before responsive component assertions)
 - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
@@ -1298,6 +1302,7 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"known_window_count_ge","n":2}`
 - `{"kind":"known_window_count_is","n":1}`
 - `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
+- `{"kind":"dock_viewport_capture_active_is","active":false}`
 - `{"kind":"dock_graph_node_count_le","max":32}`
 - `{"kind":"dock_graph_max_split_depth_le","max":8}`
 

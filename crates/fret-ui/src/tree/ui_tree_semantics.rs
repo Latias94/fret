@@ -6,7 +6,11 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn request_semantics_snapshot_if_dirty(&mut self) -> bool {
-        if self.semantics.is_none() || self.semantics_dirty {
+        let semantics_input_state_dirty = self.semantics.as_deref().is_some_and(|snapshot| {
+            snapshot.focus != self.focus || snapshot.captured != self.captured_for(PointerId(0))
+        });
+
+        if self.semantics.is_none() || self.semantics_dirty || semantics_input_state_dirty {
             self.request_semantics_snapshot();
             true
         } else {

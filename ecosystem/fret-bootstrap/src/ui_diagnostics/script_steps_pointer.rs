@@ -2638,7 +2638,7 @@ pub(super) fn handle_move_pointer_step(
     );
     if let Some(target_window) = resolved_target_window {
         if target_window != window {
-            let pointer_session_active = active.pointer_session.is_some();
+            let pointer_session_active = active.has_pointer_session();
             let dock_drag_active = app.drag(fret_core::PointerId(0)).is_some_and(|d| {
                 (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                     || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
@@ -2930,9 +2930,9 @@ pub(super) fn handle_move_pointer_step(
         // This keeps `move_pointer` useful for scripted docking flows without requiring scripts to
         // switch to a delta-driven `pointer_move` step purely to update docking arbitration.
         let modifiers = active
-            .pointer_session
-            .as_ref()
-            .filter(|session| session.window == window)
+            .pointer_sessions
+            .values()
+            .find(|session| session.window == window)
             .map(|session| session.modifiers)
             .unwrap_or_default();
         output

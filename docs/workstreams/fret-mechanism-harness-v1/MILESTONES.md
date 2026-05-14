@@ -454,3 +454,326 @@ Status: complete
   capture active/release state.
 - Remaining follow-up: add owner/test-id attribution, underlay blocking probes, and
   release-on-cancel coverage once a stable public demo exposes those surfaces.
+
+## M35: Pointer-Capture Owner and Cancel Runtime Gate
+
+Status: complete
+
+- The pointer-capture runtime gate now has owner-level assertions through the new `captured_is`
+  predicate, so scripts can prove which semantics node owns capture rather than only proving that
+  some capture is active.
+- The first owner-level runtime run exposed a confirmed mechanism defect: semantics snapshots could
+  stay stale when live pointer-capture owner state changed without a layout or semantics dirty bit.
+  `UiTree::request_semantics_snapshot_if_dirty()` now refreshes when snapshot focus or captured
+  owner differs from the current tree state.
+- The ScrollArea drag baseline gate now asserts owner true during drag and owner false after
+  `pointer_up`, while the new pointer-cancel companion asserts both active capture and owner state
+  clear after `pointer_cancel`.
+- Focused gates cover `UiPredicateV1::CapturedIs` serialization, synthetic oracle behavior,
+  runtime predicate evaluation, and the `fret-ui` semantics dirty gate.
+- Remaining follow-up: add captured-pointer underlay blocking, multi-pointer/cross-window capture,
+  and nested overlay branch/corridor runtime probes.
+
+## M36: Multi-Pointer Captured-Underlay Runtime Gate
+
+Status: complete
+
+- Schema-v2 pointer-session steps now accept optional `pointer_id`, defaulting to `0` for existing
+  mouse-pointer scripts.
+- The diagnostics runner now tracks active pointer sessions by `PointerId` instead of a single
+  global session, and pointer-move continuation state is keyed by the script pointer id.
+- Non-default touch/pen pointer sessions no longer write global mouse cursor/button override files,
+  so a synthetic underlay touch cannot move or release pointer 0's captured mouse drag.
+- UI Gallery ScrollArea diagnostics now expose a separate `viewport-probe` target without changing
+  the original scrollbar drag baseline's scroll/group semantics.
+- The new runtime gate `ui-gallery-scrollbar-drag-multipointer-underlay-touch.json` proves pointer 0
+  keeps scrollbar capture while pointer 1 touch-down/up targets the viewport probe, then proves
+  pointer 0 cancel releases active capture and owner state.
+- Remaining follow-up: extend the same multi-pointer capability to cross-window docking/tear-out and
+  nested overlay branch/corridor probes.
+
+## M37: Cross-Window Docking Multi-Pointer Runtime Gate
+
+Status: complete
+
+- Diagnostics protocol now exposes `dock_viewport_capture_active_is`, backed by the docking
+  `viewport_capture` diagnostics snapshot, so runtime scripts can assert the forbidden competing
+  capture state directly.
+- The new docking arbitration gate
+  `docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json` tears off a dock
+  tab into a second OS window, starts a dock drag in the overlapping moving window, then probes the
+  main-window viewport with pointer 1 as touch input.
+- The gate proves the dock drag remains active and the main-window viewport does not start capture
+  while the secondary pointer is down/up.
+- No core docking defect was reproduced. The defect fixed in this slice was a harness observability
+  gap: runtime diagnostics could not previously assert viewport-capture absence directly.
+- Remaining follow-up: add nested overlay branch/corridor runtime probes that combine modal
+  barrier, submenu safe corridor, hover intent, and outside-pointer routing.
+
+## M38: ContextMenu Submenu Branch/Corridor Runtime Gate
+
+Status: complete
+
+- ContextMenu submenu coverage now goes beyond placement traces: the runtime gate proves Radix-style
+  branch behavior for moving into submenu content, back to the parent trigger, away from the
+  trigger, and onto another parent-menu item.
+- The new gate `ui-gallery-context-menu-submenu-branch-corridor-routing.json` passed against UI
+  Gallery and is promoted into both the mechanism overlay/focus suite and the shadcn conformance
+  suite.
+- No core hit-test or ContextMenu recipe defect was reproduced. The defect fixed in this slice was
+  harness coverage weakness: branch/corridor behavior was only indirectly covered by placement and
+  existence assertions.
+- Remaining follow-up: add a stable semantics/accessibility runtime gate for filtered default
+  selectors versus diagnostic visibility.
+
+## M39: Hidden Semantics Runtime Selector Parity Gate
+
+Status: complete
+
+- Runtime diagnostics default selectors now match the synthetic hidden-subtree oracle: nodes with
+  `SemanticsFlags.hidden` or a hidden ancestor are filtered out of default selector predicates.
+- Diagnostics now expose `raw_semantics_hidden_is`, a raw/effective hidden predicate for scripts
+  that need to prove hidden/decorative nodes remain inspectable without weakening default
+  selector semantics.
+- The new UI Gallery gate
+  `ui-gallery-separator-decorative-hidden-semantics.json` passed against shadcn Separator and is
+  promoted into the shadcn conformance suite.
+- The slice found and fixed a real diagnostics/runtime mechanism mismatch; no Separator recipe
+  defect was reproduced after the runtime selector fix.
+- Remaining follow-up: add a dynamic semantics mutation gate for live/expanded/selected or
+  active-descendant state changes on a stable UI Gallery recipe.
+
+## M40: Accordion Expanded Semantics Runtime Mutation Gate
+
+Status: complete
+
+- Diagnostics protocol now exposes `expanded_is`, backed by the semantics expanded flag.
+- The synthetic mechanism oracle now evaluates `UiPredicateV1::ExpandedIs`, so controlled fixtures
+  and runtime scripts share the same predicate vocabulary.
+- The Accordion Usage runtime gate now asserts the trigger starts expanded, becomes collapsed after
+  click, and becomes expanded again after reopening while the panel mount/unmount behavior remains
+  covered.
+- The gate passed against UI Gallery and is promoted into both `ui-gallery-shadcn-runtime-evidence`
+  and `ui-gallery-shadcn-conformance`.
+- No Accordion recipe defect was reproduced. The defect fixed in this slice was harness
+  observability: runtime scripts could not previously assert expanded-state mutation directly.
+- Remaining follow-up: add active-descendant mutation coverage for Combobox/Command/Listbox
+  composite widgets where focus remains on a container while the active item changes.
+
+## M41: Composite Active-Descendant Runtime Gate Promotion
+
+Status: complete
+
+- Existing Combobox and Command runtime scripts now form a durable conformance gate for
+  active-descendant mutation: Combobox covers both disabled auto-highlight and first-match
+  auto-highlight, while Command covers controlled selection value and ArrowDown mutation.
+- The Command controlled-selection scripts are promoted into `ui-gallery-command`, and all four
+  active-descendant scripts are promoted into `ui-gallery-shadcn-conformance`.
+- Script roundtrip coverage now locks the four promoted scripts, and the registry now indexes the
+  Command controlled-selection scripts with `active_descendant` tags.
+- No Combobox or Command recipe defect was reproduced. The defect fixed in this slice was harness
+  promotion: active-descendant probes existed but were not all reachable from durable suites.
+- Remaining follow-up: add dynamic live-region/status mutation coverage, or selected-state mutation
+  gates for listbox-style recipes once a deterministic page exposes stable selected semantics.
+
+## M42: Sonner Live-Region Runtime Mutation Gate
+
+Status: complete
+
+- Diagnostics protocol now exposes `semantics_live_is` and `semantics_live_atomic_is`.
+- The synthetic mechanism oracle and bootstrap runtime predicate evaluator now share the same
+  live-region predicate vocabulary.
+- The new Sonner runtime gate proves the `Notifications` toast viewport is absent before a toast is
+  shown, exposes `live=polite` and `live_atomic=false` while the toast is mounted, and disappears
+  after swipe dismissal.
+- The gate passed against UI Gallery and is promoted into `ui-gallery-sonner-docs`,
+  `ui-gallery-shadcn-runtime-evidence`, and `ui-gallery-shadcn-conformance`.
+- No Sonner recipe defect was reproduced. The defect fixed in this slice was harness observability:
+  runtime scripts could not previously assert live-region metadata directly.
+- Remaining follow-up: add selected-state mutation runtime gates for listbox-style recipes.
+
+## M43: Select Selected-State Runtime Mutation Gate
+
+Status: complete
+
+- The primary Select commit-and-label UI Gallery script now asserts selected semantics after a
+  value commit: after selecting Banana and reopening the popup, Banana reports
+  `selected_is=true` while Apple reports `selected_is=false`.
+- The first promoted run exposed a diagnostics script stability defect rather than a Select recipe
+  defect: the script clicked the item before overlay placement/bounds stabilized, so the synthetic
+  click was sent to `y=0` and the label stayed on the previous value.
+- The script now waits for the overlay placement trace and visible viewport bounds before item
+  clicks and before selected-state assertions.
+- The gate passed after the harness fix and is promoted into `ui-gallery-shadcn-runtime-evidence`
+  and `ui-gallery-shadcn-conformance`.
+- Remaining follow-up: add a companion selected-state mutation gate for Tabs or DataTable faceted
+  filters if their gallery pages expose stable selected semantics without state coupling.
+
+## M44: Tabs Selected-State Runtime Mutation Companion
+
+Status: complete
+
+- Added `ui-gallery-tabs-selected-state-mutation.json`, a non-screenshot runtime gate that proves
+  the Tabs demo starts with Account selected, Password unselected, then flips those selected flags
+  after clicking the Password tab.
+- The gate uses stable UI Gallery trigger test IDs and the shared `selected_is` predicate, so it
+  checks the same runtime semantics surface as the Select gate without depending on overlay
+  placement.
+- The gate passed on the first runtime run and is promoted into `ui-gallery-shadcn-runtime-evidence`
+  and `ui-gallery-shadcn-conformance`.
+- No Tabs mechanism or recipe defect was reproduced. The value of this slice is coverage breadth:
+  selected-state semantics are now gated on both overlay-backed Select and inline Tabs.
+- Remaining follow-up: move to collection/positional semantics mutation, or add DataTable faceted
+  selected-state coverage only if a stable selected item surface is available.
+
+## M45: Command Collection Metadata Runtime Mutation Gate
+
+Status: complete
+
+- Added `ui-gallery-command-scrollable-collection-metadata-mutation.json`, a shadcn Command runtime
+  gate that asserts collection position metadata before and after filtering.
+- The gate proves the scrollable Command item `Code Editor` starts with `pos_in_set=23` and
+  `set_size=23`, then after filtering to `code editor` updates to `pos_in_set=1` and `set_size=1`.
+- Diagnostics protocol now has builder helpers for `pos_in_set_is` and `set_size_is`, plus focused
+  protocol serialization and bootstrap runtime predicate tests for collection metadata.
+- The gate passed against UI Gallery and is promoted into `ui-gallery-command`,
+  `ui-gallery-shadcn-runtime-evidence`, and `ui-gallery-shadcn-conformance`.
+- No Command recipe or semantics mechanism defect was reproduced. The fixed defect was a harness
+  coverage gap: collection metadata predicates existed, but no durable shadcn runtime mutation gate
+  exercised filtered collection rebuilding.
+- Remaining follow-up: cover collection metadata mutation across pagination or virtual-list window
+  changes to test retained/windowed node reuse rather than only filtered list rebuilding.
+
+## M46: DataTable Pagination Collection Metadata Runtime Gate
+
+Status: complete
+
+- Added diagnostics-only row anchors to the UI Gallery default DataTable via `TableDebugIds`, using
+  the stable prefix `ui-gallery-data-table-default-row-`.
+- Added `ui-gallery-data-table-default-pagination-collection-metadata.json`, a runtime gate that
+  checks row collection metadata across page changes: page 1 rows 1/2 and 2/2, page 2 rows 1/2 and
+  2/2, and final page row 1/1.
+- The first runtime run exposed a diagnostics script stability defect: `Next` was partially outside
+  the window, so the script click produced `no_hit` and never advanced pagination.
+- The script now scrolls `Next` into view, gates `bounds_within_window`, and uses `click_stable`
+  before asserting the next page's row metadata.
+- The gate passed after the script fix and is promoted into `ui-gallery-data-table`,
+  `ui-gallery-shadcn-runtime-evidence`, and `ui-gallery-shadcn-conformance`.
+- No DataTable pagination or core semantics defect was reproduced. The remaining higher-risk gap is
+  retained/windowed collection metadata mutation, where reused row nodes can retain stale
+  `pos_in_set` or `set_size`.
+
+## M47: Retained Virtual-List Collection Metadata Runtime Gate
+
+Status: complete
+
+- `SemanticsDecoration` and `SemanticsProps` now expose collection metadata, so non-pressable
+  semantics nodes can publish `pos_in_set` and `set_size` without becoming pressables or adding
+  layout wrappers.
+- A focused `fret-ui` gate proves both layout-transparent decorations and semantics wrappers can
+  stamp collection metadata into the snapshot.
+- The Virtual List Torture page now publishes row-root semantics IDs
+  `ui-gallery-virtual-list-row-N` with `ListItem` role, label, `pos_in_set`, and `set_size`, while
+  preserving the existing row label IDs used by older scripts.
+- Added `ui-gallery-virtual-list-retained-collection-metadata-bounce.json`, a runtime gate that
+  proves row 0 starts as item 1/10000, row 25 becomes item 26/10000 after a retained window-boundary
+  scroll, row 0 is detached at that offset, and row 0 returns as item 1/10000 after bouncing back.
+- The first two runtime drafts found harness authoring defects rather than retained-list defects:
+  the script duplicated existing scroll-handle and keep-alive reuse telemetry assertions. The final
+  gate scopes itself to collection metadata plus retained attach/detach, and the existing boundary
+  script continues to own scroll/reuse telemetry.
+- The promoted `ui-gallery-vlist-window-boundary-retained` suite now runs both the old boundary
+  gate and the new collection metadata bounce gate.
+- No stale retained virtual-list collection metadata defect was reproduced after the mechanism
+  observability fix.
+
+## M48: Retained Tree Hierarchy Semantics Mutation Gate
+
+Status: complete
+
+- Added `level_is` to the diagnostics protocol, bootstrap predicate evaluator, and mechanism
+  harness oracle so hierarchy metadata can be asserted outside screenshots.
+- Exported semantics `level` through diagnostics bundles and added synthetic `SemanticsProps`
+  fixture coverage for tree-item hierarchy metadata.
+- Tree and FileTree rows now publish `TreeItem` role, hierarchy `level`, and parent-row
+  `expanded` metadata; Tree toggle buttons also expose `expanded`.
+- Added `ui-gallery-tree-retained-hierarchy-semantics-toggle.json`, a retained Tree runtime gate
+  that proves root/folder/leaf levels, root/folder expanded state, collapse child detachment, and
+  expansion metadata after retained row reuse.
+- The first runtime attempts found harness precondition/stability issues: Tree Torture is a
+  `gallery-dev` page, and the old `click + type_text` nav prelude was less deterministic than the
+  existing `type_text_into(clear_before_type=true)` pattern.
+- The first valid retained Tree run found a real `fret-ui-kit` Tree policy defect: toggle buttons
+  dispatched `tree.toggle.<id>` but no owning layer handled that command, so `TreeState.expanded`
+  never changed and row-level `expanded` semantics stayed stale.
+- Tree now mutates its owned `TreeState` directly for selection and expansion, with focused policy
+  tests plus the retained Tree diagnostics suite locking the behavior.
+- Remaining follow-up: move to retained non-list action-state mutation, for example disabled or
+  invokable row action surfaces on DataTable/FileTree if a stable runtime page exposes them.
+
+## M49: DataTable Pagination Disabled/Invoke Action-State Runtime Gate
+
+Status: complete
+
+- Added `disabled_is` and generic `semantics_action_is` to the diagnostics protocol, builder,
+  bootstrap runtime predicate evaluator, and mechanism harness UI predicate oracle.
+- Diagnostics bundle semantics action export now includes `decrement` and `increment`, so the
+  runtime action surface matches the full core `SemanticsActions` contract rather than only the
+  action flags that earlier scripts happened to need.
+- The synthetic semantics relation fixture now covers a disabled pressable option and asserts both
+  `disabled_is=true` and `semantics_action_is(invoke)=false` through the same UI predicate path
+  used by runtime scripts.
+- `ui-gallery-data-table-default-pagination-collection-metadata.json` now also checks DataTable
+  Prev/Next action-state mutation: first page has Prev disabled/non-invokable and Next
+  enabled/invokable; final page flips those states.
+- The first runtime retry with the new predicate failed because the old `target/dev-fast`
+  `fretboard-dev.exe` binary had not been rebuilt and did not know `semantics_action_is`. After
+  rebuilding, the runtime gate passed.
+- No DataTable pagination component defect was reproduced. The fixed defect was a harness and
+  diagnostics observability gap: runtime scripts could not assert disabled state or arbitrary
+  semantics actions, and bundles omitted two core action flags.
+- Remaining follow-up: add a retained/windowed action-state mutation surface where reused rows or
+  tree/file rows can change `disabled`, `selected`, or `invoke` state without being rebuilt.
+
+## M50: Retained Tree Selected/Invoke Action-State Runtime Gate
+
+Status: complete
+
+- Extended `ui-gallery-tree-retained-hierarchy-semantics-toggle.json` instead of adding a parallel
+  script, so hierarchy semantics, collapse/expand detach/reattach, selected-state mutation, and
+  row invoke availability are checked in one retained Tree lifecycle.
+- The gate now proves retained Tree rows start unselected and invokable, selecting row
+  `1000000` sets `selected_is=true`, collapsing root detaches that row, re-expanding reattaches it
+  with `selected_is=true`, and selecting leaf row `2000000` moves selected state away from the
+  previous row.
+- Added script metadata tags and hints so the diagnostics registry classifies this as both
+  hierarchy and action-state coverage.
+- Focused script roundtrip passed, the single runtime gate passed, and the full
+  `ui-gallery-tree-retained` suite passed with the extended script.
+- No retained Tree mechanism or component policy defect was reproduced. This closes the first
+  retained/windowed action-state mutation gate for selected/invoke state.
+- Remaining follow-up: add a surface where retained row disabled state or invoke availability
+  changes dynamically, because selected-state mutation does not prove stale disabled action
+  suppression.
+
+## M51: Retained Tree Dynamic Disabled/Invoke Suppression Runtime Gate
+
+Status: complete
+
+- Added a diagnostics-only Tree Torture control that flips retained row `2000000` between enabled
+  and disabled through the owned `TreeItem` model while retaining the same large Tree surface.
+- Extended `ui-gallery-tree-retained-hierarchy-semantics-toggle.json` so the retained Tree gate now
+  proves dynamic `disabled_is`, `semantics_action_is(focus)`, and
+  `semantics_action_is(invoke)` mutation, disabled-row pointer clicks do not change selection, and
+  re-enabled rows become selectable again.
+- The first compile found and fixed a diagnostics-control wiring issue: the new control needed the
+  existing action extension trait import and the status label needed the existing `text_color`
+  styling path instead of a non-existent `.text_muted()` helper.
+- Keyboard-route probes showed this Tree surface is not a valid disabled-but-focusable activation
+  target: disabled rows correctly lose focus/invoke action and cannot keep focus after being
+  disabled.
+- Focused script roundtrip passed, the single runtime gate passed, and the full
+  `ui-gallery-tree-retained` suite passed after the dynamic disabled assertions were added.
+- No retained Tree stale disabled/focus/invoke mechanism or component policy defect was reproduced.
+- Remaining follow-up: find a focusable-disabled recipe/primitive surface, such as menu, listbox,
+  or command-style items, for true Enter/Space activation suppression coverage.

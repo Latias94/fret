@@ -56,8 +56,14 @@ fn json_value_contains_string(value: &serde_json::Value, needle: &str) -> bool {
 }
 
 fn no_frame_pointer_move_can_drive(app: &App, active: &ActiveScript) -> bool {
-    active.pointer_session.is_some()
-        && app.drag(fret_core::PointerId(0)).is_some_and(|drag| {
+    let Some(UiActionStepV2::PointerMove { pointer_id, .. }) = active.steps.get(active.next_step)
+    else {
+        return false;
+    };
+    let pointer_id = fret_core::PointerId(*pointer_id);
+
+    active.pointer_session(pointer_id).is_some()
+        && app.drag(pointer_id).is_some_and(|drag| {
             (drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                 || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                 && drag.dragging
@@ -2751,6 +2757,7 @@ mod tests {
         ActiveScript {
             steps: vec![UiActionStepV2::PointerMove {
                 window: None,
+                pointer_id: 0,
                 pointer_kind: None,
                 delta_x: 8.0,
                 delta_y: 0.0,
@@ -2775,13 +2782,16 @@ mod tests {
             wait_overlay_placement_trace: None,
             screenshot_wait: None,
             v2_step_state: None,
-            pointer_session: Some(V2PointerSessionState {
-                window: app_window(2),
-                button: UiMouseButtonV1::Left,
-                pointer_type: PointerType::Mouse,
-                modifiers: Modifiers::default(),
-                position: Point::default(),
-            }),
+            pointer_sessions: HashMap::from([(
+                PointerId(0),
+                V2PointerSessionState {
+                    window: app_window(2),
+                    button: UiMouseButtonV1::Left,
+                    pointer_type: PointerType::Mouse,
+                    modifiers: Modifiers::default(),
+                    position: Point::default(),
+                },
+            )]),
             pending_cancel_cross_window_drag: None,
             last_reported_step: None,
             last_reported_unix_ms: 0,
@@ -2805,21 +2815,30 @@ mod tests {
         }
     }
 
-    fn app_with_drag(kind: fret_runtime::DragKindId, cross_window: bool, dragging: bool) -> App {
+    fn app_with_drag_for_pointer(
+        pointer_id: PointerId,
+        kind: fret_runtime::DragKindId,
+        cross_window: bool,
+        dragging: bool,
+    ) -> App {
         let mut app = App::new();
         if cross_window {
             app.begin_cross_window_drag_with_kind(
-                PointerId(0),
+                pointer_id,
                 kind,
                 app_window(1),
                 Point::default(),
                 (),
             );
         } else {
-            app.begin_drag_with_kind(PointerId(0), kind, app_window(1), Point::default(), ());
+            app.begin_drag_with_kind(pointer_id, kind, app_window(1), Point::default(), ());
         }
-        app.drag_mut(PointerId(0)).unwrap().dragging = dragging;
+        app.drag_mut(pointer_id).unwrap().dragging = dragging;
         app
+    }
+
+    fn app_with_drag(kind: fret_runtime::DragKindId, cross_window: bool, dragging: bool) -> App {
+        app_with_drag_for_pointer(PointerId(0), kind, cross_window, dragging)
     }
 
     #[test]
@@ -2840,7 +2859,7 @@ mod tests {
         let local_drag = app_with_drag(fret_runtime::DRAG_KIND_DOCK_PANEL, false, true);
         let no_drag = App::new();
         let mut no_pointer_session = active.clone();
-        no_pointer_session.pointer_session = None;
+        no_pointer_session.pointer_sessions.clear();
 
         assert!(!no_frame_pointer_move_can_drive(&non_dock_drag, &active));
         assert!(!no_frame_pointer_move_can_drive(&not_dragging, &active));
@@ -2850,6 +2869,29 @@ mod tests {
             &local_drag,
             &no_pointer_session
         ));
+    }
+
+    #[test]
+    fn no_frame_pointer_move_uses_script_pointer_id() {
+        let mut active = active_pointer_move_script();
+        active.steps[0] = UiActionStepV2::PointerMove {
+            window: None,
+            pointer_id: 7,
+            pointer_kind: Some(UiPointerKindV1::Touch),
+            delta_x: 8.0,
+            delta_y: 0.0,
+            steps: 1,
+        };
+        let session = active.pointer_sessions.remove(&PointerId(0)).unwrap();
+        active.pointer_sessions.insert(PointerId(7), session);
+
+        let pointer0_drag =
+            app_with_drag_for_pointer(PointerId(0), fret_runtime::DRAG_KIND_DOCK_PANEL, true, true);
+        let pointer7_drag =
+            app_with_drag_for_pointer(PointerId(7), fret_runtime::DRAG_KIND_DOCK_PANEL, true, true);
+
+        assert!(!no_frame_pointer_move_can_drive(&pointer0_drag, &active));
+        assert!(no_frame_pointer_move_can_drive(&pointer7_drag, &active));
     }
 
     #[test]

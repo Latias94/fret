@@ -1,0 +1,5 @@
+{
+  "kind": "script_redirect",
+  "schema_version": 1,
+  "to": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+}

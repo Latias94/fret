@@ -2,6 +2,27 @@ use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use fret::AppComponentCx;
 
+fn virtual_list_row_label_test_id(index: usize) -> Arc<str> {
+    Arc::<str>::from(format!("ui-gallery-virtual-list-row-{index}-label"))
+}
+
+fn virtual_list_row_semantics(index: usize, len: usize) -> SemanticsDecoration {
+    let mut decoration = SemanticsDecoration::default()
+        .role(fret_core::SemanticsRole::ListItem)
+        .label(format!("Row {index}"))
+        .test_id(Arc::<str>::from(format!(
+            "ui-gallery-virtual-list-row-{index}"
+        )));
+
+    if let (Ok(pos_in_set), Ok(set_size)) =
+        (u32::try_from(index.saturating_add(1)), u32::try_from(len))
+    {
+        decoration = decoration.collection_position(pos_in_set, set_size);
+    }
+
+    decoration
+}
+
 pub(in crate::ui) fn preview_virtual_list_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -231,7 +252,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         };
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
-                        let row_label = cx.text(format!("Row {index}"));
+                        let row_label = cx
+                            .text(format!("Row {index}"))
+                            .test_id(virtual_list_row_label_test_id(index));
                         let extra_line = cx.text(format!(
                             "Details: index={index} seed={} repeat={}",
                             index.wrapping_mul(2654435761),
@@ -253,16 +276,14 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                        let container = cx.container(container_props, |_cx| {
+                        cx.container(container_props, |_cx| {
                             if variable_height && index % 15 == 0 {
                                 vec![row_label, extra_line]
                             } else {
                                 vec![row_label]
                             }
-                        });
-                        container.test_id(Arc::<str>::from(format!(
-                            "ui-gallery-virtual-list-row-{index}-label"
-                        )))
+                        })
+                        .attach_semantics(virtual_list_row_semantics(index, len))
                     });
 
                     cx.virtual_list_keyed_retained_with_layout(
@@ -289,7 +310,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             };
 
                             let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
-                            let row_label = cx.text(format!("Row {index}"));
+                            let row_label = cx
+                                .text(format!("Row {index}"))
+                                .test_id(virtual_list_row_label_test_id(index));
                             let extra_line = cx.text(format!(
                                 "Details: index={index} seed={} repeat={}",
                                 index.wrapping_mul(2654435761),
@@ -311,16 +334,14 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             );
                             container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                            let container = cx.container(container_props, |_cx| {
+                            cx.container(container_props, |_cx| {
                                 if variable_height && index % 15 == 0 {
                                     vec![row_label, extra_line]
                                 } else {
                                     vec![row_label]
                                 }
-                            });
-                            container.test_id(Arc::<str>::from(format!(
-                                "ui-gallery-virtual-list-row-{index}-label"
-                            )))
+                            })
+                            .attach_semantics(virtual_list_row_semantics(index, len))
                         },
                     )
                 }
@@ -414,6 +435,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .items_center()
                                 .into_element(cx)]
                         })
+                        .attach_semantics(virtual_list_row_semantics(index, len))
                     };
 
                     if row_cache {
@@ -536,6 +558,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                         .into_element(cx),
                                 ]
                             })
+                            .attach_semantics(virtual_list_row_semantics(index, len))
                         };
 
                         if row_cache {

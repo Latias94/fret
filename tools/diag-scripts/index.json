@@ -1129,6 +1129,31 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "docking-arbitration",
+        "docking-arbitration/common"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multipointer",
+        "multiwindow",
+        "viewport"
+      ],
+      "target_hints": [
+        "This gate overlaps two OS windows, starts a dock drag in the topmost torn-off window, then probes the underlay main-window viewport with a second touch pointer.",
+        "Expected: the dock drag stays active and no competing viewport capture starts for the secondary pointer."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
       "required_capabilities": [
@@ -3000,16 +3025,22 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-shadcn-conformance",
         "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
+        "a11y",
         "accordion",
         "interaction",
+        "semantics",
         "shadcn",
-        "ui-gallery",
+        "ui_gallery",
         "usage"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Proves the Accordion Usage trigger mutates its expanded semantics state when toggled.",
+        "Also keeps the existing panel mount/unmount behavior gate for the collapsible single item."
+      ]
     },
     {
       "id": "ui-gallery-ai-agent-demo-expand-tool",
@@ -5801,7 +5832,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "auto_highlight",
@@ -5820,7 +5852,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "auto_highlight",
@@ -6414,6 +6447,44 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-palette-controlled-selection-arrowdown",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-arrowdown.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "active_descendant",
+        "command",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-controlled-selection-value",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-value.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "active_descendant",
+        "command",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-command-palette-force-mount-item-visible",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
       "required_capabilities": [
@@ -6502,6 +6573,28 @@
         "Scrolls to the RTL CommandPalette snippet.",
         "Captures a screenshot to validate inline-start/end mirroring for the search icon + padding."
       ]
+    },
+    {
+      "id": "ui-gallery-command-scrollable-collection-metadata-mutation",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "collection_metadata",
+        "command",
+        "filter",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-command-scrollable-filter-clamps-scroll",
@@ -6645,6 +6738,31 @@
       ]
     },
     {
+      "id": "ui-gallery-context-menu-submenu-branch-corridor-routing",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "context_menu",
+        "corridor",
+        "regression_pack",
+        "shadcn",
+        "submenu",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Locks Radix-style submenu branch routing: moving into the submenu and back to the parent trigger keeps the submenu open, while moving to another parent item closes the associated submenu.",
+        "Also checks the away-vs-towards hover corridor with a small LTR sweep."
+      ]
+    },
+    {
       "id": "ui-gallery-context-menu-submenu-safe-corridor-sweep",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-safe-corridor-sweep.json",
       "required_capabilities": [
@@ -6692,6 +6810,34 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-default-pagination-collection-metadata",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-data-table",
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action_state",
+        "collection_metadata",
+        "data_table",
+        "disabled",
+        "invoke",
+        "pagination",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves default DataTable pagination row collection metadata across page changes.",
+        "Also proves Prev/Next disabled state and invoke action availability mutate between first and final page states."
+      ]
     },
     {
       "id": "ui-gallery-data-table-default-recipe-smoke",
@@ -9452,14 +9598,54 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scrollbar-drag-multipointer-underlay-touch",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "multipointer",
+        "regression_pack",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scrollbar-drag-pointer-cancel-release",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "pointer_cancel",
+        "regression_pack",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-select-commit-and-label-update",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json",
       "required_capabilities": [
+        "diag.overlay_placement_trace",
         "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-shadcn-conformance",
         "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [],
@@ -9667,6 +9853,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-separator-decorative-hidden-semantics",
+      "path": "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "a11y",
+        "regression_pack",
+        "semantics",
+        "separator",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves shadcn decorative Separator nodes are excluded from default diagnostics selectors.",
+        "Also proves the raw semantics diagnostics surface can still observe the effective hidden flag for targeted a11y triage."
+      ]
     },
     {
       "id": "ui-gallery-separator-docs-smoke",
@@ -9998,6 +10207,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-sonner-live-region-mutation",
+      "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-sonner-docs"
+      ],
+      "tags": [
+        "live_region",
+        "semantics",
+        "shadcn",
+        "sonner",
+        "toast",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-sonner-open-close-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-open-close-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -10272,6 +10503,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tabs-selected-state-mutation",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "selected",
+        "semantics",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tabs-vertical-list-grows",
       "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
       "required_capabilities": [
@@ -10535,6 +10786,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tree-retained-hierarchy-semantics-toggle",
+      "path": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-tree-retained"
+      ],
+      "tags": [
+        "action_state",
+        "disabled",
+        "hierarchy",
+        "invoke",
+        "retained",
+        "selected",
+        "semantics",
+        "tree",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves retained Tree row hierarchy semantics across collapse/expand detach and reattach.",
+        "Also proves row selected state, dynamic disabled state, focus/invoke action availability, and disabled pointer suppression mutate correctly across retained row reuse."
+      ]
+    },
+    {
       "id": "ui-gallery-tree-retained-toggle-and-scroll",
       "path": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-toggle-and-scroll.json",
       "required_capabilities": [],
@@ -10615,6 +10892,31 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-virtual-list-retained-collection-metadata-bounce",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-vlist-window-boundary-retained"
+      ],
+      "tags": [
+        "collection_metadata",
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "semantics",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
+        "The gate asserts ListItem collection metadata before scrolling, after a retained window-boundary scroll, and after bouncing back to the top."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",

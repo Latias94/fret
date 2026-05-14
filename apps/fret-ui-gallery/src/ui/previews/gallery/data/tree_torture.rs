@@ -1,5 +1,36 @@
 use super::super::super::super::*;
-use fret::AppComponentCx;
+use fret::{AppComponentCx, app::AppRenderActionsExt};
+
+const DYNAMIC_DISABLED_TREE_ROW_ID: u64 = 2_000_000;
+
+fn set_tree_item_disabled(
+    items: &mut [fret_ui_kit::TreeItem],
+    target_id: u64,
+    disabled: bool,
+) -> bool {
+    for item in items {
+        if item.id == target_id {
+            item.disabled = disabled;
+            return true;
+        }
+        if set_tree_item_disabled(&mut item.children, target_id, disabled) {
+            return true;
+        }
+    }
+    false
+}
+
+fn tree_item_disabled(items: &[fret_ui_kit::TreeItem], target_id: u64) -> Option<bool> {
+    for item in items {
+        if item.id == target_id {
+            return Some(item.disabled);
+        }
+        if let Some(disabled) = tree_item_disabled(&item.children, target_id) {
+            return Some(disabled);
+        }
+    }
+    None
+}
 
 pub(in crate::ui) fn preview_tree_torture(
     cx: &mut AppComponentCx<'_>,
@@ -51,6 +82,15 @@ pub(in crate::ui) fn preview_tree_torture(
 
         roots
     });
+    let target_disabled = cx
+        .app
+        .models()
+        .read(&items, |items| {
+            tree_item_disabled(items, DYNAMIC_DISABLED_TREE_ROW_ID)
+        })
+        .ok()
+        .flatten()
+        .unwrap_or(false);
     let state = cx.local_model_keyed("state", || {
         let root_count = 200u64;
         let folders_per_root = 10u64;
@@ -77,6 +117,51 @@ pub(in crate::ui) fn preview_tree_torture(
         })
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2).into_element(cx);
+
+    let controls = {
+        let items_for_toggle = items.clone();
+        let next_disabled = !target_disabled;
+        let status_color = ColorRef::Color(theme.color_token("muted-foreground"));
+        let label = if target_disabled {
+            "Enable dynamic target"
+        } else {
+            "Disable dynamic target"
+        };
+        let status = Arc::<str>::from(format!(
+            "Dynamic target {DYNAMIC_DISABLED_TREE_ROW_ID}: disabled={target_disabled}"
+        ));
+
+        ui::h_flex(move |cx| {
+            vec![
+                shadcn::Button::new(label)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(cx.actions().listen({
+                        let items_for_toggle = items_for_toggle.clone();
+                        move |host, _action_cx| {
+                            let _ = host.models_mut().update(&items_for_toggle, |items| {
+                                set_tree_item_disabled(
+                                    items,
+                                    DYNAMIC_DISABLED_TREE_ROW_ID,
+                                    next_disabled,
+                                );
+                            });
+                        }
+                    }))
+                    .test_id("ui-gallery-tree-toggle-target-disabled")
+                    .into_element(cx),
+                ui::text(status.clone())
+                    .text_sm()
+                    .text_color(status_color)
+                    .test_id("ui-gallery-tree-target-disabled-status")
+                    .into_element(cx),
+            ]
+        })
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx)
+    };
 
     let tree = cx.cached_subtree_with(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
@@ -130,5 +215,9 @@ pub(in crate::ui) fn preview_tree_torture(
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-    vec![header, cx.container(container_props, |_cx| vec![tree])]
+    vec![
+        header,
+        controls,
+        cx.container(container_props, |_cx| vec![tree]),
+    ]
 }

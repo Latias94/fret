@@ -2,6 +2,9 @@
   "schema_version": 2,
   "steps": [
     {
+      "type": "reset_diagnostics"
+    },
+    {
       "predicate": {
         "kind": "exists",
         "target": {
@@ -13,22 +16,10 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-search",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
-    {
-      "text": "tree (torture)",
-      "type": "type_text"
-    },
-    {
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-nav-tree-torture",
+          "id": "ui-gallery-nav-scroll",
           "kind": "test_id"
         }
       },
@@ -36,12 +27,56 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
+      "key": "escape",
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 1280.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "clear_before_type": true,
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "text": "tree (torture)",
+      "timeout_frames": 600,
+      "type": "type_text_into"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "id": "ui-gallery-nav-tree-torture",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "max_move_px": 2.0,
+      "stable_frames": 2,
       "target": {
         "id": "ui-gallery-nav-tree-torture",
         "kind": "test_id"
       },
-      "type": "click"
+      "timeout_frames": 240,
+      "type": "click_stable"
     },
     {
       "predicate": {

@@ -8,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_kit::declarative::table::TableViewOutput;
+use fret_ui_kit::declarative::table::{TableDebugIds, TableViewOutput};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -176,6 +176,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .row_height(Px(40.0))
         .header_height(Px(40.0))
         .column_actions_menu(false)
+        .debug_ids(TableDebugIds {
+            row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-default-row-")),
+            ..Default::default()
+        })
         .output_model(output.clone())
         .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(
