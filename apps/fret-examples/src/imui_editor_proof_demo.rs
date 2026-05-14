@@ -1051,9 +1051,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Name"),
                                                         |cx| {
                                                             TextField::new(
@@ -1081,9 +1079,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Inline rename"),
                                                         |cx| {
                                                             let outcome_model =
@@ -1137,9 +1133,7 @@ where
                                                         inline_rename_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Rename committed"),
                                                         move |cx| {
                                                             proof_compact_readout(
@@ -1158,9 +1152,7 @@ where
                                                     if !inline_rename_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().options(
-                                                                row_cx.row_options.clone(),
-                                                            ),
+                                                            PropertyRow::new(),
                                                             |cx| cx.text("Rename outcome"),
                                                             move |cx| {
                                                                 let outcome =
@@ -1179,9 +1171,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Buffered name"),
                                                         |cx| {
                                                             TextField::new(
@@ -1211,9 +1201,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Password"),
                                                         |cx| {
                                                             let outcome_model =
@@ -1263,9 +1251,7 @@ where
                                                         password_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Secret length"),
                                                         move |cx| {
                                                             let readout =
@@ -1288,9 +1274,7 @@ where
                                                     if !password_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().options(
-                                                                row_cx.row_options.clone(),
-                                                            ),
+                                                            PropertyRow::new(),
                                                             |cx| cx.text("Password outcome"),
                                                             move |cx| {
                                                                 let outcome =
@@ -1309,9 +1293,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Committed"),
                                                         |cx| {
                                                             let committed = editor_string_model_readout(
@@ -1331,9 +1313,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Name assist"),
                                                         |cx| {
                                                             render_editor_name_assist_surface(
@@ -1368,9 +1348,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Assist state"),
                                                         move |cx| {
                                                             let state = name_assist_state.clone();
@@ -1387,9 +1365,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Active assist"),
                                                         move |cx| {
                                                             let active_label =
@@ -1407,9 +1383,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Accepted assist"),
                                                         |cx| {
                                                             let accepted = editor_string_model_readout(
@@ -1434,9 +1408,7 @@ where
 
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Notes"),
                                                         |cx| {
                                                             let outcome_model =
@@ -1485,9 +1457,7 @@ where
                                                         notes_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
-                                                        PropertyRow::new().options(
-                                                            row_cx.row_options.clone(),
-                                                        ),
+                                                        PropertyRow::new(),
                                                         |cx| cx.text("Notes committed"),
                                                         move |cx| {
                                                             let readout =
@@ -1509,9 +1479,7 @@ where
                                                     if !notes_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().options(
-                                                                row_cx.row_options.clone(),
-                                                            ),
+                                                            PropertyRow::new(),
                                                             |cx| cx.text("Notes outcome"),
                                                             move |cx| {
                                                                 let outcome =
@@ -1577,9 +1545,6 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new()
-                                                                .options(
-                                                                    row_cx.row_options.clone(),
-                                                                )
                                                                 .reset(Some(
                                                                     PropertyRowReset::new(
                                                                         on_reset,
@@ -1675,9 +1640,6 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new()
-                                                                .options(
-                                                                    row_cx.row_options.clone(),
-                                                                )
                                                                 .reset(Some(
                                                                     PropertyRowReset::new(
                                                                         on_reset,
@@ -1737,9 +1699,6 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new()
-                                                                .options(
-                                                                    row_cx.row_options.clone(),
-                                                                )
                                                                 .reset(Some(
                                                                     PropertyRowReset::new(
                                                                         on_reset,
@@ -2073,9 +2032,6 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new()
-                                                                .options(
-                                                                    row_cx.row_options.clone(),
-                                                                )
                                                                 .reset(Some(
                                                                     PropertyRowReset::new(
                                                                         on_reset,
@@ -2188,7 +2144,6 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new()
-                                                                .options(row_cx.row_options.clone())
                                                                 .reset(Some(
                                                                     PropertyRowReset::new(on_reset)
                                                                         .options(
@@ -2278,46 +2233,42 @@ where
                                                             },
                                                         );
 
-                                                        rows.push(
-                                                            PropertyRow::new()
-                                                                .options(row_cx.row_options.clone())
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(on_reset).options(
-                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.iterations.reset")),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                ))
-                                                                .into_element(
-                                                                    cx,
-                                                                    |cx| cx.text("Iterations"),
-                                                                    |cx| {
-                                                                        DragValue::new(
-                                                                            editor_iterations_model.clone(),
-                                                                            fmt_i32.clone(),
-                                                                            parse_i32.clone(),
-                                                                        )
-                                                                        .options(
-                                                                            fret_ui_editor::controls::DragValueOptions {
-                                                                                test_id: Some(Arc::from(
-                                                                                    "imui-editor-proof.editor.advanced.iterations",
-                                                                                )),
-                                                                                ..Default::default()
-                                                                            },
-                                                                        )
-                                                                        .into_element(cx)
-                                                                    },
-                                                                    |cx| {
-                                                                        Some(
-                                                                            FieldStatusBadge::new(FieldStatus::Error(
-                                                                                Arc::from("stub"),
-                                                                            ))
-                                                                            .into_element(cx),
-                                                                        )
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().reset(Some(
+                                                                PropertyRowReset::new(on_reset).options(
+                                                                    fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                        test_id: Some(Arc::from("imui-editor-proof.editor.advanced.iterations.reset")),
+                                                                        ..Default::default()
                                                                     },
                                                                 ),
-                                                        );
+                                                            )),
+                                                            |cx| cx.text("Iterations"),
+                                                            |cx| {
+                                                                DragValue::new(
+                                                                    editor_iterations_model.clone(),
+                                                                    fmt_i32.clone(),
+                                                                    parse_i32.clone(),
+                                                                )
+                                                                .options(
+                                                                    fret_ui_editor::controls::DragValueOptions {
+                                                                        test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.advanced.iterations",
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    },
+                                                                )
+                                                                .into_element(cx)
+                                                            },
+                                                            |cx| {
+                                                                Some(
+                                                                    FieldStatusBadge::new(FieldStatus::Error(
+                                                                        Arc::from("stub"),
+                                                                    ))
+                                                                    .into_element(cx),
+                                                                )
+                                                            },
+                                                        ));
                                                     }
 
                                                     if show_exposure {
@@ -2334,37 +2285,33 @@ where
                                                             },
                                                         );
 
-                                                        rows.push(
-                                                            PropertyRow::new()
-                                                                .options(row_cx.row_options.clone())
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(on_reset).options(
-                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.exposure.reset")),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                ))
-                                                                .into_element(
-                                                                    cx,
-                                                                    |cx| cx.text("Exposure"),
-                                                                    |cx| {
-                                                                        NumericInput::from_presentation(
-                                                                            editor_exposure_model.clone(),
-                                                                            fixed_presentation.clone(),
-                                                                        )
-                                                                        .validate(Some(validate.clone()))
-                                                                        .options(NumericInputOptions {
-                                                                            test_id: Some(Arc::from(
-                                                                                "imui-editor-proof.editor.advanced.exposure",
-                                                                            )),
-                                                                            ..Default::default()
-                                                                        })
-                                                                        .into_element(cx)
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().reset(Some(
+                                                                PropertyRowReset::new(on_reset).options(
+                                                                    fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                        test_id: Some(Arc::from("imui-editor-proof.editor.advanced.exposure.reset")),
+                                                                        ..Default::default()
                                                                     },
-                                                                    |_cx| None,
                                                                 ),
-                                                        );
+                                                            )),
+                                                            |cx| cx.text("Exposure"),
+                                                            |cx| {
+                                                                NumericInput::from_presentation(
+                                                                    editor_exposure_model.clone(),
+                                                                    fixed_presentation.clone(),
+                                                                )
+                                                                .validate(Some(validate.clone()))
+                                                                .options(NumericInputOptions {
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.advanced.exposure",
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
+                                                            },
+                                                            |_cx| None,
+                                                        ));
                                                     }
 
                                                     if rows.is_empty() {
@@ -2669,7 +2616,7 @@ fn render_authoring_parity_declarative_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Name"),
                             |cx| {
                                 TextField::new(name_model.clone())
@@ -2692,7 +2639,7 @@ fn render_authoring_parity_declarative_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Drag value"),
                             |cx| {
                                 DragValue::from_presentation(
@@ -2711,7 +2658,7 @@ fn render_authoring_parity_declarative_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Typed numeric"),
                             |cx| {
                                 NumericInput::from_presentation(
@@ -2730,7 +2677,7 @@ fn render_authoring_parity_declarative_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Blend slider"),
                             |cx| {
                                 Slider::from_presentation(
@@ -2758,7 +2705,7 @@ fn render_authoring_parity_declarative_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Enabled"),
                             |cx| {
                                 Checkbox::new(enabled_model.clone())
@@ -2775,7 +2722,7 @@ fn render_authoring_parity_declarative_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Mode"),
                             |cx| {
                                 EnumSelect::new(shading_model.clone(), shading_items.clone())
@@ -2908,7 +2855,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Typed numeric"),
                             |cx| {
                                 let value_presentation = value_presentation.clone();
@@ -2934,7 +2881,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row_with(
                             cx,
-                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            PropertyRow::new(),
                             |cx| cx.text("Blend slider"),
                             |cx| {
                                 let blend_presentation = blend_presentation.clone();

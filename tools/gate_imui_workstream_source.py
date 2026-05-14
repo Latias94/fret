@@ -2273,6 +2273,7 @@ def main() -> None:
                 "collection::authoring_parity_collection_assets()",
             ],
             forbidden=[
+                "row_cx.row_options",
                 "fn proof_collection_assets_in_visible_order(",
                 "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "struct ProofCollectionAsset {",
@@ -2481,7 +2482,9 @@ def main() -> None:
                 "ui::text(editor_collection_status_label(selected))",
                 ".test_id(TEST_ID_COLLECTION)",
             ],
-            forbidden=[],
+            forbidden=[
+                "row_cx.row_options",
+            ],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json"),
