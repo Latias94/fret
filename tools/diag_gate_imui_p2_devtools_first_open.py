@@ -17,6 +17,29 @@ SCRIPT_PATH = "tools/diag-scripts/tooling/todo/todo-baseline.json"
 LABEL_AFTER_ADD = "todo-after-add"
 LABEL_AFTER_TOGGLE = "todo-after-toggle-done"
 LABEL_AFTER_REMOVE = "todo-after-remove"
+FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
+DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
+REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
+
+
+class ProgressRecorder:
+    def __init__(self, path: Path | None):
+        self.path = path
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def record(self, event: str, **fields: object) -> None:
+        if self.path is None:
+            return
+        payload = {
+            "ts_unix_ms": int(time.time() * 1000),
+            "event": event,
+            **fields,
+        }
+        with self.path.open("a", encoding="utf-8", newline="\n") as file:
+            file.write(json.dumps(payload, sort_keys=True) + "\n")
 
 
 def _repo_root() -> Path:
@@ -27,15 +50,35 @@ def _exe_name(stem: str) -> str:
     return f"{stem}.exe" if os.name == "nt" else stem
 
 
-def _run_checked(name: str, argv: list[str], *, cwd: Path) -> None:
+def _run_checked(
+    name: str,
+    argv: list[str],
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
     print(f"[diag-gate-imui-p2-devtools] {name}")
+    if progress is not None:
+        progress.record("step.start", name=name, argv=argv)
     proc = subprocess.run(argv, cwd=str(cwd), check=False)
     if proc.returncode != 0:
+        if progress is not None:
+            progress.record("step.fail", name=name, exit_code=proc.returncode)
         raise SystemExit(f"Step failed: {name} (exit code: {proc.returncode})")
+    if progress is not None:
+        progress.record("step.pass", name=name, exit_code=proc.returncode)
 
 
-def _run_capture_checked(name: str, argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+def _run_capture_checked(
+    name: str,
+    argv: list[str],
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> subprocess.CompletedProcess[str]:
     print(f"[diag-gate-imui-p2-devtools] {name}")
+    if progress is not None:
+        progress.record("step.start", name=name, argv=argv, captured=True)
     proc = subprocess.run(
         argv,
         cwd=str(cwd),
@@ -48,7 +91,23 @@ def _run_capture_checked(name: str, argv: list[str], *, cwd: Path) -> subprocess
     if proc.returncode != 0:
         sys.stdout.write(proc.stdout)
         sys.stderr.write(proc.stderr)
+        if progress is not None:
+            progress.record(
+                "step.fail",
+                name=name,
+                exit_code=proc.returncode,
+                stdout_len=len(proc.stdout),
+                stderr_len=len(proc.stderr),
+            )
         raise SystemExit(f"Step failed: {name} (exit code: {proc.returncode})")
+    if progress is not None:
+        progress.record(
+            "step.pass",
+            name=name,
+            exit_code=proc.returncode,
+            stdout_len=len(proc.stdout),
+            stderr_len=len(proc.stderr),
+        )
     return proc
 
 
@@ -57,8 +116,11 @@ def _run_compare_expect_diff(
     argv: list[str],
     *,
     cwd: Path,
+    progress: ProgressRecorder | None = None,
 ) -> dict:
     print(f"[diag-gate-imui-p2-devtools] {name}")
+    if progress is not None:
+        progress.record("step.start", name=name, argv=argv, captured=True)
     proc = subprocess.run(
         argv,
         cwd=str(cwd),
@@ -71,6 +133,14 @@ def _run_compare_expect_diff(
     if proc.returncode not in (0, 1):
         sys.stdout.write(proc.stdout)
         sys.stderr.write(proc.stderr)
+        if progress is not None:
+            progress.record(
+                "step.fail",
+                name=name,
+                exit_code=proc.returncode,
+                stdout_len=len(proc.stdout),
+                stderr_len=len(proc.stderr),
+            )
         raise SystemExit(f"Step failed: {name} (unexpected exit code: {proc.returncode})")
     try:
         payload = json.loads(proc.stdout)
@@ -81,7 +151,23 @@ def _run_compare_expect_diff(
     diffs = payload.get("diffs")
     if not isinstance(diffs, list) or not diffs:
         raise SystemExit(f"Step failed: {name} (expected at least one diff entry)")
+    if progress is not None:
+        progress.record(
+            "step.pass",
+            name=name,
+            exit_code=proc.returncode,
+            stdout_len=len(proc.stdout),
+            stderr_len=len(proc.stderr),
+            diff_count=len(diffs),
+        )
     return payload
+
+
+def _json_stdout(name: str, proc: subprocess.CompletedProcess[str]) -> dict:
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as err:
+        raise SystemExit(f"Step failed: {name} (invalid JSON: {err})") from err
 
 
 def _read_json(path: Path) -> dict:
@@ -111,35 +197,174 @@ def _find_bundle_dir(session_root: Path, label: str) -> Path:
     return matches[0]
 
 
+def _assert_text_contains(name: str, text: str, marker: str) -> None:
+    if marker not in text:
+        raise SystemExit(f"Step failed: {name} (missing marker: {marker})")
+
+
+def _validate_tool_app_discovery(
+    fretboard_exe: Path,
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
+    human = _run_capture_checked(
+        "list tool-apps first-open human index",
+        [str(fretboard_exe), "list", "tool-apps"],
+        cwd=cwd,
+        progress=progress,
+    )
+    human_text = human.stdout + human.stderr
+    for marker in (
+        f"first-open: {FIRST_OPEN_DOC}",
+        f"repo preflight: {REPO_PREFLIGHT_COMMAND}",
+        f"repo preflight json: {REPO_PREFLIGHT_JSON_COMMAND}",
+        f"gui branch: {DEVTOOLS_GUI_DOC}",
+        "fret-devtools",
+        "cargo run -p fret-devtools",
+        DEVTOOLS_GUI_DOC,
+        "fret-devtools-mcp",
+        "cargo run -p fret-devtools-mcp",
+        DEVTOOLS_MCP_DOC,
+    ):
+        _assert_text_contains("list tool-apps first-open human index", human_text, marker)
+
+    json_proc = _run_capture_checked(
+        "list tool-apps first-open json index",
+        [str(fretboard_exe), "list", "tool-apps", "--json"],
+        cwd=cwd,
+        progress=progress,
+    )
+    payload = _json_stdout("list tool-apps first-open json index", json_proc)
+    if payload.get("kind") != "fretboard_tool_apps":
+        raise SystemExit("list tool-apps --json should emit kind=fretboard_tool_apps")
+    if payload.get("first_open_doc") != FIRST_OPEN_DOC:
+        raise SystemExit("list tool-apps --json should expose the diagnostics first-open doc")
+    if payload.get("branch_doc") != DEVTOOLS_GUI_DOC:
+        raise SystemExit("list tool-apps --json should expose the DevTools GUI branch doc")
+    repo_preflight = payload.get("repo_preflight")
+    if not isinstance(repo_preflight, dict):
+        raise SystemExit("list tool-apps --json should expose repo_preflight")
+    if repo_preflight.get("command") != REPO_PREFLIGHT_COMMAND:
+        raise SystemExit("list tool-apps --json should expose the repo preflight command")
+    if repo_preflight.get("json_command") != REPO_PREFLIGHT_JSON_COMMAND:
+        raise SystemExit("list tool-apps --json should expose the repo preflight JSON command")
+    tool_apps = payload.get("tool_apps")
+    if not isinstance(tool_apps, list):
+        raise SystemExit("list tool-apps --json should expose a tool_apps array")
+    expected_tools = {
+        "fret-devtools": ("cargo run -p fret-devtools", DEVTOOLS_GUI_DOC, "cargo build -p fret-devtools"),
+        "fret-devtools-mcp": (
+            "cargo run -p fret-devtools-mcp",
+            DEVTOOLS_MCP_DOC,
+            "cargo build -p fret-devtools-mcp",
+        ),
+    }
+    for tool_id, (command, docs, gate) in expected_tools.items():
+        tool = next(
+            (item for item in tool_apps if isinstance(item, dict) and item.get("id") == tool_id),
+            None,
+        )
+        if tool is None:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id}")
+        if tool.get("command") != command:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} command")
+        if tool.get("docs") != docs:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} docs")
+        if tool.get("gate") != gate:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} gate")
+        if not isinstance(tool.get("best_for"), str) or not tool["best_for"]:
+            raise SystemExit(f"list tool-apps --json should expose {tool_id} best_for text")
+
+    doctor = _run_capture_checked(
+        "diag doctor campaigns first-open preflight",
+        [str(fretboard_exe), "diag", "doctor", "campaigns", "--json"],
+        cwd=cwd,
+        progress=progress,
+    )
+    doctor_payload = _json_stdout("diag doctor campaigns first-open preflight", doctor)
+    if doctor_payload.get("ok") is not True:
+        raise SystemExit("diag doctor campaigns --json should report ok=true")
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="target/imui-p2-devtools-first-open-smoke")
     parser.add_argument("--timeout-ms", type=int, default=180000)
     parser.add_argument("--poll-ms", type=int, default=50)
     parser.add_argument("--release", action="store_true")
+    parser.add_argument(
+        "--discovery-only",
+        action="store_true",
+        help="Validate only the first-open DevTools/tool-app discovery index and repo preflight.",
+    )
+    parser.add_argument(
+        "--progress-log",
+        help="Write JSONL step progress to this path. Launched mode defaults to <run-root>/gate.progress.jsonl.",
+    )
+    parser.add_argument(
+        "--reuse-built",
+        action="store_true",
+        help="Reuse existing target/<profile> binaries instead of building them first.",
+    )
     args = parser.parse_args(argv)
 
     repo_root = _repo_root()
     profile_dir = "release" if args.release else "debug"
-    run_id = str(int(time.time() * 1000))
-    root = (repo_root / args.out_dir / run_id).resolve()
-    direct_root = root / "direct"
-    campaign_base = root / "campaign"
-
-    fretboard_build = ["cargo", "build", "-j", "1", "-p", "fretboard-dev"]
-    demo_build = ["cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "todo_demo"]
-    if args.release:
-        fretboard_build.append("--release")
-        demo_build.append("--release")
-
-    _run_checked("cargo build -p fretboard-dev", fretboard_build, cwd=repo_root)
-    _run_checked("cargo build -p fret-demo --bin todo_demo", demo_build, cwd=repo_root)
+    explicit_progress_path = (
+        (repo_root / args.progress_log).resolve() if args.progress_log is not None else None
+    )
+    root: Path | None = None
+    direct_root: Path | None = None
+    campaign_base: Path | None = None
+    if args.discovery_only:
+        progress = ProgressRecorder(explicit_progress_path)
+        progress.record("gate.start", mode="discovery")
+    else:
+        run_id = str(int(time.time() * 1000))
+        root = (repo_root / args.out_dir / run_id).resolve()
+        direct_root = root / "direct"
+        campaign_base = root / "campaign"
+        progress = ProgressRecorder(explicit_progress_path or root / "gate.progress.jsonl")
+        progress.record("gate.start", mode="launched", run_root=str(root))
 
     fretboard_exe = repo_root / "target" / profile_dir / _exe_name("fretboard-dev")
-    demo_exe = repo_root / "target" / profile_dir / _exe_name("todo_demo")
+    if args.reuse_built:
+        progress.record("step.skip", name="cargo build -p fretboard-dev", reason="reuse_built")
+    else:
+        fretboard_build = ["cargo", "build", "-j", "1", "-p", "fretboard-dev"]
+        if args.release:
+            fretboard_build.append("--release")
+        _run_checked("cargo build -p fretboard-dev", fretboard_build, cwd=repo_root, progress=progress)
     if not fretboard_exe.exists():
+        progress.record("gate.fail", reason="missing_fretboard_exe", path=str(fretboard_exe))
         raise SystemExit(f"fretboard-dev exe not found: {fretboard_exe}")
+
+    _validate_tool_app_discovery(fretboard_exe, cwd=repo_root, progress=progress)
+    if args.discovery_only:
+        progress.record("gate.pass", mode="discovery")
+        print("[diag-gate-imui-p2-devtools] discovery done")
+        return 0
+
+    assert root is not None
+    assert direct_root is not None
+    assert campaign_base is not None
+
+    demo_exe = repo_root / "target" / profile_dir / _exe_name("todo_demo")
+    if args.reuse_built:
+        progress.record("step.skip", name="cargo build -p fret-demo --bin todo_demo", reason="reuse_built")
+    else:
+        demo_build = ["cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "todo_demo"]
+        if args.release:
+            demo_build.append("--release")
+        _run_checked(
+            "cargo build -p fret-demo --bin todo_demo",
+            demo_build,
+            cwd=repo_root,
+            progress=progress,
+        )
     if not demo_exe.exists():
+        progress.record("gate.fail", reason="missing_demo_exe", path=str(demo_exe))
         raise SystemExit(f"todo demo exe not found: {demo_exe}")
 
     launch_env_flags = [
@@ -171,13 +396,21 @@ def main(argv: list[str]) -> int:
             str(demo_exe),
         ],
         cwd=repo_root,
+        progress=progress,
     )
 
     sessions_root = direct_root / "sessions"
     session_root = _single_child_dir(sessions_root)
+    progress.record("artifact.session_root", path=str(session_root))
     after_add = _find_bundle_dir(session_root, LABEL_AFTER_ADD)
     after_toggle = _find_bundle_dir(session_root, LABEL_AFTER_TOGGLE)
     after_remove = _find_bundle_dir(session_root, LABEL_AFTER_REMOVE)
+    progress.record(
+        "artifact.direct_bundles",
+        after_add=str(after_add),
+        after_toggle=str(after_toggle),
+        after_remove=str(after_remove),
+    )
     script_result = _read_json(session_root / "script.result.json")
     recorded_last_bundle_dir = script_result.get("last_bundle_dir")
     expected_bundle_names = {after_add.name, after_toggle.name, after_remove.name}
@@ -196,6 +429,7 @@ def main(argv: list[str]) -> int:
             "--json",
         ],
         cwd=repo_root,
+        progress=progress,
     )
     resolve_payload = json.loads(resolve_latest.stdout)
     latest_source = resolve_payload.get("latest_bundle_dir_source")
@@ -221,6 +455,7 @@ def main(argv: list[str]) -> int:
             str(direct_root),
         ],
         cwd=repo_root,
+        progress=progress,
     )
     latest_human_text = latest_human.stdout + latest_human.stderr
     if "script.result.json:last_bundle_dir" not in latest_human_text:
@@ -237,6 +472,7 @@ def main(argv: list[str]) -> int:
             "--json",
         ],
         cwd=repo_root,
+        progress=progress,
     )
     if compare_payload.get("bundle_a") is None or compare_payload.get("bundle_b") is None:
         raise SystemExit("diag compare should report both bundle paths in JSON output")
@@ -261,9 +497,11 @@ def main(argv: list[str]) -> int:
             str(demo_exe),
         ],
         cwd=repo_root,
+        progress=progress,
     )
 
     campaign_root = _single_child_dir(campaign_base / "campaigns" / CAMPAIGN_ID)
+    progress.record("artifact.campaign_root", path=str(campaign_root))
     summarize = _run_capture_checked(
         "diag summarize campaign root",
         [
@@ -276,6 +514,7 @@ def main(argv: list[str]) -> int:
             "--json",
         ],
         cwd=repo_root,
+        progress=progress,
     )
     summarize_payload = json.loads(summarize.stdout)
     if summarize_payload.get("kind") != "diag_regression_summary":
@@ -302,6 +541,7 @@ def main(argv: list[str]) -> int:
             "--json",
         ],
         cwd=repo_root,
+        progress=progress,
     )
     dashboard_payload = json.loads(dashboard.stdout)
     if dashboard_payload.get("kind") != "diag_regression_index":
@@ -320,6 +560,7 @@ def main(argv: list[str]) -> int:
     if campaign_summary.get("kind") != "diag_regression_summary":
         raise SystemExit("regression.summary.json should remain the shared aggregate contract")
 
+    progress.record("gate.pass", mode="launched", run_root=str(root))
     print(f"[diag-gate-imui-p2-devtools] done (out_dir={root})")
     return 0
 

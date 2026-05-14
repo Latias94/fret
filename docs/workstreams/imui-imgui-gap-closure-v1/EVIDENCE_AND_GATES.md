@@ -336,17 +336,47 @@ Run evidence:
 
 ## P3 Diagnostics / DevTools First-Open Gate
 
-Use this gate for the current Dear ImGui-class diagnostics discoverability read. It verifies the
-shared CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle
-capture, latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare,
-campaign execution, `diag summarize`, and `diag dashboard`.
+Use these gates for the current Dear ImGui-class diagnostics discoverability read. The fast gate
+verifies the first-open DevTools/tool-app discovery index and repo-owned campaign preflight that a
+maintainer should find before opening the GUI/MCP branch. The launched gate verifies the shared
+CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle capture,
+latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare, campaign
+execution, `diag summarize`, and `diag dashboard`. The gate writes `gate.progress.jsonl` in launched
+mode so an outer timeout still leaves the last reached stage. Use `--reuse-built` when the binaries
+are already present and the goal is to re-check the diagnostics path without hiding it behind a
+large Rust build.
 
 ```powershell
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke
+python tools/diag_gate_imui_p2_devtools_first_open.py --reuse-built --out-dir target/imui-p2-devtools-first-open-smoke
 ```
 
 Run evidence:
 
+- 2026-05-14: `python tools/diag_gate_imui_p2_devtools_first_open.py --reuse-built --out-dir target/imui-p2-devtools-first-open-smoke-reuse-final --timeout-ms 240000 --poll-ms 50` passed
+  locally. Run root:
+  `target/imui-p2-devtools-first-open-smoke-reuse-final/1778726646728`.
+- 2026-05-14: `target/imui-p2-devtools-first-open-smoke-reuse-final/1778726646728/gate.progress.jsonl`
+  records the full first-open path: tool-app discovery, campaign doctor preflight, direct
+  `todo-baseline` run, latest resolution, compare, campaign run, summarize, dashboard, and final
+  `gate.pass`.
+- 2026-05-14: direct script result
+  `target/imui-p2-devtools-first-open-smoke-reuse-final/1778726646728/direct/sessions/1778726646873-112152/script.result.json`
+  reports `stage=passed`, `run_id=1778726649588`, and `last_bundle_dir=1778726650016-todo-after-remove`.
+- 2026-05-14: campaign summary
+  `target/imui-p2-devtools-first-open-smoke-reuse-final/1778726646728/campaign/campaigns/devtools-first-open-smoke/1778726650543/regression.summary.json`
+  reports `items_total=1`, `passed=1`, and zero deterministic/flaky/tooling/timeout failures.
+- 2026-05-14: `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only` passed
+  locally. The gate now validates `fretboard-dev list tool-apps` human and JSON output, the
+  `docs/diagnostics-first-open.md` first-open anchor, the DevTools GUI and MCP launch/docs/gate
+  entries, and `fretboard-dev diag doctor campaigns --json` with `ok=true`.
+- 2026-05-14: a full launched rerun with
+  `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-discovery-gate --timeout-ms 240000`
+  exceeded the local 10 minute command timeout before returning a result. A later short diagnostic
+  rerun showed the last recorded step was `cargo build -p fret-demo --bin todo_demo`, so the gate
+  now writes stage progress and supports `--reuse-built` to separate build cost from diagnostics
+  path verification.
 - 2026-05-14: `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun --timeout-ms 240000` passed locally.
 - Direct script result:
   `target/imui-p2-devtools-first-open-smoke-2026-05-14-gap-refresh-rerun/1778714082990/direct/sessions/1778714086733-135148/script.result.json`
