@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::layout::SplitSide;
 use fret_core::{AppWindowId, Axis, Point, PointerId, Px, Rect};
+use fret_dnd::{EdgeDropZone, compute_edge_drop_zone};
 use fret_runtime::DragKindId;
 use fret_ui_headless::tab_strip_drop_target::compute_tab_drop_target_midpoint;
 
@@ -19,6 +20,25 @@ pub enum WorkspaceTabDropZone {
     Down,
 }
 
+fn edge_for_drop_zone(zone: WorkspaceTabDropZone) -> Option<EdgeDropZone> {
+    match zone {
+        WorkspaceTabDropZone::Left => Some(EdgeDropZone::Left),
+        WorkspaceTabDropZone::Right => Some(EdgeDropZone::Right),
+        WorkspaceTabDropZone::Up => Some(EdgeDropZone::Up),
+        WorkspaceTabDropZone::Down => Some(EdgeDropZone::Down),
+        WorkspaceTabDropZone::Center => None,
+    }
+}
+
+fn drop_zone_for_edge(edge: EdgeDropZone) -> WorkspaceTabDropZone {
+    match edge {
+        EdgeDropZone::Left => WorkspaceTabDropZone::Left,
+        EdgeDropZone::Right => WorkspaceTabDropZone::Right,
+        EdgeDropZone::Up => WorkspaceTabDropZone::Up,
+        EdgeDropZone::Down => WorkspaceTabDropZone::Down,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceTabHitRect {
     pub id: Arc<str>,
@@ -30,6 +50,77 @@ pub struct WorkspacePaneDragGeometry {
     pub bounds: Rect,
     pub edge_margin: Px,
     pub edge_hysteresis: Px,
+}
+
+pub fn compute_workspace_tab_drop_zone_for_position(
+    geom: WorkspacePaneDragGeometry,
+    position: Point,
+    previous: Option<WorkspaceTabDropZone>,
+) -> WorkspaceTabDropZone {
+    let prev_edge = previous.and_then(edge_for_drop_zone);
+    compute_edge_drop_zone(
+        geom.bounds,
+        position,
+        geom.edge_margin,
+        prev_edge,
+        geom.edge_hysteresis,
+    )
+    .map(drop_zone_for_edge)
+    .unwrap_or(WorkspaceTabDropZone::Center)
+}
+
+pub fn workspace_tab_strip_row_contains_pointer(
+    pointer: Point,
+    tab_rects: &[WorkspaceTabHitRect],
+) -> bool {
+    if tab_rects.is_empty() {
+        return false;
+    }
+    let mut min_y: Option<f32> = None;
+    let mut max_y: Option<f32> = None;
+    for r in tab_rects {
+        let top = r.rect.origin.y.0;
+        let bottom = r.rect.origin.y.0 + r.rect.size.height.0;
+        min_y = Some(min_y.map_or(top, |prev| prev.min(top)));
+        max_y = Some(max_y.map_or(bottom, |prev| prev.max(bottom)));
+    }
+    min_y.is_some_and(|min_y| {
+        max_y.is_some_and(|max_y| pointer.y.0 >= min_y && pointer.y.0 <= max_y)
+    })
+}
+
+pub fn workspace_tab_pane_id_at_position(
+    state: &WorkspaceTabDragState,
+    position: Point,
+) -> Option<Arc<str>> {
+    state
+        .pane_geometry
+        .iter()
+        .find(|(_, geom)| geom.bounds.contains(position))
+        .map(|(id, _)| id.clone())
+}
+
+pub fn workspace_tab_drop_zone_for_pane(
+    state: &WorkspaceTabDragState,
+    pane_id: &str,
+    position: Point,
+) -> WorkspaceTabDropZone {
+    let mut zone = state
+        .pane_geometry
+        .iter()
+        .find(|(id, _)| id.as_ref() == pane_id)
+        .map(|(_, geom)| {
+            compute_workspace_tab_drop_zone_for_position(*geom, position, state.hovered_zone)
+        })
+        .unwrap_or_else(|| state.hovered_zone.unwrap_or(WorkspaceTabDropZone::Center));
+
+    if zone != WorkspaceTabDropZone::Center
+        && workspace_tab_strip_row_contains_pointer(position, &state.hovered_pane_tab_rects)
+    {
+        zone = WorkspaceTabDropZone::Center;
+    }
+
+    zone
 }
 
 #[derive(Debug, Clone, PartialEq)]

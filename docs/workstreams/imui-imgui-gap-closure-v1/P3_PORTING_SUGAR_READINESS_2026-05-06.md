@@ -1,7 +1,7 @@
 # P3 Porting Sugar Readiness - 2026-05-06
 
 Status: readiness audit; no porting-sugar follow-on opened yet
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## Decision
 
@@ -15,7 +15,9 @@ public mirror of Dear ImGui's cursor and label grammar:
   iteration for the minimal immediate-mode surface.
 - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` exposes typed container helpers such as
   `horizontal_with_options`, `vertical_with_options`, `grid_with_options`, `table_with_options`,
-  `scroll_with_options`, and `child_region_with_options`.
+  `scroll_with_options`, and `child_region_with_options`; split owner modules under
+  `ecosystem/fret-ui-kit/src/imui/facade_writer/`, including `container_wrappers.rs`, now own
+  focused inherent wrappers without adding Dear ImGui-style mutable cursor sugar.
 - `ecosystem/fret-ui-kit/src/imui/options/containers.rs` keeps horizontal layout explicit through
   `HorizontalOptions` (`layout`, `gap`, `justify`, `items`, `wrap`, `test_id`).
 - `apps/fret-cookbook/examples/imui_action_basics.rs` uses `ui.horizontal(...)` for small inline
@@ -109,7 +111,7 @@ Suggested readiness gates:
 
 ```powershell
 rg -n "SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp
-rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
+rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
 cargo check -p fret-demo --bin imui_editor_proof_demo
 ```
 
@@ -119,6 +121,7 @@ cargo check -p fret-demo --bin imui_editor_proof_demo
 
 - `rg -n "SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp`
   passed and confirmed the relevant Dear ImGui cursor, width, and identity axes.
-- `rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs`
-  passed and confirmed the current Fret authoring/proof anchors.
+- `rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs`
+  passed and confirmed the current Fret authoring/proof anchors across the root facade file and
+  split owner modules.
 - `cargo check -p fret-demo --bin imui_editor_proof_demo` passed.

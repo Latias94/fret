@@ -75,6 +75,8 @@ impl UiDiagnosticsService {
             hit_test_trace: Vec::new(),
             click_stable_trace: Vec::new(),
             bounds_stable_trace: Vec::new(),
+            scroll_motion_trace: Vec::new(),
+            semantics_scroll_idle_stable_trace: Vec::new(),
             focus_trace: Vec::new(),
             last_clipboard_write_completion: None,
             shortcut_routing_trace: Vec::new(),
@@ -631,6 +633,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::ClickSelectableTextSpanStable { .. }
                 | UiActionStepV2::WaitBoundsStable { .. }
                 | UiActionStepV2::WaitSemanticsScrollStable { .. }
+                | UiActionStepV2::AssertSemanticsScrollIdleStable { .. }
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }

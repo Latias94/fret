@@ -300,15 +300,15 @@ fn semantics_hit_matches_intended(
     controls_intended || index.is_descendant_of_or_self(hit_id, intended_id)
 }
 
-fn scan_window_for_intended_hit(
-    snapshot: &fret_core::SemanticsSnapshot,
-    ui: &UiTree<App>,
-    intended: &fret_core::SemanticsNode,
+fn scan_window_for_intended_hit<F>(
     window_bounds: Rect,
     probe_x: f32,
     probe_y: f32,
-) -> Option<Point> {
-    let index = SemanticsIndex::new(snapshot);
+    mut point_matches: F,
+) -> Option<Point>
+where
+    F: FnMut(Point) -> bool,
+{
     let wx0 = window_bounds.origin.x.0;
     let wy0 = window_bounds.origin.y.0;
     let wx1 = wx0 + window_bounds.size.width.0.max(0.0);
@@ -329,9 +329,7 @@ fn scan_window_for_intended_hit(
                 fret_core::Px((probe_x + dx).clamp(wx0, wx1)),
                 fret_core::Px(y),
             );
-            if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
-                && semantics_hit_matches_intended(&index, hit, intended)
-            {
+            if point_matches(pos) {
                 return Some(pos);
             }
         }
@@ -345,9 +343,7 @@ fn scan_window_for_intended_hit(
                 fret_core::Px(x),
                 fret_core::Px((probe_y + dy).clamp(wy0, wy1)),
             );
-            if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
-                && semantics_hit_matches_intended(&index, hit, intended)
-            {
+            if point_matches(pos) {
                 return Some(pos);
             }
         }
@@ -355,6 +351,44 @@ fn scan_window_for_intended_hit(
     }
 
     None
+}
+
+fn ui_hit_matches_intended(
+    index: &SemanticsIndex<'_>,
+    ui: &mut UiTree<App>,
+    position: Point,
+    intended: &fret_core::SemanticsNode,
+) -> bool {
+    let Some(hit) = ui.debug_hit_test_routing(position).hit else {
+        return false;
+    };
+
+    let intended_id = intended.id.data().as_ffi();
+    let hit_path = ui.debug_node_path(hit);
+    if hit_path.iter().any(|node| node.data().as_ffi() == intended_id) {
+        return true;
+    }
+
+    hit_path.into_iter().rev().any(|node| {
+        let node_id = node.data().as_ffi();
+        index.is_selectable(node_id)
+            && index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .is_some_and(|hit| semantics_hit_matches_intended(index, hit, intended))
+    })
+}
+
+fn semantics_point_matches_intended(
+    snapshot: &fret_core::SemanticsSnapshot,
+    index: &SemanticsIndex<'_>,
+    ui: &UiTree<App>,
+    position: Point,
+    intended: &fret_core::SemanticsNode,
+) -> bool {
+    pick_semantics_node_at(snapshot, ui, position)
+        .is_some_and(|hit| semantics_hit_matches_intended(index, hit, intended))
 }
 
 fn pointer_target_resolution_prefer_intended_hit(
@@ -397,15 +431,17 @@ fn pointer_target_resolution_prefer_intended_hit(
     let iy0 = ry0.max(wy0);
     let ix1 = rx1.min(wx1);
     let iy1 = ry1.min(wy1);
+    let index = SemanticsIndex::new(snapshot);
 
     if ix1 <= ix0 || iy1 <= iy0 {
         if let Some(pos) = scan_window_for_intended_hit(
-            snapshot,
-            ui,
-            intended,
             window_bounds,
             intended_center.x.0,
             intended_center.y.0,
+            |pos| {
+                pick_semantics_node_at(snapshot, ui, pos)
+                    .is_some_and(|hit| semantics_hit_matches_intended(&index, hit, intended))
+            },
         ) {
             return PointerTargetResolution {
                 position: pos,
@@ -442,14 +478,12 @@ fn pointer_target_resolution_prefer_intended_hit(
         Point::new(fret_core::Px(x_mid), fret_core::Px(iy1 - pad_y)),
         Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy1 - pad_y)),
         Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy1 - pad_y)),
-    ];
+        ];
 
-    let index = SemanticsIndex::new(snapshot);
     for pos in candidates {
-        let Some(hit) = pick_semantics_node_at(snapshot, ui, pos) else {
-            continue;
-        };
-        if semantics_hit_matches_intended(&index, hit, intended) {
+        if let Some(hit) = pick_semantics_node_at(snapshot, ui, pos)
+            && semantics_hit_matches_intended(&index, hit, intended)
+        {
             return PointerTargetResolution {
                 position: pos,
                 bounds: intended_bounds,
@@ -461,12 +495,13 @@ fn pointer_target_resolution_prefer_intended_hit(
     }
 
     if let Some(pos) = scan_window_for_intended_hit(
-        snapshot,
-        ui,
-        intended,
         window_bounds,
         intended_center.x.0,
         intended_center.y.0,
+        |pos| {
+            pick_semantics_node_at(snapshot, ui, pos)
+                .is_some_and(|hit| semantics_hit_matches_intended(&index, hit, intended))
+        },
     ) {
         return PointerTargetResolution {
             position: pos,
@@ -486,6 +521,159 @@ fn pointer_target_resolution_prefer_intended_hit(
     }
 }
 
+fn pointer_target_resolution_prefer_intended_hit_routing(
+    app: &App,
+    snapshot: &fret_core::SemanticsSnapshot,
+    element_runtime: Option<&ElementRuntime>,
+    ui: &mut UiTree<App>,
+    window: AppWindowId,
+    intended: &fret_core::SemanticsNode,
+    window_bounds: Rect,
+) -> PointerTargetResolution {
+    let resolved_bounds = intended
+        .test_id
+        .as_deref()
+        .and_then(|test_id| {
+            interaction_bounds_for_live_test_id(app, element_runtime, Some(&*ui), window, test_id)
+        })
+        .unwrap_or_else(|| ResolvedInteractionBounds {
+            bounds: interaction_bounds_for_semantics_node(
+                element_runtime,
+                Some(&*ui),
+                window,
+                intended,
+            ),
+            source: "semantics.node_fallback",
+        });
+    let intended_bounds = resolved_bounds.bounds;
+    let intended_center = center_of_rect_clamped_to_rect(intended_bounds, window_bounds);
+    let rx0 = intended_bounds.origin.x.0;
+    let ry0 = intended_bounds.origin.y.0;
+    let rx1 = rx0 + intended_bounds.size.width.0.max(0.0);
+    let ry1 = ry0 + intended_bounds.size.height.0.max(0.0);
+
+    let wx0 = window_bounds.origin.x.0;
+    let wy0 = window_bounds.origin.y.0;
+    let wx1 = wx0 + window_bounds.size.width.0.max(0.0);
+    let wy1 = wy0 + window_bounds.size.height.0.max(0.0);
+
+    let ix0 = rx0.max(wx0);
+    let iy0 = ry0.max(wy0);
+    let ix1 = rx1.min(wx1);
+    let iy1 = ry1.min(wy1);
+
+    let index = SemanticsIndex::new(snapshot);
+    let candidates = if ix1 <= ix0 || iy1 <= iy0 {
+        vec![center_of_rect_clamped_to_rect(intended_bounds, window_bounds)]
+    } else {
+        let w = (ix1 - ix0).max(0.0);
+        let h = (iy1 - iy0).max(0.0);
+        let pad_x = 8.0f32.min(w * 0.5);
+        let pad_y = 8.0f32.min(h * 0.5);
+        let edge_1_x = 1.0f32.min(w * 0.5);
+        let edge_2_x = 2.0f32.min(w * 0.5);
+        let edge_4_x = 4.0f32.min(w * 0.5);
+        let edge_2_y = 2.0f32.min(h * 0.5);
+        let x_mid = (ix0 + ix1) * 0.5;
+        let y_mid = (iy0 + iy1) * 0.5;
+        vec![
+            Point::new(fret_core::Px(x_mid), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(x_mid), fret_core::Px(iy0 + pad_y)),
+            Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy0 + pad_y)),
+            Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy0 + pad_y)),
+            Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix0 + edge_1_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix0 + edge_2_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix0 + edge_4_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix1 - edge_4_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix1 - edge_2_x), fret_core::Px(y_mid)),
+            Point::new(fret_core::Px(ix1 - edge_1_x), fret_core::Px(y_mid)),
+            Point::new(
+                fret_core::Px(ix0 + edge_2_x),
+                fret_core::Px(iy0 + edge_2_y),
+            ),
+            Point::new(
+                fret_core::Px(ix0 + edge_2_x),
+                fret_core::Px(iy1 - edge_2_y),
+            ),
+            Point::new(
+                fret_core::Px(ix1 - edge_2_x),
+                fret_core::Px(iy0 + edge_2_y),
+            ),
+            Point::new(
+                fret_core::Px(ix1 - edge_2_x),
+                fret_core::Px(iy1 - edge_2_y),
+            ),
+            Point::new(fret_core::Px(x_mid), fret_core::Px(iy1 - pad_y)),
+            Point::new(fret_core::Px(ix0 + pad_x), fret_core::Px(iy1 - pad_y)),
+            Point::new(fret_core::Px(ix1 - pad_x), fret_core::Px(iy1 - pad_y)),
+        ]
+    };
+
+    for pos in &candidates {
+        if ui_hit_matches_intended(&index, ui, *pos, intended) {
+            return PointerTargetResolution {
+                position: *pos,
+                bounds: intended_bounds,
+                bounds_source: resolved_bounds.source,
+                used_window_scan: false,
+                clamped_outside_window: ix1 <= ix0 || iy1 <= iy0,
+            };
+        }
+    }
+
+    if let Some(pos) = scan_window_for_intended_hit(
+        window_bounds,
+        intended_center.x.0,
+        intended_center.y.0,
+        |pos| ui_hit_matches_intended(&index, ui, pos, intended),
+    ) {
+        return PointerTargetResolution {
+            position: pos,
+            bounds: intended_bounds,
+            bounds_source: resolved_bounds.source,
+            used_window_scan: true,
+            clamped_outside_window: ix1 <= ix0 || iy1 <= iy0,
+        };
+    }
+
+    for pos in &candidates {
+        if semantics_point_matches_intended(snapshot, &index, &*ui, *pos, intended) {
+            return PointerTargetResolution {
+                position: *pos,
+                bounds: intended_bounds,
+                bounds_source: resolved_bounds.source,
+                used_window_scan: false,
+                clamped_outside_window: ix1 <= ix0 || iy1 <= iy0,
+            };
+        }
+    }
+
+    if let Some(pos) = scan_window_for_intended_hit(
+        window_bounds,
+        intended_center.x.0,
+        intended_center.y.0,
+        |pos| semantics_point_matches_intended(snapshot, &index, &*ui, pos, intended),
+    ) {
+        return PointerTargetResolution {
+            position: pos,
+            bounds: intended_bounds,
+            bounds_source: resolved_bounds.source,
+            used_window_scan: true,
+            clamped_outside_window: ix1 <= ix0 || iy1 <= iy0,
+        };
+    }
+
+    PointerTargetResolution {
+        position: candidates[0],
+        bounds: intended_bounds,
+        bounds_source: resolved_bounds.source,
+        used_window_scan: false,
+        clamped_outside_window: ix1 <= ix0 || iy1 <= iy0,
+    }
+}
+
 fn pointer_position_prefer_intended_hit(
     app: &App,
     snapshot: &fret_core::SemanticsSnapshot,
@@ -496,6 +684,27 @@ fn pointer_position_prefer_intended_hit(
     window_bounds: Rect,
 ) -> Point {
     pointer_target_resolution_prefer_intended_hit(
+        app,
+        snapshot,
+        element_runtime,
+        ui,
+        window,
+        intended,
+        window_bounds,
+    )
+    .position
+}
+
+fn pointer_position_prefer_intended_hit_routing(
+    app: &App,
+    snapshot: &fret_core::SemanticsSnapshot,
+    element_runtime: Option<&ElementRuntime>,
+    ui: &mut UiTree<App>,
+    window: AppWindowId,
+    intended: &fret_core::SemanticsNode,
+    window_bounds: Rect,
+) -> Point {
+    pointer_target_resolution_prefer_intended_hit_routing(
         app,
         snapshot,
         element_runtime,

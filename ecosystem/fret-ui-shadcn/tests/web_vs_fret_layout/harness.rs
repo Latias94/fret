@@ -28,18 +28,23 @@ pub(crate) fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: 
     );
 }
 
-pub(crate) fn run_fret_root(
-    bounds: Rect,
-    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
-) -> fret_core::SemanticsSnapshot {
-    let window = AppWindowId::default();
+fn new_shadcn_test_app() -> App {
     let mut app = App::new();
-
+    fret_icons_lucide::app::install(&mut app);
     fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
+    app
+}
+
+pub(crate) fn run_fret_root(
+    bounds: Rect,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> fret_core::SemanticsSnapshot {
+    let window = AppWindowId::default();
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -71,13 +76,7 @@ pub(crate) fn run_fret_root_frames(
     assert!(frames > 0, "frames must be > 0");
 
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -126,13 +125,7 @@ pub(crate) fn run_fret_root_with_services(
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> fret_core::SemanticsSnapshot {
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -164,13 +157,7 @@ pub(crate) fn run_fret_root_frames_with_services(
     assert!(frames > 0, "frames must be > 0");
 
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -217,13 +204,7 @@ pub(crate) fn run_fret_root_with_ui(
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (UiTree<App>, fret_core::SemanticsSnapshot, NodeId) {
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -255,13 +236,7 @@ pub(crate) fn render_and_paint_in_bounds(
     render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -293,19 +268,48 @@ pub(crate) fn render_and_paint_in_bounds(
     (snap, scene)
 }
 
+pub(crate) fn render_and_paint_in_bounds_with_services(
+    bounds: Rect,
+    services: &mut dyn fret_core::UiServices,
+    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let window = AppWindowId::default();
+    let mut app = new_shadcn_test_app();
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, services, bounds, &mut scene, 1.0);
+
+    (snap, scene)
+}
+
 pub(crate) fn run_fret_root_with_ui_and_services(
     bounds: Rect,
     services: &mut dyn fret_core::UiServices,
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (UiTree<App>, fret_core::SemanticsSnapshot, NodeId) {
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -340,13 +344,7 @@ pub(crate) fn run_fret_root_frames_with_ui_and_services(
     assert!(frames > 0, "frames must be > 0");
 
     let window = AppWindowId::default();
-    let mut app = App::new();
-
-    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
-        &mut app,
-        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
-    );
+    let mut app = new_shadcn_test_app();
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);

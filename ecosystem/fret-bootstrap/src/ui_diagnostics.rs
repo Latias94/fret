@@ -21,8 +21,9 @@ use fret_diag_protocol::{
     UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
     UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPointerKindV1,
     UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
-    UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
+    UiScriptResultV1, UiScriptStageV1, UiScrollMotionCheckV1, UiScrollMotionTraceEntryV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiSemanticsScrollIdleStableTraceEntryV1, UiShortcutRoutingTraceEntryV1,
     UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTaskbarVisibilityV1, UiTextInputSnapshotV1,
     UiTextInputVisualSnapshotV1, UiWebImeTraceEntryV1, UiWindowBackgroundMaterialRequestV1,
     UiWindowDecorationsRequestV1, UiWindowHitTestRequestV1, UiWindowStyleMatchV1, UiWindowTargetV1,
@@ -126,7 +127,8 @@ use trace_helpers::{
     MAX_CLICK_STABLE_TRACE_ENTRIES, MAX_FOCUS_TRACE_ENTRIES, MAX_IME_EVENT_TRACE_ENTRIES,
     MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES, MAX_SELECTOR_TRACE_CANDIDATES,
     MAX_SHORTCUT_ROUTING_TRACE_ENTRIES, MAX_WEB_IME_TRACE_ENTRIES, push_bounds_stable_trace,
-    push_hit_test_trace, push_selector_resolution_trace,
+    push_hit_test_trace, push_scroll_motion_trace, push_selector_resolution_trace,
+    push_semantics_scroll_idle_stable_trace,
 };
 
 // Split out the DevTools WS wiring to reduce churn in this file.
@@ -412,6 +414,8 @@ mod legacy_forked_script_protocol {
             require_fully_within_window: bool,
             #[serde(default)]
             padding_px: f32,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            motion_check: Option<UiScrollMotionCheckV1>,
             #[serde(default = "default_action_timeout_frames")]
             timeout_frames: u32,
         },

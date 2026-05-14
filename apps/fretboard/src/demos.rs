@@ -68,6 +68,100 @@ pub(crate) fn list_cookbook_examples(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+const DIAG_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
+const DIAG_GUI_BRANCH_DOC: &str =
+    "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md";
+const DIAG_REPO_PREFLIGHT_COMMAND: &str = "cargo run -p fretboard-dev -- diag doctor campaigns";
+const DIAG_REPO_PREFLIGHT_JSON_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag doctor campaigns --json";
+
+pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
+    let output_json = parse_tool_apps_json_flag(args)?;
+    if output_json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&tool_apps_json_value()).map_err(|err| err.to_string())?
+        );
+    } else {
+        println!("first-open: {DIAG_FIRST_OPEN_DOC}");
+        println!("repo preflight: {DIAG_REPO_PREFLIGHT_COMMAND}");
+        println!("repo preflight json: {DIAG_REPO_PREFLIGHT_JSON_COMMAND}");
+        println!("gui branch: {DIAG_GUI_BRANCH_DOC}");
+        for tool in tool_apps() {
+            println!(
+                "{}    # {} | best for: {} | run: {} | docs: {} | gate: {}",
+                tool.id, tool.purpose, tool.best_for, tool.command, tool.docs, tool.gate
+            );
+        }
+    }
+    Ok(())
+}
+
+fn tool_apps_json_value() -> serde_json::Value {
+    serde_json::json!({
+        "kind": "fretboard_tool_apps",
+        "schema_version": 1,
+        "first_open_doc": DIAG_FIRST_OPEN_DOC,
+        "branch_doc": DIAG_GUI_BRANCH_DOC,
+        "repo_preflight": {
+            "purpose": "Read-only maintainer preflight for checked-in diagnostics campaign manifests.",
+            "command": DIAG_REPO_PREFLIGHT_COMMAND,
+            "json_command": DIAG_REPO_PREFLIGHT_JSON_COMMAND,
+        },
+        "tool_apps": tool_apps().iter().map(|tool| {
+            serde_json::json!({
+                "id": tool.id,
+                "purpose": tool.purpose,
+                "command": tool.command,
+                "best_for": tool.best_for,
+                "docs": tool.docs,
+                "gate": tool.gate,
+            })
+        }).collect::<Vec<_>>(),
+    })
+}
+
+struct ToolApp {
+    id: &'static str,
+    purpose: &'static str,
+    command: &'static str,
+    best_for: &'static str,
+    docs: &'static str,
+    gate: &'static str,
+}
+
+fn tool_apps() -> &'static [ToolApp] {
+    &[
+        ToolApp {
+            id: "fret-devtools",
+            purpose: "DevTools GUI over shared diagnostics artifacts",
+            command: "cargo run -p fret-devtools",
+            best_for: "human inspect/script/artifact dogfood over one diagnostics root",
+            docs: "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md",
+            gate: "cargo build -p fret-devtools",
+        },
+        ToolApp {
+            id: "fret-devtools-mcp",
+            purpose: "MCP adapter over the same diagnostics operations",
+            command: "cargo run -p fret-devtools-mcp",
+            best_for: "AI/client automation over the same diagnostics operations",
+            docs: "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md",
+            gate: "cargo build -p fret-devtools-mcp",
+        },
+    ]
+}
+
+fn parse_tool_apps_json_flag(args: Vec<String>) -> Result<bool, String> {
+    let mut output_json = false;
+    for arg in args {
+        match arg.as_str() {
+            "--json" => output_json = true,
+            other => return Err(format!("unknown list tool-apps argument: {other}")),
+        }
+    }
+    Ok(output_json)
+}
+
 fn read_rs_stems(dir: &Path) -> Result<Vec<String>, String> {
     let mut out = Vec::new();
     let rd = std::fs::read_dir(dir)
@@ -352,5 +446,63 @@ mod tests {
             cookbook_example_feature_hint("imui_editor_controls_basics"),
             Some("--features cookbook-imui")
         );
+    }
+
+    #[test]
+    fn tool_apps_list_devtools_entrypoints() {
+        let tools = tool_apps();
+        assert!(tools.iter().any(|tool| tool.id == "fret-devtools"
+            && tool.command == "cargo run -p fret-devtools"
+            && tool.docs.contains("DEVTOOLS_GUI_DOGFOOD_WORKFLOW")));
+        assert!(tools.iter().any(|tool| tool.id == "fret-devtools-mcp"
+            && tool.command == "cargo run -p fret-devtools-mcp"
+            && tool.docs.contains("diag-devtools-gui-v1-ai-mcp.md")));
+    }
+
+    #[test]
+    fn tool_apps_list_names_repo_preflight_entrypoints() {
+        assert_eq!(
+            DIAG_REPO_PREFLIGHT_COMMAND,
+            "cargo run -p fretboard-dev -- diag doctor campaigns"
+        );
+        assert_eq!(
+            DIAG_REPO_PREFLIGHT_JSON_COMMAND,
+            "cargo run -p fretboard-dev -- diag doctor campaigns --json"
+        );
+    }
+
+    #[test]
+    fn tool_apps_json_flag_parser_is_explicit() {
+        assert!(!parse_tool_apps_json_flag(Vec::new()).unwrap());
+        assert!(parse_tool_apps_json_flag(vec!["--json".to_string()]).unwrap());
+        assert!(parse_tool_apps_json_flag(vec!["--bad".to_string()]).is_err());
+    }
+
+    #[test]
+    fn tool_apps_json_value_exposes_stable_machine_readable_shape() {
+        let value = tool_apps_json_value();
+        assert_eq!(value["kind"], "fretboard_tool_apps");
+        assert_eq!(value["schema_version"], 1);
+        assert_eq!(value["first_open_doc"], "docs/diagnostics-first-open.md");
+        assert_eq!(
+            value["branch_doc"],
+            "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        );
+        assert_eq!(
+            value["repo_preflight"]["command"],
+            "cargo run -p fretboard-dev -- diag doctor campaigns"
+        );
+        assert_eq!(
+            value["repo_preflight"]["json_command"],
+            "cargo run -p fretboard-dev -- diag doctor campaigns --json"
+        );
+
+        let tools = value["tool_apps"].as_array().expect("tool_apps array");
+        assert!(tools.iter().any(|tool| tool["id"] == "fret-devtools"
+            && tool["best_for"].as_str().is_some()
+            && tool["gate"] == "cargo build -p fret-devtools"));
+        assert!(tools.iter().any(|tool| tool["id"] == "fret-devtools-mcp"
+            && tool["best_for"].as_str().is_some()
+            && tool["gate"] == "cargo build -p fret-devtools-mcp"));
     }
 }

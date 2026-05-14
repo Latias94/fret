@@ -2149,6 +2149,7 @@ fn resolve_builtin_suite_scripts(
             // Callers can still override them explicitly via `--env KEY=...`.
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
             // Default to the non-retained VirtualList path so this harness gates the
             // highest-risk, most common implementation track (ADR 0175 Track B). The
@@ -2179,6 +2180,7 @@ fn resolve_builtin_suite_scripts(
             // Callers can still override them explicitly via `--env KEY=...`.
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
             push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "1");
             // Enable keep-alive in the retained-host harness so boundary scroll back can

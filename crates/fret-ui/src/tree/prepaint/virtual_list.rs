@@ -281,6 +281,7 @@ impl<H: UiHost> UiTree<H> {
                     prev_items_revision,
                     prev_viewport,
                     prev_offset,
+                    visible_range,
                     prev_window_range,
                     render_window_range,
                     window_range,
@@ -350,6 +351,18 @@ impl<H: UiHost> UiTree<H> {
                         crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize
                     } else if (update.offset.0 - update.prev_offset.0).abs() > 0.01 {
                         crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
+                    } else if let (Some(rendered), Some(visible)) =
+                        (update.render_window_range, update.visible_range)
+                    {
+                        let rendered_start = rendered.start_index.saturating_sub(rendered.overscan);
+                        let rendered_end = (rendered.end_index + rendered.overscan)
+                            .min(rendered.count.saturating_sub(1));
+                        if visible.start_index < rendered_start || visible.end_index > rendered_end
+                        {
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
+                        } else {
+                            crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
+                        }
                     } else if update.prev_window_range.map(|r| (r.count, r.overscan))
                         != update.window_range.map(|r| (r.count, r.overscan))
                     {

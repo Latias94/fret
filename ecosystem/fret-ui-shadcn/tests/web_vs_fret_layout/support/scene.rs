@@ -103,6 +103,28 @@ pub(crate) fn find_scene_quad_background_with_rect_close(
     })
 }
 
+pub(crate) fn find_scene_svg_with_rect_close(
+    scene: &Scene,
+    expected: Rect,
+    tol: f32,
+) -> Option<(Rect, fret_core::SvgId)> {
+    scene.ops().iter().find_map(|op| {
+        let (rect, svg) = match *op {
+            SceneOp::SvgMaskIcon { rect, svg, .. } | SceneOp::SvgImage { rect, svg, .. } => {
+                (rect, svg)
+            }
+            _ => return None,
+        };
+
+        let close = (rect.origin.x.0 - expected.origin.x.0).abs() <= tol
+            && (rect.origin.y.0 - expected.origin.y.0).abs() <= tol
+            && (rect.size.width.0 - expected.size.width.0).abs() <= tol
+            && (rect.size.height.0 - expected.size.height.0).abs() <= tol;
+
+        close.then_some((rect, svg))
+    })
+}
+
 pub(crate) fn find_scene_quad_background_with_world_rect_close(
     scene: &Scene,
     expected: WebRect,

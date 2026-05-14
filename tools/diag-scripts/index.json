@@ -566,6 +566,52 @@
       ]
     },
     {
+      "id": "cookbook-imui-editor-controls-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "imui",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the IMUI editor controls lesson root and key controls.",
+        "Focuses the text-assist field, waits for the anchored assist list, then captures layout, screenshot, and bundle evidence."
+      ]
+    },
+    {
+      "id": "cookbook-imui-editor-controls-roughness-typing",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "drag-value",
+        "editor-controls",
+        "imui",
+        "typing"
+      ],
+      "target_hints": [
+        "Proves DragValue typing test ids are published only while typing mode is active.",
+        "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again."
+      ]
+    },
+    {
       "id": "cookbook-markdown-and-code-basics-smoke",
       "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
       "required_capabilities": [
@@ -4995,6 +5041,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-scroll-to-rtl-field",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "checkbox",
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the default Checkbox page to the RTL section and then samples the content viewport with no scripted input.",
+        "The final idle-stability assertion fails if the viewport keeps drifting or oscillating after the RTL section is visible."
+      ]
+    },
+    {
       "id": "ui-gallery-chrome-torture-layout",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-layout.json",
       "required_capabilities": [],
@@ -9071,6 +9143,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-rtl-idle-stability",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "scroll_area",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the Scroll Area docs page to the RTL ScrollArea, then scrolls the nested RTL viewport.",
+        "The idle-stability assertions fail if either the outer content viewport or the nested RTL ScrollArea keeps drifting after scripted input stops."
+      ]
+    },
+    {
       "id": "ui-gallery-scroll-area-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
       "required_capabilities": [],
@@ -9891,6 +9989,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-table-rtl-idle-stability",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "shadcn",
+        "table",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the Table docs page to the RTL section and samples the outer Gallery content viewport with no scripted input.",
+        "This covers the table/RTL companion to the Checkbox and ScrollArea idle-stability gates."
+      ]
+    },
+    {
       "id": "ui-gallery-table-smoke",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json",
       "required_capabilities": [],
@@ -10308,13 +10432,24 @@
     {
       "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-vlist-no-window-shifts-small-scroll"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Small wheel deltas on the retained virtual list must not emit any virtual-list window-shift samples after the script resets diagnostics on the settled page."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-torture",
@@ -10383,27 +10518,51 @@
     {
       "id": "ui-gallery-virtual-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-vlist-window-boundary",
-        "ui-gallery-vlist-window-boundary-retained"
+        "ui-gallery-vlist-window-boundary"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Run with env: FRET_UI_GALLERY_VLIST_RETAINED=0.",
+        "Crossing the non-retained virtual-list window boundary must move the scroll handle and emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-window-boundary-scroll-retained",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-virt-retained",
-        "ui-gallery-virt-retained-measured"
+        "ui-gallery-virt-retained-measured",
+        "ui-gallery-vlist-window-boundary-retained"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
+        "Crossing the retained virtual-list window boundary must move the scroll handle and schedule an escape retained-host reconcile that attaches and detaches row items."
+      ]
     },
     {
       "id": "ui-gallery-wheel-burst-coalescing",
@@ -10634,7 +10793,7 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Activates doc-a-1 (pane A) via the tab overflow menu so the hidden tab is revealed before closing.",
         "Closes doc-a-1 via the close button.",
         "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
       ]
@@ -10687,7 +10846,7 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates a different tab so the drag source tab is inactive.",
+        "Activates doc-a-1 through the overflow menu so the drag source tab is inactive and visible.",
         "Drags the inactive tab toward pane B's right edge until the split preview appears.",
         "Drops to split and asserts the tab moved into the new pane."
       ]
@@ -10799,8 +10958,8 @@
         "workspace"
       ],
       "target_hints": [
-        "Waits for a known tab in pane A to exist.",
-        "Middle-clicks the tab.",
+        "Waits for the initially active tab in pane A to exist.",
+        "Middle-clicks the visible active tab body.",
         "Asserts the tab is removed from the UI tree (not_exists)."
       ]
     },
@@ -10980,7 +11139,7 @@
       ],
       "target_hints": [
         "Asserts initial pos_in_set for a known tab.",
-        "Drags the first tab to the end and drops it.",
+        "Drags the first tab onto the visible end-drop surface.",
         "Asserts pos_in_set updates after the reorder."
       ]
     },

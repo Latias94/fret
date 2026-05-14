@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui-shadcn.recipe-semantics.mechanism-harness-v1",
+  "owner_layer": "ecosystem/fret-ui-shadcn",
+  "domains": ["semantics", "focus", "overlay"],
+  "cases": [
+    {
+      "id": "combobox-open-input-controls-listbox-and-selected-option-metadata",
+      "scenario": {
+        "kind": "combobox_open",
+        "selected": "beta",
+        "navigation": []
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "role_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-input" },
+              "role": "combo_box"
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "role_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-listbox" },
+              "role": "list_box"
+            }
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "semantics-combobox-input" },
+            "flag": "expanded",
+            "expected": true
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "semantics-combobox-input" },
+            "relation": "controls",
+            "target": { "kind": "test_id", "id": "semantics-combobox-listbox" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "semantics-combobox-listbox" },
+            "relation": "labelled_by",
+            "target": { "kind": "test_id", "id": "semantics-combobox-input" }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "selected_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-item-beta" },
+              "selected": true
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "pos_in_set_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-item-beta" },
+              "pos_in_set": 2
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "set_size_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-item-beta" },
+              "set_size": 3
+            }
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "semantics-combobox-input" },
+            "action": "focus",
+            "expected": true
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "semantics-combobox-input" },
+            "action": "set_value",
+            "expected": true
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "APG combobox/listbox relationship plus cmdk active-descendant semantics",
+        "note": "Open combobox search input must expose expanded=true, control its listbox, and keep committed selection metadata separate from highlight."
+      }
+    },
+    {
+      "id": "combobox-arrow-down-sets-active-descendant-without-committed-selection",
+      "scenario": {
+        "kind": "combobox_open",
+        "selected": null,
+        "navigation": ["arrow_down"]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-input" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "active_item_is",
+              "container": { "kind": "test_id", "id": "semantics-combobox-input" },
+              "item": { "kind": "test_id", "id": "semantics-combobox-item-alpha" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "selected_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-item-alpha" },
+              "selected": false
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "pos_in_set_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-item-alpha" },
+              "pos_in_set": 1
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "set_size_is",
+              "target": { "kind": "test_id", "id": "semantics-combobox-item-alpha" },
+              "set_size": 3
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "cmdk/APG active option is exposed via active descendant; committed selection remains separate",
+        "note": "Keyboard highlight should not be reported as the committed selected value."
+      }
+    },
+    {
+      "id": "select-open-trigger-listbox-and-selected-option-metadata",
+      "scenario": {
+        "kind": "select_open",
+        "selected": "beta",
+        "navigation": []
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "role_is",
+              "target": { "kind": "test_id", "id": "semantics-select-listbox" },
+              "role": "list_box"
+            }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "semantics-select-listbox" },
+            "relation": "labelled_by",
+            "target": { "kind": "test_id", "id": "semantics-select-trigger" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "semantics-select-trigger" },
+            "relation": "controls",
+            "target": { "kind": "test_id", "id": "semantics-select-listbox" }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "active_item_is",
+              "container": { "kind": "test_id", "id": "semantics-select-listbox" },
+              "item": { "kind": "test_id", "id": "semantics-select-item-beta" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "selected_is",
+              "target": { "kind": "test_id", "id": "semantics-select-item-beta" },
+              "selected": true
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "pos_in_set_is",
+              "target": { "kind": "test_id", "id": "semantics-select-item-beta" },
+              "pos_in_set": 2
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "set_size_is",
+              "target": { "kind": "test_id", "id": "semantics-select-item-beta" },
+              "set_size": 3
+            }
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "semantics-select-item-beta" },
+            "action": "invoke",
+            "expected": true
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix Select open content exposes selected option and active descendant relationship",
+        "note": "Open select must report trigger expanded state, listbox labelling, active row, and selected option metadata."
+      }
+    }
+  ]
+}

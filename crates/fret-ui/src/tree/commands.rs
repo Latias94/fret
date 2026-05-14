@@ -707,6 +707,34 @@ impl<H: UiHost> UiTree<H> {
         (CommandAvailability::NotHandled, None)
     }
 
+    fn command_availability_in_action_route_fallback_roots(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        command: &CommandId,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        let Some(window) = self.window else {
+            return (CommandAvailability::NotHandled, None);
+        };
+
+        let roots = crate::elements::action_route_fallback_roots(app, window);
+        for element in roots {
+            let Some(node) =
+                self.resolve_live_attached_node_for_element(app, Some(window), element)
+            else {
+                continue;
+            };
+            let availability = self.command_availability_from_node(app, input_ctx, node, command);
+            match availability {
+                CommandAvailability::Available => return (availability, Some(node)),
+                CommandAvailability::Blocked => return (availability, None),
+                CommandAvailability::NotHandled => {}
+            }
+        }
+
+        (CommandAvailability::NotHandled, None)
+    }
+
     /// Publish a per-window action availability snapshot for widget-scoped commands.
     ///
     /// This is a data-only integration seam for runner/platform and UI-kit layers (menus, command
@@ -717,6 +745,12 @@ impl<H: UiHost> UiTree<H> {
     /// - This retained-runtime helper publishes a conservative baseline: for each widget-scoped
     ///   command in the registry, `NotHandled` is treated as "unavailable" (`false`) so
     ///   cross-surface gating behaves consistently.
+    /// - Explicit action-route fallback roots participate after the focused/default route. This
+    ///   keeps app/view-level typed action handlers available to menus, palettes, and overlays
+    ///   without scanning arbitrary unfocused widget subtrees.
+    /// - The no-focus, no-barrier case is allowed to use the same subtree route fallback as
+    ///   dispatch. This keeps first-open command palette/menu discovery in sync with commands that
+    ///   are registered on retained action roots before a focus target exists.
     pub fn publish_window_command_action_availability_snapshot(
         &mut self,
         app: &mut H,
@@ -836,9 +870,27 @@ impl<H: UiHost> UiTree<H> {
                     self.pending_post_layout_window_runtime_snapshot_refine = true;
                 }
             }
+            if availability == CommandAvailability::NotHandled && barrier_root.is_none() {
+                availability = self
+                    .command_availability_in_action_route_fallback_roots(app, input_ctx, &id)
+                    .0;
+            }
             // Cross-surface action availability is dispatch-path availability. Whole-subtree
-            // fallback is intentionally excluded here: it can mark actions available from
-            // unfocused widgets and turns snapshot publication into commands * nodes * depth work.
+            // fallback is intentionally excluded once focus exists: it can mark actions available
+            // from unfocused widgets and turns snapshot publication into commands * nodes * depth
+            // work. Explicit action-route fallback roots above cover view/app-level typed action
+            // handlers without weakening that contract. Before any focus target exists, match the
+            // actual dispatch fallback so first-open discovery surfaces do not disable app-level
+            // action roots.
+            if availability == CommandAvailability::NotHandled
+                && focus.is_none()
+                && barrier_root.is_none()
+            {
+                availability = self
+                    .command_availability_in_subtree(app, input_ctx, base_root, &id)
+                    .0;
+            }
+
             match availability {
                 CommandAvailability::Available => {
                     snapshot.insert(id, true);
@@ -1011,10 +1063,16 @@ impl<H: UiHost> UiTree<H> {
             start == default_root || self.is_descendant(default_root, start);
         let descendant_fallback_route = if barrier_root.is_none() {
             let (availability, route_node) =
-                self.command_availability_in_subtree(app, &input_ctx, base_root, command);
-            (availability == CommandAvailability::Available)
-                .then_some(route_node)
-                .flatten()
+                self.command_availability_in_action_route_fallback_roots(app, &input_ctx, command);
+            if availability == CommandAvailability::Available {
+                route_node
+            } else {
+                let (availability, route_node) =
+                    self.command_availability_in_subtree(app, &input_ctx, base_root, command);
+                (availability == CommandAvailability::Available)
+                    .then_some(route_node)
+                    .flatten()
+            }
         } else {
             None
         };

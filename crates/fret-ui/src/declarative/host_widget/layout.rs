@@ -52,6 +52,10 @@ impl ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
+            super::sync_internal_drag_region_route(cx.app, window, cx.node, &instance);
+        }
+
         self.render_transform = None;
         self.scroll_child_transform = None;
 

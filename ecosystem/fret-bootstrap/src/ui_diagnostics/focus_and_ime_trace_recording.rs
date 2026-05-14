@@ -175,6 +175,211 @@ fn record_focus_trace(
     );
 }
 
+fn focus_trace_summary_note(trace: &[UiFocusTraceEntryV1], step_index: u32) -> Option<String> {
+    let entry = trace
+        .iter()
+        .rev()
+        .find(|entry| entry.step_index == step_index)?;
+
+    Some(format!(
+        "note={:?} reason_code={:?} expected_node_id={:?} expected_test_id={:?} focused_element={:?} focused_element_path={:?} focused_node_id={:?} focused_test_id={:?} focused_role={:?} matches_expected={:?} modal_barrier_root={:?} focus_barrier_root={:?} pointer_occlusion={:?} pointer_occlusion_layer_id={:?} pointer_capture_active={:?} pointer_capture_layer_id={:?} pointer_capture_multiple_layers={:?} text_input={}",
+        entry.note.as_deref(),
+        entry.reason_code.as_deref(),
+        entry.expected_node_id,
+        entry.expected_test_id.as_deref(),
+        entry.focused_element,
+        entry.focused_element_path.as_deref(),
+        entry.focused_node_id,
+        entry.focused_test_id.as_deref(),
+        entry.focused_role.as_deref(),
+        entry.matches_expected,
+        entry.modal_barrier_root,
+        entry.focus_barrier_root,
+        entry.pointer_occlusion.as_deref(),
+        entry.pointer_occlusion_layer_id,
+        entry.pointer_capture_active,
+        entry.pointer_capture_layer_id,
+        entry.pointer_capture_multiple_layers,
+        text_input_focus_summary(entry.text_input_snapshot.as_ref())
+    ))
+}
+
+fn text_input_focus_summary(snapshot: Option<&UiTextInputSnapshotV1>) -> String {
+    match snapshot {
+        Some(snapshot) => format!(
+            "focus_is_text_input={} is_composing={} text_len_utf16={} selection={:?} marked={:?}",
+            snapshot.focus_is_text_input,
+            snapshot.is_composing,
+            snapshot.text_len_utf16,
+            snapshot.selection_utf16,
+            snapshot.marked_utf16
+        ),
+        None => "none".to_string(),
+    }
+}
+
+fn web_ime_trace_summary_note(trace: &[UiWebImeTraceEntryV1], step_index: u32) -> Option<String> {
+    let entry = trace
+        .iter()
+        .rev()
+        .find(|entry| entry.step_index == step_index)?;
+
+    Some(format!(
+        "note={:?} enabled={} composing={} suppress_next_input={} textarea_has_focus={:?} active_element_tag={:?} position_mode={:?} mount_kind={:?} dpr={:?} textarea_selection=({:?},{:?}) last_cursor_area={:?} last_cursor_anchor_px={:?} last_input_type={:?} last_preedit_len={:?} last_preedit_cursor_utf16={:?} last_commit_len={:?} beforeinput_seen={} input_seen={} suppressed_input_seen={} composition_start_seen={} composition_update_seen={} composition_end_seen={} cursor_area_set_seen={}",
+        entry.note.as_deref(),
+        entry.enabled,
+        entry.composing,
+        entry.suppress_next_input,
+        entry.textarea_has_focus,
+        entry.active_element_tag.as_deref(),
+        entry.position_mode.as_deref(),
+        entry.mount_kind.as_deref(),
+        entry.device_pixel_ratio,
+        entry.textarea_selection_start_utf16,
+        entry.textarea_selection_end_utf16,
+        entry.last_cursor_area,
+        entry.last_cursor_anchor_px,
+        entry.last_input_type.as_deref(),
+        entry.last_preedit_len,
+        entry.last_preedit_cursor_utf16,
+        entry.last_commit_len,
+        entry.beforeinput_seen,
+        entry.input_seen,
+        entry.suppressed_input_seen,
+        entry.composition_start_seen,
+        entry.composition_update_seen,
+        entry.composition_end_seen,
+        entry.cursor_area_set_seen
+    ))
+}
+
+#[cfg(test)]
+mod focus_trace_summary_tests {
+    use super::*;
+
+    fn focus_entry(step_index: u32) -> UiFocusTraceEntryV1 {
+        UiFocusTraceEntryV1 {
+            step_index,
+            note: Some("focus.set_focus".to_string()),
+            reason_code: Some("focus.blocked_by_focus_barrier".to_string()),
+            text_input_snapshot: Some(UiTextInputSnapshotV1 {
+                focus_is_text_input: true,
+                is_composing: false,
+                text_len_utf16: 12,
+                selection_utf16: Some((2, 4)),
+                marked_utf16: None,
+                ime_cursor_area: None,
+                visual: None,
+                ime_surrounding_text_len_bytes: Some(32),
+                ime_surrounding_cursor_bytes: Some(6),
+                ime_surrounding_anchor_bytes: Some(2),
+            }),
+            expected_node_id: Some(10),
+            expected_test_id: Some("field.expected".to_string()),
+            modal_barrier_root: Some(100),
+            focus_barrier_root: Some(200),
+            pointer_occlusion: Some("blocks_underlay_input".to_string()),
+            pointer_occlusion_layer_id: Some(7),
+            pointer_capture_active: Some(true),
+            pointer_capture_layer_id: Some(8),
+            pointer_capture_multiple_layers: Some(false),
+            focused_element: Some(55),
+            focused_element_path: Some("Root/Dialog/OtherField".to_string()),
+            focused_node_id: Some(11),
+            focused_test_id: Some("field.actual".to_string()),
+            focused_role: Some("text_input".to_string()),
+            matches_expected: Some(false),
+        }
+    }
+
+    #[test]
+    fn focus_trace_summary_note_names_expected_actual_and_barriers() {
+        let note = focus_trace_summary_note(&[focus_entry(3)], 3).unwrap();
+
+        assert!(note.contains("reason_code=Some(\"focus.blocked_by_focus_barrier\")"));
+        assert!(note.contains("expected_test_id=Some(\"field.expected\")"));
+        assert!(note.contains("focused_test_id=Some(\"field.actual\")"));
+        assert!(note.contains("matches_expected=Some(false)"));
+        assert!(note.contains("modal_barrier_root=Some(100)"));
+        assert!(note.contains("focus_barrier_root=Some(200)"));
+        assert!(note.contains("pointer_occlusion=Some(\"blocks_underlay_input\")"));
+        assert!(note.contains("pointer_capture_active=Some(true)"));
+        assert!(note.contains("focus_is_text_input=true"));
+        assert!(note.contains("selection=Some((2, 4))"));
+    }
+
+    #[test]
+    fn focus_trace_summary_note_uses_latest_matching_step() {
+        let old = focus_entry(2);
+        let mut latest = focus_entry(3);
+        latest.focused_test_id = Some("latest.focus".to_string());
+
+        let note = focus_trace_summary_note(&[old, latest], 3).unwrap();
+
+        assert!(note.contains("focused_test_id=Some(\"latest.focus\")"));
+        assert!(!note.contains("step_index=2"));
+    }
+
+    fn web_ime_entry(step_index: u32) -> UiWebImeTraceEntryV1 {
+        UiWebImeTraceEntryV1 {
+            step_index,
+            note: Some("paste_text_into.wait_clipboard_write".to_string()),
+            enabled: true,
+            composing: false,
+            suppress_next_input: true,
+            textarea_has_focus: Some(false),
+            active_element_tag: Some("BODY".to_string()),
+            position_mode: Some("cursor".to_string()),
+            mount_kind: Some("hidden_textarea".to_string()),
+            device_pixel_ratio: Some(1.5),
+            textarea_selection_start_utf16: Some(2),
+            textarea_selection_end_utf16: Some(4),
+            last_cursor_area: Some(UiRectV1 {
+                x_px: 10.0,
+                y_px: 20.0,
+                w_px: 30.0,
+                h_px: 40.0,
+            }),
+            last_cursor_anchor_px: Some((11.0, 21.0)),
+            last_input_type: Some("insertFromPaste".to_string()),
+            last_preedit_len: Some(3),
+            last_preedit_cursor_utf16: Some((1, 2)),
+            last_commit_len: Some(5),
+            beforeinput_seen: 1,
+            input_seen: 0,
+            suppressed_input_seen: 1,
+            composition_start_seen: 1,
+            composition_update_seen: 1,
+            composition_end_seen: 0,
+            cursor_area_set_seen: 1,
+        }
+    }
+
+    #[test]
+    fn web_ime_trace_summary_note_names_bridge_state() {
+        let note = web_ime_trace_summary_note(&[web_ime_entry(9)], 9).unwrap();
+
+        assert!(note.contains("enabled=true"));
+        assert!(note.contains("textarea_has_focus=Some(false)"));
+        assert!(note.contains("active_element_tag=Some(\"BODY\")"));
+        assert!(note.contains("last_input_type=Some(\"insertFromPaste\")"));
+        assert!(note.contains("suppressed_input_seen=1"));
+        assert!(note.contains("cursor_area_set_seen=1"));
+    }
+
+    #[test]
+    fn web_ime_trace_summary_note_uses_latest_matching_step() {
+        let old = web_ime_entry(8);
+        let mut latest = web_ime_entry(9);
+        latest.active_element_tag = Some("TEXTAREA".to_string());
+
+        let note = web_ime_trace_summary_note(&[old, latest], 9).unwrap();
+
+        assert!(note.contains("active_element_tag=Some(\"TEXTAREA\")"));
+        assert!(!note.contains("step_index=8"));
+    }
+}
+
 fn record_web_ime_trace(
     trace: &mut Vec<UiWebImeTraceEntryV1>,
     app: &App,

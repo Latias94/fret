@@ -993,6 +993,25 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Assert that a target's structured semantics scroll field stays idle-stable for `frames`
+    /// consecutive frames with no scripted input.
+    ///
+    /// Unlike `wait_semantics_scroll_stable`, this is an oracle step: it first samples the current
+    /// value as a baseline, then fails if any later sample drifts too far from that baseline or if a
+    /// single-frame delta exceeds the allowed threshold. This catches post-scroll oscillation/jitter
+    /// that may already look "stable enough" at a short wait boundary.
+    AssertSemanticsScrollIdleStable {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        field: UiSemanticsScrollFieldV1,
+        #[serde(default = "default_semantics_scroll_idle_stable_frames")]
+        frames: u32,
+        #[serde(default = "default_semantics_scroll_idle_stable_max_delta")]
+        max_delta: f64,
+        #[serde(default = "default_semantics_scroll_idle_stable_max_total_delta")]
+        max_total_delta: f64,
+    },
     EnsureVisible {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -1023,6 +1042,8 @@ pub enum UiActionStepV2 {
         padding_px: f32,
         #[serde(default)]
         padding_insets_px: Option<UiPaddingInsetsV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        motion_check: Option<UiScrollMotionCheckV1>,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
@@ -1525,6 +1546,34 @@ fn default_semantics_scroll_stable_frames() -> u32 {
 
 fn default_semantics_scroll_stable_max_delta() -> f64 {
     1.0
+}
+
+fn default_semantics_scroll_idle_stable_frames() -> u32 {
+    30
+}
+
+fn default_semantics_scroll_idle_stable_max_delta() -> f64 {
+    0.25
+}
+
+fn default_semantics_scroll_idle_stable_max_total_delta() -> f64 {
+    0.5
+}
+
+fn default_scroll_motion_field() -> UiSemanticsScrollFieldV1 {
+    UiSemanticsScrollFieldV1::Y
+}
+
+fn default_scroll_motion_max_target_reverse_px() -> f32 {
+    1.0
+}
+
+fn default_scroll_motion_max_scroll_reverse_px() -> f64 {
+    1.0
+}
+
+fn default_scroll_motion_require_scroll_progress() -> bool {
+    true
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -2370,6 +2419,86 @@ pub enum UiPredicateV1 {
     EventKindSeen {
         event_kind: String,
     },
+    /// True when the latest debug snapshot reports no more than `max` virtual-list window-shift
+    /// samples.
+    ///
+    /// This turns virtual-list telemetry into a script-level gate: small scrolls that should stay
+    /// inside the retained window can assert `max = 0`, while boundary-crossing scripts can use a
+    /// higher threshold and inspect the captured bundle for the reason/apply mode.
+    VirtualListWindowShiftSamplesLenLe {
+        max: u64,
+    },
+    /// True when the recent debug snapshot ring contains at least `min` virtual-list
+    /// window-shift samples matching the provided telemetry fields.
+    ///
+    /// Field values use the diagnostics JSON spelling, for example
+    /// `shift_kind = "escape"`, `reason = "scroll_offset"`,
+    /// `apply_mode = "non_retained_rerender"`, and `source = "layout"`.
+    VirtualListWindowShiftSamplesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        shift_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        apply_mode: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<String>,
+    },
+    /// True when the recent debug snapshot ring contains at least `min` virtual-list
+    /// window records matching the provided telemetry fields.
+    ///
+    /// This covers retained virtual-list reconciliation, where the latest window record carries
+    /// the shift kind/reason/apply mode even when no non-retained shift sample is emitted.
+    VirtualListWindowsMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        shift_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        apply_mode: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source: Option<String>,
+    },
+    /// True when the recent debug snapshot ring contains at least `min` retained virtual-list
+    /// reconcile records matching the provided telemetry fields.
+    ///
+    /// This is the retained-host counterpart to `virtual_list_windows_matching_ge`: retained
+    /// boundary scrolls can update row membership through a host reconcile without recording a
+    /// prepaint window-shift sample.
+    RetainedVirtualListReconcilesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reconcile_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        attached_items_min: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        detached_items_min: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reused_from_keep_alive_items_min: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        kept_alive_items_min: Option<u64>,
+    },
+    /// True when the recent debug snapshot ring contains at least `min` scroll-handle change
+    /// records matching the provided telemetry fields.
+    ///
+    /// This is a mechanism-level predicate for self-drawn scroll surfaces: it proves that the
+    /// framework scroll handle actually changed even when the semantics tree does not expose a
+    /// stable scroll field for the target widget.
+    ScrollHandleChangesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        change_kind: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset_y_min: Option<f64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        prev_offset_y_max: Option<f64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset_changed: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        upgraded_to_layout_bindings_min: Option<u64>,
+    },
     /// True when the app snapshot field addressed by JSON Pointer `pointer` equals `value`.
     ///
     /// This predicate reads the best-effort `app_snapshot` payload published by the app into
@@ -2732,6 +2861,20 @@ pub enum UiSemanticsScrollFieldV1 {
     YMax,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollMotionCheckV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<UiSelectorV1>,
+    #[serde(default = "default_scroll_motion_field")]
+    pub field: UiSemanticsScrollFieldV1,
+    #[serde(default = "default_scroll_motion_max_target_reverse_px")]
+    pub max_target_reverse_px: f32,
+    #[serde(default = "default_scroll_motion_max_scroll_reverse_px")]
+    pub max_scroll_reverse_px: f64,
+    #[serde(default = "default_scroll_motion_require_scroll_progress")]
+    pub require_scroll_progress: bool,
+}
+
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOptionalRootStateV1 {
@@ -3028,6 +3171,10 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scroll_motion_trace: Vec<UiScrollMotionTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub semantics_scroll_idle_stable_trace: Vec<UiSemanticsScrollIdleStableTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -3238,6 +3385,54 @@ pub struct UiBoundsStableTraceEntryV1 {
     pub moved_px: f32,
     pub max_move_px: f32,
     pub remaining_frames: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollMotionTraceEntryV1 {
+    pub step_index: u32,
+    pub container: UiSelectorV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<UiSelectorV1>,
+    pub target: UiSelectorV1,
+    pub field: UiSemanticsScrollFieldV1,
+    pub sample_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_delta: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_delta_y_px: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_target_reverse_px: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_scroll_reverse_px: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsScrollIdleStableTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    pub field: UiSemanticsScrollFieldV1,
+    pub sample_count: u32,
+    pub required_samples: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub baseline_value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_delta: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_delta: Option<f64>,
+    pub max_delta: f64,
+    pub max_total_delta: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4178,6 +4373,149 @@ mod tests {
     }
 
     #[test]
+    fn predicate_virtual_list_window_shift_samples_len_le_serializes() {
+        let value =
+            serde_json::to_value(UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 0 })
+                .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "virtual_list_window_shift_samples_len_le",
+                "max": 0,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 0 }
+        ));
+    }
+
+    #[test]
+    fn predicate_virtual_list_window_shift_samples_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe {
+            min: 1,
+            shift_kind: Some("escape".to_string()),
+            reason: Some("scroll_offset".to_string()),
+            apply_mode: Some("non_retained_rerender".to_string()),
+            source: Some("layout".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "virtual_list_window_shift_samples_matching_ge",
+                "min": 1,
+                "shift_kind": "escape",
+                "reason": "scroll_offset",
+                "apply_mode": "non_retained_rerender",
+                "source": "layout",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_virtual_list_windows_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::VirtualListWindowsMatchingGe {
+            min: 1,
+            shift_kind: Some("prefetch".to_string()),
+            reason: Some("scroll_offset".to_string()),
+            apply_mode: Some("retained_reconcile".to_string()),
+            source: None,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "virtual_list_windows_matching_ge",
+                "min": 1,
+                "shift_kind": "prefetch",
+                "reason": "scroll_offset",
+                "apply_mode": "retained_reconcile",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::VirtualListWindowsMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_retained_virtual_list_reconciles_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+            min: 1,
+            reconcile_kind: Some("escape".to_string()),
+            attached_items_min: Some(1),
+            detached_items_min: Some(1),
+            reused_from_keep_alive_items_min: Some(1),
+            kept_alive_items_min: None,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "retained_virtual_list_reconciles_matching_ge",
+                "min": 1,
+                "reconcile_kind": "escape",
+                "attached_items_min": 1,
+                "detached_items_min": 1,
+                "reused_from_keep_alive_items_min": 1,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_scroll_handle_changes_matching_ge_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::ScrollHandleChangesMatchingGe {
+            min: 1,
+            change_kind: Some("hit_test_only".to_string()),
+            offset_y_min: Some(720.0),
+            prev_offset_y_max: Some(0.0),
+            offset_changed: Some(true),
+            upgraded_to_layout_bindings_min: Some(1),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "scroll_handle_changes_matching_ge",
+                "min": 1,
+                "change_kind": "hit_test_only",
+                "offset_y_min": 720.0,
+                "prev_offset_y_max": 0.0,
+                "offset_changed": true,
+                "upgraded_to_layout_bindings_min": 1,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::ScrollHandleChangesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
     fn diag_screenshot_request_round_trips_and_defaults_scale_factor() {
         let json = serde_json::json!({
             "schema_version": 1,
@@ -4724,6 +5062,38 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected wait_semantics_scroll_stable"),
+        }
+    }
+
+    #[test]
+    fn step_assert_semantics_scroll_idle_stable_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "assert_semantics_scroll_idle_stable",
+            "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+            "field": "y"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::AssertSemanticsScrollIdleStable {
+                window,
+                target,
+                field,
+                frames,
+                max_delta,
+                max_total_delta,
+            } => {
+                assert!(window.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+                assert_eq!(field, UiSemanticsScrollFieldV1::Y);
+                assert_eq!(frames, default_semantics_scroll_idle_stable_frames());
+                assert_eq!(max_delta, default_semantics_scroll_idle_stable_max_delta());
+                assert_eq!(
+                    max_total_delta,
+                    default_semantics_scroll_idle_stable_max_total_delta()
+                );
+            }
+            _ => panic!("expected assert_semantics_scroll_idle_stable"),
         }
     }
 

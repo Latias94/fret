@@ -15,7 +15,7 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
         "`ComboboxContent::width_px(...)` is separate from `ComboboxTrigger::width_px(...)`",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here",
-        "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
+        "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
         ".test_id_prefix(\"ui-gallery-combobox-usage\")",
         ".test_id_prefix(\"ui-gallery-combobox-api-reference\")",
         ".test_id_prefix(\"ui-gallery-combobox-label\")",
@@ -45,6 +45,8 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
             rtl,
             api_reference,
             responsive,
+            long_text,
+            rtl_long_text,
             conformance_demo,
             groups_with_separator,
             label,
@@ -69,10 +71,11 @@ fn combobox_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let normalized_basic = normalize_ws(basic);
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "shadcn::Combobox::new(value, open)",
         ".query_model(query)",
-        ".trigger(shadcn::ComboboxTrigger::new().width_px(Px(200.0)))",
+        ".variant(shadcn::ComboboxTriggerVariant::Button)",
+        ".width_px(Px(200.0))",
         ".a11y_label(\"Framework combobox\")",
         ".test_id_prefix(\"ui-gallery-combobox-usage\")",
     ] {
@@ -231,6 +234,8 @@ fn combobox_docs_diag_scripts_cover_docs_smoke_and_existing_follow_ups() {
         "\"docsec-rtl-content\"",
         "\"ui-gallery-combobox-api-reference-content\"",
         "\"docsec-responsive-content\"",
+        "\"ui-gallery-combobox-long-text-docsec-content\"",
+        "\"ui-gallery-combobox-rtl-long-text-docsec-content\"",
         "\"docsec-conformance-demo-content\"",
         "\"docsec-groups-separator-content\"",
         "\"ui-gallery-combobox-label-content\"",

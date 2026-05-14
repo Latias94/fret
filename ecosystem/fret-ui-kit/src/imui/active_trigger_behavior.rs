@@ -102,33 +102,19 @@ pub(super) fn populate_active_trigger_response<H: UiHost>(
     input: ActiveTriggerResponseInput,
     response: &mut super::ResponseExt,
 ) {
-    response.core.hovered = state.hovered;
-    response.core.pressed = state.pressed;
-    response.core.focused = state.focused;
-    response.nav_highlighted =
-        state.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
-    response.id = Some(id);
-    response.core.clicked = input.clicked;
-    response.core.changed = input.changed;
-    response.core.rect = cx.last_bounds_for_element(id);
     let hover_delay =
         super::install_hover_query_hooks_for_pressable(cx, id, state.hovered_raw, None);
-    response.pointer_hovered_raw = state.hovered_raw;
-    response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
-    response.hover_stationary_met = hover_delay.stationary_met;
-    response.hover_delay_short_met = hover_delay.delay_short_met;
-    response.hover_delay_normal_met = hover_delay.delay_normal_met;
-    response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
-    response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
-    response.hover_blocked_by_active_item =
-        super::hover_blocked_by_active_item_for(cx, id, &behavior.active_item_model);
-    super::populate_response_lifecycle_transients(cx, id, response);
-    super::populate_response_lifecycle_from_active_state(
+    super::populate_pressable_response(
         cx,
         id,
+        state,
+        hover_delay,
+        &behavior.active_item_model,
+        input.clicked,
+        input.changed,
         state.pressed,
         input.lifecycle_edited,
+        input.enabled,
         response,
     );
-    super::sanitize_response_for_enabled(input.enabled, response);
 }

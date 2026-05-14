@@ -5,6 +5,7 @@
     "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
     "tools/diag-scripts/ui-gallery/button/ui-gallery-button-rtl-row-screenshots.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+    "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-open-screenshot.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
@@ -17,8 +18,10 @@
     "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-tight-left-collision.json",
     "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-rtl-open-screenshot.json",
     "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
     "tools/diag-scripts/ui-gallery/select/ui-gallery-select-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json"
   ]
 }

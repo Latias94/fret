@@ -82,6 +82,8 @@ pub(crate) enum ListTargetContract {
     WebDemos(NoArgs),
     /// List cookbook examples.
     CookbookExamples(ListAllArgs),
+    /// List repo-maintainer tool apps.
+    ToolApps(ListToolAppsArgs),
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
@@ -92,6 +94,13 @@ pub(crate) struct ListAllArgs {
     /// Include maintainer-only or lab targets.
     #[arg(long)]
     pub all: bool,
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
+pub(crate) struct ListToolAppsArgs {
+    /// Print machine-readable JSON.
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
@@ -226,6 +235,36 @@ mod tests {
     }
 
     #[test]
+    fn list_tool_apps_contract_parses() {
+        let cli = try_parse_contract(["fretboard-dev", "list", "tool-apps"])
+            .expect("list tool-apps should parse");
+
+        let FretboardCommandContract::List(list) = cli.command else {
+            panic!("expected list command");
+        };
+
+        let ListTargetContract::ToolApps(_) = list.target else {
+            panic!("expected tool-apps target");
+        };
+    }
+
+    #[test]
+    fn list_tool_apps_contract_captures_json_flag() {
+        let cli = try_parse_contract(["fretboard-dev", "list", "tool-apps", "--json"])
+            .expect("list tool-apps --json should parse");
+
+        let FretboardCommandContract::List(list) = cli.command else {
+            panic!("expected list command");
+        };
+
+        let ListTargetContract::ToolApps(args) = list.target else {
+            panic!("expected tool-apps target");
+        };
+
+        assert!(args.json);
+    }
+
+    #[test]
     fn list_contract_requires_a_target() {
         let err = try_parse_contract(["fretboard-dev", "list"])
             .expect_err("list should require a target");
@@ -240,6 +279,19 @@ mod tests {
         let help = render_command_help_path(&["dev"]).expect("dev help should render");
         assert!(help.contains("native"));
         assert!(help.contains("web"));
+    }
+
+    #[test]
+    fn list_help_includes_tool_apps() {
+        let help = render_command_help_path(&["list"]).expect("list help should render");
+        assert!(help.contains("tool-apps"));
+    }
+
+    #[test]
+    fn list_tool_apps_help_includes_json_flag() {
+        let help =
+            render_command_help_path(&["list", "tool-apps"]).expect("tool-apps help should render");
+        assert!(help.contains("--json"));
     }
 
     #[test]

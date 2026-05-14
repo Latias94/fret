@@ -265,15 +265,16 @@ where
         let reset_action = self.options.reset.clone();
         let scrub_test_id = self.options.test_id.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let active_typing_test_id = if typing { typing_test_id.clone() } else { None };
         let scrub_axis_test_id = derived_test_id(scrub_test_id.as_ref(), "axis");
         let scrub_value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
         let scrub_prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
         let scrub_suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
-        let typing_axis_test_id = derived_test_id(typing_test_id.as_ref(), "axis");
-        let typing_input_test_id = derived_test_id(typing_test_id.as_ref(), "input");
-        let typing_prefix_test_id = derived_test_id(typing_test_id.as_ref(), "prefix");
-        let typing_suffix_test_id = derived_test_id(typing_test_id.as_ref(), "suffix");
-        let typing_error_icon_test_id = derived_test_id(typing_test_id.as_ref(), "error");
+        let typing_axis_test_id = derived_test_id(active_typing_test_id.as_ref(), "axis");
+        let typing_input_test_id = derived_test_id(active_typing_test_id.as_ref(), "input");
+        let typing_prefix_test_id = derived_test_id(active_typing_test_id.as_ref(), "prefix");
+        let typing_suffix_test_id = derived_test_id(active_typing_test_id.as_ref(), "suffix");
+        let typing_error_icon_test_id = derived_test_id(active_typing_test_id.as_ref(), "error");
         let explicit_reset_test_id = reset_action
             .as_ref()
             .and_then(|reset| reset.test_id.clone());
@@ -282,8 +283,8 @@ where
             .or_else(|| derived_test_id(scrub_test_id.as_ref(), "reset"));
         let typing_reset_test_id = explicit_reset_test_id
             .as_ref()
-            .map(|id| Arc::<str>::from(format!("{}.typing", id.as_ref())))
-            .or_else(|| derived_test_id(typing_test_id.as_ref(), "reset"));
+            .and_then(|id| typing.then(|| Arc::<str>::from(format!("{}.typing", id.as_ref()))))
+            .or_else(|| derived_test_id(active_typing_test_id.as_ref(), "reset"));
 
         let (density, frame_chrome, (text_style, input_chrome)) = {
             let theme = Theme::global(&*cx.app);
@@ -833,7 +834,7 @@ where
                     vec![editor_input_group_row(cx, Px(0.0), segments)]
                 },
             );
-            if let Some(test_id) = typing_test_id.as_ref() {
+            if let Some(test_id) = active_typing_test_id.as_ref() {
                 typing_frame = typing_frame.test_id(test_id.clone());
             }
             typing_frame

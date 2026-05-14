@@ -33,20 +33,35 @@
       "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
       "button": "left"
     },
-
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 420.0, "delta_y": 0.0, "steps": 42 },
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 1050.0, "y_px": 160.0 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": -1.0, "delta_y": 0.0, "steps": 1 },
-    { "type": "wait_frames", "n": 4 },
-
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "current" },
+      "delta_x": 1200.0,
+      "delta_y": 0.0,
+      "steps": 160
+    },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.center" } },
-      "timeout_frames": 240
+      "predicate": { "kind": "workspace_tab_strip_drag_active_is", "active": true, "pane_id": "pane-a" },
+      "timeout_frames": 480,
+      "timeout_ms": 15000
     },
     {
       "type": "assert",
       "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" } }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.left" } }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.up" } }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.down" } }
     },
 
     { "type": "press_key", "key": "escape" },

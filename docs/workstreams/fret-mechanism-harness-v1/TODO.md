@@ -55,8 +55,16 @@ date: 2026-05-12
   context-menu nested submenu keyboard restore focused gate.
 - [x] Extend the roving focus interaction fixture with printable-key typeahead dispatch,
   no-match preservation, wrapper traversal, and call-count metrics.
-- [ ] Add a real UI Gallery scroll/virtual-list diagnostics gate once the smallest stable demo page
+- [x] Add real UI Gallery scroll/virtual-list diagnostics gates once the smallest stable demo pages
   and selectors are identified.
+  - Result: the dev-only Virtual List Torture page now gates small-scroll no-window-shift telemetry,
+    and the default Checkbox page now gates post-scroll RTL viewport idle stability.
+- [x] Add boundary-crossing Virtual List runtime gates for non-retained and retained owner paths.
+  - Result: the non-retained `ui-gallery-vlist-window-boundary` suite passes after the owner fix.
+    The retained script produced evidence, but the outer suite wrapper still needs a clean-exit
+    follow-up because no `suite.summary.json` was written.
+- [ ] Fix or explain the retained Virtual List boundary suite wrapper clean-exit gap so retained
+  boundary-crossing coverage has a normal `suite.summary.json` proof.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
@@ -69,7 +77,7 @@ date: 2026-05-12
 - [x] Add dropdown-menu, context-menu, and menubar submenu fixture coverage for ArrowRight open
   and ArrowLeft restore parity.
 - [x] Extend recipe-level typeahead parity beyond the current mechanism matrices.
-- [ ] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
+- [x] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
 - [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
 - [x] Add modal-barrier root lifecycle runtime coverage on a default-compatible page.

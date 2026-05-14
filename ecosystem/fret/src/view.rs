@@ -3292,6 +3292,7 @@ fn install_app_ui_action_handlers_for_owner<Owner: 'static, H: UiHost>(
     handlers: &Option<(OnCommand, OnCommandAvailability)>,
 ) {
     if let Some((on_command, on_command_availability)) = handlers.clone() {
+        cx.action_route_fallback_root(action_root);
         cx.action_on_command_for_owner::<Owner>(action_root, on_command);
         cx.action_on_command_availability_for_owner::<Owner>(action_root, on_command_availability);
     }
@@ -4398,6 +4399,51 @@ mod tests {
         assert!(
             ui.dispatch_command(&mut app, &mut services, &command),
             "registered unit action handlers should dispatch through the no-focus command route"
+        );
+        assert_eq!(
+            st.view
+                .count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn app_ui_unit_action_handler_publishes_available_snapshot_when_focus_exists() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let command = <RuntimeIncrementAction as fret_runtime::TypedAction>::action_id();
+        app.commands_mut().register(
+            command.clone(),
+            fret_runtime::CommandMeta::new("Runtime Increment")
+                .with_scope(fret_runtime::CommandScope::Widget),
+        );
+
+        let mut services = FakeUiServices;
+        let mut st = view_init_window::<RuntimeLocalsWithView>(&mut app, window);
+        app.set_frame_id(FrameId(1));
+        let root = render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        ui.set_focus(Some(first_leaf(&ui, root)));
+        ui.publish_window_runtime_snapshots(&mut app);
+
+        let availability = app
+            .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.available(window, &command));
+        assert_eq!(
+            availability,
+            Some(true),
+            "view-level AppUi action handlers should stay available after focus moves into normal content"
+        );
+
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &command),
+            "focused-content command dispatch should still reach the AppUi action route fallback"
         );
         assert_eq!(
             st.view

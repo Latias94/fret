@@ -35,7 +35,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .variant(shadcn::ComboboxTriggerVariant::Button)
                         .width_px(Px(180.0)),
                 )
-                .input(shadcn::ComboboxInput::new().placeholder("اختر المنتج"))
+                .input(
+                    shadcn::ComboboxInput::new()
+                        .placeholder("اختر المنتج")
+                        .show_trigger(true),
+                )
                 .content(
                     shadcn::ComboboxContent::new([
                         shadcn::ComboboxContentPart::input(

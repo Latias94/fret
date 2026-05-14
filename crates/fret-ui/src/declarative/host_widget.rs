@@ -10,6 +10,26 @@ mod measure;
 mod paint;
 mod semantics;
 
+fn sync_internal_drag_region_route<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+    instance: &ElementInstance,
+) {
+    let ElementInstance::InternalDragRegion(props) = instance else {
+        return;
+    };
+    let Some(kind) = props.route_kind else {
+        return;
+    };
+
+    if props.enabled {
+        crate::internal_drag::set_route(app, window, kind, node);
+    } else if crate::internal_drag::route(&*app, window, kind) == Some(node) {
+        crate::internal_drag::remove_route(app, window, kind);
+    }
+}
+
 fn interactive_resize_text_width_cache_entries() -> usize {
     crate::runtime_config::ui_runtime_config().interactive_resize_text_width_cache_entries
 }
@@ -976,6 +996,38 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.event_observer_impl(cx, event);
     }
 
+    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return;
+        };
+
+        sync_internal_drag_region_route(cx.app, window, cx.node, &instance);
+
+        let canvas_has_prepaint =
+            matches!(instance, ElementInstance::Canvas(props) if props.prepaint);
+        if !canvas_has_prepaint {
+            return;
+        }
+
+        let on_prepaint = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::canvas::CanvasPaintHooks::default,
+            |hooks| hooks.on_prepaint.clone(),
+        );
+        let Some(on_prepaint) = on_prepaint else {
+            return;
+        };
+
+        let mut host = crate::canvas::UiCanvasPrepaintHostAdapter::new(cx);
+        let mut canvas_cx = crate::canvas::CanvasPrepaintCx::new(&mut host);
+        (on_prepaint)(&mut canvas_cx);
+    }
+
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(blob) = self.text_cache.blob.take() {
             services.text().release(blob);
@@ -1003,34 +1055,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         self.semantics_impl(cx);
-    }
-
-    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
-        let Some(window) = cx.window else {
-            return;
-        };
-        let canvas_has_prepaint = matches!(
-            self.instance(cx.app, window, cx.node),
-            Some(ElementInstance::Canvas(props)) if props.prepaint
-        );
-        if !canvas_has_prepaint {
-            return;
-        }
-
-        let on_prepaint = crate::elements::with_element_state(
-            &mut *cx.app,
-            window,
-            self.element,
-            crate::canvas::CanvasPaintHooks::default,
-            |hooks| hooks.on_prepaint.clone(),
-        );
-        let Some(on_prepaint) = on_prepaint else {
-            return;
-        };
-
-        let mut host = crate::canvas::UiCanvasPrepaintHostAdapter::new(cx);
-        let mut canvas_cx = crate::canvas::CanvasPrepaintCx::new(&mut host);
-        (on_prepaint)(&mut canvas_cx);
     }
 
     fn measure(&mut self, cx: &mut MeasureCx<'_, H>) -> Size {

@@ -8,7 +8,7 @@ use fret_core::{
     SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
     UvRect, ViewportFit,
 };
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{CommandId, DragKindId, Model};
 use std::sync::Arc;
 
 use crate::{ResizablePanelGroupStyle, SvgSource, TextAreaStyle, TextInputStyle};
@@ -365,6 +365,13 @@ pub struct TextInputRegionProps {
 pub struct InternalDragRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
+    /// Optional cross-window route anchor kind.
+    ///
+    /// When set, the region refreshes `InternalDragRouteService` from the retained interaction
+    /// lifecycle so runner-routed cross-window internal drags can dispatch to this stable region
+    /// even when hit-testing is over unrelated UI. The runtime does not assign policy to the kind;
+    /// component layers choose it.
+    pub route_kind: Option<DragKindId>,
 }
 
 /// An external drag event listener region primitive.
@@ -381,6 +388,7 @@ impl Default for InternalDragRegionProps {
         Self {
             layout: LayoutStyle::default(),
             enabled: true,
+            route_kind: None,
         }
     }
 }

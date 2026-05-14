@@ -2035,36 +2035,54 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                     fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
                 };
 
-                // Prefer the prepaint-derived window range (ADR 0175). This lets retained
-                // virtual surfaces update row membership on cache-hit frames without
-                // re-deriving the window from scroll state during reconcile.
-                let mut window_range =
-                    state
-                        .window_range
-                        .or(state.render_window_range)
-                        .filter(|r| {
-                            r.count == props.len
-                                && r.overscan == props.overscan
-                                && r.start_index <= r.end_index
-                                && r.end_index < r.count
-                        });
-
-                if window_range.is_none() {
-                    if viewport.0 <= 0.0 {
-                        return RetainedVirtualListReconcileItems::DeferUntilViewportKnown;
-                    }
-
-                    let offset_point = props.scroll_handle.offset();
-                    let offset_axis = match props.axis {
-                        fret_core::Axis::Vertical => offset_point.y,
-                        fret_core::Axis::Horizontal => offset_point.x,
-                    };
-                    let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
-                    window_range =
-                        state
-                            .metrics
-                            .visible_range(offset_axis, viewport, props.overscan);
+                if viewport.0 <= 0.0 {
+                    return RetainedVirtualListReconcileItems::DeferUntilViewportKnown;
                 }
+
+                let valid_window = |range: crate::virtual_list::VirtualRange| {
+                    range.count == props.len
+                        && range.overscan == props.overscan
+                        && range.start_index <= range.end_index
+                        && range.end_index < range.count
+                };
+
+                let offset_point = props.scroll_handle.offset();
+                let offset_axis = match props.axis {
+                    fret_core::Axis::Vertical => offset_point.y,
+                    fret_core::Axis::Horizontal => offset_point.x,
+                };
+                let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                let visible_range = state.metrics.visible_range(offset_axis, viewport, 0);
+                let ideal_window_range =
+                    state
+                        .metrics
+                        .visible_range(offset_axis, viewport, props.overscan);
+
+                // Prefer the prepaint-derived window range (ADR 0175), but only while it still
+                // covers the current visible range. Programmatic scroll-handle changes can schedule
+                // retained reconcile without a preceding prepaint pass; in that case re-derive the
+                // next retained window from the current offset instead of preserving stale rows.
+                let cached_window = state
+                    .window_range
+                    .or(state.render_window_range)
+                    .filter(|r| valid_window(*r));
+                let window_range = match (cached_window, visible_range, ideal_window_range) {
+                    (Some(cached), Some(visible), Some(ideal)) => {
+                        let cached_start = cached.start_index.saturating_sub(cached.overscan);
+                        let cached_end = (cached.end_index + cached.overscan)
+                            .min(cached.count.saturating_sub(1));
+                        if visible.start_index < cached_start || visible.end_index > cached_end {
+                            Some(crate::virtual_list::shift_virtual_range_minimally(
+                                cached, visible,
+                            ))
+                            .or(Some(ideal))
+                        } else {
+                            Some(cached)
+                        }
+                    }
+                    (Some(cached), _, _) => Some(cached),
+                    (None, _, ideal) => ideal,
+                };
 
                 let Some(range) = window_range else {
                     return RetainedVirtualListReconcileItems::DeferUntilViewportKnown;

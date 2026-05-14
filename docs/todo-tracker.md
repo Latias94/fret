@@ -106,6 +106,89 @@ It complements (but does not replace) ADRs:
   - Scope: rebase the Dear ImGui gap read from current source before any next fearless cleanup or
     helper widening. Treat the old v2 parity audit as historical evidence unless this lane
     revalidates it.
+- Closed kit owner-split follow-on:
+  - `docs/workstreams/imui-kit-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M1_BUTTON_ACTIONS_SLICE_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M2_PRESSABLE_RESPONSE_ASSEMBLY_SLICE_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M3_MENU_ITEMS_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/M4_SELECTION_COMBO_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed private `fret-ui-kit::imui` owner split lane; start
+    `imui-facade-disclosure-owner-split-v1` for disclosure wrappers instead of reopening this
+    folder.
+- Closed facade disclosure owner-split follow-on:
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/M1_DISCLOSURE_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-disclosure-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed disclosure wrapper owner split; keep text, boolean/model, table, docking,
+    multi-window, and additive widget work in separate follow-ons.
+- Closed facade text model owner-split follow-on:
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/M1_TEXT_MODEL_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-text-model-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed text and textarea model wrapper owner split; keep boolean/model, table, docking,
+    multi-window, and additive text behavior work in separate follow-ons.
+- Closed facade boolean wrapper owner-split follow-on:
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/M1_BOOLEAN_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed checkbox/radio/switch wrapper owner split; keep slider/combo model, table,
+    docking, multi-window, and additive boolean behavior work in separate follow-ons.
+- Closed facade value model owner-split follow-on:
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/M1_VALUE_MODEL_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-value-model-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed slider/combo model wrapper owner split; keep table, docking, multi-window, and
+    additive value-editing behavior work in separate follow-ons.
+- Closed facade container wrapper owner-split follow-on:
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/M1_CONTAINER_FACADE_OWNER_SPLIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed container/table/tab/virtual-list/child-region wrapper owner split; keep
+    trait-surface reshaping, docking, multi-window, and additive container behavior work in
+    separate follow-ons.
+- Closed facade floating/popup owner-split follow-on:
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M0_BASELINE_AUDIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/M1_FLOATING_POPUP_FACADE_OWNER_SPLIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/CLOSEOUT_AUDIT_2026-05-14.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/WORKSTREAM.json`
+  - Scope: closed floating/popup/tooltip/drag-drop/window trait-default owner split; keep
+    trait-surface reshaping, additive popup/floating behavior, docking, and multi-window work in
+    separate follow-ons.
 - Closed debug draw owner-split follow-on:
   - `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`
   - `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`
@@ -1257,9 +1340,11 @@ It complements (but does not replace) ADRs:
   `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`,
   and local non-Linux continuation is bounded by
   `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`;
-  the 2026-05-04 local non-interactive refresh is recorded in
-  `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
-  without counting as launched campaign acceptance.
+  the latest 2026-05-13 local non-interactive refresh is recorded in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+  and the launched bounded-campaign repair is recorded in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`;
+  platform-specific real-host acceptance remains open.
 - Use `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json` as the closed
   diagnostics follow-on for the M3 mixed-DPI automation decision:
   the repo now has a runner-owned host monitor-topology environment fingerprint. The first
@@ -1641,7 +1726,8 @@ It complements (but does not replace) ADRs:
     - Mixed-DPI accepted run: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
     - Window-style opacity capability: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
     - Local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
-    - Local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
+    - Latest local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+    - Launched bounded-campaign repair: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
     - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
     - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

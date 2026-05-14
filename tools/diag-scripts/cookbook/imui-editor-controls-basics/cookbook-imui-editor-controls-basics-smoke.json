@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook imui editor controls: smoke",
+    "tags": ["cookbook", "cookbook.imui_editor_controls_basics", "imui", "editor-controls", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the IMUI editor controls lesson root and key controls.",
+      "Focuses the text-assist field, waits for the anchored assist list, then captures layout, screenshot, and bundle evidence."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1000.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.summary" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.roughness" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.tint" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+    { "type": "capture_layout_sidecar", "label": "cookbook-imui-editor-controls-basics-smoke.layout" },
+    { "type": "capture_screenshot", "label": "cookbook-imui-editor-controls-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-imui-editor-controls-basics-smoke" }
+  ]
+}

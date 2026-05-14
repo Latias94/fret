@@ -91,6 +91,8 @@ mod carousel;
 mod chart;
 #[path = "web_vs_fret_layout/collapsible.rs"]
 mod collapsible;
+#[path = "web_vs_fret_layout/combobox_trigger.rs"]
+mod combobox_trigger;
 #[path = "web_vs_fret_layout/dashboard.rs"]
 mod dashboard;
 #[path = "web_vs_fret_layout/empty.rs"]

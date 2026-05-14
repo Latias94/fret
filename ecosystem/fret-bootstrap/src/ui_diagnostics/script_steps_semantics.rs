@@ -72,6 +72,47 @@ pub(super) fn handle_focus_step(
     ui.set_focus(Some(node.id));
     ui.publish_window_runtime_snapshots(app);
     let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+    record_focus_trace(
+        &mut active.focus_trace,
+        app,
+        window,
+        element_runtime,
+        Some(snapshot),
+        Some(&*ui),
+        injected_step_index,
+        Some(node.id.data().as_ffi()),
+        node.test_id.as_deref(),
+        "focus.set_focus",
+    );
+    if let Some(note) = focus_trace_summary_note(&active.focus_trace, injected_step_index) {
+        let kind = if active
+            .focus_trace
+            .iter()
+            .rev()
+            .find(|entry| entry.step_index == injected_step_index)
+            .and_then(|entry| entry.matches_expected)
+            == Some(true)
+        {
+            "focus.trace"
+        } else {
+            "focus.trace_mismatch"
+        };
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: kind.to_string(),
+                step_index: Some(injected_step_index),
+                note: Some(note),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+    }
     active.last_injected_step = Some(injected_step_index);
     active.next_step = active.next_step.saturating_add(1);
     active.v2_step_state = None;

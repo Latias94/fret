@@ -20,6 +20,10 @@ enum SemanticsRelationScenario {
     TextInputActiveDescendantElement,
     AttachSemanticsRelationsAndFlags,
     SemanticsWrapperRelationsAndFlags,
+    TextInputRegionValueAndEditingMetadata,
+    PressableCollectionMetadata,
+    SemanticsWrapperLiveAndStructuredMetadata,
+    HiddenSubtreePolicy,
 }
 
 #[test]
@@ -49,6 +53,7 @@ fn observe_case(
     );
     let mut services = FakeTextService::default();
     let text_model = app.models_mut().insert("hello".to_string());
+    let focus_element: Cell<Option<crate::elements::GlobalElementId>> = Cell::new(None);
 
     let root = render_root(
         &mut ui,
@@ -57,9 +62,16 @@ fn observe_case(
         window,
         bounds,
         "mechanism-harness-semantics-relations",
-        |cx| build_scenario(cx, &case.scenario, text_model),
+        |cx| build_scenario(cx, &case.scenario, text_model, &focus_element),
     );
     ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    if let Some(element) = focus_element.get() {
+        let node = crate::elements::node_for_element(&mut app, window, element)
+            .ok_or_else(|| ScenarioObserveError::new("focus target element did not resolve"))?;
+        ui.set_focus(Some(node));
+    }
+
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -72,6 +84,7 @@ fn build_scenario(
     cx: &mut ElementContext<'_, TestHost>,
     scenario: &SemanticsRelationScenario,
     text_model: fret_runtime::Model<String>,
+    focus_element: &Cell<Option<crate::elements::GlobalElementId>>,
 ) -> Vec<AnyElement> {
     match scenario {
         SemanticsRelationScenario::TextInputControlsElement => {
@@ -190,6 +203,146 @@ fn build_scenario(
             );
 
             vec![label, description, controlled, target]
+        }
+        SemanticsRelationScenario::TextInputRegionValueAndEditingMetadata => {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = Length::Px(Px(180.0));
+            props.layout.size.height = Length::Px(Px(48.0));
+            props.a11y_label = Some(Arc::from("Editor"));
+            props.a11y_value = Some(Arc::from("hello"));
+            props.a11y_text_selection = Some((2, 2));
+            props.a11y_text_composition = Some((1, 3));
+
+            let region = cx.text_input_region(props, |_cx| Vec::<AnyElement>::new());
+            focus_element.set(Some(region.id));
+            vec![region.attach_semantics(
+                crate::element::SemanticsDecoration::default().test_id("editor-region"),
+            )]
+        }
+        SemanticsRelationScenario::PressableCollectionMetadata => {
+            let option = |cx: &mut ElementContext<'_, TestHost>,
+                          test_id: &'static str,
+                          label: &'static str,
+                          pos_in_set: u32,
+                          selected: bool,
+                          checked: Option<bool>| {
+                cx.pressable(
+                    crate::element::PressableProps {
+                        layout: {
+                            let mut layout = crate::element::LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(24.0));
+                            layout
+                        },
+                        a11y: crate::element::PressableA11y {
+                            role: Some(fret_core::SemanticsRole::ListBoxOption),
+                            label: Some(Arc::from(label)),
+                            test_id: Some(Arc::from(test_id)),
+                            selected,
+                            checked,
+                            pos_in_set: Some(pos_in_set),
+                            set_size: Some(5),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _state| vec![cx.text(label)],
+                )
+            };
+
+            vec![cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::ListBox,
+                    test_id: Some(Arc::from("collection-listbox")),
+                    ..Default::default()
+                },
+                |cx, _id| {
+                    vec![
+                        option(cx, "option-two", "Two", 2, true, Some(true)),
+                        option(cx, "option-three", "Three", 3, false, None),
+                    ]
+                },
+            )]
+        }
+        SemanticsRelationScenario::SemanticsWrapperLiveAndStructuredMetadata => {
+            let live = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Status,
+                    label: Some(Arc::from("Sync status")),
+                    test_id: Some(Arc::from("live-status")),
+                    value: Some(Arc::from("Saved")),
+                    live: Some(fret_core::SemanticsLive::Polite),
+                    live_atomic: true,
+                    ..Default::default()
+                },
+                |_cx, _id| Vec::new(),
+            );
+
+            let range = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Slider,
+                    label: Some(Arc::from("Volume")),
+                    test_id: Some(Arc::from("volume-slider")),
+                    value: Some(Arc::from("50")),
+                    numeric_value: Some(50.0),
+                    min_numeric_value: Some(0.0),
+                    max_numeric_value: Some(100.0),
+                    numeric_value_step: Some(1.0),
+                    numeric_value_jump: Some(10.0),
+                    value_editable: Some(true),
+                    ..Default::default()
+                },
+                |_cx, _id| Vec::new(),
+            );
+
+            let viewport = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Viewport,
+                    label: Some(Arc::from("Results")),
+                    test_id: Some(Arc::from("results-viewport")),
+                    scroll_y: Some(40.0),
+                    scroll_y_min: Some(0.0),
+                    scroll_y_max: Some(120.0),
+                    ..Default::default()
+                },
+                |_cx, _id| Vec::new(),
+            );
+
+            vec![live, range, viewport]
+        }
+        SemanticsRelationScenario::HiddenSubtreePolicy => {
+            let visible = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Button,
+                    label: Some(Arc::from("Visible")),
+                    test_id: Some(Arc::from("visible-button")),
+                    ..Default::default()
+                },
+                |_cx, _id| Vec::new(),
+            );
+
+            let hidden = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    label: Some(Arc::from("Hidden Group")),
+                    test_id: Some(Arc::from("hidden-group")),
+                    hidden: true,
+                    ..Default::default()
+                },
+                |cx, _id| {
+                    vec![cx.semantics_with_id(
+                        crate::element::SemanticsProps {
+                            role: fret_core::SemanticsRole::Button,
+                            label: Some(Arc::from("Hidden Child")),
+                            test_id: Some(Arc::from("hidden-child-button")),
+                            ..Default::default()
+                        },
+                        |_cx, _id| Vec::new(),
+                    )]
+                },
+            );
+
+            vec![visible, hidden]
         }
     }
 }

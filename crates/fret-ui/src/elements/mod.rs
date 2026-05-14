@@ -23,6 +23,7 @@ pub use runtime::{
     OverlayPlacementDiagnosticsRecord, WindowElementDiagnosticsSnapshot,
 };
 
+pub(crate) use access::action_route_fallback_roots;
 pub(crate) use access::{
     clear_timer_target, is_pressed_pressable, record_timer_target, record_timer_target_node,
     record_transient_event, set_pressed_pressable, set_pressed_pressable_with_node, timer_target,

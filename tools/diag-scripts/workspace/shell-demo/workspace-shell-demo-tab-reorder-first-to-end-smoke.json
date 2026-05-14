@@ -6,7 +6,7 @@
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
       "Asserts initial pos_in_set for a known tab.",
-      "Drags the first tab to the end and drops it.",
+      "Drags the first tab onto the visible end-drop surface.",
       "Asserts pos_in_set updates after the reorder."
     ]
   },
@@ -45,7 +45,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" }
       },
       "timeout_frames": 240
     },
@@ -92,7 +92,6 @@
       },
       "timeout_frames": 240
     },
-
     {
       "type": "drag_to",
       "from": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },

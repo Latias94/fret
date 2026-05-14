@@ -246,6 +246,7 @@ struct ViewCacheBuildBoundaryFrame {
     state_keys: Option<Vec<(GlobalElementId, TypeId)>>,
     authoring_identities: Option<Vec<GlobalElementId>>,
     elements: Option<Vec<GlobalElementId>>,
+    action_route_fallback_root: bool,
 }
 
 impl ViewCacheBuildBoundaryFrame {
@@ -254,6 +255,7 @@ impl ViewCacheBuildBoundaryFrame {
             && self.state_keys.is_none()
             && self.authoring_identities.is_none()
             && self.elements.is_none()
+            && !self.action_route_fallback_root
     }
 }
 
@@ -324,6 +326,25 @@ impl ViewCacheBuildBoundaryStore {
 
     fn mark_reuse_root(&mut self, root: GlobalElementId) {
         self.reuse_roots.insert(root);
+    }
+
+    fn record_action_route_fallback_root(&mut self, root: GlobalElementId) {
+        self.next
+            .entry(root)
+            .or_default()
+            .action_route_fallback_root = true;
+    }
+
+    fn action_route_fallback_roots(&self) -> Vec<GlobalElementId> {
+        let mut roots: Vec<GlobalElementId> = self
+            .next
+            .iter()
+            .chain(self.rendered.iter())
+            .filter_map(|(&root, frame)| frame.action_route_fallback_root.then_some(root))
+            .collect();
+        roots.sort_by_key(|root| root.0);
+        roots.dedup();
+        roots
     }
 
     fn record_reuse_frame(&mut self, root: GlobalElementId, frame_id: FrameId) -> bool {
@@ -1120,6 +1141,16 @@ impl WindowElementState {
             || self
                 .node_entry(element)
                 .is_some_and(|entry| entry.last_seen_frame == self.prepared_frame)
+    }
+
+    pub(crate) fn record_action_route_fallback_root(&mut self, element: GlobalElementId) {
+        self.view_cache_build_boundaries
+            .record_action_route_fallback_root(element);
+    }
+
+    pub(crate) fn action_route_fallback_roots(&self) -> Vec<GlobalElementId> {
+        self.view_cache_build_boundaries
+            .action_route_fallback_roots()
     }
 
     pub(crate) fn take_transient_event(&mut self, element: GlobalElementId, key: u64) -> bool {

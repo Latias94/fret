@@ -3,7 +3,11 @@
   "meta": {
     "name": "ui-gallery-checkbox-scroll-to-rtl-field",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["ui_gallery", "shadcn", "checkbox", "scroll", "sanity"]
+    "tags": ["ui_gallery", "shadcn", "checkbox", "scroll", "rtl", "idle_stability", "mechanism_harness"],
+    "target_hints": [
+      "Scrolls the default Checkbox page to the RTL section and then samples the content viewport with no scripted input.",
+      "The final idle-stability assertion fails if the viewport keeps drifting or oscillating after the RTL section is visible."
+    ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -58,17 +62,46 @@
     { "type": "wait_frames", "n": 10 },
 
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" },
-        "padding_px": 24.0,
-        "eps_px": 1.0
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl" },
+      "delta_y": -200.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "motion_check": {
+        "scroll_target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y",
+        "max_target_reverse_px": 1.0,
+        "max_scroll_reverse_px": 1.0,
+        "require_scroll_progress": true
       },
       "timeout_frames": 900
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "field": "y",
+      "stable_frames": 8,
+      "max_delta": 0.25,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl" },
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 300
+    },
+    {
+      "type": "assert_semantics_scroll_idle_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "field": "y",
+      "frames": 45,
+      "max_delta": 0.25,
+      "max_total_delta": 0.5
     },
     { "type": "capture_screenshot", "label": "ui-gallery-checkbox-scroll-to-rtl-field.rtl_visible" },
     { "type": "capture_bundle", "label": "ui-gallery-checkbox-scroll-to-rtl-field" }
   ]
 }
-

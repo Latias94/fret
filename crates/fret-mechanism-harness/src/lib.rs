@@ -15,8 +15,10 @@ pub use fixture::{
 };
 pub use observe::{
     BoundsSpace, ObservedHitTestSample, ObservedMechanismMetric, ObservedNode, ObservedOverlay,
-    ObservedRoot, ObservedSemanticsFlag, ObservedSemanticsRelation, ObservedTree, QueryError,
-    role_label,
+    ObservedRoot, ObservedSemanticsAction, ObservedSemanticsActions, ObservedSemanticsCheckedState,
+    ObservedSemanticsFlag, ObservedSemanticsLive, ObservedSemanticsNumeric,
+    ObservedSemanticsPressedState, ObservedSemanticsRelation, ObservedSemanticsScroll,
+    ObservedTextRange, ObservedTextSelection, ObservedTree, QueryError, role_label,
 };
 pub use oracle::{
     MechanismPredicate, OracleEvalError, PredicateFailure, PredicatePass, evaluate_predicate,
@@ -28,7 +30,10 @@ pub use runner::{
 #[cfg(test)]
 mod tests {
     use fret_core::{Point, Px, Rect, Size};
-    use fret_diag_protocol::{UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1};
+    use fret_diag_protocol::{
+        UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsNumericFieldV1,
+        UiSemanticsScrollFieldV1,
+    };
     use serde::Deserialize;
 
     use super::*;
@@ -345,6 +350,381 @@ mod tests {
             },
         )
         .unwrap();
+    }
+
+    #[test]
+    fn semantics_relation_oracles_resolve_targets_across_barrier_roots() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ));
+
+        let mut trigger = ObservedNode::new(
+            "trigger",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        trigger.node_id = Some(1);
+        trigger.controls_node_ids = vec![2];
+
+        let mut listbox = ObservedNode::new(
+            "listbox",
+            Rect::new(Point::new(Px(0.0), Px(24.0)), Size::new(Px(80.0), Px(48.0))),
+        );
+        listbox.node_id = Some(2);
+        listbox.labelled_by_node_ids = vec![1];
+
+        tree.barrier_root_node_id = Some(2);
+        tree.push_node(trigger);
+        tree.push_node(listbox);
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "listbox".to_string(),
+                    root_z_index: None,
+                },
+                relation: ObservedSemanticsRelation::LabelledBy,
+                target: UiSelectorV1::TestId {
+                    id: "trigger".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "trigger".to_string(),
+                    root_z_index: None,
+                },
+                relation: ObservedSemanticsRelation::Controls,
+                target: UiSelectorV1::TestId {
+                    id: "listbox".to_string(),
+                    root_z_index: None,
+                },
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn semantics_value_state_actions_and_structured_metadata_are_queryable() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        ));
+
+        let mut input = ObservedNode::new(
+            "editor",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(28.0))),
+        );
+        input.node_id = Some(1);
+        input.role = Some("text_field".to_string());
+        input.label = Some("Editor".to_string());
+        input.value = Some("hello".to_string());
+        input.text_selection = Some(ObservedTextSelection {
+            anchor: 2,
+            focus: 2,
+        });
+        input.text_composition = Some(ObservedTextRange { start: 1, end: 3 });
+        input.actions = ObservedSemanticsActions {
+            focus: true,
+            set_text_selection: true,
+            ..Default::default()
+        };
+
+        let mut option = ObservedNode::new(
+            "option",
+            Rect::new(
+                Point::new(Px(0.0), Px(30.0)),
+                Size::new(Px(100.0), Px(24.0)),
+            ),
+        );
+        option.node_id = Some(2);
+        option.selected = Some(true);
+        option.checked = Some(true);
+        option.pos_in_set = Some(2);
+        option.set_size = Some(5);
+        option.actions.invoke = true;
+
+        let mut status = ObservedNode::new(
+            "status",
+            Rect::new(
+                Point::new(Px(0.0), Px(60.0)),
+                Size::new(Px(100.0), Px(24.0)),
+            ),
+        );
+        status.node_id = Some(3);
+        status.live = Some(ObservedSemanticsLive::Polite);
+        status.live_atomic = Some(true);
+        status.numeric = Some(ObservedSemanticsNumeric {
+            value: Some(50.0),
+            min: Some(0.0),
+            max: Some(100.0),
+            step: Some(1.0),
+            jump: Some(10.0),
+        });
+        status.scroll = Some(ObservedSemanticsScroll {
+            y: Some(40.0),
+            y_min: Some(0.0),
+            y_max: Some(120.0),
+            ..Default::default()
+        });
+
+        tree.push_node(input);
+        tree.push_node(option);
+        tree.push_node(status);
+
+        let editor = UiSelectorV1::TestId {
+            id: "editor".to_string(),
+            root_z_index: None,
+        };
+        let option_selector = UiSelectorV1::TestId {
+            id: "option".to_string(),
+            root_z_index: None,
+        };
+        let status_selector = UiSelectorV1::TestId {
+            id: "status".to_string(),
+            root_z_index: None,
+        };
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::ValueEquals {
+                    target: editor.clone(),
+                    text: "hello".to_string(),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::TextCompositionIs {
+                    target: editor.clone(),
+                    composing: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsTextSelectionIs {
+                target: editor.clone(),
+                expected: Some(ObservedTextSelection {
+                    anchor: 2,
+                    focus: 2,
+                }),
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsActionIs {
+                target: editor,
+                action: ObservedSemanticsAction::SetTextSelection,
+                expected: true,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::SelectedIs {
+                    target: option_selector.clone(),
+                    selected: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::CheckedIs {
+                    target: option_selector.clone(),
+                    checked: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::PosInSetIs {
+                    target: option_selector.clone(),
+                    pos_in_set: 2,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsActionIs {
+                target: option_selector,
+                action: ObservedSemanticsAction::Invoke,
+                expected: true,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsLiveIs {
+                target: status_selector.clone(),
+                live: Some(ObservedSemanticsLive::Polite),
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::SemanticsNumericApproxEq {
+                    target: status_selector.clone(),
+                    field: UiSemanticsNumericFieldV1::Value,
+                    value: 50.0,
+                    eps: 0.01,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::SemanticsScrollApproxEq {
+                    target: status_selector,
+                    field: UiSemanticsScrollFieldV1::YMax,
+                    value: 120.0,
+                    eps: 0.01,
+                },
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        ));
+
+        let mut visible = ObservedNode::new(
+            "visible",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        visible.node_id = Some(1);
+
+        let mut hidden_parent = ObservedNode::new(
+            "hidden-parent",
+            Rect::new(
+                Point::new(Px(0.0), Px(30.0)),
+                Size::new(Px(120.0), Px(60.0)),
+            ),
+        );
+        hidden_parent.node_id = Some(2);
+        hidden_parent.hidden = Some(true);
+
+        let mut hidden_child = ObservedNode::new(
+            "hidden-child",
+            Rect::new(Point::new(Px(4.0), Px(34.0)), Size::new(Px(80.0), Px(24.0))),
+        );
+        hidden_child.node_id = Some(3);
+        hidden_child.parent_node_id = Some(2);
+        hidden_child.hidden = Some(false);
+
+        tree.push_node(visible);
+        tree.push_node(hidden_parent);
+        tree.push_node(hidden_child);
+
+        let hidden_parent_selector = UiSelectorV1::TestId {
+            id: "hidden-parent".to_string(),
+            root_z_index: None,
+        };
+        let hidden_child_selector = UiSelectorV1::TestId {
+            id: "hidden-child".to_string(),
+            root_z_index: None,
+        };
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::NotExists {
+                    target: hidden_parent_selector.clone(),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::NotExists {
+                    target: hidden_child_selector.clone(),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsFlagIs {
+                target: hidden_parent_selector,
+                flag: ObservedSemanticsFlag::Hidden,
+                expected: true,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::SemanticsFlagIs {
+                target: hidden_child_selector,
+                flag: ObservedSemanticsFlag::Hidden,
+                expected: false,
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn active_item_none_rejects_roving_focus_descendants() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ));
+
+        let mut listbox = ObservedNode::new(
+            "listbox",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(48.0))),
+        );
+        listbox.node_id = Some(1);
+
+        let mut option = ObservedNode::new(
+            "option",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(24.0))),
+        );
+        option.node_id = Some(2);
+        option.parent_node_id = Some(1);
+
+        tree.push_node(listbox);
+        tree.push_node(option);
+
+        let predicate = MechanismPredicate::UiPredicate {
+            predicate: UiPredicateV1::ActiveItemIsNone {
+                container: UiSelectorV1::TestId {
+                    id: "listbox".to_string(),
+                    root_z_index: None,
+                },
+            },
+        };
+
+        tree.focus_node_id = Some(1);
+        evaluate_predicate(&tree, &predicate).unwrap();
+
+        tree.focus_node_id = Some(2);
+        assert!(
+            evaluate_predicate(&tree, &predicate).is_err(),
+            "roving focus on a descendant should count as an active item"
+        );
     }
 
     #[test]
