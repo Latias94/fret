@@ -372,6 +372,36 @@ element-runtime flat view-cache build-time rendered/next maps and frame-local si
 method surface. The final migration into `ViewBoundaryState`, paint-cache replay ownership, and
 non-code-editor proof surface remain open.
 
+Most recent boundary paint-cache entry slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md`
+- Boundary-owned paint-cache entry gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache::paint_cache_entry_is_boundary_owned_for_view_cache_roots --no-fail-fast`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- View-cache paint-cache gating gate:
+  `cargo nextest run -p fret-ui tree::tests::view_cache::view_cache_disables_paint_cache_for_non_boundary_nodes tree::tests::view_cache::view_cache_allows_paint_cache_for_boundary_nodes --no-fail-fast`
+- Boundary diagnostics gate:
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+
+Observed result:
+
+- boundary-owned paint-cache entry gate: `1 passed, 934 skipped`;
+- paint-cache regression gate: `9 passed, 926 skipped`;
+- view-cache paint-cache gating gate: `2 passed, 933 skipped`;
+- boundary diagnostics gate: `5 passed, 97 skipped`;
+- both compile gates passed.
+
+This slice is a runtime ownership-consolidation step, not a new perf claim. It moves boundary-node
+`PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`, adds `paint_cache_owner` to
+boundary diagnostics, and preserves node-owned paint-cache entries as the fallback for
+non-boundary nodes. The global previous-op storage and env-knob retention decisions remain open.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

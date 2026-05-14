@@ -31,21 +31,22 @@ impl<H: UiHost> UiTree<H> {
         };
         let sf = scale_factor;
 
-        let (invalidated, hit_test_only_paint_invalidated, prev_cache) = match self.nodes.get(node)
-        {
-            Some(n) => (
-                n.invalidation.paint,
-                n.paint_invalidated_by_hit_test_only,
-                n.paint_cache,
-            ),
-            None => return,
-        };
-
         let view_cache = self
             .nodes
             .get(node)
             .map(|n| n.view_cache)
             .unwrap_or_default();
+        let prev_cache = if self.view_boundaries.contains_key(node) {
+            self.view_boundaries
+                .get(node)
+                .and_then(|boundary| boundary.paint_cache.entry())
+        } else {
+            self.nodes.get(node).and_then(|n| n.paint_cache)
+        };
+        let (invalidated, hit_test_only_paint_invalidated) = match self.nodes.get(node) {
+            Some(n) => (n.invalidation.paint, n.paint_invalidated_by_hit_test_only),
+            None => return,
+        };
         let span = if view_cache.enabled && tracing::enabled!(tracing::Level::TRACE) {
             tracing::trace_span!(
                 "ui.cache_root.paint",
@@ -237,8 +238,15 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.debug_record_paint_cache_replay(node, replayed_ops as u32);
 
-                if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
-                    let prev = n.invalidation;
+                if let Some(boundary) = self.view_boundaries.get_mut(node) {
+                    boundary.paint_cache.set_entry(PaintCacheEntry {
+                        generation: self.paint_cache.target_generation,
+                        key,
+                        origin: bounds.origin,
+                        start: start as u32,
+                        end: (start + replayed_ops) as u32,
+                    });
+                } else if let Some(n) = self.nodes.get_mut(node) {
                     n.paint_cache = Some(PaintCacheEntry {
                         generation: self.paint_cache.target_generation,
                         key,
@@ -246,6 +254,10 @@ impl<H: UiHost> UiTree<H> {
                         start: start as u32,
                         end: (start + replayed_ops) as u32,
                     });
+                }
+
+                if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
+                    let prev = n.invalidation;
                     n.invalidation.paint = false;
                     n.paint_invalidated_by_hit_test_only = false;
                     (prev, n.invalidation)
@@ -579,16 +591,23 @@ impl<H: UiHost> UiTree<H> {
                 .paint_observation_record_time
                 .saturating_add(obs_elapsed);
         }
-        if let Some(n) = self.nodes.get_mut(node) {
-            if cache_enabled {
-                n.paint_cache = Some(PaintCacheEntry {
-                    generation: self.paint_cache.target_generation,
-                    key,
-                    origin: bounds.origin,
-                    start: start as u32,
-                    end: end as u32,
-                });
-            } else {
+        if cache_enabled {
+            let entry = PaintCacheEntry {
+                generation: self.paint_cache.target_generation,
+                key,
+                origin: bounds.origin,
+                start: start as u32,
+                end: end as u32,
+            };
+            if let Some(boundary) = self.view_boundaries.get_mut(node) {
+                boundary.paint_cache.set_entry(entry);
+            } else if let Some(n) = self.nodes.get_mut(node) {
+                n.paint_cache = Some(entry);
+            }
+        } else {
+            if let Some(boundary) = self.view_boundaries.get_mut(node) {
+                boundary.paint_cache.clear();
+            } else if let Some(n) = self.nodes.get_mut(node) {
                 // When caching is disabled for this node (e.g. due to a render transform),
                 // ensure we don't keep a stale cache entry that could be replayed later.
                 n.paint_cache = None;

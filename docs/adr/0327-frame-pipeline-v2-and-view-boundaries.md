@@ -131,6 +131,8 @@ M4C introduced `ViewBoundaryHints` as the first public authoring step away from 
 M4D consolidated element-runtime view-cache build-time rendered/next side maps into
 `ViewCacheBuildBoundaryStore`; final `ViewBoundaryState` ownership or explicit retention is still
 open.
+M4E moved boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`; previous
+op storage and non-boundary fallback remain open.
 
 ### 3. Layout containment is a dependency contract
 

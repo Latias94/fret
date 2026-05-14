@@ -51,6 +51,63 @@ fn paint_cache_replays_ops_when_node_translates() {
 }
 
 #[test]
+fn paint_cache_entry_is_boundary_owned_for_view_cache_roots() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let node = ui.create_node(CountingPaintWidget {
+        paints: paints.clone(),
+    });
+    ui.set_node_view_cache_flags(node, true, true, true);
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert!(
+        ui.test_view_boundary_paint_cache_has_entry(node),
+        "view-cache roots should store paint-cache entries in ViewBoundaryState"
+    );
+    assert!(
+        ui.nodes[node].paint_cache.is_none(),
+        "view-cache roots should not keep a parallel node-owned paint-cache entry"
+    );
+
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|stats| stats.id == node)
+        .expect("boundary stats for view-cache root");
+    assert_eq!(
+        boundary.paint_cache_owner,
+        "view_boundary_paint_cache_state"
+    );
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        1,
+        "boundary-owned paint cache should replay for clean view-cache roots"
+    );
+    assert_eq!(ui.debug_stats().paint_cache_hits, 1);
+}
+
+#[test]
 fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
     let mut app = crate::test_host::TestHost::new();
 

@@ -21,7 +21,9 @@ Progress ledger:
   behind an accepted ADR/workstream reason. M4D consolidates element-runtime build-time maps into
   `ViewCacheBuildBoundaryStore`; final `ViewBoundaryState` ownership remains open.
 - [ ] Broader paint-cache replay stores are consolidated into boundary-owned scene-fragment state or
-  retained behind an accepted ADR/workstream reason.
+  retained behind an accepted ADR/workstream reason. M4E moves boundary-node `PaintCacheEntry`
+  ownership into `ViewBoundaryState::paint_cache`; previous-op storage and non-boundary fallback
+  remain open.
 - [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
   boundary-hint API. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces
   `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring.
@@ -121,5 +123,8 @@ Progress ledger:
     `ViewCacheBuildBoundaryStore` (`M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md`).
   - [ ] Decide whether `ViewCacheBuildBoundaryStore` migrates into `ViewBoundaryState` directly or
     remains as an explicitly retained build-boundary mechanism.
-  - [ ] Consolidate paint-cache previous-op-range replay ownership.
+  - [x] Move boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`
+    (`M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md`).
+  - [ ] Consolidate paint-cache previous-op storage / previous-op-range replay ownership.
+  - [ ] Decide whether non-boundary node-owned paint-cache entries are retained or migrated.
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.

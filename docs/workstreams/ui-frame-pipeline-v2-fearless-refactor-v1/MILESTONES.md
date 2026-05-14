@@ -179,6 +179,15 @@ Status after M4D on 2026-05-14:
 - M4D removes the flat side maps from `WindowElementState`, but it does not yet make
   `ViewBoundaryState` the final build-owner and does not touch node-owned paint-cache replay.
 
+Status after M4E on 2026-05-14:
+
+- `M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md` moves boundary-node `PaintCacheEntry`
+  ownership into `ViewBoundaryState::paint_cache`.
+- Ordinary paint-cache replay still uses `PaintCacheState` for previous-frame op storage, and
+  non-boundary nodes still use the node-owned fallback entry path.
+- Boundary diagnostics now include `paint_cache_owner`, so bundles can distinguish boundary-owned
+  paint-cache entries from missing or retained fallback ownership.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.
@@ -223,5 +232,6 @@ Status on 2026-05-14:
 
 - Open. The code-editor vertical slice is complete, but the global contract is not complete while
   the consolidated view-cache build-boundary store still needs a final `ViewBoundaryState`
-  ownership/retention decision, broader paint-cache consolidation, internal contained-layout flag
-  cleanup, old env-knob ownership, and the second non-code-editor proof surface remain open.
+  ownership/retention decision, previous-op paint-cache storage and non-boundary fallback still
+  need migration or retention decisions, internal contained-layout flag cleanup, old env-knob
+  ownership, and the second non-code-editor proof surface remain open.

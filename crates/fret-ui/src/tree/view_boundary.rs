@@ -63,6 +63,7 @@ pub(super) struct ViewBoundaryState {
     pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
     pub(super) scene_fragment: BoundarySceneFragmentState,
+    pub(super) paint_cache: BoundaryPaintCacheState,
 }
 
 impl ViewBoundaryState {
@@ -79,6 +80,7 @@ impl ViewBoundaryState {
             dirty: BoundaryDirtyState::default(),
             prepaint: BoundaryPrepaintState::default(),
             scene_fragment: BoundarySceneFragmentState::default(),
+            paint_cache: BoundaryPaintCacheState::default(),
         }
     }
 
@@ -90,6 +92,29 @@ impl ViewBoundaryState {
             ViewBoundaryKind::Node
         };
         self.layout_dependencies = BoundaryLayoutDependencies::from_view_cache_flags(flags);
+    }
+}
+
+#[derive(Default)]
+pub(super) struct BoundaryPaintCacheState {
+    entry: Option<PaintCacheEntry>,
+}
+
+impl BoundaryPaintCacheState {
+    pub(super) fn entry(&self) -> Option<PaintCacheEntry> {
+        self.entry
+    }
+
+    pub(super) fn set_entry(&mut self, entry: PaintCacheEntry) {
+        self.entry = Some(entry);
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.entry = None;
+    }
+
+    pub(super) fn has_entry(&self) -> bool {
+        self.entry.is_some()
     }
 }
 
@@ -445,6 +470,11 @@ impl<H: UiHost> UiTree<H> {
                     ViewBoundaryKind::ViewCacheRoot => "view_cache",
                 },
                 prepaint_owner: "view_boundary_prepaint_state",
+                paint_cache_owner: if state.paint_cache.has_entry() {
+                    "view_boundary_paint_cache_state"
+                } else {
+                    "none"
+                },
                 scene_fragment_owner: if state.scene_fragment.slot_count() > 0 {
                     "view_boundary_scene_fragment_state"
                 } else {
@@ -499,5 +529,12 @@ impl<H: UiHost> UiTree<H> {
     #[cfg(test)]
     pub(crate) fn test_view_boundary_layout_dirty(&self, node: NodeId) -> bool {
         self.boundary_layout_dirty(node)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_view_boundary_paint_cache_has_entry(&self, node: NodeId) -> bool {
+        self.view_boundaries
+            .get(node)
+            .is_some_and(|state| state.paint_cache.has_entry())
     }
 }
