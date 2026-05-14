@@ -114,6 +114,10 @@ Exit criteria:
   `hovered()`, `pressed()`, `clicked()`, `changed()`), while response assembly uses crate-local core
   setters. This preserves the shared `fret_authoring::Response` compatibility surface without
   keeping public field mutation.
+  2026-05-14 adapter-seam follow-up result: emitted adapter signal records are read-only now.
+  `AdapterSignalRecord` and `AdapterSignalMetadata` are constructed by the seam and expose
+  `identity()`, `response()`, `metadata()`, `rect()`, and `focus_restore_target()` accessors, while
+  `AdapterSeamOptions` remains a public-field input options bag.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

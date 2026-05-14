@@ -196,6 +196,10 @@ Run evidence:
   crate-local core setters and merge helpers, and `tools/gate_imui_workstream_source.py` rejects
   public `core` field access or direct `.core` reads/writes from returning in the covered IMUI
   surfaces.
+- 2026-05-14: made emitted adapter seam records read-only as well. `AdapterSignalRecord` and
+  `AdapterSignalMetadata` now expose constructor/accessor APIs while `report_adapter_signal(...)`
+  remains the canonical emission path. `AdapterSeamOptions` stays as a public-field input options
+  bag because callers need to provide a reporter and focus-restore target ergonomically.
 
 ## P3 Design Surface Readiness Gates
 

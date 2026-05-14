@@ -129,7 +129,9 @@ Readiness order for the next locally testable review slices:
    callers use `id()`, while response assemblers use crate-local `set_id(...)`. `ResponseExt.core`
    is now accessor-only as well: public code can still round-trip the shared
    `fret_authoring::Response` through `core()` / `from_core(...)`, while runtime assembly writes
-   through crate-local core setters.
+   through crate-local core setters. The adapter signal record is now read-only too: adapter seam
+   inputs keep builder-friendly public options, but emitted `AdapterSignalRecord` /
+   `AdapterSignalMetadata` values expose identity, response, and metadata through accessors.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

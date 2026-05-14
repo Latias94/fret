@@ -76,6 +76,20 @@ fn adapter_seam_option_defaults_compile() {
 }
 
 #[test]
+fn adapter_signal_records_are_read_only_reports() {
+    let record = AdapterSignalRecord::new(
+        None,
+        ResponseExt::default(),
+        fret_ui_kit::imui::adapters::AdapterSignalMetadata::new(None, None),
+    );
+
+    assert!(record.identity().is_none());
+    assert!(!record.response().clicked());
+    assert!(record.metadata().rect().is_none());
+    assert!(record.metadata().focus_restore_target().is_none());
+}
+
+#[test]
 fn adapter_seam_module_stays_contract_only() {
     for marker in [
         "pub struct AdapterSignalMetadata",

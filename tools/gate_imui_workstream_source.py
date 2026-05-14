@@ -3208,10 +3208,40 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/adapters.rs"),
             required=[
-                "rect: response.rect()",
+                "pub struct AdapterSignalMetadata {\n    rect: Option<Rect>,\n    focus_restore_target: Option<GlobalElementId>,\n}",
+                "pub fn new(rect: Option<Rect>, focus_restore_target: Option<GlobalElementId>) -> Self",
+                "pub fn rect(self) -> Option<Rect>",
+                "pub fn focus_restore_target(self) -> Option<GlobalElementId>",
+                "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    response: ResponseExt,\n    metadata: AdapterSignalMetadata,\n}",
+                "pub fn identity(self) -> Option<GlobalElementId>",
+                "pub fn response(self) -> ResponseExt",
+                "pub fn metadata(self) -> AdapterSignalMetadata",
+                "AdapterSignalRecord::new(",
+                "AdapterSignalMetadata::new(response.rect(), options.focus_restore_target)",
             ],
             forbidden=[
                 "response.core.",
+                "pub struct AdapterSignalMetadata {\n    pub rect",
+                "pub struct AdapterSignalRecord {\n    pub identity",
+                "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    pub response",
+                "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    response: ResponseExt,\n    pub metadata",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/tests/imui_adapter_seam_smoke.rs"),
+            required=[
+                "AdapterSignalRecord::new(",
+                "AdapterSignalMetadata::new(None, None)",
+                "record.identity()",
+                "record.response().clicked()",
+                "record.metadata().rect()",
+                "record.metadata().focus_restore_target()",
+            ],
+            forbidden=[
+                "record.identity,",
+                "record.identity;",
+                "record.response.clicked",
+                "record.metadata.rect",
             ],
         ),
         SourceCheck(
