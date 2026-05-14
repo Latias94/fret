@@ -23,8 +23,9 @@ Progress ledger:
 - [ ] Broader paint-cache replay stores are consolidated into boundary-owned scene-fragment state or
   retained behind an accepted ADR/workstream reason. M4E moves boundary-node `PaintCacheEntry`
   ownership into `ViewBoundaryState::paint_cache`; M4F deletes the remaining node-owned
-  `PaintCacheEntry` fallback and introduces a plain-node boundary-shaped side store; previous-op
-  storage remains open.
+  `PaintCacheEntry` fallback and introduces a plain-node boundary-shaped side store; M4G splits the
+  previous-frame scene recording into `PreviousFramePaintRecording`; final recording ownership
+  remains open.
 - [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
   boundary-hint API. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces
   `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring.
@@ -130,5 +131,10 @@ Progress ledger:
     entries through `UiTree::boundary_paint_cache_entries`, with migration into
     `ViewBoundaryState::paint_cache` when the node becomes a true runtime boundary
     (`M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md`).
-  - [ ] Consolidate paint-cache previous-op storage / previous-op-range replay ownership.
+  - [x] Split paint-cache previous-frame recording storage out of generation/counter control into
+    `PreviousFramePaintRecording`
+    (`M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md`).
+  - [ ] Decide whether `PreviousFramePaintRecording` migrates into `ViewBoundaryState`, becomes a
+    boundary-owned scene-fragment source, or remains as an explicitly retained per-tree recording
+    mechanism.
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.

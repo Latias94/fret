@@ -87,10 +87,10 @@ Out of scope:
 | --- | --- | --- | --- |
 | ADR 0327 contract | Accepted; implementation in progress | `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md` is accepted as the target contract; `M0_CONTRACT_FREEZE_2026-05-14.md` records the contract freeze. | Continue implementation against the accepted contract. |
 | Code-editor vertical slice | Complete | `CLOSEOUT_AUDIT_2026-05-14.md` closes the slice with correctness, layering, diagnostics, deletion, and perf evidence. | Keep as the first proof surface and regression gate. |
-| Boundary runtime core | Partial global, complete for the slice | `ViewBoundaryState` owns dirty, prepaint, scene-fragment state, and boundary-node paint-cache entries. Plain retained paint-cache entries now use `UiTree::boundary_paint_cache_entries`, a boundary-shaped side store, instead of `Node`. `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` consolidates view-cache build-time rendered/next maps into a single runtime store. `M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md` moves boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`; `M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md` deletes the remaining `Node::paint_cache` fallback. | Migrate or explicitly retain the consolidated build-boundary store under the final `ViewBoundary` model, then resolve previous-op storage and the plain paint-cache side-store shape. |
+| Boundary runtime core | Partial global, complete for the slice | `ViewBoundaryState` owns dirty, prepaint, scene-fragment state, and boundary-node paint-cache entries. Plain retained paint-cache entries now use `UiTree::boundary_paint_cache_entries`, a boundary-shaped side store, instead of `Node`. `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` consolidates view-cache build-time rendered/next maps into a single runtime store. `M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md` moves boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`; `M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md` deletes the remaining `Node::paint_cache` fallback; `M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md` splits previous-frame paint recording storage out of paint-cache generation/counter control. | Migrate or explicitly retain the consolidated build-boundary store under the final `ViewBoundary` model, then decide the final owner for `PreviousFramePaintRecording` and the plain paint-cache side-store shape. |
 | Boundary diagnostics | Complete for the slice | `debug.boundaries[]` is canonical; nested `debug.cache_roots[].boundary` is retired. | Keep diagnostics stable while broader boundary stores are consolidated. |
 | Prepaint ownership | Partial global, complete for the slice | Code-editor row-derived state moved out of paint into boundary-owned prepaint/scene-fragment state. | Audit other geometry-derived paint work and migrate only with proof surfaces. |
-| Scene-fragment replay | Partial global, complete for row replay and node-fallback deletion | `CanvasSceneFragment<RowSceneFragmentPayload>` is boundary-owned for the code-editor row path. Boundary `PaintCacheEntry` replay metadata is owned by `ViewBoundaryState::paint_cache`; plain paint-cache entries are no longer node-owned and use the boundary-shaped side store. | Decide final previous-op storage and plain-entry store shape for non-code-editor surfaces. |
+| Scene-fragment replay | Partial global, complete for row replay and node-fallback deletion | `CanvasSceneFragment<RowSceneFragmentPayload>` is boundary-owned for the code-editor row path. Boundary `PaintCacheEntry` replay metadata is owned by `ViewBoundaryState::paint_cache`; plain paint-cache entries are no longer node-owned and use the boundary-shaped side store. `PreviousFramePaintRecording` now names the remaining previous-frame scene recording carrier. | Decide final previous-frame recording owner and plain-entry store shape for non-code-editor surfaces. |
 | Layout containment | Authoring API replaced; runtime consolidation still partial | `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring. `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` removes flat element-runtime view-cache rendered/next side maps, but runtime still maps boundary hints into low-level view-cache flags. | Consolidate remaining internal `contained_layout` flags/debug fields when final boundary dependency ownership lands. |
 | Old-path deletion | Complete for replaced slice paths | Closeout audit records deleted node-owned prepaint storage, row replay carriers, dirty cache-root maps, and nested boundary diagnostics. | Keep deleting only when a replacement path has gates and evidence. |
 | Perf gate | Complete for the slice | `paint.widget` p95 improved from `1494us` to `650us`; total p95 improved from `1811us` to `1396us`. | Add a stricter code-editor paint stressor only if resize probes stop catching regressions. |
@@ -110,7 +110,7 @@ Continue this workstream for broader ADR 0327 follow-ons:
   `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`.
 - Wider view-cache rendered/next map consolidation after the M4D build-boundary store slice.
 - Wider paint-cache previous-op-range and scene-fragment replay consolidation after the M4E/M4F
-  paint-cache entry ownership slices.
+  paint-cache entry ownership slices and the M4G previous-frame recording split.
 - Ownership and deletion decisions for older paint-cache/layout env knobs.
 
 ## Completion Contract
@@ -153,8 +153,8 @@ Not complete:
   that store is not yet the final `ViewBoundaryState` owner.
 - boundary-node paint-cache entries are now owned by `ViewBoundaryState::paint_cache`, and the
   node-owned entry fallback is deleted. Plain retained paint-cache entries use
-  `UiTree::boundary_paint_cache_entries`, and `PaintCacheState` still owns previous-frame op
-  storage.
+  `UiTree::boundary_paint_cache_entries`, and `PaintCacheState` still owns
+  `PreviousFramePaintRecording` as the named previous-frame scene recording carrier.
 - internal low-level `contained_layout` flags and diagnostic fields remain after public authoring
   moved to boundary hints.
 - old env knobs or compatibility paths remain without an owner and a deletion/retention decision.

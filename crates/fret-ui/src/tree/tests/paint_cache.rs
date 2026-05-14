@@ -175,6 +175,47 @@ fn paint_cache_side_store_entry_migrates_when_node_becomes_view_boundary() {
 }
 
 #[test]
+fn previous_frame_paint_recording_ingests_scene_and_clears_when_recording_invalidates() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_paint_cache_enabled(true);
+
+    let node = ui.create_node(CountingPaintWidget {
+        paints: paints.clone(),
+    });
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(scene.ops_len(), 1);
+    assert_eq!(ui.test_previous_frame_paint_recording_ops_len(), 0);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    assert_eq!(
+        ui.test_previous_frame_paint_recording_ops_len(),
+        1,
+        "ingest should move scene ops into the previous-frame paint recording owner"
+    );
+
+    ui.set_paint_cache_enabled(false);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        ui.test_previous_frame_paint_recording_ops_len(),
+        0,
+        "disabling paint cache should clear the previous-frame paint recording owner"
+    );
+}
+
+#[test]
 fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
     let mut app = crate::test_host::TestHost::new();
 

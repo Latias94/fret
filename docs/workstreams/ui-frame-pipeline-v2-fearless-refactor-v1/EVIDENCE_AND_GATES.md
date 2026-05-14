@@ -435,6 +435,35 @@ node-owned `PaintCacheEntry` field, routes true runtime-boundary entries through
 `UiTree::boundary_paint_cache_entries`, and keeps `PaintCacheState` as the still-open
 previous-frame op storage owner for the next paint-cache replay decision.
 
+Most recent previous-frame paint recording slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+  and
+  `cargo check -p fret-ui --all-targets`
+- Merge-conflict resolution support gates after pulling upstream:
+  `python3 tools/check_diag_scripts_registry.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  and `git diff --check`
+
+Observed result:
+
+- paint-cache regression gate: `11 passed, 929 skipped`;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- `cargo check -p fret-ui --all-targets`: passed;
+- diagnostics script registry: up to date;
+- workstream catalog: `370 dedicated directories, 47 standalone markdown files`;
+- `git diff --check`: passed.
+
+This slice is a local paint-cache ownership split, not a new perf claim. It replaces anonymous
+`PaintCacheState::prev_ops`, `prev_text_blob_ids`, and `prev_fingerprint` fields with
+`PreviousFramePaintRecording`, keeps generation and replay counters in `PaintCacheState`, and leaves
+the final previous-frame recording owner decision open for the next paint-cache replay slice.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

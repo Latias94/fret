@@ -201,6 +201,16 @@ Status after M4F on 2026-05-14:
 - Ordinary `PaintCacheEntry` ownership no longer has a node fallback. `PaintCacheState` still owns
   previous-frame op storage and remains the next paint-cache replay ownership decision.
 
+Status after M4G on 2026-05-14:
+
+- `M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md` splits previous-frame paint recording
+  storage into `PreviousFramePaintRecording`.
+- `PaintCacheState` still owns the recording carrier for now, but no longer mixes anonymous
+  previous-frame ops/text/fingerprint fields with generation, hit/miss, and replay counters.
+- This is a local ownership split and not the final paint-cache replay owner decision. The next M4
+  step is to decide whether `PreviousFramePaintRecording` moves into `ViewBoundaryState`, feeds
+  boundary-owned scene fragments, or remains as an explicitly retained per-tree mechanism.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.

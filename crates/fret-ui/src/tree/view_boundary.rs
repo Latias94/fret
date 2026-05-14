@@ -623,4 +623,9 @@ impl<H: UiHost> UiTree<H> {
             .get(node)
             .is_some_and(BoundaryPaintCacheState::has_entry)
     }
+
+    #[cfg(test)]
+    pub(crate) fn test_previous_frame_paint_recording_ops_len(&self) -> usize {
+        self.paint_cache.previous_frame.ops.len()
+    }
 }

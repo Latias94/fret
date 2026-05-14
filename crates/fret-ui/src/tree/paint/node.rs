@@ -144,7 +144,8 @@ impl<H: UiHost> UiTree<H> {
 
                 let range_start = prev.start as usize;
                 let range_end = prev.end as usize;
-                if range_start > range_end || range_end > self.paint_cache.prev_ops.len() {
+                if range_start > range_end || range_end > self.paint_cache.previous_frame.ops.len()
+                {
                     return None;
                 }
 
@@ -215,7 +216,7 @@ impl<H: UiHost> UiTree<H> {
                     },
                     |span| {
                         scene.replay_ops_translated(
-                            &self.paint_cache.prev_ops[range_start..range_end],
+                            &self.paint_cache.previous_frame.ops[range_start..range_end],
                             delta,
                         );
                         let end = scene.ops_len();

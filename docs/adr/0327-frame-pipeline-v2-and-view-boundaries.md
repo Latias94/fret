@@ -135,8 +135,10 @@ M4E moved boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::pai
 deleted the remaining node-owned `PaintCacheEntry` fallback. True runtime boundaries now own their
 entries through `ViewBoundaryState::paint_cache`; plain retained paint-cache nodes use
 `UiTree::boundary_paint_cache_entries`, a boundary-shaped side store that migrates into
-`ViewBoundaryState::paint_cache` if the node becomes a runtime boundary. Previous-frame op storage
-remains a separate open paint-cache replay owner.
+`ViewBoundaryState::paint_cache` if the node becomes a runtime boundary. M4G split previous-frame
+scene recording storage into `PreviousFramePaintRecording`, so the remaining previous-frame replay
+carrier is now named separately from paint-cache generation and counter control. Its final owner
+remains an open paint-cache replay decision.
 
 ### 3. Layout containment is a dependency contract
 

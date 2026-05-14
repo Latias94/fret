@@ -89,14 +89,35 @@ pub enum PaintCachePolicy {
 #[derive(Debug, Default)]
 pub(super) struct PaintCacheState {
     pub(super) generation: u64,
-    pub(super) prev_ops: Vec<SceneOp>,
-    pub(super) prev_text_blob_ids: Vec<TextBlobId>,
-    pub(super) prev_fingerprint: u64,
+    pub(super) previous_frame: PreviousFramePaintRecording,
     pub(super) source_generation: u64,
     pub(super) target_generation: u64,
     pub(super) hits: u32,
     pub(super) misses: u32,
     pub(super) replayed_ops: u32,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct PreviousFramePaintRecording {
+    pub(super) ops: Vec<SceneOp>,
+    text_blob_ids: Vec<TextBlobId>,
+    fingerprint: u64,
+}
+
+impl PreviousFramePaintRecording {
+    pub(super) fn ingest_scene(&mut self, scene: &mut Scene) {
+        scene.swap_storage(
+            &mut self.ops,
+            &mut self.text_blob_ids,
+            &mut self.fingerprint,
+        );
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.ops.clear();
+        self.text_blob_ids.clear();
+        self.fingerprint = 0;
+    }
 }
 
 impl PaintCacheState {
@@ -113,9 +134,7 @@ impl PaintCacheState {
     }
 
     pub(super) fn invalidate_recording(&mut self) {
-        self.prev_ops.clear();
-        self.prev_text_blob_ids.clear();
-        self.prev_fingerprint = 0;
+        self.previous_frame.clear();
         self.generation = self.generation.saturating_add(1);
     }
 }
