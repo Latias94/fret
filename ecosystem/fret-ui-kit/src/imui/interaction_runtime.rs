@@ -5,6 +5,7 @@ mod drag;
 mod hover;
 mod lifecycle;
 mod models;
+mod pressable_response;
 
 pub(super) use disabled::{
     DisabledScopeGuard, disabled_alpha_for, imui_is_disabled, sanitize_response_for_enabled,
@@ -31,3 +32,4 @@ pub(super) use models::{
     float_window_collapsed_model_for, lifecycle_session_model_for, long_press_signal_model_for,
     pointer_click_modifiers_model_for,
 };
+pub(super) use pressable_response::populate_pressable_response;

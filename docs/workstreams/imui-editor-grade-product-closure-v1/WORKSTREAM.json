@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-05-06",
+  "updated": "2026-05-14",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
@@ -47,6 +47,14 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md"
     },
     {
       "role": "status",
@@ -226,7 +234,11 @@
     },
     {
       "role": "next",
-      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md"
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md"
     },
     {
       "role": "execution",
@@ -302,6 +314,14 @@
       "command": "python tools/diag_gate_action_first_authoring_v1.py --only cookbook-imui-action-basics-cross-frontend"
     },
     {
+      "name": "imui-p0-editor-control-visual-gate",
+      "command": "cargo run -p fretboard-dev -- diag suite cookbook-imui-editor-controls-basics --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics"
+    },
+    {
+      "name": "imui-product-chain-discovery-gate",
+      "command": "python tools/diag_gate_imui_product_chain.py"
+    },
+    {
       "name": "imui-collection-command-package-closeout",
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
     },
@@ -370,6 +390,14 @@
       "command": "cargo build -p fret-devtools"
     },
     {
+      "name": "devtools-tool-app-discovery",
+      "command": "cargo run -p fretboard-dev -- list tool-apps"
+    },
+    {
+      "name": "devtools-tool-app-discovery-json",
+      "command": "cargo run -p fretboard-dev -- list tool-apps --json"
+    },
+    {
       "name": "diag-campaign-doctor",
       "command": "cargo run -p fretboard-dev -- diag doctor campaigns"
     },
@@ -401,6 +429,8 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md",
     "docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md",
     "docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md",
     "docs/workstreams/imui-color-edit-alpha-preview-v1/CLOSEOUT_AUDIT_2026-05-04.md",
@@ -521,7 +551,8 @@
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
-    "docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
@@ -532,10 +563,17 @@
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
     "docs/diagnostics-first-open.md",
     "docs/ui-diagnostics-and-scripted-tests.md",
+    "apps/fretboard/src/demos.rs",
+    "apps/fretboard/src/cli/contracts.rs",
+    "apps/fretboard/src/cli/help.rs",
     "apps/fret-cookbook/examples/imui_action_basics.rs",
     "tools/diag_gate_action_first_authoring_v1.py",
     "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
     "tools/diag-scripts/suites/cookbook-imui-action-basics/suite.json",
+    "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
+    "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
+    "tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json",
+    "tools/diag_gate_imui_product_chain.py",
     "apps/fret-cookbook/src/lib.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/options.rs",
@@ -546,6 +584,9 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs",
     "ecosystem/fret-imui/src/tests/mod.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs",
@@ -591,6 +632,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md` as the latest local non-interactive docking refresh, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }

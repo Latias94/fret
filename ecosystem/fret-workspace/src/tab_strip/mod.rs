@@ -34,9 +34,8 @@ use crate::commands::{
     tab_pin_command, tab_unpin_command,
 };
 use crate::tab_drag::{
-    DRAG_KIND_WORKSPACE_TAB, WorkspacePaneDragGeometry, WorkspaceTabDragState,
-    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
-    resolve_workspace_tab_drop_intent,
+    DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropIntent, WorkspaceTabDropZone,
+    WorkspaceTabInsertionSide, resolve_workspace_tab_drop_intent, workspace_tab_drop_zone_for_pane,
 };
 
 mod consts;
@@ -136,6 +135,42 @@ fn workspace_tab_release_treats_pointer_as_drag(
     current: Point,
 ) -> bool {
     dragging || workspace_tab_drag_distance_threshold_reached(start, current)
+}
+
+fn workspace_tab_strip_release_claims_local_drop(
+    state: &WorkspaceTabStripDragState,
+    pointer_pos_window: Point,
+    pointer_pos_layout: Point,
+    drop_target: &WorkspaceTabStripDropTarget,
+) -> bool {
+    if !matches!(drop_target, WorkspaceTabStripDropTarget::None) {
+        return true;
+    }
+
+    let contains_release = |rect: Option<fret_core::Rect>| {
+        rect.is_some_and(|rect| {
+            rect.contains(pointer_pos_window) || rect.contains(pointer_pos_layout)
+        })
+    };
+
+    contains_release(state.scroll_viewport_rect)
+        || contains_release(state.end_drop_target_rect)
+        || contains_release(state.overflow_control_rect)
+        || contains_release(state.scroll_left_control_rect)
+        || contains_release(state.scroll_right_control_rect)
+}
+
+fn workspace_tab_strip_clear_cross_pane_drag_on_local_release(
+    state: &mut WorkspaceTabDragState,
+    pointer_id: fret_core::PointerId,
+    window: fret_core::AppWindowId,
+) -> bool {
+    if state.pointer == Some(pointer_id) && state.source_window == Some(window) {
+        *state = WorkspaceTabDragState::default();
+        true
+    } else {
+        false
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1108,6 +1143,7 @@ impl WorkspaceTabStrip {
                                                                 let mut outcome = PressablePointerUpResult::Continue;
                                                                 let mut maybe_drop: WorkspaceTabStripDropTarget =
                                                                     WorkspaceTabStripDropTarget::None;
+                                                                let mut local_release_claimed = false;
                                                                 let _ = host.models_mut().update(&drag_model, |st| {
                                                                     if st.pointer != Some(up.pointer_id) {
                                                                         return;
@@ -1129,6 +1165,7 @@ impl WorkspaceTabStrip {
                                                                             ) {
                                                                                 maybe_drop =
                                                                                     st.drop_target.clone();
+                                                                                local_release_claimed = true;
                                                                                 *st = WorkspaceTabStripDragState::default();
                                                                                 return;
                                                                             }
@@ -1210,17 +1247,43 @@ impl WorkspaceTabStrip {
                                                                                 }
                                                                             }
 
+                                                                            local_release_claimed =
+                                                                                workspace_tab_strip_release_claims_local_drop(
+                                                                                    st,
+                                                                                    pointer_pos_window,
+                                                                                    pointer_pos_layout,
+                                                                                    &next_drop,
+                                                                                );
                                                                             maybe_drop = next_drop;
                                                                         } else {
                                                                             maybe_drop =
                                                                                 st.drop_target.clone();
+                                                                            local_release_claimed = !matches!(
+                                                                                maybe_drop,
+                                                                                WorkspaceTabStripDropTarget::None
+                                                                            );
                                                                         }
                                                                     }
                                                                     *st = WorkspaceTabStripDragState::default();
                                                                 });
 
                                                                 if outcome == PressablePointerUpResult::SkipActivate {
-                                                                    let intent = tab_drag_model
+                                                                    if local_release_claimed
+                                                                        && let Some(model) = tab_drag_model.as_ref()
+                                                                    {
+                                                                        let _ = host.models_mut().update(model, |st| {
+                                                                            workspace_tab_strip_clear_cross_pane_drag_on_local_release(
+                                                                                st,
+                                                                                up.pointer_id,
+                                                                                acx.window,
+                                                                            );
+                                                                        });
+                                                                    }
+
+                                                                    let intent = if local_release_claimed {
+                                                                        WorkspaceTabDropIntent::None
+                                                                    } else {
+                                                                        tab_drag_model
                                                                         .as_ref()
                                                                         .and_then(|m| {
                                                                             let pointer_pos_window =
@@ -1242,8 +1305,6 @@ impl WorkspaceTabStrip {
 
                                                                                     let mut target_pane: Option<Arc<str>> =
                                                                                         None;
-                                                                                    let mut target_geom: Option<WorkspacePaneDragGeometry> =
-                                                                                        None;
                                                                                     for (pane_id, geom) in
                                                                                         &st.pane_geometry
                                                                                     {
@@ -1256,7 +1317,6 @@ impl WorkspaceTabStrip {
                                                                                         {
                                                                                             target_pane =
                                                                                                 Some(pane_id.clone());
-                                                                                            target_geom = Some(*geom);
                                                                                             break;
                                                                                         }
                                                                                     }
@@ -1266,28 +1326,12 @@ impl WorkspaceTabStrip {
                                                                                         return WorkspaceTabDropIntent::None;
                                                                                     };
 
-                                                                                    let mut zone = st
-                                                                                        .hovered_zone
-                                                                                        .unwrap_or(WorkspaceTabDropZone::Center);
-                                                                                    if zone != WorkspaceTabDropZone::Center
-                                                                                        && let Some(geom) = target_geom
-                                                                                    {
-                                                                                        // Docks/splits should be mediated by the pane drop
-                                                                                        // surface. If the pointer is within the tab-strip
-                                                                                        // band, force a center drop so "drop on the tabstrip"
-                                                                                        // does not accidentally request a split.
-                                                                                        let tab_strip_max_y = geom
-                                                                                            .bounds
-                                                                                            .origin
-                                                                                            .y
-                                                                                            .0
-                                                                                            + 48.0;
-                                                                                        if pointer_pos_window.y.0
-                                                                                            <= tab_strip_max_y
-                                                                                        {
-                                                                                            zone = WorkspaceTabDropZone::Center;
-                                                                                        }
-                                                                                    }
+                                                                                    let zone =
+                                                                                        workspace_tab_drop_zone_for_pane(
+                                                                                            st,
+                                                                                            target_pane.as_ref(),
+                                                                                            pointer_pos_window,
+                                                                                        );
 
                                                                                     let intent =
                                                                                         resolve_workspace_tab_drop_intent(
@@ -1305,7 +1349,8 @@ impl WorkspaceTabStrip {
                                                                                 })
                                                                                 .ok()
                                                                         })
-                                                                        .unwrap_or(WorkspaceTabDropIntent::None);
+                                                                        .unwrap_or(WorkspaceTabDropIntent::None)
+                                                                    };
 
                                                                     let should_return = matches!(
                                                                         &intent,
@@ -2123,6 +2168,7 @@ impl WorkspaceTabStrip {
                                     InternalDragRegionProps {
                                         layout,
                                         enabled: true,
+                                        route_kind: None,
                                     },
                                     |cx| {
                                         cx.internal_drag_region_on_internal_drag(on_internal_drag);
@@ -2382,7 +2428,8 @@ impl WorkspaceTabStrip {
                                     .unwrap_or_default();
 
                                 let should_compute = tab_drag_snapshot.pointer.is_some()
-                                    && tab_drag_snapshot.hovered_pane.as_deref() == Some(pane_id.as_ref())
+                                    && tab_drag_snapshot.hovered_pane.as_deref()
+                                        == Some(pane_id.as_ref())
                                     && tab_drag_snapshot.hovered_zone.is_some();
 
                                 if let (true, Some(pointer_id)) = (should_compute, tab_drag_snapshot.pointer) {
@@ -2395,6 +2442,15 @@ impl WorkspaceTabStrip {
                                     let mut next_tab: Option<Arc<str>> = None;
                                     let mut next_side: Option<WorkspaceTabInsertionSide> = None;
                                     let next_rects = rects_for_cross;
+
+                                    let pointer_in_tab_row = session.as_ref().is_some_and(
+                                        |session| {
+                                            crate::tab_drag::workspace_tab_strip_row_contains_pointer(
+                                                session.position,
+                                                &next_rects,
+                                            )
+                                        },
+                                    );
 
                                     if let Some(session) = session
                                         && session.kind == DRAG_KIND_WORKSPACE_TAB
@@ -2465,13 +2521,18 @@ impl WorkspaceTabStrip {
                                     if tab_drag_snapshot.hovered_tab != next_tab
                                         || tab_drag_snapshot.hovered_tab_side != next_side
                                         || tab_drag_snapshot.hovered_pane_tab_rects != next_rects
+                                        || (pointer_in_tab_row
+                                            && tab_drag_snapshot.hovered_zone
+                                                != Some(WorkspaceTabDropZone::Center))
                                     {
                                         let _ = cx.app.models_mut().update(&tab_drag_model, |st| {
                                             if st.pointer != Some(pointer_id)
                                                 || st.hovered_pane.as_deref() != Some(pane_id.as_ref())
-                                                || st.hovered_zone != Some(WorkspaceTabDropZone::Center)
                                             {
                                                 return;
+                                            }
+                                            if pointer_in_tab_row {
+                                                st.hovered_zone = Some(WorkspaceTabDropZone::Center);
                                             }
                                             st.hovered_tab = next_tab.clone();
                                             st.hovered_tab_side = next_side;
@@ -2987,7 +3048,7 @@ impl WorkspaceTabStrip {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::PointerId;
+    use fret_core::{PointerId, Rect, Size};
 
     #[test]
     fn workspace_tab_drag_activation_uses_distance_fallback_when_sensor_is_pending() {
@@ -3035,5 +3096,71 @@ mod tests {
         assert!(!workspace_tab_release_treats_pointer_as_drag(
             false, start, current
         ));
+    }
+
+    #[test]
+    fn local_tab_strip_release_claims_end_drop_even_without_resolved_tab_target() {
+        let state = WorkspaceTabStripDragState {
+            end_drop_target_rect: Some(Rect::new(
+                Point::new(Px(180.0), Px(0.0)),
+                Size::new(Px(60.0), Px(32.0)),
+            )),
+            ..Default::default()
+        };
+
+        assert!(workspace_tab_strip_release_claims_local_drop(
+            &state,
+            Point::new(Px(200.0), Px(16.0)),
+            Point::new(Px(200.0), Px(16.0)),
+            &WorkspaceTabStripDropTarget::None,
+        ));
+    }
+
+    #[test]
+    fn local_tab_strip_release_does_not_claim_pane_body_without_drop_target() {
+        let state = WorkspaceTabStripDragState {
+            scroll_viewport_rect: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(160.0), Px(32.0)),
+            )),
+            end_drop_target_rect: Some(Rect::new(
+                Point::new(Px(180.0), Px(0.0)),
+                Size::new(Px(60.0), Px(32.0)),
+            )),
+            ..Default::default()
+        };
+
+        assert!(!workspace_tab_strip_release_claims_local_drop(
+            &state,
+            Point::new(Px(220.0), Px(120.0)),
+            Point::new(Px(220.0), Px(120.0)),
+            &WorkspaceTabStripDropTarget::None,
+        ));
+    }
+
+    #[test]
+    fn local_tab_strip_release_clears_cross_pane_drag_state_for_same_pointer() {
+        let window = fret_core::AppWindowId::default();
+        let mut state = WorkspaceTabDragState {
+            pointer: Some(PointerId(3)),
+            source_window: Some(window),
+            source_pane: Some(Arc::<str>::from("pane-a")),
+            dragged_tab: Some(Arc::<str>::from("doc-a-0")),
+            hovered_pane: Some(Arc::<str>::from("pane-a")),
+            hovered_zone: Some(WorkspaceTabDropZone::Right),
+            ..Default::default()
+        };
+
+        assert!(workspace_tab_strip_clear_cross_pane_drag_on_local_release(
+            &mut state,
+            PointerId(3),
+            window,
+        ));
+        assert_eq!(state.pointer, None);
+        assert_eq!(state.source_window, None);
+        assert_eq!(state.source_pane, None);
+        assert_eq!(state.dragged_tab, None);
+        assert_eq!(state.hovered_pane, None);
+        assert_eq!(state.hovered_zone, None);
     }
 }

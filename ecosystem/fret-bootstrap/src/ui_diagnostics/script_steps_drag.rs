@@ -312,6 +312,7 @@ pub(super) fn handle_drag_pointer_until_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
     text_font_stack_key_stable_frames: u32,
     font_catalog_populated: bool,
     system_font_rescan_idle: bool,
@@ -793,15 +794,41 @@ pub(super) fn handle_drag_pointer_until_step(
                         svc.cfg.redact_text,
                         &mut active.selector_resolution_trace,
                     ) {
-                        let start = center_of_rect_clamped_to_rect(
-                            interaction_bounds_for_semantics_node(
+                        let start = if let Some(ui) = ui.as_deref_mut() {
+                            let start = pointer_position_prefer_intended_hit_routing(
+                                app,
+                                snapshot,
                                 element_runtime,
-                                None,
+                                ui,
                                 window,
                                 node,
-                            ),
-                            window_bounds,
-                        );
+                                window_bounds,
+                            );
+                            record_hit_test_trace_for_selector(
+                                &mut active.hit_test_trace,
+                                ui,
+                                element_runtime,
+                                window,
+                                Some(snapshot),
+                                &target,
+                                step_index as u32,
+                                start,
+                                Some(node),
+                                Some("drag_pointer_until.start"),
+                                svc.cfg.max_debug_string_bytes,
+                            );
+                            start
+                        } else {
+                            center_of_rect_clamped_to_rect(
+                                interaction_bounds_for_semantics_node(
+                                    element_runtime,
+                                    None,
+                                    window,
+                                    node,
+                                ),
+                                window_bounds,
+                            )
+                        };
                         let mut end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -856,6 +883,13 @@ pub(super) fn handle_drag_pointer_until_step(
                         if suppress_pointer_events_for_cross_window_hover {
                             state.playback.frame = state.playback.frame.saturating_add(1);
                         } else {
+                            let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+                            active.last_injected_step = Some(injected_step_index);
+                            active.last_injected_pointer_source_step = Some(injected_step_index);
+                            active.last_injected_pointer_source_test_id = match &target {
+                                UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+                                _ => None,
+                            };
                             let _ = push_drag_playback_frame(
                                 &mut state.playback,
                                 &mut output.events,
@@ -863,6 +897,13 @@ pub(super) fn handle_drag_pointer_until_step(
                             );
                         }
                     } else if !suppress_pointer_events_for_cross_window_hover {
+                        let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+                        active.last_injected_step = Some(injected_step_index);
+                        active.last_injected_pointer_source_step = Some(injected_step_index);
+                        active.last_injected_pointer_source_test_id = match &target {
+                            UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+                            _ => None,
+                        };
                         output.events.extend(pointer_move_with_internal_over_events(
                             state.playback.button,
                             state.playback.end,

@@ -3110,6 +3110,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn action_route_fallback_root(&mut self, element: GlobalElementId) {
+        self.window_state.record_action_route_fallback_root(element);
+    }
+
     pub fn action_add_on_command_for_owner<Owner: Any>(
         &mut self,
         element: GlobalElementId,

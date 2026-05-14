@@ -145,12 +145,14 @@ Example | Status | Feature | Run | Diag suite
 [`external_texture_import_basics.rs`](./examples/external_texture_import_basics.rs) | Lab | `cookbook-interop` | `cargo run -p fretboard-dev -- dev native --example external_texture_import_basics` | `cookbook-external-texture-import-basics`
 [`imui_action_basics.rs`](./examples/imui_action_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_action_basics` | `cookbook-imui-action-basics`
 [`imui_debug_draw_basics.rs`](./examples/imui_debug_draw_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_debug_draw_basics` | `cookbook-imui-debug-draw-basics`
-[`imui_editor_controls_basics.rs`](./examples/imui_editor_controls_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_editor_controls_basics` | -
+[`imui_editor_controls_basics.rs`](./examples/imui_editor_controls_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_editor_controls_basics` | `cookbook-imui-editor-controls-basics`
 
 After these focused cookbook lessons, use `cargo run -p fret-demo --bin imui_editor_proof_demo` for
 the heavier editor-panel proof that combines state, command actions, editor controls, menu/popup
 behavior, and diagnostic `test_id` anchors. It lives in `fret-demo`, so it is not listed as a
-cookbook example row.
+cookbook example row. Use `cargo run -p fretboard-dev -- list native-demos --all` to discover
+heavier product proofs such as `imui_editor_proof_demo`, `workspace_shell_demo`, and
+`docking_arbitration_demo`.
 
 If you are invoking the tiny smoke surface through the public workspace runner, pick the package
 explicitly because `fret-demo` and `fret-examples-imui` both define `imui_hello_demo`:

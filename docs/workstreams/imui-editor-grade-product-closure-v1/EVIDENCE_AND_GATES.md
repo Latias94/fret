@@ -11,13 +11,19 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_DEMOTE_DELETE_PLAN_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
-- `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
-- `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
-- `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
-- `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md`
 - `tools/diag_gate_action_first_authoring_v1.py`
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/suites/cookbook-imui-action-basics/suite.json`
+- `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json`
+- `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json`
+- `tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json`
+- `tools/diag_gate_imui_product_chain.py`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
@@ -125,9 +131,14 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
-- `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
+- `docs/diagnostics-first-open.md`
+- `apps/fretboard/src/demos.rs`
+- `apps/fretboard/src/cli/contracts.rs`
+- `apps/fretboard/src/cli/help.rs`
 - `apps/fret-cookbook/examples/imui_action_basics.rs`
 - `apps/fret-cookbook/src/lib.rs`
 - `ecosystem/fret-ui-kit/src/imui.rs`
@@ -141,6 +152,9 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs`
 - `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
+- `ecosystem/fret-ui-editor/src/controls/slider.rs`
 - `ecosystem/fret-imui/src/tests/mod.rs`
 - `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
 - `ecosystem/fret-imui/src/tests/models_controls.rs`
@@ -332,13 +346,47 @@ This package now proves:
 
 - `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+- `cargo check -p fret-workspace`
+- `cargo nextest run -p fret-ui declarative_internal_drag_region_can_install_route_anchor --no-fail-fast`
+- `cargo nextest run -p fret-workspace workspace_pane_tree_installs_workspace_tab_drag_route_anchor --no-fail-fast`
+- `cargo nextest run -p fret-workspace workspace_root_drop_after_tab_pointer_up_dispatches_split_and_move --no-fail-fast`
+- `cargo nextest run -p fret-workspace pointer_click_on_inactive_tab_dispatches_activate --no-fail-fast`
+- `cargo fmt --package fret-ui -- --check`
+- `cargo fmt --package fret-workspace -- --check`
 
 This package currently proves:
 
 - `workspace_shell_demo` remains the primary coherent shell proof,
 - `editor_notes_demo` remains the minimal shell-mounted rail proof,
 - the launched shell smoke floor now reaches beyond tabstrip-only checks,
+- source-level workspace tab drag routing now keeps the root `DRAG_KIND_WORKSPACE_TAB` route anchor
+  in `crates/fret-ui` while pane/zone/drop policy stays in `fret-workspace`,
+- `PointerUp -> InternalDrag::Drop` can resolve a right-edge pane split from the root-routed
+  workspace tab drag and then move the dragged tab into the generated pane,
 - and the shell proof set does not silently collapse back into the generic `imui` backlog.
+
+### Workspace shell tab-strip gates
+
+- `cargo nextest run -p fret-workspace`
+- `cargo run -p fret-demo --bin workspace_shell_demo --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json --dir target/fret-diag/workspace-reorder-first-to-end-2026-05-14-v3 --timeout-ms 240000 --exit-after-run --launch -- target/release/workspace_shell_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke.json --dir target/fret-diag/workspace-row-suppressed-2026-05-14-v3 --timeout-ms 240000 --exit-after-run --launch -- target/release/workspace_shell_demo.exe`
+- `python tools/diag_gate_imui_product_chain.py --launched --only workspace-shell --release --out-dir target/imui-product-chain-launched-2026-05-14-workspace-shell-v3`
+
+This package now proves:
+
+- `WorkspaceTabDragState` is anchored at the root model identity, not a transient local model identity, so tab drag state survives pane-tree churn.
+- local release on the tab strip claims end-drop and row-local drop before pane-level move/split arbitration can steal the gesture.
+- tab-row hover keeps publishing `hovered_pane_tab_rects`, so the split-preview path no longer starves itself when the pointer sits inside the row.
+- the reorder-first-to-end smoke now lands on `workspace-shell-pane-pane-a-tab-strip.drop_end` and reorders `doc-a-0` to `pos_in_set=3`.
+- the row-suppressed smoke keeps pane B split previews absent while the pointer remains on the source row.
+- the launched workspace-shell product chain stays green with `stage_counts: {"passed": 11}`.
+
+Run evidence:
+
+- `target/fret-diag/workspace-reorder-first-to-end-2026-05-14-v3/1778711172824-workspace-shell-demo-tab-reorder-first-to-end-smoke/script.result.json` reports `stage=passed`.
+- `target/fret-diag/workspace-row-suppressed-2026-05-14-v3/1778711195977-workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke/script.result.json` reports `stage=passed`.
+- `target/imui-product-chain-launched-2026-05-14-workspace-shell-v3/1778711236860/workspace-shell/suite.summary.json` reports `status=passed` and `stage_counts.passed=11`.
 
 The promoted launched suite now freezes this minimum shell coverage:
 
@@ -347,14 +395,41 @@ The promoted launched suite now freezes this minimum shell coverage:
 - content-focus restore via Escape,
 - and left-rail / file-tree keep-alive.
 
+The 2026-05-13 workspace tab split handoff source gate is not a replacement for the launched
+`diag-hardening-smoke-workspace` suite. The launched inactive-tab drag-to-split-right smoke is now
+closed with a release demo rebuild plus a packed diagnostics artifact:
+
+```powershell
+cargo build -p fret-demo --bin workspace_shell_demo --release
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-inactive-to-split-right-smoke.json --dir target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run15 --timeout-ms 180000 --exit-after-run --pack --ai-packet --launch -- target/release/workspace_shell_demo.exe
+cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- target/release/workspace_shell_demo.exe
+```
+
+Run evidence:
+
+- `target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run15/1778688009999/script.result.json`
+  reports `stage=passed`.
+- `drag_pointer_until.start` resolved to `x=588.3334,y=14.666666`, hit
+  `workspace-shell-pane-pane-a-tab-doc-a-2.chrome`, and set
+  `hit_path_contains_intended=true`.
+- Step 14 dispatches `workspace.tab.activate.doc-a-2`,
+  `workspace.pane.split.horizontal.second.window-1.pane.1`, and
+  `workspace.pane.move_active_tab_to.window-1.pane.1`, proving the inactive source tab moved into
+  the generated pane rather than moving pane B's active tab.
+- Packed share artifact:
+  `target/fret-diag/workspace-shell-inactive-drag-2026-05-13-run15/share/1778688009999.zip`.
+
 ### Diagnostics / tooling gates
 
 - `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast`
 - `cargo nextest run -p fret-diag identity_browser_html --no-fail-fast`
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
+- `python tools/diag_gate_imui_product_chain.py`
 - `cargo build -p fret-devtools`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
+- `cargo run -p fretboard-dev -- list tool-apps`
+- `cargo run -p fretboard-dev -- list tool-apps --json`
 
 This package currently proves:
 
@@ -370,6 +445,10 @@ This package currently proves:
 - one canonical first-open doc now routes diagnostics readers before they open branch/reference
   notes,
 - DevTools GUI and MCP stay aligned as consumers of the same artifacts root,
+- `fretboard-dev list tool-apps` exposes the DevTools GUI and MCP launch commands as one
+  repo-maintainer discovery surface,
+- `fretboard-dev list tool-apps --json` exposes the same `fretboard_tool_apps` schema for
+  automation and source-gate checks,
 - and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
 - captured immediate/runtime identity warnings now have a bounded first-open path through
   `diag query identity-warnings --browser --json`,
@@ -383,7 +462,9 @@ This package currently proves:
 - `python tools/gate_imui_workstream_source.py`
 - `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`
 - `cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
-- Local refresh evidence: `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
+- `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics no_frame_pointer_move --no-fail-fast`
+- Local refresh evidence: `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+- Launched campaign repair evidence: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
 
 This package currently proves:
 
@@ -392,12 +473,20 @@ This package currently proves:
 - `docking_arbitration_demo` is the launched proof surface for that package,
 - the four expectations map to four repo-owned scripts instead of one vague docking smoke story,
 - local source-policy, campaign validation, Wayland fallback, window-style capability, script
-  roundtrip, and diagnostics predicate gates were refreshed on 2026-05-04,
+  roundtrip, and diagnostics predicate gates were refreshed on 2026-05-13,
+- the launched bounded P3 campaign now passes 4/4 scripts after the diagnostics runner
+  no-frame pointer-move repair in `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+- the focused `no_frame_pointer_move` unit gate locks the fallback to active cross-window dock-panel
+  or dock-tabs drags with an active pointer session,
 - and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
   IMUI lane's new umbrella package.
 
-The 2026-05-04 launched bounded campaign attempt timed out before script-result completion and is
-not counted as passing hand-feel evidence.
+The 2026-05-13 launched bounded campaign result is `campaign: ok` at
+`target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
+verification rerun also green at
+`target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778656624160`. This closes the generic
+bounded-campaign gap, but not Linux Wayland compositor acceptance or every platform-specific
+real-host hand-feel risk.
 
 ### Lane hygiene gates
 
@@ -428,8 +517,72 @@ Focused command:
 python tools/diag_gate_action_first_authoring_v1.py --only cookbook-imui-action-basics-cross-frontend
 ```
 
-Latest local evidence (2026-04-28): `PASS (run_id=1777376310911)`, packed at
+Focused editor-control visual gate:
+
+```text
+cargo run -p fretboard-dev -- diag script validate tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json --json
+cargo run -p fretboard-dev -- diag suite cookbook-imui-editor-controls-basics --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics
+```
+
+Latest local action evidence (2026-04-28): `PASS (run_id=1777376310911)`, packed at
 `target/dfa-v1/1777376303772/i/share/1777376310911.zip`.
+
+Latest local editor-control smoke evidence (2026-05-13): `PASS (run_id=1778653020152)`, direct run
+artifact root:
+`target/fret-diag/cookbook-imui-editor-controls-basics/2026-05-13-run6`.
+The documented suite command also passed on 2026-05-13 with both scripts:
+
+- smoke: `PASS ... (run_id=1778653340628)`
+- roughness typing: `PASS ... (run_id=1778653344599)`
+
+The suite summary at `target/fret-diag/suite.summary.json` reported `scripts_with_evidence: 2` and
+`warning_issues: 0` for both bundles.
+
+The captured first-contact editor-control artifacts are:
+
+- layout sidecar:
+  `target/fret-diag/cookbook-imui-editor-controls-basics/2026-05-13-run6/1778653020648-cookbook-imui-editor-controls-basics-smoke.layout/layout.taffy.v1.json`
+- screenshot:
+  `target/fret-diag/cookbook-imui-editor-controls-basics/2026-05-13-run6/screenshots/1778653020668-cookbook-imui-editor-controls-basics-smoke/window-4294967297-tick-34-frame-33.png`
+- final bundle:
+  `target/fret-diag/cookbook-imui-editor-controls-basics/2026-05-13-run6/1778653020746-cookbook-imui-editor-controls-basics-smoke/bundle.schema2.json`
+- roughness typing bundle:
+  `target/fret-diag/1778653344759-cookbook-imui-editor-controls-roughness-typing/bundle.schema2.json`
+
+Latest launched generic-action evidence (2026-05-14): `PASS (run_id=1778703206445)`, packed at
+`target/imui-product-chain-launched-2026-05-14-generic-action-action-route-fallback/1778702675441/generic-action/1778702675548/i/share/1778703206445.zip`.
+This run exercises command palette, declarative, GenUI DropdownMenu, and IMUI triggers through the
+same typed action handler after `fret-ui` began honoring explicit action-route fallback roots for
+view/app-owned action handlers. The source gate is:
+
+```text
+cargo nextest run -p fret-ui action_availability_snapshot_does_not_scan_unfocused_subtree action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback --no-fail-fast --jobs 1
+cargo nextest run -p fret --lib app_ui_unit_action_handler_publishes_available_command_snapshot_by_default app_ui_unit_action_handler_publishes_available_snapshot_when_focus_exists locals_with_runtime_dispatch_updates_locals_and_rerenders_cached_view --no-fail-fast --jobs 1
+python tools/diag_gate_imui_product_chain.py --launched --only generic-action --release --out-dir target/imui-product-chain-launched-2026-05-14-generic-action-action-route-fallback
+```
+
+### Product-chain discovery gate
+
+Status: landed as a lightweight maintainer gate.
+
+The default product-chain gate validates discovery plus promoted script/suite inputs across
+`imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`,
+`workspace_shell_demo`, DevTools/diagnostics first-open, and the IMUI source gates. It does not
+replace the individual launched gates; it keeps the cross-app product chain discoverable and
+validated without forcing a single `diag campaign` launch target onto unrelated apps.
+
+Focused command:
+
+```text
+python tools/diag_gate_imui_product_chain.py
+```
+
+Use `--launched` when the local machine should also execute the existing launched proof commands
+sequentially across the cookbook, editor proof, and workspace shell surfaces:
+
+```text
+python tools/diag_gate_imui_product_chain.py --launched --only generic-action,editor-controls,editor-proof,workspace-shell
+```
 
 ### P3 multi-window parity gate
 

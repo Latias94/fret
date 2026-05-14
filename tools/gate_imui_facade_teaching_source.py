@@ -118,7 +118,7 @@ def main() -> None:
                 "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
                 "imui_in(cx, |ui| {",
                 "let enabled = enabled_state.paint_value_in(ui.cx_mut());",
-                'ui.text(format!("Count: {count}"));',
+                'cx.text(format!("Count: {count}")).test_id(TEST_ID_COUNT_TEXT)',
                 'ui.checkbox_model("Enabled", enabled_state.model())',
                 'ui.button("Increment").clicked()',
             ],

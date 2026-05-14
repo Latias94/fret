@@ -441,6 +441,9 @@ Deliverables:
 
 - A concise navigation note for maintainers/contributors.
 - Cross-links from older workstreams where needed.
+- First-open diagnostics/tool-app discovery now points to the repo-owned
+  `diag doctor campaigns` preflight in both human and JSON forms before maintainers branch into
+  GUI/MCP consumers.
 - A maintainer checklist for landing diagnostics changes safely.
 - One thin migration-intent note that says which docs stay active, which stay as linked background,
   and which should stop acting as parallel planning surfaces.

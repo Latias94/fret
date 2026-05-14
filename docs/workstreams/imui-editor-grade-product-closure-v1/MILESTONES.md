@@ -6,6 +6,10 @@ Last updated: 2026-04-28
 Status note (2026-04-22): this file now records umbrella phase state only. Implementation-heavy
 execution has moved into closed narrow follow-ons or the active docking parity lane.
 
+Status note (2026-05-14): the workspace shell tab-strip gate set was refreshed, but this umbrella
+lane is still maintenance-only. Treat the new evidence as proof-state refresh for the workspace
+shell surface, not as a reactivation of the umbrella lane.
+
 ## M0 - Baseline and owner freeze
 
 Exit criteria:

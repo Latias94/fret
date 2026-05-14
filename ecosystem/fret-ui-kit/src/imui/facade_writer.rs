@@ -3,6 +3,16 @@
 use super::*;
 use std::any::Any;
 
+mod boolean_wrappers;
+mod button_actions;
+mod container_wrappers;
+mod disclosure;
+mod floating_popup;
+mod menu_items;
+mod selection_combo;
+mod text_models;
+mod value_models;
+
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
 ///
 /// This mirrors the `fret-imui::ImUi` pattern without depending on the `fret-imui` crate.
@@ -76,187 +86,6 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         }
     }
 
-    pub fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.horizontal_with_options(HorizontalOptions::default(), f);
-    }
-
-    pub fn horizontal_with_options(
-        &mut self,
-        options: HorizontalOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let build_focus = self.build_focus.clone();
-        let element =
-            self.with_cx_mut(|cx| horizontal_container_element(cx, build_focus, options, f));
-        self.add(element);
-    }
-
-    pub fn menu_bar(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.menu_bar_with_options(MenuBarOptions::default(), f);
-    }
-
-    pub fn menu_bar_with_options(
-        &mut self,
-        options: MenuBarOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let build_focus = self.build_focus.clone();
-        let element = self
-            .with_cx_mut(|cx| menu_family_controls::menu_bar_element(cx, build_focus, options, f));
-        self.add(element);
-    }
-
-    pub fn tab_bar(
-        &mut self,
-        id: &str,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
-    ) -> TabBarResponse {
-        self.tab_bar_with_options(id, TabBarOptions::default(), f)
-    }
-
-    pub fn tab_bar_with_options(
-        &mut self,
-        id: &str,
-        options: TabBarOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
-    ) -> TabBarResponse {
-        let build_focus = self.build_focus.clone();
-        let (element, response) = self.with_cx_mut(|cx| {
-            tab_family_controls::tab_bar_element(cx, id, build_focus, options, f)
-        });
-        self.add(element);
-        response
-    }
-
-    pub fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.vertical_with_options(VerticalOptions::default(), f);
-    }
-
-    pub fn vertical_with_options(
-        &mut self,
-        options: VerticalOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let build_focus = self.build_focus.clone();
-        let element =
-            self.with_cx_mut(|cx| vertical_container_element(cx, build_focus, options, f));
-        self.add(element);
-    }
-
-    pub fn grid(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.grid_with_options(GridOptions::default(), f);
-    }
-
-    pub fn grid_with_options(
-        &mut self,
-        options: GridOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let build_focus = self.build_focus.clone();
-        let element = self.with_cx_mut(|cx| grid_container_element(cx, build_focus, options, f));
-        self.add(element);
-    }
-
-    pub fn table(
-        &mut self,
-        id: &str,
-        columns: &[TableColumn],
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-    ) -> TableResponse {
-        self.table_with_options(id, columns, TableOptions::default(), f)
-    }
-
-    pub fn table_with_options(
-        &mut self,
-        id: &str,
-        columns: &[TableColumn],
-        options: TableOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-    ) -> TableResponse {
-        let build_focus = self.build_focus.clone();
-        let (element, response) = self.with_cx_mut(|cx| {
-            table_controls::table_element(cx, id, columns, build_focus, options, f)
-        });
-        self.add(element);
-        response
-    }
-
-    pub fn virtual_list<K, R>(
-        &mut self,
-        id: &str,
-        len: usize,
-        key_at: K,
-        row: R,
-    ) -> VirtualListResponse
-    where
-        K: FnMut(usize) -> fret_ui::ItemKey,
-        R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
-    {
-        self.virtual_list_with_options(id, len, VirtualListOptions::default(), key_at, row)
-    }
-
-    pub fn virtual_list_with_options<K, R>(
-        &mut self,
-        id: &str,
-        len: usize,
-        options: VirtualListOptions,
-        key_at: K,
-        row: R,
-    ) -> VirtualListResponse
-    where
-        K: FnMut(usize) -> fret_ui::ItemKey,
-        R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
-    {
-        let build_focus = self.build_focus.clone();
-        let (element, response) = self.with_cx_mut(|cx| {
-            virtual_list_controls::virtual_list_element(
-                cx,
-                id,
-                len,
-                build_focus,
-                options,
-                key_at,
-                row,
-            )
-        });
-        self.add(element);
-        response
-    }
-
-    pub fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.scroll_with_options(ScrollOptions::default(), f);
-    }
-
-    pub fn scroll_with_options(
-        &mut self,
-        options: ScrollOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let build_focus = self.build_focus.clone();
-        let element = self.with_cx_mut(|cx| scroll_container_element(cx, build_focus, options, f));
-        self.add(element);
-    }
-
-    pub fn child_region(
-        &mut self,
-        id: &str,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        self.child_region_with_options(id, ChildRegionOptions::default(), f);
-    }
-
-    pub fn child_region_with_options(
-        &mut self,
-        id: &str,
-        options: ChildRegionOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let build_focus = self.build_focus.clone();
-        let element = self
-            .with_cx_mut(|cx| child_region::child_region_element(cx, id, build_focus, options, f));
-        self.add(element);
-    }
-
     /// Disable all `imui`-facade interactions within the closure and dim visuals (ImGui-style
     /// `BeginDisabled/EndDisabled`).
     ///
@@ -304,592 +133,6 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
             })
         });
         self.add(element);
-    }
-
-    pub fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::button(self, label);
-        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
-    pub fn small_button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::small_button(self, label);
-        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
-    pub fn small_button_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        options: ButtonOptions,
-    ) -> ResponseExt {
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::small_button_with_options(self, label, options);
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn arrow_button(&mut self, id: &str, direction: ButtonArrowDirection) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::arrow_button(self, id, direction);
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn arrow_button_with_options(
-        &mut self,
-        id: &str,
-        direction: ButtonArrowDirection,
-        options: ButtonOptions,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::arrow_button_with_options(
-            self, id, direction, options,
-        );
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn invisible_button(&mut self, id: &str, size: Size) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::invisible_button(self, id, size);
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn invisible_button_with_options(
-        &mut self,
-        id: &str,
-        size: Size,
-        options: ButtonOptions,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::invisible_button_with_options(
-            self, id, size, options,
-        );
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn action_button(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        action: impl Into<ActionId>,
-    ) -> ResponseExt {
-        self.action_button_with_options(label, action, ButtonOptions::default())
-    }
-
-    pub fn action_button_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        action: impl Into<ActionId>,
-        options: ButtonOptions,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::action_button_with_options(
-            self, label, action, options,
-        );
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn action_payload_button<T>(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        action: impl Into<ActionId>,
-        payload: T,
-    ) -> ResponseExt
-    where
-        T: Any + Clone + Send + Sync + 'static,
-    {
-        self.action_payload_button_with_options(label, action, payload, ButtonOptions::default())
-    }
-
-    pub fn action_payload_button_with_options<T>(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        action: impl Into<ActionId>,
-        payload: T,
-        options: ButtonOptions,
-    ) -> ResponseExt
-    where
-        T: Any + Clone + Send + Sync + 'static,
-    {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::action_payload_button_with_options(
-            self, label, action, payload, options,
-        );
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn button_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
-        self.button_command_with_options(command, ButtonOptions::default())
-    }
-
-    pub fn button_command_with_options(
-        &mut self,
-        command: impl Into<CommandId>,
-        options: ButtonOptions,
-    ) -> ResponseExt {
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::button_command_with_options(self, command, options);
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn menu_item(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
-        self.menu_item_with_options(label, MenuItemOptions::default())
-    }
-
-    pub fn menu_item_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        options: MenuItemOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_with_options(self, label, options);
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
-    pub fn menu_item_checkbox_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        checked: bool,
-        options: MenuItemOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_checkbox_with_options(
-            self, label, checked, options,
-        );
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
-    pub fn menu_item_radio_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        checked: bool,
-        options: MenuItemOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_radio_with_options(
-            self, label, checked, options,
-        );
-        self.record_focusable(resp.id, enabled);
-        resp
-    }
-
-    pub fn menu_item_action(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        action: impl Into<ActionId>,
-    ) -> ResponseExt {
-        self.menu_item_action_with_options(label, action, MenuItemOptions::default())
-    }
-
-    pub fn menu_item_action_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        action: impl Into<ActionId>,
-        options: MenuItemOptions,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_action_with_options(
-            self, label, action, options,
-        );
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn begin_menu(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        self.begin_menu_with_options(id, label, BeginMenuOptions::default(), f)
-    }
-
-    pub fn begin_menu_with_options(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        options: BeginMenuOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
-    }
-
-    pub fn begin_submenu(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        self.begin_submenu_with_options(id, label, BeginSubmenuOptions::default(), f)
-    }
-
-    pub fn begin_submenu_with_options(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        options: BeginSubmenuOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        menu_family_controls::begin_submenu_with_options(self, id, label.into(), options, f)
-    }
-
-    pub fn menu_item_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
-        self.menu_item_command_with_options(command, MenuItemOptions::default())
-    }
-
-    pub fn menu_item_command_with_options(
-        &mut self,
-        command: impl Into<CommandId>,
-        options: MenuItemOptions,
-    ) -> ResponseExt {
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_command_with_options(
-            self, command, options,
-        );
-        self.record_focusable(resp.id, resp.enabled);
-        resp
-    }
-
-    pub fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
-        self.selectable_with_options(
-            label,
-            SelectableOptions {
-                selected,
-                ..Default::default()
-            },
-        )
-    }
-
-    pub fn selectable_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        options: SelectableOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::selectable_with_options(self, label, options);
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn multi_selectable<K: Clone + PartialEq + 'static>(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<ImUiMultiSelectState<K>>,
-        all_keys: &[K],
-        key: K,
-    ) -> ResponseExt {
-        self.multi_selectable_with_options(
-            label,
-            model,
-            all_keys,
-            key,
-            SelectableOptions::default(),
-        )
-    }
-
-    pub fn multi_selectable_with_options<K: Clone + PartialEq + 'static>(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<ImUiMultiSelectState<K>>,
-        all_keys: &[K],
-        key: K,
-        options: SelectableOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::multi_selectable_with_options(
-            self, label, model, all_keys, key, options,
-        );
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn combo(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        preview: impl Into<Arc<str>>,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> ComboResponse {
-        self.combo_with_options(id, label, preview, ComboOptions::default(), f)
-    }
-
-    pub fn combo_with_options(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        preview: impl Into<Arc<str>>,
-        options: ComboOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> ComboResponse {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::combo_with_options(
-            self, id, label, preview, options, f,
-        );
-        self.record_focusable(resp.id(), focusable);
-        resp
-    }
-
-    pub fn collapsing_header(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        self.collapsing_header_with_options(id, label, CollapsingHeaderOptions::default(), f)
-    }
-
-    pub fn collapsing_header_with_options(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        options: CollapsingHeaderOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::collapsing_header_with_options(
-            self, id, label, options, f,
-        );
-        self.record_focusable(resp.id(), enabled);
-        resp
-    }
-
-    pub fn tree_node(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        self.tree_node_with_options(id, label, TreeNodeOptions::default(), f)
-    }
-
-    pub fn tree_node_with_options(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        options: TreeNodeOptions,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) -> DisclosureResponse {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::tree_node_with_options(self, id, label, options, f);
-        self.record_focusable(resp.id(), enabled);
-        resp
-    }
-
-    pub fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
-        self.input_text_model_with_options(model, InputTextOptions::default())
-    }
-
-    pub fn input_text_model_with_options(
-        &mut self,
-        model: &fret_runtime::Model<String>,
-        options: InputTextOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::input_text_model_with_options(self, model, options);
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn input_text_completion_model(
-        &mut self,
-        id: &str,
-        model: &fret_runtime::Model<String>,
-        candidates: &[Arc<str>],
-    ) -> InputTextPickerResponse {
-        self.input_text_completion_model_with_options(
-            id,
-            model,
-            candidates,
-            InputTextPickerOptions::default(),
-        )
-    }
-
-    pub fn input_text_completion_model_with_options(
-        &mut self,
-        id: &str,
-        model: &fret_runtime::Model<String>,
-        candidates: &[Arc<str>],
-        options: InputTextPickerOptions,
-    ) -> InputTextPickerResponse {
-        let focusable = options.input.enabled
-            && options.input.focusable
-            && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_completion_model_with_options(
-            self, id, model, candidates, options,
-        );
-        self.record_focusable(resp.id(), focusable);
-        resp
-    }
-
-    pub fn input_text_history_model(
-        &mut self,
-        id: &str,
-        model: &fret_runtime::Model<String>,
-        history: &[Arc<str>],
-    ) -> InputTextPickerResponse {
-        self.input_text_history_model_with_options(
-            id,
-            model,
-            history,
-            InputTextPickerOptions::default(),
-        )
-    }
-
-    pub fn input_text_history_model_with_options(
-        &mut self,
-        id: &str,
-        model: &fret_runtime::Model<String>,
-        history: &[Arc<str>],
-        options: InputTextPickerOptions,
-    ) -> InputTextPickerResponse {
-        let focusable = options.input.enabled
-            && options.input.focusable
-            && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_history_model_with_options(
-            self, id, model, history, options,
-        );
-        self.record_focusable(resp.id(), focusable);
-        resp
-    }
-
-    pub fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
-        self.textarea_model_with_options(model, TextAreaOptions::default())
-    }
-
-    pub fn textarea_model_with_options(
-        &mut self,
-        model: &fret_runtime::Model<String>,
-        options: TextAreaOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::textarea_model_with_options(self, model, options);
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn checkbox_model(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-    ) -> ResponseExt {
-        self.checkbox_model_with_options(label, model, CheckboxOptions::default())
-    }
-
-    pub fn checkbox_model_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-        options: CheckboxOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::checkbox_model_with_options(
-            self, label, model, options,
-        );
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn radio(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
-        self.radio_with_options(label, selected, RadioOptions::default())
-    }
-
-    pub fn radio_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        selected: bool,
-        options: RadioOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp =
-            <Self as UiWriterImUiFacadeExt<H>>::radio_with_options(self, label, selected, options);
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn switch_model(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-    ) -> ResponseExt {
-        self.switch_model_with_options(label, model, SwitchOptions::default())
-    }
-
-    pub fn switch_model_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<bool>,
-        options: SwitchOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::switch_model_with_options(
-            self, label, model, options,
-        );
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn slider_f32_model(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<f32>,
-    ) -> ResponseExt {
-        self.slider_f32_model_with_options(label, model, SliderOptions::default())
-    }
-
-    pub fn slider_f32_model_with_options(
-        &mut self,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<f32>,
-        options: SliderOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::slider_f32_model_with_options(
-            self, label, model, options,
-        );
-        self.record_focusable(resp.id, focusable);
-        resp
-    }
-
-    pub fn combo_model(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<Option<Arc<str>>>,
-        items: &[Arc<str>],
-    ) -> ResponseExt {
-        self.combo_model_with_options(id, label, model, items, ComboModelOptions::default())
-    }
-
-    pub fn combo_model_with_options(
-        &mut self,
-        id: &str,
-        label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<Option<Arc<str>>>,
-        items: &[Arc<str>],
-        options: ComboModelOptions,
-    ) -> ResponseExt {
-        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
-        let focusable = enabled && options.focusable;
-        let resp = <Self as UiWriterImUiFacadeExt<H>>::combo_model_with_options(
-            self, id, label, model, items, options,
-        );
-        self.record_focusable(resp.id, focusable);
-        resp
     }
 }
 
@@ -1232,8 +475,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element = self.with_cx_mut(|cx| floating_layer_element(cx, id, f));
-        self.add(element);
+        floating_popup::floating_layer(self, id, f);
     }
 
     /// Render a minimal in-window floating area primitive.
@@ -1263,10 +505,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: FloatingAreaOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>, FloatingAreaContext),
     ) -> FloatingAreaResponse {
-        let (element, response) =
-            self.with_cx_mut(|cx| floating_area_element(cx, id, initial_position, options, f));
-        self.add(element);
-        response
+        floating_popup::floating_area_with_options(self, id, initial_position, options, f)
     }
 
     /// Build a drag surface that moves a floating area (ImGui-style).
@@ -1279,9 +518,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
-        self.with_cx_mut(|cx| {
-            floating_area_drag_surface_element(cx, area, props, None, true, true, setup, f)
-        })
+        floating_popup::floating_area_drag_surface(self, area, props, setup, f)
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -1289,7 +526,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// This is intended to support ImGui-like `OpenPopup` / `BeginPopup` splits without forcing
     /// callers to allocate a dedicated `Model<bool>` per popup.
     fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
-        popup_overlay::popup_open_model(self, id)
+        floating_popup::popup_open_model(self, id)
     }
 
     /// Drops all internal state for a named popup scope.
@@ -1298,19 +535,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// without bound (e.g. popups keyed by user-generated strings). Dropping a scope will close the
     /// popup (if open) and release the internal models if no other references exist.
     fn drop_popup_scope(&mut self, id: &str) {
-        popup_overlay::drop_popup_scope(self, id);
+        floating_popup::drop_popup_scope(self, id);
     }
 
     fn open_popup(&mut self, id: &str) {
-        popup_overlay::open_popup(self, id);
+        floating_popup::open_popup(self, id);
     }
 
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
-        popup_overlay::open_popup_at(self, id, anchor);
+        floating_popup::open_popup_at(self, id, anchor);
     }
 
     fn close_popup(&mut self, id: &str) {
-        popup_overlay::close_popup(self, id);
+        floating_popup::close_popup(self, id);
     }
 
     fn begin_popup_menu(
@@ -1329,7 +566,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_menu_with_options(self, id, trigger, options, false, f)
+        floating_popup::begin_popup_menu_with_options(self, id, trigger, options, f)
     }
 
     fn begin_popup_modal(
@@ -1348,7 +585,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupModalOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_modal_with_options(self, id, trigger, options, f)
+        floating_popup::begin_popup_modal_with_options(self, id, trigger, options, f)
     }
 
     /// Build a generic immediate collapsing header with explicit stable identity.
@@ -1409,7 +646,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         text: impl Into<Arc<str>>,
         options: TooltipOptions,
     ) -> bool {
-        tooltip_overlay::tooltip_text_with_options(self, id, trigger, text.into(), options)
+        floating_popup::tooltip_text_with_options(self, id, trigger, text, options)
     }
 
     fn tooltip(
@@ -1428,7 +665,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: TooltipOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        tooltip_overlay::tooltip_with_options(self, id, trigger, options, f)
+        floating_popup::tooltip_with_options(self, id, trigger, options, f)
     }
 
     /// Publish a typed payload for the trigger's existing pressable drag gesture.
@@ -1453,7 +690,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         payload: T,
         options: DragSourceOptions,
     ) -> DragSourceResponse {
-        drag_drop::drag_source_with_options(self, trigger, payload, options)
+        floating_popup::drag_source_with_options(self, trigger, payload, options)
     }
 
     /// Resolve a typed drop target against the trigger's existing pressable surface.
@@ -1469,7 +706,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         trigger: ResponseExt,
         options: DropTargetOptions,
     ) -> DropTargetResponse<T> {
-        drag_drop::drop_target_with_options(self, trigger, options)
+        floating_popup::drop_target_with_options(self, trigger, options)
     }
 
     fn menu_separator(&mut self) {
@@ -1672,7 +909,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_context_menu_with_options(self, id, trigger, options, f)
+        floating_popup::begin_popup_context_menu_with_options(self, id, trigger, options, f)
     }
 
     fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
@@ -1977,7 +1214,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        floating_window::floating_window_show(self, id, title, initial_position, f)
+        floating_popup::window(self, id, title, initial_position, f)
     }
 
     /// Render a floating window with explicit state and behavior options.
@@ -1989,14 +1226,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: WindowOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        floating_window::floating_window_show_with_options(
-            self,
-            id,
-            title,
-            initial_position,
-            options,
-            f,
-        )
+        floating_popup::window_with_options(self, id, title, initial_position, options, f)
     }
 }
 

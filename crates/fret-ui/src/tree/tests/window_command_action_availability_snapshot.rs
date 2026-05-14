@@ -407,6 +407,50 @@ fn action_availability_snapshot_does_not_scan_unfocused_subtree() {
 }
 
 #[test]
+fn action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let action_root = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, action_root);
+    ui.set_focus(None);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        query_count, 1,
+        "expected no-focus publication to use the same subtree route fallback as dispatch"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+}
+
+#[test]
 fn action_availability_snapshot_publishes_focus_menu_bar_gating() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

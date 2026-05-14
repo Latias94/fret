@@ -1,7 +1,7 @@
 # P2 Golden Path Promotion - 2026-05-06
 
 Status: landed P2 promotion note
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## Decision
 
@@ -29,10 +29,14 @@ cargo run -p fret-demo --bin imui_editor_proof_demo
 ## Gates
 
 ```powershell
-cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast
+python tools/gate_imui_editor_collection_source.py
 cargo check -p fret-demo --bin imui_editor_proof_demo
 rg -n "imui_editor_proof_demo|state, command actions|command/action dispatch" apps/fret-cookbook/README.md apps/fret-cookbook/EXAMPLES.md docs/examples/README.md
 ```
+
+Status note (2026-05-13): the current collection proof source gate is the lightweight Python gate
+above. The older Rust `fret-examples` source tests remain as historical anchors, but the active lane
+does not require recompiling `fret-examples` just to validate `include_str!` marker checks.
 
 ## Next Read
 

@@ -1,7 +1,7 @@
 use super::frame::ElementInstance;
 use super::frame::with_element_record_for_node;
 use super::prelude::*;
-use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx};
+use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx, PrepaintCx};
 use fret_runtime::CommandId;
 
 mod event;
@@ -9,6 +9,26 @@ mod layout;
 mod measure;
 mod paint;
 mod semantics;
+
+fn sync_internal_drag_region_route<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+    instance: &ElementInstance,
+) {
+    let ElementInstance::InternalDragRegion(props) = instance else {
+        return;
+    };
+    let Some(kind) = props.route_kind else {
+        return;
+    };
+
+    if props.enabled {
+        crate::internal_drag::set_route(app, window, kind, node);
+    } else if crate::internal_drag::route(&*app, window, kind) == Some(node) {
+        crate::internal_drag::remove_route(app, window, kind);
+    }
+}
 
 fn interactive_resize_text_width_cache_entries() -> usize {
     crate::runtime_config::ui_runtime_config().interactive_resize_text_width_cache_entries
@@ -974,6 +994,17 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
         self.event_observer_impl(cx, event);
+    }
+
+    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return;
+        };
+
+        sync_internal_drag_region_route(cx.app, window, cx.node, &instance);
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

@@ -205,6 +205,7 @@ where
         );
         let scrub_test_id = self.options.test_id.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let active_typing_test_id = if typing { typing_test_id.clone() } else { None };
         let prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
         let suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
         let value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
@@ -431,7 +432,7 @@ where
                 prefix: prefix.clone(),
                 suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
-                test_id: typing_test_id,
+                test_id: active_typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.
                 error_display: NumericInputErrorDisplay::TrailingIcon,

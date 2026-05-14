@@ -242,34 +242,22 @@ fn slider_f32_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
                 .unwrap_or_else(|_| super::slider_clamp_and_snap(min, min, max, step));
             let progress = slider_progress(current, a11y_min, a11y_max);
 
-            response.core.hovered = state.hovered;
-            response.core.pressed = state.pressed;
-            response.core.focused = state.focused;
-            response.nav_highlighted =
-                state.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
-            response.id = Some(id);
-            response.core.changed = cx.take_transient_for(id, super::KEY_CHANGED);
-            response.core.rect = cx.last_bounds_for_element(id);
+            let changed = cx.take_transient_for(id, super::KEY_CHANGED);
             let hover_delay =
                 super::install_hover_query_hooks_for_pressable(cx, id, state.hovered_raw, None);
-            response.pointer_hovered_raw = state.hovered_raw;
-            response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
-            response.hover_stationary_met = hover_delay.stationary_met;
-            response.hover_delay_short_met = hover_delay.delay_short_met;
-            response.hover_delay_normal_met = hover_delay.delay_normal_met;
-            response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
-            response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
-            response.hover_blocked_by_active_item =
-                super::hover_blocked_by_active_item_for(cx, id, &active_item_model);
-            super::populate_response_lifecycle_transients(cx, id, response);
-            super::populate_response_lifecycle_from_active_state(
+            super::populate_pressable_response(
                 cx,
                 id,
+                state,
+                hover_delay,
+                &active_item_model,
+                false,
+                changed,
                 state.pressed,
-                response.core.changed,
+                changed,
+                enabled,
                 response,
             );
-            super::sanitize_response_for_enabled(enabled, response);
 
             let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
             let mut track = ContainerProps::default();

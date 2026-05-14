@@ -537,6 +537,50 @@
       ]
     },
     {
+      "id": "cookbook-imui-editor-controls-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "imui",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the IMUI editor controls lesson root and key controls.",
+        "Focuses the text-assist field, waits for the anchored assist list, then captures layout, screenshot, and bundle evidence."
+      ]
+    },
+    {
+      "id": "cookbook-imui-editor-controls-roughness-typing",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "drag-value",
+        "editor-controls",
+        "imui",
+        "typing"
+      ],
+      "target_hints": [
+        "Proves DragValue typing test ids are published only while typing mode is active.",
+        "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again."
+      ]
+    },
+    {
       "id": "cookbook-markdown-and-code-basics-smoke",
       "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
       "required_capabilities": [
@@ -10020,7 +10064,7 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Activates doc-a-1 (pane A) via the tab overflow menu so the hidden tab is revealed before closing.",
         "Closes doc-a-1 via the close button.",
         "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
       ]
@@ -10070,7 +10114,7 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates a different tab so the drag source tab is inactive.",
+        "Activates doc-a-1 through the overflow menu so the drag source tab is inactive and visible.",
         "Drags the inactive tab toward pane B's right edge until the split preview appears.",
         "Drops to split and asserts the tab moved into the new pane."
       ]
@@ -10177,8 +10221,8 @@
         "workspace"
       ],
       "target_hints": [
-        "Waits for a known tab in pane A to exist.",
-        "Middle-clicks the tab.",
+        "Waits for the initially active tab in pane A to exist.",
+        "Middle-clicks the visible active tab body.",
         "Asserts the tab is removed from the UI tree (not_exists)."
       ]
     },
@@ -10350,7 +10394,7 @@
       ],
       "target_hints": [
         "Asserts initial pos_in_set for a known tab.",
-        "Drags the first tab to the end and drops it.",
+        "Drags the first tab onto the visible end-drop surface.",
         "Asserts pos_in_set updates after the reorder."
       ]
     },

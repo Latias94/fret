@@ -90,6 +90,13 @@ pub(crate) fn with_window_state<H: UiHost, R>(
     })
 }
 
+pub(crate) fn action_route_fallback_roots<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> Vec<GlobalElementId> {
+    with_window_state(app, window, |st| st.action_route_fallback_roots())
+}
+
 pub(crate) fn record_timer_target<H: UiHost>(
     app: &mut H,
     window: AppWindowId,

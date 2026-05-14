@@ -1,17 +1,15 @@
 use std::cell::Cell;
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, InternalDragKind, Point, Px};
-use fret_runtime::Model;
-use fret_ui::action::{OnInternalDrag, OnPointerDown};
+use fret_core::{AppWindowId, Axis, Color, Corners, Edges, InternalDragKind, Point, Px};
+use fret_runtime::{CommandId, Model};
+use fret_ui::action::{OnInternalDrag, OnPointerDown, UiDragActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, InternalDragRegionProps, LayoutStyle,
     Length, PointerRegionProps, PositionStyle, ResizablePanelGroupProps, ViewCacheProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, ResizablePanelGroupStyle, Theme, UiHost};
-
-use fret_dnd::{EdgeDropZone, compute_edge_drop_zone};
 
 use crate::commands::{
     pane_activate_command, pane_move_active_tab_to_command, pane_split_command,
@@ -21,8 +19,9 @@ use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_regist
 use crate::layout::{WorkspacePaneLayout, WorkspacePaneTree, WorkspaceWindowLayout};
 use crate::tab_drag::{
     DRAG_KIND_WORKSPACE_TAB, WorkspacePaneDragGeometry, WorkspaceTabDragState,
-    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabHitRect, WorkspaceTabInsertionSide,
-    resolve_workspace_tab_drop_intent,
+    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
+    resolve_workspace_tab_drop_intent, workspace_tab_drop_zone_for_pane,
+    workspace_tab_pane_id_at_position,
 };
 
 fn fill_layout() -> LayoutStyle {
@@ -90,57 +89,190 @@ fn drop_preview_border(theme: &Theme) -> Option<Color> {
         .or_else(|| theme.color_by_key("ring"))
 }
 
-fn edge_for_drop_zone(zone: WorkspaceTabDropZone) -> Option<EdgeDropZone> {
-    match zone {
-        WorkspaceTabDropZone::Left => Some(EdgeDropZone::Left),
-        WorkspaceTabDropZone::Right => Some(EdgeDropZone::Right),
-        WorkspaceTabDropZone::Up => Some(EdgeDropZone::Up),
-        WorkspaceTabDropZone::Down => Some(EdgeDropZone::Down),
-        WorkspaceTabDropZone::Center => None,
-    }
+fn pane_id_at_position(state: &WorkspaceTabDragState, position: Point) -> Option<Arc<str>> {
+    workspace_tab_pane_id_at_position(state, position)
 }
 
-fn drop_zone_for_edge(edge: EdgeDropZone) -> WorkspaceTabDropZone {
-    match edge {
-        EdgeDropZone::Left => WorkspaceTabDropZone::Left,
-        EdgeDropZone::Right => WorkspaceTabDropZone::Right,
-        EdgeDropZone::Up => WorkspaceTabDropZone::Up,
-        EdgeDropZone::Down => WorkspaceTabDropZone::Down,
-    }
-}
-
-fn compute_drop_zone_for_position(
-    geom: WorkspacePaneDragGeometry,
-    position: Point,
-    previous: Option<WorkspaceTabDropZone>,
-) -> WorkspaceTabDropZone {
-    let prev_edge = previous.and_then(edge_for_drop_zone);
-    compute_edge_drop_zone(
-        geom.bounds,
-        position,
-        geom.edge_margin,
-        prev_edge,
-        geom.edge_hysteresis,
-    )
-    .map(drop_zone_for_edge)
-    .unwrap_or(WorkspaceTabDropZone::Center)
-}
-
-fn tab_strip_row_contains_pointer(pointer: Point, tab_rects: &[WorkspaceTabHitRect]) -> bool {
-    if tab_rects.is_empty() {
+fn clear_workspace_tab_hover(state: &mut WorkspaceTabDragState) -> bool {
+    if state.hovered_pane.is_none()
+        && state.hovered_zone.is_none()
+        && state.hovered_tab.is_none()
+        && state.hovered_tab_side.is_none()
+        && state.hovered_pane_tab_rects.is_empty()
+    {
         return false;
     }
-    let mut min_y: Option<f32> = None;
-    let mut max_y: Option<f32> = None;
-    for r in tab_rects {
-        let top = r.rect.origin.y.0;
-        let bottom = r.rect.origin.y.0 + r.rect.size.height.0;
-        min_y = Some(min_y.map_or(top, |prev| prev.min(top)));
-        max_y = Some(max_y.map_or(bottom, |prev| prev.max(bottom)));
+
+    state.hovered_pane = None;
+    state.hovered_zone = None;
+    state.hovered_tab = None;
+    state.hovered_tab_side = None;
+    state.hovered_pane_tab_rects = Vec::new();
+    true
+}
+
+fn update_workspace_tab_hover_for_pane(
+    state: &mut WorkspaceTabDragState,
+    pane_id: &Arc<str>,
+    position: Point,
+) -> bool {
+    let next_zone = workspace_tab_drop_zone_for_pane(state, pane_id.as_ref(), position);
+    if state.hovered_pane.as_deref() == Some(pane_id.as_ref())
+        && state.hovered_zone == Some(next_zone)
+    {
+        return false;
     }
-    min_y.is_some_and(|min_y| {
-        max_y.is_some_and(|max_y| pointer.y.0 >= min_y && pointer.y.0 <= max_y)
-    })
+
+    state.hovered_pane = Some(pane_id.clone());
+    state.hovered_zone = Some(next_zone);
+    if next_zone != WorkspaceTabDropZone::Center {
+        state.hovered_tab = None;
+        state.hovered_tab_side = None;
+    }
+    true
+}
+
+fn update_workspace_tab_hover_at_position(
+    state: &mut WorkspaceTabDragState,
+    position: Point,
+) -> bool {
+    let Some(pane_id) = pane_id_at_position(state, position) else {
+        return clear_workspace_tab_hover(state);
+    };
+
+    update_workspace_tab_hover_for_pane(state, &pane_id, position)
+}
+
+fn take_workspace_tab_drop_intent_at_position(
+    state: &mut WorkspaceTabDragState,
+    position: Point,
+) -> WorkspaceTabDropIntent {
+    let target_pane = pane_id_at_position(state, position).or_else(|| state.hovered_pane.clone());
+    let intent = target_pane
+        .map(|pane_id| {
+            let zone = workspace_tab_drop_zone_for_pane(state, pane_id.as_ref(), position);
+            resolve_workspace_tab_drop_intent(state, &pane_id, zone)
+        })
+        .unwrap_or(WorkspaceTabDropIntent::None);
+
+    *state = WorkspaceTabDragState::default();
+    intent
+}
+
+fn take_workspace_tab_drop_intent_for_pane(
+    state: &mut WorkspaceTabDragState,
+    pane_id: &Arc<str>,
+    position: Point,
+) -> WorkspaceTabDropIntent {
+    if state.hovered_pane.as_deref() != Some(pane_id.as_ref()) {
+        return WorkspaceTabDropIntent::None;
+    }
+
+    let zone = workspace_tab_drop_zone_for_pane(state, pane_id.as_ref(), position);
+    let intent = resolve_workspace_tab_drop_intent(state, pane_id, zone);
+    *state = WorkspaceTabDragState::default();
+    intent
+}
+
+fn dispatch_workspace_tab_drop_intent(
+    host: &mut dyn UiDragActionHost,
+    window: AppWindowId,
+    window_model: &Model<WorkspaceWindowLayout>,
+    fallback_move_tab_cmd: Option<CommandId>,
+    intent: WorkspaceTabDropIntent,
+) -> bool {
+    match intent {
+        WorkspaceTabDropIntent::None => false,
+        WorkspaceTabDropIntent::MoveToPane {
+            source,
+            dragged_tab,
+            target,
+        } => {
+            if let Some(cmd) = pane_activate_command(source.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = tab_activate_command(dragged_tab.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = pane_move_active_tab_to_command(target.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            } else if let Some(cmd) = fallback_move_tab_cmd {
+                host.dispatch_command(Some(window), cmd);
+            }
+            host.request_redraw(window);
+            true
+        }
+        WorkspaceTabDropIntent::InsertToPane {
+            source,
+            dragged_tab,
+            target,
+            target_tab,
+            side,
+        } => {
+            if let Some(cmd) = pane_activate_command(source.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = tab_activate_command(dragged_tab.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = pane_move_active_tab_to_command(target.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            } else if let Some(cmd) = fallback_move_tab_cmd {
+                host.dispatch_command(Some(window), cmd);
+            }
+
+            let cmd = match side {
+                WorkspaceTabInsertionSide::Before => {
+                    tab_move_active_before_command(target_tab.as_ref())
+                }
+                WorkspaceTabInsertionSide::After => {
+                    tab_move_active_after_command(target_tab.as_ref())
+                }
+            };
+            if let Some(cmd) = cmd {
+                host.dispatch_command(Some(window), cmd);
+            }
+
+            host.request_redraw(window);
+            true
+        }
+        WorkspaceTabDropIntent::SplitAndMove {
+            source,
+            dragged_tab,
+            target,
+            axis,
+            side,
+        } => {
+            let new_pane_id = host
+                .models_mut()
+                .read(window_model, |w| w.generate_next_pane_id())
+                .ok();
+
+            let Some(new_pane_id) = new_pane_id else {
+                return false;
+            };
+
+            if let Some(cmd) = pane_activate_command(target.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = pane_split_command(axis, side, new_pane_id.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+
+            if let Some(cmd) = pane_activate_command(source.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = tab_activate_command(dragged_tab.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+            if let Some(cmd) = pane_move_active_tab_to_command(new_pane_id.as_ref()) {
+                host.dispatch_command(Some(window), cmd);
+            }
+
+            host.request_redraw(window);
+            true
+        }
+    }
 }
 
 fn drop_preview_element<H: UiHost>(
@@ -372,7 +504,7 @@ struct SplitResizeModelState {
 
 #[track_caller]
 fn get_tab_drag_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<WorkspaceTabDragState> {
-    cx.local_model(WorkspaceTabDragState::default)
+    cx.model_for(cx.root_id(), WorkspaceTabDragState::default)
 }
 
 #[track_caller]
@@ -404,7 +536,8 @@ where
     let active_pane = window_snapshot.active_pane_id().map(|id| id.as_ref());
 
     let tab_drag_for_root = tab_drag.clone();
-    let clear_hover: OnInternalDrag = Arc::new(move |host, acx, drag| {
+    let window_model_for_root = window.clone();
+    let root_drag_handler: OnInternalDrag = Arc::new(move |host, acx, drag| {
         let Some(session) = host.drag(drag.pointer_id) else {
             return false;
         };
@@ -425,14 +558,8 @@ where
                     {
                         return;
                     }
-                    if st.hovered_pane.is_some() || st.hovered_zone.is_some() {
-                        st.hovered_pane = None;
-                        st.hovered_zone = None;
-                        st.hovered_tab = None;
-                        st.hovered_tab_side = None;
-                        st.hovered_pane_tab_rects = Vec::new();
-                        did_clear = true;
-                    }
+                    let pointer_pos_window = drag.position_window.unwrap_or(drag.position);
+                    did_clear = update_workspace_tab_hover_at_position(st, pointer_pos_window);
                 });
                 if did_clear {
                     host.request_redraw(acx.window);
@@ -455,7 +582,25 @@ where
                 }
                 did_clear
             }
-            InternalDragKind::Drop => false,
+            InternalDragKind::Drop => {
+                let mut intent = WorkspaceTabDropIntent::None;
+                let _ = host.models_mut().update(&tab_drag_for_root, |st| {
+                    if st.pointer != Some(drag.pointer_id)
+                        || st.source_window != Some(session_source_window)
+                    {
+                        return;
+                    }
+                    let pointer_pos_window = drag.position_window.unwrap_or(drag.position);
+                    intent = take_workspace_tab_drop_intent_at_position(st, pointer_pos_window);
+                });
+                dispatch_workspace_tab_drop_intent(
+                    host,
+                    acx.window,
+                    &window_model_for_root,
+                    None,
+                    intent,
+                )
+            }
         }
     });
 
@@ -463,9 +608,10 @@ where
         InternalDragRegionProps {
             layout: fill_layout(),
             enabled: true,
+            route_kind: Some(DRAG_KIND_WORKSPACE_TAB),
         },
         |cx| {
-            cx.internal_drag_region_on_internal_drag(clear_hover.clone());
+            cx.internal_drag_region_on_internal_drag(root_drag_handler.clone());
             vec![render_node_with_resize(
                 cx,
                 &window,
@@ -719,37 +865,8 @@ where
                         // the workspace root clear-hover region) do not clear state on steady
                         // `Over` events.
                         stop_propagation = true;
-                        let geom = st
-                            .pane_geometry
-                            .iter()
-                            .find(|(id, _)| id.as_ref() == pane_id.as_ref())
-                            .map(|(_, g)| *g);
                         let pointer_pos_window = drag.position_window.unwrap_or(drag.position);
-                        let mut next_zone = geom.map_or(WorkspaceTabDropZone::Center, |geom| {
-                            compute_drop_zone_for_position(
-                                geom,
-                                pointer_pos_window,
-                                st.hovered_zone,
-                            )
-                        });
-                        if next_zone != WorkspaceTabDropZone::Center
-                            && tab_strip_row_contains_pointer(
-                                pointer_pos_window,
-                                &st.hovered_pane_tab_rects,
-                            )
-                        {
-                            next_zone = WorkspaceTabDropZone::Center;
-                        }
-
-                        if st.hovered_pane.as_deref() != Some(pane_id.as_ref())
-                            || st.hovered_zone != Some(next_zone)
-                        {
-                            st.hovered_pane = Some(pane_id.clone());
-                            st.hovered_zone = Some(next_zone);
-                            if next_zone != WorkspaceTabDropZone::Center {
-                                st.hovered_tab = None;
-                                st.hovered_tab_side = None;
-                            }
+                        if update_workspace_tab_hover_for_pane(st, &pane_id, pointer_pos_window) {
                             handled = true;
                         }
                     });
@@ -808,132 +925,21 @@ where
                             return;
                         }
 
-                        let geom = st
-                            .pane_geometry
-                            .iter()
-                            .find(|(id, _)| id.as_ref() == pane_id.as_ref())
-                            .map(|(_, g)| *g);
                         let pointer_pos_window = drag.position_window.unwrap_or(drag.position);
-                        let zone = geom.map_or_else(
-                            || st.hovered_zone.unwrap_or(WorkspaceTabDropZone::Center),
-                            |geom| {
-                                let zone = compute_drop_zone_for_position(
-                                    geom,
-                                    pointer_pos_window,
-                                    st.hovered_zone,
-                                );
-                                if zone != WorkspaceTabDropZone::Center
-                                    && tab_strip_row_contains_pointer(
-                                        pointer_pos_window,
-                                        &st.hovered_pane_tab_rects,
-                                    )
-                                {
-                                    WorkspaceTabDropZone::Center
-                                } else {
-                                    zone
-                                }
-                            },
+                        intent = take_workspace_tab_drop_intent_for_pane(
+                            st,
+                            &pane_id,
+                            pointer_pos_window,
                         );
-
-                        intent = resolve_workspace_tab_drop_intent(st, &pane_id, zone);
-
-                        *st = WorkspaceTabDragState::default();
                     });
 
-                    match intent {
-                        WorkspaceTabDropIntent::None => false,
-                        WorkspaceTabDropIntent::MoveToPane {
-                            source,
-                            dragged_tab,
-                            target,
-                        } => {
-                            if let Some(cmd) = pane_activate_command(source.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = tab_activate_command(dragged_tab.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = pane_move_active_tab_to_command(target.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            } else if let Some(cmd) = move_tab_cmd.clone() {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            host.request_redraw(acx.window);
-                            true
-                        }
-                        WorkspaceTabDropIntent::InsertToPane {
-                            source,
-                            dragged_tab,
-                            target,
-                            target_tab,
-                            side,
-                        } => {
-                            if let Some(cmd) = pane_activate_command(source.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = tab_activate_command(dragged_tab.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = pane_move_active_tab_to_command(target.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            } else if let Some(cmd) = move_tab_cmd.clone() {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-
-                            let cmd = match side {
-                                WorkspaceTabInsertionSide::Before => {
-                                    tab_move_active_before_command(target_tab.as_ref())
-                                }
-                                WorkspaceTabInsertionSide::After => {
-                                    tab_move_active_after_command(target_tab.as_ref())
-                                }
-                            };
-                            if let Some(cmd) = cmd {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-
-                            host.request_redraw(acx.window);
-                            true
-                        }
-                        WorkspaceTabDropIntent::SplitAndMove {
-                            source,
-                            dragged_tab,
-                            target,
-                            axis,
-                            side,
-                        } => {
-                            let new_pane_id = host
-                                .models_mut()
-                                .read(&window_model, |w| w.generate_next_pane_id())
-                                .ok();
-
-                            let Some(new_pane_id) = new_pane_id else {
-                                return false;
-                            };
-
-                            if let Some(cmd) = pane_activate_command(target.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = pane_split_command(axis, side, new_pane_id.as_ref())
-                            {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-
-                            if let Some(cmd) = pane_activate_command(source.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = tab_activate_command(dragged_tab.as_ref()) {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-                            if let Some(cmd) = pane_move_active_tab_to_command(new_pane_id.as_ref())
-                            {
-                                host.dispatch_command(Some(acx.window), cmd);
-                            }
-
-                            host.request_redraw(acx.window);
-                            true
-                        }
-                    }
+                    dispatch_workspace_tab_drop_intent(
+                        host,
+                        acx.window,
+                        &window_model,
+                        move_tab_cmd.clone(),
+                        intent,
+                    )
                 }
             }
         })
@@ -961,6 +967,7 @@ where
                 InternalDragRegionProps {
                     layout: pane_stack_layout(),
                     enabled: true,
+                    route_kind: None,
                 },
                 |cx| {
                     cx.internal_drag_region_on_internal_drag(drag_handler.clone());

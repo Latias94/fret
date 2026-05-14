@@ -86,6 +86,10 @@ Recent landing in this priority bucket:
 - DevTools `Regression` drill-down now exposes `Capability Sources` as a separate evidence lane,
 - MCP regression dashboard output now also surfaces capability provenance plus capability-check
   paths when the sibling `regression.summary.json` is available.
+- `fretboard-dev list tool-apps` now also names the repo-owned
+  `diag doctor campaigns` / `diag doctor campaigns --json` preflight beside the DevTools GUI and
+  MCP entrypoints, so first-open diagnostics discovery points maintainers at the checked-in
+  campaign-manifest guard before they branch into GUI or automation consumers.
 
 Definition of done:
 

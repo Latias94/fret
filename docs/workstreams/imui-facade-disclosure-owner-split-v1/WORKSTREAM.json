@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "slug": "imui-facade-disclosure-owner-split-v1",
+  "title": "ImUi Facade Disclosure Owner Split v1",
+  "status": "closed",
+  "updated": "2026-05-13",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-kit-owner-split-v1",
+  "problem": "Split the remaining disclosure-adjacent inherent `ImUiFacade` wrappers out of `facade_writer.rs` without widening public IMUI names, `fret-imui`, or `crates/fret-ui` runtime contracts.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/M1_DISCLOSURE_FACADE_OWNER_SPLIT_2026-05-13.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-facade-disclosure-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused `fret-ui-kit` IMUI smoke gates and source-policy checks to prove the disclosure wrapper owner split did not change public surface or contracts.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast",
+      "python tools/gate_imui_facade_teaching_source.py",
+      "python tools/gate_imui_workstream_source.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-facade-disclosure-owner-split-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "imui-facade-teaching-source",
+      "command": "python tools/gate_imui_facade_teaching_source.py"
+    },
+    {
+      "name": "imui-workstream-source",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "fret-ui-kit-imui-smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "format-fret-ui-kit",
+      "command": "cargo fmt --package fret-ui-kit -- --check"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/DESIGN.md",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/M1_DISCLOSURE_FACADE_OWNER_SPLIT_2026-05-13.md",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/TODO.md",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/MILESTONES.md",
+    "docs/workstreams/imui-facade-disclosure-owner-split-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "Treat this lane as closed history for the disclosure wrapper owner split. Start separate follow-ons for text, boolean/model, table, additive widgets, docking/multi-window behavior, or runtime public API changes."
+  }
+}

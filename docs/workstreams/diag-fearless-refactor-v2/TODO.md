@@ -372,6 +372,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] add a maintainer-facing manifest validation entrypoint (`diag campaign validate`) that can
     validate either repo-owned manifests or explicit ad hoc manifest paths without preloading the
     full workspace registry,
+  - [x] surface the repo-owned campaign preflight from the first-open/tool-app discovery path:
+    `fretboard-dev list tool-apps` now prints `diag doctor campaigns` and the machine-readable
+    JSON map includes the same preflight command pair,
   - [ ] decide whether to keep JSON-only or add TOML / generated registry inputs later,
   - [x] add first-pass campaign metadata (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
   - [x] add direct script items in addition to suites,

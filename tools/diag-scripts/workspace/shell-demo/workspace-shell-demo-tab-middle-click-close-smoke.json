@@ -5,8 +5,8 @@
     "tags": ["workspace", "tabstrip", "close", "smoke", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Waits for a known tab in pane A to exist.",
-      "Middle-clicks the tab.",
+      "Waits for the initially active tab in pane A to exist.",
+      "Middle-clicks the visible active tab body.",
       "Asserts the tab is removed from the UI tree (not_exists)."
     ]
   },
@@ -18,7 +18,16 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
       },
       "timeout_frames": 240
     },
@@ -26,7 +35,7 @@
     {
       "type": "pointer_down",
       "window": { "kind": "current" },
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
       "button": "middle"
     },
     { "type": "wait_frames", "n": 2 },
@@ -37,7 +46,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
       },
       "timeout_frames": 240
     },
@@ -45,4 +54,3 @@
     { "type": "capture_bundle", "label": "workspace-shell-demo-tab-middle-click-close-smoke" }
   ]
 }
-

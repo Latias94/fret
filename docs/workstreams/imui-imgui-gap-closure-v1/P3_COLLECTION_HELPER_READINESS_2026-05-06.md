@@ -1,7 +1,7 @@
 # P3 Collection Helper Readiness - 2026-05-06
 
 Status: readiness audit; no collection helper follow-on opened yet
-Last updated: 2026-05-06
+Last updated: 2026-05-13
 
 ## Decision
 
@@ -86,7 +86,7 @@ If a follow-on becomes justified, start with `imui-multi-select-request-v1` or
 Suggested readiness gates:
 
 ```powershell
-cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast
+python tools/gate_imui_editor_collection_source.py
 cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast
 ```
 
@@ -98,3 +98,8 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --
   passed: 9 app-owned collection proof tests passed.
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast`
   passed: 4 public helper smoke tests passed.
+
+2026-05-13 gate refresh:
+
+- `python tools/gate_imui_editor_collection_source.py` passed and is now the active source gate for
+  the same marker checks.

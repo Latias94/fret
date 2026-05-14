@@ -114,6 +114,8 @@ required cookbook features for known Lab examples and print what it enabled.
       `cargo run -p fret-demo --bin imui_editor_proof_demo`
       for the heavier editor-panel path with state, command actions, menu/popup behavior, and
       diagnostic `test_id` anchors
+    - to discover product proofs outside the cookbook table:
+      `cargo run -p fretboard-dev -- list native-demos --all`
     - if you are using the public workspace runner for the tiny smoke surface, choose a package
       explicitly because `fret-demo` and `fret-examples-imui` both define `imui_hello_demo`
       - maintainer wrapper:
