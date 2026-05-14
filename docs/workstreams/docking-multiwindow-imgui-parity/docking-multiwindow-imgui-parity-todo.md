@@ -331,6 +331,13 @@ Each TODO is labeled:
         `docking-arbitration-demo-wayland-degrade-no-os-tearoff` script, requiring
         `platform.capabilities` admission, Linux/Wayland-safe capability predicates, a long
         tear-off gesture, `known_window_count_is(n=1)`, and the canonical evidence bundle label.
+    - [x] Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+      - `tools/diag_gate_docking_wayland_policy_skip.py`
+      - The gate writes `capabilities.json` with `diag.script_v2`, simulates a non-Wayland
+        `platform.capabilities` sidecar, and requires `skipped_policy`,
+        `environment.requirement_unsatisfied`, `environment.platform_capabilities.platform_ne`,
+        and no script item files under `script-results/` or `suite-results/`.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

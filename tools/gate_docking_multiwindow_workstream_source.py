@@ -18,6 +18,7 @@ WAYLAND_CAMPAIGN = Path("tools/diag-campaigns/imui-p3-wayland-real-host.json")
 WAYLAND_SCRIPT = Path(
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json"
 )
+WAYLAND_POLICY_SKIP_GATE = Path("tools/diag_gate_docking_wayland_policy_skip.py")
 
 REQUIRED_COMMON_SCRIPTS = [
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
@@ -165,11 +166,28 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md"),
+        required=[
+            "Status: local policy-skip gate; no Wayland acceptance claim.",
+            "python tools/diag_gate_docking_wayland_policy_skip.py",
+            "`capabilities.json` with `diag.script_v2`",
+            "`environment.requirement_unsatisfied`",
+            "`environment.platform_capabilities.platform_ne`",
+            "script item files are not",
+            "produced under `script-results/` or `suite-results/`",
+            "does not close `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
         required=[
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "python tools/gate_docking_multiwindow_workstream_source.py",
+            "python tools/diag_gate_docking_wayland_policy_skip.py",
             "tools/gate_docking_multiwindow_workstream_source.py",
+            "tools/diag_gate_docking_wayland_policy_skip.py",
         ],
         failures=failures,
     )
@@ -178,6 +196,8 @@ def _check_docs(failures: list[str]) -> None:
         required=[
             "Latest source-drift guard:",
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "Latest local Wayland policy-skip gate:",
+            "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
         ],
         failures=failures,
     )
@@ -185,7 +205,24 @@ def _check_docs(failures: list[str]) -> None:
         Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"),
         required=[
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "source drift guard now validates docking suite membership",
+            "Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        WAYLAND_POLICY_SKIP_GATE,
+        required=[
+            "CAMPAIGN_ID = \"imui-p3-wayland-real-host\"",
+            "\"capabilities\": [\"diag.script_v2\"]",
+            "\"platform\": \"windows\"",
+            "\"availability\": \"launch_time\"",
+            "\"environment.requirement_unsatisfied\"",
+            "\"environment.platform_capabilities.platform_ne\"",
+            "\"existing_filesystem\"",
+            "\"script-results\"",
+            "\"suite-results\"",
         ],
         failures=failures,
     )
