@@ -107,19 +107,18 @@ fn source_response_for<H: UiHost>(
         .flatten();
 
     let Some(pointer_id) = pointer_id else {
-        return DragSourceResponse::default();
+        return DragSourceResponse::inactive();
     };
     let Some(drag) = cx.app.drag(pointer_id) else {
-        return DragSourceResponse::default();
+        return DragSourceResponse::inactive();
     };
 
-    DragSourceResponse {
-        active: true,
-        cross_window: drag.cross_window_hover,
-        position: Some(drag.position),
-        pointer_id: Some(pointer_id),
-        session_id: Some(drag.session_id),
-    }
+    DragSourceResponse::new(
+        drag.cross_window_hover,
+        drag.position,
+        pointer_id,
+        drag.session_id,
+    )
 }
 
 fn first_active_payload_for<T: Any, H: UiHost>(
@@ -184,7 +183,7 @@ pub(super) fn drag_source_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
     options: DragSourceOptions,
 ) -> DragSourceResponse {
     let Some(trigger_id) = trigger.id else {
-        return DragSourceResponse::default();
+        return DragSourceResponse::inactive();
     };
 
     let payload: Rc<dyn Any> = Rc::new(payload);
@@ -317,14 +316,14 @@ pub(super) fn drop_target_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
     options: DropTargetOptions,
 ) -> DropTargetResponse<T> {
     let Some(trigger_id) = trigger.id else {
-        return DropTargetResponse::default();
+        return DropTargetResponse::empty();
     };
 
     ui.with_cx_mut(|cx| {
         let store = store_model_for(cx);
         prune_store(cx, &store);
 
-        let mut response = DropTargetResponse::default();
+        let mut response = DropTargetResponse::empty();
         if !options.enabled {
             return response;
         }
@@ -353,14 +352,14 @@ pub(super) fn drop_target_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             response.preview_position = Some(position);
             let _ = cx.app.models_mut().update(&store, |st| {
                 if let Some(active) = st.active.get_mut(&session_id) {
-                    if trigger.pointer_hovered_raw {
+                    if trigger.pointer_hovered_raw() {
                         active.hovered_target = Some(trigger_id);
                     } else if active.hovered_target == Some(trigger_id) {
                         active.hovered_target = None;
                     }
                 }
             });
-            if trigger.pointer_hovered_raw {
+            if trigger.pointer_hovered_raw() {
                 response.over = true;
                 response.preview_payload = Some(payload);
             }

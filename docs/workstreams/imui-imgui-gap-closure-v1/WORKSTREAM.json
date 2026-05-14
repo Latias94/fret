@@ -186,8 +186,16 @@
       "command": "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py"
     },
     {
+      "name": "imui diagnostics devtools discovery",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only"
+    },
+    {
       "name": "imui diagnostics devtools first-open",
       "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
+    },
+    {
+      "name": "imui diagnostics devtools first-open reuse-built",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --reuse-built --out-dir target/imui-p2-devtools-first-open-smoke"
     },
     {
       "name": "imui product chain",
@@ -278,6 +286,7 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret/src/lib.rs",
     "apps/fret-cookbook/src/lib.rs",

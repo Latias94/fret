@@ -89,12 +89,20 @@ impl Default for InspectorPanelOptions {
 
 #[derive(Debug, Clone)]
 pub struct InspectorPanelCx {
-    pub density: EditorDensity,
-    pub query: Arc<str>,
-    pub query_lower: Arc<str>,
+    density: EditorDensity,
+    query: Arc<str>,
+    query_lower: Arc<str>,
 }
 
 impl InspectorPanelCx {
+    pub fn density(&self) -> EditorDensity {
+        self.density
+    }
+
+    pub fn query(&self) -> &str {
+        self.query.as_ref()
+    }
+
     pub fn is_query_empty(&self) -> bool {
         self.query_lower.is_empty()
     }

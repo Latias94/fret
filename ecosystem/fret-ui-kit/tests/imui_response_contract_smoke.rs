@@ -10,39 +10,32 @@ fn to_shared_response(response: ResponseExt) -> Response {
 
 #[test]
 fn shared_and_facade_response_boundary_compiles() {
-    let response = ResponseExt {
-        core: Response {
-            hovered: true,
-            pressed: false,
-            focused: false,
-            clicked: true,
-            changed: false,
-            rect: Some(Rect::new(
-                Point::new(0.0.into(), 0.0.into()),
-                Size::new(8.0.into(), 4.0.into()),
-            )),
-        },
-        activated: true,
-        deactivated: false,
-        edited: false,
-        deactivated_after_edit: false,
-        secondary_clicked: true,
-        double_clicked: false,
-        context_menu_requested: true,
-        ..ResponseExt::default()
+    let mut response = ResponseExt::default();
+    response.core = Response {
+        hovered: true,
+        pressed: false,
+        focused: false,
+        clicked: true,
+        changed: false,
+        rect: Some(Rect::new(
+            Point::new(0.0.into(), 0.0.into()),
+            Size::new(8.0.into(), 4.0.into()),
+        )),
     };
 
     let shared = to_shared_response(response);
     assert!(shared.clicked());
     assert!(!shared.changed());
 
-    assert!(response.activated());
+    assert!(!response.activated());
     assert!(!response.deactivated());
     assert!(!response.edited());
     assert!(!response.deactivated_after_edit());
-    assert!(response.secondary_clicked());
+    assert!(!response.secondary_clicked());
     assert!(!response.double_clicked());
-    assert!(response.context_menu_requested());
+    assert!(!response.context_menu_requested());
+    assert!(response.context_menu_anchor().is_none());
+    assert!(response.pointer_click_modifiers().is_none());
 }
 
 #[test]
@@ -58,6 +51,15 @@ fn facade_drag_and_long_press_accessors_compile() {
     let _ = response.deactivated();
     let _ = response.edited();
     let _ = response.deactivated_after_edit();
+    let _ = response.pointer_hovered_raw();
+    let _ = response.pointer_hovered_raw_below_barrier();
+    let _ = response.hover_stationary_met();
+    let _ = response.hover_delay_short_met();
+    let _ = response.hover_delay_normal_met();
+    let _ = response.hover_delay_short_shared_met();
+    let _ = response.hover_delay_normal_shared_met();
+    let _ = response.hover_blocked_by_active_item();
+    let _ = response.nav_highlighted();
     let _ = response.long_pressed();
     let _ = response.press_holding();
 }

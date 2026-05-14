@@ -63,10 +63,10 @@ pub(crate) fn render_imui_disabled_scope_tooltip_hover_scene(
                     },
                 );
                 hovered_for_tooltip.set(resp.is_hovered(ImUiHoveredFlags::FOR_TOOLTIP));
-                hovered_raw.set(resp.pointer_hovered_raw);
-                stationary_met.set(resp.hover_stationary_met);
-                delay_short_met.set(resp.hover_delay_short_met);
-                delay_normal_met.set(resp.hover_delay_normal_met);
+                hovered_raw.set(resp.pointer_hovered_raw());
+                stationary_met.set(resp.hover_stationary_met());
+                delay_short_met.set(resp.hover_delay_short_met());
+                delay_normal_met.set(resp.hover_delay_normal_met());
             });
         })
     });
@@ -101,8 +101,8 @@ pub(crate) fn render_imui_popup_modal_barrier_hover_scene(
             under_hovered_default.set(under.core.hovered);
             under_hovered_allow_when_blocked
                 .set(under.is_hovered(ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_POPUP));
-            under_hovered_raw.set(under.pointer_hovered_raw);
-            under_hovered_raw_below_barrier.set(under.pointer_hovered_raw_below_barrier);
+            under_hovered_raw.set(under.pointer_hovered_raw());
+            under_hovered_raw_below_barrier.set(under.pointer_hovered_raw_below_barrier());
 
             if open_popup {
                 ui.open_popup_at(popup_id, anchor);
@@ -152,9 +152,9 @@ pub(crate) fn render_imui_shared_hover_delay_scene(
                 },
             );
             id_b.set(b.id);
-            b_stationary_met.set(b.hover_stationary_met);
-            b_delay_short_met.set(b.hover_delay_short_met);
-            b_delay_short_shared_met.set(b.hover_delay_short_shared_met);
+            b_stationary_met.set(b.hover_stationary_met());
+            b_delay_short_met.set(b.hover_delay_short_met());
+            b_delay_short_shared_met.set(b.hover_delay_short_shared_met());
             let flags = ImUiHoveredFlags::DELAY_SHORT | ImUiHoveredFlags::NO_NAV_OVERRIDE;
             hovered_b_shared.set(b.is_hovered(flags));
             hovered_b_no_shared.set(b.is_hovered(flags | ImUiHoveredFlags::NO_SHARED_DELAY));
@@ -196,7 +196,7 @@ pub(crate) fn render_imui_active_item_blocks_hover_scene(
                 );
 
                 b_core_hovered.set(b.core.hovered);
-                b_blocked_by_active_item.set(b.hover_blocked_by_active_item);
+                b_blocked_by_active_item.set(b.hover_blocked_by_active_item());
                 let flags = ImUiHoveredFlags::NO_NAV_OVERRIDE;
                 b_hovered_default.set(b.is_hovered(flags));
                 b_hovered_allow_when_blocked

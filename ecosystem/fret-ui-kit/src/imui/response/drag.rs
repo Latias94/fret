@@ -10,30 +10,30 @@ use fret_ui::GlobalElementId;
 /// contract with additional commonly requested signals.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DragResponse {
-    pub started: bool,
-    pub dragging: bool,
-    pub stopped: bool,
-    pub delta: Point,
-    pub total: Point,
+    pub(crate) started: bool,
+    pub(crate) dragging: bool,
+    pub(crate) stopped: bool,
+    pub(crate) delta: Point,
+    pub(crate) total: Point,
 }
 
 /// Published state for an immediate drag source helper.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct DragSourceResponse {
-    pub active: bool,
-    pub cross_window: bool,
-    pub position: Option<Point>,
-    pub pointer_id: Option<PointerId>,
-    pub session_id: Option<DragSessionId>,
+    pub(crate) active: bool,
+    pub(crate) cross_window: bool,
+    pub(crate) position: Option<Point>,
+    pub(crate) pointer_id: Option<PointerId>,
+    pub(crate) session_id: Option<DragSessionId>,
 }
 
 /// Immediate drag/drop target readout for a typed payload.
 pub struct DropTargetResponse<T: 'static> {
-    pub active: bool,
-    pub over: bool,
-    pub delivered: bool,
-    pub source_id: Option<GlobalElementId>,
-    pub session_id: Option<fret_runtime::DragSessionId>,
+    pub(crate) active: bool,
+    pub(crate) over: bool,
+    pub(crate) delivered: bool,
+    pub(crate) source_id: Option<GlobalElementId>,
+    pub(crate) session_id: Option<fret_runtime::DragSessionId>,
     pub(in super::super) preview_position: Option<Point>,
     pub(in super::super) delivered_position: Option<Point>,
     pub(in super::super) preview_payload: Option<Rc<T>>,
@@ -41,6 +41,31 @@ pub struct DropTargetResponse<T: 'static> {
 }
 
 impl DragSourceResponse {
+    pub(crate) fn inactive() -> Self {
+        Self {
+            active: false,
+            cross_window: false,
+            position: None,
+            pointer_id: None,
+            session_id: None,
+        }
+    }
+
+    pub(crate) fn new(
+        cross_window: bool,
+        position: Point,
+        pointer_id: PointerId,
+        session_id: DragSessionId,
+    ) -> Self {
+        Self {
+            active: true,
+            cross_window,
+            position: Some(position),
+            pointer_id: Some(pointer_id),
+            session_id: Some(session_id),
+        }
+    }
+
     pub fn active(self) -> bool {
         self.active
     }
@@ -63,6 +88,34 @@ impl DragSourceResponse {
 }
 
 impl DragResponse {
+    pub(crate) fn clear(&mut self) {
+        self.dragging = false;
+        self.delta = Point::default();
+        self.total = Point::default();
+    }
+
+    pub(crate) fn set_started(&mut self, started: bool) {
+        self.started = started;
+    }
+
+    pub(crate) fn set_dragging(&mut self, dragging: bool) {
+        self.dragging = dragging;
+    }
+
+    pub(crate) fn set_stopped(&mut self, stopped: bool) {
+        self.stopped = stopped;
+    }
+
+    pub(crate) fn set_motion(&mut self, delta: Point, total: Point) {
+        self.delta = delta;
+        self.total = total;
+    }
+
+    pub(crate) fn merge_edges(&mut self, other: Self) {
+        self.started |= other.started;
+        self.stopped |= other.stopped;
+    }
+
     pub fn started(self) -> bool {
         self.started
     }
@@ -84,8 +137,8 @@ impl DragResponse {
     }
 }
 
-impl<T: 'static> Default for DropTargetResponse<T> {
-    fn default() -> Self {
+impl<T: 'static> DropTargetResponse<T> {
+    pub(crate) fn empty() -> Self {
         Self {
             active: false,
             over: false,
@@ -98,9 +151,7 @@ impl<T: 'static> Default for DropTargetResponse<T> {
             delivered_payload: None,
         }
     }
-}
 
-impl<T: 'static> DropTargetResponse<T> {
     pub fn active(&self) -> bool {
         self.active
     }

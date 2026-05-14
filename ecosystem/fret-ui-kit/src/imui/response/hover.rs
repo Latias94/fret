@@ -86,66 +86,202 @@ impl std::ops::BitOrAssign for ImUiHoveredFlags {
 pub struct ResponseExt {
     pub core: Response,
     pub id: Option<GlobalElementId>,
-    pub enabled: bool,
+    enabled: bool,
     /// True on the frame an item enters its active or engaged state.
-    pub activated: bool,
+    activated: bool,
     /// True on the frame an item leaves its active or engaged state.
-    pub deactivated: bool,
+    deactivated: bool,
     /// True on the frame an item commits a meaningful value mutation.
-    pub edited: bool,
+    edited: bool,
     /// True on the frame an item deactivates after having been edited during the same active
     /// session.
-    pub deactivated_after_edit: bool,
+    deactivated_after_edit: bool,
     /// Pointer-hover signal without ImGui-style disabled gating.
     ///
     /// When a widget is disabled, `core.hovered` is forced to `false` by
     /// `sanitize_response_for_enabled(...)`.
     /// This field can still carry the raw pointer-hover signal for query helpers like
     /// `is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)`.
-    pub pointer_hovered_raw: bool,
+    pointer_hovered_raw: bool,
     /// Pointer-hover signal available even when popup policy blocks/suppresses hover (best-effort).
     ///
     /// This is primarily intended to support ImGui's `AllowWhenBlockedByPopup` hovered query flag.
-    pub pointer_hovered_raw_below_barrier: bool,
+    pointer_hovered_raw_below_barrier: bool,
     /// True once the "stationary" dwell timer has elapsed while hovered (best-effort).
-    pub hover_stationary_met: bool,
+    hover_stationary_met: bool,
     /// True once the short hover delay has elapsed while hovered.
-    pub hover_delay_short_met: bool,
+    hover_delay_short_met: bool,
     /// True once the normal hover delay has elapsed while hovered.
-    pub hover_delay_normal_met: bool,
+    hover_delay_normal_met: bool,
     /// True once the short hover delay has elapsed (shared window-scoped timer, best-effort).
-    pub hover_delay_short_shared_met: bool,
+    hover_delay_short_shared_met: bool,
     /// True once the normal hover delay has elapsed (shared window-scoped timer, best-effort).
-    pub hover_delay_normal_shared_met: bool,
+    hover_delay_normal_shared_met: bool,
     /// True when ImGui-style hover queries should be suppressed because another item is active.
     ///
     /// This is a facade-level policy knob intended to mirror `IsItemHovered()` behavior where
     /// hovered queries are suppressed while dragging another item, unless explicitly overridden
     /// with `ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`.
-    pub hover_blocked_by_active_item: bool,
+    hover_blocked_by_active_item: bool,
     /// True when the item is focused and the window's focus-visible policy indicates keyboard
     /// navigation is active.
     ///
     /// This is intended as an immediate-mode equivalent of ImGui's "nav highlight under nav"
     /// behavior used by `IsItemHovered()` when `NavHighlightItemUnderNav` is active.
-    pub nav_highlighted: bool,
-    pub secondary_clicked: bool,
-    pub double_clicked: bool,
-    pub long_pressed: bool,
-    pub press_holding: bool,
-    pub context_menu_requested: bool,
-    pub context_menu_anchor: Option<Point>,
+    nav_highlighted: bool,
+    secondary_clicked: bool,
+    double_clicked: bool,
+    long_pressed: bool,
+    press_holding: bool,
+    context_menu_requested: bool,
+    context_menu_anchor: Option<Point>,
     /// True when `clicked` was produced by a pointer click rather than keyboard activation.
-    pub pointer_clicked: bool,
+    pointer_clicked: bool,
     /// Best-effort modifier snapshot for the pointer click that produced `clicked`.
     ///
     /// Consumers should read this through `pointer_click_modifiers()` so keyboard activations map
     /// to `None`.
-    pub pointer_click_modifiers: Modifiers,
-    pub drag: DragResponse,
+    pointer_click_modifiers: Modifiers,
+    pub(crate) drag: DragResponse,
 }
 
 impl ResponseExt {
+    pub(crate) fn drag_mut(&mut self) -> &mut DragResponse {
+        &mut self.drag
+    }
+
+    pub fn drag(self) -> DragResponse {
+        self.drag
+    }
+
+    pub(crate) fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+
+    pub(crate) fn set_activated(&mut self, activated: bool) {
+        self.activated = activated;
+    }
+
+    pub(crate) fn set_deactivated(&mut self, deactivated: bool) {
+        self.deactivated = deactivated;
+    }
+
+    pub(crate) fn set_edited(&mut self, edited: bool) {
+        self.edited = edited;
+    }
+
+    pub(crate) fn set_deactivated_after_edit(&mut self, deactivated_after_edit: bool) {
+        self.deactivated_after_edit = deactivated_after_edit;
+    }
+
+    pub(crate) fn merge_activated(&mut self, activated: bool) {
+        self.activated |= activated;
+    }
+
+    pub(crate) fn merge_deactivated(&mut self, deactivated: bool) {
+        self.deactivated |= deactivated;
+    }
+
+    pub(crate) fn merge_edited(&mut self, edited: bool) {
+        self.edited |= edited;
+    }
+
+    pub(crate) fn merge_deactivated_after_edit(&mut self, deactivated_after_edit: bool) {
+        self.deactivated_after_edit |= deactivated_after_edit;
+    }
+
+    pub(crate) fn clear_lifecycle_signals(&mut self) {
+        self.activated = false;
+        self.deactivated = false;
+        self.edited = false;
+        self.deactivated_after_edit = false;
+    }
+
+    pub(crate) fn set_pointer_hovered_raw(&mut self, pointer_hovered_raw: bool) {
+        self.pointer_hovered_raw = pointer_hovered_raw;
+    }
+
+    pub(crate) fn set_pointer_hovered_raw_below_barrier(
+        &mut self,
+        pointer_hovered_raw_below_barrier: bool,
+    ) {
+        self.pointer_hovered_raw_below_barrier = pointer_hovered_raw_below_barrier;
+    }
+
+    pub(crate) fn set_hover_stationary_met(&mut self, hover_stationary_met: bool) {
+        self.hover_stationary_met = hover_stationary_met;
+    }
+
+    pub(crate) fn set_hover_delay_short_met(&mut self, hover_delay_short_met: bool) {
+        self.hover_delay_short_met = hover_delay_short_met;
+    }
+
+    pub(crate) fn set_hover_delay_normal_met(&mut self, hover_delay_normal_met: bool) {
+        self.hover_delay_normal_met = hover_delay_normal_met;
+    }
+
+    pub(crate) fn set_hover_delay_short_shared_met(&mut self, hover_delay_short_shared_met: bool) {
+        self.hover_delay_short_shared_met = hover_delay_short_shared_met;
+    }
+
+    pub(crate) fn set_hover_delay_normal_shared_met(
+        &mut self,
+        hover_delay_normal_shared_met: bool,
+    ) {
+        self.hover_delay_normal_shared_met = hover_delay_normal_shared_met;
+    }
+
+    pub(crate) fn set_hover_blocked_by_active_item(&mut self, hover_blocked_by_active_item: bool) {
+        self.hover_blocked_by_active_item = hover_blocked_by_active_item;
+    }
+
+    pub(crate) fn set_nav_highlighted(&mut self, nav_highlighted: bool) {
+        self.nav_highlighted = nav_highlighted;
+    }
+
+    pub(crate) fn set_secondary_clicked(&mut self, secondary_clicked: bool) {
+        self.secondary_clicked = secondary_clicked;
+    }
+
+    pub(crate) fn set_double_clicked(&mut self, double_clicked: bool) {
+        self.double_clicked = double_clicked;
+    }
+
+    pub(crate) fn set_long_pressed(&mut self, long_pressed: bool) {
+        self.long_pressed = long_pressed;
+    }
+
+    pub(crate) fn set_press_holding(&mut self, press_holding: bool) {
+        self.press_holding = press_holding;
+    }
+
+    pub(crate) fn set_context_menu_requested(&mut self, context_menu_requested: bool) {
+        self.context_menu_requested = context_menu_requested;
+    }
+
+    pub(crate) fn set_context_menu_anchor(&mut self, context_menu_anchor: Option<Point>) {
+        self.context_menu_anchor = context_menu_anchor;
+    }
+
+    pub(crate) fn set_pointer_clicked(&mut self, pointer_clicked: bool) {
+        self.pointer_clicked = pointer_clicked;
+    }
+
+    pub(crate) fn set_pointer_click_modifiers(&mut self, pointer_click_modifiers: Modifiers) {
+        self.pointer_click_modifiers = pointer_click_modifiers;
+    }
+
+    pub(crate) fn clear_press_context_signals(&mut self) {
+        self.secondary_clicked = false;
+        self.double_clicked = false;
+        self.long_pressed = false;
+        self.press_holding = false;
+        self.context_menu_requested = false;
+        self.context_menu_anchor = None;
+        self.pointer_clicked = false;
+        self.pointer_click_modifiers = Modifiers::default();
+    }
+
     pub fn activated(self) -> bool {
         self.activated
     }
@@ -168,6 +304,10 @@ impl ResponseExt {
 
     pub fn changed(self) -> bool {
         self.core.changed()
+    }
+
+    pub fn enabled(self) -> bool {
+        self.enabled
     }
 
     pub fn secondary_clicked(self) -> bool {
@@ -200,6 +340,38 @@ impl ResponseExt {
 
     pub fn context_menu_anchor(self) -> Option<Point> {
         self.context_menu_anchor
+    }
+
+    pub fn pointer_hovered_raw(self) -> bool {
+        self.pointer_hovered_raw
+    }
+
+    pub fn pointer_hovered_raw_below_barrier(self) -> bool {
+        self.pointer_hovered_raw_below_barrier
+    }
+
+    pub fn hover_stationary_met(self) -> bool {
+        self.hover_stationary_met
+    }
+
+    pub fn hover_delay_short_met(self) -> bool {
+        self.hover_delay_short_met
+    }
+
+    pub fn hover_delay_normal_met(self) -> bool {
+        self.hover_delay_normal_met
+    }
+
+    pub fn hover_delay_short_shared_met(self) -> bool {
+        self.hover_delay_short_shared_met
+    }
+
+    pub fn hover_delay_normal_shared_met(self) -> bool {
+        self.hover_delay_normal_shared_met
+    }
+
+    pub fn hover_blocked_by_active_item(self) -> bool {
+        self.hover_blocked_by_active_item
     }
 
     pub fn nav_highlighted(self) -> bool {
@@ -245,7 +417,7 @@ impl ResponseExt {
 
         let mut pointer_hovered = if allow_disabled {
             self.pointer_hovered_raw
-        } else if self.enabled {
+        } else if self.enabled() {
             self.core.hovered
         } else {
             false
@@ -299,22 +471,22 @@ impl ResponseExt {
     }
 
     pub fn drag_started(self) -> bool {
-        self.drag.started
+        self.drag.started()
     }
 
     pub fn dragging(self) -> bool {
-        self.drag.dragging
+        self.drag.dragging()
     }
 
     pub fn drag_stopped(self) -> bool {
-        self.drag.stopped
+        self.drag.stopped()
     }
 
     pub fn drag_delta(self) -> Point {
-        self.drag.delta
+        self.drag.delta()
     }
 
     pub fn drag_total(self) -> Point {
-        self.drag.total
+        self.drag.total()
     }
 }

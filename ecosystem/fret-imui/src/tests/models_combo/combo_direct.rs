@@ -222,10 +222,10 @@ fn combo_lifecycle_tracks_open_session_edges() {
                     );
                 },
             );
-            activated_out.set(resp.trigger.activated());
-            deactivated_out.set(resp.trigger.deactivated());
-            edited_out.set(resp.trigger.edited());
-            after_edit_out.set(resp.trigger.deactivated_after_edit());
+            activated_out.set(resp.response().activated());
+            deactivated_out.set(resp.response().deactivated());
+            edited_out.set(resp.response().edited());
+            after_edit_out.set(resp.response().deactivated_after_edit());
             open_out.set(resp.open());
         })
     };

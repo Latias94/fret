@@ -61,7 +61,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_action_with_options(
             self, label, action, options,
         );
-        self.record_focusable(resp.id, resp.enabled);
+        self.record_focusable(resp.id, resp.enabled());
         resp
     }
 
@@ -115,7 +115,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_command_with_options(
             self, command, options,
         );
-        self.record_focusable(resp.id, resp.enabled);
+        self.record_focusable(resp.id, resp.enabled());
         resp
     }
 }

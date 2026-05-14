@@ -115,11 +115,11 @@ pub(in super::super) fn populate_pressable_drag_response<H: UiHost>(
     id: GlobalElementId,
     response: &mut super::super::ResponseExt,
 ) {
-    response.drag.started = cx.take_transient_for(id, super::super::KEY_DRAG_STARTED);
-    response.drag.stopped = cx.take_transient_for(id, super::super::KEY_DRAG_STOPPED);
-    response.drag.dragging = false;
-    response.drag.delta = Point::default();
-    response.drag.total = Point::default();
+    let started = cx.take_transient_for(id, super::super::KEY_DRAG_STARTED);
+    let stopped = cx.take_transient_for(id, super::super::KEY_DRAG_STOPPED);
+    response.drag_mut().set_started(started);
+    response.drag_mut().set_stopped(stopped);
+    response.drag_mut().clear();
 
     let kind = drag_kind_for_element(id);
     let pointer_id = cx.app.find_drag_pointer_id(|d| {
@@ -132,7 +132,7 @@ pub(in super::super) fn populate_pressable_drag_response<H: UiHost>(
             .map(|drag| (drag.dragging, drag.position, drag.start_position))
     });
     if let Some((dragging, current, start)) = drag_snapshot {
-        response.drag.dragging = dragging;
+        response.drag_mut().set_dragging(dragging);
         let (delta, total) = cx.state_for(id, DragReportState::default, |st| {
             let prev = st.last_position.unwrap_or(current);
             st.last_position = Some(current);
@@ -142,8 +142,7 @@ pub(in super::super) fn populate_pressable_drag_response<H: UiHost>(
             )
         });
         if dragging {
-            response.drag.delta = delta;
-            response.drag.total = total;
+            response.drag_mut().set_motion(delta, total);
         }
     } else {
         cx.state_for(id, DragReportState::default, |st| {

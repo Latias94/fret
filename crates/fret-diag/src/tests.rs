@@ -32,6 +32,7 @@ use crate::stats::{
     check_bundle_for_overlay_synthesis_min_json, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max_json,
     check_bundle_for_retained_vlist_keep_alive_budget_json,
+    check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
     check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
     check_bundle_for_ui_gallery_code_editor_a11y_composition_drag_json,
@@ -3859,6 +3860,66 @@ fn check_bundle_for_retained_vlist_attach_detach_max_fails_when_missing_reconcil
     )
     .expect_err("expected missing reconcile events");
     assert!(err.contains("expected at least 1 retained virtual-list reconcile event"));
+}
+
+#[test]
+fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming_reads_current_and_legacy_schema()
+{
+    let out_dir = tmp_out_dir("retained_vlist_keep_alive_reuse_current_schema");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.schema2.json");
+    let bundle = json!({
+        "schema_version": 2,
+        "windows": [{
+            "window": 1,
+            "snapshots": [
+                {
+                    "frame_id": 10,
+                    "debug": {
+                        "retained_virtual_list_reconciles": [
+                            {
+                                "reconcile_kind": "escape",
+                                "kept_alive_items": 4,
+                                "reused_from_keep_alive_items": 0
+                            }
+                        ]
+                    }
+                },
+                {
+                    "frame_id": 11,
+                    "debug": {
+                        "retained_virtual_list_reconciles": [
+                            {
+                                "reconcile_kind": "escape",
+                                "kept_alive_items": 9,
+                                "reused_from_keep_alive_items": 9
+                            }
+                        ]
+                    }
+                },
+                {
+                    "frame_id": 12,
+                    "debug": {
+                        "retained_virtual_list_reconcile_records": [
+                            {
+                                "reconcile_kind": "escape",
+                                "kept_alive_items": 1,
+                                "reused_keep_alive_items": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        }]
+    });
+    std::fs::write(
+        &bundle_path,
+        serde_json::to_vec_pretty(&bundle).expect("serialize bundle"),
+    )
+    .expect("write bundle");
+
+    check_bundle_for_retained_vlist_keep_alive_reuse_min(&bundle_path, 2, 0)
+        .expect("expected streaming gate to read current and legacy retained virtual-list schemas");
 }
 
 #[test]

@@ -22,7 +22,7 @@ use fret_ui::action::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, Elements, InsetStyle, LayoutStyle, Length, PositionStyle,
-    PressableProps, SizeStyle,
+    PressableA11y, PressableProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -480,6 +480,10 @@ where
                 layout,
                 enabled: true,
                 focusable: false,
+                a11y: PressableA11y {
+                    hidden: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             move |cx, _st| {
@@ -823,6 +827,32 @@ mod tests {
                 .any(|r| r.root == barrier_root && r.blocks_underlay_input),
             "expected barrier root to block underlay input"
         );
+    }
+
+    #[test]
+    fn modal_barrier_is_hidden_from_accessibility_tree_but_still_invokable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+        let open = app.models_mut().insert(true);
+
+        let barrier = fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
+            modal_barrier(cx, open, true, Vec::<AnyElement>::new())
+        });
+
+        let ElementKind::Pressable(PressableProps {
+            enabled,
+            focusable,
+            a11y,
+            ..
+        }) = &barrier.kind
+        else {
+            panic!("expected modal barrier to be a pressable");
+        };
+        assert!(*enabled);
+        assert!(!focusable);
+        assert!(a11y.hidden);
+        assert!(a11y.label.is_none());
     }
 
     #[test]

@@ -255,4 +255,20 @@ mod tests {
         b.push_token(3);
         assert_ne!(a, b);
     }
+
+    #[test]
+    fn deps_signature_distinguishes_model_identity_before_revision() {
+        let mut material = DepsSignature::default();
+        material.push_token(10);
+        material.push_token(1);
+
+        let mut light = DepsSignature::default();
+        light.push_token(20);
+        light.push_token(1);
+
+        assert_ne!(
+            material, light,
+            "model-backed selector deps must include model identity so switching between same-revision models recomputes"
+        );
+    }
 }

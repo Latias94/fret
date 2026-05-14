@@ -58,3 +58,7 @@ pub(in crate::tree) use internal::{
 pub(in crate::tree) use invalidation::UiDebugHoverDeclarativeInvalidationCounts;
 pub(in crate::tree) use invalidation::UiDebugLayoutDirtySource;
 pub(in crate::tree) use view_cache::DebugViewCacheRootRecord;
+pub(crate) use virtual_list::{
+    UiDebugVirtualListWindowShiftClassificationInput, classify_virtual_list_window_shift,
+    fallback_virtual_list_window_shift_detail,
+};

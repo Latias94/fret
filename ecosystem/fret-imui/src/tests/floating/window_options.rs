@@ -603,7 +603,7 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
                 );
                 collapsed_out.set(resp.collapsed());
                 resizing_out.set(resp.resizing());
-                area_id_out.set(resp.area.id.0);
+                area_id_out.set(resp.id().0);
             })
         },
     );
@@ -660,7 +660,7 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
                 );
                 collapsed_out.set(resp.collapsed());
                 resizing_out.set(resp.resizing());
-                area_id_out.set(resp.area.id.0);
+                area_id_out.set(resp.id().0);
             })
         },
     );
@@ -735,7 +735,7 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
                 );
                 collapsed_out.set(resp.collapsed());
                 resizing_out.set(resp.resizing());
-                area_id_out.set(resp.area.id.0);
+                area_id_out.set(resp.id().0);
             })
         },
     );

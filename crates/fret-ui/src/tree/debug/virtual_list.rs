@@ -30,6 +30,24 @@ pub enum UiDebugVirtualListWindowShiftApplyMode {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub(crate) struct UiDebugVirtualListWindowShiftClassificationInput {
+    pub view_cache_active: bool,
+    pub retained_host: bool,
+    pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
+    pub deferred_scroll_to_item: bool,
+    pub items_revision: u64,
+    pub prev_items_revision: u64,
+    pub viewport: Px,
+    pub prev_viewport: Px,
+    pub offset: Px,
+    pub prev_offset: Px,
+    pub visible_range: Option<crate::virtual_list::VirtualRange>,
+    pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub window_range: Option<crate::virtual_list::VirtualRange>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct UiDebugVirtualListWindow {
     pub source: UiDebugVirtualListWindowSource,
     pub node: NodeId,
@@ -131,4 +149,184 @@ pub struct UiDebugVirtualListWindowShiftSample {
     pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
     pub window_range: Option<crate::virtual_list::VirtualRange>,
     pub render_window_range: Option<crate::virtual_list::VirtualRange>,
+}
+
+pub(crate) fn classify_virtual_list_window_shift(
+    input: UiDebugVirtualListWindowShiftClassificationInput,
+) -> (
+    Option<UiDebugVirtualListWindowShiftReason>,
+    Option<UiDebugVirtualListWindowShiftApplyMode>,
+    Option<UiDebugInvalidationDetail>,
+) {
+    if input.window_shift_kind == UiDebugVirtualListWindowShiftKind::None {
+        return (None, None, None);
+    }
+
+    let reason = if input.deferred_scroll_to_item {
+        UiDebugVirtualListWindowShiftReason::ScrollToItem
+    } else if (input.viewport.0 - input.prev_viewport.0).abs() > 0.01 {
+        UiDebugVirtualListWindowShiftReason::ViewportResize
+    } else if virtual_range_inputs_changed(input.render_window_range, input.window_range) {
+        UiDebugVirtualListWindowShiftReason::InputsChange
+    } else if input.items_revision != input.prev_items_revision {
+        UiDebugVirtualListWindowShiftReason::ItemsRevision
+    } else if (input.offset.0 - input.prev_offset.0).abs() > 0.01 {
+        UiDebugVirtualListWindowShiftReason::ScrollOffset
+    } else if rendered_window_no_longer_covers_visible(
+        input.render_window_range,
+        input.visible_range,
+    ) {
+        UiDebugVirtualListWindowShiftReason::ScrollOffset
+    } else if virtual_range_inputs_changed(input.prev_window_range, input.window_range) {
+        UiDebugVirtualListWindowShiftReason::InputsChange
+    } else {
+        UiDebugVirtualListWindowShiftReason::Unknown
+    };
+
+    let mode = if input.retained_host {
+        UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile
+    } else {
+        UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
+    };
+
+    let invalidation_detail = if input.view_cache_active && !input.retained_host {
+        Some(match reason {
+            UiDebugVirtualListWindowShiftReason::ScrollToItem => {
+                UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+            }
+            UiDebugVirtualListWindowShiftReason::ViewportResize => {
+                UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+            }
+            UiDebugVirtualListWindowShiftReason::ItemsRevision => {
+                UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+            }
+            UiDebugVirtualListWindowShiftReason::InputsChange => {
+                UiDebugInvalidationDetail::ScrollHandleInputsChangeWindowUpdate
+            }
+            _ => fallback_virtual_list_window_shift_detail(input.window_shift_kind),
+        })
+    } else {
+        None
+    };
+
+    (Some(reason), Some(mode), invalidation_detail)
+}
+
+pub(crate) fn fallback_virtual_list_window_shift_detail(
+    kind: UiDebugVirtualListWindowShiftKind,
+) -> UiDebugInvalidationDetail {
+    match kind {
+        UiDebugVirtualListWindowShiftKind::None => UiDebugInvalidationDetail::Unknown,
+        UiDebugVirtualListWindowShiftKind::Prefetch => {
+            UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
+        }
+        UiDebugVirtualListWindowShiftKind::Escape => {
+            UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+        }
+    }
+}
+
+fn virtual_range_inputs_changed(
+    previous: Option<crate::virtual_list::VirtualRange>,
+    current: Option<crate::virtual_list::VirtualRange>,
+) -> bool {
+    previous.map(|range| (range.count, range.overscan))
+        != current.map(|range| (range.count, range.overscan))
+}
+
+fn rendered_window_no_longer_covers_visible(
+    rendered: Option<crate::virtual_list::VirtualRange>,
+    visible: Option<crate::virtual_list::VirtualRange>,
+) -> bool {
+    let (Some(rendered), Some(visible)) = (rendered, visible) else {
+        return false;
+    };
+    let rendered_start = rendered.start_index.saturating_sub(rendered.overscan);
+    let rendered_end =
+        (rendered.end_index + rendered.overscan).min(rendered.count.saturating_sub(1));
+    visible.start_index < rendered_start || visible.end_index > rendered_end
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn range(
+        start_index: usize,
+        end_index: usize,
+        overscan: usize,
+        count: usize,
+    ) -> crate::virtual_list::VirtualRange {
+        crate::virtual_list::VirtualRange {
+            start_index,
+            end_index,
+            overscan,
+            count,
+        }
+    }
+
+    #[test]
+    fn virtual_list_window_shift_classification_prioritizes_structural_inputs() {
+        let (reason, apply_mode, detail) =
+            classify_virtual_list_window_shift(UiDebugVirtualListWindowShiftClassificationInput {
+                view_cache_active: true,
+                retained_host: false,
+                window_shift_kind: UiDebugVirtualListWindowShiftKind::Escape,
+                deferred_scroll_to_item: false,
+                items_revision: 12,
+                prev_items_revision: 11,
+                viewport: Px(240.0),
+                prev_viewport: Px(240.0),
+                offset: Px(720.0),
+                prev_offset: Px(720.0),
+                visible_range: Some(range(72, 95, 0, 111)),
+                prev_window_range: Some(range(72, 95, 10, 50_000)),
+                render_window_range: Some(range(72, 95, 10, 50_000)),
+                window_range: Some(range(72, 95, 10, 111)),
+            });
+
+        assert_eq!(
+            reason,
+            Some(UiDebugVirtualListWindowShiftReason::InputsChange)
+        );
+        assert_eq!(
+            apply_mode,
+            Some(UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender)
+        );
+        assert_eq!(
+            detail,
+            Some(UiDebugInvalidationDetail::ScrollHandleInputsChangeWindowUpdate)
+        );
+    }
+
+    #[test]
+    fn virtual_list_window_shift_classification_keeps_retained_detail_side_effect_free() {
+        let (reason, apply_mode, detail) =
+            classify_virtual_list_window_shift(UiDebugVirtualListWindowShiftClassificationInput {
+                view_cache_active: true,
+                retained_host: true,
+                window_shift_kind: UiDebugVirtualListWindowShiftKind::Escape,
+                deferred_scroll_to_item: false,
+                items_revision: 12,
+                prev_items_revision: 11,
+                viewport: Px(240.0),
+                prev_viewport: Px(240.0),
+                offset: Px(720.0),
+                prev_offset: Px(720.0),
+                visible_range: Some(range(72, 95, 0, 111)),
+                prev_window_range: Some(range(72, 95, 10, 50_000)),
+                render_window_range: Some(range(72, 95, 10, 50_000)),
+                window_range: Some(range(72, 95, 10, 111)),
+            });
+
+        assert_eq!(
+            reason,
+            Some(UiDebugVirtualListWindowShiftReason::InputsChange)
+        );
+        assert_eq!(
+            apply_mode,
+            Some(UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile)
+        );
+        assert_eq!(detail, None);
+    }
 }

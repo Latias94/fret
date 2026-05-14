@@ -1,5 +1,9 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-context-menu-occlusion-wheel-pass-through",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
@@ -52,9 +56,54 @@
 
     { "type": "reset_diagnostics" },
 
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_is_finite",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y_max"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_not_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y_max",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
     { "type": "capture_screenshot", "label": "ui-gallery-context-menu-occlusion-wheel-pass-through-before" },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" }, "delta_y": 1440.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }, "delta_y": -720.0 },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_not_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-content" }
+      }
+    },
     { "type": "capture_screenshot", "label": "ui-gallery-context-menu-occlusion-wheel-pass-through-after" },
 
     { "type": "capture_bundle", "label": "ui-gallery-context-menu-occlusion-wheel-pass-through" }

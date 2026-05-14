@@ -268,6 +268,10 @@ Current status:
   `docs/diagnostics-first-open.md` is the canonical first-open diagnostics workflow, and the
   inspect, bundles/scripts, GUI dogfood, and diagnostics-v2 navigation docs are now explicit
   branch/reference notes instead of competing start pages.
+- 2026-05-14 maintenance hardening keeps the closed P2 contract visible in the GUI itself:
+  `apps/fret-devtools/src/native.rs` now renders a first-open evidence panel with the canonical
+  diagnostics doc, GUI branch doc, repo preflight, artifacts root, direct run/latest/compare loop,
+  campaign summarize/dashboard loop, and the bounded P2 smoke gate.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,

@@ -12,9 +12,13 @@ description = "Derived state selector utilities for Fret apps and components."
 
 [features]
 default = []
-ui = ["dep:fret-runtime", "dep:fret-ui"]
+ui = ["dep:fret-runtime", "dep:fret-ui", "dep:slotmap"]
 
 [dependencies]
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
+slotmap = { workspace = true, optional = true }
 tracing.workspace = true
+
+[dev-dependencies]
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }

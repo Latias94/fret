@@ -45,7 +45,7 @@ fn input_text_completion_picker_filters_popup_and_commits_clicked_candidate() {
             );
             changed_out.set(response.changed());
             picked_index_out.set(response.picked_index());
-            picked_out.replace(response.picked.clone());
+            picked_out.replace(response.picked().map(Arc::from));
         })
     };
 

@@ -413,7 +413,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
                         },
                         |_ui| {},
                     )
-                    .trigger
+                    .response()
                     .context_menu_requested(),
                 );
             })
@@ -447,7 +447,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
                         },
                         |_ui| {},
                     )
-                    .trigger
+                    .response()
                     .context_menu_requested(),
                 );
             })
@@ -489,7 +489,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
                         },
                         |_ui| {},
                     )
-                    .trigger
+                    .response()
                     .context_menu_requested(),
                 );
             })
@@ -520,7 +520,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
                         },
                         |_ui| {},
                     )
-                    .trigger
+                    .response()
                     .context_menu_requested(),
                 );
             })

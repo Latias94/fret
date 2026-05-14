@@ -211,9 +211,9 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
     let toggled = trigger.id.is_some_and(|element_id| {
         ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, open_after))
     });
-    trigger.activated = toggled && open_after;
-    trigger.deactivated = toggled && !open_after;
-    trigger.deactivated_after_edit = false;
+    trigger.set_activated(toggled && open_after);
+    trigger.set_deactivated(toggled && !open_after);
+    trigger.set_deactivated_after_edit(false);
 
     ComboResponse {
         trigger,

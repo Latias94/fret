@@ -118,7 +118,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     spec: DisclosureSpec,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> DisclosureResponse {
-    let mut response = DisclosureResponse::default();
+    let mut response = DisclosureResponse::empty();
 
     let element = ui.with_cx_mut(|cx| {
         let scope_key = format!("fret-ui-kit.imui.disclosure.{id}");
@@ -246,24 +246,30 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     trigger_response.core.hovered = state.hovered;
                     trigger_response.core.pressed = state.pressed;
                     trigger_response.core.focused = state.focused;
-                    trigger_response.nav_highlighted = state.focused
-                        && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                    trigger_response.set_nav_highlighted(
+                        state.focused
+                            && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
+                    );
                     trigger_response.id = Some(trigger_id);
                     trigger_response.core.clicked =
                         cx.take_transient_for(trigger_id, super::KEY_CLICKED);
-                    trigger_response.secondary_clicked =
-                        cx.take_transient_for(trigger_id, super::KEY_SECONDARY_CLICKED);
-                    trigger_response.double_clicked =
-                        cx.take_transient_for(trigger_id, super::KEY_DOUBLE_CLICKED);
-                    trigger_response.context_menu_requested =
-                        cx.take_transient_for(trigger_id, super::KEY_CONTEXT_MENU_REQUESTED);
-                    trigger_response.context_menu_anchor = cx
-                        .read_model(
+                    trigger_response.set_secondary_clicked(
+                        cx.take_transient_for(trigger_id, super::KEY_SECONDARY_CLICKED),
+                    );
+                    trigger_response.set_double_clicked(
+                        cx.take_transient_for(trigger_id, super::KEY_DOUBLE_CLICKED),
+                    );
+                    trigger_response.set_context_menu_requested(
+                        cx.take_transient_for(trigger_id, super::KEY_CONTEXT_MENU_REQUESTED),
+                    );
+                    trigger_response.set_context_menu_anchor(
+                        cx.read_model(
                             &context_anchor_model_for_report,
                             Invalidation::Paint,
                             |_app, value| *value,
                         )
-                        .unwrap_or(None);
+                        .unwrap_or(None),
+                    );
                     trigger_response.core.rect = cx.last_bounds_for_element(trigger_id);
                     let hover_delay = super::install_hover_query_hooks_for_pressable(
                         cx,
@@ -271,18 +277,19 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         state.hovered_raw,
                         None,
                     );
-                    trigger_response.pointer_hovered_raw = state.hovered_raw;
-                    trigger_response.pointer_hovered_raw_below_barrier =
-                        state.hovered_raw_below_barrier;
-                    trigger_response.hover_stationary_met = hover_delay.stationary_met;
-                    trigger_response.hover_delay_short_met = hover_delay.delay_short_met;
-                    trigger_response.hover_delay_normal_met = hover_delay.delay_normal_met;
-                    trigger_response.hover_delay_short_shared_met =
-                        hover_delay.shared_delay_short_met;
-                    trigger_response.hover_delay_normal_shared_met =
-                        hover_delay.shared_delay_normal_met;
-                    trigger_response.hover_blocked_by_active_item =
-                        super::hover_blocked_by_active_item_for(cx, trigger_id, &active_item_model);
+                    trigger_response.set_pointer_hovered_raw(state.hovered_raw);
+                    trigger_response
+                        .set_pointer_hovered_raw_below_barrier(state.hovered_raw_below_barrier);
+                    trigger_response.set_hover_stationary_met(hover_delay.stationary_met);
+                    trigger_response.set_hover_delay_short_met(hover_delay.delay_short_met);
+                    trigger_response.set_hover_delay_normal_met(hover_delay.delay_normal_met);
+                    trigger_response
+                        .set_hover_delay_short_shared_met(hover_delay.shared_delay_short_met);
+                    trigger_response
+                        .set_hover_delay_normal_shared_met(hover_delay.shared_delay_normal_met);
+                    trigger_response.set_hover_blocked_by_active_item(
+                        super::hover_blocked_by_active_item_for(cx, trigger_id, &active_item_model),
+                    );
                     super::sanitize_response_for_enabled(enabled, trigger_response);
 
                     vec![header_row(cx, &spec, action_label, open_now, state)]

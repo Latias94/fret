@@ -425,14 +425,12 @@ mod tests {
         let position = Point::new(Px(40.0), Px(24.0));
 
         assert_eq!(
+            ghost_anchor_position(DragSourceResponse::inactive(), &options,),
+            None
+        );
+        assert_eq!(
             ghost_anchor_position(
-                DragSourceResponse {
-                    active: false,
-                    cross_window: false,
-                    position: Some(position),
-                    pointer_id: None,
-                    session_id: None,
-                },
+                DragSourceResponse::new(true, position, PointerId(1), DragSessionId(1),),
                 &options,
             ),
             None
@@ -440,24 +438,8 @@ mod tests {
         assert_eq!(
             ghost_anchor_position(
                 DragSourceResponse {
-                    active: true,
-                    cross_window: true,
-                    position: Some(position),
-                    pointer_id: None,
-                    session_id: None,
-                },
-                &options,
-            ),
-            None
-        );
-        assert_eq!(
-            ghost_anchor_position(
-                DragSourceResponse {
-                    active: true,
-                    cross_window: false,
                     position: None,
-                    pointer_id: None,
-                    session_id: None,
+                    ..DragSourceResponse::new(false, position, PointerId(1), DragSessionId(1))
                 },
                 &options,
             ),
@@ -474,13 +456,12 @@ mod tests {
 
         assert_eq!(
             ghost_anchor_position(
-                DragSourceResponse {
-                    active: true,
-                    cross_window: false,
-                    position: Some(Point::new(Px(120.0), Px(40.0))),
-                    pointer_id: None,
-                    session_id: None,
-                },
+                DragSourceResponse::new(
+                    false,
+                    Point::new(Px(120.0), Px(40.0)),
+                    PointerId(1),
+                    DragSessionId(1),
+                ),
                 &options,
             ),
             Some(Point::new(Px(138.0), Px(34.0)))

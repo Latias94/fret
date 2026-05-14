@@ -7,80 +7,92 @@ use super::super::options::TableSortDirection;
 use super::drag::DragResponse;
 use super::hover::ResponseExt;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct DisclosureResponse {
-    pub trigger: ResponseExt,
-    pub open: bool,
-    pub toggled: bool,
+    pub(crate) trigger: ResponseExt,
+    pub(crate) open: bool,
+    pub(crate) toggled: bool,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct ComboResponse {
-    pub trigger: ResponseExt,
-    pub open: bool,
-    pub toggled: bool,
+    pub(crate) trigger: ResponseExt,
+    pub(crate) open: bool,
+    pub(crate) toggled: bool,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct InputTextPickerResponse {
-    pub input: ResponseExt,
-    pub open: bool,
-    pub picked_index: Option<usize>,
-    pub picked: Option<Arc<str>>,
+    pub(crate) input: ResponseExt,
+    pub(crate) open: bool,
+    pub(crate) picked_index: Option<usize>,
+    pub(crate) picked: Option<Arc<str>>,
 }
 
 /// Aggregated response surface for helper-owned tab bars.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TabBarResponse {
-    pub selected: Option<Arc<str>>,
-    pub selected_changed: bool,
-    pub triggers: Vec<TabTriggerResponse>,
+    pub(crate) selected: Option<Arc<str>>,
+    pub(crate) selected_changed: bool,
+    pub(crate) triggers: Vec<TabTriggerResponse>,
 }
 
 /// Outward trigger response for a single helper-owned tab item.
 #[derive(Debug, Clone)]
 pub struct TabTriggerResponse {
-    pub id: Arc<str>,
-    pub selected: bool,
-    pub trigger: ResponseExt,
+    pub(crate) id: Arc<str>,
+    pub(crate) selected: bool,
+    pub(crate) trigger: ResponseExt,
 }
 
 /// Aggregated response surface for helper-owned table headers.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TableResponse {
-    pub headers: Vec<TableHeaderResponse>,
+    pub(crate) headers: Vec<TableHeaderResponse>,
 }
 
 /// Outward response for a single helper-owned table header cell.
 #[derive(Debug, Clone)]
 pub struct TableHeaderResponse {
-    pub column_index: usize,
-    pub column_id: Option<Arc<str>>,
-    pub sortable: bool,
-    pub sort_direction: Option<TableSortDirection>,
-    pub trigger: ResponseExt,
-    pub resize: TableColumnResizeResponse,
+    pub(crate) column_index: usize,
+    pub(crate) column_id: Option<Arc<str>>,
+    pub(crate) sortable: bool,
+    pub(crate) sort_direction: Option<TableSortDirection>,
+    pub(crate) trigger: ResponseExt,
+    pub(crate) resize: TableColumnResizeResponse,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TableColumnResizeResponse {
-    pub column_index: usize,
-    pub column_id: Option<Arc<str>>,
-    pub enabled: bool,
-    pub min_width: Option<fret_core::Px>,
-    pub max_width: Option<fret_core::Px>,
-    pub drag: DragResponse,
+    pub(crate) column_index: usize,
+    pub(crate) column_id: Option<Arc<str>>,
+    pub(crate) enabled: bool,
+    pub(crate) min_width: Option<fret_core::Px>,
+    pub(crate) max_width: Option<fret_core::Px>,
+    pub(crate) drag: DragResponse,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct VirtualListResponse {
-    pub handle: fret_ui::scroll::VirtualListScrollHandle,
-    pub rendered_range: Option<(usize, usize)>,
+    pub(crate) handle: fret_ui::scroll::VirtualListScrollHandle,
+    pub(crate) rendered_range: Option<(usize, usize)>,
 }
 
 impl DisclosureResponse {
+    pub(crate) fn empty() -> Self {
+        Self {
+            trigger: ResponseExt::default(),
+            open: false,
+            toggled: false,
+        }
+    }
+
     pub fn id(self) -> Option<GlobalElementId> {
         self.trigger.id
+    }
+
+    pub fn response(self) -> ResponseExt {
+        self.trigger
     }
 
     pub fn open(self) -> bool {
@@ -113,6 +125,10 @@ impl ComboResponse {
         self.trigger.id
     }
 
+    pub fn response(self) -> ResponseExt {
+        self.trigger
+    }
+
     pub fn open(self) -> bool {
         self.open
     }
@@ -141,6 +157,14 @@ impl ComboResponse {
 impl InputTextPickerResponse {
     pub fn id(&self) -> Option<GlobalElementId> {
         self.input.id
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.input
+    }
+
+    pub fn open(&self) -> bool {
+        self.open
     }
 
     pub fn changed(&self) -> bool {
@@ -221,8 +245,20 @@ impl TableResponse {
 }
 
 impl TableHeaderResponse {
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
     pub fn column_id(&self) -> Option<&str> {
         self.column_id.as_deref()
+    }
+
+    pub fn sortable(&self) -> bool {
+        self.sortable
+    }
+
+    pub fn sort_direction(&self) -> Option<TableSortDirection> {
+        self.sort_direction
     }
 
     pub fn response(&self) -> ResponseExt {
@@ -244,15 +280,31 @@ impl TableHeaderResponse {
     pub fn resizing(&self) -> bool {
         self.resize.dragging()
     }
+
+    pub fn resize(&self) -> &TableColumnResizeResponse {
+        &self.resize
+    }
 }
 
 impl TableColumnResizeResponse {
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
     pub fn column_id(&self) -> Option<&str> {
         self.column_id.as_deref()
     }
 
     pub fn enabled(&self) -> bool {
         self.enabled
+    }
+
+    pub fn min_width(&self) -> Option<Px> {
+        self.min_width
+    }
+
+    pub fn max_width(&self) -> Option<Px> {
+        self.max_width
     }
 
     pub fn dragging(&self) -> bool {

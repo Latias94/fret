@@ -333,7 +333,7 @@ Status: complete for first runtime gates
 
 ## M28: Virtual-List Boundary Owner Slice
 
-Status: complete for focused mechanism gates; retained runtime suite wrapper follow-up remains
+Status: complete
 
 - Boundary-crossing virtual-list diagnostics exposed confirmed owner defects in the mechanism layer:
   non-retained wheel handling could dirty the view-cache root before prepaint observed the stale
@@ -345,6 +345,96 @@ Status: complete for focused mechanism gates; retained runtime suite wrapper fol
 - Focused gates passed for the new prepaint reason regression, retained virtual-list window update,
   revision-only window update, prepaint escape invalidation, and overscan-policy mismatch cases.
 - The non-retained `ui-gallery-vlist-window-boundary` runtime suite passed after the owner fix.
-  The retained script produced evidence, but the outer suite did not write `suite.summary.json`, so
-  the retained runtime suite wrapper needs a clean-exit follow-up before it is considered fully
-  closed.
+  The retained `ui-gallery-vlist-window-boundary-retained` runtime suite now also passes with a
+  normal `suite.summary.json`.
+- The retained follow-up exposed diagnostics harness drift rather than a retained-host mechanism
+  defect: the original script did not bounce back to exercise reuse, and the streaming post-run
+  gate was still reading the older reconcile-record field names. The script and gate now observe
+  current `retained_virtual_list_reconciles[].reused_from_keep_alive_items` telemetry.
+- A synthetic retained-host reconcile fixture now covers the same attach/detach/keep-alive reuse
+  invariant without launching UI Gallery. Its first draft exposed another harness issue rather than
+  a mechanism defect: retained reconcile debug records are frame-scoped, so the fixture runner must
+  accumulate records immediately after each frame.
+- A synthetic prepaint virtual-list window-update fixture now covers scroll-offset, viewport-resize,
+  items-revision, and scroll-to-item reason/detail attribution. Its first run exposed a confirmed
+  mechanism defect: prepaint debug telemetry kept the specific viewport/items-revision reason, but
+  the actual dirty cache-root reason regressed to generic prefetch/window-update detail. The
+  prepaint path now uses one classifier for both debug telemetry and cache-root dirty attribution.
+- The same fixture now covers a length-shrink input-change case. It exposed that stale rendered
+  window counts were not classified as `InputsChange` before offset deltas. Prepaint now emits a
+  dedicated `scroll_handle_inputs_change_window_update` invalidation detail for this case.
+
+## M29: DataTable Retained Filter-Shrink Consumer Gate
+
+Status: complete
+
+- The synthetic length-shrink `InputsChange` proof now has a real component-consumer companion:
+  `ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json` runs against the DataTable
+  torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`.
+- The first runtime pass exposed a confirmed component-layer defect. Retained DataTable row entries
+  were rebuilt from raw data and local sorting instead of the filtered `FlatRowOrderCache`, so a
+  global filter could leave the retained virtualized path behaving as if it still had the original
+  50,000 rows.
+- The same gate exposed a confirmed mechanism-layer defect. Layout-time virtual-list telemetry used
+  local classification and did not reliably classify render-window or previous-window
+  `count`/`overscan` mismatches as `InputsChange`.
+- Layout and prepaint virtual-list paths now share `classify_virtual_list_window_shift`, and the
+  DataTable retained path now derives row entries from the shared filtered row order.
+- Diagnostics virtual-list matching predicates now support `invalidation_detail` filtering so
+  non-retained DataTable filter-shrink companions can later assert
+  `scroll_handle_inputs_change_window_update` directly.
+- The real runtime gate passes and records a layout-sourced retained virtual-list
+  `reason=inputs_change`, `apply_mode=retained_reconcile` proof after applying
+  `GlobalFilter: Process 123`.
+
+## M30: DataTable View-Cache Filter-Shrink Consumer Gate
+
+Status: complete
+
+- A second DataTable torture companion now covers the non-retained, view-cache-enabled path. It runs
+  with `FRET_UI_GALLERY_VIEW_CACHE=1` and asserts layout-sourced
+  `reason=inputs_change`, `apply_mode=non_retained_rerender`, and
+  `invalidation_detail=scroll_handle_inputs_change_window_update`.
+- The first non-retained run exposed a harness precondition issue rather than a mechanism defect:
+  default Gallery runs have `view_cache_active=false`, so the layout record correctly had
+  `reason=inputs_change` but no view-cache invalidation detail.
+- The script and suite names now carry the view-cache precondition, and the passing runtime evidence
+  proves the filtered row count shrinks from 50,000 to 111 through the real DataTable consumer.
+
+## M31: DataTable RTL Idle-Stability Consumer Gate
+
+Status: complete
+
+- The DataTable page now has a promoted RTL idle-stability runtime gate in addition to Checkbox,
+  ScrollArea, and plain Table.
+- The gate scrolls the public DataTable docs page to `ui-gallery-data-table-rtl-root`, waits for
+  `ui-gallery-data-table-rtl-root` and `ui-gallery-data-table-rtl-footer` bounds to settle, and then
+  samples `ui-gallery-content-viewport` for 60 no-input frames.
+- The gate passed and did not reproduce a scroll-jitter mechanism defect on the DataTable RTL
+  surface.
+
+## M32: Combobox RTL Long-Text Gate Audit
+
+Status: complete
+
+- The Combobox RTL long-text companion already existed, was registered in the combobox, RTL smoke,
+  and shadcn conformance suites, and passed a fresh audit rerun.
+- The gate proves the physical-left RTL chevron stays before the trigger label, the long label
+  stays in its width budget, the popup content shell records a top collision flip with
+  `sideOffset=6`, and the selected option label stays before the physical-right RTL checkmark.
+- No mechanism or recipe defect was reproduced in this slice. The defect was workstream state
+  drift: TODO and coverage docs still listed RTL long-text as an uncovered gap even though a
+  promoted runtime gate existed and was green.
+
+## M33: Pointer Occlusion Runtime Gate Strengthening
+
+Status: complete
+
+- The context-menu pointer occlusion wheel gate now has a structural oracle instead of only
+  screenshots and a final bundle.
+- The gate verifies the overlay page content viewport starts at `scroll.y=0`, has a non-zero scroll
+  range, receives a wheel through `BlockMouseExceptScroll`, ends at non-zero `scroll.y`, and keeps
+  the context menu mounted.
+- No pointer occlusion mechanism defect was reproduced. The defect found in this slice was a
+  harness weakness: the previous gate could pass without proving that underlay wheel pass-through
+  actually moved a scroll container.

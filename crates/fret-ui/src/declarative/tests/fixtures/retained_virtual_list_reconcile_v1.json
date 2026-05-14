@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.retained-virtual-list-reconcile.v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["invalidation", "layout"],
+  "cases": [
+    {
+      "id": "bounce-reuses-detached-keep-alive-items",
+      "scenario": {
+        "kind": "retained_virtual_list",
+        "len": 100,
+        "viewport_width": 200.0,
+        "viewport_height": 50.0,
+        "row_height": 10.0,
+        "overscan": 0,
+        "keep_alive": 32,
+        "warmup_frames": 3,
+        "steps": [
+          { "label": "down", "offset_y": 60.0, "frames": 2 },
+          { "label": "up", "offset_y": 0.0, "frames": 2 }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.down.retained_reconcile.kept_alive_items_total",
+            "comparison": "ge",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.up.retained_reconcile.reused_from_keep_alive_items_total",
+            "comparison": "ge",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.up.retained_reconcile.attached_items_total",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.up.retained_reconcile.keep_alive_pool_len_after_max",
+            "comparison": "ge",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render.cache_root_calls_after_warmup",
+            "comparison": "le",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "Synthetic retained-host correctness case for the UI Gallery bounce gate: detached rows must enter the keep-alive bucket and be reused when scrolling back without repeatedly rerendering the cache root."
+      }
+    }
+  ]
+}
