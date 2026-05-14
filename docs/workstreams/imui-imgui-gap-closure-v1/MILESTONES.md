@@ -71,6 +71,8 @@ Exit criteria:
   policy-light, apps teach the opt-in `fret::imui` lane, and policy-heavy widgets remain under
   `fret::imui::kit` / `editor` / `docking`. New public helpers need two proof surfaces plus a
   focused gate before they become default authoring vocabulary.
+  2026-05-14 cleanup result: `FloatingAreaContext` is now externally opaque, with read-only
+  accessors for facade-created area id, position, and drag kind.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

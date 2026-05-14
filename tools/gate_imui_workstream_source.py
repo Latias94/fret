@@ -2518,6 +2518,23 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_options.rs"),
+            required=[
+                "pub struct FloatingAreaContext",
+                "pub(crate) id: GlobalElementId",
+                "pub(crate) position: Point",
+                "pub(crate) drag_kind: fret_runtime::DragKindId",
+                "pub fn id(self) -> GlobalElementId",
+                "pub fn position(self) -> Point",
+                "pub fn drag_kind(self) -> fret_runtime::DragKindId",
+            ],
+            forbidden=[
+                "pub id: GlobalElementId",
+                "pub position: Point",
+                "pub drag_kind: fret_runtime::DragKindId",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/theme.rs"),
             required=[
                 "pub fn apply_editor_theme_preset_v1<H: UiHost>",

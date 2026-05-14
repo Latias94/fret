@@ -118,6 +118,14 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
 cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast
 ```
 
+Run evidence:
+
+- 2026-05-14: made `FloatingAreaContext` externally opaque in
+  `ecosystem/fret-ui-kit/src/imui/floating_options.rs`. The facade still hands callers a context
+  with `id()`, `position()`, and `drag_kind()` accessors, but external code can no longer construct
+  or mutate area identity / drag-kind fields. `tools/gate_imui_workstream_source.py` rejects public
+  fields from returning.
+
 ## P3 Design Surface Readiness Gates
 
 Use these for the current design/theme readiness note:
