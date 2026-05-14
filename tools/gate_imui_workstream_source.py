@@ -2640,6 +2640,30 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/hover.rs"),
+            required=[
+                "pub struct ResponseExt",
+                "pub(crate) drag: DragResponse",
+                "pub(crate) fn drag_mut(&mut self) -> &mut DragResponse",
+                "pub fn drag(self) -> DragResponse",
+                "pub fn drag_started(self) -> bool",
+                "self.drag.started()",
+                "self.drag.dragging()",
+                "self.drag.stopped()",
+                "self.drag.delta()",
+                "self.drag.total()",
+            ],
+            forbidden=[
+                "pub drag: DragResponse",
+                "pub fn drag_mut(&mut self) -> &mut DragResponse",
+                "self.drag.started\n",
+                "self.drag.dragging\n",
+                "self.drag.stopped\n",
+                "self.drag.delta\n",
+                "self.drag.total\n",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
             required=[
                 "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub(crate) dragging: bool,\n    pub(crate) stopped: bool,\n    pub(crate) delta: Point,\n    pub(crate) total: Point,\n}",

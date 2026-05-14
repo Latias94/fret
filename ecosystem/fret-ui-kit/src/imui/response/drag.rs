@@ -88,6 +88,34 @@ impl DragSourceResponse {
 }
 
 impl DragResponse {
+    pub(crate) fn clear(&mut self) {
+        self.dragging = false;
+        self.delta = Point::default();
+        self.total = Point::default();
+    }
+
+    pub(crate) fn set_started(&mut self, started: bool) {
+        self.started = started;
+    }
+
+    pub(crate) fn set_dragging(&mut self, dragging: bool) {
+        self.dragging = dragging;
+    }
+
+    pub(crate) fn set_stopped(&mut self, stopped: bool) {
+        self.stopped = stopped;
+    }
+
+    pub(crate) fn set_motion(&mut self, delta: Point, total: Point) {
+        self.delta = delta;
+        self.total = total;
+    }
+
+    pub(crate) fn merge_edges(&mut self, other: Self) {
+        self.started |= other.started;
+        self.stopped |= other.stopped;
+    }
+
     pub fn started(self) -> bool {
         self.started
     }

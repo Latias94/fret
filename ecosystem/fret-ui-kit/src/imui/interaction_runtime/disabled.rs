@@ -67,5 +67,5 @@ pub(in super::super) fn sanitize_response_for_enabled(
     response.context_menu_anchor = None;
     response.pointer_clicked = false;
     response.pointer_click_modifiers = Modifiers::default();
-    response.drag = super::super::DragResponse::default();
+    *response.drag_mut() = super::super::DragResponse::default();
 }

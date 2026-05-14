@@ -10,27 +10,21 @@ fn to_shared_response(response: ResponseExt) -> Response {
 
 #[test]
 fn shared_and_facade_response_boundary_compiles() {
-    let response = ResponseExt {
-        core: Response {
-            hovered: true,
-            pressed: false,
-            focused: false,
-            clicked: true,
-            changed: false,
-            rect: Some(Rect::new(
-                Point::new(0.0.into(), 0.0.into()),
-                Size::new(8.0.into(), 4.0.into()),
-            )),
-        },
-        activated: true,
-        deactivated: false,
-        edited: false,
-        deactivated_after_edit: false,
-        secondary_clicked: true,
-        double_clicked: false,
-        context_menu_requested: true,
-        ..ResponseExt::default()
+    let mut response = ResponseExt::default();
+    response.core = Response {
+        hovered: true,
+        pressed: false,
+        focused: false,
+        clicked: true,
+        changed: false,
+        rect: Some(Rect::new(
+            Point::new(0.0.into(), 0.0.into()),
+            Size::new(8.0.into(), 4.0.into()),
+        )),
     };
+    response.activated = true;
+    response.secondary_clicked = true;
+    response.context_menu_requested = true;
 
     let shared = to_shared_response(response);
     assert!(shared.clicked());

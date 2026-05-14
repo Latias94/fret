@@ -156,6 +156,11 @@ Run evidence:
   construction and empty target construction are crate-local, smoke tests now validate accessor
   usage through helper-returned responses, and the source gate rejects public drag/drop response
   fields or default construction from returning.
+- 2026-05-14: made `ResponseExt` aggregate drag state accessor-first too. Public callers now read
+  the aggregate response through `drag()`, `drag_started()`, `dragging()`, `drag_stopped()`,
+  `drag_delta()`, and `drag_total()`, while `populate_pressable_drag_response(...)` and disabled
+  sanitization use crate-local mutators. `tools/gate_imui_workstream_source.py` rejects a public
+  `ResponseExt.drag` field or direct `ResponseExt` drag field reads from returning.
 
 ## P3 Design Surface Readiness Gates
 
