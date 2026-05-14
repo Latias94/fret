@@ -6,6 +6,12 @@ This note records a source-only guard for the docking multi-window lane. The shi
 not change in this slice; the purpose is to prevent stale parity notes from misclassifying already
 promoted docking diag gates as open gaps.
 
+Follow-up (2026-05-15): the same source guard now also parses the Wayland real-host campaign and
+bounded Wayland degradation script directly. This keeps local non-Linux maintenance honest: the
+campaign must remain host-admitted by `platform.capabilities`, and the script must still prove
+"attempt tear-off -> one known OS window -> captured bundle" before any real Wayland acceptance note
+can count.
+
 ## Assumptions-First Resume
 
 1. Confident: `docking-multiwindow-imgui-parity` remains the active lane for runner/backend-owned
@@ -33,6 +39,9 @@ promoted docking diag gates as open gaps.
   status note and corrected tab overflow status.
 - Recorded the new gate in `WORKSTREAM.json`, the TODO tracker, and the repo-wide workstream/roadmap
   indexes.
+- Follow-up: extended the same gate to source-check
+  `tools/diag-campaigns/imui-p3-wayland-real-host.json` and
+  `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`.
 
 ## Guarded Invariants
 
@@ -46,6 +55,12 @@ promoted docking diag gates as open gaps.
 - The standalone behavior-first note no longer teaches tab overflow as an ungated gap.
 - Current execution continues through the dedicated lane and Wayland real-host acceptance remains
   open.
+- `imui-p3-wayland-real-host` stays a manual, host-admitted campaign whose environment predicate
+  requires Linux plus `ui.window_tear_off=false`, `ui.window_hover_detection=none`, and
+  `ui.window_z_level=none`.
+- The canonical Wayland degradation script still waits for hover detection `none`, performs a long
+  tear-off gesture, asserts `known_window_count_is(n=1)`, and captures
+  `docking-arbitration-demo-wayland-degrade-no-os-tearoff`.
 
 ## Commands Run
 
@@ -58,6 +73,14 @@ python tools/check_workstream_catalog.py
 git diff --check
 ```
 
+Follow-up command set (2026-05-15):
+
+```powershell
+python -m py_compile tools/gate_docking_multiwindow_workstream_source.py tools/gate_imui_workstream_source.py
+python tools/gate_docking_multiwindow_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
 ## Results
 
 - `python tools/gate_docking_multiwindow_workstream_source.py` passed.
@@ -68,6 +91,9 @@ git diff --check
 - `python tools/check_workstream_catalog.py` passed with 370 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` passed.
+- 2026-05-15 follow-up source guard passed locally and now fails if the Wayland campaign stops using
+  `platform.capabilities` admission or if the bounded script stops asserting one-window fallback
+  evidence.
 
 ## Verdict
 

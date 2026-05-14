@@ -325,6 +325,12 @@ Each TODO is labeled:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
       - Source policy, Wayland/X11 capability posture, docking fallback behavior, and all four
         multi-window campaign manifests validated locally.
+    - [x] Wayland admission source drift is now guarded:
+      - `tools/gate_docking_multiwindow_workstream_source.py` parses
+        `tools/diag-campaigns/imui-p3-wayland-real-host.json` and the canonical
+        `docking-arbitration-demo-wayland-degrade-no-os-tearoff` script, requiring
+        `platform.capabilities` admission, Linux/Wayland-safe capability predicates, a long
+        tear-off gesture, `known_window_count_is(n=1)`, and the canonical evidence bundle label.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

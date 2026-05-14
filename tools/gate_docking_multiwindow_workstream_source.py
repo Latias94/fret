@@ -14,6 +14,10 @@ COMMON_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/common/suite.
 WINDOWS_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/windows/suite.json")
 ROOT_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/suite.json")
 SMOKE_SUITE = Path("tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json")
+WAYLAND_CAMPAIGN = Path("tools/diag-campaigns/imui-p3-wayland-real-host.json")
+WAYLAND_SCRIPT = Path(
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json"
+)
 
 REQUIRED_COMMON_SCRIPTS = [
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
@@ -151,6 +155,12 @@ def _check_docs(failures: list[str]) -> None:
             "`tools/diag-scripts/suites/docking-arbitration/common/suite.json`",
             "`tools/diag-scripts/suites/docking-arbitration/windows/suite.json`",
             "`tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`",
+            "2026-05-15",
+            "`tools/diag-campaigns/imui-p3-wayland-real-host.json`",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`",
+            "`imui-p3-wayland-real-host` stays a manual, host-admitted campaign",
+            "The canonical Wayland degradation script still waits for hover detection `none`",
+            "asserts `known_window_count_is(n=1)`",
         ],
         failures=failures,
     )
@@ -216,10 +226,128 @@ def _check_suites(failures: list[str]) -> None:
     )
 
 
+def _step_predicate(step: Any) -> dict[str, Any]:
+    if not isinstance(step, dict):
+        return {}
+    predicate = step.get("predicate")
+    return predicate if isinstance(predicate, dict) else {}
+
+
+def _check_wayland_admission(failures: list[str]) -> None:
+    campaign = _read_json(WAYLAND_CAMPAIGN, failures)
+    if not isinstance(campaign, dict):
+        return
+    if campaign.get("kind") != "diag_campaign_manifest":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected diag_campaign_manifest")
+    if campaign.get("id") != "imui-p3-wayland-real-host":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected id imui-p3-wayland-real-host")
+    if campaign.get("tier") != "manual":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected manual tier")
+    if campaign.get("expected_duration_ms") != 180000:
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected 180000ms duration")
+
+    items = campaign.get("items")
+    if not isinstance(items, list) or not any(
+        isinstance(item, dict)
+        and item.get("kind") == "script"
+        and item.get("value") == WAYLAND_SCRIPT.as_posix()
+        for item in items
+    ):
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: missing canonical Wayland script item")
+
+    requires_environment = campaign.get("requires_environment")
+    if not isinstance(requires_environment, list) or len(requires_environment) != 1:
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected one environment admission rule")
+        return
+
+    requirement = requires_environment[0]
+    if not isinstance(requirement, dict):
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: environment rule must be an object")
+        return
+    if requirement.get("source_id") != "platform.capabilities":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected platform.capabilities source")
+
+    predicate = requirement.get("predicate")
+    if not isinstance(predicate, dict):
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: missing platform predicate")
+        return
+    expected_predicate = {
+        "kind": "platform_capabilities",
+        "platform_is": "linux",
+        "ui_multi_window_is": True,
+        "ui_window_tear_off_is": False,
+        "ui_window_hover_detection_is": "none",
+        "ui_window_z_level_is": "none",
+    }
+    for key, expected in expected_predicate.items():
+        if predicate.get(key) != expected:
+            failures.append(
+                f"{WAYLAND_CAMPAIGN.as_posix()}: expected predicate {key}={expected!r}"
+            )
+
+    script = _read_json(WAYLAND_SCRIPT, failures)
+    if not isinstance(script, dict):
+        return
+    if script.get("schema_version") != 2:
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: expected schema_version=2")
+    meta = script.get("meta")
+    env_defaults = meta.get("env_defaults") if isinstance(meta, dict) else None
+    if (
+        not isinstance(env_defaults, dict)
+        or env_defaults.get("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF") != "1"
+    ):
+        failures.append(
+            f"{WAYLAND_SCRIPT.as_posix()}: expected FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1"
+        )
+
+    steps = script.get("steps")
+    if not isinstance(steps, list):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: expected steps list")
+        return
+
+    if not any(
+        step.get("type") == "wait_until"
+        and _step_predicate(step).get("kind") == "platform_ui_window_hover_detection_is"
+        and _step_predicate(step).get("quality") == "none"
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing hover-detection-none wait")
+
+    if not any(
+        step.get("type") == "drag_pointer"
+        and isinstance(step.get("target"), dict)
+        and step["target"].get("id") == "dock-arb-tab-drag-anchor-right"
+        and isinstance(step.get("delta_x"), (int, float))
+        and step["delta_x"] >= 2000.0
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing long tear-off drag gesture")
+
+    if not any(
+        step.get("type") == "assert"
+        and _step_predicate(step).get("kind") == "known_window_count_is"
+        and _step_predicate(step).get("n") == 1
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing one-window fallback assertion")
+
+    if not any(
+        step.get("type") == "capture_bundle"
+        and step.get("label") == "docking-arbitration-demo-wayland-degrade-no-os-tearoff"
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing canonical evidence bundle")
+
+
 def collect_failures() -> list[str]:
     failures: list[str] = []
     _check_docs(failures)
     _check_suites(failures)
+    _check_wayland_admission(failures)
     return failures
 
 
