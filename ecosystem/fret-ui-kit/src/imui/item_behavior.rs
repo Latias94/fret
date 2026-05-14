@@ -162,35 +162,39 @@ pub(super) fn populate_pressable_item_response<H: UiHost>(
     input: PressableItemResponseInput,
     response: &mut super::ResponseExt,
 ) {
-    response.secondary_clicked = cx.take_transient_for(id, super::KEY_SECONDARY_CLICKED);
-    response.double_clicked = cx.take_transient_for(id, super::KEY_DOUBLE_CLICKED);
-    response.long_pressed = cx.take_transient_for(id, super::KEY_LONG_PRESSED);
-    response.press_holding = cx
-        .read_model(
+    response.set_secondary_clicked(cx.take_transient_for(id, super::KEY_SECONDARY_CLICKED));
+    response.set_double_clicked(cx.take_transient_for(id, super::KEY_DOUBLE_CLICKED));
+    response.set_long_pressed(cx.take_transient_for(id, super::KEY_LONG_PRESSED));
+    response.set_press_holding(
+        cx.read_model(
             &behavior.long_press_signal_model,
             fret_ui::Invalidation::Paint,
             |_app, value| value.holding,
         )
-        .unwrap_or(false);
-    response.context_menu_requested = cx.take_transient_for(id, super::KEY_CONTEXT_MENU_REQUESTED);
-    response.context_menu_anchor = cx
-        .read_model(
+        .unwrap_or(false),
+    );
+    response
+        .set_context_menu_requested(cx.take_transient_for(id, super::KEY_CONTEXT_MENU_REQUESTED));
+    response.set_context_menu_anchor(
+        cx.read_model(
             &behavior.context_anchor_model,
             fret_ui::Invalidation::Paint,
             |_app, v| *v,
         )
-        .unwrap_or(None);
-    response.pointer_clicked = cx.take_transient_for(id, super::KEY_POINTER_CLICKED);
-    if response.pointer_clicked
+        .unwrap_or(None),
+    );
+    response.set_pointer_clicked(cx.take_transient_for(id, super::KEY_POINTER_CLICKED));
+    if response.pointer_clicked()
         && let Some(pointer_click_modifiers_model) = behavior.pointer_click_modifiers_model.as_ref()
     {
-        response.pointer_click_modifiers = cx
-            .read_model(
+        response.set_pointer_click_modifiers(
+            cx.read_model(
                 pointer_click_modifiers_model,
                 fret_ui::Invalidation::Paint,
                 |_app, modifiers| *modifiers,
             )
-            .unwrap_or_default();
+            .unwrap_or_default(),
+        );
     }
     super::populate_pressable_drag_response(cx, id, response);
     let hover_delay = super::install_hover_query_hooks_for_pressable(

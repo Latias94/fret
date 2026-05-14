@@ -713,8 +713,8 @@ fn table_resize_handle<H: UiHost>(
 
             let mut drag_response = ResponseExt::default();
             super::populate_pressable_drag_response(cx, region_id, &mut drag_response);
-            response.drag = drag_response.drag;
-            let dragging = response.drag.dragging;
+            response.drag = drag_response.drag();
+            let dragging = response.drag.dragging();
             let (started, stopped) =
                 cx.state_for(region_id, TableResizeHandleDragState::default, |state| {
                     let started = dragging && !state.was_dragging;
@@ -722,8 +722,12 @@ fn table_resize_handle<H: UiHost>(
                     state.was_dragging = dragging;
                     (started, stopped)
                 });
-            response.drag.started |= started;
-            response.drag.stopped |= stopped;
+            response.drag.merge_edges({
+                let mut edges = super::DragResponse::default();
+                edges.set_started(started);
+                edges.set_stopped(stopped);
+                edges
+            });
 
             vec![table_resize_handle_visual(cx, enabled)]
         })

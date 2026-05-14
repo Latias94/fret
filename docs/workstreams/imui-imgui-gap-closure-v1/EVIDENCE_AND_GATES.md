@@ -156,6 +156,28 @@ Run evidence:
   construction and empty target construction are crate-local, smoke tests now validate accessor
   usage through helper-returned responses, and the source gate rejects public drag/drop response
   fields or default construction from returning.
+- 2026-05-14: made `ResponseExt` aggregate drag state accessor-first too. Public callers now read
+  the aggregate response through `drag()`, `drag_started()`, `dragging()`, `drag_stopped()`,
+  `drag_delta()`, and `drag_total()`, while `populate_pressable_drag_response(...)` and disabled
+  sanitization use crate-local mutators. `tools/gate_imui_workstream_source.py` rejects a public
+  `ResponseExt.drag` field or direct `ResponseExt` drag field reads from returning.
+- 2026-05-14: made `ResponseExt` press/context-menu derived signal storage private too. Public
+  callers keep using `secondary_clicked()`, `double_clicked()`, `long_pressed()`,
+  `press_holding()`, `context_menu_requested()`, `context_menu_anchor()`, `pointer_clicked()`, and
+  `pointer_click_modifiers()`, while `item_behavior`, disclosure headers, and disabled sanitization
+  write through crate-local setters/clear helpers. `tools/gate_imui_workstream_source.py` rejects
+  public fields or direct runtime writes from returning.
+- 2026-05-14: made `ResponseExt` lifecycle edge storage private too. Public callers keep using
+  `activated()`, `deactivated()`, `edited()`, and `deactivated_after_edit()`, while lifecycle
+  runtime assembly plus combo/text-picker edit merging use crate-local set/merge helpers.
+  `tools/gate_imui_workstream_source.py` rejects public lifecycle fields or direct runtime writes
+  from returning.
+- 2026-05-14: made `ResponseExt` raw hover, hover-delay, active-item block, and nav-highlight
+  storage private too. Public callers and tests use `pointer_hovered_raw()`,
+  `pointer_hovered_raw_below_barrier()`, the hover-delay accessors, `hover_blocked_by_active_item()`,
+  and `nav_highlighted()`, while pressable/disclosure response assembly uses crate-local setters.
+  Disabled sanitization still clears only nav highlight so `ALLOW_WHEN_DISABLED` raw-hover queries
+  keep working.
 
 ## P3 Design Surface Readiness Gates
 

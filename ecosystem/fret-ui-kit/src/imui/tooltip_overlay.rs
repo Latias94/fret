@@ -117,7 +117,7 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let gates = radix_tooltip::tooltip_trigger_update_gates(
                 cx,
-                trigger.pointer_hovered_raw,
+                trigger.pointer_hovered_raw(),
                 trigger.core.focused,
                 &event_models,
             );

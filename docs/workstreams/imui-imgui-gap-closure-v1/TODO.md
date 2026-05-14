@@ -108,6 +108,21 @@ Readiness order for the next locally testable review slices:
    preserving read-only drag accessors and higher-level `ResponseExt` helpers.
    2026-05-14 drag/drop follow-up: source and target drag/drop responses now keep their storage and
    construction paths crate-local; public code reads helper-returned responses through accessors.
+   2026-05-14 response drag-state follow-up: `ResponseExt` now keeps its aggregate drag response
+   crate-local too. Public callers read drag state through `drag()`, `drag_started()`,
+   `dragging()`, `drag_stopped()`, `drag_delta()`, and `drag_total()`, while internal assemblers use
+   crate-local mutators.
+   2026-05-14 press/context follow-up: `ResponseExt` press and context-menu derived signals now
+   keep storage private. Public callers stay on `secondary_clicked()`, `double_clicked()`,
+   `long_pressed()`, `press_holding()`, `context_menu_requested()`, `context_menu_anchor()`,
+   `pointer_clicked()`, and `pointer_click_modifiers()`, while runtime assemblers use crate-local
+   setters.
+   2026-05-14 lifecycle follow-up: `ResponseExt` lifecycle edge storage is private as well. Public
+   callers stay on `activated()`, `deactivated()`, `edited()`, and `deactivated_after_edit()`;
+   runtime lifecycle, combo, text-picker, and disabled paths use crate-local set/merge/clear helpers.
+   2026-05-14 hover/nav follow-up: raw hover, hover-delay, active-item block, and nav-highlight
+   storage is private. Public callers and tests use accessor methods; runtime pressable/disclosure
+   assemblers use crate-local setters, while disabled sanitization only clears nav highlight.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

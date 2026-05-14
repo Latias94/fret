@@ -94,7 +94,7 @@ pub(super) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             })
         });
     response.core.changed = changed;
-    response.edited |= changed;
-    response.deactivated_after_edit |= changed && combo.toggled && !combo.open;
+    response.merge_edited(changed);
+    response.merge_deactivated_after_edit(changed && combo.toggled && !combo.open);
     response
 }

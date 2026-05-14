@@ -299,8 +299,8 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, selected_now))
         });
         input.core.changed |= picked_changed;
-        input.edited |= picked_changed;
-        input.deactivated_after_edit |= picked_changed;
+        input.merge_edited(picked_changed);
+        input.merge_deactivated_after_edit(picked_changed);
     }
 
     InputTextPickerResponse {

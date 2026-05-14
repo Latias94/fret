@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## M0 - Current Source Baseline
 
@@ -92,6 +92,18 @@ Exit criteria:
   2026-05-14 drag/drop follow-up result: `DragSourceResponse` and `DropTargetResponse` now keep
   storage and construction paths crate-local, while public callers use helper-returned response
   accessors.
+  2026-05-14 response drag-state follow-up result: `ResponseExt` now keeps aggregate drag response
+  storage crate-local as well; public code stays on `drag()` and the higher-level drag edge/motion
+  helpers, while internal response assemblers populate it through crate-local mutators.
+  2026-05-14 press/context follow-up result: `ResponseExt` press and context-menu derived signal
+  storage is private, with runtime assembly routed through crate-local setters and public use routed
+  through accessors.
+  2026-05-14 lifecycle follow-up result: `ResponseExt` activation/edit/deactivation edge storage
+  is private too; runtime lifecycle assembly and combo/text-picker edit merging use crate-local
+  helpers while public callers keep accessor-only reads.
+  2026-05-14 hover/nav follow-up result: `ResponseExt` raw hover, hover-delay, active-item block,
+  and nav-highlight storage is private too; pressable/disclosure assembly uses crate-local setters
+  and tests read through accessors.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
