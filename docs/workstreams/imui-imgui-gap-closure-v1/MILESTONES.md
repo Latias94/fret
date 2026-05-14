@@ -81,6 +81,8 @@ Exit criteria:
   2026-05-14 tab follow-up result: tab-bar aggregate and tab-trigger responses now keep selection /
   trigger storage crate-local while preserving `selected_id()`, `selected_changed()`, `trigger(...)`,
   and trigger edge accessors.
+  2026-05-14 virtual-list follow-up result: `VirtualListResponse` now keeps scroll handle and
+  rendered-range storage crate-local while retaining `handle()` and `rendered_range()`.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

@@ -72,10 +72,10 @@ pub struct TableColumnResizeResponse {
     pub drag: DragResponse,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct VirtualListResponse {
-    pub handle: fret_ui::scroll::VirtualListScrollHandle,
-    pub rendered_range: Option<(usize, usize)>,
+    pub(crate) handle: fret_ui::scroll::VirtualListScrollHandle,
+    pub(crate) rendered_range: Option<(usize, usize)>,
 }
 
 impl DisclosureResponse {

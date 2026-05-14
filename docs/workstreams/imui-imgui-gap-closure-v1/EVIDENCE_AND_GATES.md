@@ -137,6 +137,9 @@ Run evidence:
   state. Existing tab tests already use `selected_id()`, `selected_changed()`, `trigger(...)`, and
   trigger edge helpers; the source gate now rejects public tab response fields and public
   `TabBarResponse` default construction from returning.
+- 2026-05-14: made `VirtualListResponse` accessor-first too. Public callers keep using `handle()`
+  and `rendered_range()`, while the response's scroll handle and rendered-range storage are
+  crate-local and guarded by the IMUI source gate.
 
 ## P3 Design Surface Readiness Gates
 
