@@ -150,6 +150,11 @@ reopen.
       perf artifacts. This keeps GUI discoverability aligned with `fretboard-dev list tool-apps`
       instead of making the GUI a second source of truth. The default product-chain discovery gate
       now also source-checks that GUI projection.
+      Maintenance: `apps/fret-devtools-mcp/src/native.rs` now exposes a sessionless
+      `fret-diag://first-open.md` resource and mirrors the same shared IMUI product-chain route in
+      its server instructions/resource text, so the MCP adapter does not invent a parallel
+      first-open schema. The default product-chain discovery gate now also source-checks that MCP
+      projection.
 
 ## P3 - Multi-window hand-feel closure
 

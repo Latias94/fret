@@ -422,6 +422,10 @@
       "command": "cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast"
     },
     {
+      "name": "imui-p2-devtools-mcp-product-workflow-source",
+      "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
+    },
+    {
       "name": "devtools-build",
       "command": "cargo build -p fret-devtools"
     },
@@ -664,6 +668,7 @@
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools/src/native.rs",
     "apps/fret-devtools-mcp/src/main.rs",
+    "apps/fret-devtools-mcp/src/native.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
     "tools/diag-campaigns/devtools-first-open-smoke.json",
     "docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md",

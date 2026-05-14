@@ -288,6 +288,11 @@ Current status:
   `imui-product-chain` command, focused discovery command, launched `perf-docking` command, suite,
   docs, and expected perf artifacts from the shared product-chain vocabulary. The default
   product-chain discovery gate now source-checks that GUI projection.
+- 2026-05-15 DevTools MCP product-workflow projection adds a sessionless
+  `fret-diag://first-open.md` resource in `apps/fret-devtools-mcp/src/native.rs` and points the MCP
+  server instructions at it. That resource mirrors the same `imui-product-chain` command/focused
+  command/launched perf command/suite/docs/artifacts route, while the product-chain discovery gate
+  source-checks the MCP projection alongside the GUI projection.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,

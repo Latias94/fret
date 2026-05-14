@@ -521,6 +521,25 @@ python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/gate_imui_workstream_source.py
 ```
 
+DevTools MCP product-workflow projection follow-up (2026-05-15):
+
+- `apps/fret-devtools-mcp/src/native.rs` now exposes `fret-diag://first-open.md` as a sessionless
+  text resource and points MCP server instructions at that resource.
+- The MCP first-open resource mirrors the shared `imui-product-chain` route: default command,
+  focused discovery command, launched `perf-docking` command, `perf-docking-arbitration-steady`
+  suite, product-closure docs, and `perf-docking/regression.summary.json` plus
+  `perf-docking/check.perf_thresholds.json`.
+- The default product-chain discovery gate now source-checks the MCP projection alongside the GUI
+  first-open panel, so `fretboard-dev list tool-apps`, the GUI shell, and the MCP adapter cannot
+  silently diverge on the product workflow route.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
 ### Multi-window hand-feel gates
 
 - `python tools/gate_imui_workstream_source.py`

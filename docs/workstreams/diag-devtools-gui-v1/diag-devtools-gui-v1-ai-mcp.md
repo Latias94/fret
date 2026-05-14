@@ -94,7 +94,16 @@ The MCP server exposes key artifacts as resources. These are derived from the mo
 `bundle.dumped` event observed for a given session. If resources are missing or stale, trigger a
 fresh dump with `fret_diag_bundle_dump` first.
 
+The server also exposes `fret-diag://first-open.md`, a sessionless text resource that mirrors the
+shared first-open diagnostics path and points at the same IMUI product-chain route used by the GUI
+and CLI discoverability maps.
+
 ### Resource URIs
+
+Global:
+
+- `fret-diag://first-open.md`
+  - Markdown text for the shared first-open diagnostics path and IMUI product-chain route
 
 For a session `<session_id>`:
 

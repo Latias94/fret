@@ -231,6 +231,9 @@ Launch the MCP adapter directly with:
 cargo run -p fret-devtools-mcp
 ```
 
+The MCP adapter also exposes `fret-diag://first-open.md` as a text resource for the same shared
+first-open evidence path, including the IMUI product-chain route.
+
 ### Maintainer/workstream branch
 
 Open:
