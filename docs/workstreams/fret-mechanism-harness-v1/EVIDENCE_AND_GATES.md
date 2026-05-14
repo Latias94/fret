@@ -64,6 +64,7 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_scroll_handle_i
 cargo test --profile dev-fast -p fret-ui --lib view_cache_scroll -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache_virtual_list -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture
+cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles
 cargo test --profile dev-fast -p fret-ui --lib scroll_handle_changes_classify -- --nocapture
 cargo test --profile dev-fast -p fret-diag-protocol --lib predicate_virtual_list_window_shift_samples_len_le_serializes -- --nocapture
 cargo test --profile dev-fast -p fret-diag-protocol --lib step_assert_semantics_scroll_idle_stable_deserializes_with_defaults -- --nocapture
@@ -107,6 +108,17 @@ Current runtime evidence anchors:
   - proof:
     bundle frame 54 recorded an `escape` retained reconcile with
     `reused_from_keep_alive_items=9` and `keep_alive_pool_len_after=9`.
+- Synthetic retained-host reconcile fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/retained_virtual_list_reconcile_v1.json`
+  - runner:
+    `crates/fret-ui/src/declarative/tests/retained_virtual_list_reconcile_harness.rs`
+  - proof:
+    asserts the bounce scenario records keep-alive insertion on downward scroll and reuse on the
+    return scroll while avoiding cache-root rerendering after warmup.
+  - current command:
+    `cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles`
+  - current result:
+    passed, 1 test; Nextest run id `0ab07b84-dfed-4198-8a55-70754688b874`.
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:

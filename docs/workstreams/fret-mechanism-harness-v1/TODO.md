@@ -68,6 +68,12 @@ date: 2026-05-12
   - Result: the gap was a diagnostics harness issue. The suite finalizer now summarizes success-tail
     failures, the retained script now bounces back to exercise reuse, and the streaming post-run
     gate reads current `retained_virtual_list_reconciles[].reused_from_keep_alive_items` schema.
+- [x] Add retained-host synthetic reconcile fixture metrics so keep-alive attach/detach/reuse can
+  be checked without launching UI Gallery.
+  - Result: `retained_virtual_list_reconcile_v1.json` now drives a bounce scenario through the real
+    declarative retained virtual-list host and asserts retained reconcile metrics. The first draft
+    exposed a harness sampling bug: debug reconcile records are frame-scoped and must be captured
+    per frame before the next debug frame clears them.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes

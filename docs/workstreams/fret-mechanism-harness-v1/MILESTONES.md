@@ -351,3 +351,7 @@ Status: complete
   defect: the original script did not bounce back to exercise reuse, and the streaming post-run
   gate was still reading the older reconcile-record field names. The script and gate now observe
   current `retained_virtual_list_reconciles[].reused_from_keep_alive_items` telemetry.
+- A synthetic retained-host reconcile fixture now covers the same attach/detach/keep-alive reuse
+  invariant without launching UI Gallery. Its first draft exposed another harness issue rather than
+  a mechanism defect: retained reconcile debug records are frame-scoped, so the fixture runner must
+  accumulate records immediately after each frame.
