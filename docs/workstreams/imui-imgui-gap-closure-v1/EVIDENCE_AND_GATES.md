@@ -328,6 +328,10 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --
   Dear ImGui's `ImGuiSelectionBasicStorage` direction without copying `BeginMultiSelect` /
   `EndMultiSelect` runtime ownership into `fret-imui`; the proof collection no longer carries a
   local `proof_collection_normalize_selection(...)`.
+- 2026-05-14: refreshed `P3_COLLECTION_HELPER_READINESS_2026-05-06.md` to keep multi-select
+  request/IO vocabulary candidate-only. `tools/gate_imui_workstream_source.py` now rejects
+  `BeginMultiSelect`/`EndMultiSelect`-style runtime names from the current `fret-ui-kit::imui`
+  storage helper.
 
 ## P3 Execution Priority Review Gates
 

@@ -398,6 +398,23 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md"),
+            required=[
+                "Status: readiness audit; no collection helper follow-on opened yet",
+                "`ImUiMultiSelectState` keeps selection and range-anchor storage private behind accessors and",
+                "`ImUiMultiSelectState::from_ordered_selection(...)` owns visible-order selection repair",
+                "This is the correct extraction level for the current proof set.",
+                "It follows Dear ImGui's",
+                "It does **not** justify copying Dear ImGui's `BeginMultiSelect()` /",
+                "Do not add an `ImUiMultiSelectIO`, `ImUiSelectionRequest`, or `BeginMultiSelect`/`EndMultiSelect`",
+                "The likely owner for that future API is still `fret-ui-kit::imui`, not `fret-imui`.",
+            ],
+            forbidden=[
+                "Status: implementation follow-on opened",
+                "Copy Dear ImGui's `BeginMultiSelect()` / `EndMultiSelect()` runtime shape into `fret-imui`",
+            ],
+        ),
+        SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md"),
             required=[
                 "Do not turn the P3 catalogs into a broad",
@@ -1333,6 +1350,10 @@ def main() -> None:
             forbidden=[
                 "pub struct ImUiMultiSelectState<K> {\n    pub selected",
                 "pub struct ImUiMultiSelectState<K> {\n    selected: Vec<K>,\n    pub anchor",
+                "BeginMultiSelect",
+                "EndMultiSelect",
+                "ImUiMultiSelectIO",
+                "ImUiSelectionRequest",
             ],
         ),
         SourceCheck(
