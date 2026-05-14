@@ -23,8 +23,6 @@ fn shared_and_facade_response_boundary_compiles() {
         )),
     };
     response.activated = true;
-    response.secondary_clicked = true;
-    response.context_menu_requested = true;
 
     let shared = to_shared_response(response);
     assert!(shared.clicked());
@@ -34,9 +32,11 @@ fn shared_and_facade_response_boundary_compiles() {
     assert!(!response.deactivated());
     assert!(!response.edited());
     assert!(!response.deactivated_after_edit());
-    assert!(response.secondary_clicked());
+    assert!(!response.secondary_clicked());
     assert!(!response.double_clicked());
-    assert!(response.context_menu_requested());
+    assert!(!response.context_menu_requested());
+    assert!(response.context_menu_anchor().is_none());
+    assert!(response.pointer_click_modifiers().is_none());
 }
 
 #[test]

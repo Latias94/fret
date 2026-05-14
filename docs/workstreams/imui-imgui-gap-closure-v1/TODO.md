@@ -112,6 +112,11 @@ Readiness order for the next locally testable review slices:
    crate-local too. Public callers read drag state through `drag()`, `drag_started()`,
    `dragging()`, `drag_stopped()`, `drag_delta()`, and `drag_total()`, while internal assemblers use
    crate-local mutators.
+   2026-05-14 press/context follow-up: `ResponseExt` press and context-menu derived signals now
+   keep storage private. Public callers stay on `secondary_clicked()`, `double_clicked()`,
+   `long_pressed()`, `press_holding()`, `context_menu_requested()`, `context_menu_anchor()`,
+   `pointer_clicked()`, and `pointer_click_modifiers()`, while runtime assemblers use crate-local
+   setters.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

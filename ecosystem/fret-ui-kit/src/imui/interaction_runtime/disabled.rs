@@ -1,7 +1,6 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use fret_core::Modifiers;
 use fret_ui::{ElementContext, UiHost};
 
 pub(in super::super) struct DisabledScopeGuard {
@@ -59,13 +58,6 @@ pub(in super::super) fn sanitize_response_for_enabled(
     response.core.clicked = false;
     response.core.changed = false;
     response.nav_highlighted = false;
-    response.secondary_clicked = false;
-    response.double_clicked = false;
-    response.long_pressed = false;
-    response.press_holding = false;
-    response.context_menu_requested = false;
-    response.context_menu_anchor = None;
-    response.pointer_clicked = false;
-    response.pointer_click_modifiers = Modifiers::default();
+    response.clear_press_context_signals();
     *response.drag_mut() = super::super::DragResponse::default();
 }

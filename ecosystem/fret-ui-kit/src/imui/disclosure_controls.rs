@@ -251,19 +251,23 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     trigger_response.id = Some(trigger_id);
                     trigger_response.core.clicked =
                         cx.take_transient_for(trigger_id, super::KEY_CLICKED);
-                    trigger_response.secondary_clicked =
-                        cx.take_transient_for(trigger_id, super::KEY_SECONDARY_CLICKED);
-                    trigger_response.double_clicked =
-                        cx.take_transient_for(trigger_id, super::KEY_DOUBLE_CLICKED);
-                    trigger_response.context_menu_requested =
-                        cx.take_transient_for(trigger_id, super::KEY_CONTEXT_MENU_REQUESTED);
-                    trigger_response.context_menu_anchor = cx
-                        .read_model(
+                    trigger_response.set_secondary_clicked(
+                        cx.take_transient_for(trigger_id, super::KEY_SECONDARY_CLICKED),
+                    );
+                    trigger_response.set_double_clicked(
+                        cx.take_transient_for(trigger_id, super::KEY_DOUBLE_CLICKED),
+                    );
+                    trigger_response.set_context_menu_requested(
+                        cx.take_transient_for(trigger_id, super::KEY_CONTEXT_MENU_REQUESTED),
+                    );
+                    trigger_response.set_context_menu_anchor(
+                        cx.read_model(
                             &context_anchor_model_for_report,
                             Invalidation::Paint,
                             |_app, value| *value,
                         )
-                        .unwrap_or(None);
+                        .unwrap_or(None),
+                    );
                     trigger_response.core.rect = cx.last_bounds_for_element(trigger_id);
                     let hover_delay = super::install_hover_query_hooks_for_pressable(
                         cx,

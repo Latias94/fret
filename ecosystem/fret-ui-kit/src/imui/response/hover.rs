@@ -129,19 +129,19 @@ pub struct ResponseExt {
     /// This is intended as an immediate-mode equivalent of ImGui's "nav highlight under nav"
     /// behavior used by `IsItemHovered()` when `NavHighlightItemUnderNav` is active.
     pub nav_highlighted: bool,
-    pub secondary_clicked: bool,
-    pub double_clicked: bool,
-    pub long_pressed: bool,
-    pub press_holding: bool,
-    pub context_menu_requested: bool,
-    pub context_menu_anchor: Option<Point>,
+    secondary_clicked: bool,
+    double_clicked: bool,
+    long_pressed: bool,
+    press_holding: bool,
+    context_menu_requested: bool,
+    context_menu_anchor: Option<Point>,
     /// True when `clicked` was produced by a pointer click rather than keyboard activation.
-    pub pointer_clicked: bool,
+    pointer_clicked: bool,
     /// Best-effort modifier snapshot for the pointer click that produced `clicked`.
     ///
     /// Consumers should read this through `pointer_click_modifiers()` so keyboard activations map
     /// to `None`.
-    pub pointer_click_modifiers: Modifiers,
+    pointer_click_modifiers: Modifiers,
     pub(crate) drag: DragResponse,
 }
 
@@ -152,6 +152,49 @@ impl ResponseExt {
 
     pub fn drag(self) -> DragResponse {
         self.drag
+    }
+
+    pub(crate) fn set_secondary_clicked(&mut self, secondary_clicked: bool) {
+        self.secondary_clicked = secondary_clicked;
+    }
+
+    pub(crate) fn set_double_clicked(&mut self, double_clicked: bool) {
+        self.double_clicked = double_clicked;
+    }
+
+    pub(crate) fn set_long_pressed(&mut self, long_pressed: bool) {
+        self.long_pressed = long_pressed;
+    }
+
+    pub(crate) fn set_press_holding(&mut self, press_holding: bool) {
+        self.press_holding = press_holding;
+    }
+
+    pub(crate) fn set_context_menu_requested(&mut self, context_menu_requested: bool) {
+        self.context_menu_requested = context_menu_requested;
+    }
+
+    pub(crate) fn set_context_menu_anchor(&mut self, context_menu_anchor: Option<Point>) {
+        self.context_menu_anchor = context_menu_anchor;
+    }
+
+    pub(crate) fn set_pointer_clicked(&mut self, pointer_clicked: bool) {
+        self.pointer_clicked = pointer_clicked;
+    }
+
+    pub(crate) fn set_pointer_click_modifiers(&mut self, pointer_click_modifiers: Modifiers) {
+        self.pointer_click_modifiers = pointer_click_modifiers;
+    }
+
+    pub(crate) fn clear_press_context_signals(&mut self) {
+        self.secondary_clicked = false;
+        self.double_clicked = false;
+        self.long_pressed = false;
+        self.press_holding = false;
+        self.context_menu_requested = false;
+        self.context_menu_anchor = None;
+        self.pointer_clicked = false;
+        self.pointer_click_modifiers = Modifiers::default();
     }
 
     pub fn activated(self) -> bool {

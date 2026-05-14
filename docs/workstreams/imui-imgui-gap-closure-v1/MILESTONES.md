@@ -95,6 +95,9 @@ Exit criteria:
   2026-05-14 response drag-state follow-up result: `ResponseExt` now keeps aggregate drag response
   storage crate-local as well; public code stays on `drag()` and the higher-level drag edge/motion
   helpers, while internal response assemblers populate it through crate-local mutators.
+  2026-05-14 press/context follow-up result: `ResponseExt` press and context-menu derived signal
+  storage is private, with runtime assembly routed through crate-local setters and public use routed
+  through accessors.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
