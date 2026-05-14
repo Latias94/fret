@@ -235,6 +235,13 @@ Run evidence:
   New public `*Response`/`*Outcome`/`*Summary`/`*Signal`/`*Record`/`*Context` records must now be
   explicitly registered in `tools/gate_imui_workstream_source.py` before the field-opacity check
   can pass.
+- 2026-05-14: made editor `ColorEdit` event/request/payload records accessor-first too.
+  `ColorEditPaletteSlotDrop`, `ColorEditEyedropperRequest`, and `ColorEditDragDropPayload` now keep
+  storage private while exposing callback reads through explicit accessors. The opaque-output gate
+  suffix scan now includes `*Request`, `*Payload`, and `*Drop` records in the IMUI/editor source
+  roots. Focused gates passed locally: `cargo nextest run -p fret-ui-editor color_edit
+  --no-fail-fast`, `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke
+  --test imui_surface_policy --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
 
 ## P3 Design Surface Readiness Gates
 

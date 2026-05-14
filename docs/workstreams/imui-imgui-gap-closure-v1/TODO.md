@@ -152,6 +152,10 @@ Readiness order for the next locally testable review slices:
    `fret-imui`, `fret-ui-editor`, and `fret-ui-kit::imui` source roots for new public
    `*Response`/`*Outcome`/`*Summary`/`*Signal`/`*Record`/`*Context` structs and fails unless they
    are explicitly covered by the opaque-output-struct check.
+   2026-05-14 editor color-event follow-up: `ColorEditPaletteSlotDrop`,
+   `ColorEditEyedropperRequest`, and `ColorEditDragDropPayload` now follow the same accessor-first
+   rule. The opaque-output catalog now covers `*Request`, `*Payload`, and `*Drop` records in the
+   IMUI/editor scan roots.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

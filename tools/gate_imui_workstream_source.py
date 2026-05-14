@@ -31,8 +31,11 @@ OUTPUT_STRUCT_SCAN_ROOTS = (
 
 OUTPUT_STRUCT_SUFFIXES = (
     "Context",
+    "Drop",
     "Outcome",
+    "Payload",
     "Record",
+    "Request",
     "Response",
     "Signal",
     "Summary",
@@ -219,6 +222,14 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/controls/transform_edit.rs"),
             ["TransformEditAxisOutcome"],
         ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit.rs"),
+            [
+                "ColorEditPaletteSlotDrop",
+                "ColorEditEyedropperRequest",
+                "ColorEditDragDropPayload",
+            ],
+        ),
     ]
     checks = [
         SourceCheck(
@@ -394,6 +405,8 @@ def main() -> None:
                 "`imui-facade-container-wrapper-owner-split-v1` lane is closed too.",
                 "`imui-facade-floating-popup-owner-split-v1` lane is closed too.",
                 "2026-05-14 editor drag-value follow-up: `DragValueCoreResponse`",
+                "2026-05-14 editor color-event follow-up: `ColorEditPaletteSlotDrop`,",
+                "`ColorEditEyedropperRequest`, and `ColorEditDragDropPayload`",
             ],
             forbidden=[],
         ),
@@ -474,6 +487,8 @@ def main() -> None:
                 "items_total=1",
                 "stage_counts.passed=1",
                 "made `DragValueCoreResponse` accessor-first",
+                "made editor `ColorEdit` event/request/payload records accessor-first too.",
+                "suffix scan now includes `*Request`, `*Payload`, and `*Drop` records",
             ],
             forbidden=[],
         ),
@@ -522,6 +537,9 @@ def main() -> None:
                 "including structural container wrappers",
                 "The 2026-05-14 floating/popup owner split moved trait default",
                 "implementation bodies behind a private owner without changing public method names.",
+                "Editor `ColorEdit` callback records are part of the public editor surface",
+                "`ColorEditPaletteSlotDrop`, `ColorEditEyedropperRequest`, and",
+                "`ColorEditDragDropPayload` expose event/request/payload reads through accessors",
             ],
             forbidden=[],
         ),

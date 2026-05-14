@@ -345,8 +345,8 @@ pub(super) fn apply_color_drop_payload(
     current: Color,
     target_show_alpha: bool,
 ) -> Color {
-    let mut next = payload.color;
-    if payload.components == ColorEditDragDropComponents::Rgb || !target_show_alpha {
+    let mut next = payload.color();
+    if payload.components() == ColorEditDragDropComponents::Rgb || !target_show_alpha {
         next.a = current.a;
     }
     next
@@ -356,7 +356,7 @@ pub(super) fn palette_slot_drop_from_payload(
     previous: ColorEditPaletteEntry,
     payload: ColorEditDragDropPayload,
 ) -> ColorEditPaletteEntry {
-    previous.with_rgb(fret_ui_kit::colors::hex_rgb_from_linear(payload.color))
+    previous.with_rgb(fret_ui_kit::colors::hex_rgb_from_linear(payload.color()))
 }
 
 fn color_drag_kind_for_element(element: GlobalElementId) -> DragKindId {

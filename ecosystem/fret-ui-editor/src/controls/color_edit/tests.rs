@@ -94,11 +94,11 @@ fn palette_slot_drop_event_replaces_rgb_and_preserves_slot_metadata() {
 
     let event = ColorEditPaletteSlotDrop::new(7, previous.clone(), payload);
 
-    assert_eq!(event.index, 7);
-    assert_eq!(event.previous, previous);
-    assert_eq!(event.payload, payload);
-    assert_eq!(event.next.name.as_ref(), "Saved Slot");
-    assert_eq!(event.next.rgb, 0xef_44_44);
+    assert_eq!(event.index(), 7);
+    assert_eq!(event.previous(), &previous);
+    assert_eq!(event.payload(), payload);
+    assert_eq!(event.next().name.as_ref(), "Saved Slot");
+    assert_eq!(event.next().rgb, 0xef_44_44);
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn palette_slot_drop_event_ignores_payload_alpha_because_palette_slots_are_rgb()
 
     let event = ColorEditPaletteSlotDrop::new(1, previous, payload);
 
-    assert_eq!(event.next.rgb, source.to_srgb_hex_rgb());
+    assert_eq!(event.next().rgb, source.to_srgb_hex_rgb());
 }
 
 #[test]
@@ -266,12 +266,12 @@ fn drag_drop_payload_shape_tracks_alpha_visibility() {
     color.a = 0.25;
 
     let rgb = ColorEditDragDropPayload::from_color(color, false);
-    assert_eq!(rgb.color, color);
-    assert_eq!(rgb.components, ColorEditDragDropComponents::Rgb);
+    assert_eq!(rgb.color(), color);
+    assert_eq!(rgb.components(), ColorEditDragDropComponents::Rgb);
 
     let rgba = ColorEditDragDropPayload::from_color(color, true);
-    assert_eq!(rgba.color, color);
-    assert_eq!(rgba.components, ColorEditDragDropComponents::Rgba);
+    assert_eq!(rgba.color(), color);
+    assert_eq!(rgba.components(), ColorEditDragDropComponents::Rgba);
 }
 
 #[test]
