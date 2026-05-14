@@ -95,7 +95,8 @@ as product-chain suites. This refresh adds two suite manifests and wires them in
 `tools/diag_gate_imui_product_chain.py`:
 
 - `tools/diag-scripts/suites/editor-notes-demo/suite.json` validates the app-local
-  `editor_notes_demo` preserved multiline draft script and draft-controller commit/discard script.
+  `editor_notes_demo` preserved multiline draft script, draft-controller commit/discard script, and
+  asset selection -> inspector sync script.
 - `tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json` validates the adaptive
   `editor_notes_device_shell_demo` responsive desktop-rail/mobile-drawer proof.
 
@@ -111,6 +112,16 @@ Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed
 1/1 script.
+
+Follow-up local verification on 2026-05-14 passed with run root
+`target/imui-product-chain-editor-notes-selection-sync-2026-05-14-r3/1778735909022`: the expanded
+`editor-notes-demo` suite passed 3/3 scripts with `scripts_with_evidence: 3` and `warning_issues:
+0` for all three script lint outputs. The new `editor-notes-demo-selection-sync` script covers
+asset selection, inspector field binding, collection summary, and summary-command status as one
+product workflow. The first launched run exposed a mechanism-layer selector bug: model-backed
+selector dependency signatures used only model revision, so switching to a different same-revision
+asset could replay stale derived UI text. The fix stays in `fret-selector` by including `ModelId`
+before revision in model-backed dependency signatures.
 
 The follow-up accessibility repair stays in the shared headless overlay policy layer rather than in
 the demo: `fret-ui-kit` now hides modal backdrop/barrier pressables from the accessibility tree

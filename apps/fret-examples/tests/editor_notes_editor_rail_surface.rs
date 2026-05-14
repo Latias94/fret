@@ -87,3 +87,47 @@ fn editor_notes_demo_draft_controller_diag_script_clicks_app_owned_commit_and_di
         );
     }
 }
+
+#[test]
+fn editor_notes_demo_selection_sync_diag_script_keeps_product_workflow_reviewable() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json"
+    );
+    let suite = include_str!("../../../tools/diag-scripts/suites/editor-notes-demo/suite.json");
+
+    for needle in [
+        "\"schema_version\": 2",
+        "\"editor-notes-demo-selection-sync\"",
+        "\"editor-notes-demo.collection.summary\"",
+        "\"active: Key Light\"",
+        "\"active: Camera\"",
+        "\"active: Material\"",
+        "\"editor-notes-demo.selection.light\"",
+        "\"editor-notes-demo.selection.camera\"",
+        "\"editor-notes-demo.selection.material\"",
+        "\"editor-notes-demo.inspector.name\"",
+        "\"Weathered Steel\"",
+        "\"Key Light A\"",
+        "\"ShotCam_Main\"",
+        "\"editor-notes-demo.inspector.notes\"",
+        "\"Ready to copy summary for Key Light.\"",
+        "\"Copied summary: Key Light\"",
+        "\"Ready to copy summary for Camera.\"",
+        "\"Copied summary: Camera\"",
+        "\"type\": \"click_stable\"",
+        "\"type\": \"capture_screenshot\"",
+        "\"type\": \"capture_bundle\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "editor notes selection-sync diag script should keep the asset selection -> inspector workflow reviewable; missing `{needle}`"
+        );
+    }
+
+    assert!(
+        suite.contains(
+            "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json"
+        ),
+        "editor-notes-demo suite should include the selection-sync product workflow script",
+    );
+}

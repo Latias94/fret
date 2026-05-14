@@ -25,6 +25,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json`
 - `tools/diag-scripts/suites/editor-notes-demo/suite.json`
 - `tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json`
+- `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json`
 - `tools/diag_gate_imui_product_chain.py`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
@@ -369,7 +370,7 @@ This package currently proves:
 - `workspace_shell_demo` remains the primary coherent shell proof,
 - `editor_notes_demo` remains the minimal shell-mounted rail proof,
 - `editor_notes_demo` now has a promoted suite over preserved multiline draft behavior and
-  app-owned draft controller commit/discard affordances,
+  app-owned draft controller commit/discard affordances plus asset selection -> inspector sync,
 - `editor_notes_device_shell_demo` has its own promoted suite because it launches a different
   adaptive shell binary and proves desktop rails plus compact drawer reuse of the same editor
   content,
@@ -630,13 +631,27 @@ behavior instead of `cargo run` build-lock timing.
 Latest local editor-notes product-chain evidence (2026-05-14):
 
 - Command:
-  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes,editor-notes-device-shell --out-dir target/imui-product-chain-editor-notes-launched-2026-05-14-reuse --timeout-ms 240000 --poll-ms 50`
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes --out-dir target/imui-product-chain-editor-notes-selection-sync-2026-05-14-r3 --timeout-ms 240000 --poll-ms 50`
+- Run root:
+  `target/imui-product-chain-editor-notes-selection-sync-2026-05-14-r3/1778735909022`
+- `editor-notes/suite.summary.json` reports `status=passed`, `stage_counts.passed=3`,
+  `scripts_with_evidence=3`, and `warning_issues=0` for all three script lint outputs.
+- The third script,
+  `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json`, proves
+  left-rail asset selection updates collection summary, inspector field values, and app-owned
+  summary-command status across Material -> Key Light -> Camera -> Material.
+- Root-cause fix:
+  `ecosystem/fret-selector/src/ui.rs` now includes `ModelId` before revision in model-backed
+  selector dependency signatures, so switching between same-revision models recomputes derived UI
+  values instead of replaying stale cache entries.
+
+Previous combined editor-notes/editor-notes-device-shell proof (2026-05-14):
+
 - Run root:
   `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`
-- `editor-notes/suite.summary.json` reports `status=passed`, `stage_counts.passed=2`, and
-  `scripts_with_evidence=2`.
-- `editor-notes-device-shell/suite.summary.json` reports `status=passed`, `stage_counts.passed=1`,
-  and `scripts_with_evidence=1`.
+- `editor-notes/suite.summary.json` reported `status=passed`, `stage_counts.passed=2`, and
+  `scripts_with_evidence=2`; `editor-notes-device-shell/suite.summary.json` reported
+  `status=passed`, `stage_counts.passed=1`, and `scripts_with_evidence=1`.
 
 Follow-up accessibility repair evidence (2026-05-14):
 

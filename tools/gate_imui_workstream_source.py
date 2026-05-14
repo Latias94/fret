@@ -3492,6 +3492,60 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json"),
+            required=[
+                '"schema_version": 2',
+                '"editor-notes-demo-selection-sync"',
+                '"editor-notes-demo.collection.summary"',
+                '"active: Key Light"',
+                '"active: Camera"',
+                '"active: Material"',
+                '"editor-notes-demo.selection.light"',
+                '"editor-notes-demo.selection.camera"',
+                '"editor-notes-demo.selection.material"',
+                '"editor-notes-demo.inspector.name"',
+                '"Weathered Steel"',
+                '"Key Light A"',
+                '"ShotCam_Main"',
+                '"editor-notes-demo.inspector.notes"',
+                '"Ready to copy summary for Key Light."',
+                '"Copied summary: Key Light"',
+                '"Ready to copy summary for Camera."',
+                '"Copied summary: Camera"',
+                '"type": "click_stable"',
+                '"type": "capture_screenshot"',
+                '"type": "capture_bundle"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-selector/src/ui.rs"),
+            required=[
+                "use slotmap::Key as _;",
+                "pub fn model_rev_invalidation<T: Any>(",
+                "self.deps.push_token(model.id().data().as_ffi());",
+                "let rev = observed_model_revision(self.cx, model, invalidation);",
+                "self.deps.push_token(rev.unwrap_or(MISSING_TOKEN));",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-selector/src/lib.rs"),
+            required=[
+                "fn deps_signature_distinguishes_model_identity_before_revision()",
+                "model-backed selector deps must include model identity so switching between same-revision models recomputes",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-selector/Cargo.toml"),
+            required=[
+                'ui = ["dep:fret-runtime", "dep:fret-ui", "dep:slotmap"]',
+                "slotmap = { workspace = true, optional = true }",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("docs/workstreams/README.md"),
             required=[
                 "`docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json`",
@@ -4896,6 +4950,7 @@ def main() -> None:
                 '"kind": "diag_script_suite_manifest"',
                 "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-preserve-draft.json",
                 "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json",
+                "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json",
             ],
             forbidden=[
                 "editor-notes-device-shell-demo-responsive-proof",

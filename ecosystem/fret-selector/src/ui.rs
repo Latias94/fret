@@ -2,6 +2,8 @@ use std::any::Any;
 use std::hash::Hash;
 use std::panic::Location;
 
+use slotmap::Key as _;
+
 use fret_runtime::Model;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
@@ -98,6 +100,7 @@ impl<'cx, 'a, H: UiHost> DepsBuilder<'cx, 'a, H> {
         model: &Model<T>,
         invalidation: Invalidation,
     ) -> &mut Self {
+        self.deps.push_token(model.id().data().as_ffi());
         let rev = observed_model_revision(self.cx, model, invalidation);
         self.deps.push_token(rev.unwrap_or(MISSING_TOKEN));
         #[cfg(debug_assertions)]
