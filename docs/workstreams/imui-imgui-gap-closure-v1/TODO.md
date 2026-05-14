@@ -136,6 +136,9 @@ Readiness order for the next locally testable review slices:
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
    `pressed()`, and `focused()`.
+   2026-05-14 debug-draw follow-up: `DebugDrawResponse` now keeps response and summary storage
+   private, removes external default construction, and exposes the underlying interaction response
+   through `response()`.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

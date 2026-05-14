@@ -125,7 +125,7 @@ impl View for ImUiDebugDrawBasicsView {
                     );
                     let response_summary_text = format!(
                         "Response: enabled={}, hovered={}, clicked={}, rect_ready={}",
-                        response.response.enabled(),
+                        response.response().enabled(),
                         response.hovered_like_imgui(),
                         response.clicked(),
                         response.rect().is_some()

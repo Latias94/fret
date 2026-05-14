@@ -3104,9 +3104,10 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-cookbook/examples/imui_debug_draw_basics.rs"),
             required=[
-                "response.response.enabled()",
+                "response.response().enabled()",
             ],
             forbidden=[
+                "response.response.enabled()",
                 "response.response.enabled,",
             ],
         ),
@@ -3300,9 +3301,19 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs"),
             required=[
+                "#[derive(Debug, Clone)]\npub struct DebugDrawResponse",
+                "pub struct DebugDrawResponse {\n    response: ResponseExt,\n    list_summary: DebugDrawListSummary,\n    command_summaries: Arc<[DebugDrawCommandSummary]>,\n}",
+                "pub(crate) fn new(",
+                "pub fn response(&self) -> ResponseExt",
+                "DebugDrawResponse::new(",
                 "self.response.rect()",
             ],
             forbidden=[
+                "#[derive(Debug, Clone, Default)]\npub struct DebugDrawResponse",
+                "pub struct DebugDrawResponse {\n    pub response: ResponseExt",
+                "pub struct DebugDrawResponse {\n    response: ResponseExt,\n    pub list_summary",
+                "pub struct DebugDrawResponse {\n    response: ResponseExt,\n    list_summary: DebugDrawListSummary,\n    pub command_summaries",
+                "DebugDrawResponse::default()",
                 "self.response.core.",
             ],
         ),

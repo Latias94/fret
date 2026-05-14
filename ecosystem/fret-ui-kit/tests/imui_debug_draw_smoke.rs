@@ -360,6 +360,7 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
     });
     let _: DebugDrawListSummary = response.list_summary();
     let _: &[DebugDrawCommandSummary] = response.command_summaries();
+    let _: fret_ui_kit::imui::ResponseExt = response.response();
     let _: bool = response.hovered_like_imgui();
 
     let response = ui.debug_draw_with_options(

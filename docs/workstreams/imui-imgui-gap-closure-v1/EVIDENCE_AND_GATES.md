@@ -212,6 +212,10 @@ Run evidence:
   `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`,
   `cargo check -p fret-demo --bin imui_editor_proof_demo`, `python tools/gate_imui_workstream_source.py`,
   `python tools/check_workstream_catalog.py`, and `git diff --check`.
+- 2026-05-14: made `DebugDrawResponse` accessor-first in `fret-ui-kit`. Response and summary
+  storage are private, external default construction is gone, and public callers use
+  `response()`, `list_summary()`, and `command_summaries()`. Cookbook and smoke tests now read the
+  response through accessors, and the source gate rejects the old public-field shape.
 
 ## P3 Design Surface Readiness Gates
 

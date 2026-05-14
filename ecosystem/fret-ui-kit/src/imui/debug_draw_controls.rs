@@ -101,14 +101,30 @@ impl DebugDrawInteractionOptions {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DebugDrawResponse {
-    pub response: ResponseExt,
-    pub list_summary: DebugDrawListSummary,
-    pub command_summaries: Arc<[DebugDrawCommandSummary]>,
+    response: ResponseExt,
+    list_summary: DebugDrawListSummary,
+    command_summaries: Arc<[DebugDrawCommandSummary]>,
 }
 
 impl DebugDrawResponse {
+    pub(crate) fn new(
+        response: ResponseExt,
+        list_summary: DebugDrawListSummary,
+        command_summaries: Arc<[DebugDrawCommandSummary]>,
+    ) -> Self {
+        Self {
+            response,
+            list_summary,
+            command_summaries,
+        }
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.response
+    }
+
     pub fn command_summaries(&self) -> &[DebugDrawCommandSummary] {
         &self.command_summaries
     }
@@ -1265,11 +1281,7 @@ where
         })
     });
     ui.add(element);
-    DebugDrawResponse {
-        response,
-        list_summary,
-        command_summaries,
-    }
+    DebugDrawResponse::new(response, list_summary, command_summaries)
 }
 
 fn debug_draw_element<H: UiHost>(
