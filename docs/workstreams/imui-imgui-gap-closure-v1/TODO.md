@@ -139,6 +139,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 debug-draw follow-up: `DebugDrawResponse` now keeps response and summary storage
    private, removes external default construction, and exposes the underlying interaction response
    through `response()`.
+   2026-05-14 debug-draw summary follow-up: `DebugDrawCommandSummary` and
+   `DebugDrawListSummary` now keep diagnostic storage private as well. Public callers read command
+   kind/channel/clip/count metrics through explicit accessors instead of copying fields.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

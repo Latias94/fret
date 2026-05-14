@@ -125,6 +125,9 @@ Exit criteria:
   2026-05-14 debug-draw follow-up result: `DebugDrawResponse` now follows the same accessor-first
   rule. Interaction and summary storage are private, helper construction is internal, and public
   callers use `response()`, `list_summary()`, and `command_summaries()`.
+  2026-05-14 debug-draw summary follow-up result: `DebugDrawCommandSummary` and
+  `DebugDrawListSummary` are accessor-first too. Debug-draw diagnostic metrics remain public to
+  read, but construction and mutation stay internal to the list/response pipeline.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

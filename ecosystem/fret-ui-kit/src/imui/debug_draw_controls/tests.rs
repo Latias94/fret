@@ -378,7 +378,7 @@ fn debug_draw_list_reports_command_summaries_in_merge_order() {
     assert_eq!(
         summaries
             .iter()
-            .map(|summary| (summary.channel, summary.kind))
+            .map(|summary| (summary.channel(), summary.kind()))
             .collect::<Vec<_>>(),
         vec![
             (Some(0), DebugDrawCommandKind::RectFilled),
@@ -386,10 +386,10 @@ fn debug_draw_list_reports_command_summaries_in_merge_order() {
             (Some(2), DebugDrawCommandKind::Line),
         ]
     );
-    assert_eq!(summaries[1].image, Some(ImageId::default()));
-    assert_eq!(summaries[1].vertex_count, 3);
-    assert_eq!(summaries[1].index_count, 3);
-    assert_eq!(summaries[1].triangle_count, 1);
+    assert_eq!(summaries[1].image(), Some(ImageId::default()));
+    assert_eq!(summaries[1].vertex_count(), 3);
+    assert_eq!(summaries[1].index_count(), 3);
+    assert_eq!(summaries[1].triangle_count(), 1);
 }
 
 #[test]
@@ -423,15 +423,15 @@ fn debug_draw_list_summary_counts_visible_command_classes() {
     list.pop_clip_rect();
 
     let summary = list.list_summary();
-    assert_eq!(summary.command_count, 6);
-    assert_eq!(summary.clip_push_count, 1);
-    assert_eq!(summary.clip_pop_count, 1);
-    assert_eq!(summary.image_command_count, 1);
-    assert_eq!(summary.svg_command_count, 1);
-    assert_eq!(summary.text_command_count, 1);
-    assert_eq!(summary.vertex_count, 4);
-    assert_eq!(summary.index_count, 6);
-    assert_eq!(summary.triangle_count, 2);
+    assert_eq!(summary.command_count(), 6);
+    assert_eq!(summary.clip_push_count(), 1);
+    assert_eq!(summary.clip_pop_count(), 1);
+    assert_eq!(summary.image_command_count(), 1);
+    assert_eq!(summary.svg_command_count(), 1);
+    assert_eq!(summary.text_command_count(), 1);
+    assert_eq!(summary.vertex_count(), 4);
+    assert_eq!(summary.index_count(), 6);
+    assert_eq!(summary.triangle_count(), 2);
 }
 
 #[test]
@@ -466,26 +466,26 @@ fn debug_draw_command_summaries_track_effective_clip_stack() {
     list.pop_clip_rect();
 
     let summaries = list.command_summaries();
-    assert_eq!(summaries[0].clip_rect, None);
-    assert_eq!(summaries[0].clip_depth, 0);
-    assert_eq!(summaries[1].clip_rect, Some(outer));
-    assert_eq!(summaries[1].clip_depth, 1);
-    assert_eq!(summaries[2].clip_rect, Some(outer));
-    assert_eq!(summaries[2].clip_depth, 1);
-    assert_eq!(summaries[3].clip_rect, Some(inner));
-    assert_eq!(summaries[3].clip_depth, 2);
-    assert_eq!(summaries[4].clip_rect, Some(inner));
-    assert_eq!(summaries[4].clip_depth, 2);
-    assert_eq!(summaries[5].clip_rect, Some(outer));
-    assert_eq!(summaries[5].clip_depth, 1);
-    assert_eq!(summaries[6].clip_rect, Some(outer));
-    assert_eq!(summaries[6].clip_depth, 1);
-    assert_eq!(summaries[7].clip_rect, None);
-    assert_eq!(summaries[7].clip_depth, 0);
+    assert_eq!(summaries[0].clip_rect(), None);
+    assert_eq!(summaries[0].clip_depth(), 0);
+    assert_eq!(summaries[1].clip_rect(), Some(outer));
+    assert_eq!(summaries[1].clip_depth(), 1);
+    assert_eq!(summaries[2].clip_rect(), Some(outer));
+    assert_eq!(summaries[2].clip_depth(), 1);
+    assert_eq!(summaries[3].clip_rect(), Some(inner));
+    assert_eq!(summaries[3].clip_depth(), 2);
+    assert_eq!(summaries[4].clip_rect(), Some(inner));
+    assert_eq!(summaries[4].clip_depth(), 2);
+    assert_eq!(summaries[5].clip_rect(), Some(outer));
+    assert_eq!(summaries[5].clip_depth(), 1);
+    assert_eq!(summaries[6].clip_rect(), Some(outer));
+    assert_eq!(summaries[6].clip_depth(), 1);
+    assert_eq!(summaries[7].clip_rect(), None);
+    assert_eq!(summaries[7].clip_depth(), 0);
 
     let summary = list.list_summary();
-    assert_eq!(summary.max_clip_depth, 2);
-    assert_eq!(summary.final_clip_depth, 0);
+    assert_eq!(summary.max_clip_depth(), 2);
+    assert_eq!(summary.final_clip_depth(), 0);
 }
 
 #[test]

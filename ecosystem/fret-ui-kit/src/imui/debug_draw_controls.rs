@@ -677,12 +677,12 @@ impl ImUiDebugDrawList {
 
     /// Return aggregate source-level metadata for recorded debug draw commands.
     pub fn list_summary(&self) -> DebugDrawListSummary {
-        let mut summary = DebugDrawListSummary::default();
+        let mut summary = DebugDrawListSummary::new();
         let mut clip_stack = Vec::new();
         self.for_each_command_with_channel(|channel, command| {
             summary.include(command.summary_with_clip_state(channel, &mut clip_stack));
         });
-        summary.final_clip_depth = clip_stack.len();
+        summary.set_final_clip_depth(clip_stack.len());
         summary
     }
 

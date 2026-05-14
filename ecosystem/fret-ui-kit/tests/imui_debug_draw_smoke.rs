@@ -349,13 +349,13 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
         );
         let summaries: Vec<DebugDrawCommandSummary> = draw.command_summaries();
         let list_summary: DebugDrawListSummary = draw.list_summary();
-        assert_eq!(list_summary.command_count, summaries.len());
-        assert!(list_summary.max_clip_depth >= 1);
-        assert_eq!(list_summary.final_clip_depth, 0);
+        assert_eq!(list_summary.command_count(), summaries.len());
+        assert!(list_summary.max_clip_depth() >= 1);
+        assert_eq!(list_summary.final_clip_depth(), 0);
         assert!(
             summaries
                 .iter()
-                .any(|summary| summary.kind == DebugDrawCommandKind::ImageTriangleMesh)
+                .any(|summary| summary.kind() == DebugDrawCommandKind::ImageTriangleMesh)
         );
     });
     let _: DebugDrawListSummary = response.list_summary();

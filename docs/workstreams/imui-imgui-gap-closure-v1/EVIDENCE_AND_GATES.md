@@ -216,6 +216,11 @@ Run evidence:
   storage are private, external default construction is gone, and public callers use
   `response()`, `list_summary()`, and `command_summaries()`. Cookbook and smoke tests now read the
   response through accessors, and the source gate rejects the old public-field shape.
+- 2026-05-14: made `DebugDrawCommandSummary` and `DebugDrawListSummary` accessor-first as well.
+  Command kind/channel/clip metadata and aggregate list counters remain readable through explicit
+  accessors, but storage, default construction, and final-clip-depth mutation stay internal to
+  `debug_draw_controls`. Cookbook, smoke tests, and debug-draw owner tests now use accessor reads,
+  and the source gate rejects public summary fields or external default construction from returning.
 
 ## P3 Design Surface Readiness Gates
 
