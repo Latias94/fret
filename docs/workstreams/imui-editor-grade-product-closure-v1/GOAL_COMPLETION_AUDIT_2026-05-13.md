@@ -36,7 +36,7 @@ architecture intact:
 | Fearless refactor is being used | The debug-draw owner split and the 2026-05-13 facade owner splits moved oversized private owners into narrower modules without public API widening. | Met for recent slices |
 | Duplicate/stale helper deletion is evidence-driven | `P1_CLEANUP_AUDIT_2026-05-06.md` and `P1_CLOSEOUT_AUDIT_2026-05-06.md` record a no-delete verdict for current aliases instead of deleting canonical seams. | Met |
 | Dear ImGui comparison is local and source-backed | `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`, the P3 catalog notes, and `repo-ref/imgui/imgui.h` / `imgui.cpp` / `imgui_demo.cpp` are evidence anchors. | Met |
-| User-usable golden path exists | `imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`, `editor_notes_demo`, `workspace_shell_demo`, `docking_arbitration_demo`, and diagnostics docs form the current product chain; `imui_editor_controls_basics` and editor-notes surfaces now have launched evidence, and the default product-chain gate validates the docking campaign manifest. | Partially met |
+| User-usable golden path exists | `imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`, `editor_notes_demo`, `workspace_shell_demo`, `docking_arbitration_demo`, the docking perf entrypoint, and diagnostics docs form the current product chain; `imui_editor_controls_basics` and editor-notes surfaces now have launched evidence, and the default product-chain gate validates the docking campaign and perf suite manifests. | Partially met |
 | Repro + gate + evidence discipline exists | `EVIDENCE_AND_GATES.md`, `tools/gate_imui_workstream_source.py`, `tools/gate_imui_facade_teaching_source.py`, and `tools/gate_imui_editor_collection_source.py` lock current source/doc proof surfaces. | Met |
 | Docking local non-interactive gates are current | `M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md` records green campaign manifest validation and non-GUI behavior gates. | Met for local non-interactive gates only |
 | Launched bounded multi-window campaign is green | `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records the repaired launched bounded P3 campaign at `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, plus the post-documentation rerun at `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778656624160`, with `campaign: ok` and `passed: 4`. | Met for the generic bounded campaign only |
@@ -75,8 +75,11 @@ architecture intact:
   and the DevTools GUI/MCP first-open help/JSON map in the default product-chain command. Broader
   product workflow closure still needs continued visual/interaction and hand-feel evidence before
   this goal is complete.
-- **Performance discipline is not proven by this audit.** Smoothness remains routed to the
-  dedicated perf workstreams, not closed by IMUI source gates.
+- **Performance discipline now has a product-chain entrypoint, but not closure.** The
+  `perf-docking-arbitration-steady` suite is wired into the IMUI product-chain gate, and the
+  explicit launched `perf-docking` slice verifies `regression.summary.json` records two passing
+  `perf_case` rows. This is an entrypoint and tooling contract repair, not a broad smoothness
+  closeout or platform-specific perf acceptance.
 - **Public helper/API growth remains intentionally constrained.** This is correct architecture, but
   it means full Dear ImGui API breadth is not the completion criterion unless real proof surfaces
   demand it.

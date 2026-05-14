@@ -146,3 +146,13 @@ while keeping pointer dismissal working. Local verification on 2026-05-14 passed
 `target/imui-product-chain-editor-notes-device-shell-a11y-2026-05-14/1778731960670`; the
 `editor-notes-device-shell-demo` suite passed 1/1 script and its lint output reported
 `warning_issues: 0` and `findings: []`.
+
+Follow-up perf entrypoint refresh on 2026-05-14: the product-chain gate now treats
+`tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` as the current docking perf
+entrypoint and adds a launched `perf-docking` slice. The first local run exposed a diagnostics
+tooling bug rather than an app bug: `diag perf` printed human `PERF ...` rows but wrote a failed
+`regression.summary.json` unless `--json` was used. The repair keeps row evidence internal for both
+stdout modes in `crates/fret-diag/src/diag_perf.rs`, with the focused test
+`perf_regression_summary_uses_rows_when_stdout_is_human`. The repaired local run at
+`target/imui-product-chain-perf-docking-gate-2026-05-14/1778772670718/perf-docking/regression.summary.json`
+reports two passing `perf_case` rows and `failed_tooling=0`.

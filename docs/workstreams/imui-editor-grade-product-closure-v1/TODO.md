@@ -158,6 +158,11 @@ reopen.
       Result: `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` and
       `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md` now make the source-policy rejection
       explicit and tie the remaining proof surface to runner/backend-owned diagnostics.
+- [x] Add a product-chain perf entrypoint before claiming smoothness maturity.
+      Result: `tools/diag_gate_imui_product_chain.py` now validates
+      `perf-docking-arbitration-steady` in the lightweight source/script pass and can launch the
+      `perf-docking` slice explicitly. The slice also repaired `diag perf` summary evidence so
+      human stdout mode still writes `perf_case` rows into `regression.summary.json`.
 
 ## Closeout / follow-on management
 

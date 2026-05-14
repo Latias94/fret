@@ -390,6 +390,10 @@
       "command": "cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"
     },
     {
+      "name": "imui-p3-docking-perf-entrypoint",
+      "command": "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+    },
+    {
       "name": "imui-p2-devtools-first-open-smoke",
       "command": "python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
     },

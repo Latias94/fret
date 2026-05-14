@@ -325,6 +325,10 @@ Current status:
   `tools/diag-campaigns/imui-p3-multiwindow-parity.json` now binds four repo-owned scripts into one
   lane-owned package over `docking_arbitration_demo`, and keeps `diag-hardening-smoke-docking`
   small instead of overloading it with all P3 stress coverage.
+- 2026-05-14 perf entrypoint refresh:
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` is now wired into the
+  product-chain gate as the docking perf/smoothness entrypoint, with a launched `perf-docking`
+  slice that verifies `diag perf` writes passing `perf_case` rows to `regression.summary.json`.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

@@ -26,6 +26,7 @@ EDITOR_NOTES = "editor-notes"
 EDITOR_NOTES_DEVICE_SHELL = "editor-notes-device-shell"
 WORKSPACE_SHELL = "workspace-shell"
 DOCKING = "docking"
+PERF_DOCKING = "perf-docking"
 SOURCE_GATES = "source-gates"
 
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
@@ -43,6 +44,7 @@ ALL_GATES = [
     EDITOR_NOTES_DEVICE_SHELL,
     WORKSPACE_SHELL,
     DOCKING,
+    PERF_DOCKING,
     SOURCE_GATES,
 ]
 
@@ -85,6 +87,10 @@ PRODUCT_SURFACES = [
     ProductSurface(
         name=DOCKING,
         campaign="tools/diag-campaigns/imui-p3-multiwindow-parity.json",
+    ),
+    ProductSurface(
+        name=PERF_DOCKING,
+        suite="tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json",
     ),
 ]
 
@@ -586,6 +592,53 @@ def _run_launched_gates(
             ),
         ]
         _run_checked("launched workspace shell suite", cmd, cwd=repo_root)
+
+    if PERF_DOCKING in selected:
+        out_dir = out_root / "perf-docking"
+        cmd = [
+            "cargo",
+            "run",
+            "-p",
+            "fretboard-dev",
+            "--",
+            "diag",
+            "perf",
+            "perf-docking-arbitration-steady",
+            "--dir",
+            str(out_dir),
+            "--repeat",
+            "1",
+            "--warmup-frames",
+            "5",
+            "--reuse-launch",
+            "--env",
+            "FRET_DOCK_ARB_PRESET=large",
+            "--env",
+            "FRET_DOCK_ARB_NO_PERSIST=1",
+            "--env",
+            "FRET_DOCK_ARB_DISALLOW_DROP_TARGETS=1",
+            "--launch",
+            "--",
+            *_fret_demo_launch_command(
+                repo_root,
+                "docking_arbitration_demo",
+                release=release,
+                reuse_built=reuse_built,
+            ),
+        ]
+        _run_checked("launched docking perf suite", cmd, cwd=repo_root)
+        summary = _read_json_file(out_dir / "regression.summary.json")
+        totals = summary.get("totals")
+        if not isinstance(totals, dict):
+            raise SystemExit("docking perf regression summary is missing totals")
+        if totals.get("passed") != 2 or totals.get("failed_tooling") != 0:
+            raise SystemExit("docking perf regression summary did not pass both perf cases")
+        items = summary.get("items")
+        if not isinstance(items, list) or len(items) != 2:
+            raise SystemExit("docking perf regression summary did not record both perf scripts")
+        for item in items:
+            if item.get("kind") != "perf_case" or item.get("status") != "passed":
+                raise SystemExit("docking perf regression summary contains a non-passing item")
 
 
 def main(argv: list[str]) -> int:

@@ -1130,15 +1130,14 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     &bundle_path,
                     report_warmup_frames,
                 )?;
-                if stats_json {
-                    stats_rows::push_perf_json_row(
-                        &mut perf_json_rows,
-                        script_key.as_str(),
-                        sort,
-                        &report,
-                        &bundle_path,
-                    );
-                } else {
+                stats_rows::push_perf_json_row(
+                    &mut perf_json_rows,
+                    script_key.as_str(),
+                    sort,
+                    &report,
+                    &bundle_path,
+                );
+                if !stats_json {
                     println!(
                         "PERF {} sort={} top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
                         src.display(),
@@ -1523,15 +1522,16 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     Some((prev_us, _, _)) if *prev_us >= top_total => {}
                     _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
                 }
-            } else if stats_json {
+            } else {
                 reporting::push_perf_json_no_last_bundle_dir(
                     &mut perf_json_rows,
                     script_key.clone(),
                     sort,
                     None,
                 );
-            } else {
-                reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, None);
+                if !stats_json {
+                    reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, None);
+                }
             }
 
             if !reuse_process {
@@ -1675,14 +1675,13 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             )?;
 
             let Some(bundle_path) = bundle_path else {
-                if stats_json {
-                    reporting::push_perf_json_no_last_bundle_dir(
-                        &mut perf_json_rows,
-                        src.display().to_string(),
-                        sort,
-                        Some(repeat),
-                    );
-                } else {
+                reporting::push_perf_json_no_last_bundle_dir(
+                    &mut perf_json_rows,
+                    src.display().to_string(),
+                    sort,
+                    Some(repeat),
+                );
+                if !stats_json {
                     reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, Some(repeat));
                 }
                 if !reuse_process {
@@ -1938,26 +1937,25 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         }
 
         if runs_total.len() == repeat {
-            if stats_json {
-                reporting::push_perf_json_repeat_summary_row(
-                    &mut perf_json_rows,
-                    src.as_path(),
-                    sort,
-                    repeat,
-                    &runs_json,
-                    &runs_total,
-                    &runs_layout,
-                    &runs_solve,
-                    &runs_prepaint,
-                    &runs_paint,
-                    &runs_dispatch,
-                    &runs_hit_test,
-                    &runs_pointer_move_dispatch,
-                    &runs_pointer_move_hit_test,
-                    &runs_pointer_move_global_changes,
-                    script_worst.as_ref(),
-                );
-            } else {
+            reporting::push_perf_json_repeat_summary_row(
+                &mut perf_json_rows,
+                src.as_path(),
+                sort,
+                repeat,
+                &runs_json,
+                &runs_total,
+                &runs_layout,
+                &runs_solve,
+                &runs_prepaint,
+                &runs_paint,
+                &runs_dispatch,
+                &runs_hit_test,
+                &runs_pointer_move_dispatch,
+                &runs_pointer_move_hit_test,
+                &runs_pointer_move_global_changes,
+                script_worst.as_ref(),
+            );
+            if !stats_json {
                 let total = summarize_times_us(&runs_total);
                 let layout = summarize_times_us(&runs_layout);
                 let solve = summarize_times_us(&runs_solve);
@@ -3101,5 +3099,59 @@ mod tests {
             Some("no_last_bundle_dir")
         );
         assert_eq!(item.name, "apps/demo.perf.json");
+    }
+
+    #[test]
+    fn perf_regression_summary_uses_rows_when_stdout_is_human() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-summary-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).expect("create temp summary dir");
+        let rows = vec![serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "repeat": 1,
+            "stats": { "total_time_us": { "max": 0 } },
+            "worst_run": {
+                "bundle": "F:/repo/.fret/bundle.schema2.json",
+                "run_index": 0,
+                "top_total_time_us": 0
+            }
+        })];
+
+        write_regression_summary_for_perf(
+            Path::new("F:/repo"),
+            &out_dir,
+            42,
+            BundleStatsSort::Time,
+            1,
+            &rows,
+            None,
+            &[],
+            &[],
+            None,
+            None,
+            None,
+            false,
+            false,
+        );
+
+        let summary_path = out_dir.join("regression.summary.json");
+        let summary: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&summary_path).expect("read regression summary"),
+        )
+        .expect("parse regression summary");
+        assert_eq!(summary["totals"]["passed"], 1);
+        assert_eq!(summary["totals"]["failed_tooling"], 0);
+        assert_eq!(
+            summary["items"][0]["reason_code"].as_str(),
+            None,
+            "summary should not synthesize tooling.diag_perf.no_rows when rows exist"
+        );
+
+        let _ = std::fs::remove_dir_all(&out_dir);
     }
 }
