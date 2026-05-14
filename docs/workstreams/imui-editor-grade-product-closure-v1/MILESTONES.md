@@ -297,6 +297,10 @@ Current status:
   stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints.
   The owner remains `docs/workstreams/diag-devtools-gui-v1/`; this umbrella records the evidence
   only to keep the broader Dear ImGui-class product goal honest.
+- 2026-05-15 DevTools GUI selected-summary follow-up commands convert the selected `bundle_dir`
+  into concrete `diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
+  visual-compare, and footprint-compare commands. This keeps the failing-summary-to-next-command
+  loop productized without moving diagnostics policy into `fret-imui`.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

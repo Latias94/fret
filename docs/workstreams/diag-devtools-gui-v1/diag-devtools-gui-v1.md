@@ -66,6 +66,10 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints. This keeps the
   gate vocabulary visible in the product surface without moving gate policy into `fret-ui` or
   `fret-imui`.
+- The selected regression summary inspector now generates concrete follow-up commands from the
+  selected `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`,
+  `hotspots`, visual compare, and footprint compare), so authors can move from failing aggregate
+  summary to the next diagnostic command without re-deriving paths by hand.
 
 ## Goals (v1)
 

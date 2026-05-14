@@ -104,6 +104,8 @@ Conventions:
 - [ ] First-class UI for gates:
   - [x] First-open `Gate Commands` block for existing stale paint/scene, pixels-changed,
         perf-threshold, and resource-footprint diagnostics command templates.
+  - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
+        stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

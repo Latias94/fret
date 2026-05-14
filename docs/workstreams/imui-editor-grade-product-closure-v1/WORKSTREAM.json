@@ -427,7 +427,7 @@
     },
     {
       "name": "imui-p2-devtools-gate-command-source",
-      "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast"
+      "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates selected_regression_followup_command_lines_use_selected_bundle_dir --no-fail-fast"
     },
     {
       "name": "imui-p2-devtools-perf-evidence-drilldown",

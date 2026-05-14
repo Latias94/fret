@@ -359,6 +359,16 @@ def _validate_devtools_gui_first_open_source(
         "resource.footprint.json",
         "regression_selected_perf_evidence",
         "regression_summary_drilldown(&summary)",
+        "Copy follow-up commands",
+        "Follow-up Commands",
+        "fn selected_regression_followup_command_lines(bundle_dirs: &[Arc<str>]) -> Vec<String>",
+        "diag stats: cargo run -p fretboard-dev -- diag stats {bundle_arg} --json",
+        "layout perf summary: cargo run -p fretboard-dev -- diag layout-perf-summary {bundle_arg} --json",
+        "memory summary: cargo run -p fretboard-dev -- diag memory-summary {bundle_arg} --json",
+        "triage: cargo run -p fretboard-dev -- diag triage {bundle_arg} --json",
+        "hotspots: cargo run -p fretboard-dev -- diag hotspots {bundle_arg} --json",
+        "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> {bundle_arg} --json",
+        "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> {bundle_arg} --footprint --json",
         "Perf Evidence",
         "perf_summary_json",
         "compare_json",
@@ -375,6 +385,7 @@ def _validate_devtools_gui_first_open_source(
         "devtools_first_open_lines_surface_canonical_paths",
         "devtools_demo_metrics_debug_lines_surface_canonical_routes",
         "devtools_gate_command_lines_surface_first_class_gates",
+        "selected_regression_followup_command_lines_use_selected_bundle_dir",
     ):
         _assert_text_contains(name, source, marker)
     if progress is not None:

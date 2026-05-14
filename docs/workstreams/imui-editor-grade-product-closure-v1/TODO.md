@@ -159,6 +159,9 @@ reopen.
       pixels-changed, perf-threshold, and resource-footprint diagnostics command templates. This is
       tracked in `docs/workstreams/diag-devtools-gui-v1/`, keeping gate UX in the diagnostics owner
       lane rather than the IMUI runtime.
+      Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
+      commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
+      compare, reducing GUI-to-CLI friction without adding GUI-private diagnostics semantics.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.
