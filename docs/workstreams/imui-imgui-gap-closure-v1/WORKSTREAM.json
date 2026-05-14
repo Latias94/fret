@@ -210,6 +210,10 @@
       "command": "cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast"
     },
     {
+      "name": "fret-imui shortcut ownership tests",
+      "command": "cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast"
+    },
+    {
       "name": "fret-imui combo ownership tests",
       "command": "cargo nextest run -p fret-imui models_combo --no-fail-fast"
     },
@@ -282,6 +286,7 @@
     "repo-ref/imgui/imgui_demo.cpp",
     "repo-ref/imgui/docs/BACKENDS.md",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs",
+    "ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
