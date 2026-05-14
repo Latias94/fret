@@ -3521,11 +3521,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-selector/src/ui.rs"),
             required=[
-                "use slotmap::Key as _;",
                 "pub fn model_rev_invalidation<T: Any>(",
                 "self.deps.push_token(model.id().data().as_ffi());",
                 "let rev = observed_model_revision(self.cx, model, invalidation);",
                 "self.deps.push_token(rev.unwrap_or(MISSING_TOKEN));",
+                "fn deps_builder_model_rev_includes_model_identity_before_revision()",
+                "assert_eq!(material_sig.tokens()[0], material.id().data().as_ffi());",
+                "assert_eq!(light_sig.tokens()[0], light.id().data().as_ffi());",
+                "assert_ne!(material_sig, light_sig);",
             ],
             forbidden=[],
         ),

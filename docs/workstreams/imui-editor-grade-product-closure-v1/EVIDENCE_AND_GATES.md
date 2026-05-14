@@ -684,3 +684,9 @@ The checklist and bounded package are now both explicit:
 
 Future work should replace or refine items inside that bounded package rather than inventing
 another parallel P3 gate entry.
+
+### Selector mechanism gate
+
+- `cargo nextest run -p fret-selector --features ui deps_builder_model_rev_includes_model_identity_before_revision --no-fail-fast`
+- This locks the real `ElementContext` + `ModelStore` path so same-revision model switches still
+  invalidate selector memoization correctly.
