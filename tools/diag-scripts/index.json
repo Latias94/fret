@@ -1682,6 +1682,30 @@
       ]
     },
     {
+      "id": "editor-notes-demo-selection-sync",
+      "path": "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "editor-notes-demo"
+      ],
+      "tags": [
+        "inspector",
+        "regression",
+        "screenshots",
+        "selection",
+        "ui_editor",
+        "workspace_frame"
+      ],
+      "target_hints": [
+        "Uses the app-local editor_notes_demo shell-mounted editor surface.",
+        "Proves left-rail asset selection updates collection summary, inspector fields, and app-owned summary command status without widening shared IMUI helpers.",
+        "Keeps the proof at the product workflow layer: app-owned selection state, reusable inspector controls, and diagnostics-visible stable test ids."
+      ]
+    },
+    {
       "id": "editor-notes-device-shell-demo-responsive-proof",
       "path": "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-device-shell-demo-responsive-proof.json",
       "required_capabilities": [
