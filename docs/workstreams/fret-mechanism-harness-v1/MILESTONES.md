@@ -330,3 +330,21 @@ Status: complete for first runtime gates
   passed script evidence when a following capture step started.
 - Current runtime evidence did not reproduce the reported RTL scroll jitter: the Checkbox gate
   sampled `y=2495.999755859375` for all 45 frames with `frame_delta=0.0` and `total_delta=0.0`.
+
+## M28: Virtual-List Boundary Owner Slice
+
+Status: complete for focused mechanism gates; retained runtime suite wrapper follow-up remains
+
+- Boundary-crossing virtual-list diagnostics exposed confirmed owner defects in the mechanism layer:
+  non-retained wheel handling could dirty the view-cache root before prepaint observed the stale
+  rendered window, retained reconcile could reuse stale cached windows after programmatic scroll,
+  final scroll-handle baseline consumption lacked a last-owner non-retained dirty fallback, and
+  prepaint reason attribution lost `ScrollOffset` when state offset had already been synced.
+- Workspace focus registry/scope components also polluted view-cache diagnostics with render-time
+  no-op `ModelStore::update` calls; they now read first and update only on actual value changes.
+- Focused gates passed for the new prepaint reason regression, retained virtual-list window update,
+  revision-only window update, prepaint escape invalidation, and overscan-policy mismatch cases.
+- The non-retained `ui-gallery-vlist-window-boundary` runtime suite passed after the owner fix.
+  The retained script produced evidence, but the outer suite did not write `suite.summary.json`, so
+  the retained runtime suite wrapper needs a clean-exit follow-up before it is considered fully
+  closed.
