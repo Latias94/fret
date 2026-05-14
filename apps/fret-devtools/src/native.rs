@@ -36,6 +36,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
 mod pack;
+mod followup;
 mod script_studio;
 mod semantics;
 mod summarize;
@@ -61,6 +62,12 @@ const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
 const CMD_REGRESSION_REFRESH: &str = "fret.devtools.regression.refresh";
 const CMD_REGRESSION_SUMMARIZE: &str = "fret.devtools.regression.summarize";
 const CMD_REGRESSION_PACK_SELECTED_BUNDLE: &str = "fret.devtools.regression.pack_selected_bundle";
+const CMD_REGRESSION_RUN_FOLLOWUP_STATS: &str = "fret.devtools.regression.followup.stats";
+const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =
+    "fret.devtools.regression.followup.layout_perf";
+const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.followup.memory";
+const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
+const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -182,6 +189,9 @@ struct State {
     pack_last_error: Model<Option<Arc<str>>>,
     summarize_in_flight: Model<bool>,
     summarize_last_error: Model<Option<Arc<str>>>,
+    followup_in_flight: Model<bool>,
+    followup_last_command_line: Model<Option<Arc<str>>>,
+    followup_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
@@ -233,6 +243,8 @@ struct State {
     pack_rx: std::sync::mpsc::Receiver<pack::PackJobResult>,
     summarize_tx: std::sync::mpsc::Sender<summarize::SummarizeJobResult>,
     summarize_rx: std::sync::mpsc::Receiver<summarize::SummarizeJobResult>,
+    followup_tx: std::sync::mpsc::Sender<followup::FollowupJobResult>,
+    followup_rx: std::sync::mpsc::Receiver<followup::FollowupJobResult>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -353,6 +365,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let pack_last_error = app.models_mut().insert(None::<Arc<str>>);
     let summarize_in_flight = app.models_mut().insert(false);
     let summarize_last_error = app.models_mut().insert(None::<Arc<str>>);
+    let followup_in_flight = app.models_mut().insert(false);
+    let followup_last_command_line = app.models_mut().insert(None::<Arc<str>>);
+    let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
@@ -426,6 +441,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 
     let (pack_tx, pack_rx) = pack::new_pack_channel();
     let (summarize_tx, summarize_rx) = summarize::new_summarize_channel();
+    let (followup_tx, followup_rx) = followup::new_followup_channel();
 
     let mut st = State {
         cfg,
@@ -482,6 +498,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         pack_last_error,
         summarize_in_flight,
         summarize_last_error,
+        followup_in_flight,
+        followup_last_command_line,
+        followup_last_error,
         viewer_url,
         last_pick_json,
         last_inspect_hover_json,
@@ -528,6 +547,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         pack_rx,
         summarize_tx,
         summarize_rx,
+        followup_tx,
+        followup_rx,
     };
 
     refresh_script_library(app, &mut st);
@@ -538,6 +559,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     pack::poll_pack_jobs(cx.app, st);
     summarize::poll_summarize_jobs(cx.app, st);
+    followup::poll_followup_jobs(cx.app, st);
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
@@ -623,6 +645,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.pack_last_error, Invalidation::Paint);
     cx.observe_model(&st.summarize_in_flight, Invalidation::Paint);
     cx.observe_model(&st.summarize_last_error, Invalidation::Paint);
+    cx.observe_model(&st.followup_in_flight, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_command_line, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_hover_json, Invalidation::Paint);
@@ -2475,6 +2500,23 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .read(&st.summarize_last_error, |v| v.clone())
         .ok()
         .flatten();
+    let followup_in_flight = cx
+        .app
+        .models()
+        .read(&st.followup_in_flight, |v| *v)
+        .unwrap_or(false);
+    let followup_last_command_line = cx
+        .app
+        .models()
+        .read(&st.followup_last_command_line, |v| v.clone())
+        .ok()
+        .flatten();
+    let followup_last_error = cx
+        .app
+        .models()
+        .read(&st.followup_last_error, |v| v.clone())
+        .ok()
+        .flatten();
     let repo_root = repo_root_from_script_paths(&st.script_paths);
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
@@ -2490,6 +2532,20 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         format!(
             "summarize_in_flight={} summarize_last_error={err}",
             if summarize_in_flight { "true" } else { "false" }
+        )
+    };
+    let followup_status_line = {
+        let command = followup_last_command_line
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let err = followup_last_error
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        format!(
+            "followup_in_flight={} last_followup_command={command} followup_last_error={err}",
+            if followup_in_flight { "true" } else { "false" }
         )
     };
     let loaded_dir_line = loaded_dir
@@ -2913,6 +2969,71 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "stats")
+        {
+            out.push(
+                shadcn::Button::new("Run stats")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_STATS)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "layout-perf-summary")
+        {
+            out.push(
+                shadcn::Button::new("Run layout perf")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "memory-summary")
+        {
+            out.push(
+                shadcn::Button::new("Run memory")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_MEMORY)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "triage")
+        {
+            out.push(
+                shadcn::Button::new("Run triage")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "hotspots")
+        {
+            out.push(
+                shadcn::Button::new("Run hotspots")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS)
+                    .into_element(cx),
+            );
+        }
         if let Some(first_bundle_dir) = selected_bundle_dirs.first().map(|v| v.to_string()) {
             let on_copy_first: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
@@ -3234,6 +3355,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     );
 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
+    let selected_followup_status_text = cx.text(followup_status_line);
     let selected_bundle_dirs_blob =
         text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
     let selected_capability_sources_blob =
@@ -3260,6 +3382,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Evidence Actions",
         "Copy paths or pack the currently selected evidence without leaving this inspector.",
         vec![selected_actions],
+    );
+    let selected_followup_run_status_section = diag_section(
+        cx,
+        "Follow-up Run Status",
+        "Runnable follow-up commands execute through the shared diagnostics engine and report status here.",
+        vec![selected_followup_status_text],
     );
     let selected_followup_commands_section = diag_section(
         cx,
@@ -3317,6 +3445,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         vec![
             selected_overview_section,
             selected_actions_section,
+            selected_followup_run_status_section,
             selected_followup_commands_section,
             selected_runnable_followup_commands_section,
             selected_manual_followup_commands_section,
@@ -3690,6 +3819,35 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .into_element(cx)
 }
 
+fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
+    let selected_bundle_dirs = app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.clone())
+        .unwrap_or_default();
+    let Some(mut command) =
+        regression_bundle_followup_commands(selected_bundle_dirs.iter().map(|v| v.as_ref()))
+            .into_iter()
+            .find(|command| command.id == command_id)
+    else {
+        push_log(
+            app,
+            &st.log_lines,
+            &format!("follow-up refused (no selected command {command_id})"),
+        );
+        return;
+    };
+    if let Some(bundle_arg) = command.diag_args.get_mut(1)
+        && !is_abs_path(bundle_arg)
+    {
+        let repo_root = repo_root_from_script_paths(&st.script_paths);
+        *bundle_arg = repo_root.join(&bundle_arg).to_string_lossy().to_string();
+    }
+
+    if let Err(err) = followup::start_regression_followup_command(app, st, command) {
+        push_log(app, &st.log_lines, &format!("follow-up refused: {err}"));
+    }
+}
+
 fn on_command(
     app: &mut App,
     _services: &mut dyn UiServices,
@@ -3810,6 +3968,26 @@ fn on_command(
                     &format!("regression pack refused: {err}"),
                 );
             }
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_STATS => {
+            run_selected_regression_followup(app, st, "stats");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF => {
+            run_selected_regression_followup(app, st, "layout-perf-summary");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_MEMORY => {
+            run_selected_regression_followup(app, st, "memory-summary");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE => {
+            run_selected_regression_followup(app, st, "triage");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS => {
+            run_selected_regression_followup(app, st, "hotspots");
             app.request_redraw(window);
         }
         CMD_SCRIPT_FORK => {

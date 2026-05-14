@@ -309,6 +309,9 @@ Current status:
 - 2026-05-15 shared regression follow-up commands are now structured in
   `crates/fret-diag/src/regression_summary.rs`, with GUI/MCP consumers separating bundle-local
   runnable commands from baseline-required manual compare commands.
+- 2026-05-15 DevTools GUI selected-summary runnable follow-ups can now be launched in-app for
+  `stats`, `layout-perf-summary`, `memory-summary`, `triage`, and `hotspots`; the GUI records
+  in-flight/error status while leaving baseline-required compare commands manual.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

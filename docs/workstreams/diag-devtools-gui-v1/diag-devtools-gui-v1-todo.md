@@ -108,6 +108,8 @@ Conventions:
         stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from
         baseline-required manual compare commands for GUI and MCP consumers.
+  - [x] GUI selected-summary inspector can launch bundle-local runnable follow-ups and records
+        in-flight/error status without treating baseline-required compare commands as runnable.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

@@ -74,6 +74,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The same projection now carries structured follow-up command metadata. The GUI separates
   bundle-local runnable commands from manual compare commands that still require a baseline, so
   placeholder compare commands are visible without being presented as ready-to-run actions.
+- Bundle-local runnable follow-ups can now be launched from the selected-summary inspector through
+  the shared diagnostics engine, with in-flight/error status recorded in the GUI; baseline-required
+  compare commands remain manual until the user supplies a baseline.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.

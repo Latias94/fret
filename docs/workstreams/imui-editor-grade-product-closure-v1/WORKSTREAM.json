@@ -434,6 +434,10 @@
       "command": "cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast"
     },
     {
+      "name": "imui-p2-devtools-runnable-followup-actions",
+      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args --no-fail-fast"
+    },
+    {
       "name": "imui-p2-devtools-gate-command-source",
       "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast"
     },
@@ -698,6 +702,7 @@
     "crates/fret-diag/src/regression_summary.rs",
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools/src/native.rs",
+    "apps/fret-devtools/src/followup.rs",
     "apps/fret-devtools-mcp/src/main.rs",
     "apps/fret-devtools-mcp/src/native.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",

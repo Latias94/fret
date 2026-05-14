@@ -169,6 +169,9 @@ reopen.
       Maintenance: the shared follow-up projection now carries structured command metadata and
       separates bundle-local runnable commands from baseline-required manual compare commands, so
       GUI and MCP consumers do not present placeholder compare commands as ready-to-run actions.
+      Maintenance: the DevTools GUI selected-summary inspector can now launch bundle-local
+      runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`)
+      through the shared diagnostics engine and records in-flight/error status in the GUI.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

@@ -550,6 +550,10 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 - That projection is now structured: direct bundle-local commands carry concrete `diag_args`, while
   visual/footprint compare commands are marked as baseline-required manual follow-ups. GUI and MCP
   consumers can therefore separate runnable actions from placeholder compare templates.
+- `apps/fret-devtools/src/followup.rs` now launches the runnable subset through
+  `fret_diag::diag_cmd` on a background job and records in-flight/error status back into the GUI.
+  The baseline-required compare commands are rejected by the focused unit gate instead of being
+  treated as runnable.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
 - Focused source gates:
@@ -557,6 +561,7 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 ```text
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
