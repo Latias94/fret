@@ -119,24 +119,14 @@ pub(crate) fn followup_result_history_summary_lines<'a>(
     entries: &[FollowupResultHistoryEntry],
     selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
 ) -> Vec<String> {
-    let selected_bundle_keys = selected_bundle_dirs
-        .into_iter()
-        .map(normalize_followup_bundle_key)
-        .filter(|value| !value.is_empty())
-        .collect::<Vec<_>>();
+    let selected_bundle_keys = followup_selected_bundle_keys(selected_bundle_dirs);
     if selected_bundle_keys.is_empty() {
         return vec!["follow-up history: <no selected bundle>".to_string()];
     }
 
     let matching = entries
         .iter()
-        .filter(|entry| {
-            entry
-                .bundle_dir
-                .as_deref()
-                .map(normalize_followup_bundle_key)
-                .is_some_and(|bundle_key| selected_bundle_keys.iter().any(|v| v == &bundle_key))
-        })
+        .filter(|entry| followup_history_entry_matches_selected_bundle(entry, &selected_bundle_keys))
         .collect::<Vec<_>>();
     if matching.is_empty() {
         return vec!["follow-up history: <none for selected bundle>".to_string()];
@@ -160,6 +150,24 @@ pub(crate) fn followup_result_history_summary_lines<'a>(
         }
     }
     lines
+}
+
+pub(crate) fn followup_result_history_latest_path<'a>(
+    entries: &[FollowupResultHistoryEntry],
+    selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
+) -> Option<String> {
+    let selected_bundle_keys = followup_selected_bundle_keys(selected_bundle_dirs);
+    followup_result_history_latest_entry(entries, &selected_bundle_keys)
+        .map(|entry| entry.result_path.clone())
+}
+
+pub(crate) fn followup_result_history_latest_json<'a>(
+    entries: &[FollowupResultHistoryEntry],
+    selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
+) -> Option<String> {
+    let selected_bundle_keys = followup_selected_bundle_keys(selected_bundle_dirs);
+    followup_result_history_latest_entry(entries, &selected_bundle_keys)
+        .map(|entry| entry.result_json.clone())
 }
 
 pub(crate) fn poll_followup_jobs(app: &mut App, st: &mut State) {
@@ -315,6 +323,39 @@ fn normalize_followup_bundle_key(value: &str) -> String {
         .to_string()
 }
 
+fn followup_selected_bundle_keys<'a>(
+    selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
+) -> Vec<String> {
+    selected_bundle_dirs
+        .into_iter()
+        .map(normalize_followup_bundle_key)
+        .filter(|value| !value.is_empty())
+        .collect()
+}
+
+fn followup_history_entry_matches_selected_bundle(
+    entry: &FollowupResultHistoryEntry,
+    selected_bundle_keys: &[String],
+) -> bool {
+    entry
+        .bundle_dir
+        .as_deref()
+        .map(normalize_followup_bundle_key)
+        .is_some_and(|bundle_key| selected_bundle_keys.iter().any(|v| v == &bundle_key))
+}
+
+fn followup_result_history_latest_entry<'a>(
+    entries: &'a [FollowupResultHistoryEntry],
+    selected_bundle_keys: &[String],
+) -> Option<&'a FollowupResultHistoryEntry> {
+    if selected_bundle_keys.is_empty() {
+        return None;
+    }
+    entries
+        .iter()
+        .find(|entry| followup_history_entry_matches_selected_bundle(entry, selected_bundle_keys))
+}
+
 pub(crate) fn start_regression_followup_command(
     app: &mut App,
     st: &mut State,
@@ -427,6 +468,26 @@ mod tests {
     use super::*;
     use fret_diag::regression_summary::regression_bundle_followup_commands;
 
+    fn history_entry(
+        id: &str,
+        command_line: &str,
+        result_path: &str,
+        bundle_dir: &str,
+        status: &str,
+        error: Option<&str>,
+    ) -> FollowupResultHistoryEntry {
+        FollowupResultHistoryEntry {
+            id: id.to_string(),
+            label: id.to_string(),
+            command_line: command_line.to_string(),
+            result_path: result_path.to_string(),
+            result_json: "{}".to_string(),
+            bundle_dir: Some(bundle_dir.to_string()),
+            status: status.to_string(),
+            error: error.map(ToOwned::to_owned),
+        }
+    }
+
     #[test]
     fn regression_followup_command_rejects_baseline_required_commands() {
         let commands = regression_bundle_followup_commands(["target/fret-diag/run-a"]);
@@ -521,30 +582,22 @@ mod tests {
     #[test]
     fn regression_followup_result_history_summary_filters_to_selected_bundle() {
         let entries = vec![
-            FollowupResultHistoryEntry {
-                id: "stats".to_string(),
-                label: "diag stats".to_string(),
-                command_line:
-                    "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-a --json"
-                        .to_string(),
-                result_path: ".fret/diag/followups/10-stats.json".to_string(),
-                result_json: "{}".to_string(),
-                bundle_dir: Some("target\\fret-diag\\run-a".to_string()),
-                status: "passed".to_string(),
-                error: None,
-            },
-            FollowupResultHistoryEntry {
-                id: "triage".to_string(),
-                label: "triage".to_string(),
-                command_line:
-                    "cargo run -p fretboard-dev -- diag triage target/fret-diag/run-b --json"
-                        .to_string(),
-                result_path: ".fret/diag/followups/20-triage.json".to_string(),
-                result_json: "{}".to_string(),
-                bundle_dir: Some("target/fret-diag/run-b".to_string()),
-                status: "failed".to_string(),
-                error: Some("boom".to_string()),
-            },
+            history_entry(
+                "stats",
+                "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-a --json",
+                ".fret/diag/followups/10-stats.json",
+                "target\\fret-diag\\run-a",
+                "passed",
+                None,
+            ),
+            history_entry(
+                "triage",
+                "cargo run -p fretboard-dev -- diag triage target/fret-diag/run-b --json",
+                ".fret/diag/followups/20-triage.json",
+                "target/fret-diag/run-b",
+                "failed",
+                Some("boom"),
+            ),
         ];
 
         let lines = followup_result_history_summary_lines(&entries, ["target/fret-diag/run-a"]);
@@ -554,5 +607,52 @@ mod tests {
         assert!(text.contains("passed | stats | target\\fret-diag\\run-a"));
         assert!(text.contains(".fret/diag/followups/10-stats.json"));
         assert!(!text.contains("run-b"));
+    }
+
+    #[test]
+    fn regression_followup_result_history_latest_path_prefers_selected_bundle() {
+        let entries = vec![
+            history_entry(
+                "triage",
+                "cargo run -p fretboard-dev -- diag triage target/fret-diag/run-b --json",
+                ".fret/diag/followups/30-triage.json",
+                "target/fret-diag/run-b",
+                "passed",
+                None,
+            ),
+            {
+                let mut entry = history_entry(
+                    "stats",
+                    "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-a --json",
+                    ".fret/diag/followups/20-stats.json",
+                    "target/fret-diag/run-a",
+                    "passed",
+                    None,
+                );
+                entry.result_json = "{\"status\":\"passed\"}".to_string();
+                entry
+            },
+            history_entry(
+                "stats",
+                "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-b --json",
+                ".fret/diag/followups/10-stats.json",
+                "target/fret-diag/run-b",
+                "failed",
+                Some("boom"),
+            ),
+        ];
+
+        assert_eq!(
+            followup_result_history_latest_path(&entries, ["target\\fret-diag\\run-a"]),
+            Some(".fret/diag/followups/20-stats.json".to_string())
+        );
+        assert_eq!(
+            followup_result_history_latest_json(&entries, ["target/fret-diag/run-a"]),
+            Some("{\"status\":\"passed\"}".to_string())
+        );
+        assert_eq!(
+            followup_result_history_latest_path(&entries, ["target/fret-diag/missing"]),
+            None
+        );
     }
 }

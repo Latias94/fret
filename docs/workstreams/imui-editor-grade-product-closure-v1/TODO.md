@@ -174,13 +174,18 @@ reopen.
       through the shared diagnostics engine and records in-flight/error status in the GUI.
       Maintenance: each GUI-launched follow-up now writes a lightweight
       `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
-      Maintenance: the selected-summary inspector mirrors that latest follow-up result JSON inline,
-      so pass/fail/error/timing metadata is visible without opening the artifact manually.
-      Maintenance: the selected-summary inspector now adds a structured follow-up result summary
-      above the raw JSON, keeping status, command, duration, and error preview readable in the GUI.
+      Maintenance: the selected-summary inspector mirrors that latest selected-bundle follow-up
+      result JSON inline, so pass/fail/error/timing metadata is visible without opening the artifact
+      manually.
+      Maintenance: the selected-summary inspector now adds a structured selected-bundle follow-up
+      result summary above the raw JSON, keeping status, command, duration, and error preview
+      readable in the GUI.
       Maintenance: follow-up results are retained as a bounded in-memory history filtered to the
       selected bundle, so the GUI no longer implies that a previous bundle's last result belongs to
       the current selected-summary evidence.
+      Maintenance: the follow-up result copy action now uses the selected bundle's latest history
+      entry instead of the global last result artifact, keeping copied evidence paths aligned with
+      the current selection.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

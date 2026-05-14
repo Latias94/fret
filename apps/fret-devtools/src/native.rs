@@ -2532,11 +2532,6 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .read(&st.followup_last_result_path, |v| v.clone())
         .ok()
         .flatten();
-    let followup_last_result_json = cx
-        .app
-        .models()
-        .read(&st.followup_last_result_json, |v| v.clone())
-        .unwrap_or_default();
     let followup_result_history = cx
         .app
         .models()
@@ -2549,20 +2544,24 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .ok()
         .flatten();
     let repo_root = repo_root_from_script_paths(&st.script_paths);
-    let selected_followup_history_filter_dirs = {
-        let mut dirs: Vec<String> = Vec::new();
-        for dir in selected_bundle_dirs.iter() {
-            let dir = dir.trim();
-            if dir.is_empty() {
-                continue;
-            }
-            dirs.push(dir.to_string());
-            if !is_abs_path(dir) {
-                dirs.push(repo_root.join(dir).to_string_lossy().to_string());
-            }
-        }
-        dirs
-    };
+    let selected_followup_history_filter_dirs =
+        selected_followup_history_filter_dirs_from_bundle_dirs(
+            &st.script_paths,
+            &selected_bundle_dirs,
+        );
+    let selected_followup_result_path = followup::followup_result_history_latest_path(
+        &followup_result_history,
+        selected_followup_history_filter_dirs
+            .iter()
+            .map(|value| value.as_str()),
+    );
+    let selected_followup_result_json = followup::followup_result_history_latest_json(
+        &followup_result_history,
+        selected_followup_history_filter_dirs
+            .iter()
+            .map(|value| value.as_str()),
+    )
+    .unwrap_or_default();
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
@@ -3083,9 +3082,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
-        if followup_last_result_path.is_some() {
+        if selected_followup_result_path.is_some() {
             out.push(
-                shadcn::Button::new("Copy follow-up result")
+                shadcn::Button::new("Copy selected follow-up result")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_click(CMD_COPY_FOLLOWUP_RESULT_PATH)
@@ -3416,7 +3415,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_followup_status_text = cx.text(followup_status_line);
     let selected_followup_result_summary_blob = text_blob_sized(
         cx,
-        followup::followup_result_summary_lines(&followup_last_result_json).join("\r\n"),
+        followup::followup_result_summary_lines(&selected_followup_result_json).join("\r\n"),
         Px(96.0),
     );
     let selected_followup_result_history_blob = text_blob_sized(
@@ -3432,10 +3431,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     );
     let selected_followup_result_json_blob = text_blob_sized(
         cx,
-        if followup_last_result_json.trim().is_empty() {
-            "<no follow-up result yet>".to_string()
+        if selected_followup_result_json.trim().is_empty() {
+            "<no selected-bundle follow-up result yet>".to_string()
         } else {
-            followup_last_result_json
+            selected_followup_result_json
         },
         Px(140.0),
     );
@@ -3475,7 +3474,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_followup_result_summary_section = diag_section(
         cx,
         "Follow-up Result Summary",
-        "Status, command, duration, and error preview from the latest GUI-launched follow-up result.",
+        "Status, command, duration, and error preview from the latest selected-bundle follow-up result.",
         vec![selected_followup_result_summary_blob],
     );
     let selected_followup_result_history_section = diag_section(
@@ -3487,7 +3486,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_followup_result_json_section = diag_section(
         cx,
         "Follow-up Result JSON",
-        "The latest GUI-launched follow-up result artifact is mirrored here for quick triage.",
+        "The latest selected-bundle follow-up result artifact is mirrored here for quick triage.",
         vec![selected_followup_result_json_blob],
     );
     let selected_followup_commands_section = diag_section(
@@ -3923,6 +3922,25 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .into_element(cx)
 }
 
+fn selected_followup_history_filter_dirs_from_bundle_dirs(
+    script_paths: &script_studio::ScriptPaths,
+    selected_bundle_dirs: &[Arc<str>],
+) -> Vec<String> {
+    let repo_root = repo_root_from_script_paths(script_paths);
+    let mut dirs: Vec<String> = Vec::new();
+    for dir in selected_bundle_dirs.iter() {
+        let dir = dir.trim();
+        if dir.is_empty() {
+            continue;
+        }
+        dirs.push(dir.to_string());
+        if !is_abs_path(dir) {
+            dirs.push(repo_root.join(dir).to_string_lossy().to_string());
+        }
+    }
+    dirs
+}
+
 fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
     let selected_bundle_dirs = app
         .models()
@@ -4095,16 +4113,29 @@ fn on_command(
             app.request_redraw(window);
         }
         CMD_COPY_FOLLOWUP_RESULT_PATH => {
-            let Some(path) = app
+            let selected_bundle_dirs = app
                 .models()
-                .read(&st.followup_last_result_path, |v| v.clone())
-                .ok()
-                .flatten()
-            else {
+                .read(&st.regression_selected_bundle_dirs, |v| v.clone())
+                .unwrap_or_default();
+            let selected_followup_history_filter_dirs =
+                selected_followup_history_filter_dirs_from_bundle_dirs(
+                    &st.script_paths,
+                    &selected_bundle_dirs,
+                );
+            let followup_result_history = app
+                .models()
+                .read(&st.followup_result_history, |v| v.clone())
+                .unwrap_or_default();
+            let Some(path) = followup::followup_result_history_latest_path(
+                &followup_result_history,
+                selected_followup_history_filter_dirs
+                    .iter()
+                    .map(|value| value.as_str()),
+            ) else {
                 push_log(
                     app,
                     &st.log_lines,
-                    "copy follow-up result refused (no result artifact yet)",
+                    "copy selected follow-up result refused (no selected-bundle result artifact yet)",
                 );
                 return;
             };
@@ -4112,7 +4143,7 @@ fn on_command(
             app.push_effect(Effect::ClipboardWriteText {
                 window,
                 token,
-                text: path.to_string(),
+                text: path,
             });
         }
         CMD_SCRIPT_FORK => {

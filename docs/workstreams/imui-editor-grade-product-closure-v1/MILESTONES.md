@@ -315,13 +315,17 @@ Current status:
 - 2026-05-15 GUI-launched regression follow-ups now write
   `.fret/diag/followups/*.json` result records with command/status/error/timing metadata and expose
   the latest result path for copying.
-- 2026-05-15 the DevTools GUI selected-summary inspector now mirrors the latest follow-up result
-  JSON inline, so authors can inspect pass/fail/error/timing metadata without leaving the panel.
-- 2026-05-15 the same inspector now projects the latest follow-up result into a structured summary
-  above raw JSON, keeping status, command, duration, and error preview immediately scannable.
+- 2026-05-15 the DevTools GUI selected-summary inspector now mirrors the latest selected-bundle
+  follow-up result JSON inline, so authors can inspect pass/fail/error/timing metadata without
+  leaving the panel.
+- 2026-05-15 the same inspector now projects the latest selected-bundle follow-up result into a
+  structured summary above raw JSON, keeping status, command, duration, and error preview
+  immediately scannable.
 - 2026-05-15 follow-up results are retained as a bounded in-memory history filtered to the selected
   bundle, so selected-summary triage can distinguish current evidence from a previous bundle's last
   launched follow-up.
+- 2026-05-15 the follow-up result copy action now resolves the selected bundle's latest history
+  path instead of the global last result artifact, keeping copied evidence aligned with selection.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

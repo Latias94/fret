@@ -112,12 +112,14 @@ Conventions:
         in-flight/error status without treating baseline-required compare commands as runnable.
   - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
         latest result path for copying.
-  - [x] GUI selected-summary inspector mirrors the latest follow-up result JSON inline for
-        pass/fail/error/timing triage.
-  - [x] GUI selected-summary inspector shows a structured follow-up result summary above raw JSON
-        for status, command, duration, and error preview.
+  - [x] GUI selected-summary inspector mirrors the latest selected-bundle follow-up result JSON
+        inline for pass/fail/error/timing triage.
+  - [x] GUI selected-summary inspector shows a structured selected-bundle follow-up result summary
+        above raw JSON for status, command, duration, and error preview.
   - [x] GUI selected-summary inspector keeps a bounded follow-up result history filtered to the
         selected bundle, preventing stale global-last results from masquerading as current evidence.
+  - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
+        the global last result artifact.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,
