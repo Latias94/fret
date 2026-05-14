@@ -44,7 +44,7 @@ pub(in super::super) fn sanitize_response_for_enabled(
     enabled: bool,
     response: &mut super::super::ResponseExt,
 ) {
-    response.enabled = enabled;
+    response.set_enabled(enabled);
     if enabled {
         return;
     }

@@ -86,7 +86,7 @@ impl std::ops::BitOrAssign for ImUiHoveredFlags {
 pub struct ResponseExt {
     pub core: Response,
     pub id: Option<GlobalElementId>,
-    pub enabled: bool,
+    enabled: bool,
     /// True on the frame an item enters its active or engaged state.
     activated: bool,
     /// True on the frame an item leaves its active or engaged state.
@@ -152,6 +152,10 @@ impl ResponseExt {
 
     pub fn drag(self) -> DragResponse {
         self.drag
+    }
+
+    pub(crate) fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
     }
 
     pub(crate) fn set_activated(&mut self, activated: bool) {
@@ -302,6 +306,10 @@ impl ResponseExt {
         self.core.changed()
     }
 
+    pub fn enabled(self) -> bool {
+        self.enabled
+    }
+
     pub fn secondary_clicked(self) -> bool {
         self.secondary_clicked
     }
@@ -409,7 +417,7 @@ impl ResponseExt {
 
         let mut pointer_hovered = if allow_disabled {
             self.pointer_hovered_raw
-        } else if self.enabled {
+        } else if self.enabled() {
             self.core.hovered
         } else {
             false
