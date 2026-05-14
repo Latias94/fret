@@ -236,7 +236,26 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routin
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_occlusion -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json --dir target/fret-diag-context-menu-occlusion-wheel-structured-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
+
+Current runtime evidence:
+
+- Context-menu pointer occlusion wheel pass-through:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
+  - asserts `ui-gallery-content-viewport.scroll.y_max != 0` and `scroll.y == 0` before the wheel,
+    wheels `ui-gallery-overlay-reset` under `BlockMouseExceptScroll`, then asserts
+    `ui-gallery-content-viewport.scroll.y != 0` while `ui-gallery-context-content` still exists.
+  - current run result:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/script.result.json`
+  - current bundle:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/1778749343795-ui-gallery-context-menu-occlusion-wheel-pass-through/bundle.schema2.json`
+  - current share pack:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/share/1778749337977.zip`
+  - current screenshot after wheel:
+    `target/fret-diag-context-menu-occlusion-wheel-structured-v2/sessions/1778749334444-150476/screenshots/1778749343662-ui-gallery-context-menu-occlusion-wheel-pass-through-after/window-4294967297-tick-49-frame-49.png`
+  - trace proof from the final bundle: `pointer_occlusion=block_mouse_except_scroll`,
+    `pointer_capture_active=false`, and `ui-gallery-content-viewport.scroll.y=535.3333740234375`.
 
 ## Focus Barrier Gates
 
@@ -320,6 +339,7 @@ target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-ga
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-label-checkmark --session-auto --launch -- target/debug/fret-ui-gallery.exe
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger-bottom-room.json --dir target/fret-diag-combobox-popup-bottom-room-label-checkmark --session-auto --launch -- target/debug/fret-ui-gallery.exe
 target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-long-text-geometry-v4 --session-auto --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json --dir target/fret-diag-combobox-rtl-long-text-audit --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current evidence anchors:
@@ -390,6 +410,24 @@ Current evidence anchors:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/script.result.json`
   - bundle with long-text child anchors:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/1778619501160-ui-gallery-combobox-long-text-open/bundle.schema2.json`
+- Combobox RTL long-text trigger/option geometry gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json`
+  - asserts trigger label width budget, physical-left RTL chevron inset, label-after-chevron
+    spacing, chrome-relative vertical centering, content-shell top collision flip with
+    `side_offset_px=6`, option label width budget, physical-right RTL checkmark inset, and
+    label-before-checkmark spacing.
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - current audit evidence:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/1778747711700/script.result.json`
+  - current audit share pack:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/share/1778747711700.zip`
+  - current audit layout sidecar:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/1778747713455-ui-gallery-combobox-rtl-long-text-open.layout/layout.taffy.v1.json`
+  - current audit screenshot:
+    `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/screenshots/1778747713519-ui-gallery-combobox-rtl-long-text-open/window-4294967297-tick-34-frame-34.png`
 - Popover first-open explicit-width center alignment gate:
   `ecosystem/fret-ui-shadcn/src/popover.rs`
   - test: `popover_first_open_center_alignment_uses_explicit_width_for_x`
@@ -607,6 +645,8 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json`
 - Pointer occlusion routing runner:
   `crates/fret-ui/src/tree/tests/pointer_occlusion_routing_harness.rs`
+- Pointer occlusion runtime gate:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
 - Focus barrier routing fixture:
   `crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`
 - Focus barrier routing runner:

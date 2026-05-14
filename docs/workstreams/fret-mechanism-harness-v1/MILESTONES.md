@@ -412,3 +412,29 @@ Status: complete
   samples `ui-gallery-content-viewport` for 60 no-input frames.
 - The gate passed and did not reproduce a scroll-jitter mechanism defect on the DataTable RTL
   surface.
+
+## M32: Combobox RTL Long-Text Gate Audit
+
+Status: complete
+
+- The Combobox RTL long-text companion already existed, was registered in the combobox, RTL smoke,
+  and shadcn conformance suites, and passed a fresh audit rerun.
+- The gate proves the physical-left RTL chevron stays before the trigger label, the long label
+  stays in its width budget, the popup content shell records a top collision flip with
+  `sideOffset=6`, and the selected option label stays before the physical-right RTL checkmark.
+- No mechanism or recipe defect was reproduced in this slice. The defect was workstream state
+  drift: TODO and coverage docs still listed RTL long-text as an uncovered gap even though a
+  promoted runtime gate existed and was green.
+
+## M33: Pointer Occlusion Runtime Gate Strengthening
+
+Status: complete
+
+- The context-menu pointer occlusion wheel gate now has a structural oracle instead of only
+  screenshots and a final bundle.
+- The gate verifies the overlay page content viewport starts at `scroll.y=0`, has a non-zero scroll
+  range, receives a wheel through `BlockMouseExceptScroll`, ends at non-zero `scroll.y`, and keeps
+  the context menu mounted.
+- No pointer occlusion mechanism defect was reproduced. The defect found in this slice was a
+  harness weakness: the previous gate could pass without proving that underlay wheel pass-through
+  actually moved a scroll container.

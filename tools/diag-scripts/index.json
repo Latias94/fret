@@ -6122,7 +6122,10 @@
     {
       "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],

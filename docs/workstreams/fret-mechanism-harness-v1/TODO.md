@@ -107,8 +107,13 @@ date: 2026-05-12
     no-input frames, and passes. This did not reproduce a scroll-jitter mechanism defect.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
-- [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes
-  test ids for underlay, overlay, and observer/capture state.
+- [x] Add a UI Gallery pointer occlusion diagnostics gate once a stable overlay demo exposes test
+  ids for underlay and overlay state.
+  - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
+    viewport starts at `scroll.y=0`, has a non-zero scroll range, receives a wheel through
+    `BlockMouseExceptScroll`, ends with `scroll.y != 0`, and keeps the context menu mounted.
+- [ ] Add a UI Gallery captured-pointer diagnostics gate once a stable demo exposes pointer-capture
+  owner and underlay probes.
 - [x] Add active-descendant interaction fixture coverage for combobox query-driven active descendant
   selection.
 - [x] Add nested focus scope fixture coverage for inner/outer trapped scope traversal and pointer
@@ -171,8 +176,12 @@ date: 2026-05-12
   and add cross-metric side-gap oracles for both top-flip and bottom-room placement.
 - [x] Add Combobox long-text truncation/ellipsis coverage for constrained trigger and popup option
   text, including trigger-label and option-label geometry predicates.
-- [ ] Add a Combobox RTL long-text companion so leading/trailing icon/checkmark ownership is
+- [x] Add a Combobox RTL long-text companion so leading/trailing icon/checkmark ownership is
   covered in both directions.
+  - Result: `ui-gallery-combobox-rtl-long-text-geometry.json` is already promoted into
+    `ui-gallery-combobox`, `ui-gallery-rtl-smoke`, and `ui-gallery-shadcn-conformance`. The audit
+    rerun passed and proved the physical-left RTL chevron, label-after-chevron spacing,
+    content-shell top collision flip, and physical-right RTL checkmark/label separation.
 - [x] Tighten the Combobox Responsive desktop placement gate so it asserts preferred/chosen bottom
   placement and shadcn `sideOffset=6`, and add it to the `ui-gallery-combobox` diagnostics suite.
 - [x] Fix the Popover first-open placement-size bridge so explicit content width hints beat the
