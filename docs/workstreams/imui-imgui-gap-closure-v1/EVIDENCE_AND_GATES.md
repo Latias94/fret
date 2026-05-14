@@ -57,6 +57,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
+  - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
@@ -118,6 +119,40 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
 cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast
 ```
 
+Run evidence:
+
+- 2026-05-14: made `FloatingAreaContext` externally opaque in
+  `ecosystem/fret-ui-kit/src/imui/floating_options.rs`. The facade still hands callers a context
+  with `id()`, `position()`, and `drag_kind()` accessors, but external code can no longer construct
+  or mutate area identity / drag-kind fields. `tools/gate_imui_workstream_source.py` rejects public
+  fields from returning.
+- 2026-05-14: made `FloatingAreaResponse` / `FloatingWindowResponse` accessor-first too. Floating
+  response identity, geometry, drag, resize, and collapse state now stay behind methods instead of
+  public fields, and the floating tests use `resp.id()` instead of `resp.area.id`.
+- 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
+  state too. Public callers now read trigger details through `response()` and semantic helpers, the
+  response types no longer expose external `Default` construction, and
+  `tools/gate_imui_workstream_source.py` rejects public fields from returning.
+- 2026-05-14: made `InputTextPickerResponse` accessor-first for input/open/pick state. Text picker
+  tests now use `picked()` / `picked_index()` and the source gate rejects public picker response
+  fields and public default construction from returning.
+- 2026-05-14: made `TabBarResponse` / `TabTriggerResponse` accessor-first for selection and trigger
+  state. Existing tab tests already use `selected_id()`, `selected_changed()`, `trigger(...)`, and
+  trigger edge helpers; the source gate now rejects public tab response fields and public
+  `TabBarResponse` default construction from returning.
+- 2026-05-14: made `VirtualListResponse` accessor-first too. Public callers keep using `handle()`
+  and `rendered_range()`, while the response's scroll handle and rendered-range storage are
+  crate-local and guarded by the IMUI source gate.
+- 2026-05-14: made `TableResponse` / `TableHeaderResponse` /
+  `TableColumnResizeResponse` accessor-first for header metadata, sort state, resize bounds, and
+  drag state. Public table tests now read `column_index()`, `sortable()`, `sort_direction()`,
+  `resize()`, `min_width()`, and `max_width()` instead of response fields; the source gate rejects
+  public table response fields and default construction from returning.
+- 2026-05-14: made `DragResponse` accessor-first for started/dragging/stopped/delta/total state.
+  Internal response assemblers can still populate drag state, while external callers stay on
+  `started()`, `dragging()`, `stopped()`, `delta()`, and `total()` or the higher-level
+  `ResponseExt` drag helpers.
+
 ## P3 Design Surface Readiness Gates
 
 Use these for the current design/theme readiness note:
@@ -129,6 +164,13 @@ rg -n "ShowStyleEditor|ImGuiStyle|PushStyleColor|PushStyleVar|StyleColorsDark|St
 cargo nextest run -p fret-ui-editor default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome installed_preset_can_be_reapplied_after_base_theme_reset --no-fail-fast
 cargo nextest run -p fret-ui-kit --features imui input_text_model_uses_compact_imui_chrome_without_focus_ring textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast
 ```
+
+Run evidence:
+
+- 2026-05-14: deleted the unused `apply_editor_theme_patch_v1` compatibility wrapper from
+  `ecosystem/fret-ui-editor/src/theme.rs`. In-tree callers already use
+  `apply_editor_theme_preset_v1(...)` or `install_editor_theme_preset_v1(...)`, and
+  `tools/gate_imui_workstream_source.py` rejects the old wrapper from returning.
 
 ## P3 Porting Sugar Readiness Gates
 
@@ -155,6 +197,24 @@ Run evidence:
   `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast`,
   `python tools/gate_imui_workstream_source.py`, `python tools/gate_imui_facade_teaching_source.py`,
   and `git diff --check` passed locally.
+- 2026-05-14: `PropertyGridVirtualizedRowCx` now mirrors `PropertyGridRowCx` with `row(...)` and
+  `row_with(...)`, so virtualized property-grid callers can keep row policy centralized instead of
+  copying `row_cx.row_options` into each row. The adapter smoke now uses the helper, and
+  `tools/gate_imui_workstream_source.py` rejects that manual copy from returning there.
+- 2026-05-14: deleted the unused public `PropertyGridRow` wrapper from
+  `ecosystem/fret-ui-editor/src/composites/property_grid.rs` and its composite re-export. The
+  editor row authoring surface now has one canonical grid policy path:
+  `PropertyGridRowCx::row(...)` / `row_with(...)`, with custom raw rows still using
+  `PropertyRow` directly. `tools/gate_imui_workstream_source.py` rejects the redundant wrapper and
+  re-export from returning.
+- 2026-05-14: made `PropertyGridRowCx` and `PropertyGridVirtualizedRowCx` opaque row contexts
+  instead of exposing `row_options` as a public field. External authoring now keeps the row policy
+  path on `row(...)` / `row_with(...)`; editor-internal composites that need row-local policy
+  patches use crate-local `row_options()`. The source gate rejects public `row_options` /
+  `density` fields from returning.
+- 2026-05-14: made `InspectorPanelCx` opaque as well: callers get `density()`, `query()`,
+  `is_query_empty()`, and `matches(...)` instead of public `query_lower` implementation state. The
+  source gate rejects the old public context fields from returning.
 
 ## P3 Child Region Readiness Gates
 

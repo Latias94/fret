@@ -2836,8 +2836,10 @@ dependencies = [
 name = "fret-selector"
 version = "0.1.0"
 dependencies = [
+ "fret-core",
  "fret-runtime",
  "fret-ui",
+ "slotmap",
  "tracing",
 ]
 

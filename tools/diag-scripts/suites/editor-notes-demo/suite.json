@@ -3,6 +3,7 @@
   "kind": "diag_script_suite_manifest",
   "scripts": [
     "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-preserve-draft.json",
-    "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json"
+    "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json",
+    "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-selection-sync.json"
   ]
 }

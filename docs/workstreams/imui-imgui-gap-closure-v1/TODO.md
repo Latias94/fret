@@ -85,6 +85,27 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md`. Keep `fret-imui`
    policy-light, put generic policy-heavy helpers in `kit`, editor controls in `editor`, docking
    helpers in `docking`, and continue teaching apps through `fret::imui`.
+   2026-05-14 cleanup: `FloatingAreaContext` now exposes accessors instead of public identity /
+   drag-kind fields, so callers can read the facade-created context without constructing invalid
+   contexts.
+   2026-05-14 follow-up: floating responses now follow the same accessor-first shape; tests use
+   `resp.id()` rather than reaching through `resp.area.id`.
+   2026-05-14 response follow-up: disclosure and combo responses now keep trigger/open/toggle
+   fields crate-local, remove external default construction, and expose read-only `response()`,
+   `open()`, and `toggled()` methods for callers.
+   2026-05-14 text-picker follow-up: `InputTextPickerResponse` now keeps input/open/pick storage
+   crate-local, removes external default construction, and exposes read-only `response()`, `open()`,
+   `picked()`, and `picked_index()` accessors.
+   2026-05-14 tab follow-up: tab-bar aggregate and tab-trigger responses now follow the same
+   accessor-first shape; tab response storage stays crate-local and `TabBarResponse` no longer
+   exposes external default construction.
+   2026-05-14 virtual-list follow-up: `VirtualListResponse` now keeps its scroll handle and
+   rendered-range storage crate-local while preserving read-only `handle()` and
+   `rendered_range()` accessors.
+   2026-05-14 table follow-up: table aggregate/header/resize responses now expose header metadata
+   and resize bounds through accessors instead of public fields; response storage stays crate-local.
+   2026-05-14 drag follow-up: `DragResponse` now keeps drag edge/delta storage crate-local while
+   preserving read-only drag accessors and higher-level `ResponseExt` helpers.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
@@ -95,6 +116,8 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
    editor tokens cover the active proof; a style editor, preset selector, or visual gate should be a
    narrow follow-on with evidence.
+   2026-05-14 cleanup: the unused `apply_editor_theme_patch_v1` compatibility wrapper was deleted;
+   apps and tests now stay on explicit preset entry points.
 4. Porting sugar readiness: `SameLine`/item-width/label-ID helpers only if two proof surfaces pay
    the same tax. Current proof surfaces already keep most of that tax local with
    `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and
@@ -102,6 +125,13 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen sugar until a
    second surface repeats the same pattern; do not copy Dear ImGui's string-label parser or
    stack/next-item width grammar into Fret by default.
+   2026-05-14 cleanup: the unused `PropertyGridRow` wrapper was deleted so property-grid row
+   authoring stays on `PropertyGridRowCx::row(...)` / `row_with(...)` plus raw `PropertyRow` for
+   genuinely custom rows.
+   2026-05-14 follow-up: eager and virtualized grid row contexts now keep `row_options`
+   crate-local, so proof/app code cannot drift back to copying row policy fields by default.
+   2026-05-14 inspector follow-up: `InspectorPanelCx` now hides `query_lower` and exposes query
+   behavior through methods.
 5. Diagnostics/devtools readiness: define a Fret equivalent of Demo/Metrics/Debug discoverability.
    Follow-on: `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` and
    `docs/workstreams/diag-fearless-refactor-v2/README.md` keep the GUI

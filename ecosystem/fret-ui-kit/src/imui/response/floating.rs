@@ -3,14 +3,18 @@ use fret_ui::GlobalElementId;
 
 #[derive(Debug, Clone, Copy)]
 pub struct FloatingAreaResponse {
-    pub id: GlobalElementId,
-    pub rect: Option<Rect>,
-    pub position: Point,
-    pub dragging: bool,
-    pub drag_kind: fret_runtime::DragKindId,
+    pub(crate) id: GlobalElementId,
+    pub(crate) rect: Option<Rect>,
+    pub(crate) position: Point,
+    pub(crate) dragging: bool,
+    pub(crate) drag_kind: fret_runtime::DragKindId,
 }
 
 impl FloatingAreaResponse {
+    pub fn id(self) -> GlobalElementId {
+        self.id
+    }
+
     pub fn rect(self) -> Option<Rect> {
         self.rect
     }
@@ -22,23 +26,35 @@ impl FloatingAreaResponse {
     pub fn dragging(self) -> bool {
         self.dragging
     }
+
+    pub fn drag_kind(self) -> fret_runtime::DragKindId {
+        self.drag_kind
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct FloatingWindowResponse {
-    pub area: FloatingAreaResponse,
-    pub size: Option<Size>,
-    pub resizing: bool,
-    pub collapsed: bool,
+    pub(crate) area: FloatingAreaResponse,
+    pub(crate) size: Option<Size>,
+    pub(crate) resizing: bool,
+    pub(crate) collapsed: bool,
 }
 
 impl FloatingWindowResponse {
+    pub fn area(self) -> FloatingAreaResponse {
+        self.area
+    }
+
+    pub fn id(self) -> GlobalElementId {
+        self.area.id()
+    }
+
     pub fn rect(self) -> Option<Rect> {
-        self.area.rect
+        self.area.rect()
     }
 
     pub fn position(self) -> Point {
-        self.area.position
+        self.area.position()
     }
 
     pub fn size(self) -> Option<Size> {
@@ -46,7 +62,11 @@ impl FloatingWindowResponse {
     }
 
     pub fn dragging(self) -> bool {
-        self.area.dragging
+        self.area.dragging()
+    }
+
+    pub fn drag_kind(self) -> fret_runtime::DragKindId {
+        self.area.drag_kind()
     }
 
     pub fn resizing(self) -> bool {

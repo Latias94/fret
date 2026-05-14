@@ -14,7 +14,7 @@ pub use gradient_editor::{
 pub use inspector_panel::{
     InspectorPanel, InspectorPanelCx, InspectorPanelOptions, InspectorPanelSearchAssistOptions,
 };
-pub use property_grid::{PropertyGrid, PropertyGridOptions, PropertyGridRow, PropertyGridRowCx};
+pub use property_grid::{PropertyGrid, PropertyGridOptions, PropertyGridRowCx};
 pub use property_grid_virtualized::{
     PropertyGridVirtualized, PropertyGridVirtualizedOptions, PropertyGridVirtualizedRowCx,
 };

@@ -2,6 +2,8 @@ use std::any::Any;
 use std::hash::Hash;
 use std::panic::Location;
 
+use slotmap::Key as _;
+
 use fret_runtime::Model;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
@@ -98,6 +100,7 @@ impl<'cx, 'a, H: UiHost> DepsBuilder<'cx, 'a, H> {
         model: &Model<T>,
         invalidation: Invalidation,
     ) -> &mut Self {
+        self.deps.push_token(model.id().data().as_ffi());
         let rev = observed_model_revision(self.cx, model, invalidation);
         self.deps.push_token(rev.unwrap_or(MISSING_TOKEN));
         #[cfg(debug_assertions)]
@@ -350,4 +353,289 @@ pub fn observed_global_token<T: Any, H: UiHost>(
 ) -> Option<u64> {
     cx.observe_global::<T>(invalidation);
     cx.app.global_revision_of::<T>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        any::{Any, TypeId},
+        collections::{HashMap, HashSet},
+    };
+
+    use fret_core::{AppWindowId, Point, PointerId, Rect};
+    use fret_runtime::{
+        ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
+        DragSessionId, Effect, EffectSink, FrameId, GlobalsHost, ImageUploadToken, ModelHost,
+        ModelId, ModelStore, ModelsHost, ShareSheetToken, TickId, TimeHost, TimerToken,
+    };
+    use fret_ui::ElementRuntime;
+
+    #[derive(Default)]
+    struct TestUiHost {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
+        commands: CommandRegistry,
+        redraws: HashSet<AppWindowId>,
+        effects: Vec<Effect>,
+        drags: HashMap<PointerId, DragSession>,
+        next_drag_session_id: u64,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_share_sheet_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl GlobalsHost for TestUiHost {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_ref::<T>())
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            #[derive(Debug)]
+            struct GlobalLeaseMarker;
+
+            struct Guard<T: Any> {
+                type_id: TypeId,
+                value: Option<T>,
+                globals: *mut HashMap<TypeId, Box<dyn Any>>,
+            }
+
+            impl<T: Any> Drop for Guard<T> {
+                fn drop(&mut self) {
+                    let Some(value) = self.value.take() else {
+                        return;
+                    };
+                    unsafe {
+                        (*self.globals).insert(self.type_id, Box::new(value));
+                    }
+                }
+            }
+
+            let type_id = TypeId::of::<T>();
+            let existing = self
+                .globals
+                .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
+
+            let existing = match existing {
+                None => None,
+                Some(v) => {
+                    if v.is::<GlobalLeaseMarker>() {
+                        panic!("global already leased: {type_id:?}");
+                    }
+                    Some(*v.downcast::<T>().expect("global type id must match"))
+                }
+            };
+
+            let mut guard = Guard::<T> {
+                type_id,
+                value: Some(existing.unwrap_or_else(init)),
+                globals: &mut self.globals as *mut _,
+            };
+
+            let result = {
+                let value = guard.value.as_mut().expect("guard value exists");
+                f(value, self)
+            };
+
+            drop(guard);
+            result
+        }
+    }
+
+    impl ModelHost for TestUiHost {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl ModelsHost for TestUiHost {
+        fn take_changed_models(&mut self) -> Vec<ModelId> {
+            self.models.take_changed_models()
+        }
+    }
+
+    impl CommandsHost for TestUiHost {
+        fn commands(&self) -> &CommandRegistry {
+            &self.commands
+        }
+    }
+
+    impl EffectSink for TestUiHost {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraws.insert(window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+    }
+
+    impl TimeHost for TestUiHost {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            let token = TimerToken(self.next_timer_token);
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            token
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            let token = ClipboardToken(self.next_clipboard_token);
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            token
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            let token = ShareSheetToken(self.next_share_sheet_token);
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+            token
+        }
+
+        fn next_image_upload_token(&mut self) -> ImageUploadToken {
+            let token = ImageUploadToken(self.next_image_upload_token);
+            self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+            token
+        }
+    }
+
+    impl DragHost for TestUiHost {
+        fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
+            self.drags.get(&pointer_id)
+        }
+
+        fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
+            self.drags.get_mut(&pointer_id)
+        }
+
+        fn cancel_drag(&mut self, pointer_id: PointerId) {
+            self.drags.remove(&pointer_id);
+        }
+
+        fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
+            self.drags.values().any(predicate)
+        }
+
+        fn find_drag_pointer_id(
+            &self,
+            mut predicate: impl FnMut(&DragSession) -> bool,
+        ) -> Option<PointerId> {
+            self.drags
+                .values()
+                .find(|d| predicate(d))
+                .map(|d| d.pointer_id)
+        }
+
+        fn cancel_drag_sessions(
+            &mut self,
+            mut predicate: impl FnMut(&DragSession) -> bool,
+        ) -> Vec<PointerId> {
+            let to_cancel: Vec<PointerId> = self
+                .drags
+                .values()
+                .filter(|d| predicate(d))
+                .map(|d| d.pointer_id)
+                .collect();
+            for pointer_id in &to_cancel {
+                self.cancel_drag(*pointer_id);
+            }
+            to_cancel
+        }
+
+        fn begin_drag_with_kind<T: Any>(
+            &mut self,
+            pointer_id: PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+            let session_id = DragSessionId(self.next_drag_session_id);
+            self.drags.insert(
+                pointer_id,
+                DragSession::new(session_id, pointer_id, source_window, kind, start, payload),
+            );
+        }
+
+        fn begin_cross_window_drag_with_kind<T: Any>(
+            &mut self,
+            pointer_id: PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
+            let session_id = DragSessionId(self.next_drag_session_id);
+            self.drags.insert(
+                pointer_id,
+                DragSession::new_cross_window(
+                    session_id,
+                    pointer_id,
+                    source_window,
+                    kind,
+                    start,
+                    payload,
+                ),
+            );
+        }
+    }
+
+    #[test]
+    fn deps_builder_model_rev_includes_model_identity_before_revision() {
+        let mut host = TestUiHost::default();
+        let material = host.models_mut().insert("material".to_string());
+        let light = host.models_mut().insert("light".to_string());
+
+        let mut runtime = ElementRuntime::new();
+        let mut cx = ElementContext::new_for_root_name(
+            &mut host,
+            &mut runtime,
+            AppWindowId::default(),
+            Rect::default(),
+            "selector-test",
+        );
+
+        let material_sig = {
+            let mut deps = DepsBuilder::new(&mut cx);
+            deps.model_rev_invalidation(&material, Invalidation::Paint);
+            deps.finish()
+        };
+
+        let light_sig = {
+            let mut deps = DepsBuilder::new(&mut cx);
+            deps.model_rev_invalidation(&light, Invalidation::Paint);
+            deps.finish()
+        };
+
+        assert_eq!(material_sig.tokens().len(), 2);
+        assert_eq!(light_sig.tokens().len(), 2);
+        assert_eq!(material_sig.tokens()[0], material.id().data().as_ffi());
+        assert_eq!(light_sig.tokens()[0], light.id().data().as_ffi());
+        assert_eq!(material_sig.tokens()[1], light_sig.tokens()[1]);
+        assert_ne!(material_sig, light_sig);
+    }
 }

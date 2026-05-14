@@ -12,7 +12,7 @@ use fret_ui_kit::headless::text_assist::TextAssistItem;
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
     InspectorPanelOptions, PropertyGrid, PropertyGridOptions, PropertyGridVirtualized,
-    PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions, PropertyRow,
+    PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions,
 };
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
@@ -384,14 +384,11 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         3,
         |index| index as u64,
         move |cx, index, row_cx| {
-            PropertyRow::new()
-                .options(row_cx.row_options.clone())
-                .into_element(
-                    cx,
-                    |cx| cx.text(format!("Item {index}")),
-                    |cx| cx.text("Value"),
-                    |_cx| None,
-                )
+            row_cx.row(
+                cx,
+                |cx| cx.text(format!("Item {index}")),
+                |cx| cx.text("Value"),
+            )
         },
     );
 

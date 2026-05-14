@@ -118,7 +118,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     spec: DisclosureSpec,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> DisclosureResponse {
-    let mut response = DisclosureResponse::default();
+    let mut response = DisclosureResponse::empty();
 
     let element = ui.with_cx_mut(|cx| {
         let scope_key = format!("fret-ui-kit.imui.disclosure.{id}");

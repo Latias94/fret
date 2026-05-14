@@ -275,7 +275,7 @@ impl GradientEditor {
                                 enabled,
                                 stops_test_id.clone(),
                                 stop,
-                                row_cx.row_options.clone(),
+                                row_cx.row_options(),
                             )
                         }));
                     }

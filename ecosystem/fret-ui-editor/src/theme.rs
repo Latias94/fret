@@ -121,13 +121,6 @@ pub fn reapply_installed_editor_theme_preset_on_window_metrics_change<H: UiHost>
     )
 }
 
-/// Apply the default editor density patch.
-///
-/// This remains as the compatibility wrapper for older callsites.
-pub fn apply_editor_theme_patch_v1<H: UiHost>(app: &mut H) {
-    apply_editor_theme_preset_v1(app, EditorThemePresetV1::Default);
-}
-
 fn editor_theme_patch_v1() -> ThemeConfig {
     let mut cfg = ThemeConfig::default();
 

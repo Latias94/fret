@@ -71,6 +71,24 @@ Exit criteria:
   policy-light, apps teach the opt-in `fret::imui` lane, and policy-heavy widgets remain under
   `fret::imui::kit` / `editor` / `docking`. New public helpers need two proof surfaces plus a
   focused gate before they become default authoring vocabulary.
+  2026-05-14 cleanup result: `FloatingAreaContext` is now externally opaque, with read-only
+  accessors for facade-created area id, position, and drag kind.
+  2026-05-14 follow-up result: floating responses now expose area/window state through accessors
+  instead of public fields.
+  2026-05-14 response follow-up result: disclosure and combo responses now expose trigger state
+  through `response()`, keep trigger/open/toggle storage crate-local, and no longer allow external
+  default construction.
+  2026-05-14 text-picker follow-up result: `InputTextPickerResponse` now exposes input state and
+  pick results through accessors while keeping its storage crate-local.
+  2026-05-14 tab follow-up result: tab-bar aggregate and tab-trigger responses now keep selection /
+  trigger storage crate-local while preserving `selected_id()`, `selected_changed()`, `trigger(...)`,
+  and trigger edge accessors.
+  2026-05-14 virtual-list follow-up result: `VirtualListResponse` now keeps scroll handle and
+  rendered-range storage crate-local while retaining `handle()` and `rendered_range()`.
+  2026-05-14 table follow-up result: table aggregate/header/resize responses now keep metadata and
+  drag storage crate-local while exposing explicit header and resize accessors.
+  2026-05-14 drag follow-up result: `DragResponse` now keeps edge/delta storage crate-local while
+  preserving read-only drag accessors and `ResponseExt` helper methods.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
@@ -81,10 +99,19 @@ Exit criteria:
   Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
   outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
+  2026-05-14 cleanup result: the unused `apply_editor_theme_patch_v1` compatibility wrapper was
+  deleted; explicit preset entry points remain the only editor theme patch authoring path.
   Current porting-sugar audit result: keep `SameLine` / item-width / label-ID sugar candidate-only
   until at least two proof surfaces pay the same authoring tax. Prefer typed Fret helpers
   (`horizontal_with_options`, `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over
   copying Dear ImGui's mutable cursor, item-width stack, or label suffix parser.
+  2026-05-14 cleanup result: the unused public `PropertyGridRow` wrapper was deleted so the grid
+  row authoring surface stays on the canonical `PropertyGridRowCx::row(...)` / `row_with(...)`
+  path instead of growing a second row-policy wrapper.
+  2026-05-14 follow-up result: both eager and virtualized grid row contexts are now opaque; row
+  options stay crate-local while external callers use row helpers instead of public fields.
+  2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
+  methods and keeps `query_lower` private.
   Current child-region audit result: keep `child-region depth` as a candidate-only item until a
   behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
   proof and gate.
