@@ -2518,6 +2518,27 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/property_grid_virtualized.rs"),
+            required=[
+                "impl PropertyGridVirtualizedRowCx",
+                "pub fn row<H: UiHost>(",
+                "pub fn row_with<H: UiHost>(",
+                "row.options(self.row_options.clone())",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs"),
+            required=[
+                "imui::property_grid_virtualized(",
+                "row_cx.row(",
+                "format!(\"Item {index}\")",
+            ],
+            forbidden=[
+                "row_cx.row_options",
+            ],
+        ),
+        SourceCheck(
             Path("docs/workstreams/README.md"),
             required=[
                 "`docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json`",

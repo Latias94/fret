@@ -13,7 +13,7 @@ use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::composites::property_row::{PropertyRowLayoutVariant, PropertyRowOptions};
+use crate::composites::property_row::{PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions};
 use crate::primitives::EditorDensity;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 
@@ -165,4 +165,27 @@ impl PropertyGridVirtualized {
 pub struct PropertyGridVirtualizedRowCx {
     pub density: EditorDensity,
     pub row_options: PropertyRowOptions,
+}
+
+impl PropertyGridVirtualizedRowCx {
+    pub fn row<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        self.row_with(cx, PropertyRow::new(), label, value, |_cx| None)
+    }
+
+    pub fn row_with<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        row: PropertyRow,
+        label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
+    ) -> AnyElement {
+        row.options(self.row_options.clone())
+            .into_element(cx, label, value, actions)
+    }
 }

@@ -155,6 +155,10 @@ Run evidence:
   `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast`,
   `python tools/gate_imui_workstream_source.py`, `python tools/gate_imui_facade_teaching_source.py`,
   and `git diff --check` passed locally.
+- 2026-05-14: `PropertyGridVirtualizedRowCx` now mirrors `PropertyGridRowCx` with `row(...)` and
+  `row_with(...)`, so virtualized property-grid callers can keep row policy centralized instead of
+  copying `row_cx.row_options` into each row. The adapter smoke now uses the helper, and
+  `tools/gate_imui_workstream_source.py` rejects that manual copy from returning there.
 
 ## P3 Child Region Readiness Gates
 
