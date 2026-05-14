@@ -438,6 +438,15 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         "product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}",
         "product workflow artifacts: {}",
         "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
+        "regression_summary_drilldown(&summary)",
+        "regression_bundle_followup_command_lines(drilldown.bundle_dirs.iter().map(String::as_str))",
+        "bundle_dirs: Vec<String>",
+        "perf_evidence_lines: Vec<String>",
+        "followup_command_lines: Vec<String>",
+        "bundle dirs:",
+        "perf evidence:",
+        "follow-up commands:",
+        "build_regression_dashboard_result_limits_top_rows_and_builds_human_summary",
         "mcp_first_open_resource_text_surfaces_imui_product_chain",
     ):
         _assert_contains(source, marker, name)

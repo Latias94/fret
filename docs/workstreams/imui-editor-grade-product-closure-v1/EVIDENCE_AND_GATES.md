@@ -585,12 +585,16 @@ DevTools MCP product-workflow projection follow-up (2026-05-15):
   focused discovery command, launched `perf-docking` command, `perf-docking-arbitration-steady`
   suite, product-closure docs, and `perf-docking/regression.summary.json` plus
   `perf-docking/check.perf_thresholds.json`.
+- `fret_diag_regression_dashboard` now consumes the shared `fret-diag` regression drill-down and
+  follow-up command projection, returning bundle dirs, capability provenance, perf evidence, and
+  follow-up command lines instead of maintaining a MCP-private regression evidence parser.
 - The default product-chain discovery gate now source-checks the MCP projection alongside the GUI
   first-open panel, so `fretboard-dev list tool-apps`, the GUI shell, and the MCP adapter cannot
   silently diverge on the product workflow route.
 - Focused source gates:
 
 ```text
+cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast
 python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/gate_imui_workstream_source.py

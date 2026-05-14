@@ -8,8 +8,8 @@ use std::time::Duration;
 use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
-    RegressionSummaryV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
+    regression_bundle_followup_command_lines, regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -1660,9 +1660,15 @@ struct DashboardFailingSummaryEntryV1 {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 struct RegressionDashboardEvidenceV1 {
     #[serde(default)]
+    bundle_dirs: Vec<String>,
+    #[serde(default)]
     capability_sources: Vec<String>,
     #[serde(default)]
     capabilities_check_paths: Vec<String>,
+    #[serde(default)]
+    perf_evidence_lines: Vec<String>,
+    #[serde(default)]
+    followup_command_lines: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1682,9 +1688,15 @@ struct RegressionDashboardResultV1 {
     top_reason_codes: Vec<DashboardReasonCodeEntryV1>,
     failing_summaries: Vec<DashboardFailingSummaryEntryV1>,
     #[serde(default)]
+    bundle_dirs: Vec<String>,
+    #[serde(default)]
     capability_sources: Vec<String>,
     #[serde(default)]
     capabilities_check_paths: Vec<String>,
+    #[serde(default)]
+    perf_evidence_lines: Vec<String>,
+    #[serde(default)]
+    followup_command_lines: Vec<String>,
     human_summary: String,
     #[serde(default)]
     index_json: Option<String>,
@@ -2241,30 +2253,6 @@ fn session_resource_uris(
     uris
 }
 
-fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
-    if let Some(path) = value.get("path").and_then(|value| value.as_str())
-        && !path.trim().is_empty()
-    {
-        return Some(path.to_string());
-    }
-    if let Some(label) = value.get("label").and_then(|value| value.as_str())
-        && !label.trim().is_empty()
-    {
-        return Some(label.to_string());
-    }
-    let transport = value.get("transport").and_then(|value| value.as_str());
-    let session_id = value.get("session_id").and_then(|value| value.as_str());
-    match (transport, session_id) {
-        (Some(transport), Some(session_id))
-            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
-        {
-            Some(format!("{transport}:{session_id}"))
-        }
-        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
-        _ => None,
-    }
-}
-
 fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashboardEvidenceV1 {
     let Ok(summary_json) = std::fs::read_to_string(summary_path) else {
         return RegressionDashboardEvidenceV1::default();
@@ -2272,58 +2260,16 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
     let Ok(summary) = serde_json::from_str::<RegressionSummaryV1>(&summary_json) else {
         return RegressionDashboardEvidenceV1::default();
     };
-    let mut evidence = RegressionDashboardEvidenceV1::default();
-    for item in summary.items {
-        if item.status == RegressionStatusV1::Passed {
-            continue;
-        }
-        let capability_source = item
-            .evidence
-            .as_ref()
-            .and_then(|evidence| evidence.extra.as_ref())
-            .and_then(|extra| extra.get("capability_source"))
-            .and_then(capability_source_display_from_value)
-            .or_else(|| {
-                item.source
-                    .as_ref()
-                    .and_then(|source| source.metadata.as_ref())
-                    .and_then(|metadata| metadata.get("capability_source"))
-                    .and_then(capability_source_display_from_value)
-            })
-            .or_else(|| {
-                item.evidence
-                    .as_ref()
-                    .and_then(|evidence| evidence.extra.as_ref())
-                    .and_then(|extra| extra.get("capabilities_source_path"))
-                    .and_then(|value| value.as_str())
-                    .filter(|value| !value.trim().is_empty())
-                    .map(ToString::to_string)
-            });
-        if let Some(source) = capability_source
-            && !evidence
-                .capability_sources
-                .iter()
-                .any(|existing| existing == &source)
-        {
-            evidence.capability_sources.push(source);
-        }
-        if let Some(check_path) = item
-            .evidence
-            .as_ref()
-            .and_then(|evidence| evidence.extra.as_ref())
-            .and_then(|extra| extra.get("capabilities_check_path"))
-            .and_then(|value| value.as_str())
-            .filter(|value| !value.trim().is_empty())
-            .map(ToString::to_string)
-            && !evidence
-                .capabilities_check_paths
-                .iter()
-                .any(|existing| existing == &check_path)
-        {
-            evidence.capabilities_check_paths.push(check_path);
-        }
+    let drilldown = regression_summary_drilldown(&summary);
+    let followup_command_lines =
+        regression_bundle_followup_command_lines(drilldown.bundle_dirs.iter().map(String::as_str));
+    RegressionDashboardEvidenceV1 {
+        bundle_dirs: drilldown.bundle_dirs,
+        capability_sources: drilldown.capability_sources,
+        capabilities_check_paths: drilldown.capabilities_check_paths,
+        perf_evidence_lines: drilldown.perf_evidence_lines,
+        followup_command_lines,
     }
-    evidence
 }
 
 fn build_regression_dashboard_result(
@@ -2338,6 +2284,10 @@ fn build_regression_dashboard_result(
     let summary_path = index_path.with_file_name(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     let evidence = collect_regression_dashboard_evidence(&summary_path);
     let mut human_lines = dashboard_human_lines_from_projection(index_path, &projection);
+    if !evidence.bundle_dirs.is_empty() {
+        human_lines.push("bundle dirs:".to_string());
+        human_lines.extend(evidence.bundle_dirs.iter().map(|dir| format!("  - {dir}")));
+    }
     if !evidence.capability_sources.is_empty() {
         human_lines.push("capability sources:".to_string());
         human_lines.extend(
@@ -2354,6 +2304,24 @@ fn build_regression_dashboard_result(
                 .capabilities_check_paths
                 .iter()
                 .map(|path| format!("  - {path}")),
+        );
+    }
+    if !evidence.perf_evidence_lines.is_empty() {
+        human_lines.push("perf evidence:".to_string());
+        human_lines.extend(
+            evidence
+                .perf_evidence_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.followup_command_lines.is_empty() {
+        human_lines.push("follow-up commands:".to_string());
+        human_lines.extend(
+            evidence
+                .followup_command_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
         );
     }
     let human_summary = human_lines.join("\n");
@@ -2391,8 +2359,11 @@ fn build_regression_dashboard_result(
             .into_iter()
             .map(Into::into)
             .collect(),
+        bundle_dirs: evidence.bundle_dirs,
         capability_sources: evidence.capability_sources,
         capabilities_check_paths: evidence.capabilities_check_paths,
+        perf_evidence_lines: evidence.perf_evidence_lines,
+        followup_command_lines: evidence.followup_command_lines,
         human_summary,
         index_json: if include_json { index_json } else { None },
     }
@@ -3044,6 +3015,9 @@ mod tests {
                     "lane": "smoke",
                     "reason_code": "capability.missing",
                     "evidence": {
+                        "bundle_dir": "target/fret-diag/campaigns/ui-gallery/run-a",
+                        "perf_summary_json": "target/fret-diag/campaigns/ui-gallery/layout.perf.summary.v1.json",
+                        "compare_json": "target/fret-diag/campaigns/ui-gallery/check.perf_thresholds.json",
                         "extra": {
                             "capability_source": {
                                 "kind": "filesystem",
@@ -3089,6 +3063,10 @@ mod tests {
         assert!(result.human_summary.contains("top reason codes:"));
         assert!(result.human_summary.contains("pixel_diff: 4"));
         assert_eq!(
+            result.bundle_dirs,
+            vec!["target/fret-diag/campaigns/ui-gallery/run-a".to_string()]
+        );
+        assert_eq!(
             result.capability_sources,
             vec!["target/fret-diag/capabilities.json".to_string()]
         );
@@ -3096,8 +3074,17 @@ mod tests {
             result.capabilities_check_paths,
             vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
         );
+        assert!(result.perf_evidence_lines.iter().any(|line| line.contains(
+            "capability-check [skipped_policy] perf_summary_json: target/fret-diag/campaigns/ui-gallery/layout.perf.summary.v1.json"
+        )));
+        assert!(result.followup_command_lines.iter().any(|line| line.contains(
+            "diag stats: cargo run -p fretboard-dev -- diag stats target/fret-diag/campaigns/ui-gallery/run-a --json"
+        )));
+        assert!(result.human_summary.contains("bundle dirs:"));
         assert!(result.human_summary.contains("capability sources:"));
         assert!(result.human_summary.contains("capability checks:"));
+        assert!(result.human_summary.contains("perf evidence:"));
+        assert!(result.human_summary.contains("follow-up commands:"));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

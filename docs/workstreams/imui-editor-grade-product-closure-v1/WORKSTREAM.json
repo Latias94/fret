@@ -446,6 +446,10 @@
       "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
     },
     {
+      "name": "imui-p2-devtools-mcp-regression-dashboard-drilldown",
+      "command": "cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast"
+    },
+    {
       "name": "devtools-build",
       "command": "cargo build -p fret-devtools"
     },
@@ -610,6 +614,7 @@
     "docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md",
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
+    "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",

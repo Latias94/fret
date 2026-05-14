@@ -303,6 +303,9 @@ Current status:
   footprint-compare commands. This keeps the failing-summary-to-next-command loop productized
   without moving diagnostics policy into `fret-imui` or leaving command composition as GUI-private
   logic.
+- 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
+  projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
+  lines in both structured JSON and the human summary.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.
