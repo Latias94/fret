@@ -464,6 +464,37 @@ This slice is a local paint-cache ownership split, not a new perf claim. It repl
 `PreviousFramePaintRecording`, keeps generation and replay counters in `PaintCacheState`, and leaves
 the final previous-frame recording owner decision open for the next paint-cache replay slice.
 
+Most recent previous-frame paint replay span slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4H_PREVIOUS_FRAME_PAINT_REPLAY_SPAN_SLICE_2026-05-14.md`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+
+Observed result:
+
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- paint-cache regression gate: `12 passed, 929 skipped`;
+- layering check: passed;
+- workstream catalog: passed;
+- `WORKSTREAM.json` validation: passed;
+- `git diff --check`: passed.
+
+This slice is a local paint-cache replay-owner narrowing step, not a new perf claim. It adds
+text blob side-index spans to `PaintCacheEntry`, makes `PreviousFramePaintRecording` own entry
+range validation and replay slicing, and uses the precomputed text blob side index during cache-hit
+replay. The final previous-frame recording owner decision remains open.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

@@ -626,6 +626,6 @@ impl<H: UiHost> UiTree<H> {
 
     #[cfg(test)]
     pub(crate) fn test_previous_frame_paint_recording_ops_len(&self) -> usize {
-        self.paint_cache.previous_frame.ops.len()
+        self.paint_cache.previous_frame.ops_len()
     }
 }

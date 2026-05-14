@@ -73,6 +73,8 @@ pub(super) struct PaintCacheEntry {
     pub(super) origin: Point,
     pub(super) start: u32,
     pub(super) end: u32,
+    pub(super) text_blob_start: u32,
+    pub(super) text_blob_end: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -99,12 +101,17 @@ pub(super) struct PaintCacheState {
 
 #[derive(Debug, Default)]
 pub(super) struct PreviousFramePaintRecording {
-    pub(super) ops: Vec<SceneOp>,
+    ops: Vec<SceneOp>,
     text_blob_ids: Vec<TextBlobId>,
     fingerprint: u64,
 }
 
 impl PreviousFramePaintRecording {
+    #[cfg(test)]
+    pub(super) fn ops_len(&self) -> usize {
+        self.ops.len()
+    }
+
     pub(super) fn ingest_scene(&mut self, scene: &mut Scene) {
         scene.swap_storage(
             &mut self.ops,
@@ -118,6 +125,50 @@ impl PreviousFramePaintRecording {
         self.text_blob_ids.clear();
         self.fingerprint = 0;
     }
+
+    pub(super) fn is_entry_replayable(&self, entry: PaintCacheEntry) -> bool {
+        self.entry_ranges(entry).is_some()
+    }
+
+    pub(super) fn replay_entry_translated(
+        &self,
+        scene: &mut Scene,
+        entry: PaintCacheEntry,
+        delta: Point,
+    ) -> Option<usize> {
+        let ranges = self.entry_ranges(entry)?;
+        let start = scene.ops_len();
+        scene.replay_ops_translated_with_text_blob_ids(
+            &self.ops[ranges.ops],
+            delta,
+            &self.text_blob_ids[ranges.text_blobs],
+        );
+        Some(scene.ops_len().saturating_sub(start))
+    }
+
+    fn entry_ranges(&self, entry: PaintCacheEntry) -> Option<PreviousFramePaintRecordingRanges> {
+        let op_start = entry.start as usize;
+        let op_end = entry.end as usize;
+        if op_start > op_end || op_end > self.ops.len() {
+            return None;
+        }
+
+        let text_blob_start = entry.text_blob_start as usize;
+        let text_blob_end = entry.text_blob_end as usize;
+        if text_blob_start > text_blob_end || text_blob_end > self.text_blob_ids.len() {
+            return None;
+        }
+
+        Some(PreviousFramePaintRecordingRanges {
+            ops: op_start..op_end,
+            text_blobs: text_blob_start..text_blob_end,
+        })
+    }
+}
+
+struct PreviousFramePaintRecordingRanges {
+    ops: std::ops::Range<usize>,
+    text_blobs: std::ops::Range<usize>,
 }
 
 impl PaintCacheState {

@@ -216,6 +216,68 @@ fn previous_frame_paint_recording_ingests_scene_and_clears_when_recording_invali
 }
 
 #[test]
+fn previous_frame_paint_recording_replay_preserves_text_blob_side_index() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let text_blob = fret_core::TextBlobId::from(KeyData::from_ffi(101));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_paint_cache_enabled(true);
+
+    struct TextPaintWidget {
+        paints: Arc<AtomicUsize>,
+        text_blob: fret_core::TextBlobId,
+    }
+
+    impl<H: UiHost> Widget<H> for TextPaintWidget {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            self.paints.fetch_add(1, Ordering::SeqCst);
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(0),
+                origin: cx.bounds.origin,
+                text: self.text_blob,
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                outline: None,
+                shadow: None,
+            });
+        }
+    }
+
+    let node = ui.create_node(TextPaintWidget {
+        paints: paints.clone(),
+        text_blob,
+    });
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert_eq!(scene.text_blob_ids(), &[text_blob]);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        1,
+        "text widget should be replayed from the previous-frame recording"
+    );
+    assert_eq!(
+        scene.text_blob_ids(),
+        &[text_blob],
+        "paint-cache replay should preserve the precomputed text blob side index"
+    );
+}
+
+#[test]
 fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
     let mut app = crate::test_host::TestHost::new();
 

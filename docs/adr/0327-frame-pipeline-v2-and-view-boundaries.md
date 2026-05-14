@@ -137,7 +137,8 @@ entries through `ViewBoundaryState::paint_cache`; plain retained paint-cache nod
 `UiTree::boundary_paint_cache_entries`, a boundary-shaped side store that migrates into
 `ViewBoundaryState::paint_cache` if the node becomes a runtime boundary. M4G split previous-frame
 scene recording storage into `PreviousFramePaintRecording`, so the remaining previous-frame replay
-carrier is now named separately from paint-cache generation and counter control. Its final owner
+carrier is now named separately from paint-cache generation and counter control. M4H moved replay
+range validation, op slicing, and text blob side-index replay into that carrier. Its final owner
 remains an open paint-cache replay decision.
 
 ### 3. Layout containment is a dependency contract

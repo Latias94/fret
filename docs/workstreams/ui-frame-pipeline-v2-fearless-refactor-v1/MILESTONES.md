@@ -211,6 +211,17 @@ Status after M4G on 2026-05-14:
   step is to decide whether `PreviousFramePaintRecording` moves into `ViewBoundaryState`, feeds
   boundary-owned scene fragments, or remains as an explicitly retained per-tree mechanism.
 
+Status after M4H on 2026-05-14:
+
+- `M4H_PREVIOUS_FRAME_PAINT_REPLAY_SPAN_SLICE_2026-05-14.md` moves previous-frame
+  `PaintCacheEntry` replay range validation, op slicing, and text blob side-index replay into
+  `PreviousFramePaintRecording`.
+- `PaintCacheEntry` now carries both op spans and text blob side-index spans, and replay uses
+  `Scene::replay_ops_translated_with_text_blob_ids(...)` to preserve the precomputed side index.
+- This is still not the final paint-cache replay owner decision. `PaintCacheState` owns the
+  recording carrier until the workstream decides whether it moves into `ViewBoundaryState`, becomes
+  a boundary-owned scene-fragment source, or remains an explicitly retained per-tree mechanism.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.

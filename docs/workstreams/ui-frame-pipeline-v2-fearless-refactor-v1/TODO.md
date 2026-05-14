@@ -24,7 +24,8 @@ Progress ledger:
   retained behind an accepted ADR/workstream reason. M4E moves boundary-node `PaintCacheEntry`
   ownership into `ViewBoundaryState::paint_cache`; M4F deletes the remaining node-owned
   `PaintCacheEntry` fallback and introduces a plain-node boundary-shaped side store; M4G splits the
-  previous-frame scene recording into `PreviousFramePaintRecording`; final recording ownership
+  previous-frame scene recording into `PreviousFramePaintRecording`; M4H moves replay range
+  validation and text side-index replay into that recording carrier; final recording ownership
   remains open.
 - [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
   boundary-hint API. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces
@@ -134,6 +135,9 @@ Progress ledger:
   - [x] Split paint-cache previous-frame recording storage out of generation/counter control into
     `PreviousFramePaintRecording`
     (`M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md`).
+  - [x] Move previous-frame replay range validation, op slicing, and text side-index replay into
+    `PreviousFramePaintRecording`
+    (`M4H_PREVIOUS_FRAME_PAINT_REPLAY_SPAN_SLICE_2026-05-14.md`).
   - [ ] Decide whether `PreviousFramePaintRecording` migrates into `ViewBoundaryState`, becomes a
     boundary-owned scene-fragment source, or remains as an explicitly retained per-tree recording
     mechanism.
