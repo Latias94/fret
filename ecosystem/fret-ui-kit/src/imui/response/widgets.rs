@@ -21,12 +21,12 @@ pub struct ComboResponse {
     pub(crate) toggled: bool,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct InputTextPickerResponse {
-    pub input: ResponseExt,
-    pub open: bool,
-    pub picked_index: Option<usize>,
-    pub picked: Option<Arc<str>>,
+    pub(crate) input: ResponseExt,
+    pub(crate) open: bool,
+    pub(crate) picked_index: Option<usize>,
+    pub(crate) picked: Option<Arc<str>>,
 }
 
 /// Aggregated response surface for helper-owned tab bars.
@@ -157,6 +157,14 @@ impl ComboResponse {
 impl InputTextPickerResponse {
     pub fn id(&self) -> Option<GlobalElementId> {
         self.input.id
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.input
+    }
+
+    pub fn open(&self) -> bool {
+        self.open
     }
 
     pub fn changed(&self) -> bool {

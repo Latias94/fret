@@ -42,7 +42,7 @@ fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
                 },
             );
             picked_index_out.set(response.picked_index());
-            picked_out.replace(response.picked.clone());
+            picked_out.replace(response.picked().map(Arc::from));
         })
     };
 

@@ -93,6 +93,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 response follow-up: disclosure and combo responses now keep trigger/open/toggle
    fields crate-local, remove external default construction, and expose read-only `response()`,
    `open()`, and `toggled()` methods for callers.
+   2026-05-14 text-picker follow-up: `InputTextPickerResponse` now keeps input/open/pick storage
+   crate-local, removes external default construction, and exposes read-only `response()`, `open()`,
+   `picked()`, and `picked_index()` accessors.
    2026-05-14 tab follow-up: tab-bar aggregate and tab-trigger responses now follow the same
    accessor-first shape; tab response storage stays crate-local and `TabBarResponse` no longer
    exposes external default construction.

@@ -133,6 +133,9 @@ Run evidence:
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
   `tools/gate_imui_workstream_source.py` rejects public fields from returning.
+- 2026-05-14: made `InputTextPickerResponse` accessor-first for input/open/pick state. Text picker
+  tests now use `picked()` / `picked_index()` and the source gate rejects public picker response
+  fields and public default construction from returning.
 - 2026-05-14: made `TabBarResponse` / `TabTriggerResponse` accessor-first for selection and trigger
   state. Existing tab tests already use `selected_id()`, `selected_changed()`, `trigger(...)`, and
   trigger edge helpers; the source gate now rejects public tab response fields and public
