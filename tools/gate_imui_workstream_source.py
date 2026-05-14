@@ -23,6 +23,22 @@ class OpaqueStructCheck:
     struct_names: list[str]
 
 
+OUTPUT_STRUCT_SCAN_ROOTS = (
+    Path("ecosystem/fret-imui/src"),
+    Path("ecosystem/fret-ui-editor/src"),
+    Path("ecosystem/fret-ui-kit/src/imui"),
+)
+
+OUTPUT_STRUCT_SUFFIXES = (
+    "Context",
+    "Outcome",
+    "Record",
+    "Response",
+    "Signal",
+    "Summary",
+)
+
+
 def read_source(path: Path) -> str:
     try:
         return (WORKSPACE_ROOT / path).read_text(encoding="utf-8")
@@ -58,6 +74,41 @@ def find_struct_body(source: str, struct_name: str) -> str | None:
                 return source[start:idx]
         idx += 1
     return None
+
+
+def public_output_struct_names(source: str) -> list[str]:
+    names: list[str] = []
+    for match in re.finditer(
+        r"\bpub\s+struct\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*<[^{};]+>)?\s*\{",
+        source,
+    ):
+        name = match.group(1)
+        if name.endswith(OUTPUT_STRUCT_SUFFIXES):
+            names.append(name)
+    return names
+
+
+def check_opaque_output_struct_catalog(
+    checks: list[OpaqueStructCheck], failures: list[str]
+) -> None:
+    covered: dict[Path, set[str]] = {}
+    for check in checks:
+        covered.setdefault(check.path, set()).update(check.struct_names)
+
+    for root in OUTPUT_STRUCT_SCAN_ROOTS:
+        scan_root = WORKSPACE_ROOT / root
+        if not scan_root.exists():
+            failures.append(f"{root.as_posix()}: missing opaque-output scan root")
+            continue
+
+        for source_path in sorted(scan_root.rglob("*.rs")):
+            path = source_path.relative_to(WORKSPACE_ROOT)
+            source = read_source(path)
+            for struct_name in public_output_struct_names(source):
+                if struct_name not in covered.get(path, set()):
+                    failures.append(
+                        f"{path.as_posix()} {struct_name}: public output struct is not covered by opaque-output-struct check"
+                    )
 
 
 def check_opaque_output_structs(check: OpaqueStructCheck, failures: list[str]) -> None:
@@ -6802,6 +6853,7 @@ def main() -> None:
     failures: list[str] = []
     for check in checks:
         check_source(check, failures)
+    check_opaque_output_struct_catalog(opaque_output_checks, failures)
     for check in opaque_output_checks:
         check_opaque_output_structs(check, failures)
     check_fret_imui_runtime_dependencies(failures)

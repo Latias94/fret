@@ -230,6 +230,11 @@ Run evidence:
   storage and construction are internal to the editor controls. The editor proof reads them through
   `section()`, `axis()`, and `outcome()`, and the source gate covers the records with the reusable
   opaque-output-struct check.
+- 2026-05-14: hardened the opaque-output gate again so it scans the `fret-imui`,
+  `fret-ui-editor`, and `fret-ui-kit::imui` source roots for public output-style structs by suffix.
+  New public `*Response`/`*Outcome`/`*Summary`/`*Signal`/`*Record`/`*Context` records must now be
+  explicitly registered in `tools/gate_imui_workstream_source.py` before the field-opacity check
+  can pass.
 
 ## P3 Design Surface Readiness Gates
 

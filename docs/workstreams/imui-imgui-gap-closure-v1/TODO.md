@@ -148,6 +148,10 @@ Readiness order for the next locally testable review slices:
    2026-05-14 editor axis-outcome follow-up: `VecEditAxisOutcome` and
    `TransformEditAxisOutcome` now keep section/axis/outcome storage private. Public proof code reads
    axis edit events through explicit accessors.
+   2026-05-14 output-catalog gate follow-up: the IMUI workstream source gate now scans the
+   `fret-imui`, `fret-ui-editor`, and `fret-ui-kit::imui` source roots for new public
+   `*Response`/`*Outcome`/`*Summary`/`*Signal`/`*Record`/`*Context` structs and fails unless they
+   are explicitly covered by the opaque-output-struct check.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

@@ -134,6 +134,9 @@ Exit criteria:
   2026-05-14 editor axis-outcome follow-up result: vector and transform axis edit outcome records
   are accessor-first too, so proof/app code can observe edit events without constructing or
   mutating invalid section/axis/outcome triples.
+  2026-05-14 output-catalog gate result: the source gate now auto-discovers new public IMUI/editor
+  output-style structs by suffix and requires every match to be registered in the opaque-output
+  catalog before field-opacity checks run.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
