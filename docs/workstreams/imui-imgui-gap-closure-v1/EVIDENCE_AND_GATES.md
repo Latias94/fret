@@ -28,6 +28,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-imui/src/tests/floating/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_drag/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs`
+  - `ecosystem/fret-imui/src/tests/interaction_press/mod.rs`
   - `ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs`
   - `ecosystem/fret-imui/src/tests/label_identity/mod.rs`
   - `ecosystem/fret-imui/src/tests/models_combo/mod.rs`
@@ -216,6 +217,7 @@ cargo nextest run -p fret-imui composition --no-fail-fast
 cargo nextest run -p fret-imui floating --no-fail-fast
 cargo nextest run -p fret-imui interaction_drag --no-fail-fast
 cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast
+cargo nextest run -p fret-imui interaction_press --no-fail-fast
 cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast
 cargo nextest run -p fret-imui label_identity --no-fail-fast
 cargo nextest run -p fret-imui models_combo --no-fail-fast
@@ -250,6 +252,11 @@ Run evidence:
   `ecosystem/fret-imui/src/tests/interaction_menu_tabs/`.
 - 2026-05-14: `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast` passed
   locally with 18 tests.
+- 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/interaction_press.rs`
+  file into `click_edges`, `lifecycle`, `context_menu`, and `press_hold` test owners under
+  `ecosystem/fret-imui/src/tests/interaction_press/`.
+- 2026-05-14: `cargo nextest run -p fret-imui interaction_press --no-fail-fast` passed
+  locally with 9 tests.
 - 2026-05-14: split the former single `ecosystem/fret-imui/src/tests/interaction_shortcuts.rs`
   file into `command_metadata`, `button_shortcuts`, `selectable_shortcuts`, and `disclosure_tree`
   test owners under `ecosystem/fret-imui/src/tests/interaction_shortcuts/`.
