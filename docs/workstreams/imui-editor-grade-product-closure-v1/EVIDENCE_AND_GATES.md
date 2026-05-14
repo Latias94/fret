@@ -23,6 +23,8 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json`
 - `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json`
 - `tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json`
+- `tools/diag-scripts/suites/editor-notes-demo/suite.json`
+- `tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json`
 - `tools/diag_gate_imui_product_chain.py`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
@@ -178,6 +180,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `apps/fret-examples/src/lib.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
+- `apps/fret-examples/src/editor_notes_device_shell_demo.rs`
 - `apps/fret-examples/src/docking_arbitration_demo.rs`
 - `apps/fret-devtools/src/main.rs`
 - `apps/fret-devtools-mcp/src/main.rs`
@@ -193,11 +196,15 @@ Use these when reopening the lane before diving into older notes:
    - `cargo run -p fretboard-dev -- dev native --demo imui_action_basics --features cookbook-imui`
 2. Immediate/editor proof
    - `cargo run -p fret-demo --bin imui_editor_proof_demo`
-3. Workspace shell proof
+3. Editor notes workbench proof
+   - `cargo run -p fret-demo --bin editor_notes_demo`
+4. Adaptive editor notes shell proof
+   - `cargo run -p fret-demo --bin editor_notes_device_shell_demo`
+5. Workspace shell proof
    - `cargo run -p fret-demo --bin workspace_shell_demo`
-4. DevTools proof
+6. DevTools proof
    - `cargo run -p fret-devtools`
-5. Multi-window parity proof
+7. Multi-window parity proof
    - `cargo run -p fret-demo --bin docking_arbitration_demo`
 
 These are not the only relevant surfaces, but they give the fastest current read on the lane
@@ -345,6 +352,8 @@ This package now proves:
 ### Editor shell gates
 
 - `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast`
+- `cargo run -p fretboard-dev -- diag suite editor-notes-demo --launch -- cargo run -p fret-demo --bin editor_notes_demo`
+- `cargo run -p fretboard-dev -- diag suite editor-notes-device-shell-demo --launch -- cargo run -p fret-demo --bin editor_notes_device_shell_demo`
 - `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
 - `cargo check -p fret-workspace`
 - `cargo nextest run -p fret-ui declarative_internal_drag_region_can_install_route_anchor --no-fail-fast`
@@ -358,6 +367,11 @@ This package currently proves:
 
 - `workspace_shell_demo` remains the primary coherent shell proof,
 - `editor_notes_demo` remains the minimal shell-mounted rail proof,
+- `editor_notes_demo` now has a promoted suite over preserved multiline draft behavior and
+  app-owned draft controller commit/discard affordances,
+- `editor_notes_device_shell_demo` has its own promoted suite because it launches a different
+  adaptive shell binary and proves desktop rails plus compact drawer reuse of the same editor
+  content,
 - the launched shell smoke floor now reaches beyond tabstrip-only checks,
 - source-level workspace tab drag routing now keeps the root `DRAG_KIND_WORKSPACE_TAB` route anchor
   in `crates/fret-ui` while pane/zone/drop policy stays in `fret-workspace`,
@@ -567,7 +581,8 @@ Status: landed as a lightweight maintainer gate.
 
 The default product-chain gate validates discovery plus promoted script/suite inputs across
 `imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`,
-`workspace_shell_demo`, DevTools/diagnostics first-open, and the IMUI source gates. It does not
+`editor_notes_demo`, `editor_notes_device_shell_demo`, `workspace_shell_demo`,
+DevTools/diagnostics first-open, and the IMUI source gates. It does not
 replace the individual launched gates; it keeps the cross-app product chain discoverable and
 validated without forcing a single `diag campaign` launch target onto unrelated apps.
 
@@ -578,11 +593,34 @@ python tools/diag_gate_imui_product_chain.py
 ```
 
 Use `--launched` when the local machine should also execute the existing launched proof commands
-sequentially across the cookbook, editor proof, and workspace shell surfaces:
+sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:
 
 ```text
-python tools/diag_gate_imui_product_chain.py --launched --only generic-action,editor-controls,editor-proof,workspace-shell
+python tools/diag_gate_imui_product_chain.py --launched --only generic-action,editor-controls,editor-proof,editor-notes,editor-notes-device-shell,workspace-shell
 ```
+
+For the editor-notes product slice alone:
+
+```text
+python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes,editor-notes-device-shell
+```
+
+Use `--reuse-built` for heavy `fret-demo` binaries when the relevant `target/debug` or
+`target/release` executable already exists; this keeps the launched proof focused on diagnostics
+behavior instead of `cargo run` build-lock timing.
+
+Latest local editor-notes product-chain evidence (2026-05-14):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes,editor-notes-device-shell --out-dir target/imui-product-chain-editor-notes-launched-2026-05-14-reuse --timeout-ms 240000 --poll-ms 50`
+- Run root:
+  `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`
+- `editor-notes/suite.summary.json` reports `status=passed`, `stage_counts.passed=2`, and
+  `scripts_with_evidence=2`.
+- `editor-notes-device-shell/suite.summary.json` reports `status=passed`, `stage_counts.passed=1`,
+  and `scripts_with_evidence=1`.
+- The device-shell run still reports one `semantics.missing_label` warning. Treat that as a
+  follow-up accessibility/product-polish slice, not as a blocker for admitting the promoted suite.
 
 ### P3 multi-window parity gate
 

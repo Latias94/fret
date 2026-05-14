@@ -322,6 +322,10 @@
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
     {
+      "name": "imui-product-chain-editor-notes-launched-gate",
+      "command": "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes,editor-notes-device-shell"
+    },
+    {
       "name": "imui-collection-command-package-closeout",
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
     },
@@ -573,6 +577,8 @@
     "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
     "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
     "tools/diag-scripts/suites/cookbook-imui-editor-controls-basics/suite.json",
+    "tools/diag-scripts/suites/editor-notes-demo/suite.json",
+    "tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json",
     "tools/diag_gate_imui_product_chain.py",
     "apps/fret-cookbook/src/lib.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
@@ -611,6 +617,7 @@
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/editor_notes_device_shell_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools-mcp/src/main.rs",

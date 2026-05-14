@@ -3,7 +3,7 @@
 
 The lightweight default mode checks discoverability, promoted script/suite inputs, and source
 guards. Use `--launched` when a local machine should also execute the existing launched diagnostics
-proofs across the cookbook, editor proof, and workspace shell apps.
+proofs across the cookbook, editor proof, editor notes, and workspace shell apps.
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ DISCOVERY = "discovery"
 GENERIC_ACTION = "generic-action"
 EDITOR_CONTROLS = "editor-controls"
 EDITOR_PROOF = "editor-proof"
+EDITOR_NOTES = "editor-notes"
+EDITOR_NOTES_DEVICE_SHELL = "editor-notes-device-shell"
 WORKSPACE_SHELL = "workspace-shell"
 SOURCE_GATES = "source-gates"
 
@@ -30,6 +32,8 @@ ALL_GATES = [
     GENERIC_ACTION,
     EDITOR_CONTROLS,
     EDITOR_PROOF,
+    EDITOR_NOTES,
+    EDITOR_NOTES_DEVICE_SHELL,
     WORKSPACE_SHELL,
     SOURCE_GATES,
 ]
@@ -56,6 +60,14 @@ PRODUCT_SURFACES = [
     ProductSurface(
         name=EDITOR_PROOF,
         suite="tools/diag-scripts/suites/imui-editor-proof-edit-outcomes/suite.json",
+    ),
+    ProductSurface(
+        name=EDITOR_NOTES,
+        suite="tools/diag-scripts/suites/editor-notes-demo/suite.json",
+    ),
+    ProductSurface(
+        name=EDITOR_NOTES_DEVICE_SHELL,
+        suite="tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json",
     ),
     ProductSurface(
         name=WORKSPACE_SHELL,
@@ -179,6 +191,8 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
         cwd=repo_root,
     )
     _assert_contains(native.stdout, "imui_editor_proof_demo", "list native demos")
+    _assert_contains(native.stdout, "editor_notes_demo", "list native demos")
+    _assert_contains(native.stdout, "editor_notes_device_shell_demo", "list native demos")
     _assert_contains(native.stdout, "workspace_shell_demo", "list native demos")
     _assert_contains(native.stdout, "docking_arbitration_demo", "list native demos")
 
@@ -253,6 +267,33 @@ def _cargo_run_demo_command(
     return cmd
 
 
+def _built_bin_command(repo_root: Path, stem: str, *, release: bool) -> list[str]:
+    profile_dir = "release" if release else "debug"
+    exe = repo_root / "target" / profile_dir / _exe_name(stem)
+    if not exe.exists():
+        raise SystemExit(
+            f"built binary not found: {exe}\n"
+            f"hint: build it first or rerun without --reuse-built"
+        )
+    return [str(exe)]
+
+
+def _fret_demo_launch_command(
+    repo_root: Path,
+    bin_name: str,
+    *,
+    release: bool,
+    reuse_built: bool,
+) -> list[str]:
+    if reuse_built:
+        return _built_bin_command(repo_root, bin_name, release=release)
+    return _cargo_run_demo_command(
+        "fret-demo",
+        bin_name=bin_name,
+        release=release,
+    )
+
+
 def _run_launched_gates(
     repo_root: Path,
     *,
@@ -260,6 +301,7 @@ def _run_launched_gates(
     timeout_ms: int,
     poll_ms: int,
     release: bool,
+    reuse_built: bool,
     selected: set[str],
 ) -> None:
     out_root.mkdir(parents=True, exist_ok=True)
@@ -326,13 +368,68 @@ def _run_launched_gates(
             str(poll_ms),
             "--launch",
             "--",
-            *_cargo_run_demo_command(
-                "fret-demo",
-                bin_name="imui_editor_proof_demo",
+            *_fret_demo_launch_command(
+                repo_root,
+                "imui_editor_proof_demo",
                 release=release,
+                reuse_built=reuse_built,
             ),
         ]
         _run_checked("launched editor proof suite", cmd, cwd=repo_root)
+
+    if EDITOR_NOTES in selected:
+        cmd = [
+            "cargo",
+            "run",
+            "-p",
+            "fretboard-dev",
+            "--",
+            "diag",
+            "suite",
+            "editor-notes-demo",
+            "--dir",
+            str(out_root / "editor-notes"),
+            "--timeout-ms",
+            str(timeout_ms),
+            "--poll-ms",
+            str(poll_ms),
+            "--launch",
+            "--",
+            *_fret_demo_launch_command(
+                repo_root,
+                "editor_notes_demo",
+                release=release,
+                reuse_built=reuse_built,
+            ),
+        ]
+        _run_checked("launched editor notes suite", cmd, cwd=repo_root)
+
+    if EDITOR_NOTES_DEVICE_SHELL in selected:
+        cmd = [
+            "cargo",
+            "run",
+            "-p",
+            "fretboard-dev",
+            "--",
+            "diag",
+            "suite",
+            "editor-notes-device-shell-demo",
+            "--dir",
+            str(out_root / "editor-notes-device-shell"),
+            "--timeout-ms",
+            str(timeout_ms),
+            "--poll-ms",
+            str(poll_ms),
+            "--launch",
+            "--",
+            *_fret_demo_launch_command(
+                repo_root,
+                "editor_notes_device_shell_demo",
+                release=release,
+                reuse_built=reuse_built,
+            ),
+        ]
+        _run_checked("launched editor notes device shell suite", cmd, cwd=repo_root)
 
     if WORKSPACE_SHELL in selected:
         cmd = [
@@ -352,10 +449,11 @@ def _run_launched_gates(
             str(poll_ms),
             "--launch",
             "--",
-            *_cargo_run_demo_command(
-                "fret-demo",
-                bin_name="workspace_shell_demo",
+            *_fret_demo_launch_command(
+                repo_root,
+                "workspace_shell_demo",
                 release=release,
+                reuse_built=reuse_built,
             ),
         ]
         _run_checked("launched workspace shell suite", cmd, cwd=repo_root)
@@ -367,6 +465,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--timeout-ms", type=int, default=240000)
     parser.add_argument("--poll-ms", type=int, default=50)
     parser.add_argument("--release", action="store_true")
+    parser.add_argument(
+        "--reuse-built",
+        action="store_true",
+        help="For launched fret-demo surfaces, run existing target/{debug,release} binaries instead of cargo run.",
+    )
     parser.add_argument(
         "--launched",
         action="store_true",
@@ -402,6 +505,7 @@ def main(argv: list[str]) -> int:
             timeout_ms=args.timeout_ms,
             poll_ms=args.poll_ms,
             release=args.release,
+            reuse_built=args.reuse_built,
             selected=selected,
         )
 
