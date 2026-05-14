@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use fret::{AppComponentCx, app::AppRenderActionsExt};
+use fret_ui_kit::declarative::ModelWatchExt as _;
 
 pub(in crate::ui) fn preview_data_table_torture(
     cx: &mut AppComponentCx<'_>,
@@ -82,21 +83,23 @@ pub(in crate::ui) fn preview_data_table_torture(
         |(data, columns)| (data.clone(), columns.clone()),
     );
 
-    let state = cx.local_model_keyed("state", || {
-        let mut state_value = fret_ui_headless::table::TableState::default();
-        state_value.pagination.page_size = data.len();
-        state_value.pagination.page_index = 0;
-        state_value
-    });
-    let reset_state = state.clone();
-    let reset_page_size = data.len();
+    let reset_epoch = cx.local_model_keyed("reset_epoch", || 0_u64);
+    let reset_epoch_value = cx.watch_model(&reset_epoch).layout().copied().unwrap_or(0);
 
-    let sorting: Vec<SortSpec> = cx
-        .app
-        .models()
-        .read(&state, |st| st.sorting.clone())
-        .ok()
-        .unwrap_or_default();
+    cx.keyed(("data_table_torture_reset_epoch", reset_epoch_value), |cx| {
+        let state = cx.local_model_keyed("state", || {
+            let mut state_value = fret_ui_headless::table::TableState::default();
+            state_value.pagination.page_size = data.len();
+            state_value.pagination.page_index = 0;
+            state_value
+        });
+        let reset_state = state.clone();
+        let reset_epoch = reset_epoch.clone();
+        let reset_page_size = data.len();
+
+    let state_snapshot = cx.watch_model(&state).layout().cloned_or_default();
+
+    let sorting: Vec<SortSpec> = state_snapshot.sorting.clone();
     let sorting_text: Arc<str> = if sorting.is_empty() {
         Arc::<str>::from("Sorting: <none>")
     } else {
@@ -108,12 +111,7 @@ pub(in crate::ui) fn preview_data_table_torture(
     };
 
     let pinning_text: Arc<str> = {
-        let pinning = cx
-            .app
-            .models()
-            .read(&state, |st| st.column_pinning.clone())
-            .ok()
-            .unwrap_or_default();
+        let pinning = state_snapshot.column_pinning.clone();
         if pinning.left.is_empty() && pinning.right.is_empty() {
             Arc::<str>::from("Pinning: <none>")
         } else {
@@ -134,12 +132,7 @@ pub(in crate::ui) fn preview_data_table_torture(
     };
 
     let global_filter_text: Arc<str> = {
-        let global_filter = cx
-            .app
-            .models()
-            .read(&state, |st| st.global_filter.clone())
-            .ok()
-            .flatten();
+        let global_filter = state_snapshot.global_filter.clone();
         match global_filter {
             None => Arc::<str>::from("GlobalFilter: <none>"),
             Some(v) => {
@@ -153,17 +146,11 @@ pub(in crate::ui) fn preview_data_table_torture(
     };
 
     let name_filter_text: Arc<str> = {
-        let value = cx
-            .app
-            .models()
-            .read(&state, |st| {
-                st.column_filters
-                    .iter()
-                    .find(|f| f.column.as_ref() == "name")
-                    .map(|f| f.value.clone())
-            })
-            .ok()
-            .flatten();
+        let value = state_snapshot
+            .column_filters
+            .iter()
+            .find(|f| f.column.as_ref() == "name")
+            .map(|f| f.value.clone());
         match value {
             None => Arc::<str>::from("NameFilter: <none>"),
             Some(v) => {
@@ -177,17 +164,11 @@ pub(in crate::ui) fn preview_data_table_torture(
     };
 
     let status_filter_text: Arc<str> = {
-        let value = cx
-            .app
-            .models()
-            .read(&state, |st| {
-                st.column_filters
-                    .iter()
-                    .find(|f| f.column.as_ref() == "status")
-                    .map(|f| f.value.clone())
-            })
-            .ok()
-            .flatten();
+        let value = state_snapshot
+            .column_filters
+            .iter()
+            .find(|f| f.column.as_ref() == "status")
+            .map(|f| f.value.clone());
         match value {
             None => Arc::<str>::from("StatusFilter: <none>"),
             Some(serde_json::Value::String(s)) => Arc::<str>::from(format!("StatusFilter: {s}")),
@@ -262,12 +243,16 @@ pub(in crate::ui) fn preview_data_table_torture(
                     .test_id("ui-gallery-data-table-torture-reset-state")
                     .on_activate(cx.actions().listen({
                         let reset_state = reset_state.clone();
+                        let reset_epoch = reset_epoch.clone();
                         move |host, _action_cx| {
                             let _ = host.models_mut().update(&reset_state, |st| {
                                 *st = fret_ui_headless::table::TableState::default();
                                 st.pagination.page_size = reset_page_size;
                                 st.pagination.page_index = 0;
                             });
+                            let _ = host
+                                .models_mut()
+                                .update(&reset_epoch, |epoch| *epoch = epoch.wrapping_add(1));
                         }
                     }))
                     .into_element(cx),
@@ -405,5 +390,6 @@ pub(in crate::ui) fn preview_data_table_torture(
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-    vec![header, cx.container(container_props, |_cx| vec![table])]
+        vec![header, cx.container(container_props, |_cx| vec![table])]
+    })
 }

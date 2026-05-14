@@ -43,27 +43,13 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-virtual-list-jump-input",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "ctrl": true
-      },
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "type": "press_key"
-    },
-    {
       "text": "9000",
-      "type": "type_text"
+      "timeout_frames": 600,
+      "type": "set_text_value"
     },
     {
       "n": 2,

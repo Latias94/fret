@@ -51,6 +51,18 @@ pub(crate) fn sync_column_visibility(
     state: &Model<TableState>,
     desired: &HashMap<ColumnId, bool>,
 ) {
+    let should_update = app
+        .models()
+        .read(state, |st| {
+            desired
+                .iter()
+                .any(|(id, visible)| is_column_visible(st, id) != *visible)
+        })
+        .unwrap_or(true);
+    if !should_update {
+        return;
+    }
+
     let _ = app.models_mut().update(state, |st| {
         let _ = apply_column_visibility_change(st, desired);
     });
