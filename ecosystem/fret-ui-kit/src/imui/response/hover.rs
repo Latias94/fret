@@ -102,33 +102,33 @@ pub struct ResponseExt {
     /// `sanitize_response_for_enabled(...)`.
     /// This field can still carry the raw pointer-hover signal for query helpers like
     /// `is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)`.
-    pub pointer_hovered_raw: bool,
+    pointer_hovered_raw: bool,
     /// Pointer-hover signal available even when popup policy blocks/suppresses hover (best-effort).
     ///
     /// This is primarily intended to support ImGui's `AllowWhenBlockedByPopup` hovered query flag.
-    pub pointer_hovered_raw_below_barrier: bool,
+    pointer_hovered_raw_below_barrier: bool,
     /// True once the "stationary" dwell timer has elapsed while hovered (best-effort).
-    pub hover_stationary_met: bool,
+    hover_stationary_met: bool,
     /// True once the short hover delay has elapsed while hovered.
-    pub hover_delay_short_met: bool,
+    hover_delay_short_met: bool,
     /// True once the normal hover delay has elapsed while hovered.
-    pub hover_delay_normal_met: bool,
+    hover_delay_normal_met: bool,
     /// True once the short hover delay has elapsed (shared window-scoped timer, best-effort).
-    pub hover_delay_short_shared_met: bool,
+    hover_delay_short_shared_met: bool,
     /// True once the normal hover delay has elapsed (shared window-scoped timer, best-effort).
-    pub hover_delay_normal_shared_met: bool,
+    hover_delay_normal_shared_met: bool,
     /// True when ImGui-style hover queries should be suppressed because another item is active.
     ///
     /// This is a facade-level policy knob intended to mirror `IsItemHovered()` behavior where
     /// hovered queries are suppressed while dragging another item, unless explicitly overridden
     /// with `ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`.
-    pub hover_blocked_by_active_item: bool,
+    hover_blocked_by_active_item: bool,
     /// True when the item is focused and the window's focus-visible policy indicates keyboard
     /// navigation is active.
     ///
     /// This is intended as an immediate-mode equivalent of ImGui's "nav highlight under nav"
     /// behavior used by `IsItemHovered()` when `NavHighlightItemUnderNav` is active.
-    pub nav_highlighted: bool,
+    nav_highlighted: bool,
     secondary_clicked: bool,
     double_clicked: bool,
     long_pressed: bool,
@@ -191,6 +191,48 @@ impl ResponseExt {
         self.deactivated = false;
         self.edited = false;
         self.deactivated_after_edit = false;
+    }
+
+    pub(crate) fn set_pointer_hovered_raw(&mut self, pointer_hovered_raw: bool) {
+        self.pointer_hovered_raw = pointer_hovered_raw;
+    }
+
+    pub(crate) fn set_pointer_hovered_raw_below_barrier(
+        &mut self,
+        pointer_hovered_raw_below_barrier: bool,
+    ) {
+        self.pointer_hovered_raw_below_barrier = pointer_hovered_raw_below_barrier;
+    }
+
+    pub(crate) fn set_hover_stationary_met(&mut self, hover_stationary_met: bool) {
+        self.hover_stationary_met = hover_stationary_met;
+    }
+
+    pub(crate) fn set_hover_delay_short_met(&mut self, hover_delay_short_met: bool) {
+        self.hover_delay_short_met = hover_delay_short_met;
+    }
+
+    pub(crate) fn set_hover_delay_normal_met(&mut self, hover_delay_normal_met: bool) {
+        self.hover_delay_normal_met = hover_delay_normal_met;
+    }
+
+    pub(crate) fn set_hover_delay_short_shared_met(&mut self, hover_delay_short_shared_met: bool) {
+        self.hover_delay_short_shared_met = hover_delay_short_shared_met;
+    }
+
+    pub(crate) fn set_hover_delay_normal_shared_met(
+        &mut self,
+        hover_delay_normal_shared_met: bool,
+    ) {
+        self.hover_delay_normal_shared_met = hover_delay_normal_shared_met;
+    }
+
+    pub(crate) fn set_hover_blocked_by_active_item(&mut self, hover_blocked_by_active_item: bool) {
+        self.hover_blocked_by_active_item = hover_blocked_by_active_item;
+    }
+
+    pub(crate) fn set_nav_highlighted(&mut self, nav_highlighted: bool) {
+        self.nav_highlighted = nav_highlighted;
     }
 
     pub(crate) fn set_secondary_clicked(&mut self, secondary_clicked: bool) {
@@ -290,6 +332,38 @@ impl ResponseExt {
 
     pub fn context_menu_anchor(self) -> Option<Point> {
         self.context_menu_anchor
+    }
+
+    pub fn pointer_hovered_raw(self) -> bool {
+        self.pointer_hovered_raw
+    }
+
+    pub fn pointer_hovered_raw_below_barrier(self) -> bool {
+        self.pointer_hovered_raw_below_barrier
+    }
+
+    pub fn hover_stationary_met(self) -> bool {
+        self.hover_stationary_met
+    }
+
+    pub fn hover_delay_short_met(self) -> bool {
+        self.hover_delay_short_met
+    }
+
+    pub fn hover_delay_normal_met(self) -> bool {
+        self.hover_delay_normal_met
+    }
+
+    pub fn hover_delay_short_shared_met(self) -> bool {
+        self.hover_delay_short_shared_met
+    }
+
+    pub fn hover_delay_normal_shared_met(self) -> bool {
+        self.hover_delay_normal_shared_met
+    }
+
+    pub fn hover_blocked_by_active_item(self) -> bool {
+        self.hover_blocked_by_active_item
     }
 
     pub fn nav_highlighted(self) -> bool {

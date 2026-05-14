@@ -352,14 +352,14 @@ pub(super) fn drop_target_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             response.preview_position = Some(position);
             let _ = cx.app.models_mut().update(&store, |st| {
                 if let Some(active) = st.active.get_mut(&session_id) {
-                    if trigger.pointer_hovered_raw {
+                    if trigger.pointer_hovered_raw() {
                         active.hovered_target = Some(trigger_id);
                     } else if active.hovered_target == Some(trigger_id) {
                         active.hovered_target = None;
                     }
                 }
             });
-            if trigger.pointer_hovered_raw {
+            if trigger.pointer_hovered_raw() {
                 response.over = true;
                 response.preview_payload = Some(payload);
             }

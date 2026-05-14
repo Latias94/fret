@@ -54,7 +54,7 @@ pub(in super::super) fn sanitize_response_for_enabled(
     response.core.focused = false;
     response.core.clicked = false;
     response.core.changed = false;
-    response.nav_highlighted = false;
+    response.set_nav_highlighted(false);
     response.clear_press_context_signals();
     *response.drag_mut() = super::super::DragResponse::default();
 }

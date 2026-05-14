@@ -246,8 +246,10 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     trigger_response.core.hovered = state.hovered;
                     trigger_response.core.pressed = state.pressed;
                     trigger_response.core.focused = state.focused;
-                    trigger_response.nav_highlighted = state.focused
-                        && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                    trigger_response.set_nav_highlighted(
+                        state.focused
+                            && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
+                    );
                     trigger_response.id = Some(trigger_id);
                     trigger_response.core.clicked =
                         cx.take_transient_for(trigger_id, super::KEY_CLICKED);
@@ -275,18 +277,19 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         state.hovered_raw,
                         None,
                     );
-                    trigger_response.pointer_hovered_raw = state.hovered_raw;
-                    trigger_response.pointer_hovered_raw_below_barrier =
-                        state.hovered_raw_below_barrier;
-                    trigger_response.hover_stationary_met = hover_delay.stationary_met;
-                    trigger_response.hover_delay_short_met = hover_delay.delay_short_met;
-                    trigger_response.hover_delay_normal_met = hover_delay.delay_normal_met;
-                    trigger_response.hover_delay_short_shared_met =
-                        hover_delay.shared_delay_short_met;
-                    trigger_response.hover_delay_normal_shared_met =
-                        hover_delay.shared_delay_normal_met;
-                    trigger_response.hover_blocked_by_active_item =
-                        super::hover_blocked_by_active_item_for(cx, trigger_id, &active_item_model);
+                    trigger_response.set_pointer_hovered_raw(state.hovered_raw);
+                    trigger_response
+                        .set_pointer_hovered_raw_below_barrier(state.hovered_raw_below_barrier);
+                    trigger_response.set_hover_stationary_met(hover_delay.stationary_met);
+                    trigger_response.set_hover_delay_short_met(hover_delay.delay_short_met);
+                    trigger_response.set_hover_delay_normal_met(hover_delay.delay_normal_met);
+                    trigger_response
+                        .set_hover_delay_short_shared_met(hover_delay.shared_delay_short_met);
+                    trigger_response
+                        .set_hover_delay_normal_shared_met(hover_delay.shared_delay_normal_met);
+                    trigger_response.set_hover_blocked_by_active_item(
+                        super::hover_blocked_by_active_item_for(cx, trigger_id, &active_item_model),
+                    );
                     super::sanitize_response_for_enabled(enabled, trigger_response);
 
                     vec![header_row(cx, &spec, action_label, open_now, state)]

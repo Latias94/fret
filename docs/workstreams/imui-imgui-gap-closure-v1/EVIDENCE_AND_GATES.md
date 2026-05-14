@@ -172,6 +172,12 @@ Run evidence:
   runtime assembly plus combo/text-picker edit merging use crate-local set/merge helpers.
   `tools/gate_imui_workstream_source.py` rejects public lifecycle fields or direct runtime writes
   from returning.
+- 2026-05-14: made `ResponseExt` raw hover, hover-delay, active-item block, and nav-highlight
+  storage private too. Public callers and tests use `pointer_hovered_raw()`,
+  `pointer_hovered_raw_below_barrier()`, the hover-delay accessors, `hover_blocked_by_active_item()`,
+  and `nav_highlighted()`, while pressable/disclosure response assembly uses crate-local setters.
+  Disabled sanitization still clears only nav highlight so `ALLOW_WHEN_DISABLED` raw-hover queries
+  keep working.
 
 ## P3 Design Surface Readiness Gates
 

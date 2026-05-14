@@ -51,6 +51,15 @@ fn facade_drag_and_long_press_accessors_compile() {
     let _ = response.deactivated();
     let _ = response.edited();
     let _ = response.deactivated_after_edit();
+    let _ = response.pointer_hovered_raw();
+    let _ = response.pointer_hovered_raw_below_barrier();
+    let _ = response.hover_stationary_met();
+    let _ = response.hover_delay_short_met();
+    let _ = response.hover_delay_normal_met();
+    let _ = response.hover_delay_short_shared_met();
+    let _ = response.hover_delay_normal_shared_met();
+    let _ = response.hover_blocked_by_active_item();
+    let _ = response.nav_highlighted();
     let _ = response.long_pressed();
     let _ = response.press_holding();
 }
