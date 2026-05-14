@@ -148,6 +148,10 @@ Run evidence:
   drag state. Public table tests now read `column_index()`, `sortable()`, `sort_direction()`,
   `resize()`, `min_width()`, and `max_width()` instead of response fields; the source gate rejects
   public table response fields and default construction from returning.
+- 2026-05-14: made `DragResponse` accessor-first for started/dragging/stopped/delta/total state.
+  Internal response assemblers can still populate drag state, while external callers stay on
+  `started()`, `dragging()`, `stopped()`, `delta()`, and `total()` or the higher-level
+  `ResponseExt` drag helpers.
 
 ## P3 Design Surface Readiness Gates
 

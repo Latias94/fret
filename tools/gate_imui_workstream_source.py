@@ -2640,6 +2640,24 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
+            required=[
+                "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub(crate) dragging: bool,\n    pub(crate) stopped: bool,\n    pub(crate) delta: Point,\n    pub(crate) total: Point,\n}",
+                "pub fn started(self) -> bool",
+                "pub fn dragging(self) -> bool",
+                "pub fn stopped(self) -> bool",
+                "pub fn delta(self) -> Point",
+                "pub fn total(self) -> Point",
+            ],
+            forbidden=[
+                "pub struct DragResponse {\n    pub started: bool",
+                "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub dragging: bool",
+                "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub(crate) dragging: bool,\n    pub stopped: bool",
+                "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub(crate) dragging: bool,\n    pub(crate) stopped: bool,\n    pub delta: Point",
+                "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub(crate) dragging: bool,\n    pub(crate) stopped: bool,\n    pub(crate) delta: Point,\n    pub total: Point",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/theme.rs"),
             required=[
                 "pub fn apply_editor_theme_preset_v1<H: UiHost>",

@@ -87,6 +87,8 @@ Exit criteria:
   rendered-range storage crate-local while retaining `handle()` and `rendered_range()`.
   2026-05-14 table follow-up result: table aggregate/header/resize responses now keep metadata and
   drag storage crate-local while exposing explicit header and resize accessors.
+  2026-05-14 drag follow-up result: `DragResponse` now keeps edge/delta storage crate-local while
+  preserving read-only drag accessors and `ResponseExt` helper methods.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

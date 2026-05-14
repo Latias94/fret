@@ -10,11 +10,11 @@ use fret_ui::GlobalElementId;
 /// contract with additional commonly requested signals.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DragResponse {
-    pub started: bool,
-    pub dragging: bool,
-    pub stopped: bool,
-    pub delta: Point,
-    pub total: Point,
+    pub(crate) started: bool,
+    pub(crate) dragging: bool,
+    pub(crate) stopped: bool,
+    pub(crate) delta: Point,
+    pub(crate) total: Point,
 }
 
 /// Published state for an immediate drag source helper.
