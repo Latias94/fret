@@ -87,3 +87,34 @@ bundles after hidden typing inputs stopped publishing inactive `.typing.input` t
   - DevTools discoverability productization,
   - a narrower interaction-specific editor-control script only after a concrete consumer task needs
     it.
+
+## 2026-05-14 Product-Chain Evidence Refresh
+
+The heavier editor-notes/workbench chain already had focused scripts, but they were not promoted
+as product-chain suites. This refresh adds two suite manifests and wires them into
+`tools/diag_gate_imui_product_chain.py`:
+
+- `tools/diag-scripts/suites/editor-notes-demo/suite.json` validates the app-local
+  `editor_notes_demo` preserved multiline draft script and draft-controller commit/discard script.
+- `tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json` validates the adaptive
+  `editor_notes_device_shell_demo` responsive desktop-rail/mobile-drawer proof.
+
+The suites stay separate because they launch different binaries. This is a gate/productization
+improvement, not API widening and not a reason to widen `fret-imui`,
+`fret-ui-kit::imui`, or `crates/fret-ui`.
+
+The product-chain gate also supports `--reuse-built` for launched `fret-demo` surfaces so heavy
+editor/workbench diagnostics can run against existing binaries without turning build-lock timing
+into product-chain signal.
+
+Local verification on 2026-05-14 passed with run root
+`target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
+`editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed
+1/1 script.
+
+The follow-up accessibility repair stays in the shared headless overlay policy layer rather than in
+the demo: `fret-ui-kit` now hides modal backdrop/barrier pressables from the accessibility tree
+while keeping pointer dismissal working. Local verification on 2026-05-14 passed with run root
+`target/imui-product-chain-editor-notes-device-shell-a11y-2026-05-14/1778731960670`; the
+`editor-notes-device-shell-demo` suite passed 1/1 script and its lint output reported
+`warning_issues: 0` and `findings: []`.

@@ -61,6 +61,17 @@ const CMD_REGRESSION_REFRESH: &str = "fret.devtools.regression.refresh";
 const CMD_REGRESSION_SUMMARIZE: &str = "fret.devtools.regression.summarize";
 const CMD_REGRESSION_PACK_SELECTED_BUNDLE: &str = "fret.devtools.regression.pack_selected_bundle";
 
+const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
+const DEVTOOLS_GUI_BRANCH_DOC: &str =
+    "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md";
+const DEVTOOLS_REPO_PREFLIGHT_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag doctor campaigns";
+const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag doctor campaigns --json";
+const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =
+    "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke";
+const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "devtools-first-open-smoke";
+
 #[derive(Clone)]
 struct DevtoolsConfig {
     transport: DiagTransportKind,
@@ -750,9 +761,20 @@ fn header_bar(
 
     let endpoint_line = cx.text(format!("Endpoint: {ws_url_with_token}"));
     let workspace_line = cx.text(format!(
-        "Workspace root: {} | token: {} | port: {}",
+        "Artifacts root: {} | token: {} | port: {}",
         st.cfg.fs_out_dir, st.cfg.token, st.cfg.ws_port
     ));
+
+    let mut first_open_rows = Vec::new();
+    for line in devtools_first_open_lines(st.cfg.fs_out_dir.as_ref()) {
+        first_open_rows.push(cx.text(line));
+    }
+    let first_open_panel = diag_section(
+        cx,
+        "First-open Evidence Path",
+        "Canonical docs, repo preflight, artifact roots, and smoke gate stay visible in the GUI shell.",
+        first_open_rows,
+    );
 
     let connection_actions = ui::h_row(|cx| {
         [
@@ -824,6 +846,7 @@ fn header_bar(
             shell_badges,
             endpoint_line,
             workspace_line,
+            first_open_panel,
             connection_actions,
             quick_actions,
         ])
@@ -5066,6 +5089,27 @@ fn build_regression_dashboard_human(
     dashboard_human_lines_from_projection(index_path, &projection).join("\n")
 }
 
+fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        format!("first-open: {DEVTOOLS_FIRST_OPEN_DOC}"),
+        format!("gui branch: {DEVTOOLS_GUI_BRANCH_DOC}"),
+        format!("repo preflight: {DEVTOOLS_REPO_PREFLIGHT_COMMAND}"),
+        format!("repo preflight json: {DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND}"),
+        format!("artifacts root: {artifacts_root}"),
+        "direct loop: diag run -> diag latest -> diag compare".to_string(),
+        format!(
+            "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard"
+        ),
+        format!("gate: {DEVTOOLS_FIRST_OPEN_GATE_COMMAND}"),
+    ]
+}
+
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
     if is_abs_path(raw) {
         PathBuf::from(raw)
@@ -5138,6 +5182,26 @@ mod tests {
             resolved,
             PathBuf::from("F:/repo").join("target/fret-diag/campaigns/ui-gallery-pr")
         );
+    }
+
+    #[test]
+    fn devtools_first_open_lines_surface_canonical_paths() {
+        let lines = devtools_first_open_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("first-open: docs/diagnostics-first-open.md"));
+        assert!(text.contains(
+            "gui branch: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        ));
+        assert!(text.contains("repo preflight: cargo run -p fretboard-dev -- diag doctor campaigns"));
+        assert!(text.contains(
+            "repo preflight json: cargo run -p fretboard-dev -- diag doctor campaigns --json"
+        ));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains("direct loop: diag run -> diag latest -> diag compare"));
+        assert!(text.contains(
+            "campaign loop: diag campaign run devtools-first-open-smoke -> diag summarize -> diag dashboard"
+        ));
+        assert!(text.contains("gate: python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"));
     }
 
     #[test]

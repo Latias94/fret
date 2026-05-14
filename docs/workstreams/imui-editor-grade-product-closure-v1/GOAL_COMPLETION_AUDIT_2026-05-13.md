@@ -64,11 +64,13 @@ architecture intact:
   and `fretboard-dev list tool-apps --json` now gives tools one machine-readable GUI/MCP map, but
   the current priority map still says Dear ImGui-class always-available demo/metrics/debug
   discoverability needs continued work.
-- **Product workflow coherence is now source-backed, lightly consumer-audited, and first-contact
-  visually artifact-backed.** `P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md` checks docs/tooling
-  discovery, compile paths, and the launched `imui_editor_controls_basics` layout/screenshot/bundle
-  smoke. A broader visual/interaction audit across the heavier editor/workbench chain is still
-  needed before calling the product workflow fully closed.
+- **Product workflow coherence is now source-backed, lightly consumer-audited, first-contact
+  visually artifact-backed, and editor-notes suite-backed.** `P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
+  checks docs/tooling discovery, compile paths, and the launched `imui_editor_controls_basics`
+  layout/screenshot/bundle smoke. The 2026-05-14 refresh promotes `editor_notes_demo` and
+  `editor_notes_device_shell_demo` suite manifests into the product-chain gate. Broader product
+  workflow closure still needs continued visual/interaction and hand-feel evidence before this goal
+  is complete.
 - **Performance discipline is not proven by this audit.** Smoothness remains routed to the
   dedicated perf workstreams, not closed by IMUI source gates.
 - **Public helper/API growth remains intentionally constrained.** This is correct architecture, but
