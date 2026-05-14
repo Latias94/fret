@@ -89,6 +89,9 @@ Exit criteria:
   drag storage crate-local while exposing explicit header and resize accessors.
   2026-05-14 drag follow-up result: `DragResponse` now keeps edge/delta storage crate-local while
   preserving read-only drag accessors and `ResponseExt` helper methods.
+  2026-05-14 drag/drop follow-up result: `DragSourceResponse` and `DropTargetResponse` now keep
+  storage and construction paths crate-local, while public callers use helper-returned response
+  accessors.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

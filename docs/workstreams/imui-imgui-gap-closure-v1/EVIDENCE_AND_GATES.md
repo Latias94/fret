@@ -152,6 +152,10 @@ Run evidence:
   Internal response assemblers can still populate drag state, while external callers stay on
   `started()`, `dragging()`, `stopped()`, `delta()`, and `total()` or the higher-level
   `ResponseExt` drag helpers.
+- 2026-05-14: made `DragSourceResponse` / `DropTargetResponse` accessor-first too. Active source
+  construction and empty target construction are crate-local, smoke tests now validate accessor
+  usage through helper-returned responses, and the source gate rejects public drag/drop response
+  fields or default construction from returning.
 
 ## P3 Design Surface Readiness Gates
 

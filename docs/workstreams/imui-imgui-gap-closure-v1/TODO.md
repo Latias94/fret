@@ -106,6 +106,8 @@ Readiness order for the next locally testable review slices:
    and resize bounds through accessors instead of public fields; response storage stays crate-local.
    2026-05-14 drag follow-up: `DragResponse` now keeps drag edge/delta storage crate-local while
    preserving read-only drag accessors and higher-level `ResponseExt` helpers.
+   2026-05-14 drag/drop follow-up: source and target drag/drop responses now keep their storage and
+   construction paths crate-local; public code reads helper-returned responses through accessors.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
