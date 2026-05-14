@@ -3796,11 +3796,35 @@ fn short_followup_result_path(path: &str) -> String {
 
 fn file_url_from_path(path: &str) -> String {
     let normalized = path.trim().replace('\\', "/");
-    if normalized.starts_with('/') {
-        format!("file://{normalized}")
+    let encoded = percent_encode_file_url_path(&normalized);
+    if encoded.starts_with('/') {
+        format!("file://{encoded}")
     } else {
-        format!("file:///{normalized}")
+        format!("file:///{encoded}")
     }
+}
+
+fn percent_encode_file_url_path(path: &str) -> String {
+    use std::fmt::Write as _;
+
+    let mut out = String::with_capacity(path.len());
+    for byte in path.bytes() {
+        match byte {
+            b'A'..=b'Z'
+            | b'a'..=b'z'
+            | b'0'..=b'9'
+            | b'-'
+            | b'.'
+            | b'_'
+            | b'~'
+            | b'/'
+            | b':' => out.push(byte as char),
+            _ => {
+                let _ = write!(&mut out, "%{byte:02X}");
+            }
+        }
+    }
+    out
 }
 
 fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
@@ -5965,6 +5989,14 @@ mod tests {
         assert_eq!(
             file_url_from_path("/tmp/fret/diag/followups/10-stats.json"),
             "file:///tmp/fret/diag/followups/10-stats.json"
+        );
+        assert_eq!(
+            file_url_from_path("F:\\repo\\.fret\\diag\\followups\\10 stats#failed.json"),
+            "file:///F:/repo/.fret/diag/followups/10%20stats%23failed.json"
+        );
+        assert_eq!(
+            file_url_from_path("/tmp/fret/diag/followups/结果.json"),
+            "file:///tmp/fret/diag/followups/%E7%BB%93%E6%9E%9C.json"
         );
     }
 

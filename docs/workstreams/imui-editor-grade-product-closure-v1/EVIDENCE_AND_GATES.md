@@ -570,8 +570,9 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   changes the summary/raw JSON/copy target while preserving newest-first fallback.
 - A `Follow-up Result Details` block surfaces the selected result's status, path, command, bundle,
   and error preview, and a copy action exposes the exact command that produced that artifact.
-- The selected follow-up JSON artifact can be opened through the platform URL handler via a file URL
-  projection, keeping native artifact inspection one click away where supported.
+- The selected follow-up JSON artifact can be opened through the platform URL handler via an
+  escaped file URL projection, keeping native artifact inspection one click away where supported and
+  preserving paths containing spaces, fragments, or non-ASCII bytes.
 - The follow-up result copy action resolves the selected bundle's latest history path and refuses
   when no selected-bundle result exists, rather than copying the global last artifact.
 - The same inspector can copy the selected bundle's follow-up JSON payload directly, so issue

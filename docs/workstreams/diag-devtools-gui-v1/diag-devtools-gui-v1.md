@@ -90,8 +90,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   switch the summary/raw JSON/copy target between recent follow-up artifacts.
 - The selected result now has a details block with status, path, command, bundle, and error preview,
   plus a copy action for the exact command that produced that artifact.
-- The selected follow-up JSON artifact can also be opened through the platform URL handler, keeping
-  artifact inspection one click away when the native backend supports file URLs.
+- The selected follow-up JSON artifact can also be opened through the platform URL handler via an
+  escaped `file://` URL, keeping artifact inspection one click away when the native backend
+  supports file URLs.
 - The copy action now uses the selected bundle's latest follow-up history entry rather than the
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue

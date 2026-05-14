@@ -188,7 +188,8 @@ reopen.
       Maintenance: the selected follow-up result now has a details block with status, path, command,
       bundle, and error preview, and the exact producing command can be copied from the inspector.
       Maintenance: the selected follow-up JSON artifact can also be opened through the platform URL
-      handler, keeping artifact inspection one click away where native file URLs are supported.
+      handler via an escaped `file://` URL, keeping artifact inspection one click away where native
+      file URLs are supported.
       Maintenance: the follow-up result copy action now uses the selected bundle's latest history
       entry instead of the global last result artifact, keeping copied evidence paths aligned with
       the current selection.

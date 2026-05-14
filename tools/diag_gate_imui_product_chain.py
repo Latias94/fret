@@ -390,6 +390,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "fn selected_followup_result_command_from_state(",
         "fn selected_followup_result_json_from_state(",
         "fn file_url_from_path(",
+        "fn percent_encode_file_url_path(",
+        "10%20stats%23failed.json",
         "Demo / Metrics / Debug Routes",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "Gate Commands",

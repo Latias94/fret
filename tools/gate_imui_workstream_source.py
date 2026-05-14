@@ -5615,6 +5615,8 @@ def main() -> None:
                 "fn selected_followup_result_command_from_state(",
                 "fn selected_followup_result_json_from_state(",
                 "fn file_url_from_path(",
+                "fn percent_encode_file_url_path(",
+                "10%20stats%23failed.json",
                 "regression_selected_perf_evidence",
                 "regression_summary_drilldown(&summary)",
                 "regression_bundle_followup_commands(selected_bundle_dirs.iter().map(|v| v.as_ref()))",
