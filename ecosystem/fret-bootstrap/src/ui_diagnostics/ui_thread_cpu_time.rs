@@ -123,12 +123,12 @@ pub(super) fn sample_current_thread(frame_id: u64) -> UiThreadCpuSample {
         CACHED_TOTAL_TIME_US.with(|slot| slot.set(total_us));
         CACHED_DELTA_CYCLES.with(|slot| slot.set(delta_cycles));
         CACHED_TOTAL_CYCLES.with(|slot| slot.set(total_cycles));
-        return UiThreadCpuSample {
+        UiThreadCpuSample {
             delta_time_us,
             total_time_us: total_us,
             delta_cycles,
             total_cycles,
-        };
+        }
     }
 
     #[cfg(not(windows))]

@@ -675,7 +675,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let receiver_window = self
             .cursor_screen_pos
-            .and_then(|screen_pos| win32::window_under_cursor_root(screen_pos))
+            .and_then(win32::window_under_cursor_root)
             .and_then(|hwnd| hwnd_to_window.get(&hwnd).copied());
 
         let snapshot = RunnerPlatformWindowReceiverAtCursorSnapshotV1 {
