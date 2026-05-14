@@ -373,7 +373,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "followup_in_flight",
         "followup_last_result_path",
         "followup_last_result_json",
+        "followup_result_history",
         "followup::followup_result_summary_lines(&followup_last_result_json)",
+        "followup::followup_result_history_summary_lines(",
         "Demo / Metrics / Debug Routes",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "Gate Commands",
@@ -411,6 +413,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "Copy follow-up result",
         "Follow-up Result Summary",
         "Status, command, duration, and error preview from the latest GUI-launched follow-up result.",
+        "Follow-up Result History",
+        "Recent GUI-launched follow-up results for the selected bundle, newest first.",
         "Follow-up Result JSON",
         "The latest GUI-launched follow-up result artifact is mirrored here for quick triage.",
         "last_followup_result={result}",
@@ -449,9 +453,12 @@ def _validate_devtools_gui_followup_source(repo_root: Path) -> None:
 
     for marker in (
         "pub(crate) fn runnable_diag_args_for_followup_command",
+        "pub(crate) struct FollowupResultHistoryEntry",
         "pub(crate) fn followup_result_summary_lines",
+        "pub(crate) fn followup_result_history_summary_lines",
         "fret_devtools_regression_followup_result",
         "follow-up result: <invalid json>",
+        "follow-up history: <none for selected bundle>",
         "followup_result_record_json",
         "write_followup_result_record",
         "command.requires_baseline",
@@ -462,6 +469,7 @@ def _validate_devtools_gui_followup_source(repo_root: Path) -> None:
         "regression_followup_command_returns_direct_diag_args",
         "regression_followup_result_record_has_stable_shape",
         "regression_followup_result_summary_lines_project_status_and_duration",
+        "regression_followup_result_history_summary_filters_to_selected_bundle",
     ):
         _assert_contains(source, marker, name)
 

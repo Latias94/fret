@@ -116,6 +116,8 @@ Conventions:
         pass/fail/error/timing triage.
   - [x] GUI selected-summary inspector shows a structured follow-up result summary above raw JSON
         for status, command, duration, and error preview.
+  - [x] GUI selected-summary inspector keeps a bounded follow-up result history filtered to the
+        selected bundle, preventing stale global-last results from masquerading as current evidence.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

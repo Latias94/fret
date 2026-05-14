@@ -194,6 +194,7 @@ struct State {
     followup_last_command_line: Model<Option<Arc<str>>>,
     followup_last_result_path: Model<Option<Arc<str>>>,
     followup_last_result_json: Model<String>,
+    followup_result_history: Model<Vec<followup::FollowupResultHistoryEntry>>,
     followup_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
@@ -372,6 +373,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let followup_last_command_line = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_result_path = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_result_json = app.models_mut().insert(String::new());
+    let followup_result_history = app
+        .models_mut()
+        .insert(Vec::<followup::FollowupResultHistoryEntry>::new());
     let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
@@ -507,6 +511,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         followup_last_command_line,
         followup_last_result_path,
         followup_last_result_json,
+        followup_result_history,
         followup_last_error,
         viewer_url,
         last_pick_json,
@@ -656,6 +661,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.followup_last_command_line, Invalidation::Paint);
     cx.observe_model(&st.followup_last_result_path, Invalidation::Paint);
     cx.observe_model(&st.followup_last_result_json, Invalidation::Paint);
+    cx.observe_model(&st.followup_result_history, Invalidation::Paint);
     cx.observe_model(&st.followup_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
@@ -2531,6 +2537,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.followup_last_result_json, |v| v.clone())
         .unwrap_or_default();
+    let followup_result_history = cx
+        .app
+        .models()
+        .read(&st.followup_result_history, |v| v.clone())
+        .unwrap_or_default();
     let followup_last_error = cx
         .app
         .models()
@@ -2538,6 +2549,20 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .ok()
         .flatten();
     let repo_root = repo_root_from_script_paths(&st.script_paths);
+    let selected_followup_history_filter_dirs = {
+        let mut dirs: Vec<String> = Vec::new();
+        for dir in selected_bundle_dirs.iter() {
+            let dir = dir.trim();
+            if dir.is_empty() {
+                continue;
+            }
+            dirs.push(dir.to_string());
+            if !is_abs_path(dir) {
+                dirs.push(repo_root.join(dir).to_string_lossy().to_string());
+            }
+        }
+        dirs
+    };
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
@@ -3394,6 +3419,17 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         followup::followup_result_summary_lines(&followup_last_result_json).join("\r\n"),
         Px(96.0),
     );
+    let selected_followup_result_history_blob = text_blob_sized(
+        cx,
+        followup::followup_result_history_summary_lines(
+            &followup_result_history,
+            selected_followup_history_filter_dirs
+                .iter()
+                .map(|value| value.as_str()),
+        )
+        .join("\r\n"),
+        Px(120.0),
+    );
     let selected_followup_result_json_blob = text_blob_sized(
         cx,
         if followup_last_result_json.trim().is_empty() {
@@ -3441,6 +3477,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Follow-up Result Summary",
         "Status, command, duration, and error preview from the latest GUI-launched follow-up result.",
         vec![selected_followup_result_summary_blob],
+    );
+    let selected_followup_result_history_section = diag_section(
+        cx,
+        "Follow-up Result History",
+        "Recent GUI-launched follow-up results for the selected bundle, newest first.",
+        vec![selected_followup_result_history_blob],
     );
     let selected_followup_result_json_section = diag_section(
         cx,
@@ -3506,6 +3548,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_actions_section,
             selected_followup_run_status_section,
             selected_followup_result_summary_section,
+            selected_followup_result_history_section,
             selected_followup_result_json_section,
             selected_followup_commands_section,
             selected_runnable_followup_commands_section,

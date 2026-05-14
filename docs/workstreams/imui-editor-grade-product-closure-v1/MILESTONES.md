@@ -319,6 +319,9 @@ Current status:
   JSON inline, so authors can inspect pass/fail/error/timing metadata without leaving the panel.
 - 2026-05-15 the same inspector now projects the latest follow-up result into a structured summary
   above raw JSON, keeping status, command, duration, and error preview immediately scannable.
+- 2026-05-15 follow-up results are retained as a bounded in-memory history filtered to the selected
+  bundle, so selected-summary triage can distinguish current evidence from a previous bundle's last
+  launched follow-up.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

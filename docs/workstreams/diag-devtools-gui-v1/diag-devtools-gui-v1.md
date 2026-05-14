@@ -83,6 +83,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   pass/fail/error/timing metadata visible without leaving the DevTools surface.
 - The same inspector projects that latest follow-up result into a structured summary above the raw
   JSON, keeping status, command, duration, and error preview readable at scan speed.
+- GUI-launched follow-up results are also retained as a bounded in-memory history and filtered by
+  the selected bundle, so authors do not confuse a previous bundle's last result with the current
+  selected-summary evidence.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.

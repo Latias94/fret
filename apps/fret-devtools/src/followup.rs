@@ -15,7 +15,20 @@ pub(crate) struct FollowupJobResult {
     pub command_line: String,
     pub result_path: PathBuf,
     pub result_json: String,
+    pub bundle_dir: Option<String>,
     pub result: Result<(), String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct FollowupResultHistoryEntry {
+    pub id: String,
+    pub label: String,
+    pub command_line: String,
+    pub result_path: String,
+    pub result_json: String,
+    pub bundle_dir: Option<String>,
+    pub status: String,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -26,6 +39,8 @@ struct FollowupResultRecordV1 {
     label: String,
     command_line: String,
     diag_args: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bundle_dir: Option<String>,
     status: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
@@ -83,6 +98,9 @@ pub(crate) fn followup_result_summary_lines(result_json: &str) -> Vec<String> {
     if let Some(args) = value.get("diag_args").and_then(|value| value.as_array()) {
         lines.push(format!("diag_args_count: {}", args.len()));
     }
+    if let Some(bundle_dir) = followup_bundle_dir_from_result_json(&value) {
+        lines.push(format!("bundle_dir: {bundle_dir}"));
+    }
     if let Some(error) = value
         .get("error")
         .and_then(|value| value.as_str())
@@ -93,6 +111,53 @@ pub(crate) fn followup_result_summary_lines(result_json: &str) -> Vec<String> {
     let command_line = field("command_line");
     if command_line != "-" {
         lines.push(format!("command: {command_line}"));
+    }
+    lines
+}
+
+pub(crate) fn followup_result_history_summary_lines<'a>(
+    entries: &[FollowupResultHistoryEntry],
+    selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
+) -> Vec<String> {
+    let selected_bundle_keys = selected_bundle_dirs
+        .into_iter()
+        .map(normalize_followup_bundle_key)
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+    if selected_bundle_keys.is_empty() {
+        return vec!["follow-up history: <no selected bundle>".to_string()];
+    }
+
+    let matching = entries
+        .iter()
+        .filter(|entry| {
+            entry
+                .bundle_dir
+                .as_deref()
+                .map(normalize_followup_bundle_key)
+                .is_some_and(|bundle_key| selected_bundle_keys.iter().any(|v| v == &bundle_key))
+        })
+        .collect::<Vec<_>>();
+    if matching.is_empty() {
+        return vec!["follow-up history: <none for selected bundle>".to_string()];
+    }
+
+    let mut lines = vec![format!(
+        "follow-up history: {} matching result(s)",
+        matching.len()
+    )];
+    for entry in matching.into_iter().take(8) {
+        lines.push(format!(
+            "{} | {} | {}",
+            entry.status,
+            entry.id,
+            entry.bundle_dir.as_deref().unwrap_or("-")
+        ));
+        lines.push(format!("result: {}", entry.result_path));
+        lines.push(format!("command: {}", entry.command_line));
+        if let Some(error) = entry.error.as_deref().filter(|value| !value.trim().is_empty()) {
+            lines.push(format!("error: {error}"));
+        }
     }
     lines
 }
@@ -113,6 +178,10 @@ pub(crate) fn poll_followup_jobs(app: &mut App, st: &mut State) {
         let _ = app
             .models_mut()
             .update(&st.followup_last_result_json, |v| *v = msg.result_json.clone());
+        let _ = app.models_mut().update(&st.followup_result_history, |v| {
+            v.insert(0, FollowupResultHistoryEntry::from_job_result(&msg));
+            v.truncate(32);
+        });
 
         match msg.result {
             Ok(()) => {
@@ -156,6 +225,7 @@ fn build_followup_result_record(
     finished_unix_ms: u64,
     result: &Result<(), String>,
 ) -> FollowupResultRecordV1 {
+    let bundle_dir = followup_bundle_dir_from_diag_args(&diag_args);
     FollowupResultRecordV1 {
         schema_version: 1,
         kind: "fret_devtools_regression_followup_result",
@@ -163,6 +233,7 @@ fn build_followup_result_record(
         label: command.label.clone(),
         command_line: command.command_line.clone(),
         diag_args,
+        bundle_dir,
         status: if result.is_ok() { "passed" } else { "failed" },
         error: result.as_ref().err().cloned(),
         started_unix_ms,
@@ -194,6 +265,56 @@ fn write_followup_result_record(out_path: &PathBuf, result_json: &str) -> Result
     })
 }
 
+impl FollowupResultHistoryEntry {
+    fn from_job_result(result: &FollowupJobResult) -> Self {
+        Self {
+            id: result.id.clone(),
+            label: result.label.clone(),
+            command_line: result.command_line.clone(),
+            result_path: result.result_path.to_string_lossy().to_string(),
+            result_json: result.result_json.clone(),
+            bundle_dir: result.bundle_dir.clone(),
+            status: if result.result.is_ok() {
+                "passed".to_string()
+            } else {
+                "failed".to_string()
+            },
+            error: result.result.as_ref().err().cloned(),
+        }
+    }
+}
+
+fn followup_bundle_dir_from_diag_args(args: &[String]) -> Option<String> {
+    args.get(1)
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn followup_bundle_dir_from_result_json(value: &serde_json::Value) -> Option<String> {
+    value
+        .get("bundle_dir")
+        .and_then(|value| value.as_str())
+        .or_else(|| {
+            value
+                .get("diag_args")
+                .and_then(|value| value.as_array())
+                .and_then(|args| args.get(1))
+                .and_then(|value| value.as_str())
+        })
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn normalize_followup_bundle_key(value: &str) -> String {
+    value
+        .trim()
+        .replace('\\', "/")
+        .trim_end_matches('/')
+        .to_string()
+}
+
 pub(crate) fn start_regression_followup_command(
     app: &mut App,
     st: &mut State,
@@ -208,6 +329,7 @@ pub(crate) fn start_regression_followup_command(
     }
 
     let args = runnable_diag_args_for_followup_command(&command)?;
+    let bundle_dir = followup_bundle_dir_from_diag_args(&args);
     let repo_root = repo_root_from_script_paths(&st.script_paths);
     let result_dir = repo_root.join(".fret").join("diag").join("followups");
     std::fs::create_dir_all(&result_dir).map_err(|err| {
@@ -227,6 +349,7 @@ pub(crate) fn start_regression_followup_command(
         let label = label.clone();
         let command_line = command_line.clone();
         let command = command.clone();
+        let bundle_dir = bundle_dir.clone();
         let result_path = result_path.clone();
         move || {
             let diag_args = args.clone();
@@ -256,6 +379,7 @@ pub(crate) fn start_regression_followup_command(
                 command_line,
                 result_path,
                 result_json,
+                bundle_dir,
                 result,
             });
         }
@@ -354,6 +478,7 @@ mod tests {
         assert_eq!(value["id"], "stats");
         assert_eq!(value["status"], "failed");
         assert_eq!(value["error"], "boom");
+        assert_eq!(value["bundle_dir"], "target/fret-diag/run-a");
         assert_eq!(value["started_unix_ms"], 10);
         assert_eq!(value["finished_unix_ms"], 20);
 
@@ -389,6 +514,45 @@ mod tests {
         assert!(text.contains("label: diag stats"));
         assert!(text.contains("duration_ms: 15"));
         assert!(text.contains("diag_args_count: 3"));
+        assert!(text.contains("bundle_dir: target/fret-diag/run-a"));
         assert!(text.contains("error: boom"));
+    }
+
+    #[test]
+    fn regression_followup_result_history_summary_filters_to_selected_bundle() {
+        let entries = vec![
+            FollowupResultHistoryEntry {
+                id: "stats".to_string(),
+                label: "diag stats".to_string(),
+                command_line:
+                    "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-a --json"
+                        .to_string(),
+                result_path: ".fret/diag/followups/10-stats.json".to_string(),
+                result_json: "{}".to_string(),
+                bundle_dir: Some("target\\fret-diag\\run-a".to_string()),
+                status: "passed".to_string(),
+                error: None,
+            },
+            FollowupResultHistoryEntry {
+                id: "triage".to_string(),
+                label: "triage".to_string(),
+                command_line:
+                    "cargo run -p fretboard-dev -- diag triage target/fret-diag/run-b --json"
+                        .to_string(),
+                result_path: ".fret/diag/followups/20-triage.json".to_string(),
+                result_json: "{}".to_string(),
+                bundle_dir: Some("target/fret-diag/run-b".to_string()),
+                status: "failed".to_string(),
+                error: Some("boom".to_string()),
+            },
+        ];
+
+        let lines = followup_result_history_summary_lines(&entries, ["target/fret-diag/run-a"]);
+        let text = lines.join("\n");
+
+        assert!(text.contains("follow-up history: 1 matching result(s)"));
+        assert!(text.contains("passed | stats | target\\fret-diag\\run-a"));
+        assert!(text.contains(".fret/diag/followups/10-stats.json"));
+        assert!(!text.contains("run-b"));
     }
 }

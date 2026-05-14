@@ -561,6 +561,9 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   section, keeping the quick pass/fail/error/timing read inside the DevTools surface.
 - The inspector also projects the latest result JSON into a `Follow-up Result Summary` section above
   the raw payload, keeping status, command, duration, and error preview scannable in the GUI.
+- A bounded `Follow-up Result History` section filters recent GUI-launched follow-up results to the
+  selected bundle, preventing a previous bundle's global-last result from being read as current
+  selected-summary evidence.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
 - Focused source gates:
@@ -568,7 +571,7 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 ```text
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
-cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_history_summary_filters_to_selected_bundle --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery

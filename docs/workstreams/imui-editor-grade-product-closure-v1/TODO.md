@@ -178,6 +178,9 @@ reopen.
       so pass/fail/error/timing metadata is visible without opening the artifact manually.
       Maintenance: the selected-summary inspector now adds a structured follow-up result summary
       above the raw JSON, keeping status, command, duration, and error preview readable in the GUI.
+      Maintenance: follow-up results are retained as a bounded in-memory history filtered to the
+      selected bundle, so the GUI no longer implies that a previous bundle's last result belongs to
+      the current selected-summary evidence.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.
