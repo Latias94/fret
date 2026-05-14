@@ -323,6 +323,11 @@ cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --
   `first_selected()`, `selected_count()`, `is_empty()`, `clear()`, `new(...)`, and `single(...)`;
   `tools/gate_imui_workstream_source.py` rejects the public-field shape and direct proof-side field
   mutation from returning.
+- 2026-05-14: moved visible-order selection repair into
+  `ImUiMultiSelectState::from_ordered_selection(...)`. This keeps the storage helper aligned with
+  Dear ImGui's `ImGuiSelectionBasicStorage` direction without copying `BeginMultiSelect` /
+  `EndMultiSelect` runtime ownership into `fret-imui`; the proof collection no longer carries a
+  local `proof_collection_normalize_selection(...)`.
 
 ## P3 Execution Priority Review Gates
 

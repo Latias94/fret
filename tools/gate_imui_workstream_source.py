@@ -1282,6 +1282,7 @@ def main() -> None:
                 "use fret::imui::{kit::ImUiMultiSelectState, prelude::*};",
                 "ImUiMultiSelectState::new(",
                 "ImUiMultiSelectState::single(",
+                "ImUiMultiSelectState::from_ordered_selection(",
                 "selection.selected()",
                 "selection.anchor()",
                 "state.clear();",
@@ -1312,6 +1313,7 @@ def main() -> None:
                 "next_selection.anchor,",
                 "state.selected.clear()",
                 "state.anchor = None",
+                "fn proof_collection_normalize_selection(",
             ],
         ),
         SourceCheck(
@@ -1320,6 +1322,7 @@ def main() -> None:
                 "pub struct ImUiMultiSelectState<K> {\n    selected: Vec<K>,\n    anchor: Option<K>,\n}",
                 "pub fn new(selected: Vec<K>, anchor: Option<K>) -> Self",
                 "pub fn single(key: K) -> Self",
+                "pub fn from_ordered_selection(all_keys: &[K], selected: Vec<K>, anchor: Option<K>) -> Self",
                 "pub fn selected(&self) -> &[K]",
                 "pub fn selected_count(&self) -> usize",
                 "pub fn is_empty(&self) -> bool",

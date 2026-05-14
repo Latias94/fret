@@ -216,27 +216,6 @@ fn proof_collection_rects_intersect(a: Rect, b: Rect) -> bool {
     a.origin.x.0 < bx1 && ax1 > b.origin.x.0 && a.origin.y.0 < by1 && ay1 > b.origin.y.0
 }
 
-fn proof_collection_normalize_selection(
-    collection_keys: &[Arc<str>],
-    selected: Vec<Arc<str>>,
-) -> Vec<Arc<str>> {
-    let mut ordered = Vec::new();
-
-    for key in collection_keys {
-        if selected.iter().any(|item| item == key) && !ordered.iter().any(|item| item == key) {
-            ordered.push(key.clone());
-        }
-    }
-
-    for key in selected {
-        if !ordered.iter().any(|item| item == &key) {
-            ordered.push(key);
-        }
-    }
-
-    ordered
-}
-
 fn proof_collection_active_id(
     collection_keys: &[Arc<str>],
     selection: &ImUiMultiSelectState<Arc<str>>,
@@ -336,7 +315,11 @@ fn proof_collection_select_all_selection(
         .or_else(|| collection_keys.first().cloned());
 
     Some((
-        ImUiMultiSelectState::new(collection_keys.to_vec(), next_anchor),
+        ImUiMultiSelectState::from_ordered_selection(
+            collection_keys,
+            collection_keys.to_vec(),
+            next_anchor,
+        ),
         ProofCollectionKeyboardState {
             active_id: Some(next_active),
         },
@@ -724,7 +707,11 @@ fn proof_collection_keyboard_move_selection(
         (next_index, anchor_index)
     };
 
-    ImUiMultiSelectState::new(collection_keys[start..=end].to_vec(), Some(anchor))
+    ImUiMultiSelectState::from_ordered_selection(
+        collection_keys,
+        collection_keys[start..=end].to_vec(),
+        Some(anchor),
+    )
 }
 
 fn proof_collection_keyboard_selection(
@@ -1028,13 +1015,12 @@ fn proof_collection_box_select_state_for_hits(
                 merged.push(hit.clone());
             }
         }
-        proof_collection_normalize_selection(collection_keys, merged)
+        merged
     } else {
-        proof_collection_normalize_selection(collection_keys, hits.to_vec())
+        hits.to_vec()
     };
 
-    let anchor = selected.first().cloned();
-    ImUiMultiSelectState::new(selected, anchor)
+    ImUiMultiSelectState::from_ordered_selection(collection_keys, selected, None)
 }
 
 fn proof_collection_box_select_selection(

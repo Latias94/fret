@@ -191,6 +191,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 multi-select storage follow-up: `ImUiMultiSelectState` now keeps selection and anchor
    storage private behind explicit accessors/constructors. The collection proof remains app-owned,
    but it can no longer bypass the shared selection-storage API by mutating public fields.
+   2026-05-14 ordered-selection follow-up: collection order normalization moved from the proof app
+   into `ImUiMultiSelectState::from_ordered_selection(...)`, keeping the Dear ImGui-style storage
+   helper in `fret-ui-kit::imui` while avoiding a monolithic `fret-imui` multi-select runtime.
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned

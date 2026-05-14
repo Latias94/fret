@@ -169,6 +169,8 @@ Exit criteria:
   2026-05-14 multi-select storage result: `ImUiMultiSelectState` is still the shared policy-layer
   storage helper, but callers now use `new`/`single` plus read-only selection and anchor accessors
   instead of constructing or clearing public fields directly.
+  2026-05-14 ordered-selection result: visible-order selection repair is now a
+  `fret-ui-kit::imui` storage operation instead of duplicated proof-app logic.
   Current execution-priority review result: treat the P3 catalog notes as readiness maps, not an
   implementation queue. Product/golden workflow coherence, runner/backend multi-window hand-feel,
   and diagnostics/DevTools discoverability remain higher-value Dear ImGui-grade closure work than

@@ -235,6 +235,7 @@ def main() -> None:
                 "struct ProofCollectionBoxSelectState {",
                 "fn proof_collection_box_select_selection(",
                 "fn proof_collection_box_select_active_rect(",
+                "ImUiMultiSelectState::from_ordered_selection(",
                 "imui_editor_proof_demo.model.authoring_parity.collection_box_select",
                 "props.capture_phase_pointer_moves = true;",
                 "cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {",
@@ -249,6 +250,7 @@ def main() -> None:
                 "fret_ui_kit::imui::collection_box_select",
                 "pub fn collection_box_select",
                 "struct ImUiCollectionBoxSelect",
+                "fn proof_collection_normalize_selection(",
             ],
         ),
         SourceCheck(
