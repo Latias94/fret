@@ -363,3 +363,52 @@ Status: complete
 - The same fixture now covers a length-shrink input-change case. It exposed that stale rendered
   window counts were not classified as `InputsChange` before offset deltas. Prepaint now emits a
   dedicated `scroll_handle_inputs_change_window_update` invalidation detail for this case.
+
+## M29: DataTable Retained Filter-Shrink Consumer Gate
+
+Status: complete
+
+- The synthetic length-shrink `InputsChange` proof now has a real component-consumer companion:
+  `ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json` runs against the DataTable
+  torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`.
+- The first runtime pass exposed a confirmed component-layer defect. Retained DataTable row entries
+  were rebuilt from raw data and local sorting instead of the filtered `FlatRowOrderCache`, so a
+  global filter could leave the retained virtualized path behaving as if it still had the original
+  50,000 rows.
+- The same gate exposed a confirmed mechanism-layer defect. Layout-time virtual-list telemetry used
+  local classification and did not reliably classify render-window or previous-window
+  `count`/`overscan` mismatches as `InputsChange`.
+- Layout and prepaint virtual-list paths now share `classify_virtual_list_window_shift`, and the
+  DataTable retained path now derives row entries from the shared filtered row order.
+- Diagnostics virtual-list matching predicates now support `invalidation_detail` filtering so
+  non-retained DataTable filter-shrink companions can later assert
+  `scroll_handle_inputs_change_window_update` directly.
+- The real runtime gate passes and records a layout-sourced retained virtual-list
+  `reason=inputs_change`, `apply_mode=retained_reconcile` proof after applying
+  `GlobalFilter: Process 123`.
+
+## M30: DataTable View-Cache Filter-Shrink Consumer Gate
+
+Status: complete
+
+- A second DataTable torture companion now covers the non-retained, view-cache-enabled path. It runs
+  with `FRET_UI_GALLERY_VIEW_CACHE=1` and asserts layout-sourced
+  `reason=inputs_change`, `apply_mode=non_retained_rerender`, and
+  `invalidation_detail=scroll_handle_inputs_change_window_update`.
+- The first non-retained run exposed a harness precondition issue rather than a mechanism defect:
+  default Gallery runs have `view_cache_active=false`, so the layout record correctly had
+  `reason=inputs_change` but no view-cache invalidation detail.
+- The script and suite names now carry the view-cache precondition, and the passing runtime evidence
+  proves the filtered row count shrinks from 50,000 to 111 through the real DataTable consumer.
+
+## M31: DataTable RTL Idle-Stability Consumer Gate
+
+Status: complete
+
+- The DataTable page now has a promoted RTL idle-stability runtime gate in addition to Checkbox,
+  ScrollArea, and plain Table.
+- The gate scrolls the public DataTable docs page to `ui-gallery-data-table-rtl-root`, waits for
+  `ui-gallery-data-table-rtl-root` and `ui-gallery-data-table-rtl-footer` bounds to settle, and then
+  samples `ui-gallery-content-viewport` for 60 no-input frames.
+- The gate passed and did not reproduce a scroll-jitter mechanism defect on the DataTable RTL
+  surface.

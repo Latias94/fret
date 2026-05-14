@@ -85,6 +85,10 @@ pub use debug::{
     UiDebugVirtualListWindowShiftReason, UiDebugVirtualListWindowShiftSample,
     UiDebugVirtualListWindowSource, UiDebugWidgetMeasureHotspot, UiInputArbitrationSnapshot,
 };
+pub(crate) use debug::{
+    UiDebugVirtualListWindowShiftClassificationInput, classify_virtual_list_window_shift,
+    fallback_virtual_list_window_shift_detail,
+};
 use frame_arena::FrameArenaScratch;
 use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
 use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStackKey};

@@ -85,6 +85,26 @@ date: 2026-05-12
   - Result: a stale render-window count now classifies as `InputsChange` before offset deltas and
     uses the dedicated `scroll_handle_inputs_change_window_update` invalidation detail. The first
     run showed the length-shrink case was not exposed as an input change.
+- [x] Add a DataTable retained filter-shrink runtime companion for the virtual-list
+  `InputsChange` mechanism.
+  - Result: `ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json` drives the real
+    DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, applies a global filter,
+    and asserts a layout-sourced retained virtual-list `inputs_change` record. The first runtime
+    pass exposed a component defect: retained DataTable rows were built from raw data instead of the
+    filtered row order. The follow-up exposed a mechanism defect: layout-time virtual-list
+    classification did not share the prepaint `InputsChange` classifier.
+- [x] Add a DataTable view-cache filter-shrink runtime companion for non-retained
+  `InputsChange` invalidation detail.
+  - Result: `ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json` drives the
+    same DataTable torture page with `FRET_UI_GALLERY_VIEW_CACHE=1`, applies a global filter, and
+    asserts `reason=inputs_change`, `apply_mode=non_retained_rerender`, and
+    `invalidation_detail=scroll_handle_inputs_change_window_update`. The first draft exposed a
+    harness precondition issue rather than a mechanism defect: default Gallery runs have
+    `view_cache_active=false`, so no invalidation detail should be expected.
+- [x] Add a DataTable RTL idle-stability runtime companion.
+  - Result: `ui-gallery-data-table-rtl-idle-stability.json` scrolls the public DataTable page to the
+    RTL section, waits for root/footer bounds stability, samples the Gallery content viewport for 60
+    no-input frames, and passes. This did not reproduce a scroll-jitter mechanism defect.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes

@@ -1,0 +1,224 @@
+{
+  "meta": {
+    "name": "ui-gallery-data-table-rtl-idle-stability",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "data_table",
+      "scroll",
+      "rtl",
+      "idle_stability",
+      "mechanism_harness"
+    ],
+    "target_hints": [
+      "Scrolls the Data Table docs page to its RTL section and samples the outer Gallery content viewport with no scripted input.",
+      "Companion to the Checkbox, ScrollArea, and Table RTL idle-stability gates."
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "key": "escape",
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "height_px": 760.0,
+      "type": "set_window_inner_size",
+      "width_px": 1120.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-scroll",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "shortcut": "primary+a",
+      "type": "press_shortcut"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "datatable",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "bounds_within_window",
+        "padding_px": 8.0,
+        "target": {
+          "id": "ui-gallery-nav-data-table",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-data-table",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-component",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-rtl-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-rtl-table",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
+      "delta_y": -200.0,
+      "motion_check": {
+        "field": "y",
+        "max_scroll_reverse_px": 1.0,
+        "max_target_reverse_px": 1.0,
+        "require_scroll_progress": true,
+        "scroll_target": {
+          "id": "ui-gallery-content-viewport",
+          "kind": "test_id"
+        }
+      },
+      "padding_insets_px": {
+        "bottom_px": 40.0,
+        "left_px": 16.0,
+        "right_px": 16.0,
+        "top_px": 16.0
+      },
+      "padding_px": 16.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "target": {
+        "id": "ui-gallery-data-table-rtl-root",
+        "kind": "test_id"
+      },
+      "timeout_frames": 1800,
+      "type": "scroll_into_view"
+    },
+    {
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-content-viewport",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_semantics_scroll_stable"
+    },
+    {
+      "max_move_px": 0.5,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-data-table-rtl-root",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_bounds_stable"
+    },
+    {
+      "max_move_px": 0.5,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-data-table-rtl-footer",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_bounds_stable"
+    },
+    {
+      "field": "y",
+      "frames": 60,
+      "max_delta": 0.25,
+      "max_total_delta": 0.5,
+      "target": {
+        "id": "ui-gallery-content-viewport",
+        "kind": "test_id"
+      },
+      "type": "assert_semantics_scroll_idle_stable"
+    },
+    {
+      "label": "ui-gallery-data-table-rtl-idle-stability",
+      "type": "capture_screenshot"
+    },
+    {
+      "label": "ui-gallery-data-table-rtl-idle-stability",
+      "type": "capture_bundle"
+    }
+  ]
+}

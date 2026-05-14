@@ -1,5 +1,4 @@
 {
-  "schema_version": 2,
   "meta": {
     "name": "ui-gallery-data-table-retained-column-actions-menu",
     "required_capabilities": [
@@ -21,336 +20,337 @@
       "page:data_table_torture"
     ]
   },
+  "schema_version": 2,
   "steps": [
     {
       "type": "reset_diagnostics"
     },
     {
-      "type": "press_key",
-      "key": "escape"
+      "key": "escape",
+      "type": "press_key"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-search"
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "set_text_value",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-nav-search"
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
       },
       "text": "datatable (torture)",
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "set_text_value"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "value_equals",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-search"
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
         },
         "text": "datatable (torture)"
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-data-table-torture"
+          "id": "ui-gallery-nav-data-table-torture",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "click",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-nav-data-table-torture"
-      }
+        "id": "ui-gallery-nav-data-table-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-data-table-torture-root"
+          "id": "ui-gallery-data-table-torture-root",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-data-table-torture-reset-state"
+          "id": "ui-gallery-data-table-torture-reset-state",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "click",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-data-table-torture-reset-state"
-      }
+        "id": "ui-gallery-data-table-torture-reset-state",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "Sorting: <none>"
+          "name": "Sorting: <none>",
+          "role": "text"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "Pinning: <none>"
+          "name": "Pinning: <none>",
+          "role": "text"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "GlobalFilter: <none>"
+          "name": "GlobalFilter: <none>",
+          "role": "text"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "NameFilter: <none>"
+          "name": "NameFilter: <none>",
+          "role": "text"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "StatusFilter: <none>"
+          "name": "StatusFilter: <none>",
+          "role": "text"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "press_key",
-      "key": "escape"
+      "key": "escape",
+      "type": "press_key"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "button",
-          "name": "Column actions for mem_mb"
+          "name": "Column actions for mem_mb",
+          "role": "button"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
-      "target": {
-        "kind": "role_and_name",
-        "role": "button",
-        "name": "Column actions for mem_mb"
-      }
-    },
-    {
-      "type": "wait_frames",
-      "n": 2
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "kind": "role_and_name",
-          "role": "menu_item",
-          "name": "Pin Left"
-        }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click",
       "target": {
         "kind": "role_and_name",
-        "role": "menu_item",
-        "name": "Pin Left"
-      }
+        "name": "Column actions for mem_mb",
+        "role": "button"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "Pinning: left=[mem_mb] right=[]"
+          "name": "Pin Left",
+          "role": "menu_item"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
       "target": {
         "kind": "role_and_name",
-        "role": "button",
-        "name": "Column actions for mem_mb"
-      }
+        "name": "Pin Left",
+        "role": "menu_item"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "menu_item",
-          "name": "Sort Asc"
+          "name": "Pinning: left=[mem_mb] right=[]",
+          "role": "text"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
       "target": {
         "kind": "role_and_name",
-        "role": "menu_item",
-        "name": "Sort Asc"
-      }
+        "name": "Column actions for mem_mb",
+        "role": "button"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "text",
-          "name": "Sorting: mem_mb asc"
+          "name": "Sort Asc",
+          "role": "menu_item"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
       "target": {
         "kind": "role_and_name",
-        "role": "button",
-        "name": "Column actions for mem_mb"
-      }
+        "name": "Sort Asc",
+        "role": "menu_item"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
           "kind": "role_and_name",
-          "role": "menu_item",
-          "name": "Hide"
+          "name": "Sorting: mem_mb asc",
+          "role": "text"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
       "target": {
         "kind": "role_and_name",
-        "role": "menu_item",
-        "name": "Hide"
-      }
+        "name": "Column actions for mem_mb",
+        "role": "button"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "name": "Hide",
+          "role": "menu_item"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "kind": "role_and_name",
+        "name": "Hide",
+        "role": "menu_item"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-data-table-header-mem_mb"
+          "id": "ui-gallery-data-table-header-mem_mb",
+          "kind": "test_id"
         }
-      }
+      },
+      "type": "assert"
     },
     {
-      "type": "assert",
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-data-table-row-0-cell-mem_mb"
+          "id": "ui-gallery-data-table-row-0-cell-mem_mb",
+          "kind": "test_id"
         }
-      }
+      },
+      "type": "assert"
     },
     {
-      "type": "capture_bundle",
-      "label": "ui-gallery-data-table-retained-column-actions-menu"
+      "label": "ui-gallery-data-table-retained-column-actions-menu",
+      "type": "capture_bundle"
     }
   ]
 }

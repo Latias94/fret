@@ -74,9 +74,14 @@ cargo build -p fret-ui-gallery --release
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json --dir target/fret-diag-virtual-list-harness-commit-check --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary --dir target/fret-diag-vlist-window-boundary-after-reason-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
 cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-bounce-script-final --session-auto --launch -- target/debug/fret-ui-gallery.exe
+$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
+$env:FRET_UI_GALLERY_VIEW_CACHE='1'
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-view-cache-filter-shrink-inputs-change --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json --dir target/fret-diag-data-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current runtime evidence anchors:
@@ -138,6 +143,35 @@ Current runtime evidence anchors:
   - companion focused result:
     `cargo nextest run -p fret-ui prepaint_detects_render_window_insufficient_for_overscan_policy prepaint_marks_scroll_to_item_window_updates_with_distinct_invalidation_detail prepaint_attributes_window_escape_to_scroll_offset_when_state_offset_was_synced prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape virtual_list_window_shift_detail_classifies_items_revision view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
     passed, 6 tests; Nextest run id `3f91c35e-f1ff-4e06-8b13-155dc289a493`.
+- DataTable retained filter-shrink input-change runtime gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json`
+  - proof:
+    drives the real DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, scrolls the
+    retained table, applies the global filter `Process 123`, observes `GlobalFilter: Process 123`,
+    and asserts at least one layout-sourced virtual-list window record with
+    `reason=inputs_change` and `apply_mode=retained_reconcile`.
+  - evidence:
+    `target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix/sessions/1778743224380-134968/1778743227800`
+  - share pack:
+    `target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix/sessions/1778743224380-134968/share/1778743227800.zip`
+- DataTable view-cache filter-shrink input-change runtime gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-data-table-view-cache-torture/suite.json`
+  - proof:
+    drives the real DataTable torture page with `FRET_UI_GALLERY_VIEW_CACHE=1`, scrolls the table,
+    applies the global filter `Process 123`, observes `GlobalFilter: Process 123`, and asserts at
+    least one layout-sourced virtual-list window record with `reason=inputs_change`,
+    `apply_mode=non_retained_rerender`, and
+    `invalidation_detail=scroll_handle_inputs_change_window_update`.
+  - first failed precondition evidence:
+    `target/fret-diag-datatable-filter-shrink-nonretained-inputs-change/sessions/1778744865979-149372/1778744869344/ai.packet`
+  - current evidence:
+    `target/fret-diag-datatable-view-cache-filter-shrink-inputs-change/sessions/1778745510540-145220/1778745514577`
+  - share pack:
+    `target/fret-diag-datatable-view-cache-filter-shrink-inputs-change/sessions/1778745510540-145220/share/1778745514577.zip`
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:
@@ -175,6 +209,18 @@ Current runtime evidence anchors:
   - trace proof:
     outer content viewport `sample_count=60`, `baseline_value=1260.0`, `value=1260.0`,
     `frame_delta=0.0`, `total_delta=0.0`.
+- DataTable RTL post-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - proof:
+    scrolls the DataTable page to `ui-gallery-data-table-rtl-root`, waits for the root and footer
+    bounds to settle, then samples `ui-gallery-content-viewport` for 60 no-input frames.
+  - evidence:
+    `target/fret-diag-data-table-rtl-idle-stability/sessions/1778746329247-149040/1778746333478`
+  - share pack:
+    `target/fret-diag-data-table-rtl-idle-stability/sessions/1778746329247-149040/share/1778746333478.zip`
 
 ## Environment View-Cache Gates
 

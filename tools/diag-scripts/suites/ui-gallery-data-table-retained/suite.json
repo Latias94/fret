@@ -9,6 +9,7 @@
     "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
     "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json",
     "tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json",
+    "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json",
     "tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json",
     "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
     "tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json",

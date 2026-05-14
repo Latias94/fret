@@ -28,9 +28,6 @@ type CellAt<H, TData> =
 type GroupAggsU64 = std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>;
 type GroupAggsAny = std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>;
 type GroupAggsText = std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>;
-type SorterFn<TData> = dyn Fn(&TData, &TData) -> std::cmp::Ordering;
-type SorterSpec<TData> = (SortSpec, Arc<SorterFn<TData>>);
-
 /// Narrow interop bridge for table surfaces that still store view state in `Model<TableState>`.
 ///
 /// This stays intentionally table-specific so `LocalState<TableState>` can participate in the
@@ -3596,12 +3593,6 @@ where
         data_index: usize,
     }
 
-    #[derive(Default)]
-    struct RetainedTableRowsState {
-        last_items_revision: Option<u64>,
-        entries: Arc<[RowEntry]>,
-    }
-
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
     let ring = theme
@@ -3714,51 +3705,25 @@ where
 
     let scroll_x = cx.slot_state(ScrollHandle::default, |h| h.clone());
 
-    let entries = cx.slot_state(RetainedTableRowsState::default, |st| {
-        if st.last_items_revision != Some(items_revision) {
-            st.last_items_revision = Some(items_revision);
-
-            let mut entries: Vec<RowEntry> = (0..data.len())
-                .map(|i| RowEntry {
-                    key: (row_key_at)(&data[i], i),
-                    data_index: i,
-                })
-                .collect();
-
-            if !sorting.is_empty() {
-                let mut sorters: Vec<SorterSpec<TData>> = Vec::new();
-                for spec in &sorting {
-                    if let Some(col) = columns
-                        .iter()
-                        .find(|c| c.id.as_ref() == spec.column.as_ref())
-                        && let Some(cmp) = col.sort_cmp.as_ref()
-                    {
-                        sorters.push((spec.clone(), Arc::clone(cmp)));
-                    }
-                }
-
-                if !sorters.is_empty() {
-                    entries.sort_by(|a, b| {
-                        let a_row = &data[a.data_index];
-                        let b_row = &data[b.data_index];
-                        for (spec, cmp) in &sorters {
-                            let ord = (cmp)(a_row, b_row);
-                            let ord = if spec.desc { ord.reverse() } else { ord };
-                            if ord != std::cmp::Ordering::Equal {
-                                return ord;
-                            }
-                        }
-
-                        a.key.cmp(&b.key)
-                    });
-                }
-            }
-
-            st.entries = Arc::from(entries);
-        }
-
-        st.entries.clone()
+    let row_order = cx.slot_state(FlatRowOrderCache::default, |cache| {
+        let deps = FlatRowOrderDeps {
+            items_revision,
+            data_len: data.len(),
+            sorting: sorting.clone(),
+            column_filters: state_value.column_filters.clone(),
+            global_filter: state_value.global_filter.clone(),
+        };
+        let (order, _recomputed) = cache.row_order(data.as_ref(), columns.as_ref(), deps);
+        order.clone()
     });
+    let entries: Arc<[RowEntry]> = row_order
+        .iter()
+        .map(|&i| RowEntry {
+            key: (row_key_at)(&data[i], i),
+            data_index: i,
+        })
+        .collect::<Vec<_>>()
+        .into();
 
     let mut fill_layout = LayoutStyle::default();
     fill_layout.size.width = Length::Fill;

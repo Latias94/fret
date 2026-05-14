@@ -2442,6 +2442,8 @@ pub enum UiPredicateV1 {
         apply_mode: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         source: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        invalidation_detail: Option<String>,
     },
     /// True when the recent debug snapshot ring contains at least `min` virtual-list
     /// window records matching the provided telemetry fields.
@@ -2458,6 +2460,8 @@ pub enum UiPredicateV1 {
         apply_mode: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         source: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        invalidation_detail: Option<String>,
     },
     /// True when the recent debug snapshot ring contains at least `min` retained virtual-list
     /// reconcile records matching the provided telemetry fields.
@@ -4399,6 +4403,7 @@ mod tests {
             reason: Some("scroll_offset".to_string()),
             apply_mode: Some("non_retained_rerender".to_string()),
             source: Some("layout".to_string()),
+            invalidation_detail: Some("scroll_handle_inputs_change_window_update".to_string()),
         })
         .unwrap();
 
@@ -4411,6 +4416,7 @@ mod tests {
                 "reason": "scroll_offset",
                 "apply_mode": "non_retained_rerender",
                 "source": "layout",
+                "invalidation_detail": "scroll_handle_inputs_change_window_update",
             })
         );
 
@@ -4429,6 +4435,7 @@ mod tests {
             reason: Some("scroll_offset".to_string()),
             apply_mode: Some("retained_reconcile".to_string()),
             source: None,
+            invalidation_detail: Some("scroll_handle_prefetch_window_update".to_string()),
         })
         .unwrap();
 
@@ -4440,6 +4447,7 @@ mod tests {
                 "shift_kind": "prefetch",
                 "reason": "scroll_offset",
                 "apply_mode": "retained_reconcile",
+                "invalidation_detail": "scroll_handle_prefetch_window_update",
             })
         );
 
