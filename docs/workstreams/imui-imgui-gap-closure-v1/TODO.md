@@ -132,6 +132,10 @@ Readiness order for the next locally testable review slices:
    through crate-local core setters. The adapter signal record is now read-only too: adapter seam
    inputs keep builder-friendly public options, but emitted `AdapterSignalRecord` /
    `AdapterSignalMetadata` values expose identity, response, and metadata through accessors.
+   2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
+   storage private and no longer exposes external default construction. `DragValueCore` still owns
+   response construction, while editor controls read visual state through `dragging()`, `hovered()`,
+   `pressed()`, and `focused()`.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

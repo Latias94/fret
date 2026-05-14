@@ -59,6 +59,9 @@ Last updated: 2026-05-14
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
   - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
+  - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+  - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
 - Current proof surfaces:
@@ -200,6 +203,15 @@ Run evidence:
   `AdapterSignalMetadata` now expose constructor/accessor APIs while `report_adapter_signal(...)`
   remains the canonical emission path. `AdapterSeamOptions` stays as a public-field input options
   bag because callers need to provide a reporter and focus-restore target ergonomically.
+- 2026-05-14: made `DragValueCoreResponse` accessor-first in `fret-ui-editor`. Scrub response
+  storage for `dragging`, `hovered`, `pressed`, and `focused` is now private, `DragValueCore`
+  constructs the response internally, and `DragValue` / `AxisDragValue` consume those signals
+  through read-only accessors. The response no longer exposes external default construction. The
+  source gate rejects public fields, stale direct field reads, and public default construction.
+  Focused gates passed locally: `cargo check -p fret-ui-editor --tests`,
+  `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`,
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`, `python tools/gate_imui_workstream_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
 
 ## P3 Design Surface Readiness Gates
 

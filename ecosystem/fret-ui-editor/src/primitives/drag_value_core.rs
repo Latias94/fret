@@ -88,12 +88,39 @@ impl Default for DragValueCoreOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct DragValueCoreResponse {
-    pub dragging: bool,
-    pub hovered: bool,
-    pub pressed: bool,
-    pub focused: bool,
+    dragging: bool,
+    hovered: bool,
+    pressed: bool,
+    focused: bool,
+}
+
+impl DragValueCoreResponse {
+    pub(crate) fn new(dragging: bool, hovered: bool, pressed: bool, focused: bool) -> Self {
+        Self {
+            dragging,
+            hovered,
+            pressed,
+            focused,
+        }
+    }
+
+    pub fn dragging(self) -> bool {
+        self.dragging
+    }
+
+    pub fn hovered(self) -> bool {
+        self.hovered
+    }
+
+    pub fn pressed(self) -> bool {
+        self.pressed
+    }
+
+    pub fn focused(self) -> bool {
+        self.focused
+    }
 }
 
 #[derive(Debug)]
@@ -443,13 +470,12 @@ where
                 let dragging = state.lock().unwrap_or_else(|e| e.into_inner()).dragging;
                 children(
                     cx,
-                    DragValueCoreResponse {
+                    DragValueCoreResponse::new(
                         dragging,
-                        hovered: pressable.hovered,
-                        pressed: pressable.pressed,
-                        focused: pressable.focused,
-                        ..Default::default()
-                    },
+                        pressable.hovered,
+                        pressable.pressed,
+                        pressable.focused,
+                    ),
                 )
             },
         )
@@ -509,7 +535,7 @@ fn resolve_options(theme: &Theme, mut opts: DragValueCoreOptions) -> DragValueCo
 
 #[cfg(test)]
 mod tests {
-    use super::DragState;
+    use super::{DragState, DragValueCoreResponse};
     use fret_core::{Point, PointerId, Px};
 
     fn origin() -> Point {
@@ -548,5 +574,15 @@ mod tests {
 
         state.begin_session(PointerId(1), origin());
         assert!(!state.commit_session());
+    }
+
+    #[test]
+    fn drag_value_core_response_exposes_read_only_signals() {
+        let response = DragValueCoreResponse::new(true, true, false, true);
+
+        assert!(response.dragging());
+        assert!(response.hovered());
+        assert!(!response.pressed());
+        assert!(response.focused());
     }
 }

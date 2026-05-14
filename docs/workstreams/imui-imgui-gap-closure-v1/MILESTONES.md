@@ -118,6 +118,10 @@ Exit criteria:
   `AdapterSignalRecord` and `AdapterSignalMetadata` are constructed by the seam and expose
   `identity()`, `response()`, `metadata()`, `rect()`, and `focus_restore_target()` accessors, while
   `AdapterSeamOptions` remains a public-field input options bag.
+  2026-05-14 editor drag-value follow-up result: `DragValueCoreResponse` storage is private too and
+  external default construction is gone. `DragValueCore` owns construction through a crate-local
+  constructor, and editor controls consume scrub visual state through read-only accessors instead of
+  copying response fields.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
