@@ -72,6 +72,7 @@ const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.c
 const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.copy_result_json";
 const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
     "fret.devtools.regression.followup.copy_result_command";
+const CMD_OPEN_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.open_result_json";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -3111,6 +3112,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .on_click(CMD_COPY_FOLLOWUP_RESULT_PATH)
                     .into_element(cx),
             );
+            out.push(
+                shadcn::Button::new("Open selected follow-up JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_OPEN_FOLLOWUP_RESULT_JSON)
+                    .into_element(cx),
+            );
         }
         if selected_followup_result_entry.is_some() {
             out.push(
@@ -3786,6 +3794,15 @@ fn short_followup_result_path(path: &str) -> String {
         .to_string()
 }
 
+fn file_url_from_path(path: &str) -> String {
+    let normalized = path.trim().replace('\\', "/");
+    if normalized.starts_with('/') {
+        format!("file://{normalized}")
+    } else {
+        format!("file:///{normalized}")
+    }
+}
+
 fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     let fallback = cx
         .app
@@ -4323,6 +4340,21 @@ fn on_command(
                 window,
                 token,
                 text: command_line,
+            });
+        }
+        CMD_OPEN_FOLLOWUP_RESULT_JSON => {
+            let Some(path) = selected_followup_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "open selected follow-up JSON refused (no selected-bundle result artifact yet)",
+                );
+                return;
+            };
+            app.push_effect(Effect::OpenUrl {
+                url: file_url_from_path(&path),
+                target: None,
+                rel: None,
             });
         }
         CMD_COPY_FOLLOWUP_RESULT_JSON => {
@@ -5921,6 +5953,18 @@ mod tests {
         assert_eq!(
             resolved,
             PathBuf::from("F:/repo").join("target/fret-diag/campaigns/ui-gallery-pr")
+        );
+    }
+
+    #[test]
+    fn file_url_from_path_projects_native_artifact_paths() {
+        assert_eq!(
+            file_url_from_path("F:\\repo\\.fret\\diag\\followups\\10-stats.json"),
+            "file:///F:/repo/.fret/diag/followups/10-stats.json"
+        );
+        assert_eq!(
+            file_url_from_path("/tmp/fret/diag/followups/10-stats.json"),
+            "file:///tmp/fret/diag/followups/10-stats.json"
         );
     }
 

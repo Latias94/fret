@@ -328,6 +328,8 @@ Current status:
   authors to switch the summary/raw JSON/copy target between recent artifacts.
 - 2026-05-15 selected follow-up results now have a details block with status, path, command,
   bundle, and error preview, and the exact producing command can be copied from the inspector.
+- 2026-05-15 the selected follow-up JSON artifact can now be opened through the platform URL
+  handler, keeping native artifact inspection one click away when file URLs are supported.
 - 2026-05-15 the follow-up result copy action now resolves the selected bundle's latest history
   path instead of the global last result artifact, keeping copied evidence aligned with selection.
 - 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping
