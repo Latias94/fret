@@ -140,6 +140,11 @@ Run evidence:
 - 2026-05-14: made `VirtualListResponse` accessor-first too. Public callers keep using `handle()`
   and `rendered_range()`, while the response's scroll handle and rendered-range storage are
   crate-local and guarded by the IMUI source gate.
+- 2026-05-14: made `TableResponse` / `TableHeaderResponse` /
+  `TableColumnResizeResponse` accessor-first for header metadata, sort state, resize bounds, and
+  drag state. Public table tests now read `column_index()`, `sortable()`, `sort_direction()`,
+  `resize()`, `min_width()`, and `max_width()` instead of response fields; the source gate rejects
+  public table response fields and default construction from returning.
 
 ## P3 Design Surface Readiness Gates
 

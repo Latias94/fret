@@ -99,6 +99,8 @@ Readiness order for the next locally testable review slices:
    2026-05-14 virtual-list follow-up: `VirtualListResponse` now keeps its scroll handle and
    rendered-range storage crate-local while preserving read-only `handle()` and
    `rendered_range()` accessors.
+   2026-05-14 table follow-up: table aggregate/header/resize responses now expose header metadata
+   and resize bounds through accessors instead of public fields; response storage stays crate-local.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

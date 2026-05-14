@@ -46,30 +46,30 @@ pub struct TabTriggerResponse {
 }
 
 /// Aggregated response surface for helper-owned table headers.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TableResponse {
-    pub headers: Vec<TableHeaderResponse>,
+    pub(crate) headers: Vec<TableHeaderResponse>,
 }
 
 /// Outward response for a single helper-owned table header cell.
 #[derive(Debug, Clone)]
 pub struct TableHeaderResponse {
-    pub column_index: usize,
-    pub column_id: Option<Arc<str>>,
-    pub sortable: bool,
-    pub sort_direction: Option<TableSortDirection>,
-    pub trigger: ResponseExt,
-    pub resize: TableColumnResizeResponse,
+    pub(crate) column_index: usize,
+    pub(crate) column_id: Option<Arc<str>>,
+    pub(crate) sortable: bool,
+    pub(crate) sort_direction: Option<TableSortDirection>,
+    pub(crate) trigger: ResponseExt,
+    pub(crate) resize: TableColumnResizeResponse,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TableColumnResizeResponse {
-    pub column_index: usize,
-    pub column_id: Option<Arc<str>>,
-    pub enabled: bool,
-    pub min_width: Option<fret_core::Px>,
-    pub max_width: Option<fret_core::Px>,
-    pub drag: DragResponse,
+    pub(crate) column_index: usize,
+    pub(crate) column_id: Option<Arc<str>>,
+    pub(crate) enabled: bool,
+    pub(crate) min_width: Option<fret_core::Px>,
+    pub(crate) max_width: Option<fret_core::Px>,
+    pub(crate) drag: DragResponse,
 }
 
 #[derive(Debug, Clone)]
@@ -237,8 +237,20 @@ impl TableResponse {
 }
 
 impl TableHeaderResponse {
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
     pub fn column_id(&self) -> Option<&str> {
         self.column_id.as_deref()
+    }
+
+    pub fn sortable(&self) -> bool {
+        self.sortable
+    }
+
+    pub fn sort_direction(&self) -> Option<TableSortDirection> {
+        self.sort_direction
     }
 
     pub fn response(&self) -> ResponseExt {
@@ -260,15 +272,31 @@ impl TableHeaderResponse {
     pub fn resizing(&self) -> bool {
         self.resize.dragging()
     }
+
+    pub fn resize(&self) -> &TableColumnResizeResponse {
+        &self.resize
+    }
 }
 
 impl TableColumnResizeResponse {
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
     pub fn column_id(&self) -> Option<&str> {
         self.column_id.as_deref()
     }
 
     pub fn enabled(&self) -> bool {
         self.enabled
+    }
+
+    pub fn min_width(&self) -> Option<Px> {
+        self.min_width
+    }
+
+    pub fn max_width(&self) -> Option<Px> {
+        self.max_width
     }
 
     pub fn dragging(&self) -> bool {

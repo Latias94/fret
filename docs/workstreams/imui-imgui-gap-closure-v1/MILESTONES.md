@@ -83,6 +83,8 @@ Exit criteria:
   and trigger edge accessors.
   2026-05-14 virtual-list follow-up result: `VirtualListResponse` now keeps scroll handle and
   rendered-range storage crate-local while retaining `handle()` and `rendered_range()`.
+  2026-05-14 table follow-up result: table aggregate/header/resize responses now keep metadata and
+  drag storage crate-local while exposing explicit header and resize accessors.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

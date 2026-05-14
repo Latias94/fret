@@ -162,18 +162,18 @@ fn table_sortable_header_reports_app_owned_trigger_without_sorting_rows() {
             let name = response
                 .header("asset-name")
                 .expect("asset-name sortable header response");
-            assert_eq!(name.column_index, 0);
-            assert!(name.sortable);
+            assert_eq!(name.column_index(), 0);
+            assert!(name.sortable());
             assert_eq!(name.column_id(), Some("asset-name"));
-            assert_eq!(name.sort_direction, Some(TableSortDirection::Ascending));
+            assert_eq!(name.sort_direction(), Some(TableSortDirection::Ascending));
             name_clicked_out.set(name.clicked());
 
             let status = response
                 .header("asset-status")
                 .expect("asset-status sortable header response");
-            assert_eq!(status.column_index, 1);
-            assert!(status.sortable);
-            assert_eq!(status.sort_direction, None);
+            assert_eq!(status.column_index(), 1);
+            assert!(status.sortable());
+            assert_eq!(status.sort_direction(), None);
             status_clicked_out.set(status.clicked());
         })
     };
@@ -290,16 +290,17 @@ fn table_resizable_header_reports_drag_response() {
             let name = response
                 .header("asset-name")
                 .expect("asset-name header response");
-            assert_eq!(name.resize.column_index, 0);
-            assert_eq!(name.resize.column_id(), Some("asset-name"));
-            assert_eq!(name.resize.min_width, Some(Px(80.0)));
-            assert_eq!(name.resize.max_width, Some(Px(240.0)));
-            resize_enabled.set(name.resize.enabled());
-            resize_dragging.set(name.resize.dragging());
-            resize_started.set(name.resize.drag_started());
-            resize_stopped.set(name.resize.drag_stopped());
-            resize_total_x.set(name.resize.drag_total_x());
-            resize_width.set(name.resize.width_from_start(Px(140.0)).0);
+            let resize = name.resize();
+            assert_eq!(resize.column_index(), 0);
+            assert_eq!(resize.column_id(), Some("asset-name"));
+            assert_eq!(resize.min_width(), Some(Px(80.0)));
+            assert_eq!(resize.max_width(), Some(Px(240.0)));
+            resize_enabled.set(resize.enabled());
+            resize_dragging.set(resize.dragging());
+            resize_started.set(resize.drag_started());
+            resize_stopped.set(resize.drag_stopped());
+            resize_total_x.set(resize.drag_total_x());
+            resize_width.set(resize.width_from_start(Px(140.0)).0);
         })
     };
 
