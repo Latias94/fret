@@ -14,6 +14,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md`
@@ -136,6 +137,9 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/diagnostics-first-open.md`
@@ -613,6 +617,12 @@ command, `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`,
 DevTools-style consumers can surface the product-chain evidence path without hard-coding GUI-only
 knowledge.
 
+Goal completion audit refresh (2026-05-15):
+`GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and explicitly not
+complete. The strict blockers remain real-host Wayland compositor acceptance for `DW-P1-linux-003`,
+DevTools GUI productization / always-available demo-metrics-debug discoverability, and broader perf
+attribution/smoothness outside the bounded `perf-docking` entrypoint.
+
 The 2026-05-13 launched bounded campaign result is `campaign: ok` at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
 verification rerun also green at
@@ -623,6 +633,7 @@ real-host hand-feel risk.
 ### Lane hygiene gates
 
 - `python tools/gate_imui_workstream_source.py`
+- `python tools/diag_gate_docking_wayland_policy_skip.py`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`

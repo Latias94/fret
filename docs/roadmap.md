@@ -110,7 +110,10 @@ Tracker highlights:
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
-  `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
+  `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`. Latest strict
+  goal read: `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
+  keeps the lane not complete until real-host Wayland hand-feel, DevTools GUI productization, and
+  broader perf attribution/smoothness are closed in their owner lanes.
 - ImUi text input policy depth follow-on (closed narrow P1 lane for Dear ImGui-class read-only,
   select-all-on-focus, and multiline AllowTabInput behavior, with runtime text mechanisms and IMUI
   flags as kit policy): `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`,

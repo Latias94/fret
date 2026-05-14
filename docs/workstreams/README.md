@@ -278,6 +278,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
@@ -293,9 +294,11 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - Scope: keep the phase ordering and cross-phase status for the remaining maturity gap after the
     stack-reset closeouts without reopening runtime widening or generic helper-growth by default;
-    future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
-    review, and implementation-heavy work should stay in narrower follow-ons or the active docking
-    parity lane.
+    the 2026-05-15 audit keeps the goal explicitly not complete until real-host Wayland hand-feel,
+    DevTools GUI productization, and broader perf attribution/smoothness close in their owner
+    lanes; future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget
+    before review, and implementation-heavy work should stay in narrower follow-ons or the active
+    docking parity lane.
 
 - Closed narrow P1 text input policy depth follow-on:
   - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
@@ -2092,7 +2095,7 @@ Rule:
 - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for structural container facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/` — first 2026-05-14, latest 2026-05-14, 7 markdown docs (closed narrow follow-on for floating/popup trait-default owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-debug-draw-owner-split-v1/` — first 2026-05-06, latest 2026-05-06, 10 markdown docs (closed narrow follow-on for splitting IMUI debug draw private owners without public API or behavior changes; includes a closeout audit and private test owner)
-- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-13, 22 markdown docs
+- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-15, 23 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private active-trigger behavior follow-on for deleting switch/menu/tab trigger response and lifecycle duplication without widening `fret-imui` or runtime contracts by default)

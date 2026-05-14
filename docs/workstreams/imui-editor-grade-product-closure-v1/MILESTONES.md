@@ -376,6 +376,9 @@ Primary evidence:
 
 Current status:
 
-- Not started.
-- The lane should close only after the remaining M1/M4 status is resolved or explicitly handed off
-  to new narrow follow-ons with the umbrella state refreshed again.
+- In progress as a maintenance/status umbrella.
+- The 2026-05-15 goal-completion audit keeps the lane explicitly not complete after the latest
+  product-chain discovery, Wayland source/admission/policy-skip, and perf-threshold refreshes.
+- The lane should close only after real-host Wayland hand-feel, DevTools GUI productization, and
+  broader perf attribution/smoothness are resolved or explicitly handed off with fresh owner-lane
+  closeout evidence.

@@ -179,6 +179,12 @@ reopen.
 
 ## Closeout / follow-on management
 
+- [x] Refresh the goal-completion audit after the latest product-chain discovery, Wayland
+      admission/policy-skip, and perf-threshold slices.
+      Result: `GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and
+      explicitly not complete. Real-host Wayland compositor acceptance, DevTools GUI
+      productization, and broader perf attribution/smoothness remain owner-lane work, not
+      `fret-imui` or runtime widening.
 - [x] Keep pure teaching-surface cleanup out of this umbrella unless it becomes the dominant
       remaining P0 pressure.
       Result: the remaining P0 backlog no longer reads as teaching-surface cleanup first, so no
