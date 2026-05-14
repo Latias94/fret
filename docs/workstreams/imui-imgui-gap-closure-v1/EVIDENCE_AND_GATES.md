@@ -178,6 +178,11 @@ Run evidence:
   and `nav_highlighted()`, while pressable/disclosure response assembly uses crate-local setters.
   Disabled sanitization still clears only nav highlight so `ALLOW_WHEN_DISABLED` raw-hover queries
   keep working.
+- 2026-05-14: made `ResponseExt.enabled` storage private too. Public/demo/test callers use
+  `enabled()`, while disabled sanitization and text controls use crate-local `set_enabled(...)`.
+  `ResponseExt.core` and `ResponseExt.id` intentionally remain public in this slice because current
+  source evidence shows they are broader shared-response and routing-identity surfaces that need a
+  separate contract audit.
 
 ## P3 Design Surface Readiness Gates
 

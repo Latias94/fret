@@ -78,6 +78,16 @@ fn push_attributed_span_background_quads(
     }
 }
 
+fn text_prepare_depends_on_width(
+    wrap: fret_core::TextWrap,
+    overflow: TextOverflow,
+    align: fret_core::TextAlign,
+) -> bool {
+    !matches!(wrap, fret_core::TextWrap::None)
+        || matches!(overflow, TextOverflow::Ellipsis)
+        || !matches!(align, fret_core::TextAlign::Start)
+}
+
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -598,7 +608,9 @@ impl ElementHostWidget {
                 let align_changed = self.text_cache.last_align != Some(props.align);
                 let ink_overflow_changed =
                     self.text_cache.last_ink_overflow != Some(props.ink_overflow);
-                let width_changed = self.text_cache.last_width != Some(max_width);
+                let raw_width_changed = self.text_cache.last_width != Some(max_width);
+                let width_changed = raw_width_changed
+                    && text_prepare_depends_on_width(props.wrap, props.overflow, props.align);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
                 let signature_changed = scale_changed
@@ -662,6 +674,10 @@ impl ElementHostWidget {
                     self.text_cache.ink_pad_bottom = cached.ink_pad_bottom;
                     self.text_cache.last_width = Some(max_width);
                     needs_prepare = false;
+                }
+
+                if !needs_prepare && raw_width_changed && !width_changed {
+                    self.text_cache.last_width = Some(max_width);
                 }
 
                 if needs_prepare {
@@ -831,7 +847,9 @@ impl ElementHostWidget {
                 let align_changed = self.text_cache.last_align != Some(props.align);
                 let ink_overflow_changed =
                     self.text_cache.last_ink_overflow != Some(props.ink_overflow);
-                let width_changed = self.text_cache.last_width != Some(max_width);
+                let raw_width_changed = self.text_cache.last_width != Some(max_width);
+                let width_changed = raw_width_changed
+                    && text_prepare_depends_on_width(props.wrap, props.overflow, props.align);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
                 let signature_changed = scale_changed
@@ -895,6 +913,10 @@ impl ElementHostWidget {
                     self.text_cache.ink_pad_bottom = cached.ink_pad_bottom;
                     self.text_cache.last_width = Some(max_width);
                     needs_prepare = false;
+                }
+
+                if !needs_prepare && raw_width_changed && !width_changed {
+                    self.text_cache.last_width = Some(max_width);
                 }
 
                 if needs_prepare {
@@ -1078,7 +1100,9 @@ impl ElementHostWidget {
                 let align_changed = self.text_cache.last_align != Some(props.align);
                 let ink_overflow_changed =
                     self.text_cache.last_ink_overflow != Some(props.ink_overflow);
-                let width_changed = self.text_cache.last_width != Some(max_width);
+                let raw_width_changed = self.text_cache.last_width != Some(max_width);
+                let width_changed = raw_width_changed
+                    && text_prepare_depends_on_width(props.wrap, props.overflow, props.align);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
                 let signature_changed = scale_changed
@@ -1142,6 +1166,10 @@ impl ElementHostWidget {
                     self.text_cache.ink_pad_bottom = cached.ink_pad_bottom;
                     self.text_cache.last_width = Some(max_width);
                     needs_prepare = false;
+                }
+
+                if !needs_prepare && raw_width_changed && !width_changed {
+                    self.text_cache.last_width = Some(max_width);
                 }
 
                 if needs_prepare {

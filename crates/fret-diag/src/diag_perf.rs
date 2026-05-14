@@ -772,6 +772,13 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             &perf_suite_prelude_scripts,
         )?;
     }
+    let perf_required_launch_features = scripts_required_launch_features(
+        scripts
+            .iter()
+            .chain(perf_suite_prewarm_scripts.iter())
+            .chain(perf_suite_prelude_scripts.iter())
+            .map(|src| src.as_path()),
+    );
 
     let run_suite_aux_script_must_pass = |src: &PathBuf,
                                           child: &mut Option<LaunchedDemo>,
@@ -833,6 +840,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         child = maybe_launch_demo(
             &launch,
             &perf_launch_env,
+            &perf_required_launch_features,
             &workspace_root,
             &resolved_ready_path,
             &resolved_exit_path,
@@ -872,6 +880,11 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
     }
 
     for (script_index, src) in scripts.into_iter().enumerate() {
+        let per_script_required_launch_features = scripts_required_launch_features(
+            std::iter::once(src.as_path())
+                .chain(perf_suite_prewarm_scripts.iter().map(|src| src.as_path()))
+                .chain(perf_suite_prelude_scripts.iter().map(|src| src.as_path())),
+        );
         let script_launch_env_buf;
         let script_launch_env = if use_global_script_env_defaults {
             &perf_launch_env
@@ -894,6 +907,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             child = maybe_launch_demo(
                 &launch,
                 script_launch_env,
+                &per_script_required_launch_features,
                 &workspace_root,
                 &resolved_ready_path,
                 &resolved_exit_path,
@@ -936,6 +950,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 child = maybe_launch_demo(
                     &launch,
                     script_launch_env,
+                    &per_script_required_launch_features,
                     &workspace_root,
                     &resolved_ready_path,
                     &resolved_exit_path,
@@ -1569,6 +1584,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 child = maybe_launch_demo(
                     &launch,
                     script_launch_env,
+                    &per_script_required_launch_features,
                     &workspace_root,
                     &resolved_ready_path,
                     &resolved_exit_path,

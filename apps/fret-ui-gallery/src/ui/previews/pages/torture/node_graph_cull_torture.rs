@@ -242,8 +242,9 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
     let view = cx.local_model_keyed("view", NodeGraphViewState::default);
     let editor_config = cx.local_model_keyed("editor_config", NodeGraphEditorConfig::default);
 
-    let surface =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let surface = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let graph = graph.clone();
             let view = view.clone();
             let editor_config = editor_config.clone();
@@ -269,7 +270,8 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
                 },
                 |_cx| vec![subtree],
             )]
-        });
+        },
+    );
 
     let canvas = DocSection::build(cx, "Canvas", surface)
         .description("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles.")

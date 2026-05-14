@@ -1005,6 +1005,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
 
         sync_internal_drag_region_route(cx.app, window, cx.node, &instance);
+
+        let canvas_has_prepaint =
+            matches!(instance, ElementInstance::Canvas(props) if props.prepaint);
+        if !canvas_has_prepaint {
+            return;
+        }
+
+        let on_prepaint = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::canvas::CanvasPaintHooks::default,
+            |hooks| hooks.on_prepaint.clone(),
+        );
+        let Some(on_prepaint) = on_prepaint else {
+            return;
+        };
+
+        let mut host = crate::canvas::UiCanvasPrepaintHostAdapter::new(cx);
+        let mut canvas_cx = crate::canvas::CanvasPrepaintCx::new(&mut host);
+        (on_prepaint)(&mut canvas_cx);
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

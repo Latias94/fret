@@ -282,9 +282,4 @@ impl<H: UiHost> UiTree<H> {
             Transform2D::IDENTITY,
         );
     }
-
-    #[cfg(test)]
-    pub(crate) fn test_set_paint_cache_allow_hit_test_only_override(value: Option<bool>) {
-        super::set_paint_cache_allow_hit_test_only_for_test(value);
-    }
 }

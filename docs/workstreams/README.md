@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 369
+- Dedicated directories: 370
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2197,6 +2197,7 @@ Rule:
 - `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/` — first 2026-03-04, latest 2026-03-04, 3 markdown docs
 - `docs/workstreams/ui-editor-v1/` — first 2026-02-14, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-03, 8 markdown docs
+- `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/` — first n/a, latest n/a, 19 markdown docs (active Frame Pipeline v2 execution-model refactor lane; includes `WORKSTREAM.json`, `PROGRESS.md`, and M4C boundary-hint API evidence)
 - `docs/workstreams/ui-gallery-fearless-refactor/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1/` — first 2026-02-23, latest 2026-03-10, 3 markdown docs
 - `docs/workstreams/ui-gallery-visual-parity/` — first 2026-02-01, latest 2026-02-24, 2 markdown docs

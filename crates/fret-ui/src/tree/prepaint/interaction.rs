@@ -53,7 +53,8 @@ impl<H: UiHost> UiTree<H> {
                 // Their prepaint hooks drive live runtime state (for example chart engine
                 // stepping, dock drag routes, or cull-window updates), so gating them behind
                 // `view_cache_active()` breaks correctness in the default no-cache mode.
-                n.view_cache.enabled && (self.view_cache_active() || n.element.is_none()),
+                n.widget_prepaint_enabled
+                    || (n.view_cache.enabled && (self.view_cache_active() || n.element.is_none())),
             ),
             None => return,
         };
@@ -71,15 +72,15 @@ impl<H: UiHost> UiTree<H> {
         );
 
         if is_view_cache_root && is_manual_cache_root {
-            let contained_layout = self
+            let layout_dependency = self
                 .nodes
                 .get(node)
-                .map(|n| n.view_cache.contained_layout)
-                .unwrap_or(false);
+                .map(|n| n.view_cache.parent_layout_dependency.as_debug_str())
+                .unwrap_or("parent_dependent");
             self.debug_record_view_cache_root(
                 node,
                 self.should_reuse_view_cache_node(node),
-                contained_layout,
+                layout_dependency,
                 crate::tree::UiDebugCacheRootReuseReason::ManualCacheRoot,
             );
         }
@@ -88,6 +89,7 @@ impl<H: UiHost> UiTree<H> {
             let window = self.window;
             let sf = scale_factor;
             self.begin_prepaint_outputs_for_node(node, key);
+            self.begin_scene_fragment_for_node(node, key);
             self.with_widget_mut(node, |widget, tree| {
                 let mut cx = crate::widget::PrepaintCx {
                     app,

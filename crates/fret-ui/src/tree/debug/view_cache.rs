@@ -5,9 +5,31 @@ pub struct UiDebugCacheRootStats {
     pub root: NodeId,
     pub element: Option<GlobalElementId>,
     pub reused: bool,
-    pub contained_layout: bool,
+    pub layout_dependency: &'static str,
     pub paint_replayed_ops: u32,
     pub reuse_reason: UiDebugCacheRootReuseReason,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugBoundaryStats {
+    pub id: NodeId,
+    pub parent: Option<NodeId>,
+    pub element: Option<GlobalElementId>,
+    pub kind: &'static str,
+    pub source: &'static str,
+    pub prepaint_owner: &'static str,
+    pub paint_cache_owner: &'static str,
+    pub scene_fragment_owner: &'static str,
+    pub scene_fragment_slots: usize,
+    pub scene_fragment_entries: usize,
+    pub scene_fragment_used_entries: usize,
+    pub scene_fragment_rejected_entries: usize,
+    pub scene_fragment_reject_reason: Option<&'static str>,
+    pub layout_dependency: &'static str,
+    pub layout_definite: bool,
+    pub layout_dirty: bool,
+    pub layout_dirty_source: Option<UiDebugInvalidationSource>,
+    pub layout_dirty_detail: Option<UiDebugInvalidationDetail>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,6 +69,6 @@ impl UiDebugCacheRootReuseReason {
 pub(in crate::tree) struct DebugViewCacheRootRecord {
     pub(in crate::tree) root: NodeId,
     pub(in crate::tree) reused: bool,
-    pub(in crate::tree) contained_layout: bool,
+    pub(in crate::tree) layout_dependency: &'static str,
     pub(in crate::tree) reuse_reason: UiDebugCacheRootReuseReason,
 }

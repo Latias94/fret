@@ -144,8 +144,23 @@ impl UiTreeDebugSnapshotV1 {
                 })
         };
 
-        let cache_roots: Vec<UiCacheRootStatsV1> = ui
-            .debug_cache_root_stats()
+        let debug_cache_root_stats = ui.debug_cache_root_stats();
+        let cache_root_outcome_by_root: HashMap<u64, UiCacheRootBoundaryOutcomeV1> =
+            debug_cache_root_stats
+                .iter()
+                .map(|stats| {
+                    let root = stats.root.data().as_ffi();
+                    let contained_relayout_in_frame = contained_relayout_roots.contains(&stats.root);
+                    (
+                        root,
+                        UiBoundaryDiagnosticsV1::cache_root_outcome_from_debug_stats(
+                            stats,
+                            contained_relayout_in_frame,
+                        ),
+                    )
+                })
+                .collect();
+        let cache_roots: Vec<UiCacheRootStatsV1> = debug_cache_root_stats
             .iter()
             .map(|stats| {
                 UiCacheRootStatsV1::from_stats(
@@ -155,6 +170,24 @@ impl UiTreeDebugSnapshotV1 {
                     semantics.as_ref(),
                     &contained_relayout_roots,
                     stats,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+        let cache_root_by_root: HashMap<u64, &UiCacheRootStatsV1> =
+            cache_roots.iter().map(|root| (root.root, root)).collect();
+        let boundaries: Vec<UiBoundaryDiagnosticsV1> = ui
+            .debug_boundary_stats()
+            .iter()
+            .map(|boundary| {
+                UiBoundaryDiagnosticsV1::from_boundary_stats(
+                    window,
+                    element_runtime_state,
+                    boundary,
+                    cache_root_by_root.get(&boundary.id.data().as_ffi()).copied(),
+                    cache_root_outcome_by_root
+                        .get(&boundary.id.data().as_ffi())
+                        .copied(),
                     max_debug_string_bytes,
                 )
             })
@@ -302,6 +335,7 @@ impl UiTreeDebugSnapshotV1 {
                 .map(|u| UiGlobalChangeUnobservedV1::from_unobserved(app, u))
                 .collect(),
             cache_roots,
+            boundaries,
             overlay_synthesis: app
                 .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
                 .and_then(|diag| diag.events_for_window(window, app.frame_id()))

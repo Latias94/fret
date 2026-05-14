@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "UI gallery: PromptInput cursor-style docs preview screenshot (zinc dark)",
     "tags": [
       "ui-gallery",

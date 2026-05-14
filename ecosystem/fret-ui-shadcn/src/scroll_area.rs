@@ -679,6 +679,7 @@ pub struct ScrollArea {
     viewport_test_id: Option<Arc<str>>,
     viewport_focus_test_id: Option<Arc<str>>,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
+    viewport_probe_unbounded: Option<bool>,
 }
 
 impl ScrollArea {
@@ -697,6 +698,7 @@ impl ScrollArea {
             viewport_test_id: None,
             viewport_focus_test_id: None,
             viewport_intrinsic_measure_mode: None,
+            viewport_probe_unbounded: None,
         }
     }
 
@@ -715,6 +717,7 @@ impl ScrollArea {
             viewport_test_id: None,
             viewport_focus_test_id: None,
             viewport_intrinsic_measure_mode: None,
+            viewport_probe_unbounded: None,
             _phantom: PhantomData,
         }
     }
@@ -768,6 +771,11 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_probe_unbounded(mut self, probe_unbounded: bool) -> Self {
+        self.viewport_probe_unbounded = Some(probe_unbounded);
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
@@ -779,6 +787,9 @@ impl ScrollArea {
         }
         if let Some(mode) = self.viewport_intrinsic_measure_mode {
             viewport = viewport.intrinsic_measure_mode(mode);
+        }
+        if let Some(probe_unbounded) = self.viewport_probe_unbounded {
+            viewport = viewport.probe_unbounded(probe_unbounded);
         }
 
         let mut root = ScrollAreaRoot::new(viewport)
@@ -829,6 +840,7 @@ pub struct ScrollAreaBuild<H, B> {
     viewport_test_id: Option<Arc<str>>,
     viewport_focus_test_id: Option<Arc<str>>,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
+    viewport_probe_unbounded: Option<bool>,
     _phantom: PhantomData<fn() -> H>,
 }
 
@@ -881,6 +893,11 @@ where
         self
     }
 
+    pub fn viewport_probe_unbounded(mut self, probe_unbounded: bool) -> Self {
+        self.viewport_probe_unbounded = Some(probe_unbounded);
+        self
+    }
+
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = collect_built_scroll_area_children(
@@ -905,6 +922,9 @@ where
         }
         if let Some(mode) = self.viewport_intrinsic_measure_mode {
             area = area.viewport_intrinsic_measure_mode(mode);
+        }
+        if let Some(probe_unbounded) = self.viewport_probe_unbounded {
+            area = area.viewport_probe_unbounded(probe_unbounded);
         }
 
         area.into_element(cx)
@@ -978,6 +998,13 @@ mod tests {
                 .children
                 .iter()
                 .any(|child| any_element_has_text(child, needle))
+    }
+
+    fn any_scroll_probe_unbounded(el: &AnyElement) -> Option<bool> {
+        if let ElementKind::Scroll(props) = &el.kind {
+            return Some(props.probe_unbounded);
+        }
+        el.children.iter().find_map(any_scroll_probe_unbounded)
     }
 
     #[derive(Default)]
@@ -1083,6 +1110,54 @@ mod tests {
         assert!(
             any_element_has_text(&element, "Row"),
             "expected ScrollArea::build to keep child content"
+        );
+    }
+
+    #[test]
+    fn scroll_area_compact_surface_forwards_viewport_probe_unbounded() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::new([ui::text("Row").into_element(cx)])
+                .viewport_probe_unbounded(false)
+                .into_element(cx)
+        });
+
+        assert_eq!(
+            any_scroll_probe_unbounded(&element),
+            Some(false),
+            "expected ScrollArea::new to forward viewport_probe_unbounded(false)"
+        );
+    }
+
+    #[test]
+    fn scroll_area_build_surface_forwards_viewport_probe_unbounded() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, ui::text("Row"));
+            })
+            .viewport_probe_unbounded(false)
+            .into_element(cx)
+        });
+
+        assert_eq!(
+            any_scroll_probe_unbounded(&element),
+            Some(false),
+            "expected ScrollArea::build to forward viewport_probe_unbounded(false)"
         );
     }
 

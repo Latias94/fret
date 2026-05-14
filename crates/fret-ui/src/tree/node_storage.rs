@@ -1,16 +1,66 @@
 use super::*;
-use std::any::{Any, TypeId};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(super) struct ViewCacheFlags {
     pub(super) enabled: bool,
-    pub(super) contained_layout: bool,
+    pub(super) parent_layout_dependency: ViewCacheParentLayoutDependency,
     /// Whether the cache root's own box is layout-definite (i.e. it does not size-to-content).
     ///
     /// This is used to decide whether layout/hit-test invalidations can be truncated at the cache
     /// root when view caching is active. Auto-sized cache roots must allow invalidations to reach
     /// ancestors so the root can be placed before running contained relayouts.
     pub(super) layout_definite: bool,
+}
+
+impl ViewCacheFlags {
+    pub(super) fn from_contain_layout_when_bounds_known(
+        enabled: bool,
+        contain_layout_when_bounds_known: bool,
+        layout_definite: bool,
+    ) -> Self {
+        Self {
+            enabled,
+            parent_layout_dependency:
+                ViewCacheParentLayoutDependency::from_contain_layout_when_bounds_known(
+                    contain_layout_when_bounds_known,
+                ),
+            layout_definite,
+        }
+    }
+
+    pub(super) fn layout_contained_when_bounds_known(self) -> bool {
+        self.parent_layout_dependency == ViewCacheParentLayoutDependency::ContainedWhenBoundsKnown
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_layout_contained_when_bounds_known(&mut self, value: bool) {
+        self.parent_layout_dependency =
+            ViewCacheParentLayoutDependency::from_contain_layout_when_bounds_known(value);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ViewCacheParentLayoutDependency {
+    #[default]
+    ParentDependent,
+    ContainedWhenBoundsKnown,
+}
+
+impl ViewCacheParentLayoutDependency {
+    fn from_contain_layout_when_bounds_known(value: bool) -> Self {
+        if value {
+            Self::ContainedWhenBoundsKnown
+        } else {
+            Self::ParentDependent
+        }
+    }
+
+    pub(super) fn as_debug_str(self) -> &'static str {
+        match self {
+            Self::ParentDependent => "parent_dependent",
+            Self::ContainedWhenBoundsKnown => "contained_when_bounds_known",
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -58,10 +108,9 @@ pub(super) struct Node<H: UiHost> {
     pub(super) subtree_layout_dirty_count: u32,
     pub(super) layout_dirty_children_suppressed: bool,
     pub(super) paint_invalidated_by_hit_test_only: bool,
-    pub(super) paint_cache: Option<PaintCacheEntry>,
     pub(super) interaction_cache: Option<prepaint::InteractionCacheEntry>,
-    pub(super) prepaint_outputs: PrepaintOutputs,
     pub(super) prepaint_hit_test: Option<PrepaintHitTestCache>,
+    pub(super) widget_prepaint_enabled: bool,
     pub(super) view_cache: ViewCacheFlags,
     pub(super) view_cache_needs_rerender: bool,
     pub(super) text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
@@ -82,46 +131,6 @@ pub(super) struct PrepaintHitTestCache {
     pub(super) is_focusable: bool,
     pub(super) focus_traversal_children: bool,
     pub(super) can_scroll_descendant_into_view: bool,
-}
-
-#[derive(Default)]
-pub(super) struct PrepaintOutputs {
-    key: Option<PaintCacheKey>,
-    values: Vec<(TypeId, Box<dyn Any>)>,
-}
-
-impl PrepaintOutputs {
-    pub(super) fn begin_frame(&mut self, key: PaintCacheKey) {
-        if self.key != Some(key) {
-            self.key = Some(key);
-            self.values.clear();
-        }
-    }
-
-    pub(super) fn set<T: Any>(&mut self, value: T) {
-        let ty = TypeId::of::<T>();
-        if let Some((_, existing)) = self.values.iter_mut().find(|(id, _)| *id == ty) {
-            *existing = Box::new(value);
-            return;
-        }
-        self.values.push((ty, Box::new(value)));
-    }
-
-    pub(super) fn get<T: Any>(&self) -> Option<&T> {
-        let ty = TypeId::of::<T>();
-        self.values
-            .iter()
-            .find(|(id, _)| *id == ty)
-            .and_then(|(_, value)| value.downcast_ref::<T>())
-    }
-
-    pub(super) fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
-        let ty = TypeId::of::<T>();
-        self.values
-            .iter_mut()
-            .find(|(id, _)| *id == ty)
-            .and_then(|(_, value)| value.downcast_mut::<T>())
-    }
 }
 
 impl<H: UiHost> Node<H> {
@@ -145,10 +154,9 @@ impl<H: UiHost> Node<H> {
             subtree_layout_dirty_count: 1,
             layout_dirty_children_suppressed: false,
             paint_invalidated_by_hit_test_only: false,
-            paint_cache: None,
             interaction_cache: None,
-            prepaint_outputs: PrepaintOutputs::default(),
             prepaint_hit_test: None,
+            widget_prepaint_enabled: false,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
             text_boundary_mode_override: None,

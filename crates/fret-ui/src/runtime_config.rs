@@ -48,9 +48,6 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) hit_test_bounds_tree_disabled: bool,
     pub(crate) hit_test_bounds_tree_min_records: usize,
 
-    pub(crate) paint_cache_relax_view_cache_gating: bool,
-    pub(crate) paint_cache_allow_hit_test_only: bool,
-
     pub(crate) validate_semantics: bool,
     pub(crate) validate_semantics_panic: bool,
     pub(crate) validate_element_tree_unique_ids: bool,
@@ -58,12 +55,8 @@ pub(crate) struct UiRuntimeEnvConfig {
 
     pub(crate) layout_all_profile: bool,
     pub(crate) layout_profile: bool,
-    pub(crate) layout_subtree_dirty_aggregation: bool,
     pub(crate) layout_subtree_dirty_aggregation_validate: bool,
     pub(crate) layout_subtree_dirty_aggregation_validate_panic: bool,
-    pub(crate) layout_engine_sweep_policy: LayoutEngineSweepPolicy,
-    pub(crate) layout_skip_request_build_translation_only: bool,
-    pub(crate) layout_flow_skip_barrier_clean_children: bool,
     #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub(crate) debug_focus_repair: bool,
     pub(crate) taffy_dump: Option<RuntimeTaffyDumpConfig>,
@@ -91,12 +84,6 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) text_wrap_width_bucket_px: u8,
     pub(crate) text_wrap_width_small_step_bucket_px: u8,
     pub(crate) text_wrap_width_small_step_max_dw_px: u8,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum LayoutEngineSweepPolicy {
-    Always,
-    OnDemand,
 }
 
 pub(crate) fn ui_runtime_config() -> &'static UiRuntimeEnvConfig {
@@ -209,11 +196,6 @@ impl UiRuntimeEnvConfig {
                 .unwrap_or(256)
                 .max(1);
 
-        let paint_cache_relax_view_cache_gating =
-            env_non_empty("FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING");
-        let paint_cache_allow_hit_test_only =
-            env_non_empty("FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY");
-
         let validate_semantics = env_present("FRET_VALIDATE_SEMANTICS");
         let validate_semantics_panic = env_present("FRET_VALIDATE_SEMANTICS_PANIC");
         let validate_element_tree_unique_ids = env_present("FRET_VALIDATE_ELEMENT_TREE_UNIQUE_IDS");
@@ -222,45 +204,10 @@ impl UiRuntimeEnvConfig {
 
         let layout_all_profile = env_enabled("FRET_LAYOUT_ALL_PROFILE");
         let layout_profile = env_enabled("FRET_LAYOUT_PROFILE");
-        // Default-on: subtree aggregation makes it cheap to avoid reusing stale layout-dependent
-        // caches when a descendant is dirty but invalidation bubbling is truncated or buggy.
-        //
-        // Set to "0" to disable for perf experiments.
-        let layout_subtree_dirty_aggregation =
-            std::env::var("FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION")
-                .ok()
-                .map(|v| v != "0")
-                .unwrap_or(true);
         let layout_subtree_dirty_aggregation_validate =
             env_present("FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION_VALIDATE");
         let layout_subtree_dirty_aggregation_validate_panic =
             env_present("FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION_VALIDATE_PANIC");
-        let layout_engine_sweep_policy = match std::env::var("FRET_UI_LAYOUT_ENGINE_SWEEP")
-            .ok()
-            .as_deref()
-        {
-            Some("always") => LayoutEngineSweepPolicy::Always,
-            Some("on_demand") => LayoutEngineSweepPolicy::OnDemand,
-            Some(v) => {
-                tracing::warn!(
-                    "invalid FRET_UI_LAYOUT_ENGINE_SWEEP={v:?} (expected always|on_demand); defaulting to on_demand"
-                );
-                LayoutEngineSweepPolicy::OnDemand
-            }
-            None => LayoutEngineSweepPolicy::OnDemand,
-        };
-        // Default-on: these are perf knobs intended to keep the request/build phase cheap on
-        // steady-state frames. Set to "0" to disable.
-        let layout_skip_request_build_translation_only =
-            std::env::var("FRET_UI_LAYOUT_SKIP_REQUEST_BUILD_TRANSLATION_ONLY")
-                .ok()
-                .map(|v| v != "0")
-                .unwrap_or(true);
-        let layout_flow_skip_barrier_clean_children =
-            std::env::var("FRET_UI_LAYOUT_FLOW_SKIP_BARRIER_CLEAN_CHILDREN")
-                .ok()
-                .map(|v| v != "0")
-                .unwrap_or(true);
         let debug_focus_repair = env_present("FRET_DEBUG_FOCUS_REPAIR");
 
         let taffy_dump = env_present("FRET_TAFFY_DUMP").then(|| RuntimeTaffyDumpConfig {
@@ -364,20 +311,14 @@ impl UiRuntimeEnvConfig {
             resizable_split_log,
             hit_test_bounds_tree_disabled,
             hit_test_bounds_tree_min_records,
-            paint_cache_relax_view_cache_gating,
-            paint_cache_allow_hit_test_only,
             validate_semantics,
             validate_semantics_panic,
             validate_element_tree_unique_ids,
             validate_element_tree_unique_ids_panic,
             layout_all_profile,
             layout_profile,
-            layout_subtree_dirty_aggregation,
             layout_subtree_dirty_aggregation_validate,
             layout_subtree_dirty_aggregation_validate_panic,
-            layout_engine_sweep_policy,
-            layout_skip_request_build_translation_only,
-            layout_flow_skip_barrier_clean_children,
             debug_focus_repair,
             taffy_dump,
             taffy_dump_once,

@@ -257,6 +257,16 @@ Conventions:
     `total/layout/paint/solve p95=3995/2137/1747/574us`, with the real 20k-line torture surface active and
     `paint_perf.us_total=365us` in the sampled bundle. Do not start the row display-list rewrite from this sample
     alone; either create a stricter editor paint stressor or move to a currently near-threshold gate.
+  - Latest macOS M4 contained-layout gate: perf log entry `2026-05-13 16:44:18 +08:00` shows
+    `ui-code-editor-resize-probes` repeat=3 passing `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`
+    with `failures=[]`, non-zero `code_editor.paint_perf`, and p95 total/layout/paint/solve
+    `1361/295/1134/116us`. This closes the current macOS layout-solve failure; the next measured
+    limiter on this script is paint/widget row replay and content resolution.
+  - [x] Contain the code-editor gallery content cache layout boundary during resize.
+    - Implementation: `apps/fret-ui-gallery/src/spec.rs` marks only the code-editor MVP/torture pages as contained
+      layout roots, and `apps/fret-ui-gallery/src/driver/shell.rs` forwards that policy into `ViewCacheProps`.
+    - Evidence: perf log entry `2026-05-13 16:44:18 +08:00`; p95 total drops from the script-fix smoke's
+      `2070us` to `1361us` and p95 layout solve from `766us` to `116us`.
   - Latest payload-aware typical-frame contract: perf log entry `2026-05-11` promotes
     `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json` with
     `threshold_surface=ui-renderer-payload`, measured p50/p95/max top total=`2563/3603/3603us`, hard frame p95
@@ -341,6 +351,11 @@ Conventions:
   - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
     - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
     - Evidence: perf log entry `2026-02-08` (editor resize gate delta).
+  - [x] Align declarative host-widget paint prepare invalidation with the nowrap text-blob key.
+    - Implementation: `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+    - Contract: `TextWrap::None + overflow!=Ellipsis + align=Start` is width-insensitive for paint prepare;
+      ellipsis and non-start alignment remain width-sensitive.
+    - Evidence: perf log entry `2026-05-13 14:39:15 +08:00` (unit guards + text-measure overlay diag).
   - [x] Normalize Canvas hosted/shared text fingerprints to ignore `max_width` for nowrap+non-ellipsis.
     - Implementation: `perf(fret-ui): normalize nowrap canvas text keys` (commit `667d8317b`).
     - Evidence: perf log entry `2026-02-08` (editor resize jitter drops to ~13ms worst-frame).

@@ -324,7 +324,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     // Keep a cache root boundary so the file-tree surface can be adopted as a panel-level unit.
     // Consumers can still wrap this in their own cache roots if needed.
     cx.cached_subtree_with(
-        CachedSubtreeProps::default().contained_layout(true),
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |_cx| vec![list],
     )
 }

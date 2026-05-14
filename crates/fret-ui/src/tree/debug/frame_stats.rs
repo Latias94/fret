@@ -234,8 +234,7 @@ pub struct UiDebugFrameStats {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
-    /// Paint-cache replay attempts that were allowed specifically by the
-    /// `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` gate.
+    /// Paint-cache replay attempts that were allowed specifically by hit-test-only invalidation.
     pub paint_cache_hit_test_only_replay_allowed: u32,
     /// Hit-test-only replay attempts rejected because the previous cache key did not match.
     pub paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,

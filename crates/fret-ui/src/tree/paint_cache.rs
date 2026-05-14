@@ -73,6 +73,8 @@ pub(super) struct PaintCacheEntry {
     pub(super) origin: Point,
     pub(super) start: u32,
     pub(super) end: u32,
+    pub(super) text_blob_start: u32,
+    pub(super) text_blob_end: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -89,14 +91,84 @@ pub enum PaintCachePolicy {
 #[derive(Debug, Default)]
 pub(super) struct PaintCacheState {
     pub(super) generation: u64,
-    pub(super) prev_ops: Vec<SceneOp>,
-    pub(super) prev_text_blob_ids: Vec<TextBlobId>,
-    pub(super) prev_fingerprint: u64,
+    previous_frame: PreviousFramePaintRecording,
     pub(super) source_generation: u64,
     pub(super) target_generation: u64,
     pub(super) hits: u32,
     pub(super) misses: u32,
     pub(super) replayed_ops: u32,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct PreviousFramePaintRecording {
+    ops: Vec<SceneOp>,
+    text_blob_ids: Vec<TextBlobId>,
+    fingerprint: u64,
+}
+
+impl PreviousFramePaintRecording {
+    #[cfg(test)]
+    pub(super) fn ops_len(&self) -> usize {
+        self.ops.len()
+    }
+
+    pub(super) fn ingest_scene(&mut self, scene: &mut Scene) {
+        scene.swap_storage(
+            &mut self.ops,
+            &mut self.text_blob_ids,
+            &mut self.fingerprint,
+        );
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.ops.clear();
+        self.text_blob_ids.clear();
+        self.fingerprint = 0;
+    }
+
+    pub(super) fn is_entry_replayable(&self, entry: PaintCacheEntry) -> bool {
+        self.entry_ranges(entry).is_some()
+    }
+
+    pub(super) fn replay_entry_translated(
+        &self,
+        scene: &mut Scene,
+        entry: PaintCacheEntry,
+        delta: Point,
+    ) -> Option<usize> {
+        let ranges = self.entry_ranges(entry)?;
+        let start = scene.ops_len();
+        scene.replay_ops_translated_with_text_blob_ids(
+            &self.ops[ranges.ops],
+            delta,
+            &self.text_blob_ids[ranges.text_blobs],
+        );
+        Some(scene.ops_len().saturating_sub(start))
+    }
+
+    fn entry_ranges(&self, entry: PaintCacheEntry) -> Option<PreviousFramePaintRecordingRanges> {
+        let op_start = entry.start as usize;
+        let op_end = entry.end as usize;
+        if op_start > op_end || op_end > self.ops.len() {
+            return None;
+        }
+
+        let text_blob_start = entry.text_blob_start as usize;
+        let text_blob_end = entry.text_blob_end as usize;
+        if text_blob_start > text_blob_end || text_blob_end > self.text_blob_ids.len() {
+            return None;
+        }
+
+        Some(PreviousFramePaintRecordingRanges {
+            ops: op_start..op_end,
+            text_blobs: text_blob_start..text_blob_end,
+        })
+    }
+}
+
+struct PreviousFramePaintRecordingRanges {
+    ops: std::ops::Range<usize>,
+    text_blobs: std::ops::Range<usize>,
 }
 
 impl PaintCacheState {
@@ -113,9 +185,30 @@ impl PaintCacheState {
     }
 
     pub(super) fn invalidate_recording(&mut self) {
-        self.prev_ops.clear();
-        self.prev_text_blob_ids.clear();
-        self.prev_fingerprint = 0;
+        self.previous_frame.clear();
         self.generation = self.generation.saturating_add(1);
+    }
+
+    pub(super) fn ingest_previous_frame_scene(&mut self, scene: &mut Scene) {
+        self.previous_frame.ingest_scene(scene);
+    }
+
+    pub(super) fn is_entry_replayable_in_previous_frame(&self, entry: PaintCacheEntry) -> bool {
+        self.previous_frame.is_entry_replayable(entry)
+    }
+
+    pub(super) fn replay_previous_frame_entry_translated(
+        &self,
+        scene: &mut Scene,
+        entry: PaintCacheEntry,
+        delta: Point,
+    ) -> Option<usize> {
+        self.previous_frame
+            .replay_entry_translated(scene, entry, delta)
+    }
+
+    #[cfg(test)]
+    pub(super) fn retained_recording_ops_len(&self) -> usize {
+        self.previous_frame.ops_len()
     }
 }

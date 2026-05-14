@@ -53,11 +53,7 @@ impl<H: UiHost> UiTree<H> {
     ///   sharing a single `Scene` across multiple `UiTree`s is not compatible with paint-cache
     ///   ingestion unless each tree records into an isolated scene.
     pub fn ingest_paint_cache_source(&mut self, scene: &mut Scene) {
-        scene.swap_storage(
-            &mut self.paint_cache.prev_ops,
-            &mut self.paint_cache.prev_text_blob_ids,
-            &mut self.paint_cache.prev_fingerprint,
-        );
+        self.paint_cache.ingest_previous_frame_scene(scene);
     }
 
     pub(in crate::tree) fn view_cache_active(&self) -> bool {
@@ -74,16 +70,6 @@ impl<H: UiHost> UiTree<H> {
             current = n.parent;
         }
         None
-    }
-
-    pub(in crate::tree) fn mark_cache_root_dirty(
-        &mut self,
-        root: NodeId,
-        source: UiDebugInvalidationSource,
-        detail: UiDebugInvalidationDetail,
-    ) {
-        self.dirty_cache_roots.insert(root);
-        self.dirty_cache_root_reasons.insert(root, (source, detail));
     }
 
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
@@ -110,9 +96,7 @@ impl<H: UiHost> UiTree<H> {
         //
         // This mirrors the same conditions used by invalidation propagation to truncate at cache
         // boundaries.
-        n.view_cache.contained_layout
-            && n.view_cache.layout_definite
-            && n.bounds.size != Size::default()
+        self.boundary_allows_contained_relayout(node) && n.bounds.size != Size::default()
     }
 
     pub(crate) fn view_cache_node_needs_rerender(&self, node: NodeId) -> bool {
@@ -130,19 +114,20 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         node: NodeId,
         enabled: bool,
-        contained_layout: bool,
+        contain_layout_when_bounds_known: bool,
         layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
-            let next = ViewCacheFlags {
+            let next = ViewCacheFlags::from_contain_layout_when_bounds_known(
                 enabled,
-                contained_layout,
+                contain_layout_when_bounds_known,
                 layout_definite,
-            };
+            );
             if n.view_cache == next {
                 return;
             }
             n.view_cache = next;
+            self.sync_view_boundary_state_for_node(node);
         }
     }
 
@@ -151,19 +136,17 @@ impl<H: UiHost> UiTree<H> {
             n.view_cache_needs_rerender = needs;
         }
         if !needs {
-            self.dirty_cache_roots.remove(&node);
-            self.dirty_cache_root_reasons.remove(&node);
+            self.clear_boundary_layout_dirty(node);
         }
     }
 
-    pub(in crate::tree) fn clear_cache_root_dirty_tracking_if_clean(&mut self, node: NodeId) {
+    pub(in crate::tree) fn clear_boundary_dirty_tracking_if_clean(&mut self, node: NodeId) {
         let should_clear = self
             .nodes
             .get(node)
             .is_none_or(|n| !n.view_cache_needs_rerender && !n.invalidation.layout);
         if should_clear {
-            self.dirty_cache_roots.remove(&node);
-            self.dirty_cache_root_reasons.remove(&node);
+            self.clear_boundary_layout_dirty(node);
         }
     }
 
@@ -189,7 +172,7 @@ impl<H: UiHost> UiTree<H> {
                 && n.view_cache.enabled
             {
                 n.view_cache_needs_rerender = true;
-                self.mark_cache_root_dirty(id, source, detail);
+                self.mark_boundary_layout_dirty(id, source, detail);
             }
 
             current = next;
@@ -227,7 +210,7 @@ impl<H: UiHost> UiTree<H> {
                 && n.view_cache.enabled
             {
                 n.view_cache_needs_rerender = true;
-                self.mark_cache_root_dirty(id, source, detail);
+                self.mark_boundary_layout_dirty(id, source, detail);
             }
             current = next_parent;
         }
@@ -254,7 +237,7 @@ impl<H: UiHost> UiTree<H> {
             .iter()
             .filter_map(|(id, n)| {
                 (n.view_cache.enabled
-                    && n.view_cache.contained_layout
+                    && n.view_cache.layout_contained_when_bounds_known()
                     && !n.view_cache.layout_definite
                     && n.bounds.size == Size::default()
                     && (n.invalidation.layout || n.invalidation.hit_test))

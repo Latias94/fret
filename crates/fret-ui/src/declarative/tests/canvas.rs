@@ -7,6 +7,17 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use super::*;
 use fret_core::FontId;
 
+#[derive(Debug)]
+struct TestFragmentPlan {
+    entries: usize,
+}
+
+impl crate::tree::BoundarySceneFragmentDebug for TestFragmentPlan {
+    fn boundary_scene_fragment_entry_count(&self) -> usize {
+        self.entries
+    }
+}
+
 #[test]
 fn canvas_resolves_passive_text_style_and_foreground_from_current_scope() {
     let mut app = TestHost::new();
@@ -140,6 +151,253 @@ fn canvas_resolved_passive_text_style_prefers_explicit_over_inherited() {
     assert_eq!(resolved.size, Px(21.0));
     assert_eq!(resolved.line_height, Some(Px(29.0)));
     assert_eq!(resolved.weight, fret_core::FontWeight::MEDIUM);
+}
+
+#[test]
+fn canvas_prepaint_hook_runs_before_paint_without_view_cache_root() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let prepaints = Arc::new(AtomicUsize::new(0));
+    let paints = Arc::new(AtomicUsize::new(0));
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-prepaint-hook",
+        |cx| {
+            let prepaints_for_prepaint = prepaints.clone();
+            let prepaints_for_paint = prepaints.clone();
+            let paints = paints.clone();
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                move |cx| {
+                    assert_eq!(cx.bounds().size, bounds.size);
+                    prepaints_for_prepaint.fetch_add(1, Ordering::SeqCst);
+                },
+                move |_p| {
+                    assert_eq!(prepaints_for_paint.load(Ordering::SeqCst), 1);
+                    paints.fetch_add(1, Ordering::SeqCst);
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(prepaints.load(Ordering::SeqCst), 1);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn canvas_prepaint_output_is_visible_to_canvas_paint() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let seen = Arc::new(AtomicUsize::new(0));
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-prepaint-output",
+        |cx| {
+            let seen = seen.clone();
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                move |cx| {
+                    let prev = cx.output::<usize>().copied().unwrap_or(0);
+                    cx.set_output(prev.saturating_add(1));
+                },
+                move |p| {
+                    seen.store(
+                        p.prepaint_output::<usize>().copied().unwrap_or(0),
+                        Ordering::SeqCst,
+                    );
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(seen.load(Ordering::SeqCst), 1);
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        1,
+        "stable frames should preserve the previous canvas prepaint output"
+    );
+
+    app.advance_frame();
+    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        2,
+        "repainted frames with the same prepaint key should observe previous canvas output"
+    );
+
+    app.advance_frame();
+    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.layout_all(&mut app, &mut services, bounds, 2.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 2.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        1,
+        "changing the canvas prepaint key should reset canvas output state"
+    );
+}
+
+#[test]
+fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let seen = Arc::new(AtomicUsize::new(0));
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-scene-fragment",
+        |cx| {
+            let seen = seen.clone();
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                move |cx| {
+                    let prev = cx
+                        .scene_fragment::<crate::canvas::CanvasSceneFragment<TestFragmentPlan>>()
+                        .map(|fragment| fragment.payload.entries)
+                        .unwrap_or(0);
+                    cx.set_scene_fragment_debug(crate::canvas::CanvasSceneFragment::new(
+                        TestFragmentPlan {
+                            entries: prev.saturating_add(1),
+                        },
+                        Arc::from([]),
+                        crate::canvas::CanvasHostedResources::default(),
+                        cx.bounds(),
+                        cx.bounds().origin,
+                    ));
+                },
+                move |p| {
+                    seen.store(
+                        p.scene_fragment::<crate::canvas::CanvasSceneFragment<TestFragmentPlan>>()
+                            .map(|fragment| fragment.payload.entries)
+                            .unwrap_or(0),
+                        Ordering::SeqCst,
+                    );
+                    p.record_scene_fragment_used_entries(1);
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(seen.load(Ordering::SeqCst), 1);
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|boundary| boundary.scene_fragment_entries == 1)
+        .expect("expected canvas boundary stats");
+    assert_eq!(
+        boundary.scene_fragment_owner,
+        "view_boundary_scene_fragment_state"
+    );
+    assert_eq!(boundary.scene_fragment_slots, 1);
+    assert_eq!(boundary.scene_fragment_entries, 1);
+    assert_eq!(boundary.scene_fragment_used_entries, 1);
+    assert_eq!(boundary.scene_fragment_rejected_entries, 0);
+    assert_eq!(boundary.scene_fragment_reject_reason, None);
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        1,
+        "stable frames should preserve the previous boundary scene fragment"
+    );
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|boundary| boundary.scene_fragment_entries == 1)
+        .expect("expected canvas boundary stats after stable cache hit");
+    assert_eq!(
+        boundary.scene_fragment_used_entries, 1,
+        "paint-cache hits should not record an additional scene-fragment use"
+    );
+
+    app.advance_frame();
+    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        2,
+        "repainted frames with the same key should observe the previous scene fragment"
+    );
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|boundary| boundary.scene_fragment_entries == 2)
+        .expect("expected canvas boundary stats after repaint");
+    assert_eq!(boundary.scene_fragment_slots, 1);
+    assert_eq!(boundary.scene_fragment_entries, 2);
+    assert_eq!(boundary.scene_fragment_used_entries, 2);
+    assert_eq!(boundary.scene_fragment_rejected_entries, 0);
+
+    app.advance_frame();
+    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.layout_all(&mut app, &mut services, bounds, 2.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 2.0);
+    assert_eq!(
+        seen.load(Ordering::SeqCst),
+        1,
+        "changing the prepaint key should reset the boundary scene fragment"
+    );
 }
 
 #[test]

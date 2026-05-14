@@ -145,7 +145,6 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let stop_at_view_cache = self.view_cache_active();
-        let agg_enabled = self.subtree_layout_dirty_aggregation_enabled();
         self.record_invalidation_walk_call(source);
         let source_root = node;
         let mut current = Some(node);
@@ -162,17 +161,17 @@ impl<H: UiHost> UiTree<H> {
             }
             let mut did_stop = false;
             let mut mark_dirty = false;
-            let mut mark_dirty_for_contained_layout = false;
+            let mut mark_dirty_for_layout_dependency_repair = false;
             let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
             let mut self_delta: i32 = 0;
-            let mut applied_layout_dirty_delta: i32 = 0;
+            let applied_layout_dirty_delta: i32;
             let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
                 let next_parent = n.parent;
                 if invalidation_active {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    Self::mark_node_invalidation_state(n, inv);
+                    Self::mark_node_invalidation_state(n, inv, id == source_root);
                     let layout_after = n.invalidation.layout;
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
@@ -187,7 +186,7 @@ impl<H: UiHost> UiTree<H> {
                     };
 
                     let can_truncate_at_cache_root = inv == Invalidation::Paint
-                        || (n.view_cache.contained_layout
+                        || (n.view_cache.layout_contained_when_bounds_known()
                             && n.view_cache.layout_definite
                             && n.bounds.size != Size::default())
                         // For auto-sized cache roots, allow descendant invalidations to truncate at
@@ -198,7 +197,7 @@ impl<H: UiHost> UiTree<H> {
                         //
                         // Importantly, do *not* truncate when the invalidation originates at the
                         // cache root itself (e.g. the repair step), so it can still reach ancestors.
-                        || (n.view_cache.contained_layout
+                        || (n.view_cache.layout_contained_when_bounds_known()
                             && !n.view_cache.layout_definite
                             && id != node);
                     if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
@@ -210,8 +209,9 @@ impl<H: UiHost> UiTree<H> {
                         }
                         hit_cache_root = Some(id);
                         did_stop = true;
-                        mark_dirty_for_contained_layout =
-                            n.view_cache.contained_layout && n.invalidation.layout;
+                        mark_dirty_for_layout_dependency_repair =
+                            n.view_cache.layout_contained_when_bounds_known()
+                                && n.invalidation.layout;
                         if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
@@ -219,30 +219,28 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                if agg_enabled {
-                    let child_delta = if n.layout_dirty_children_suppressed {
-                        0
-                    } else {
-                        pending_layout_dirty_delta
-                    };
-                    let apply_delta = child_delta.saturating_add(self_delta);
-                    applied_layout_dirty_delta = apply_delta;
-                    if apply_delta != 0 {
-                        let underflow =
-                            super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
-                                &mut n.subtree_layout_dirty_count,
-                                apply_delta,
-                            );
-                        if underflow {
-                            rebuild_subtree_layout_dirty = true;
-                            tracing::error!(
-                                node = ?id,
-                                element = ?n.element,
-                                stored = n.subtree_layout_dirty_count,
-                                delta = apply_delta,
-                                "subtree layout dirty count underflow during invalidation walk"
-                            );
-                        }
+                let child_delta = if n.layout_dirty_children_suppressed {
+                    0
+                } else {
+                    pending_layout_dirty_delta
+                };
+                let apply_delta = child_delta.saturating_add(self_delta);
+                applied_layout_dirty_delta = apply_delta;
+                if apply_delta != 0 {
+                    let underflow =
+                        super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
+                            &mut n.subtree_layout_dirty_count,
+                            apply_delta,
+                        );
+                    if underflow {
+                        rebuild_subtree_layout_dirty = true;
+                        tracing::error!(
+                            node = ?id,
+                            element = ?n.element,
+                            stored = n.subtree_layout_dirty_count,
+                            delta = apply_delta,
+                            "subtree layout dirty count underflow during invalidation walk"
+                        );
                     }
                 }
                 next_parent
@@ -263,29 +261,32 @@ impl<H: UiHost> UiTree<H> {
                 self.repair_subtree_layout_dirty_counts_from(id);
             }
 
-            if agg_enabled {
-                agg_walk_len = agg_walk_len.saturating_add(1);
-                pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
-                    0
-                } else {
-                    applied_layout_dirty_delta
-                };
-            }
+            agg_walk_len = agg_walk_len.saturating_add(1);
+            pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
+                0
+            } else {
+                applied_layout_dirty_delta
+            };
 
             if did_stop {
-                if mark_dirty || mark_dirty_for_contained_layout {
-                    self.mark_cache_root_dirty(id, source, detail);
+                if mark_dirty {
+                    self.mark_boundary_layout_dirty(id, source, detail);
+                } else if mark_dirty_for_layout_dependency_repair {
+                    self.mark_boundary_layout_dirty(
+                        id,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                    );
                 }
                 invalidation_active = false;
             }
-            if !invalidation_active && (!agg_enabled || pending_layout_dirty_delta == 0) {
+            if !invalidation_active && pending_layout_dirty_delta == 0 {
                 break;
             }
             current = next_parent;
         }
 
-        if agg_enabled && self.debug_enabled && agg_walk_len > 0 && pending_layout_dirty_delta != 0
-        {
+        if self.debug_enabled && agg_walk_len > 0 && pending_layout_dirty_delta != 0 {
             self.debug_stats.layout_subtree_dirty_agg_updates = self
                 .debug_stats
                 .layout_subtree_dirty_agg_updates
@@ -320,7 +321,7 @@ impl<H: UiHost> UiTree<H> {
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
                 let mut mark_dirty = false;
-                let mut mark_dirty_for_contained_layout = false;
+                let mut mark_dirty_for_layout_dependency_repair = false;
                 let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 let mut layout_transition: Option<(NodeId, bool, bool)> = None;
                 if let Some(n) = self.nodes.get_mut(id)
@@ -328,7 +329,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    Self::mark_node_invalidation_state(n, inv);
+                    Self::mark_node_invalidation_state(n, inv, false);
                     let layout_after = n.invalidation.layout;
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
@@ -337,8 +338,8 @@ impl<H: UiHost> UiTree<H> {
                     );
                     layout_transition = Some((id, layout_before, layout_after));
                     counter_update = Some((prev, n.invalidation));
-                    mark_dirty_for_contained_layout =
-                        n.view_cache.contained_layout && n.invalidation.layout;
+                    mark_dirty_for_layout_dependency_repair =
+                        n.view_cache.layout_contained_when_bounds_known() && n.invalidation.layout;
                     if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
@@ -357,8 +358,14 @@ impl<H: UiHost> UiTree<H> {
                 if let Some((prev, next)) = counter_update {
                     self.update_invalidation_counters(prev, next);
                 }
-                if mark_dirty || mark_dirty_for_contained_layout {
-                    self.mark_cache_root_dirty(id, source, detail);
+                if mark_dirty {
+                    self.mark_boundary_layout_dirty(id, source, detail);
+                } else if mark_dirty_for_layout_dependency_repair {
+                    self.mark_boundary_layout_dirty(
+                        id,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                    );
                 }
                 parent = next_parent;
             }
@@ -403,7 +410,6 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let stop_at_view_cache = self.view_cache_active();
-        let agg_enabled = self.subtree_layout_dirty_aggregation_enabled();
         let needed = Self::invalidation_mask(inv);
         if source != UiDebugInvalidationSource::Notify && (visited.mask(node) & needed) == needed {
             return;
@@ -426,7 +432,7 @@ impl<H: UiHost> UiTree<H> {
                 && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, inv, detail))
             {
                 invalidation_active = false;
-                if !agg_enabled || pending_layout_dirty_delta == 0 {
+                if pending_layout_dirty_delta == 0 {
                     break;
                 }
             }
@@ -437,9 +443,9 @@ impl<H: UiHost> UiTree<H> {
             }
             let mut did_stop = false;
             let mut mark_dirty = false;
-            let mut mark_dirty_for_contained_layout = false;
+            let mut mark_dirty_for_layout_dependency_repair = false;
             let mut self_delta: i32 = 0;
-            let mut applied_layout_dirty_delta: i32 = 0;
+            let applied_layout_dirty_delta: i32;
             let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
                 let next_parent = n.parent;
@@ -449,7 +455,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    Self::mark_node_invalidation_state(n, inv);
+                    Self::mark_node_invalidation_state(n, inv, id == source_root);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
@@ -466,10 +472,10 @@ impl<H: UiHost> UiTree<H> {
 
                 if invalidation_active {
                     let can_truncate_at_cache_root = inv == Invalidation::Paint
-                        || (n.view_cache.contained_layout
+                        || (n.view_cache.layout_contained_when_bounds_known()
                             && n.view_cache.layout_definite
                             && n.bounds.size != Size::default())
-                        || (n.view_cache.contained_layout
+                        || (n.view_cache.layout_contained_when_bounds_known()
                             && !n.view_cache.layout_definite
                             && id != node);
                     if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
@@ -479,8 +485,9 @@ impl<H: UiHost> UiTree<H> {
                                 .view_cache_invalidation_truncations
                                 .saturating_add(1);
                         }
-                        mark_dirty_for_contained_layout =
-                            n.view_cache.contained_layout && n.invalidation.layout;
+                        mark_dirty_for_layout_dependency_repair =
+                            n.view_cache.layout_contained_when_bounds_known()
+                                && n.invalidation.layout;
                         if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
@@ -490,30 +497,28 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                if agg_enabled {
-                    let child_delta = if n.layout_dirty_children_suppressed {
-                        0
-                    } else {
-                        pending_layout_dirty_delta
-                    };
-                    let apply_delta = child_delta.saturating_add(self_delta);
-                    applied_layout_dirty_delta = apply_delta;
-                    if apply_delta != 0 {
-                        let underflow =
-                            super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
-                                &mut n.subtree_layout_dirty_count,
-                                apply_delta,
-                            );
-                        if underflow {
-                            rebuild_subtree_layout_dirty = true;
-                            tracing::error!(
-                                node = ?id,
-                                element = ?n.element,
-                                stored = n.subtree_layout_dirty_count,
-                                delta = apply_delta,
-                                "subtree layout dirty count underflow during invalidation walk"
-                            );
-                        }
+                let child_delta = if n.layout_dirty_children_suppressed {
+                    0
+                } else {
+                    pending_layout_dirty_delta
+                };
+                let apply_delta = child_delta.saturating_add(self_delta);
+                applied_layout_dirty_delta = apply_delta;
+                if apply_delta != 0 {
+                    let underflow =
+                        super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
+                            &mut n.subtree_layout_dirty_count,
+                            apply_delta,
+                        );
+                    if underflow {
+                        rebuild_subtree_layout_dirty = true;
+                        tracing::error!(
+                            node = ?id,
+                            element = ?n.element,
+                            stored = n.subtree_layout_dirty_count,
+                            delta = apply_delta,
+                            "subtree layout dirty count underflow during invalidation walk"
+                        );
                     }
                 }
 
@@ -536,27 +541,30 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if did_stop {
-                if mark_dirty || mark_dirty_for_contained_layout {
-                    self.mark_cache_root_dirty(id, source, detail);
+                if mark_dirty {
+                    self.mark_boundary_layout_dirty(id, source, detail);
+                } else if mark_dirty_for_layout_dependency_repair {
+                    self.mark_boundary_layout_dirty(
+                        id,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                    );
                 }
                 invalidation_active = false;
             }
-            if agg_enabled {
-                agg_walk_len = agg_walk_len.saturating_add(1);
-                pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
-                    0
-                } else {
-                    applied_layout_dirty_delta
-                };
-            }
-            if !invalidation_active && (!agg_enabled || pending_layout_dirty_delta == 0) {
+            agg_walk_len = agg_walk_len.saturating_add(1);
+            pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
+                0
+            } else {
+                applied_layout_dirty_delta
+            };
+            if !invalidation_active && pending_layout_dirty_delta == 0 {
                 break;
             }
             current = next_parent;
         }
 
-        if agg_enabled && self.debug_enabled && agg_walk_len > 0 && pending_layout_dirty_delta != 0
-        {
+        if self.debug_enabled && agg_walk_len > 0 && pending_layout_dirty_delta != 0 {
             self.debug_stats.layout_subtree_dirty_agg_updates = self
                 .debug_stats
                 .layout_subtree_dirty_agg_updates
@@ -593,7 +601,7 @@ impl<H: UiHost> UiTree<H> {
                 let already = visited.mask(id);
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
-                    let mut mark_dirty_for_contained_layout = false;
+                    let mut mark_dirty_for_layout_dependency_repair = false;
                     let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                     let mut layout_transition: Option<(NodeId, bool, bool)> = None;
                     if let Some(n) = self.nodes.get_mut(id) {
@@ -604,7 +612,7 @@ impl<H: UiHost> UiTree<H> {
                         if (already & needed) != needed {
                             let prev = n.invalidation;
                             let layout_before = n.invalidation.layout;
-                            Self::mark_node_invalidation_state(n, inv);
+                            Self::mark_node_invalidation_state(n, inv, false);
                             let layout_after = n.invalidation.layout;
                             record_layout_invalidation_transition(
                                 &mut self.layout_invalidations_count,
@@ -613,8 +621,9 @@ impl<H: UiHost> UiTree<H> {
                             );
                             layout_transition = Some((id, layout_before, layout_after));
                             counter_update = Some((prev, n.invalidation));
-                            mark_dirty_for_contained_layout =
-                                n.view_cache.contained_layout && n.invalidation.layout;
+                            mark_dirty_for_layout_dependency_repair =
+                                n.view_cache.layout_contained_when_bounds_known()
+                                    && n.invalidation.layout;
                         }
                     }
                     if let Some((id, before, after)) = layout_transition {
@@ -630,8 +639,14 @@ impl<H: UiHost> UiTree<H> {
                     if let Some((prev, next)) = counter_update {
                         self.update_invalidation_counters(prev, next);
                     }
-                    if mark_dirty || mark_dirty_for_contained_layout {
-                        self.mark_cache_root_dirty(id, source, detail);
+                    if mark_dirty {
+                        self.mark_boundary_layout_dirty(id, source, detail);
+                    } else if mark_dirty_for_layout_dependency_repair {
+                        self.mark_boundary_layout_dirty(
+                            id,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                        );
                     }
                     visited.set_mask(id, already | needed);
                 }

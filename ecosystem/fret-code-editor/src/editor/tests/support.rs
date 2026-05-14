@@ -1,5 +1,37 @@
 use super::*;
 
+pub(super) fn render_code_editor_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut FakeServices,
+    window: AppWindowId,
+    handle: CodeEditorHandle,
+    bounds: Rect,
+) -> fret_core::Scene {
+    let root = fret_ui::declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "code-editor-frame",
+        |cx| {
+            vec![
+                CodeEditor::new(handle.clone())
+                    .key(0)
+                    .overscan(8)
+                    .into_element(cx),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(app, services, bounds, 1.0);
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    scene
+}
+
 pub(super) fn editor_ui_bounds() -> Rect {
     Rect::new(
         Point::new(Px(0.0), Px(0.0)),

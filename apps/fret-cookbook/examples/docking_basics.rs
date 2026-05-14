@@ -395,8 +395,9 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
     .gap(Space::N2)
     .items_center();
 
-    let dock_host =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let dock_host = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let window = st.window;
 
             let mut layout = LayoutStyle::default();
@@ -412,7 +413,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
                 .with_layout(layout);
 
             vec![cx.retained_subtree(props)]
-        });
+        },
+    );
 
     let card = shadcn::card(|cx| {
         ui::children![

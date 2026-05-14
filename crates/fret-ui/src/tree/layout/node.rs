@@ -39,7 +39,7 @@ impl<H: UiHost> UiTree<H> {
                 node = ?node,
                 pass = ?pass_kind,
                 view_cache_active = self.view_cache_active(),
-                contained_layout = view_cache.contained_layout,
+                layout_dependency = view_cache.parent_layout_dependency.as_debug_str(),
                 invalidated = invalidated_for_pass,
                 frame_id = app.frame_id().0,
             )
@@ -393,11 +393,11 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_clear_layout_dirty_source(node);
                 }
                 self.update_invalidation_counters(prev, next);
-                // Main-pass layout can consume a cache root's scheduling-only layout dirty marker
+                // Main-pass layout can consume a boundary's scheduling-only layout dirty marker
                 // before the contained-relayout pass ever looks at it (for example, initial mount
-                // or ancestor-driven layout). Keep `dirty_cache_roots` aligned with authoritative
+                // or ancestor-driven layout). Keep `dirty_boundaries` aligned with authoritative
                 // layout state so clean cache roots do not remain queued across stable frames.
-                self.clear_cache_root_dirty_tracking_if_clean(node);
+                self.clear_boundary_dirty_tracking_if_clean(node);
             }
         }
 

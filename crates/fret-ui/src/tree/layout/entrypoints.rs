@@ -1312,15 +1312,21 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn prune_detached_layout_followups(&mut self) {
-        let retained_dirty_cache_roots: std::collections::HashSet<NodeId> = self
-            .dirty_cache_roots
+        let retained_dirty_boundaries: std::collections::HashSet<NodeId> = self
+            .dirty_boundaries
             .iter()
             .copied()
             .filter(|&root| self.node_is_attached_to_layer_tree(root))
             .collect();
-        self.dirty_cache_roots = retained_dirty_cache_roots;
-        self.dirty_cache_root_reasons
-            .retain(|root, _| self.dirty_cache_roots.contains(root));
+        let detached: Vec<NodeId> = self
+            .dirty_boundaries
+            .difference(&retained_dirty_boundaries)
+            .copied()
+            .collect();
+        for root in detached {
+            self.clear_boundary_layout_dirty(root);
+        }
+        self.dirty_boundaries = retained_dirty_boundaries;
         self.pending_barrier_relayouts = self
             .pending_barrier_relayouts
             .iter()
@@ -1418,10 +1424,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         max_samples: usize,
     ) -> Vec<super::UiDebugLayoutDirtyDescendant> {
-        if !self.debug_enabled
-            || max_samples == 0
-            || !self.subtree_layout_dirty_aggregation_enabled()
-        {
+        if !self.debug_enabled || max_samples == 0 {
             return Vec::new();
         }
 
@@ -1533,14 +1536,14 @@ impl<H: UiHost> UiTree<H> {
         // If both an ancestor and a descendant cache root are invalidated in the same frame, only
         // relayout the ancestor; it will already relayout the subtree.
         //
-        // Hot path: avoid scanning the whole node store. Cache-root invalidations are tracked in
-        // `dirty_cache_roots`, so we can restrict this pass to the subset that actually changed.
+        // Hot path: avoid scanning the whole node store. Boundary invalidations are tracked in
+        // `dirty_boundaries`, so we can restrict this pass to the subset that actually changed.
         let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
-        for &id in &self.dirty_cache_roots {
+        for &id in &self.dirty_boundaries {
             let Some(node) = self.nodes.get(id) else {
                 continue;
             };
-            if !node.view_cache.enabled || !node.view_cache.contained_layout {
+            if !node.view_cache.enabled || !node.view_cache.layout_contained_when_bounds_known() {
                 continue;
             }
             if !node.invalidation.layout {
@@ -1663,7 +1666,7 @@ impl<H: UiHost> UiTree<H> {
             // cache root without implying that the declarative subtree must rerun next frame.
             // Keep an explicit `needs_rerender` bit authoritative, and clear the scheduling-only
             // dirty marker once both layout invalidation and rerender pressure are gone.
-            self.clear_cache_root_dirty_tracking_if_clean(root);
+            self.clear_boundary_dirty_tracking_if_clean(root);
 
             // Contained view-cache relayouts run after the main root layout pass, so any scroll
             // ancestor that inferred its content extent earlier in the frame can be left with a
@@ -1733,7 +1736,6 @@ impl<H: UiHost> UiTree<H> {
 
         let phase1_started = profile_layout.then(Instant::now);
         let reuse_cached_flow = self.interactive_resize_active();
-        let allow_translation_only_skip = runtime_cfg.layout_skip_request_build_translation_only;
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
             for &root in roots {
@@ -1770,8 +1772,7 @@ impl<H: UiHost> UiTree<H> {
             };
             let had_layout_engine_node = engine.layout_id_for_node(root).is_some();
             let needs_layout = layout_invalidated || prev_bounds != bounds;
-            let is_translation_only = allow_translation_only_skip
-                && !layout_invalidated
+            let is_translation_only = !layout_invalidated
                 && prev_bounds.size == bounds.size
                 && prev_bounds.origin != bounds.origin
                 && measured != Size::default();

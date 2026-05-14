@@ -1,5 +1,5 @@
 use fret_core::{Corners, Rect, TextStyle};
-use fret_ui::element::{AnyElement, LayoutStyle, ViewCacheProps};
+use fret_ui::element::{AnyElement, LayoutStyle, ViewBoundaryHints, ViewCacheProps};
 use fret_ui::{ElementContext, UiHost};
 
 use crate::{IntoUiElement, collect_children};
@@ -34,7 +34,7 @@ pub trait CachedSubtreeExt {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CachedSubtreeProps {
     pub layout: LayoutStyle,
-    pub contained_layout: bool,
+    pub boundary_hints: ViewBoundaryHints,
     pub cache_key: u64,
 }
 
@@ -44,8 +44,15 @@ impl CachedSubtreeProps {
         self
     }
 
-    pub fn contained_layout(mut self, contained_layout: bool) -> Self {
-        self.contained_layout = contained_layout;
+    pub fn boundary_hints(mut self, boundary_hints: ViewBoundaryHints) -> Self {
+        self.boundary_hints = boundary_hints;
+        self
+    }
+
+    pub fn contain_layout_when_bounds_known(mut self, contain: bool) -> Self {
+        self.boundary_hints = self
+            .boundary_hints
+            .contain_layout_when_bounds_known(contain);
         self
     }
 
@@ -89,12 +96,24 @@ impl<'a, H: UiHost> CachedSubtreeExt for ElementContext<'a, H> {
     {
         let view_cache = ViewCacheProps {
             layout: props.layout,
-            contained_layout: props.contained_layout,
+            boundary_hints: props.boundary_hints,
             cache_key: props.cache_key,
         };
         self.view_cache(view_cache, move |cx| {
             let items = f(cx);
             collect_children(cx, items)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cached_subtree_props_boundary_hint_replaces_direct_contained_layout_authoring() {
+        let props = CachedSubtreeProps::default().contain_layout_when_bounds_known(true);
+
+        assert!(props.boundary_hints.contain_layout_when_bounds_known);
     }
 }

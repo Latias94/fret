@@ -101,8 +101,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2).into_element(cx);
 
-    let transcript =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let transcript = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
             let revision = messages.len().min(u64::MAX as usize) as u64;
 
@@ -131,7 +132,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     vec![transcript, scroll_button]
                 }),
             ]
-        });
+        },
+    );
 
     let mut container_props = cx.with_theme(|theme| {
         decl_style::container_props(

@@ -32,6 +32,8 @@ fn snapshot_code_editor_paint_perf(
         rows_painted: u64_field!("rows_painted"),
         rows_drew_rich: u64_field!("rows_drew_rich"),
         rows_scene_replayed: u64_field!("rows_scene_replayed"),
+        rows_scene_prepaint_planned: u64_field!("rows_scene_prepaint_planned"),
+        rows_scene_prepaint_plan_used: u64_field!("rows_scene_prepaint_plan_used"),
         rows_scene_stored: u64_field!("rows_scene_stored"),
         row_scene_ops_stored: u64_field!("row_scene_ops_stored"),
         quads_selection: u64_field!("quads_selection"),
@@ -72,6 +74,10 @@ fn snapshot_code_editor_paint_perf(
         us_row_scene_replay_ops: us_field!(
             "us_row_scene_replay_ops",
             "ns_row_scene_replay_ops"
+        ),
+        us_row_scene_prepaint_plan: us_field!(
+            "us_row_scene_prepaint_plan",
+            "ns_row_scene_prepaint_plan"
         ),
         us_row_scene_capture_ops: us_field!(
             "us_row_scene_capture_ops",
@@ -2231,6 +2237,8 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_painted: metric!(rows_painted),
             rows_drew_rich: metric!(rows_drew_rich),
             rows_scene_replayed: metric!(rows_scene_replayed),
+            rows_scene_prepaint_planned: metric!(rows_scene_prepaint_planned),
+            rows_scene_prepaint_plan_used: metric!(rows_scene_prepaint_plan_used),
             rows_scene_stored: metric!(rows_scene_stored),
             row_scene_ops_stored: metric!(row_scene_ops_stored),
             quads_selection: metric!(quads_selection),
@@ -2251,6 +2259,7 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_full_key_compare: metric!(us_row_scene_full_key_compare),
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
+            us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),
             us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
             us_row_scene_store: metric!(us_row_scene_store),
             us_row_scene_fast_path: metric!(us_row_scene_fast_path),
@@ -2874,6 +2883,17 @@ fn snapshot_cache_root_stats(
     let mut replayed_ops_sum: u64 = 0;
 
     let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
+    let boundaries_by_id: std::collections::HashMap<u64, &serde_json::Value> = snapshot
+        .get("debug")
+        .and_then(|v| v.get("boundaries"))
+        .and_then(|v| v.as_array())
+        .map(|boundaries| {
+            boundaries
+                .iter()
+                .filter_map(|b| b.get("id").and_then(|v| v.as_u64()).map(|id| (id, b)))
+                .collect()
+        })
+        .unwrap_or_default();
 
     let mut out: Vec<BundleStatsCacheRoot> = roots
         .iter()
@@ -2898,6 +2918,16 @@ fn snapshot_cache_root_stats(
             replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
 
             let (role, test_id) = semantics_index.lookup_for_cache_root(root_node);
+            let boundary = boundaries_by_id.get(&root_node).copied();
+            let boundary_layout_dependency = boundary
+                .and_then(|v| v.get("layout_dependency"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let layout_dependency = boundary_layout_dependency.clone().or_else(|| {
+                r.get("layout_dependency")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            });
             BundleStatsCacheRoot {
                 root_node,
                 element: r.get("element").and_then(|v| v.as_u64()),
@@ -2906,10 +2936,7 @@ fn snapshot_cache_root_stats(
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
                 reused: reused_flag,
-                contained_layout: r
-                    .get("contained_layout")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false),
+                layout_dependency,
                 contained_relayout_in_frame,
                 paint_replayed_ops,
                 reuse_reason: r
@@ -2919,6 +2946,31 @@ fn snapshot_cache_root_stats(
                 root_in_semantics: r.get("root_in_semantics").and_then(|v| v.as_bool()),
                 root_role: role,
                 root_test_id: test_id,
+                boundary_kind: boundary
+                    .and_then(|v| v.get("kind"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_layout_dependency,
+                boundary_build_outcome: boundary
+                    .and_then(|v| v.get("build_outcome"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_reuse_reason: boundary
+                    .and_then(|v| v.get("reuse_reason"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_layout_outcome: boundary
+                    .and_then(|v| v.get("layout_outcome"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_prepaint_owner: boundary
+                    .and_then(|v| v.get("prepaint_owner"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                boundary_paint_outcome: boundary
+                    .and_then(|v| v.get("paint_outcome"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
             }
         })
         .collect();

@@ -104,6 +104,9 @@ Exit criteria:
   2026-05-14 hover/nav follow-up result: `ResponseExt` raw hover, hover-delay, active-item block,
   and nav-highlight storage is private too; pressable/disclosure assembly uses crate-local setters
   and tests read through accessors.
+  2026-05-14 enabled follow-up result: `ResponseExt.enabled` storage is private too; public readers
+  use `enabled()` and runtime/text-control assembly uses crate-local `set_enabled(...)`. `core` and
+  `id` stay out of this slice pending a separate contract audit.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

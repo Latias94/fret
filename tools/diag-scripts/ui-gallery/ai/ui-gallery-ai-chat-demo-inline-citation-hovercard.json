@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "UI Gallery: ai_chat_demo inline citation hovercard",
     "tags": ["ui-gallery", "ai", "inline-citation", "hovercard", "screenshots"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],

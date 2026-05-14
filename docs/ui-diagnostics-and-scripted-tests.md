@@ -470,7 +470,8 @@ Notes:
 {
   "schema_version": 2,
   "meta": {
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["gallery-dev"]
   },
   "steps": [
     { "type": "click", "target": { "kind": "role_and_name", "role": "button", "name": "Open" } },
@@ -1098,11 +1099,20 @@ Schema v2 scripts may include a top-level `meta` object. Supported fields:
 - `meta.tags: string[]` (display-only)
 - `meta.target_hints: string[]` (display-only)
 - `meta.required_capabilities: string[]` (gated by `capabilities.json` / DevTools session capabilities)
+- `meta.required_launch_features: string[]` (tooling launch preflight for feature-gated targets)
 - `meta.env_defaults: { [key: string]: string | number | boolean } | string[]`
   - A script-authored set of environment defaults applied only when the harness launches a fresh process
     (`fretboard-dev diag run --launch` / `fretboard-dev diag suite --launch`).
   - Command-line `--env KEY=VALUE` always wins over script defaults.
   - Suites fail early if scripts disagree on a default value for the same key.
+
+`required_launch_features` is a tooling orchestration contract, not an in-app execution semantic. When a script is
+tool-launched with an inspectable `cargo run ... --features ...` gallery command, `fretboard-dev diag` checks this
+list before spawning the demo and fails with a `missing required launch features` error instead of waiting for a page
+or selector that cannot exist. Non-inspectable prebuilt binary launches cannot prove compile-time Cargo features and
+therefore also fail this preflight when a script declares launch features. `target_hints` stays display-only and MUST
+NOT be used as a hard gate. The launcher normalizes first-party gallery wrapper features, so `ui-gallery-dev`
+satisfies `gallery-dev`, and `ui-gallery-full` satisfies both `gallery-dev` and `gallery-material3`.
 
 Supported intent steps (v2):
 

@@ -13337,3 +13337,149 @@ Helper validation:
   `target/fret-diag-hit-test-torture-dispatch-gate-helper-smoke-r2/summary.json` passed with
   `failures=0`, pointer dispatch/hit-test/global-change=`98us/15us/0`, and worst bundle
   `target/fret-diag-hit-test-torture-dispatch-gate-helper-smoke-r2/1778637860996/bundle.schema2.json`.
+
+## 2026-05-13 14:39:15 +08:00 (nowrap paint width dependency guard)
+
+Question:
+- Can declarative host-widget paint avoid re-preparing text blobs on resize when the underlying
+  text blob key is already width-insensitive (`TextWrap::None + overflow!=Ellipsis + align=Start`)?
+
+Change:
+- Added a host-widget paint guard so `Text`, `StyledText`, and `SelectableText` only treat width
+  changes as a prepare reason when the text semantics actually depend on width.
+- Preserved the width-sensitive cases: `TextOverflow::Ellipsis` and non-start alignment still
+  re-prepare when paint width changes.
+
+Validation:
+- `cargo nextest run -p fret-ui unwrapped`
+- `cargo nextest run -p fret-ui text_cache`
+- `cargo nextest run -p fret-ui window_text_input_snapshot`
+- `cargo fmt -p fret-ui --check`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+- `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target/fret-diag-codex-text-width-insensitive-text-overlay-20260513 --reuse-launch --repeat 1 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full`
+
+Evidence:
+- New unit guards cover all three host text variants:
+  - nowrap/start/clip width changes do not call prepare after the first paint;
+  - nowrap/ellipsis width changes still call prepare;
+  - nowrap/center width changes still call prepare.
+- Text-measure overlay resize jitter bundle:
+  `target/fret-diag-codex-text-width-insensitive-text-overlay-20260513/1778654271747-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- `diag stats` for that bundle: snapshots=`10`, p50/p95 total=`146/602us`, layout=`11/389us`,
+  paint=`130/207us`, `layout.engine_solve=0/212us`, `paint.widget=45/87us`,
+  and `paint.text_prepare=0/0us`.
+
+Non-evidence / follow-up:
+- A direct `ui-code-editor-resize-probes` run reached the code-editor route but still ended at
+  `wait_until_timeout` step `11`; its bundle reports `code_editor.paint_perf=0`, so it is not used
+  as proof for or against this host-widget change.
+- The next editor resize slice should first make that code-editor resize script deterministic on
+  the current macOS profile, then attribute any remaining width-sensitive wrapped or ellipsis text
+  prepare work.
+
+Decision:
+- Land the mechanism-level guard. It matches the renderer key contract and is better than expanding
+  width LRUs for a case where width should not be part of the prepared blob identity.
+
+## 2026-05-13 16:44:18 +08:00 (macOS code-editor resize contained-layout gate)
+
+Question:
+- Can the macOS `ui-code-editor-resize-probes` path become deterministic again, record non-zero
+  `code_editor.paint_perf`, and reduce the remaining resize layout tail without weakening the
+  existing macOS M4 v2 baseline?
+
+Change:
+- Updated the code-editor resize script to use `press_shortcut primary+a` so the gallery nav search
+  reset works on macOS as well as Windows.
+- The Python resize gate now enables `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1` for
+  `ui-code-editor-resize-probes`, making editor row-scene paint attribution part of the normal
+  gate surface.
+- Code-editor gallery pages now mark the shell content view-cache root as `contained_layout`.
+  This keeps live resize relayout bounded to the page content root instead of repeatedly solving
+  the surrounding gallery shell wrappers.
+- Added shadcn `ScrollArea` builder forwarding for `viewport_probe_unbounded(...)`, but did not use
+  it as the gallery optimization: the direct `probe_unbounded=false` experiment reduced solve time
+  while increasing final layout time through a double-layout observation path.
+
+Validation:
+- `cargo test -p fret-ui-shadcn --lib viewport_probe_unbounded`
+- `cargo test -p fret-ui-gallery --features gallery-full --lib code_editor_pages_use_contained_layout_content_cache`
+- `cargo fmt -p fret-ui-gallery -p fret-ui-shadcn --check`
+- `cargo run -p fretboard-dev --release -- diag perf ui-code-editor-resize-probes --dir target/fret-diag-code-editor-resize-probes-contained-layout-20260513 --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full`
+- `target/release/fretboard-dev diag stats target/fret-diag-code-editor-resize-probes-contained-layout-20260513/1778661520873/bundle.schema2.json --sort time --top 15`
+
+Evidence:
+- Threshold report:
+  `target/fret-diag-code-editor-resize-probes-contained-layout-20260513/check.perf_thresholds.json`
+  has `failures=[]` against
+  `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
+- Worst bundle:
+  `target/fret-diag-code-editor-resize-probes-contained-layout-20260513/1778661520873/bundle.schema2.json`.
+- Repeat=3 aggregate p95/max on the contained-layout run:
+  `top_total_time_us=1361/1361`, `top_layout_time_us=295/295`,
+  `top_layout_engine_solve_time_us=116/116`, and `paint_time_us=1134/1134`.
+- The immediately prior macOS script-fix smoke failed on `top_layout_engine_solve_time_us`
+  at `405us` vs threshold `372us`; its p95 total/layout/paint/solve were
+  `2070/766/1401/766us`. The contained-layout run therefore reduces p95 total by roughly
+  `34%`, p95 layout by roughly `61%`, and p95 layout solve by roughly `85%`.
+- Worst-bundle `diag stats` now reports non-zero editor paint attribution:
+  `code_editor.paint_perf frames=10`, rows painted/replayed/stored=`2890/2885/5`,
+  total p50/p95=`241/401us`, content p50/p95=`151/319us`, text p50/p95=`0/38us`,
+  fast-path p50/p95=`70/112us`.
+- Phase attribution on the worst bundle is now paint-dominant: total p50/p95=`1136/1361us`,
+  layout p50/p95=`36/361us`, prepaint p50/p95=`13/19us`, paint p50/p95=`898/1170us`;
+  hot p50/p95 are `layout.engine_solve=0/130us`, `paint.widget=683/971us`, and
+  `paint.text_prepare=8/11us`. Renderer encode/upload counters remain `0` on this diagnostic
+  surface.
+
+Decision:
+- Keep the contained-layout policy only for code-editor gallery pages. This is a gallery-shell
+  policy correction, not a core layout shortcut.
+- The first macOS resize bottleneck for this slice is closed by more than the requested 20-30%
+  target and is protected by the existing macOS M4 v2 perf baseline. The next optimization loop
+  should target code-editor paint/widget row replay/content resolution, not layout solve or
+  text prepare, unless a new failing bundle contradicts this attribution.
+
+## 2026-05-14 17:09:32 +08:00 (macOS view-cache toggle second proof surface)
+
+Question:
+- Can `ui-gallery-view-cache-toggle-perf-steady` act as the non-code-editor proof surface for the
+  Frame Pipeline v2 workstream, with a macOS M4 baseline and boundary diagnostics evidence?
+
+Change:
+- Added `docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json`.
+- Recorded the proof slice in
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md`.
+
+Validation:
+- Seed:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-m4r-view-cache-toggle-baseline-seed-20260514 --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json --perf-baseline-headroom-pct 20 --perf-baseline-threshold-surface ui --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target/release/fret-ui-gallery`
+- Validate:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514 --repeat 3 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-view-cache-toggle-perf-steady.macos-m4.v1.json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target/release/fret-ui-gallery`
+- Worst-bundle attribution:
+  `target/release/fretboard-dev diag stats target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/1778749774595/bundle.schema2.json --sort time --top 15 --check-view-cache-reuse-min 2 --check-view-cache-reuse-stable-min 2`
+
+Evidence:
+- Baseline seed worst bundle:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-seed-20260514/1778749752174/bundle.schema2.json`.
+- Seed aggregate p50/p95/max total=`574/600/600us`, layout=`101/109/109us`,
+  prepaint=`39/44/44us`, paint=`431/456/456us`.
+- Baseline validation threshold report:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/check.perf_thresholds.json`
+  has `failures=[]`.
+- Validation aggregate p50/p95/max total=`559/575/575us`, layout=`96/96/96us`,
+  prepaint=`36/36/36us`, paint=`427/443/443us`.
+- Worst-bundle stats: time sum total/layout/prepaint/paint=`2820/972/373/1475us`,
+  time p50/p95 total=`247/575us`, layout=`97/99us`, prepaint=`36/43us`,
+  paint=`114/443us`; hot p50/p95 `layout.engine_solve=0/0us`,
+  `paint.widget=28/181us`, `paint.text_prepare=0/0us`.
+- Reuse gate evidence:
+  `target/fret-diag-m4r-view-cache-toggle-baseline-validate-20260514/check.view_cache_reuse_stable.json`
+  has `failures=[]`, `reuse_snapshots=10`, `reuse_streak_tail=10`.
+- Bundle schema evidence: validation worst bundle has `debug.boundaries[]`, cache-root
+  `layout_dependency`, and no live `contained_layout` fields.
+
+Decision:
+- Promote this as the second non-code-editor proof surface for Frame Pipeline v2 M4R.
+- Treat the result as neutral perf evidence because the slice did not change runtime code; the
+  value is the stable contract and canonical boundary diagnostics proof.

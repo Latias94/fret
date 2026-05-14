@@ -1,5 +1,6 @@
 {
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery-data-table-window-boundary-scroll-retained",
     "required_capabilities": [
       "diag.script_v2"

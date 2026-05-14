@@ -3044,6 +3044,127 @@ fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
 }
 
 #[test]
+fn bundle_stats_preserves_cache_root_boundary_summary() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 50,
+                                "layout_time_us": 10,
+                                "prepaint_time_us": 5,
+                                "paint_time_us": 35
+                            },
+                            "cache_roots": [
+                                {
+                                    "root": 42,
+                                    "reused": false,
+                                    "layout_dependency": "contained_when_bounds_known",
+                                    "paint_replayed_ops": 0,
+                                    "reuse_reason": "needs_rerender"
+                                }
+                            ],
+                            "boundaries": [
+                                {
+                                    "schema_version": 1,
+                                    "id": 42,
+                                    "kind": "view_cache_root",
+                                    "source": "view_cache",
+                                    "layout_dependency": "contained_when_bounds_known",
+                                    "layout_definite": true,
+                                    "layout_dirty": false,
+                                    "prepaint_owner": "view_boundary_prepaint_state",
+                                    "scene_fragment_owner": "view_boundary_scene_fragment_state",
+                                    "scene_fragment_slots": 1,
+                                    "scene_fragment_entries": 0,
+                                    "scene_fragment_used_entries": 0,
+                                    "scene_fragment_rejected_entries": 0,
+                                    "build_outcome": "rebuilt",
+                                    "reuse_reason": "needs_rerender",
+                                    "layout_outcome": "contained_clean",
+                                    "paint_outcome": "not_replayed"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        1,
+        BundleStatsSort::Time,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    let cache_root = report.top[0]
+        .top_cache_roots
+        .first()
+        .expect("top cache root");
+    assert_eq!(
+        cache_root.layout_dependency.as_deref(),
+        Some("contained_when_bounds_known")
+    );
+    assert_eq!(cache_root.boundary_kind.as_deref(), Some("view_cache_root"));
+    assert_eq!(
+        cache_root.boundary_layout_dependency.as_deref(),
+        Some("contained_when_bounds_known")
+    );
+    assert_eq!(
+        cache_root.boundary_build_outcome.as_deref(),
+        Some("rebuilt")
+    );
+    assert_eq!(
+        cache_root.boundary_reuse_reason.as_deref(),
+        Some("needs_rerender")
+    );
+    assert_eq!(
+        cache_root.boundary_layout_outcome.as_deref(),
+        Some("contained_clean")
+    );
+    assert_eq!(
+        cache_root.boundary_prepaint_owner.as_deref(),
+        Some("view_boundary_prepaint_state")
+    );
+    assert_eq!(
+        cache_root.boundary_paint_outcome.as_deref(),
+        Some("not_replayed")
+    );
+
+    let json = report.to_json();
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/boundary/reuse_reason")
+            .and_then(|v| v.as_str()),
+        Some("needs_rerender")
+    );
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/layout_dependency")
+            .and_then(|v| v.as_str()),
+        Some("contained_when_bounds_known")
+    );
+    assert!(
+        json.pointer("/top/0/top_cache_roots/0/contained_layout")
+            .is_none()
+    );
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/boundary/layout_dependency")
+            .and_then(|v| v.as_str()),
+        Some("contained_when_bounds_known")
+    );
+}
+
+#[test]
 fn bundle_stats_reports_dispatch_unattributed_time() {
     let bundle = json!({
         "schema_version": 1,

@@ -80,7 +80,7 @@ enum TreeStep {
     SetViewCacheFlags {
         node: String,
         enabled: bool,
-        contained_layout: bool,
+        layout_contained_when_bounds_known: bool,
         layout_definite: bool,
     },
     NoteLayoutInvalidationTransition {
@@ -276,13 +276,13 @@ fn apply_step(
         TreeStep::SetViewCacheFlags {
             node,
             enabled,
-            contained_layout,
+            layout_contained_when_bounds_known,
             layout_definite,
         } => {
             ui.set_node_view_cache_flags(
                 lookup_existing_node(ui, ids, node)?,
                 *enabled,
-                *contained_layout,
+                *layout_contained_when_bounds_known,
                 *layout_definite,
             );
         }
@@ -366,8 +366,11 @@ fn append_metrics(
             set_metric(
                 observed,
                 prefix,
-                format!("node.{}.view_cache_contained_layout", node.id),
-                bool_metric(entry.view_cache.contained_layout),
+                format!(
+                    "node.{}.view_cache_layout_contained_when_bounds_known",
+                    node.id
+                ),
+                bool_metric(entry.view_cache.layout_contained_when_bounds_known()),
             );
             set_metric(
                 observed,
@@ -391,7 +394,13 @@ fn append_metrics(
                 observed,
                 prefix,
                 format!("node.{}.dirty_cache_root", node.id),
-                bool_metric(ui.dirty_cache_roots.contains(&id)),
+                bool_metric(ui.boundary_layout_dirty(id)),
+            );
+            set_metric(
+                observed,
+                prefix,
+                format!("node.{}.dirty_boundary", node.id),
+                bool_metric(ui.boundary_layout_dirty(id)),
             );
             set_metric(
                 observed,
@@ -437,7 +446,13 @@ fn append_metrics(
         observed,
         prefix,
         "debug.dirty_cache_roots_count",
-        ui.dirty_cache_roots.len() as f32,
+        ui.dirty_boundaries.len() as f32,
+    );
+    set_metric(
+        observed,
+        prefix,
+        "debug.dirty_boundaries_count",
+        ui.dirty_boundaries.len() as f32,
     );
     set_metric(
         observed,

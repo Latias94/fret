@@ -57,7 +57,7 @@ fn debug_draw_default_element_stays_noninteractive_canvas() {
                 .and_then(|decoration| decoration.test_id.as_deref()),
             Some("imui.debug_draw")
         );
-        assert!(!response.enabled);
+        assert!(!response.enabled());
     });
 }
 
@@ -97,7 +97,7 @@ fn debug_draw_interaction_wraps_canvas_in_pressable_response_surface() {
                 .and_then(|decoration| decoration.test_id.as_deref()),
             Some("imui.debug_draw.interactive")
         );
-        assert!(response.enabled);
+        assert!(response.enabled());
     });
 }
 

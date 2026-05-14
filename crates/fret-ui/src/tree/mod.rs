@@ -61,15 +61,16 @@ mod ui_tree_text_input;
 mod ui_tree_view_cache;
 mod ui_tree_widget;
 mod util;
+mod view_boundary;
 use debug::{
     DebugLayoutStackFrame, DebugPaintStackFrame, DebugViewCacheRootRecord,
     DebugWidgetMeasureStackFrame, UiDebugHoverDeclarativeInvalidationCounts,
     UiDebugLayoutDirtySource,
 };
 pub use debug::{
-    PointerOcclusion, UiDebugCacheRootReuseReason, UiDebugCacheRootStats, UiDebugDirtyView,
-    UiDebugFrameStats, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved, UiDebugHitTest,
-    UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
+    PointerOcclusion, UiDebugBoundaryStats, UiDebugCacheRootReuseReason, UiDebugCacheRootStats,
+    UiDebugDirtyView, UiDebugFrameStats, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved,
+    UiDebugHitTest, UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
     UiDebugInvalidationSource, UiDebugInvalidationWalk, UiDebugLayerInfo,
     UiDebugLayoutDirtyDescendant, UiDebugLayoutEngineMeasureChildHotspot,
     UiDebugLayoutEngineMeasureHotspot, UiDebugLayoutEngineSolve, UiDebugLayoutHotspot,
@@ -126,6 +127,8 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
+pub use view_boundary::BoundarySceneFragmentDebug;
+use view_boundary::{PaintCacheEntryState, ViewBoundaryState};
 
 pub(crate) use dispatch_snapshot::{UiDispatchSnapshot, UiDispatchSnapshotCacheEntry};
 
@@ -365,10 +368,10 @@ pub struct UiTree<H: UiHost> {
     inspection_active: bool,
     paint_cache: PaintCacheState,
     interaction_cache: prepaint::InteractionCacheState,
+    view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
+    retained_paint_cache_entries: slotmap::SecondaryMap<NodeId, PaintCacheEntryState>,
 
-    dirty_cache_roots: HashSet<NodeId>,
-    dirty_cache_root_reasons:
-        HashMap<NodeId, (UiDebugInvalidationSource, UiDebugInvalidationDetail)>,
+    dirty_boundaries: HashSet<NodeId>,
     last_redraw_request_tick: Option<TickId>,
 
     propagation_depth_generation: u32,

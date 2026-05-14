@@ -123,6 +123,10 @@ Readiness order for the next locally testable review slices:
    2026-05-14 hover/nav follow-up: raw hover, hover-delay, active-item block, and nav-highlight
    storage is private. Public callers and tests use accessor methods; runtime pressable/disclosure
    assemblers use crate-local setters, while disabled sanitization only clears nav highlight.
+   2026-05-14 enabled follow-up: `ResponseExt.enabled` storage is private too. Public/demo/test
+   callers use `enabled()`, while disabled sanitization and text controls use crate-local
+   `set_enabled(...)`. `ResponseExt.core` and `ResponseExt.id` remain explicit follow-up candidates
+   because they are broader shared-response and routing-identity surfaces.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

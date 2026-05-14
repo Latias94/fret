@@ -183,6 +183,179 @@ fn render_colored_text_diff_root(
     )
 }
 
+#[test]
+fn unwrapped_start_clip_text_reuses_prepared_blobs_across_paint_width_changes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_paint_cache_enabled(false);
+
+    let mut services = FakeTextService::default();
+    let nodes = render_text_width_cache_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        fret_core::TextOverflow::Clip,
+        fret_core::TextAlign::Start,
+    );
+
+    paint_text_width_cache_nodes(&mut ui, &mut app, &mut services, &nodes, Px(100.0));
+    assert_eq!(
+        services.prepare_calls, 3,
+        "expected the first paint to prepare plain, styled, and selectable text"
+    );
+
+    services.prepare_calls = 0;
+    paint_text_width_cache_nodes(&mut ui, &mut app, &mut services, &nodes, Px(180.0));
+    assert_eq!(
+        services.prepare_calls, 0,
+        "unwrapped start-aligned clipped text blobs are width-insensitive in paint"
+    );
+}
+
+#[test]
+fn unwrapped_ellipsis_text_reprepares_across_paint_width_changes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_paint_cache_enabled(false);
+
+    let mut services = FakeTextService::default();
+    let nodes = render_text_width_cache_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        fret_core::TextOverflow::Ellipsis,
+        fret_core::TextAlign::Start,
+    );
+
+    paint_text_width_cache_nodes(&mut ui, &mut app, &mut services, &nodes, Px(100.0));
+    services.prepare_calls = 0;
+    paint_text_width_cache_nodes(&mut ui, &mut app, &mut services, &nodes, Px(180.0));
+    assert_eq!(
+        services.prepare_calls, 3,
+        "ellipsis shaping is width-sensitive and must be prepared for the new paint width"
+    );
+}
+
+#[test]
+fn unwrapped_center_aligned_text_reprepares_across_paint_width_changes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_paint_cache_enabled(false);
+
+    let mut services = FakeTextService::default();
+    let nodes = render_text_width_cache_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        fret_core::TextOverflow::Clip,
+        fret_core::TextAlign::Center,
+    );
+
+    paint_text_width_cache_nodes(&mut ui, &mut app, &mut services, &nodes, Px(100.0));
+    services.prepare_calls = 0;
+    paint_text_width_cache_nodes(&mut ui, &mut app, &mut services, &nodes, Px(180.0));
+    assert_eq!(
+        services.prepare_calls, 3,
+        "non-start alignment is width-sensitive and must be prepared for the new paint width"
+    );
+}
+
+fn render_text_width_cache_root(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    overflow: fret_core::TextOverflow,
+    align: fret_core::TextAlign,
+) -> [NodeId; 3] {
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let styled = fret_core::AttributedText::new(
+        std::sync::Arc::<str>::from("styled"),
+        [fret_core::TextSpan {
+            len: "styled".len(),
+            ..Default::default()
+        }],
+    );
+    let selectable = fret_core::AttributedText::new(
+        std::sync::Arc::<str>::from("selectable"),
+        [fret_core::TextSpan {
+            len: "selectable".len(),
+            ..Default::default()
+        }],
+    );
+
+    let root = render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "text-width-cache",
+        move |cx| {
+            let mut plain_props = crate::element::TextProps::new("plain");
+            plain_props.wrap = fret_core::TextWrap::None;
+            plain_props.overflow = overflow;
+            plain_props.align = align;
+
+            let mut styled_props = crate::element::StyledTextProps::new(styled);
+            styled_props.wrap = fret_core::TextWrap::None;
+            styled_props.overflow = overflow;
+            styled_props.align = align;
+
+            let mut selectable_props = crate::element::SelectableTextProps::new(selectable);
+            selectable_props.wrap = fret_core::TextWrap::None;
+            selectable_props.overflow = overflow;
+            selectable_props.align = align;
+
+            vec![
+                cx.text_props(plain_props),
+                cx.styled_text_props(styled_props),
+                cx.selectable_text_props(selectable_props),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    let children = ui.children(root);
+    assert_eq!(children.len(), 3);
+    [children[0], children[1], children[2]]
+}
+
+fn paint_text_width_cache_nodes(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    nodes: &[NodeId; 3],
+    width: Px,
+) {
+    let mut scene = Scene::default();
+    for &node in nodes {
+        ui.paint(
+            app,
+            services,
+            node,
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(width, Px(24.0)),
+            ),
+            &mut scene,
+            1.0,
+        );
+    }
+}
+
 fn fingerprint_text_style(style: &TextStyle, h: &mut impl Hasher) {
     style.font.hash(h);
     style.size.0.to_bits().hash(h);

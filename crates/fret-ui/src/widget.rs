@@ -931,8 +931,23 @@ pub struct PrepaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
     pub fn set_output<T: std::any::Any>(&mut self, value: T) {
         self.tree.set_prepaint_output(self.node, value);
+    }
+
+    pub fn set_scene_fragment<T: std::any::Any>(&mut self, value: T) {
+        self.tree.set_scene_fragment(self.node, value);
+    }
+
+    pub fn set_scene_fragment_debug<T: crate::tree::BoundarySceneFragmentDebug>(
+        &mut self,
+        value: T,
+    ) {
+        self.tree.set_scene_fragment_debug(self.node, value);
     }
 
     pub fn output<T: std::any::Any>(&mut self) -> Option<&T> {
@@ -941,6 +956,14 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
 
     pub fn output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
         self.tree.prepaint_output_mut(self.node)
+    }
+
+    pub fn scene_fragment<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.scene_fragment(self.node)
+    }
+
+    pub fn scene_fragment_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.scene_fragment_mut(self.node)
     }
 
     /// Mark an invalidation on `node` for the next frame.
@@ -1135,6 +1158,14 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
 
     pub fn prepaint_output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
         self.tree.prepaint_output_mut(self.node)
+    }
+
+    pub fn scene_fragment<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.scene_fragment(self.node)
+    }
+
+    pub fn scene_fragment_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.scene_fragment_mut(self.node)
     }
 
     pub fn theme(&mut self) -> &Theme {

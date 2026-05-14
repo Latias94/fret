@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-material3"],
     "name": "ui-gallery-material3-switch-icon-color-crossfade-timeline-screenshots",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "tags": ["ui_gallery", "material3", "switch", "icons", "color", "crossfade", "timeline", "screenshots"]

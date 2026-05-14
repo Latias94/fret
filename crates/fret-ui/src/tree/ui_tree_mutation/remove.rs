@@ -370,10 +370,7 @@ impl<H: UiHost> UiTree<H> {
             {
                 let parent_counts_child_layout_dirty = !p.layout_dirty_children_suppressed;
                 p.children.retain(|&c| c != node);
-                if parent_counts_child_layout_dirty
-                    && self.subtree_layout_dirty_aggregation_enabled()
-                    && subtree_layout_dirty_count > 0
-                {
+                if parent_counts_child_layout_dirty && subtree_layout_dirty_count > 0 {
                     let delta = -(subtree_layout_dirty_count.min(i32::MAX as u32) as i32);
                     self.apply_subtree_layout_dirty_child_delta_to_ancestors(Some(parent), delta);
                 }
@@ -397,6 +394,7 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_clear_layout_dirty_source(node);
             }
             self.nodes.remove(node);
+            self.remove_view_boundary_state(node);
             self.observed_in_layout.remove_node(node);
             self.observed_in_paint.remove_node(node);
             self.observed_globals_in_layout.remove_node(node);

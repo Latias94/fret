@@ -3,10 +3,6 @@ use slotmap::SecondaryMap;
 use std::collections::HashSet;
 
 impl<H: UiHost> UiTree<H> {
-    pub(in crate::tree) fn subtree_layout_dirty_aggregation_enabled(&self) -> bool {
-        crate::runtime_config::ui_runtime_config().layout_subtree_dirty_aggregation
-    }
-
     pub(in crate::tree) fn set_layout_dirty_children_suppressed(
         &mut self,
         node: NodeId,
@@ -30,18 +26,13 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn node_subtree_layout_dirty(&self, node: NodeId) -> bool {
-        self.subtree_layout_dirty_aggregation_enabled()
-            && self
-                .nodes
-                .get(node)
-                .is_some_and(|n| n.subtree_layout_dirty_count > 0)
+        self.nodes
+            .get(node)
+            .is_some_and(|n| n.subtree_layout_dirty_count > 0)
     }
 
     #[allow(dead_code)]
     pub(crate) fn node_subtree_layout_dirty_count(&self, node: NodeId) -> u32 {
-        if !self.subtree_layout_dirty_aggregation_enabled() {
-            return 0;
-        }
         self.nodes
             .get(node)
             .map(|n| n.subtree_layout_dirty_count)
@@ -76,17 +67,17 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let total = self.node_subtree_layout_dirty_count(node);
-        if total == 0 || self.dirty_cache_roots.is_empty() {
+        if total == 0 || self.dirty_boundaries.is_empty() {
             return false;
         }
 
         let mut contained_roots: Vec<NodeId> = Vec::new();
-        for &root in &self.dirty_cache_roots {
+        for &root in &self.dirty_boundaries {
             let Some(entry) = self.nodes.get(root) else {
                 continue;
             };
             if !entry.view_cache.enabled
-                || !entry.view_cache.contained_layout
+                || !entry.view_cache.layout_contained_when_bounds_known()
                 || !entry.invalidation.layout
                 || !self.node_is_descendant_or_self(root, node)
             {
@@ -140,23 +131,19 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        // Always keep view-cache dirty roots discoverable, even if subtree aggregation is
-        // disabled. Contained view-cache relayouts use `dirty_cache_roots` as their entry set.
+        // Always keep boundary dirty roots discoverable, even if subtree aggregation is
+        // disabled. Contained view-cache relayouts use `dirty_boundaries` as their entry set.
         if after
             && self.view_cache_active()
             && let Some(n) = self.nodes.get(node)
             && n.view_cache.enabled
-            && n.view_cache.contained_layout
+            && n.view_cache.layout_contained_when_bounds_known()
         {
-            self.mark_cache_root_dirty(
+            self.mark_boundary_layout_dirty(
                 node,
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
             );
-        }
-
-        if !self.subtree_layout_dirty_aggregation_enabled() {
-            return;
         }
 
         let delta: i32 = if after { 1 } else { -1 };
@@ -174,18 +161,14 @@ impl<H: UiHost> UiTree<H> {
             && let Some(root) = self.nearest_view_cache_root(node)
             && let Some(n) = self.nodes.get(root)
             && n.view_cache.enabled
-            && n.view_cache.contained_layout
+            && n.view_cache.layout_contained_when_bounds_known()
             && n.invalidation.layout
         {
-            self.mark_cache_root_dirty(
+            self.mark_boundary_layout_dirty(
                 root,
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
             );
-        }
-
-        if !self.subtree_layout_dirty_aggregation_enabled() {
-            return;
         }
 
         let (parent, old_count, new_count) = {
@@ -224,10 +207,6 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         root: NodeId,
     ) {
-        if !self.subtree_layout_dirty_aggregation_enabled() {
-            return;
-        }
-
         let root_parent = self.nodes.get(root).and_then(|n| n.parent);
         let old_root_count = self
             .nodes
@@ -286,10 +265,6 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn repair_subtree_layout_dirty_counts_from(&mut self, root: NodeId) {
-        if !self.subtree_layout_dirty_aggregation_enabled() {
-            return;
-        }
-
         // Step 1: rebuild the subtree rooted at `root` (post-order) so descendants become
         // internally consistent with their invalidation flags and child lists.
         let mut stack: Vec<(NodeId, bool)> = Vec::new();
@@ -400,7 +375,7 @@ impl<H: UiHost> UiTree<H> {
         delta: i32,
         include_start_self: bool,
     ) {
-        if delta == 0 || !self.subtree_layout_dirty_aggregation_enabled() {
+        if delta == 0 {
             return;
         }
 
@@ -470,9 +445,6 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn validate_subtree_layout_dirty_counts_if_enabled(&mut self) {
         let cfg = crate::runtime_config::ui_runtime_config();
         if !cfg.layout_subtree_dirty_aggregation_validate {
-            return;
-        }
-        if !cfg.layout_subtree_dirty_aggregation {
             return;
         }
 

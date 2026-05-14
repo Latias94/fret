@@ -1,12 +1,18 @@
 use super::*;
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 impl<H: UiHost> UiTree<H> {
-    pub(in crate::tree) fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
+    pub(in crate::tree) fn mark_node_invalidation_state(
+        node: &mut Node<H>,
+        inv: Invalidation,
+        local: bool,
+    ) {
         match inv {
             Invalidation::HitTestOnly => {
-                if !node.invalidation.paint {
+                if local && !node.invalidation.paint {
                     node.paint_invalidated_by_hit_test_only = true;
+                } else if !local {
+                    node.paint_invalidated_by_hit_test_only = false;
                 }
             }
             Invalidation::Paint | Invalidation::Layout | Invalidation::HitTest => {
@@ -83,7 +89,7 @@ impl<H: UiHost> UiTree<H> {
             };
             let prev = n.invalidation;
             let layout_before = n.invalidation.layout;
-            Self::mark_node_invalidation_state(n, inv);
+            Self::mark_node_invalidation_state(n, inv, true);
             let next = n.invalidation;
             let layout_after = n.invalidation.layout;
             (prev, next, layout_before, layout_after)
@@ -135,24 +141,161 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         key: PaintCacheKey,
     ) {
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        n.prepaint_outputs.begin_frame(key);
+        boundary.prepaint.begin_outputs(key);
+    }
+
+    pub(in crate::tree) fn begin_scene_fragment_for_node(
+        &mut self,
+        node: NodeId,
+        key: PaintCacheKey,
+    ) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary.scene_fragment.begin_fragment(key);
     }
 
     pub(crate) fn set_prepaint_output<T: Any>(&mut self, node: NodeId, value: T) {
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        n.prepaint_outputs.set(value);
+        boundary.prepaint.set_output(value);
+    }
+
+    pub(crate) fn set_prepaint_output_box(
+        &mut self,
+        node: NodeId,
+        ty: TypeId,
+        value: Box<dyn Any>,
+    ) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary.prepaint.set_output_box(ty, value);
     }
 
     pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
-        self.nodes.get(node)?.prepaint_outputs.get::<T>()
+        self.view_boundaries.get(node)?.prepaint.output::<T>()
     }
 
     pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
-        self.nodes.get_mut(node)?.prepaint_outputs.get_mut::<T>()
+        self.view_boundaries
+            .get_mut(node)?
+            .prepaint
+            .output_mut::<T>()
+    }
+
+    pub(crate) fn prepaint_output_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
+        self.view_boundaries.get(node)?.prepaint.output_any(ty)
+    }
+
+    pub(crate) fn prepaint_output_any_mut(
+        &mut self,
+        node: NodeId,
+        ty: TypeId,
+    ) -> Option<&mut dyn Any> {
+        self.view_boundaries
+            .get_mut(node)?
+            .prepaint
+            .output_any_mut(ty)
+    }
+
+    pub(crate) fn set_scene_fragment<T: Any>(&mut self, node: NodeId, value: T) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary.scene_fragment.set_fragment(value);
+    }
+
+    pub(crate) fn set_scene_fragment_debug<T: crate::tree::BoundarySceneFragmentDebug>(
+        &mut self,
+        node: NodeId,
+        value: T,
+    ) {
+        let entry_count = value.boundary_scene_fragment_entry_count();
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary
+            .scene_fragment
+            .set_fragment_with_entry_count(value, entry_count);
+    }
+
+    pub(crate) fn set_scene_fragment_box(&mut self, node: NodeId, ty: TypeId, value: Box<dyn Any>) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary.scene_fragment.set_fragment_box(ty, value);
+    }
+
+    pub(crate) fn set_scene_fragment_box_with_entry_count(
+        &mut self,
+        node: NodeId,
+        ty: TypeId,
+        value: Box<dyn Any>,
+        entry_count: usize,
+    ) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary
+            .scene_fragment
+            .set_fragment_box_with_entry_count(ty, value, entry_count);
+    }
+
+    pub(crate) fn scene_fragment<T: Any>(&self, node: NodeId) -> Option<&T> {
+        self.view_boundaries
+            .get(node)?
+            .scene_fragment
+            .fragment::<T>()
+    }
+
+    pub(crate) fn scene_fragment_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
+        self.view_boundaries
+            .get_mut(node)?
+            .scene_fragment
+            .fragment_mut::<T>()
+    }
+
+    pub(crate) fn scene_fragment_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
+        self.view_boundaries
+            .get(node)?
+            .scene_fragment
+            .fragment_any(ty)
+    }
+
+    pub(crate) fn scene_fragment_any_mut(
+        &mut self,
+        node: NodeId,
+        ty: TypeId,
+    ) -> Option<&mut dyn Any> {
+        self.view_boundaries
+            .get_mut(node)?
+            .scene_fragment
+            .fragment_any_mut(ty)
+    }
+
+    pub(crate) fn record_scene_fragment_used_entries(&mut self, node: NodeId, count: usize) {
+        let Some(boundary) = self.view_boundaries.get_mut(node) else {
+            return;
+        };
+        boundary.scene_fragment.record_used_entries(count);
+    }
+
+    pub(crate) fn record_scene_fragment_rejected_entries(
+        &mut self,
+        node: NodeId,
+        count: usize,
+        reason: &'static str,
+    ) {
+        let Some(boundary) = self.view_boundaries.get_mut(node) else {
+            return;
+        };
+        boundary
+            .scene_fragment
+            .record_rejected_entries(count, reason);
     }
 }

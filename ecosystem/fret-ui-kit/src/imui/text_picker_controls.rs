@@ -171,7 +171,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         props.layout.size.width = Length::Fill;
         props.layout.size.height = Length::Auto;
         let root = cx.container(props, |_cx| vec![input_element]);
-        if input.enabled
+        if input.enabled()
             && options.keyboard_navigation
             && input.core.focused
             && picker_candidate_visible
@@ -191,7 +191,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         root
     });
     ui.add(root);
-    let enabled = input.enabled;
+    let enabled = input.enabled();
 
     if enabled && (visible_candidates.is_empty() || hide_for_exact_match) {
         ui.close_popup(id);

@@ -378,7 +378,7 @@ pub(super) fn input_text_model_element_with_options_and_semantics<H: UiHost>(
             .unwrap_or_default();
 
         response.id = Some(id);
-        response.enabled = enabled;
+        response.set_enabled(enabled);
         response.core.focused = enabled && cx.is_focused_element(id);
         response.core.changed = enabled && text_model_changed_for(cx, id, &current);
         response.core.rect = cx.last_bounds_for_element(id);
@@ -465,7 +465,7 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
                 .unwrap_or_default();
 
             response.id = Some(id);
-            response.enabled = enabled;
+            response.set_enabled(enabled);
             response.core.focused = enabled && cx.is_focused_element(id);
             response.core.changed = enabled && text_model_changed_for(cx, id, &current);
             response.core.rect = cx.last_bounds_for_element(id);

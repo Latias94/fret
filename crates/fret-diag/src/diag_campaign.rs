@@ -2115,6 +2115,7 @@ fn maybe_build_launch_time_probe_environment_admission_attempt(
     let mut child = maybe_launch_demo(
         &ctx.launch,
         &launch_env,
+        &[],
         &ctx.workspace_root,
         &resolved_paths.ready_path,
         &resolved_paths.exit_path,

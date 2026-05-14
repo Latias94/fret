@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery ai code block demo: screenshot",
     "tags": ["ui-gallery", "ui-gallery.ai", "ui-gallery.ai.code_block", "screenshot"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],

@@ -29,41 +29,44 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
         .clamp(16, 200_000);
     let overscan: usize = 6;
 
-    let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        vec![
-            fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0(
-                cx,
-                selection,
-                fret_ui_kit::Size::Medium,
-                None,
-                len,
-                overscan,
-                &scroll_handle,
-                0,
-                |i| i as u64,
-                Arc::new(|_models, i| Some(format!("Item {i}"))),
-                |_i| None,
-                |cx, i| {
-                    let mut out = Vec::new();
-                    let label = cx.text(format!("Item {i}"));
-                    let label = if i == 0 {
-                        label.attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id("ui-gallery-ui-kit-list-row-0-label"),
-                        )
-                    } else {
-                        label
-                    };
-                    out.push(label);
-                    out.push(cx.spacer(fret_ui::element::SpacerProps {
-                        min: Px(0.0),
-                        ..Default::default()
-                    }));
-                    out
-                },
-            ),
-        ]
-    });
+    let list = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
+            vec![
+                fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0(
+                    cx,
+                    selection,
+                    fret_ui_kit::Size::Medium,
+                    None,
+                    len,
+                    overscan,
+                    &scroll_handle,
+                    0,
+                    |i| i as u64,
+                    Arc::new(|_models, i| Some(format!("Item {i}"))),
+                    |_i| None,
+                    |cx, i| {
+                        let mut out = Vec::new();
+                        let label = cx.text(format!("Item {i}"));
+                        let label = if i == 0 {
+                            label.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("ui-gallery-ui-kit-list-row-0-label"),
+                            )
+                        } else {
+                            label
+                        };
+                        out.push(label);
+                        out.push(cx.spacer(fret_ui::element::SpacerProps {
+                            min: Px(0.0),
+                            ..Default::default()
+                        }));
+                        out
+                    },
+                ),
+            ]
+        },
+    );
 
     let list = list.attach_semantics(
         SemanticsDecoration::default()

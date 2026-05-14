@@ -906,6 +906,8 @@ mod tests {
                                     "rows_painted": 10,
                                     "rows_drew_rich": 3,
                                     "rows_scene_replayed": 8,
+                                    "rows_scene_prepaint_planned": 6,
+                                    "rows_scene_prepaint_plan_used": 5,
                                     "rows_scene_stored": 2,
                                     "row_scene_ops_stored": 19,
                                     "quads_selection": 4,
@@ -928,6 +930,7 @@ mod tests {
                                     "us_row_scene_full_key_compare": 1,
                                     "us_row_scene_replay_touch": 5,
                                     "us_row_scene_replay_ops": 25,
+                                    "us_row_scene_prepaint_plan": 7,
                                     "us_row_scene_capture_ops": 70,
                                     "us_row_scene_store": 20,
                                     "us_row_scene_fast_path": 15,
@@ -959,11 +962,14 @@ mod tests {
             .as_ref()
             .expect("code editor paint perf");
         assert_eq!(perf.rows_scene_replayed, 8);
+        assert_eq!(perf.rows_scene_prepaint_planned, 6);
+        assert_eq!(perf.rows_scene_prepaint_plan_used, 5);
         assert_eq!(perf.rows_scene_stored, 2);
         assert_eq!(perf.row_scene_ops_stored, 19);
         assert_eq!(perf.quads_selection, 4);
         assert_eq!(perf.quads_caret, 1);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
+        assert_eq!(perf.us_row_scene_prepaint_plan, 7);
         assert_eq!(perf.us_row_scene_capture_ops, 70);
         assert_eq!(perf.us_row_scene_store, 20);
         assert_eq!(perf.us_row_content_resolve, 45);
@@ -986,6 +992,16 @@ mod tests {
             Some(70)
         );
         assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/rows_scene_prepaint_planned")
+                .and_then(|v| v.as_u64()),
+            Some(6)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_prepaint_plan")
+                .and_then(|v| v.as_u64()),
+            Some(7)
+        );
+        assert_eq!(
             json.pointer("/code_editor_paint_perf/sum/us_row_content_resolve")
                 .and_then(|v| v.as_u64()),
             Some(45)
@@ -1004,6 +1020,11 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/rows_scene_replayed")
                 .and_then(|v| v.as_u64()),
             Some(8)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/rows_scene_prepaint_plan_used")
+                .and_then(|v| v.as_u64()),
+            Some(5)
         );
         assert_eq!(
             json.pointer("/top/0/code_editor_paint_perf/row_scene_ops_stored")

@@ -404,7 +404,7 @@ impl ComponentsGalleryDriver {
                     let header = cx.text(header);
 
                     let table = cx.cached_subtree_with(
-                        CachedSubtreeProps::default().contained_layout(true),
+                        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
                         |cx| {
                             vec![cx.semantics(
                                 SemanticsProps {

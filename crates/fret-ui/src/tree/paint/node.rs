@@ -31,27 +31,22 @@ impl<H: UiHost> UiTree<H> {
         };
         let sf = scale_factor;
 
-        let (invalidated, hit_test_only_paint_invalidated, prev_cache) = match self.nodes.get(node)
-        {
-            Some(n) => (
-                n.invalidation.paint,
-                n.paint_invalidated_by_hit_test_only,
-                n.paint_cache,
-            ),
-            None => return,
-        };
-
         let view_cache = self
             .nodes
             .get(node)
             .map(|n| n.view_cache)
             .unwrap_or_default();
+        let prev_cache = self.paint_cache_entry_for_node(node);
+        let (invalidated, hit_test_only_paint_invalidated) = match self.nodes.get(node) {
+            Some(n) => (n.invalidation.paint, n.paint_invalidated_by_hit_test_only),
+            None => return,
+        };
         let span = if view_cache.enabled && tracing::enabled!(tracing::Level::TRACE) {
             tracing::trace_span!(
                 "ui.cache_root.paint",
                 node = ?node,
                 view_cache_active = self.view_cache_active(),
-                contained_layout = view_cache.contained_layout,
+                layout_dependency = view_cache.parent_layout_dependency.as_debug_str(),
                 invalidated = invalidated,
                 frame_id = app.frame_id().0,
             )
@@ -101,12 +96,9 @@ impl<H: UiHost> UiTree<H> {
                 child_transform,
             )
         });
-        let relax_view_cache_gating = super::paint_cache_relax_view_cache_gating();
-        let allow_hit_test_only = super::paint_cache_allow_hit_test_only();
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
-                || relax_view_cache_gating
                 || self.nodes.get(node).is_some_and(|n| n.view_cache.enabled));
         if let Some(key_elapsed) = key_elapsed {
             self.debug_stats.paint_cache_key_time = self
@@ -115,8 +107,7 @@ impl<H: UiHost> UiTree<H> {
                 .saturating_add(key_elapsed);
         }
 
-        let replay_allowed_by_hit_test_only_gate =
-            invalidated && allow_hit_test_only && hit_test_only_paint_invalidated;
+        let replay_allowed_by_hit_test_only_gate = invalidated && hit_test_only_paint_invalidated;
         let paint_cache_replay_allowed = !invalidated || replay_allowed_by_hit_test_only_gate;
         if cache_enabled && paint_cache_replay_allowed {
             if replay_allowed_by_hit_test_only_gate && self.debug_enabled {
@@ -126,8 +117,7 @@ impl<H: UiHost> UiTree<H> {
                     .saturating_add(1);
             }
             struct PaintCacheReplayCtx {
-                range_start: usize,
-                range_end: usize,
+                entry: PaintCacheEntry,
                 delta: Point,
                 delta_visual: Point,
             }
@@ -147,9 +137,7 @@ impl<H: UiHost> UiTree<H> {
                     return None;
                 }
 
-                let range_start = prev.start as usize;
-                let range_end = prev.end as usize;
-                if range_start > range_end || range_end > self.paint_cache.prev_ops.len() {
+                if !self.paint_cache.is_entry_replayable_in_previous_frame(prev) {
                     return None;
                 }
 
@@ -184,8 +172,7 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 Some(PaintCacheReplayCtx {
-                    range_start,
-                    range_end,
+                    entry: prev,
                     delta,
                     delta_visual,
                 })
@@ -199,13 +186,13 @@ impl<H: UiHost> UiTree<H> {
 
             if let Some(ctx) = replay_ctx {
                 let PaintCacheReplayCtx {
-                    range_start,
-                    range_end,
+                    entry,
                     delta,
                     delta_visual,
                 } = ctx;
 
                 let start = scene.ops_len();
+                let text_blob_start = scene.text_blob_ids().len();
                 let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
                 let (replayed_ops, replay_elapsed) = fret_perf::measure_span_with(
                     self.debug_enabled,
@@ -219,12 +206,10 @@ impl<H: UiHost> UiTree<H> {
                         )
                     },
                     |span| {
-                        scene.replay_ops_translated(
-                            &self.paint_cache.prev_ops[range_start..range_end],
-                            delta,
-                        );
-                        let end = scene.ops_len();
-                        let replayed_ops = end.saturating_sub(start);
+                        let replayed_ops = self
+                            .paint_cache
+                            .replay_previous_frame_entry_translated(scene, entry, delta)
+                            .expect("entry was validated before paint-cache replay");
                         span.record("ops", replayed_ops as u64);
                         replayed_ops
                     },
@@ -237,15 +222,21 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.debug_record_paint_cache_replay(node, replayed_ops as u32);
 
-                if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
-                    let prev = n.invalidation;
-                    n.paint_cache = Some(PaintCacheEntry {
+                self.set_paint_cache_entry_for_node(
+                    node,
+                    PaintCacheEntry {
                         generation: self.paint_cache.target_generation,
                         key,
                         origin: bounds.origin,
                         start: start as u32,
                         end: (start + replayed_ops) as u32,
-                    });
+                        text_blob_start: text_blob_start as u32,
+                        text_blob_end: scene.text_blob_ids().len() as u32,
+                    },
+                );
+
+                if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
+                    let prev = n.invalidation;
                     n.invalidation.paint = false;
                     n.paint_invalidated_by_hit_test_only = false;
                     (prev, n.invalidation)
@@ -283,34 +274,42 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             while let Some(id) = stack.pop() {
-                                let Some(n) = self.nodes.get_mut(id) else {
+                                let Some((element, node_bounds)) =
+                                    self.nodes.get_mut(id).and_then(|n| {
+                                        if n.bounds_written_paint_pass == paint_pass {
+                                            return None;
+                                        }
+                                        translated_nodes = translated_nodes.saturating_add(1);
+                                        n.bounds.origin = Point::new(
+                                            n.bounds.origin.x + delta.x,
+                                            n.bounds.origin.y + delta.y,
+                                        );
+                                        n.bounds_written_paint_pass = paint_pass;
+                                        Some((n.element, n.bounds))
+                                    })
+                                else {
                                     continue;
                                 };
-                                if n.bounds_written_paint_pass == paint_pass {
-                                    continue;
-                                }
-                                translated_nodes = translated_nodes.saturating_add(1);
-                                n.bounds.origin = Point::new(
-                                    n.bounds.origin.x + delta.x,
-                                    n.bounds.origin.y + delta.y,
-                                );
-                                n.bounds_written_paint_pass = paint_pass;
-                                if let Some(mut cache) = n.paint_cache {
-                                    cache.origin = Point::new(
-                                        cache.origin.x + delta.x,
-                                        cache.origin.y + delta.y,
-                                    );
-                                    n.paint_cache = Some(cache);
-                                }
+                                self.translate_paint_cache_entry_origin(id, delta);
                                 if let Some(window) = window
-                                    && let Some(element) = n.element
+                                    && let Some(element) = element
                                 {
                                     crate::elements::record_bounds_for_element(
-                                        app, window, element, n.bounds,
+                                        app,
+                                        window,
+                                        element,
+                                        node_bounds,
                                     );
                                 }
-                                for &child in &n.children {
+                                let mut i = 0usize;
+                                loop {
+                                    let child =
+                                        self.nodes.get(id).and_then(|n| n.children.get(i)).copied();
+                                    let Some(child) = child else {
+                                        break;
+                                    };
                                     stack.push(child);
+                                    i += 1;
                                 }
                             }
                             self.restore_scratch_node_stack(stack);
@@ -429,64 +428,66 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut widget_type: &'static str = "<unknown>";
-        let (start, widget_elapsed) = fret_perf::measure(self.debug_enabled, || {
-            if self.debug_enabled {
-                self.debug_paint_stack.push(DebugPaintStackFrame {
-                    child_inclusive_time: Duration::default(),
-                    child_inclusive_scene_ops_delta: 0,
+        let ((start, text_blob_start), widget_elapsed) =
+            fret_perf::measure(self.debug_enabled, || {
+                if self.debug_enabled {
+                    self.debug_paint_stack.push(DebugPaintStackFrame {
+                        child_inclusive_time: Duration::default(),
+                        child_inclusive_scene_ops_delta: 0,
+                    });
+                }
+                let start = scene.ops_len();
+                let text_blob_start = scene.text_blob_ids().len();
+                self.with_widget_mut(node, |widget, tree| {
+                    if tree.debug_enabled {
+                        widget_type = widget.debug_type_name();
+                    }
+                    let children_render_transform = widget
+                        .children_render_transform(bounds)
+                        .filter(|t| t.inverse().is_some());
+                    let mut children_buf = SmallNodeList::<32>::default();
+                    if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
+                        children_buf.set(children);
+                    }
+                    let window = tree.window;
+                    let focus = tree.focus;
+                    let mut cx = PaintCx {
+                        app,
+                        node,
+                        window,
+                        focus,
+                        children: children_buf.as_slice(),
+                        bounds,
+                        scale_factor: sf,
+                        paint_style,
+                        accumulated_transform: current_transform,
+                        children_render_transform,
+                        services: &mut *services,
+                        observe_model: &mut observe_model,
+                        observe_global: &mut observe_global,
+                        scene,
+                        tree,
+                    };
+                    let transform = widget.render_transform(bounds);
+                    let pushed_transform = if let Some(transform) = transform
+                        && transform.inverse().is_some()
+                    {
+                        cx.scene.push(SceneOp::PushTransform { transform });
+                        true
+                    } else {
+                        false
+                    };
+
+                    cx.tree.debug_paint_widget_exclusive_resume();
+                    widget.paint(&mut cx);
+                    let _ = cx.tree.debug_paint_widget_exclusive_pause();
+
+                    if pushed_transform {
+                        cx.scene.push(SceneOp::PopTransform);
+                    }
                 });
-            }
-            let start = scene.ops_len();
-            self.with_widget_mut(node, |widget, tree| {
-                if tree.debug_enabled {
-                    widget_type = widget.debug_type_name();
-                }
-                let children_render_transform = widget
-                    .children_render_transform(bounds)
-                    .filter(|t| t.inverse().is_some());
-                let mut children_buf = SmallNodeList::<32>::default();
-                if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
-                    children_buf.set(children);
-                }
-                let window = tree.window;
-                let focus = tree.focus;
-                let mut cx = PaintCx {
-                    app,
-                    node,
-                    window,
-                    focus,
-                    children: children_buf.as_slice(),
-                    bounds,
-                    scale_factor: sf,
-                    paint_style,
-                    accumulated_transform: current_transform,
-                    children_render_transform,
-                    services: &mut *services,
-                    observe_model: &mut observe_model,
-                    observe_global: &mut observe_global,
-                    scene,
-                    tree,
-                };
-                let transform = widget.render_transform(bounds);
-                let pushed_transform = if let Some(transform) = transform
-                    && transform.inverse().is_some()
-                {
-                    cx.scene.push(SceneOp::PushTransform { transform });
-                    true
-                } else {
-                    false
-                };
-
-                cx.tree.debug_paint_widget_exclusive_resume();
-                widget.paint(&mut cx);
-                let _ = cx.tree.debug_paint_widget_exclusive_pause();
-
-                if pushed_transform {
-                    cx.scene.push(SceneOp::PopTransform);
-                }
+                (start, text_blob_start)
             });
-            start
-        });
         let end = scene.ops_len();
 
         if let Some(inclusive_time) = widget_elapsed {
@@ -579,20 +580,21 @@ impl<H: UiHost> UiTree<H> {
                 .paint_observation_record_time
                 .saturating_add(obs_elapsed);
         }
-        if let Some(n) = self.nodes.get_mut(node) {
-            if cache_enabled {
-                n.paint_cache = Some(PaintCacheEntry {
-                    generation: self.paint_cache.target_generation,
-                    key,
-                    origin: bounds.origin,
-                    start: start as u32,
-                    end: end as u32,
-                });
-            } else {
-                // When caching is disabled for this node (e.g. due to a render transform),
-                // ensure we don't keep a stale cache entry that could be replayed later.
-                n.paint_cache = None;
-            }
+        if cache_enabled {
+            let entry = PaintCacheEntry {
+                generation: self.paint_cache.target_generation,
+                key,
+                origin: bounds.origin,
+                start: start as u32,
+                end: end as u32,
+                text_blob_start: text_blob_start as u32,
+                text_blob_end: scene.text_blob_ids().len() as u32,
+            };
+            self.set_paint_cache_entry_for_node(node, entry);
+        } else {
+            // When caching is disabled for this node (e.g. due to a render transform), ensure we
+            // don't keep a stale cache entry that could be replayed later.
+            self.clear_paint_cache_entry_for_node(node);
         }
     }
 }

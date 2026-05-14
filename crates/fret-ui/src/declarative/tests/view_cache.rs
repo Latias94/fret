@@ -3,6 +3,63 @@ use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
+fn view_cache_boundary_hints_drive_boundary_layout_dependency() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let cache_element = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    let cache_element_for_render = cache_element.clone();
+    let _root_node = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "view-cache-boundary-hints",
+        move |cx| {
+            let cached = cx.view_cache(
+                crate::element::ViewCacheProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: crate::element::Length::Px(Px(120.0)),
+                            height: crate::element::Length::Px(Px(40.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+                .contain_layout_when_bounds_known(true),
+                |cx| vec![cx.text("cached")],
+            );
+            *cache_element_for_render.lock().expect("cache element") = Some(cached.id);
+            vec![cached]
+        },
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let cache_element = cache_element
+        .lock()
+        .expect("cache element")
+        .expect("captured cache element");
+    let cache_node =
+        crate::elements::node_for_element(&mut app, window, cache_element).expect("cache node");
+    assert!(ui.test_view_boundary_exists(cache_node));
+    assert!(ui.test_view_boundary_allows_contained_relayout(cache_node));
+}
+
+#[test]
 fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -384,7 +441,7 @@ fn view_cache_inherits_model_observations_on_cache_hit_layout() {
         let mut props = crate::element::ViewCacheProps::default();
         props.layout.size.width = Length::Px(Px(120.0));
         props.layout.size.height = Length::Px(Px(40.0));
-        props.contained_layout = true;
+        props = props.contain_layout_when_bounds_known(true);
 
         cx.view_cache(props, |cx| {
             renders.fetch_add(1, Ordering::SeqCst);

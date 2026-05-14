@@ -6,8 +6,7 @@ use std::process::ExitCode;
 use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
 use fret_diag_protocol::{
     UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiOverlayPlacementTraceKindV1,
-    UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
-    UiShortcutRoutingTraceQueryV1,
+    UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1,
 };
 
 fn main() -> ExitCode {
@@ -380,10 +379,20 @@ fn ui_gallery_nav_to_input_page() -> ScriptV2Builder {
 }
 
 fn with_required_caps(mut script: UiActionScriptV2, caps: &[&str]) -> UiActionScriptV2 {
-    script.meta = Some(UiScriptMetaV1 {
-        required_capabilities: caps.iter().map(|s| (*s).to_string()).collect(),
-        ..Default::default()
-    });
+    let mut meta = script.meta.take().unwrap_or_default();
+    meta.required_capabilities = caps.iter().map(|s| (*s).to_string()).collect();
+    script.meta = Some(meta);
+    script
+}
+
+#[allow(dead_code)]
+fn with_required_launch_features(
+    mut script: UiActionScriptV2,
+    features: &[&str],
+) -> UiActionScriptV2 {
+    let mut meta = script.meta.take().unwrap_or_default();
+    meta.required_launch_features = features.iter().map(|s| (*s).to_string()).collect();
+    script.meta = Some(meta);
     script
 }
 

@@ -2643,6 +2643,8 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/response/hover.rs"),
             required=[
                 "pub struct ResponseExt",
+                "enabled: bool",
+                "pub(crate) fn set_enabled(&mut self, enabled: bool)",
                 "activated: bool",
                 "deactivated: bool",
                 "edited: bool",
@@ -2689,6 +2691,7 @@ def main() -> None:
                 "pub(crate) drag: DragResponse",
                 "pub(crate) fn drag_mut(&mut self) -> &mut DragResponse",
                 "pub fn drag(self) -> DragResponse",
+                "pub fn enabled(self) -> bool",
                 "pub fn activated(self) -> bool",
                 "pub fn deactivated(self) -> bool",
                 "pub fn edited(self) -> bool",
@@ -2718,6 +2721,7 @@ def main() -> None:
                 "self.drag.total()",
             ],
             forbidden=[
+                "pub enabled: bool",
                 "pub activated: bool",
                 "pub deactivated: bool",
                 "pub edited: bool",
@@ -2797,12 +2801,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/interaction_runtime/disabled.rs"),
             required=[
+                "response.set_enabled(enabled);",
                 "response.clear_lifecycle_signals();",
                 "response.set_nav_highlighted(false);",
                 "response.clear_press_context_signals();",
                 "*response.drag_mut() = super::super::DragResponse::default();",
             ],
             forbidden=[
+                "response.enabled = enabled",
                 "response.activated = false",
                 "response.deactivated = false",
                 "response.edited = false",
@@ -2884,6 +2890,57 @@ def main() -> None:
             forbidden=[
                 "if trigger.pointer_hovered_raw {",
                 "trigger.pointer_hovered_raw\n",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/text_controls.rs"),
+            required=[
+                "response.set_enabled(enabled);",
+            ],
+            forbidden=[
+                "response.enabled = enabled",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs"),
+            required=[
+                "if input.enabled()",
+                "let enabled = input.enabled();",
+            ],
+            forbidden=[
+                "if input.enabled\n",
+                "let enabled = input.enabled;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs"),
+            required=[
+                "resp.enabled()",
+            ],
+            forbidden=[
+                "resp.enabled)",
+                "resp.enabled;",
+                "resp.enabled,",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs"),
+            required=[
+                "resp.enabled()",
+            ],
+            forbidden=[
+                "resp.enabled)",
+                "resp.enabled;",
+                "resp.enabled,",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-cookbook/examples/imui_debug_draw_basics.rs"),
+            required=[
+                "response.response.enabled()",
+            ],
+            forbidden=[
+                "response.response.enabled,",
             ],
         ),
         SourceCheck(

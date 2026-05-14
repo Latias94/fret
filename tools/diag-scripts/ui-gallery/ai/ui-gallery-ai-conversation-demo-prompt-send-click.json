@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "UI gallery: AI conversation demo prompt send click works when fully visible",
     "tags": ["ui-gallery", "ai-elements", "conversation", "prompt-input"],
     "required_capabilities": ["diag.script_v2"],

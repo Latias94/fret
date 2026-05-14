@@ -79,6 +79,81 @@ pub(super) fn frame_cache_max_entries(st: &CodeEditorState, max_entries: usize) 
 }
 
 #[allow(clippy::too_many_arguments)]
+pub(super) fn prepaint_row_scene_replay_plan_for_frame(
+    st: &mut CodeEditorState,
+    frame: WindowedRowsPaintFrame,
+    content_bounds: Rect,
+    cell_w: Px,
+    text_cache_max_entries: usize,
+    text_style: &TextStyle,
+    fg: Color,
+    theme_revision: u64,
+    scale_factor: f32,
+) -> RowSceneReplayPlan {
+    let width = Px(content_bounds.size.width.0.max(0.0));
+    let stable_max_width = if cell_w.0 > 0.01 {
+        Px((cell_w.0 * 512.0).max(width.0))
+    } else {
+        width
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(stable_max_width),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    scene::replay_row_scene_plan_candidates_for_frame(
+        st,
+        frame,
+        content_bounds,
+        text_cache_max_entries,
+        text_style,
+        fg,
+        theme_revision,
+        constraints,
+        scale_factor,
+    )
+}
+
+pub(super) fn take_row_scene_replay_plan_entry(
+    plan: Option<&mut RowSceneReplayPlan>,
+    frame_seq: u64,
+    row: usize,
+) -> (Option<RowSceneReplayPlanEntry>, usize, Option<&'static str>) {
+    let Some(plan) = plan else {
+        return (None, 0, None);
+    };
+    if plan.frame_seq != frame_seq {
+        let rejected = plan.entries.len();
+        plan.entries.clear();
+        return (None, rejected, Some("frame_seq_mismatch"));
+    }
+
+    let mut rejected = 0usize;
+    while plan
+        .entries
+        .front()
+        .is_some_and(|entry| entry.payload.row < row)
+    {
+        let _ = plan.entries.pop_front();
+        rejected = rejected.saturating_add(1);
+    }
+
+    if plan
+        .entries
+        .front()
+        .is_some_and(|entry| entry.payload.row == row)
+    {
+        return (plan.entries.pop_front(), rejected, None);
+    }
+
+    (
+        None,
+        rejected,
+        (rejected > 0).then_some("row_advanced_past_entry"),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(super) fn paint_row(
     painter: &mut fret_ui::canvas::CanvasPainter<'_>,
     st: &mut CodeEditorState,
@@ -105,7 +180,36 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
-    let (row_range, line, row_folds, row_preedit_range, row_spans) = if perf_enabled {
+    let (replay_plan_entry, rejected_entries, reject_reason) = take_row_scene_replay_plan_entry(
+        painter.scene_fragment_mut::<RowSceneReplayPlan>(),
+        st.paint_perf_frame.frame_seq,
+        row,
+    );
+    if rejected_entries > 0 {
+        painter.record_scene_fragment_rejected_entries(
+            rejected_entries,
+            reject_reason.unwrap_or("row_scene_plan_rejected"),
+        );
+    }
+    let replay_plan_entry_matches_rect = replay_plan_entry
+        .as_ref()
+        .is_some_and(|entry| entry.local_bounds == rect);
+    if replay_plan_entry_matches_rect {
+        painter.record_scene_fragment_used_entries(1);
+    }
+    let (row_range, line, row_folds, row_preedit_range, row_spans) = if let Some(entry) =
+        replay_plan_entry
+            .as_ref()
+            .filter(|_| replay_plan_entry_matches_rect)
+    {
+        (
+            entry.payload.row_range.clone(),
+            Arc::clone(&entry.payload.line),
+            entry.payload.row_folds.clone(),
+            entry.payload.row_preedit_range.clone(),
+            Arc::clone(&entry.payload.row_spans),
+        )
+    } else if perf_enabled {
         let started = Instant::now();
         let out = cached_row_text_with_range(st, row, text_cache_max_entries);
         add_paint_perf_elapsed(
@@ -117,6 +221,9 @@ pub(super) fn paint_row(
     } else {
         cached_row_text_with_range(st, row, text_cache_max_entries)
     };
+    if replay_plan_entry.is_some() && !replay_plan_entry_matches_rect {
+        painter.record_scene_fragment_rejected_entries(1, "rect_mismatch");
+    }
     #[cfg(not(feature = "syntax"))]
     let _ = &row_spans;
     // Rows do not emit an inert transparent background quad here.
@@ -223,7 +330,19 @@ pub(super) fn paint_row(
     let overlay = st.paint_frame_overlay;
 
     let row_content_resolve_started = perf_enabled.then(Instant::now);
-    if let Some(preedit) = st.preedit.clone() {
+    if let Some(entry) = replay_plan_entry.as_ref() {
+        if entry.local_bounds == rect {
+            row_scene_key = None;
+            row_scene_is_rich = entry.payload.is_rich;
+            row_scene_replayed = true;
+            drew_rich = entry.payload.is_rich;
+            row_preedit = entry.payload.geom.preedit;
+            fresh_geom = Some(entry.payload.geom.clone());
+            scene::replay_row_scene_plan_entry(painter, st, entry, origin);
+        }
+    }
+
+    if !row_scene_replayed && let Some(preedit) = st.preedit.clone() {
         if compose_inline_preedit {
             if let Some(range) = row_preedit_range.clone() {
                 let rich = materialize_preedit_rich_text_for_range(

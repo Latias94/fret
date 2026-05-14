@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery-code-editor-a11y-composition-ime-surrounding-valid",
     "required_capabilities": ["diag.script_v2", "diag.inject_ime", "diag.text_input_snapshot"],
     "tags": ["ui_gallery", "code_editor", "ime", "surrounding_text"]

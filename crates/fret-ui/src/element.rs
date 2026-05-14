@@ -1395,16 +1395,48 @@ impl Default for CompositeGroupProps {
 ///
 /// This is a mechanism-only primitive intended to support GPUI-style view caching experiments
 /// without committing to a stable authoring API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ViewBoundaryHints {
+    /// Declare that layout invalidation may be contained inside this boundary once its own bounds
+    /// are known and layout-definite.
+    pub contain_layout_when_bounds_known: bool,
+}
+
+impl ViewBoundaryHints {
+    pub const fn contain_layout_when_bounds_known(mut self, contain: bool) -> Self {
+        self.contain_layout_when_bounds_known = contain;
+        self
+    }
+}
+
+/// Experimental cache boundary wrapper for declarative element subtrees.
+///
+/// This is a mechanism-only primitive intended to support GPUI-style view caching experiments
+/// without committing to a stable authoring API.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ViewCacheProps {
     pub layout: LayoutStyle,
-    /// Whether the subtree should be treated as layout-contained by the runtime when view caching is enabled.
-    pub contained_layout: bool,
+    /// Boundary dependency hints consumed by the frame pipeline.
+    pub boundary_hints: ViewBoundaryHints,
     /// Explicit cache key for view-cache reuse (experimental).
     ///
     /// The runtime will reuse cached output for this view-cache root only when the computed key is
     /// unchanged. This mirrors GPUI's `ViewCacheKey` gating behavior.
     pub cache_key: u64,
+}
+
+impl ViewCacheProps {
+    pub const fn boundary_hints(mut self, hints: ViewBoundaryHints) -> Self {
+        self.boundary_hints = hints;
+        self
+    }
+
+    pub const fn contain_layout_when_bounds_known(mut self, contain: bool) -> Self {
+        self.boundary_hints = self
+            .boundary_hints
+            .contain_layout_when_bounds_known(contain);
+        self
+    }
 }
 
 /// Paint-only transform wrapper for declarative element subtrees.
@@ -2205,6 +2237,12 @@ impl ViewportSurfaceProps {
 pub struct CanvasProps {
     pub layout: LayoutStyle,
     pub cache_policy: CanvasCachePolicy,
+    /// Whether this canvas has a prepaint hook registered in element-local state.
+    ///
+    /// The hook itself is not stored here so `CanvasProps` stays `Copy + Debug`; this flag only
+    /// lets the retained tree schedule the canvas widget's prepaint pass without probing element
+    /// state for every node.
+    pub prepaint: bool,
 }
 
 /// Cache tuning for a single hosted resource kind (text/path/svg) within a declarative `Canvas`.
@@ -2279,6 +2317,7 @@ impl Default for CanvasProps {
         Self {
             layout,
             cache_policy: CanvasCachePolicy::default(),
+            prepaint: false,
         }
     }
 }

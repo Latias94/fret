@@ -229,6 +229,345 @@ pub struct ViewCacheReuseRootElementsSample {
     pub elements_tail: Vec<GlobalElementId>,
 }
 
+/// Build-time view-cache boundary state keyed by declarative `GlobalElementId`.
+///
+/// This intentionally remains in `WindowElementState` instead of `ViewBoundaryState`: it owns the
+/// rendered/next build identity records that are available before retained-node runtime boundary
+/// state is refreshed. `ViewBoundaryState` is keyed by `NodeId`, while cache-hit subtree liveness is
+/// revalidated during mount and can rebind recorded global element membership to the current live
+/// retained nodes.
+#[derive(Default)]
+struct ViewCacheBuildBoundaryStore {
+    rendered: HashMap<GlobalElementId, ViewCacheBuildBoundaryFrame>,
+    next: HashMap<GlobalElementId, ViewCacheBuildBoundaryFrame>,
+    key_mismatch_roots: HashSet<GlobalElementId>,
+    reuse_roots: HashSet<GlobalElementId>,
+    last_reused_frame: HashMap<GlobalElementId, FrameId>,
+    transitioned_reuse_roots: HashSet<GlobalElementId>,
+    stack: Vec<GlobalElementId>,
+}
+
+#[derive(Default)]
+struct ViewCacheBuildBoundaryFrame {
+    cache_key: Option<u64>,
+    state_keys: Option<Vec<(GlobalElementId, TypeId)>>,
+    authoring_identities: Option<Vec<GlobalElementId>>,
+    elements: Option<Vec<GlobalElementId>>,
+    action_route_fallback_root: bool,
+}
+
+impl ViewCacheBuildBoundaryFrame {
+    fn is_empty(&self) -> bool {
+        self.cache_key.is_none()
+            && self.state_keys.is_none()
+            && self.authoring_identities.is_none()
+            && self.elements.is_none()
+            && !self.action_route_fallback_root
+    }
+}
+
+impl ViewCacheBuildBoundaryStore {
+    fn prepare_for_frame(&mut self) {
+        self.key_mismatch_roots.clear();
+        std::mem::swap(&mut self.rendered, &mut self.next);
+        self.next.clear();
+        self.reuse_roots.clear();
+        self.transitioned_reuse_roots.clear();
+        self.stack.clear();
+    }
+
+    fn record_authoring_identity(&mut self, element: GlobalElementId) {
+        for idx in 0..self.stack.len() {
+            let root = self.stack[idx];
+            self.next
+                .entry(root)
+                .or_default()
+                .authoring_identities
+                .get_or_insert_with(Vec::new)
+                .push(element);
+        }
+    }
+
+    fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {
+        for idx in 0..self.stack.len() {
+            let root = self.stack[idx];
+            self.next
+                .entry(root)
+                .or_default()
+                .state_keys
+                .get_or_insert_with(Vec::new)
+                .push(key);
+        }
+    }
+
+    fn begin_scope(&mut self, root: GlobalElementId) {
+        self.stack.push(root);
+        let frame = self.next.entry(root).or_default();
+        frame.state_keys = None;
+        frame.authoring_identities = None;
+        frame.elements = None;
+        self.remove_empty_next(root);
+    }
+
+    fn end_scope(&mut self, root: GlobalElementId) {
+        let popped = self.stack.pop();
+        debug_assert_eq!(popped, Some(root));
+
+        let Some(frame) = self.next.get_mut(&root) else {
+            return;
+        };
+        if let Some(keys) = frame.state_keys.as_mut() {
+            let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
+            keys.retain(|&key| seen.insert(key));
+        }
+        if let Some(identities) = frame.authoring_identities.as_mut() {
+            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(identities.len());
+            identities.retain(|&id| seen.insert(id));
+        }
+        if let Some(elements) = frame.elements.as_mut() {
+            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(elements.len());
+            elements.retain(|&id| seen.insert(id));
+        }
+        self.remove_empty_next(root);
+    }
+
+    fn mark_reuse_root(&mut self, root: GlobalElementId) {
+        self.reuse_roots.insert(root);
+    }
+
+    fn record_action_route_fallback_root(&mut self, root: GlobalElementId) {
+        self.next
+            .entry(root)
+            .or_default()
+            .action_route_fallback_root = true;
+    }
+
+    fn action_route_fallback_roots(&self) -> Vec<GlobalElementId> {
+        let mut roots: Vec<GlobalElementId> = self
+            .next
+            .iter()
+            .chain(self.rendered.iter())
+            .filter_map(|(&root, frame)| frame.action_route_fallback_root.then_some(root))
+            .collect();
+        roots.sort_by_key(|root| root.0);
+        roots.dedup();
+        roots
+    }
+
+    fn record_reuse_frame(&mut self, root: GlobalElementId, frame_id: FrameId) -> bool {
+        let transitioned = self
+            .last_reused_frame
+            .get(&root)
+            .is_none_or(|last| last.0.saturating_add(1) < frame_id.0);
+        self.last_reused_frame.insert(root, frame_id);
+        if transitioned {
+            self.transitioned_reuse_roots.insert(root);
+        }
+        transitioned
+    }
+
+    fn transitioned_reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
+        self.transitioned_reuse_roots.iter().copied()
+    }
+
+    fn should_reuse_root(&self, root: GlobalElementId) -> bool {
+        self.reuse_roots.contains(&root)
+    }
+
+    fn reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
+        self.reuse_roots.iter().copied()
+    }
+
+    fn current_root(&self) -> Option<GlobalElementId> {
+        self.stack.last().copied()
+    }
+
+    fn key_matches_and_touch(&mut self, root: GlobalElementId, key: u64) -> bool {
+        if let Some(next_key) = self.next.get(&root).and_then(|frame| frame.cache_key) {
+            return next_key == key;
+        }
+        let Some(prev) = self.rendered.get(&root).and_then(|frame| frame.cache_key) else {
+            return false;
+        };
+        if prev != key {
+            return false;
+        }
+        self.set_key(root, key);
+        true
+    }
+
+    fn set_key(&mut self, root: GlobalElementId, key: u64) {
+        self.next.entry(root).or_default().cache_key = Some(key);
+    }
+
+    fn record_key_mismatch(&mut self, root: GlobalElementId) {
+        self.key_mismatch_roots.insert(root);
+    }
+
+    fn key_mismatch(&self, root: GlobalElementId) -> bool {
+        self.key_mismatch_roots.contains(&root)
+    }
+
+    fn rendered_state_keys(
+        &self,
+        root: GlobalElementId,
+    ) -> Option<&Vec<(GlobalElementId, TypeId)>> {
+        self.rendered
+            .get(&root)
+            .and_then(|frame| frame.state_keys.as_ref())
+    }
+
+    fn set_next_state_keys(&mut self, root: GlobalElementId, keys: Vec<(GlobalElementId, TypeId)>) {
+        self.next.entry(root).or_default().state_keys = Some(keys);
+    }
+
+    fn rendered_authoring_identities(
+        &self,
+        root: GlobalElementId,
+    ) -> Option<&Vec<GlobalElementId>> {
+        self.rendered
+            .get(&root)
+            .and_then(|frame| frame.authoring_identities.as_ref())
+    }
+
+    fn set_next_authoring_identities(
+        &mut self,
+        root: GlobalElementId,
+        identities: Vec<GlobalElementId>,
+    ) {
+        self.next.entry(root).or_default().authoring_identities = Some(identities);
+    }
+
+    fn record_subtree_elements(&mut self, root: GlobalElementId, elements: Vec<GlobalElementId>) {
+        self.next.entry(root).or_default().elements = Some(elements);
+    }
+
+    fn forget_subtree_elements(&mut self, root: GlobalElementId) {
+        Self::forget_subtree_elements_in(&mut self.rendered, root);
+        Self::forget_subtree_elements_in(&mut self.next, root);
+    }
+
+    fn forget_subtree_elements_in(
+        frames: &mut HashMap<GlobalElementId, ViewCacheBuildBoundaryFrame>,
+        root: GlobalElementId,
+    ) {
+        let Some(frame) = frames.get_mut(&root) else {
+            return;
+        };
+        frame.authoring_identities = None;
+        frame.elements = None;
+        if frame.is_empty() {
+            frames.remove(&root);
+        }
+    }
+
+    fn next_elements_contains_root(&self, root: GlobalElementId) -> bool {
+        self.next
+            .get(&root)
+            .is_some_and(|frame| frame.elements.is_some())
+    }
+
+    fn rendered_elements(&self, root: GlobalElementId) -> Option<&Vec<GlobalElementId>> {
+        self.rendered
+            .get(&root)
+            .and_then(|frame| frame.elements.as_ref())
+    }
+
+    fn elements_for_root(&self, root: GlobalElementId) -> Option<&[GlobalElementId]> {
+        if let Some(elements) = self
+            .next
+            .get(&root)
+            .and_then(|frame| frame.elements.as_ref())
+        {
+            return Some(elements.as_slice());
+        }
+        self.rendered
+            .get(&root)
+            .and_then(|frame| frame.elements.as_ref())
+            .map(|elements| elements.as_slice())
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn rendered_elements_len(&self, root: GlobalElementId) -> usize {
+        self.rendered
+            .get(&root)
+            .and_then(|frame| frame.elements.as_ref())
+            .map(Vec::len)
+            .unwrap_or(0)
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn state_key_roots_count(&self) -> u64 {
+        self.rendered
+            .values()
+            .filter(|frame| frame.state_keys.is_some())
+            .count()
+            .saturating_add(
+                self.next
+                    .values()
+                    .filter(|frame| frame.state_keys.is_some())
+                    .count(),
+            ) as u64
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn state_key_entries_total(&self) -> u64 {
+        Self::count_entries(&self.rendered, |frame| frame.state_keys.as_ref()).saturating_add(
+            Self::count_entries(&self.next, |frame| frame.state_keys.as_ref()),
+        )
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn element_roots_count(&self) -> u64 {
+        self.rendered
+            .values()
+            .filter(|frame| frame.elements.is_some())
+            .count()
+            .saturating_add(
+                self.next
+                    .values()
+                    .filter(|frame| frame.elements.is_some())
+                    .count(),
+            ) as u64
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn element_entries_total(&self) -> u64 {
+        Self::count_entries(&self.rendered, |frame| frame.elements.as_ref()).saturating_add(
+            Self::count_entries(&self.next, |frame| frame.elements.as_ref()),
+        )
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn key_mismatch_roots_count(&self) -> u64 {
+        self.key_mismatch_roots.len() as u64
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn count_entries<T>(
+        frames: &HashMap<GlobalElementId, ViewCacheBuildBoundaryFrame>,
+        field: impl Fn(&ViewCacheBuildBoundaryFrame) -> Option<&Vec<T>>,
+    ) -> u64 {
+        frames.values().fold(0u64, |acc, frame| {
+            acc.saturating_add(
+                field(frame)
+                    .map(|entries| entries.len() as u64)
+                    .unwrap_or(0),
+            )
+        })
+    }
+
+    fn remove_empty_next(&mut self, root: GlobalElementId) {
+        if self
+            .next
+            .get(&root)
+            .is_some_and(ViewCacheBuildBoundaryFrame::is_empty)
+        {
+            self.next.remove(&root);
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct ElementRuntime {
     windows: HashMap<AppWindowId, WindowElementState>,
@@ -423,23 +762,7 @@ pub struct WindowElementState {
     pub(super) rendered_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
     pub(super) next_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
     pub(super) lag_state: Vec<HashMap<(GlobalElementId, TypeId), Box<dyn Any>>>,
-    pub(super) view_cache_state_keys_rendered:
-        HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
-    pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
-    pub(super) view_cache_authoring_identities_rendered:
-        HashMap<GlobalElementId, Vec<GlobalElementId>>,
-    pub(super) view_cache_authoring_identities_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
-    view_cache_keys_rendered: HashMap<GlobalElementId, u64>,
-    view_cache_keys_next: HashMap<GlobalElementId, u64>,
-    view_cache_key_mismatch_roots: HashSet<GlobalElementId>,
-    pub(super) view_cache_elements_rendered: HashMap<GlobalElementId, Vec<GlobalElementId>>,
-    pub(super) view_cache_elements_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
-    action_route_fallback_roots_rendered: HashSet<GlobalElementId>,
-    action_route_fallback_roots_next: HashSet<GlobalElementId>,
-    pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
-    view_cache_last_reused_frame: HashMap<GlobalElementId, FrameId>,
-    view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
-    view_cache_stack: Vec<GlobalElementId>,
+    view_cache_build_boundaries: ViewCacheBuildBoundaryStore,
     raf_notify_roots: HashSet<GlobalElementId>,
     #[cfg(feature = "diagnostics")]
     raf_notify_roots_debug: HashSet<GlobalElementId>,
@@ -698,44 +1021,10 @@ impl WindowElementState {
         self.raf_notify_roots.clear();
         #[cfg(feature = "diagnostics")]
         self.raf_notify_roots_debug.clear();
-        self.view_cache_key_mismatch_roots.clear();
+        self.view_cache_build_boundaries.prepare_for_frame();
         self.element_children_vec_pool_reuses = 0;
         self.element_children_vec_pool_misses = 0;
         self.element_children_vec_pool_grow_events = 0;
-
-        std::mem::swap(
-            &mut self.view_cache_keys_rendered,
-            &mut self.view_cache_keys_next,
-        );
-        self.view_cache_keys_next.clear();
-
-        std::mem::swap(
-            &mut self.view_cache_state_keys_rendered,
-            &mut self.view_cache_state_keys_next,
-        );
-        self.view_cache_state_keys_next.clear();
-
-        std::mem::swap(
-            &mut self.view_cache_authoring_identities_rendered,
-            &mut self.view_cache_authoring_identities_next,
-        );
-        self.view_cache_authoring_identities_next.clear();
-
-        std::mem::swap(
-            &mut self.view_cache_elements_rendered,
-            &mut self.view_cache_elements_next,
-        );
-        self.view_cache_elements_next.clear();
-
-        std::mem::swap(
-            &mut self.action_route_fallback_roots_rendered,
-            &mut self.action_route_fallback_roots_next,
-        );
-        self.action_route_fallback_roots_next.clear();
-
-        self.view_cache_reuse_roots.clear();
-        self.view_cache_transitioned_reuse_roots.clear();
-        self.view_cache_stack.clear();
 
         std::mem::swap(
             &mut self.prev_unkeyed_fingerprints,
@@ -845,12 +1134,8 @@ impl WindowElementState {
 
     pub(crate) fn mark_authoring_identity_seen(&mut self, element: GlobalElementId) {
         self.authoring_identities_current_frame.insert(element);
-        for &root in &self.view_cache_stack {
-            self.view_cache_authoring_identities_next
-                .entry(root)
-                .or_default()
-                .push(element);
-        }
+        self.view_cache_build_boundaries
+            .record_authoring_identity(element);
         #[cfg(feature = "diagnostics")]
         self.touch_debug_identity_for_element(self.prepared_frame, element);
     }
@@ -866,19 +1151,13 @@ impl WindowElementState {
     }
 
     pub(crate) fn record_action_route_fallback_root(&mut self, element: GlobalElementId) {
-        self.action_route_fallback_roots_next.insert(element);
+        self.view_cache_build_boundaries
+            .record_action_route_fallback_root(element);
     }
 
     pub(crate) fn action_route_fallback_roots(&self) -> Vec<GlobalElementId> {
-        let mut roots: Vec<GlobalElementId> = self
-            .action_route_fallback_roots_next
-            .iter()
-            .chain(self.action_route_fallback_roots_rendered.iter())
-            .copied()
-            .collect();
-        roots.sort_by_key(|root| root.0);
-        roots.dedup();
-        roots
+        self.view_cache_build_boundaries
+            .action_route_fallback_roots()
     }
 
     pub(crate) fn take_transient_event(&mut self, element: GlobalElementId, key: u64) -> bool {
@@ -1200,42 +1479,19 @@ impl WindowElementState {
     }
 
     pub(super) fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {
-        if self.view_cache_stack.is_empty() {
-            return;
-        };
         // Nested view-cache correctness: when entering a child view-cache scope, parent cache
         // roots still need to keep the child's state alive if the parent reuses without
         // re-rendering that subtree.
-        for &root in &self.view_cache_stack {
-            self.view_cache_state_keys_next
-                .entry(root)
-                .or_default()
-                .push(key);
-        }
+        self.view_cache_build_boundaries
+            .record_state_key_access(key);
     }
 
     pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
-        self.view_cache_stack.push(root);
-        self.view_cache_state_keys_next.remove(&root);
-        self.view_cache_authoring_identities_next.remove(&root);
-        self.view_cache_elements_next.remove(&root);
+        self.view_cache_build_boundaries.begin_scope(root);
     }
 
     pub(super) fn end_view_cache_scope(&mut self, root: GlobalElementId) {
-        let popped = self.view_cache_stack.pop();
-        debug_assert_eq!(popped, Some(root));
-        if let Some(keys) = self.view_cache_state_keys_next.get_mut(&root) {
-            let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
-            keys.retain(|&key| seen.insert(key));
-        }
-        if let Some(identities) = self.view_cache_authoring_identities_next.get_mut(&root) {
-            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(identities.len());
-            identities.retain(|&id| seen.insert(id));
-        }
-        if let Some(elements) = self.view_cache_elements_next.get_mut(&root) {
-            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(elements.len());
-            elements.retain(|&id| seen.insert(id));
-        }
+        self.view_cache_build_boundaries.end_scope(root);
     }
 
     pub(crate) fn touch_observed_models_for_element_if_recorded(
@@ -1292,7 +1548,7 @@ impl WindowElementState {
     }
 
     pub(crate) fn mark_view_cache_reuse_root(&mut self, root: GlobalElementId) {
-        self.view_cache_reuse_roots.insert(root);
+        self.view_cache_build_boundaries.mark_reuse_root(root);
     }
 
     /// Returns `true` if this cache root was *not* reused in the immediately-previous frame.
@@ -1304,33 +1560,26 @@ impl WindowElementState {
         root: GlobalElementId,
         frame_id: FrameId,
     ) -> bool {
-        let transitioned = self
-            .view_cache_last_reused_frame
-            .get(&root)
-            .is_none_or(|last| last.0.saturating_add(1) < frame_id.0);
-        self.view_cache_last_reused_frame.insert(root, frame_id);
-        if transitioned {
-            self.view_cache_transitioned_reuse_roots.insert(root);
-        }
-        transitioned
+        self.view_cache_build_boundaries
+            .record_reuse_frame(root, frame_id)
     }
 
     pub(crate) fn view_cache_transitioned_reuse_roots(
         &self,
     ) -> impl Iterator<Item = GlobalElementId> + '_ {
-        self.view_cache_transitioned_reuse_roots.iter().copied()
+        self.view_cache_build_boundaries.transitioned_reuse_roots()
     }
 
     pub(crate) fn should_reuse_view_cache_root(&self, root: GlobalElementId) -> bool {
-        self.view_cache_reuse_roots.contains(&root)
+        self.view_cache_build_boundaries.should_reuse_root(root)
     }
 
     pub(crate) fn view_cache_reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
-        self.view_cache_reuse_roots.iter().copied()
+        self.view_cache_build_boundaries.reuse_roots()
     }
 
     pub(crate) fn current_view_cache_root(&self) -> Option<GlobalElementId> {
-        self.view_cache_stack.last().copied()
+        self.view_cache_build_boundaries.current_root()
     }
 
     pub(crate) fn request_notify_for_animation_frame(&mut self, root: GlobalElementId) {
@@ -1353,29 +1602,20 @@ impl WindowElementState {
         root: GlobalElementId,
         key: u64,
     ) -> bool {
-        if self.view_cache_keys_next.contains_key(&root) {
-            return self.view_cache_keys_next.get(&root).copied() == Some(key);
-        }
-        let Some(prev) = self.view_cache_keys_rendered.get(&root).copied() else {
-            return false;
-        };
-        if prev != key {
-            return false;
-        }
-        self.view_cache_keys_next.insert(root, key);
-        true
+        self.view_cache_build_boundaries
+            .key_matches_and_touch(root, key)
     }
 
     pub(crate) fn set_view_cache_key(&mut self, root: GlobalElementId, key: u64) {
-        self.view_cache_keys_next.insert(root, key);
+        self.view_cache_build_boundaries.set_key(root, key);
     }
 
     pub(crate) fn record_view_cache_key_mismatch(&mut self, root: GlobalElementId) {
-        self.view_cache_key_mismatch_roots.insert(root);
+        self.view_cache_build_boundaries.record_key_mismatch(root);
     }
 
     pub(crate) fn view_cache_key_mismatch(&self, root: GlobalElementId) -> bool {
-        self.view_cache_key_mismatch_roots.contains(&root)
+        self.view_cache_build_boundaries.key_mismatch(root)
     }
 
     pub(super) fn touch_state_key(&mut self, key: (GlobalElementId, TypeId)) {
@@ -1386,13 +1626,18 @@ impl WindowElementState {
     }
 
     pub(crate) fn touch_view_cache_state_keys_if_recorded(&mut self, root: GlobalElementId) {
-        let Some(keys) = self.view_cache_state_keys_rendered.get(&root).cloned() else {
+        let Some(keys) = self
+            .view_cache_build_boundaries
+            .rendered_state_keys(root)
+            .cloned()
+        else {
             return;
         };
         for &key in &keys {
             self.touch_state_key(key);
         }
-        self.view_cache_state_keys_next.insert(root, keys);
+        self.view_cache_build_boundaries
+            .set_next_state_keys(root, keys);
     }
 
     pub(crate) fn touch_view_cache_authoring_identities_if_recorded(
@@ -1400,8 +1645,8 @@ impl WindowElementState {
         root: GlobalElementId,
     ) {
         let Some(identities) = self
-            .view_cache_authoring_identities_rendered
-            .get(&root)
+            .view_cache_build_boundaries
+            .rendered_authoring_identities(root)
             .cloned()
         else {
             return;
@@ -1411,8 +1656,8 @@ impl WindowElementState {
             #[cfg(feature = "diagnostics")]
             self.touch_debug_identity_for_element(self.prepared_frame, identity);
         }
-        self.view_cache_authoring_identities_next
-            .insert(root, identities);
+        self.view_cache_build_boundaries
+            .set_next_authoring_identities(root, identities);
     }
 
     /// Keep action-hook state alive for a cached subtree, even when view-cache reuse skips the
@@ -1479,14 +1724,13 @@ impl WindowElementState {
         root: GlobalElementId,
         elements: Vec<GlobalElementId>,
     ) {
-        self.view_cache_elements_next.insert(root, elements);
+        self.view_cache_build_boundaries
+            .record_subtree_elements(root, elements);
     }
 
     pub(crate) fn forget_view_cache_subtree_elements(&mut self, root: GlobalElementId) {
-        self.view_cache_authoring_identities_rendered.remove(&root);
-        self.view_cache_authoring_identities_next.remove(&root);
-        self.view_cache_elements_rendered.remove(&root);
-        self.view_cache_elements_next.remove(&root);
+        self.view_cache_build_boundaries
+            .forget_subtree_elements(root);
     }
 
     pub(crate) fn touch_view_cache_subtree_elements_if_recorded(
@@ -1496,11 +1740,18 @@ impl WindowElementState {
         root_id: GlobalElementId,
         mut resolve_live_attached_node: impl FnMut(GlobalElementId, Option<NodeId>) -> Option<NodeId>,
     ) -> bool {
-        if self.view_cache_elements_next.contains_key(&root) {
+        if self
+            .view_cache_build_boundaries
+            .next_elements_contains_root(root)
+        {
             return true;
         }
 
-        let Some(elements) = self.view_cache_elements_rendered.get(&root).cloned() else {
+        let Some(elements) = self
+            .view_cache_build_boundaries
+            .rendered_elements(root)
+            .cloned()
+        else {
             return false;
         };
 
@@ -1517,7 +1768,8 @@ impl WindowElementState {
             authoritative_nodes.push((element, node, owner_root));
         }
 
-        self.view_cache_elements_next.insert(root, elements);
+        self.view_cache_build_boundaries
+            .record_subtree_elements(root, elements);
 
         for (element, node, owner_root) in authoritative_nodes {
             // Touching a retained subtree must not reassign cross-root ownership (ADR 0176).
@@ -1546,12 +1798,7 @@ impl WindowElementState {
         &self,
         root: GlobalElementId,
     ) -> Option<&[GlobalElementId]> {
-        if let Some(v) = self.view_cache_elements_next.get(&root) {
-            return Some(v.as_slice());
-        }
-        self.view_cache_elements_rendered
-            .get(&root)
-            .map(|v| v.as_slice())
+        self.view_cache_build_boundaries.elements_for_root(root)
     }
 
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
@@ -2282,7 +2529,7 @@ impl WindowElementState {
         };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
-            self.view_cache_reuse_roots.iter().copied().collect();
+            self.view_cache_reuse_roots().collect();
         view_cache_reuse_roots.sort_by_key(|id| id.0);
 
         let view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)> =
@@ -2290,10 +2537,8 @@ impl WindowElementState {
                 .iter()
                 .map(|root| {
                     let count = self
-                        .view_cache_elements_rendered
-                        .get(root)
-                        .map(|v| v.len())
-                        .unwrap_or(0);
+                        .view_cache_build_boundaries
+                        .rendered_elements_len(*root);
                     (*root, count.min(u32::MAX as usize) as u32)
                 })
                 .collect();
@@ -2378,33 +2623,15 @@ impl WindowElementState {
             .saturating_add(self.cur_visual_bounds.len() as u64);
         let timer_targets_count = self.timer_targets.len() as u64;
         let transient_events_count = self.transient_events.len() as u64;
-        let view_cache_state_key_roots_count = (self.view_cache_state_keys_rendered.len() as u64)
-            .saturating_add(self.view_cache_state_keys_next.len() as u64);
-        let view_cache_state_key_entries_total = self
-            .view_cache_state_keys_rendered
-            .values()
-            .fold(0u64, |acc, keys| acc.saturating_add(keys.len() as u64))
-            .saturating_add(
-                self.view_cache_state_keys_next
-                    .values()
-                    .fold(0u64, |acc, keys| acc.saturating_add(keys.len() as u64)),
-            );
-        let view_cache_element_roots_count = (self.view_cache_elements_rendered.len() as u64)
-            .saturating_add(self.view_cache_elements_next.len() as u64);
-        let view_cache_element_entries_total = self
-            .view_cache_elements_rendered
-            .values()
-            .fold(0u64, |acc, elements| {
-                acc.saturating_add(elements.len() as u64)
-            })
-            .saturating_add(
-                self.view_cache_elements_next
-                    .values()
-                    .fold(0u64, |acc, elements| {
-                        acc.saturating_add(elements.len() as u64)
-                    }),
-            );
-        let view_cache_key_mismatch_roots_count = self.view_cache_key_mismatch_roots.len() as u64;
+        let view_cache_state_key_roots_count =
+            self.view_cache_build_boundaries.state_key_roots_count();
+        let view_cache_state_key_entries_total =
+            self.view_cache_build_boundaries.state_key_entries_total();
+        let view_cache_element_roots_count = self.view_cache_build_boundaries.element_roots_count();
+        let view_cache_element_entries_total =
+            self.view_cache_build_boundaries.element_entries_total();
+        let view_cache_key_mismatch_roots_count =
+            self.view_cache_build_boundaries.key_mismatch_roots_count();
         let scratch_element_children_vec_pool_len =
             self.scratch_element_children_vec_pool.len() as u64;
         let scratch_element_children_vec_pool_capacity_total = self
@@ -2813,6 +3040,7 @@ impl DebugIdentitySegment {
 mod tests {
     use super::*;
     use fret_core::{Point, Px, Size};
+    use slotmap::KeyData;
 
     #[test]
     fn primary_pointer_type_defaults_to_unknown_until_observed() {
@@ -2945,6 +3173,146 @@ mod tests {
         assert_eq!(state.element_children_vec_pool_reuses(), 1);
         assert_eq!(state.element_children_vec_pool_misses(), 0);
         assert_eq!(state.element_children_vec_pool_grow_events(), 1);
+    }
+
+    #[test]
+    fn view_cache_build_boundary_store_advances_rendered_next_and_clears_frame_local_flags() {
+        let mut state = WindowElementState::default();
+        let root = GlobalElementId(1);
+        let child = GlobalElementId(2);
+        let state_key = (child, TypeId::of::<u32>());
+        let cache_key = 0xCAFE_BABE;
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.set_node_entry(
+            root,
+            NodeEntry {
+                node: NodeId::default(),
+                last_seen_frame: FrameId(1),
+                root,
+            },
+        );
+        state.set_node_entry(
+            child,
+            NodeEntry {
+                node: NodeId::default(),
+                last_seen_frame: FrameId(1),
+                root,
+            },
+        );
+        state.begin_view_cache_scope(root);
+        state.record_state_key_access(state_key);
+        state.mark_authoring_identity_seen(child);
+        state.record_view_cache_subtree_elements(root, vec![root, child]);
+        state.end_view_cache_scope(root);
+        state.set_view_cache_key(root, cache_key);
+        state.record_view_cache_key_mismatch(root);
+        state.mark_view_cache_reuse_root(root);
+
+        assert!(state.view_cache_key_mismatch(root));
+        assert!(state.should_reuse_view_cache_root(root));
+
+        state.prepare_for_frame(FrameId(2), 0);
+
+        assert!(state.view_cache_key_matches_and_touch(root, cache_key));
+        assert!(!state.view_cache_key_mismatch(root));
+        assert!(!state.should_reuse_view_cache_root(root));
+
+        assert_eq!(
+            state
+                .view_cache_elements_for_root(root)
+                .expect("recorded elements should advance to rendered storage"),
+            &[root, child]
+        );
+        state.touch_view_cache_state_keys_if_recorded(root);
+        state.touch_view_cache_authoring_identities_if_recorded(root);
+        assert!(state.touch_view_cache_subtree_elements_if_recorded(
+            root,
+            FrameId(2),
+            root,
+            |_, seeded| seeded,
+        ));
+        assert!(
+            state.authoring_identities_current_frame.contains(&child),
+            "recorded authoring identities should be restored on cache-hit frames"
+        );
+
+        state.prepare_for_frame(FrameId(3), 0);
+        assert!(
+            state.view_cache_key_matches_and_touch(root, cache_key),
+            "cache key should be preserved after a cache-hit touch frame"
+        );
+        assert_eq!(
+            state
+                .view_cache_elements_for_root(root)
+                .expect("touched elements should survive another frame"),
+            &[root, child]
+        );
+    }
+
+    #[test]
+    fn view_cache_build_boundary_store_rebinds_global_membership_to_current_nodes() {
+        let mut state = WindowElementState::default();
+        let root = GlobalElementId(1);
+        let child = GlobalElementId(2);
+        let root_node_previous = NodeId::from(KeyData::from_ffi(11));
+        let child_node_previous = NodeId::from(KeyData::from_ffi(12));
+        let root_node_current = NodeId::from(KeyData::from_ffi(21));
+        let child_node_current = NodeId::from(KeyData::from_ffi(22));
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.set_node_entry(
+            root,
+            NodeEntry {
+                node: root_node_previous,
+                last_seen_frame: FrameId(1),
+                root,
+            },
+        );
+        state.set_node_entry(
+            child,
+            NodeEntry {
+                node: child_node_previous,
+                last_seen_frame: FrameId(1),
+                root,
+            },
+        );
+        state.begin_view_cache_scope(root);
+        state.record_view_cache_subtree_elements(root, vec![root, child]);
+        state.end_view_cache_scope(root);
+
+        state.prepare_for_frame(FrameId(2), 0);
+        assert!(state.touch_view_cache_subtree_elements_if_recorded(
+            root,
+            FrameId(2),
+            root,
+            |element, seeded| {
+                assert!(
+                    seeded == Some(root_node_previous) || seeded == Some(child_node_previous),
+                    "build-boundary store should seed revalidation from the previous node entry"
+                );
+                match element {
+                    id if id == root => Some(root_node_current),
+                    id if id == child => Some(child_node_current),
+                    _ => None,
+                }
+            },
+        ));
+
+        assert_eq!(
+            state.node_entry(root).map(|entry| entry.node),
+            Some(root_node_current)
+        );
+        assert_eq!(
+            state.node_entry(child).map(|entry| entry.node),
+            Some(child_node_current)
+        );
+        assert_eq!(
+            state
+                .view_cache_elements_for_root(root)
+                .expect("global membership remains keyed by the view-cache root"),
+            &[root, child]
+        );
     }
 
     #[test]

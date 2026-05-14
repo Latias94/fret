@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn paint_cache_replays_ops_when_node_translates() {
+fn paint_cache_replays_ops_when_plain_node_translates_from_boundary_entry_store() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -24,6 +24,18 @@ fn paint_cache_replays_ops_when_node_translates() {
     ui.paint_all(&mut app, &mut services, bounds_a, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 1);
     assert_eq!(scene.ops_len(), 1);
+    assert!(
+        ui.test_paint_cache_entry_for_node_has_entry(node),
+        "plain paint-cache roots should store replay entries in boundary paint-cache entry storage"
+    );
+    assert!(
+        ui.test_retained_paint_cache_entry_store_has_entry(node),
+        "plain paint-cache roots should use the retained entry store instead of becoming runtime ViewBoundaries"
+    );
+    assert!(
+        !ui.test_view_boundary_exists(node),
+        "plain paint-cache entries must not create full runtime ViewBoundary records"
+    );
 
     ui.ingest_paint_cache_source(&mut scene);
     scene.clear();
@@ -48,6 +60,221 @@ fn paint_cache_replays_ops_when_node_translates() {
         }
         _ => panic!("expected push-transform + quad + pop-transform ops"),
     }
+}
+
+#[test]
+fn paint_cache_entry_is_boundary_owned_for_view_cache_roots() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let node = ui.create_node(CountingPaintWidget {
+        paints: paints.clone(),
+    });
+    ui.set_node_view_cache_flags(node, true, true, true);
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert!(
+        ui.test_view_boundary_paint_cache_has_entry(node),
+        "view-cache roots should store paint-cache entries in ViewBoundaryState"
+    );
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|stats| stats.id == node)
+        .expect("boundary stats for view-cache root");
+    assert_eq!(
+        boundary.paint_cache_owner,
+        "view_boundary_paint_cache_state"
+    );
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        1,
+        "boundary-owned paint cache should replay for clean view-cache roots"
+    );
+    assert_eq!(ui.debug_stats().paint_cache_hits, 1);
+}
+
+#[test]
+fn paint_cache_side_store_entry_migrates_when_node_becomes_view_boundary() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let node = ui.create_node(CountingPaintWidget {
+        paints: paints.clone(),
+    });
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert!(ui.test_retained_paint_cache_entry_store_has_entry(node));
+    assert!(!ui.test_view_boundary_exists(node));
+
+    ui.set_node_view_cache_flags(node, true, true, true);
+
+    assert!(
+        ui.test_view_boundary_paint_cache_has_entry(node),
+        "promoting a cached plain node to a runtime boundary should migrate the replay entry"
+    );
+    assert!(
+        !ui.test_retained_paint_cache_entry_store_has_entry(node),
+        "promoted boundaries should not keep a duplicate retained entry"
+    );
+
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|stats| stats.id == node)
+        .expect("boundary stats for promoted node");
+    assert_eq!(
+        boundary.paint_cache_owner,
+        "view_boundary_paint_cache_state"
+    );
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        1,
+        "migrated boundary paint-cache entries should remain replayable"
+    );
+    assert_eq!(ui.debug_stats().paint_cache_hits, 1);
+}
+
+#[test]
+fn previous_frame_paint_recording_ingests_scene_and_clears_when_recording_invalidates() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_paint_cache_enabled(true);
+
+    let node = ui.create_node(CountingPaintWidget {
+        paints: paints.clone(),
+    });
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(scene.ops_len(), 1);
+    assert_eq!(ui.test_retained_paint_recording_ops_len(), 0);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    assert_eq!(
+        ui.test_retained_paint_recording_ops_len(),
+        1,
+        "ingest should move scene ops into the retained previous-frame paint replay source"
+    );
+
+    ui.set_paint_cache_enabled(false);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        ui.test_retained_paint_recording_ops_len(),
+        0,
+        "disabling paint cache should clear the retained previous-frame paint replay source"
+    );
+}
+
+#[test]
+fn previous_frame_paint_recording_replay_preserves_text_blob_side_index() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let text_blob = fret_core::TextBlobId::from(KeyData::from_ffi(101));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_paint_cache_enabled(true);
+
+    struct TextPaintWidget {
+        paints: Arc<AtomicUsize>,
+        text_blob: fret_core::TextBlobId,
+    }
+
+    impl<H: UiHost> Widget<H> for TextPaintWidget {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            self.paints.fetch_add(1, Ordering::SeqCst);
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(0),
+                origin: cx.bounds.origin,
+                text: self.text_blob,
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                outline: None,
+                shadow: None,
+            });
+        }
+    }
+
+    let node = ui.create_node(TextPaintWidget {
+        paints: paints.clone(),
+        text_blob,
+    });
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert_eq!(scene.text_blob_ids(), &[text_blob]);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        1,
+        "text widget should be replayed from the previous-frame recording"
+    );
+    assert_eq!(
+        scene.text_blob_ids(),
+        &[text_blob],
+        "paint-cache replay should preserve the precomputed text blob side index"
+    );
 }
 
 #[test]
@@ -263,69 +490,8 @@ fn paint_cache_is_cleared_when_caching_is_disabled_for_a_node() {
     assert_eq!(paints.load(Ordering::SeqCst), 3);
 }
 
-struct PaintCacheAllowHitTestOnlyOverrideGuard;
-
-impl PaintCacheAllowHitTestOnlyOverrideGuard {
-    fn set(value: bool) -> Self {
-        UiTree::<crate::test_host::TestHost>::test_set_paint_cache_allow_hit_test_only_override(
-            Some(value),
-        );
-        Self
-    }
-}
-
-impl Drop for PaintCacheAllowHitTestOnlyOverrideGuard {
-    fn drop(&mut self) {
-        UiTree::<crate::test_host::TestHost>::test_set_paint_cache_allow_hit_test_only_override(
-            None,
-        );
-    }
-}
-
 #[test]
-fn paint_cache_hit_test_only_invalidation_does_not_replay_when_toggle_off() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(false);
-    let mut app = crate::test_host::TestHost::new();
-
-    let paints = Arc::new(AtomicUsize::new(0));
-    let mut ui = UiTree::new();
-    ui.set_window(AppWindowId::default());
-    ui.set_paint_cache_enabled(true);
-
-    let node = ui.create_node(CountingPaintWidget {
-        paints: paints.clone(),
-    });
-    ui.set_root(node);
-
-    let mut services = FakeUiServices;
-    let mut scene = Scene::default();
-    let bounds = Rect::new(
-        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
-    );
-
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-    assert_eq!(paints.load(Ordering::SeqCst), 1);
-
-    ui.ingest_paint_cache_source(&mut scene);
-    scene.clear();
-
-    ui.invalidate(node, Invalidation::HitTestOnly);
-    assert!(ui.nodes[node].paint_invalidated_by_hit_test_only);
-
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-
-    assert_eq!(
-        paints.load(Ordering::SeqCst),
-        2,
-        "expected hit-test-only invalidation to force repaint when replay toggle is off"
-    );
-    assert!(!ui.nodes[node].paint_invalidated_by_hit_test_only);
-}
-
-#[test]
-fn paint_cache_hit_test_only_invalidation_replays_when_toggle_on() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(true);
+fn paint_cache_hit_test_only_invalidation_replays_when_cache_key_matches() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -360,7 +526,7 @@ fn paint_cache_hit_test_only_invalidation_replays_when_toggle_on() {
     assert_eq!(
         paints.load(Ordering::SeqCst),
         1,
-        "expected hit-test-only invalidation to replay cached paint when toggle is on"
+        "expected hit-test-only invalidation to replay cached paint when cache key stays stable"
     );
     let stats = ui.debug_stats();
     assert_eq!(
@@ -375,8 +541,60 @@ fn paint_cache_hit_test_only_invalidation_replays_when_toggle_on() {
 }
 
 #[test]
+fn paint_cache_hit_test_only_invalidation_from_descendant_does_not_replay_ancestor() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let child_paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(CountingPaintWidget {
+        paints: child_paints.clone(),
+    });
+    ui.set_children(root, vec![child]);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(child_paints.load(Ordering::SeqCst), 1);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.invalidate(child, Invalidation::HitTestOnly);
+    assert!(ui.nodes[child].paint_invalidated_by_hit_test_only);
+    assert!(
+        !ui.nodes[root].paint_invalidated_by_hit_test_only,
+        "ancestor paint dirtied by descendant hit-test-only invalidation must not replay its cached subtree"
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        !ui.debug_paint_cache_replays.contains_key(&root),
+        "ancestor should not replay cached paint when hit-test-only invalidation came from a descendant"
+    );
+    assert!(
+        ui.debug_paint_cache_replays.contains_key(&child),
+        "descendant should still use the local hit-test-only replay path"
+    );
+    assert_eq!(
+        child_paints.load(Ordering::SeqCst),
+        1,
+        "local descendant hit-test-only invalidation should replay cached paint when the key matches"
+    );
+}
+
+#[test]
 fn paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(true);
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -430,8 +648,7 @@ fn paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch() {
 }
 
 #[test]
-fn paint_cache_does_not_replay_non_hit_test_invalidations_when_toggle_on() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(true);
+fn paint_cache_does_not_replay_non_hit_test_invalidations() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -465,7 +682,7 @@ fn paint_cache_does_not_replay_non_hit_test_invalidations_when_toggle_on() {
     assert_eq!(
         paints.load(Ordering::SeqCst),
         2,
-        "expected plain paint invalidation to keep forcing repaint even with toggle on"
+        "expected plain paint invalidation to keep forcing repaint"
     );
 }
 

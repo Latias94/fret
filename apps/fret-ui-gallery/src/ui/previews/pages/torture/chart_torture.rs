@@ -16,8 +16,9 @@ pub(in crate::ui) fn preview_chart_torture(
     use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
     use fret_ui::retained_bridge::RetainedSubtreeProps;
 
-    let chart =
-        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+    let chart = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        |cx| {
             let dataset_id = delinea::ids::DatasetId::new(1);
             let grid_id = delinea::ids::GridId::new(1);
             let x_axis = delinea::AxisId::new(1);
@@ -143,7 +144,8 @@ pub(in crate::ui) fn preview_chart_torture(
                 },
                 |_cx| vec![subtree],
             )]
-        });
+        },
+    );
 
     let chart = DocSection::build(cx, "Chart", chart)
         .description(

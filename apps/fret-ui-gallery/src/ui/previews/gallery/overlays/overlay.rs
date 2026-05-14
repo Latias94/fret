@@ -50,10 +50,13 @@ pub(in crate::ui) fn preview_overlay(
 
     let last_action_status = flags::last_action_status(cx, &models).into_element(cx);
 
-    let overlays = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), {
-        let models = models.clone();
-        move |cx| vec![layout::compose_body(cx, models.clone()).into_element(cx)]
-    });
+    let overlays = cx.cached_subtree_with(
+        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
+        {
+            let models = models.clone();
+            move |cx| vec![layout::compose_body(cx, models.clone()).into_element(cx)]
+        },
+    );
 
     let mut out: Vec<AnyElement> = vec![overlays, last_action_status];
     out.extend(flags::status_flags(cx, &models));

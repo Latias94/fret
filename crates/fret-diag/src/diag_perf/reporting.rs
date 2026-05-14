@@ -4,61 +4,6 @@ fn json_u64(v: &serde_json::Value, key: &str) -> u64 {
     v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn perf_repeat_summary_json_row_summarizes_code_editor_row_scene_fields() {
-        let mut rows = Vec::new();
-        let runs = vec![
-            serde_json::json!({
-                "top_code_editor_rows_painted": 10,
-                "top_code_editor_rows_scene_replayed": 6,
-                "top_code_editor_rows_scene_stored": 4,
-                "top_code_editor_row_scene_ops_stored": 40,
-                "top_code_editor_row_scene_replay_hit_rate_pct": 60
-            }),
-            serde_json::json!({
-                "top_code_editor_rows_painted": 20,
-                "top_code_editor_rows_scene_replayed": 18,
-                "top_code_editor_rows_scene_stored": 2,
-                "top_code_editor_row_scene_ops_stored": 12,
-                "top_code_editor_row_scene_replay_hit_rate_pct": 90
-            }),
-        ];
-
-        push_perf_json_repeat_summary_row(
-            &mut rows,
-            Path::new("tools/diag-scripts/editor.json"),
-            BundleStatsSort::Time,
-            runs.len(),
-            &runs,
-            &[100, 200],
-            &[10, 20],
-            &[0, 0],
-            &[5, 6],
-            &[80, 160],
-            &[1, 2],
-            &[0, 1],
-            &[0, 0],
-            &[0, 0],
-            &[0, 0],
-            None,
-        );
-
-        let stats = &rows[0]["stats"];
-        assert_eq!(stats["top_code_editor_rows_painted"]["max"], 20);
-        assert_eq!(stats["top_code_editor_rows_scene_replayed"]["p50"], 6);
-        assert_eq!(stats["top_code_editor_rows_scene_stored"]["p95"], 4);
-        assert_eq!(stats["top_code_editor_row_scene_ops_stored"]["max"], 40);
-        assert_eq!(
-            stats["top_code_editor_row_scene_replay_hit_rate_pct"]["p95"],
-            90
-        );
-    }
-}
-
 pub(super) fn print_perf_no_last_bundle_dir(
     src: &Path,
     sort: BundleStatsSort,
@@ -404,4 +349,59 @@ pub(super) fn push_perf_json_repeat_summary_row(
                 "run_index": run_index,
             })),
     }));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn perf_repeat_summary_json_row_summarizes_code_editor_row_scene_fields() {
+        let mut rows = Vec::new();
+        let runs = vec![
+            serde_json::json!({
+                "top_code_editor_rows_painted": 10,
+                "top_code_editor_rows_scene_replayed": 6,
+                "top_code_editor_rows_scene_stored": 4,
+                "top_code_editor_row_scene_ops_stored": 40,
+                "top_code_editor_row_scene_replay_hit_rate_pct": 60
+            }),
+            serde_json::json!({
+                "top_code_editor_rows_painted": 20,
+                "top_code_editor_rows_scene_replayed": 18,
+                "top_code_editor_rows_scene_stored": 2,
+                "top_code_editor_row_scene_ops_stored": 12,
+                "top_code_editor_row_scene_replay_hit_rate_pct": 90
+            }),
+        ];
+
+        push_perf_json_repeat_summary_row(
+            &mut rows,
+            Path::new("tools/diag-scripts/editor.json"),
+            BundleStatsSort::Time,
+            runs.len(),
+            &runs,
+            &[100, 200],
+            &[10, 20],
+            &[0, 0],
+            &[5, 6],
+            &[80, 160],
+            &[1, 2],
+            &[0, 1],
+            &[0, 0],
+            &[0, 0],
+            &[0, 0],
+            None,
+        );
+
+        let stats = &rows[0]["stats"];
+        assert_eq!(stats["top_code_editor_rows_painted"]["max"], 20);
+        assert_eq!(stats["top_code_editor_rows_scene_replayed"]["p50"], 6);
+        assert_eq!(stats["top_code_editor_rows_scene_stored"]["p95"], 4);
+        assert_eq!(stats["top_code_editor_row_scene_ops_stored"]["max"], 40);
+        assert_eq!(
+            stats["top_code_editor_row_scene_replay_hit_rate_pct"]["p95"],
+            90
+        );
+    }
 }

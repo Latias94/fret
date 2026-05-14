@@ -626,6 +626,7 @@ struct SuiteScriptLaunchRequest<'a> {
     suite_launch_env: &'a [(String, String)],
     src: &'a Path,
     launch: &'a Option<Vec<String>>,
+    required_launch_features: &'a [String],
     workspace_root: &'a Path,
     resolved_ready_path: &'a Path,
     resolved_exit_path: &'a Path,
@@ -653,6 +654,7 @@ fn maybe_launch_suite_script_demo(
     *child = maybe_launch_demo(
         request.launch,
         &per_script_launch_env,
+        request.required_launch_features,
         request.workspace_root,
         request.resolved_ready_path,
         request.resolved_exit_path,
@@ -3388,6 +3390,13 @@ hint: list suites via `fretboard-dev diag list suites`"
         &scripts,
         check_pixels_changed_test_id.is_some() || check_pixels_unchanged_test_id.is_some(),
     );
+    let suite_required_launch_features = scripts_required_launch_features(
+        scripts
+            .iter()
+            .chain(resolved_suite_prewarm_scripts.iter())
+            .chain(resolved_suite_prelude_scripts.iter())
+            .map(|src| src.as_path()),
+    );
     warmup_frames = suite_profile.resolve_warmup_frames(warmup_frames);
 
     let tool_launched = launch.is_some() || reuse_launch;
@@ -3685,6 +3694,7 @@ hint: list suites via `fretboard-dev diag list suites`"
         match maybe_launch_demo(
             &launch,
             &suite_launch_env,
+            &suite_required_launch_features,
             &workspace_root,
             &resolved_ready_path,
             &resolved_exit_path,
@@ -3758,6 +3768,19 @@ hint: list suites via `fretboard-dev diag list suites`"
     let script_count = scripts.len();
     for (idx, src) in scripts.into_iter().enumerate() {
         let script_key = normalize_repo_relative_path(&workspace_root, &src);
+        let per_script_required_launch_features = scripts_required_launch_features(
+            std::iter::once(src.as_path())
+                .chain(
+                    resolved_suite_prewarm_scripts
+                        .iter()
+                        .map(|src| src.as_path()),
+                )
+                .chain(
+                    resolved_suite_prelude_scripts
+                        .iter()
+                        .map(|src| src.as_path()),
+                ),
+        );
         if let Err(err) = maybe_launch_suite_script_demo(
             &mut child,
             &SuiteScriptLaunchRequest {
@@ -3765,6 +3788,7 @@ hint: list suites via `fretboard-dev diag list suites`"
                 suite_launch_env: &suite_launch_env,
                 src: &src,
                 launch: &launch,
+                required_launch_features: &per_script_required_launch_features,
                 workspace_root: &workspace_root,
                 resolved_ready_path: &resolved_ready_path,
                 resolved_exit_path: &resolved_exit_path,

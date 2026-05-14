@@ -6,6 +6,7 @@ impl<H: UiHost> UiTree<H> {
         let node = Node::new(widget);
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
+        self.sync_view_boundary_state_for_node(id);
         self.mark_semantics_dirty();
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
         if inv.layout {
@@ -48,6 +49,7 @@ impl<H: UiHost> UiTree<H> {
         let node = Node::new_for_element(element, widget);
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
+        self.sync_view_boundary_state_for_node(id);
         self.mark_semantics_dirty();
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
         if inv.layout {
@@ -115,7 +117,7 @@ impl<H: UiHost> UiTree<H> {
                 let should_mark_contained_cache_root_dirty = value
                     && view_cache_active
                     && n.view_cache.enabled
-                    && n.view_cache.contained_layout;
+                    && n.view_cache.layout_contained_when_bounds_known();
                 let layout_after = n.invalidation.layout;
                 (
                     layout_before,
@@ -148,14 +150,13 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if should_mark_contained_cache_root_dirty {
-            self.mark_cache_root_dirty(
+            self.mark_boundary_layout_dirty(
                 node,
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::LocalInvalidation,
             );
         } else if !value {
-            self.dirty_cache_roots.remove(&node);
-            self.dirty_cache_root_reasons.remove(&node);
+            self.clear_boundary_layout_dirty(node);
         }
     }
 
@@ -431,23 +432,6 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn subtree_has_pending_layout_work(&self, root: NodeId) -> bool {
-        if self.subtree_layout_dirty_aggregation_enabled() {
-            return self.node_subtree_layout_dirty(root);
-        }
-
-        let mut stack: Vec<NodeId> = vec![root];
-        while let Some(node) = stack.pop() {
-            let Some(entry) = self.nodes.get(node) else {
-                continue;
-            };
-            if entry.invalidation.layout {
-                return true;
-            }
-            if entry.layout_dirty_children_suppressed {
-                continue;
-            }
-            stack.extend(entry.children.iter().copied());
-        }
-        false
+        self.node_subtree_layout_dirty(root)
     }
 }
