@@ -602,6 +602,17 @@ cargo nextest run -p fret-diag contract_help_mentions_the_migrated_command_surfa
 python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15
 ```
 
+DevTools/product workflow discovery follow-up (2026-05-15): `fretboard-dev list tool-apps` now
+prints a `workflow: imui-product-chain` row, and `fretboard-dev list tool-apps --json` exposes the
+same route under `product_workflows`. The default discovery gate validates the default
+`python tools/diag_gate_imui_product_chain.py` command, the focused
+`python tools/diag_gate_imui_product_chain.py --only discovery` command, the launched
+`python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release`
+command, `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, and the expected
+`perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json` artifacts so
+DevTools-style consumers can surface the product-chain evidence path without hard-coding GUI-only
+knowledge.
+
 The 2026-05-13 launched bounded campaign result is `campaign: ok` at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
 verification rerun also green at
@@ -712,6 +723,12 @@ Latest local default product-chain evidence (2026-05-14):
 - Added coverage: the discovery step now also validates
   `fretboard-dev list tool-apps --json` as the stable first-open DevTools GUI/MCP machine-readable
   map, including repo preflight and per-tool command/docs/gate/best-for fields.
+- Added coverage: the same JSON now exposes a `product_workflows` entry for
+  `imui-product-chain`, including the default product-chain command, the focused discovery-only
+  command, the launched `perf-docking` command, the promoted
+  `perf-docking-arbitration-steady` suite, and the expected
+  `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`
+  evidence artifacts.
 - Added coverage: the same discovery step now validates `fretboard-dev --help` and
   `fretboard-dev list --help`, so the tool-app index itself stays discoverable from the first CLI
   help screens.

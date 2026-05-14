@@ -74,6 +74,18 @@ const DIAG_GUI_BRANCH_DOC: &str =
 const DIAG_REPO_PREFLIGHT_COMMAND: &str = "cargo run -p fretboard-dev -- diag doctor campaigns";
 const DIAG_REPO_PREFLIGHT_JSON_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag doctor campaigns --json";
+const IMUI_PRODUCT_CHAIN_DOC: &str =
+    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
+const IMUI_PRODUCT_CHAIN_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+const IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND: &str =
+    "python tools/diag_gate_imui_product_chain.py --only discovery";
+const IMUI_DOCKING_PERF_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
+const IMUI_DOCKING_PERF_SUITE: &str =
+    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
+const IMUI_DOCKING_PERF_ARTIFACTS: &[&str] = &[
+    "perf-docking/regression.summary.json",
+    "perf-docking/check.perf_thresholds.json",
+];
 
 pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
     let output_json = parse_tool_apps_json_flag(args)?;
@@ -87,6 +99,19 @@ pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
         println!("repo preflight: {DIAG_REPO_PREFLIGHT_COMMAND}");
         println!("repo preflight json: {DIAG_REPO_PREFLIGHT_JSON_COMMAND}");
         println!("gui branch: {DIAG_GUI_BRANCH_DOC}");
+        for workflow in product_workflows() {
+            println!(
+                "workflow: {}    # {} | command: {} | focused: {} | launched: {} | suite: {} | docs: {} | artifacts: {}",
+                workflow.id,
+                workflow.purpose,
+                workflow.command,
+                workflow.focused_command,
+                workflow.launched_command,
+                workflow.suite,
+                workflow.docs,
+                workflow.expected_artifacts.join(", ")
+            );
+        }
         for tool in tool_apps() {
             println!(
                 "{}    # {} | best for: {} | run: {} | docs: {} | gate: {}",
@@ -108,6 +133,18 @@ fn tool_apps_json_value() -> serde_json::Value {
             "command": DIAG_REPO_PREFLIGHT_COMMAND,
             "json_command": DIAG_REPO_PREFLIGHT_JSON_COMMAND,
         },
+        "product_workflows": product_workflows().iter().map(|workflow| {
+            serde_json::json!({
+                "id": workflow.id,
+                "purpose": workflow.purpose,
+                "command": workflow.command,
+                "focused_command": workflow.focused_command,
+                "launched_command": workflow.launched_command,
+                "docs": workflow.docs,
+                "suite": workflow.suite,
+                "expected_artifacts": workflow.expected_artifacts,
+            })
+        }).collect::<Vec<_>>(),
         "tool_apps": tool_apps().iter().map(|tool| {
             serde_json::json!({
                 "id": tool.id,
@@ -128,6 +165,30 @@ struct ToolApp {
     best_for: &'static str,
     docs: &'static str,
     gate: &'static str,
+}
+
+struct ProductWorkflow {
+    id: &'static str,
+    purpose: &'static str,
+    command: &'static str,
+    focused_command: &'static str,
+    launched_command: &'static str,
+    docs: &'static str,
+    suite: &'static str,
+    expected_artifacts: &'static [&'static str],
+}
+
+fn product_workflows() -> &'static [ProductWorkflow] {
+    &[ProductWorkflow {
+        id: "imui-product-chain",
+        purpose: "IMUI editor-grade product-chain gate with docking perf evidence",
+        command: IMUI_PRODUCT_CHAIN_COMMAND,
+        focused_command: IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND,
+        launched_command: IMUI_DOCKING_PERF_COMMAND,
+        docs: IMUI_PRODUCT_CHAIN_DOC,
+        suite: IMUI_DOCKING_PERF_SUITE,
+        expected_artifacts: IMUI_DOCKING_PERF_ARTIFACTS,
+    }]
 }
 
 fn tool_apps() -> &'static [ToolApp] {
@@ -472,6 +533,27 @@ mod tests {
     }
 
     #[test]
+    fn tool_apps_list_names_product_workflows() {
+        let workflows = product_workflows();
+        assert!(workflows.iter().any(|workflow| {
+            workflow.id == "imui-product-chain"
+                && workflow.command == "python tools/diag_gate_imui_product_chain.py"
+                && workflow.focused_command
+                    == "python tools/diag_gate_imui_product_chain.py --only discovery"
+                && workflow.launched_command.contains("--only perf-docking")
+                && workflow
+                    .suite
+                    .ends_with("perf-docking-arbitration-steady/suite.json")
+                && workflow
+                    .expected_artifacts
+                    .contains(&"perf-docking/regression.summary.json")
+                && workflow
+                    .expected_artifacts
+                    .contains(&"perf-docking/check.perf_thresholds.json")
+        }));
+    }
+
+    #[test]
     fn tool_apps_json_flag_parser_is_explicit() {
         assert!(!parse_tool_apps_json_flag(Vec::new()).unwrap());
         assert!(parse_tool_apps_json_flag(vec!["--json".to_string()]).unwrap());
@@ -496,6 +578,25 @@ mod tests {
             value["repo_preflight"]["json_command"],
             "cargo run -p fretboard-dev -- diag doctor campaigns --json"
         );
+
+        let workflows = value["product_workflows"]
+            .as_array()
+            .expect("product_workflows array");
+        assert!(workflows.iter().any(|workflow| workflow["id"] == "imui-product-chain"
+            && workflow["command"] == "python tools/diag_gate_imui_product_chain.py"
+            && workflow["focused_command"]
+                == "python tools/diag_gate_imui_product_chain.py --only discovery"
+            && workflow["launched_command"]
+                == "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+            && workflow["docs"]
+                == "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
+            && workflow["suite"]
+                == "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
+            && workflow["expected_artifacts"]
+                .as_array()
+                .expect("expected_artifacts array")
+                .iter()
+                .any(|artifact| artifact == "perf-docking/check.perf_thresholds.json")));
 
         let tools = value["tool_apps"].as_array().expect("tool_apps array");
         assert!(tools.iter().any(|tool| tool["id"] == "fret-devtools"

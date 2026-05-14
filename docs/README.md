@@ -49,7 +49,7 @@ Unless a document says otherwise:
   - Example (cookbook): `cargo run -p fretboard-dev -- dev native --example simple_todo`
   - Example (native demo bin): `cargo run -p fretboard-dev -- dev native --bin todo_demo`
   - Maintainer `dev` launches also default to strict runtime diagnostics; use `--no-strict-runtime` only when auditing non-strict fallback paths
-  - DevTools discoverability: `cargo run -p fretboard-dev -- list tool-apps` (or `--json` for machine-readable entrypoints)
+  - DevTools discoverability: `cargo run -p fretboard-dev -- list tool-apps` (or `--json` for machine-readable entrypoints and `product_workflows`)
   - Repo-owned diagnostics campaign preflight: `cargo run -p fretboard-dev -- diag doctor campaigns`
 - Public `dev` / `diag` implementation and the remaining hotpatch / theme posture are tracked in:
   - `docs/workstreams/fretboard-public-dev-implementation-v1/README.md`
@@ -121,7 +121,9 @@ Unless a document says otherwise:
 - AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port/ai-elements-port.md`, `docs/workstreams/ai-elements-port/ai-elements-port-todo.md`, and `docs/workstreams/standalone/ai-elements-upstream-alignment.md`
 - Diagnostics first-open workflow: `docs/diagnostics-first-open.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
-- DevTools GUI/MCP tool entrypoints: `cargo run -p fretboard-dev -- list tool-apps` (or `cargo run -p fretboard-dev -- list tool-apps --json`)
+- DevTools GUI/MCP tool entrypoints and product workflows:
+  `cargo run -p fretboard-dev -- list tool-apps` (or
+  `cargo run -p fretboard-dev -- list tool-apps --json`)
 - Repo-owned diagnostics campaign preflight: `cargo run -p fretboard-dev -- diag doctor campaigns` (or `cargo run -p fretboard-dev -- diag doctor campaigns --json`)
 - Diag artifact + evidence model (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect workflow branch (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`

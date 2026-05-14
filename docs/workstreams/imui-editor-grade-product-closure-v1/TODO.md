@@ -140,6 +140,10 @@ reopen.
       umbrella product-chain gate catches drift in the machine-readable entrypoint contract. The
       same gate validates `fretboard-dev --help` and `fretboard-dev list --help`, so the tool-apps
       index itself remains discoverable from the first CLI help screens.
+      Maintenance: the same `fretboard_tool_apps` JSON now carries a `product_workflows` entry for
+      `imui-product-chain`, including the focused discovery command, the launched `perf-docking`
+      command, and the expected perf summary/threshold artifacts, so DevTools-style consumers can
+      discover the current product-chain evidence path without owning a GUI-private schema.
 
 ## P3 - Multi-window hand-feel closure
 

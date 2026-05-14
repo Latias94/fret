@@ -51,6 +51,17 @@ DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGF
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
+IMUI_PRODUCT_CHAIN_DOC = "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
+IMUI_PRODUCT_CHAIN_COMMAND = "python tools/diag_gate_imui_product_chain.py"
+IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND = "python tools/diag_gate_imui_product_chain.py --only discovery"
+IMUI_DOCKING_PERF_COMMAND = (
+    "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+)
+IMUI_DOCKING_PERF_SUITE = "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
+IMUI_DOCKING_PERF_ARTIFACTS = {
+    "perf-docking/regression.summary.json",
+    "perf-docking/check.perf_thresholds.json",
+}
 
 ALL_GATES = [
     DISCOVERY,
@@ -249,6 +260,44 @@ def _validate_tool_apps_json(payload: dict) -> None:
     if not isinstance(repo_preflight.get("purpose"), str) or not repo_preflight["purpose"]:
         raise SystemExit("Step failed: list tool apps json (missing repo preflight purpose)")
 
+    workflows = payload.get("product_workflows")
+    if not isinstance(workflows, list):
+        raise SystemExit("Step failed: list tool apps json (missing product_workflows array)")
+    imui_workflow = next(
+        (
+            item
+            for item in workflows
+            if isinstance(item, dict) and item.get("id") == "imui-product-chain"
+        ),
+        None,
+    )
+    if imui_workflow is None:
+        raise SystemExit("Step failed: list tool apps json (missing imui-product-chain workflow)")
+    expected_workflow_fields = {
+        "command": IMUI_PRODUCT_CHAIN_COMMAND,
+        "focused_command": IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND,
+        "launched_command": IMUI_DOCKING_PERF_COMMAND,
+        "docs": IMUI_PRODUCT_CHAIN_DOC,
+        "suite": IMUI_DOCKING_PERF_SUITE,
+    }
+    for field, expected in expected_workflow_fields.items():
+        if imui_workflow.get(field) != expected:
+            raise SystemExit(
+                f"Step failed: list tool apps json (unexpected imui-product-chain {field})"
+            )
+    if not isinstance(imui_workflow.get("purpose"), str) or not imui_workflow["purpose"]:
+        raise SystemExit("Step failed: list tool apps json (missing imui-product-chain purpose)")
+    artifacts = imui_workflow.get("expected_artifacts")
+    artifact_paths = (
+        {artifact for artifact in artifacts if isinstance(artifact, str)}
+        if isinstance(artifacts, list)
+        else set()
+    )
+    if not IMUI_DOCKING_PERF_ARTIFACTS.issubset(artifact_paths):
+        raise SystemExit(
+            "Step failed: list tool apps json (missing imui-product-chain perf artifacts)"
+        )
+
     tool_apps = payload.get("tool_apps")
     if not isinstance(tool_apps, list):
         raise SystemExit("Step failed: list tool apps json (missing tool_apps array)")
@@ -292,6 +341,9 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     )
     _assert_contains(root_help.stdout, "fretboard-dev list tool-apps", "fretboard help")
     _assert_contains(root_help.stdout, "fretboard-dev list tool-apps --json", "fretboard help")
+    _assert_contains(root_help.stdout, IMUI_PRODUCT_CHAIN_COMMAND, "fretboard help")
+    _assert_contains(root_help.stdout, IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND, "fretboard help")
+    _assert_contains(root_help.stdout, IMUI_DOCKING_PERF_COMMAND, "fretboard help")
     _assert_contains(root_help.stdout, "cargo run -p fret-devtools", "fretboard help")
     _assert_contains(root_help.stdout, "cargo run -p fret-devtools-mcp", "fretboard help")
 
@@ -335,6 +387,13 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
         "list tool apps",
     )
     _assert_contains(tool_apps.stdout, f"gui branch: {DEVTOOLS_GUI_DOC}", "list tool apps")
+    _assert_contains(tool_apps.stdout, "workflow: imui-product-chain", "list tool apps")
+    _assert_contains(tool_apps.stdout, IMUI_PRODUCT_CHAIN_COMMAND, "list tool apps")
+    _assert_contains(tool_apps.stdout, IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND, "list tool apps")
+    _assert_contains(tool_apps.stdout, IMUI_DOCKING_PERF_COMMAND, "list tool apps")
+    _assert_contains(tool_apps.stdout, IMUI_DOCKING_PERF_SUITE, "list tool apps")
+    _assert_contains(tool_apps.stdout, "perf-docking/regression.summary.json", "list tool apps")
+    _assert_contains(tool_apps.stdout, "perf-docking/check.perf_thresholds.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, "cargo run -p fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, DEVTOOLS_GUI_DOC, "list tool apps")

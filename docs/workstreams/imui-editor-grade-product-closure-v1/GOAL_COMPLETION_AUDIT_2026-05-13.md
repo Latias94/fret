@@ -41,7 +41,7 @@ architecture intact:
 | Docking local non-interactive gates are current | `M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md` records green campaign manifest validation and non-GUI behavior gates. | Met for local non-interactive gates only |
 | Launched bounded multi-window campaign is green | `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records the repaired launched bounded P3 campaign at `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, plus the post-documentation rerun at `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778656624160`, with `campaign: ok` and `passed: 4`. | Met for the generic bounded campaign only |
 | Full multi-window hand-feel is closed | M14 still does not count as Linux Wayland compositor acceptance or full platform-specific real-host hand-feel closure. | Not met |
-| DevTools/Demo/Metrics-style discoverability is closed | Diagnostics lanes define the first-open CLI/GUI/MCP split; `fretboard-dev --help` / `fretboard-dev list --help` expose the tool-app index; `fretboard-dev list tool-apps --json` exposes GUI/MCP entrypoints with a machine-readable form; and the default product-chain gate now validates those entrypoints. Broader DevTools/demo/metrics productization remains product work. | Partially met |
+| DevTools/Demo/Metrics-style discoverability is closed | Diagnostics lanes define the first-open CLI/GUI/MCP split; `fretboard-dev --help` / `fretboard-dev list --help` expose the tool-app index; `fretboard-dev list tool-apps --json` exposes GUI/MCP entrypoints plus the IMUI `product_workflows` map with docking perf evidence artifacts; and the default product-chain gate now validates those entrypoints. Broader DevTools/demo/metrics productization remains product work. | Partially met |
 | Full Dear ImGui-class editor maturity is closed | Remaining gaps include real-host OS-window hand-feel, DevTools discoverability polish, perf attribution/smoothness, and proof-led helper candidates only after repeated first-party pressure. | Not met |
 
 ## Current Strengths
@@ -63,7 +63,8 @@ architecture intact:
 - **DevTools discoverability is partially productized, with a stronger drift gate.** The
   diagnostics contract is strong, `fretboard-dev --help` and `fretboard-dev list --help` now stay
   covered as first CLI discovery points, `fretboard-dev list tool-apps --json` gives tools one
-  machine-readable GUI/MCP map, and `python tools/diag_gate_imui_product_chain.py` now validates
+  machine-readable GUI/MCP map plus an IMUI `product_workflows` route to the product-chain and
+  docking perf evidence artifacts, and `python tools/diag_gate_imui_product_chain.py` now validates
   those entrypoints as part of the default IMUI product-chain gate. The current priority map still
   says Dear ImGui-class always-available demo/metrics/debug discoverability needs continued work.
 - **Product workflow coherence is now source-backed, lightly consumer-audited, first-contact

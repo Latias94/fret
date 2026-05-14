@@ -277,6 +277,12 @@ Current status:
   default IMUI product-chain gate catches drift in repo preflight and per-tool command/docs/gate
   fields. The same discovery gate now covers `fretboard-dev --help` and
   `fretboard-dev list --help`, so the tool-apps index is reachable from the first CLI help screens.
+- 2026-05-15 product workflow discovery refresh extends that same map with
+  `product_workflows.imui-product-chain`, including the default product-chain command, the
+  discovery-only command, the launched `perf-docking` command, the promoted
+  `perf-docking-arbitration-steady` suite, and the expected `regression.summary.json` /
+  `check.perf_thresholds.json` perf artifacts. This keeps DevTools-style consumers pointed at the
+  shared evidence chain instead of inventing GUI-only product workflow metadata.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,

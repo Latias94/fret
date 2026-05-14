@@ -204,6 +204,11 @@ cargo run -p fretboard-dev -- list tool-apps --json
 cargo run -p fretboard-dev -- diag doctor campaigns --json
 ```
 
+The `fretboard_tool_apps` JSON includes `product_workflows`; today that names the IMUI
+product-chain gate, its focused discovery-only form, the launched docking perf form, and the
+expected `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`
+artifacts that DevTools-style consumers should surface first.
+
 Open:
 
 - `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`

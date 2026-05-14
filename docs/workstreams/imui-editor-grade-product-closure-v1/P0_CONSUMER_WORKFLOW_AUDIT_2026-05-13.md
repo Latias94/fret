@@ -125,6 +125,14 @@ Follow-up CLI entrypoint refresh on 2026-05-14: the product-chain discovery gate
 `fretboard-dev --help` and `fretboard-dev list --help`, so the `tool-apps` index remains
 discoverable before a maintainer already knows the exact `list tool-apps` subcommand.
 
+Follow-up product workflow discovery refresh on 2026-05-15: `fretboard-dev list tool-apps` now
+prints a `workflow: imui-product-chain` row, and `fretboard-dev list tool-apps --json` exposes that
+same route as `product_workflows`. The default product-chain discovery gate validates the default
+gate command, the focused discovery command, the launched `perf-docking` command, the promoted
+`perf-docking-arbitration-steady` suite, and the expected `perf-docking/regression.summary.json` /
+`perf-docking/check.perf_thresholds.json` artifacts. This is still a tooling/discoverability
+refresh, not a reason to widen `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui`.
+
 Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed
