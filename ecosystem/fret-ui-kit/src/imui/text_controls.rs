@@ -377,7 +377,7 @@ pub(super) fn input_text_model_element_with_options_and_semantics<H: UiHost>(
             .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
             .unwrap_or_default();
 
-        response.id = Some(id);
+        response.set_id(Some(id));
         response.set_enabled(enabled);
         response.core.focused = enabled && cx.is_focused_element(id);
         response.core.changed = enabled && text_model_changed_for(cx, id, &current);
@@ -464,7 +464,7 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
                 .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
                 .unwrap_or_default();
 
-            response.id = Some(id);
+            response.set_id(Some(id));
             response.set_enabled(enabled);
             response.core.focused = enabled && cx.is_focused_element(id);
             response.core.changed = enabled && text_model_changed_for(cx, id, &current);
@@ -588,7 +588,7 @@ mod tests {
                     },
                 );
 
-                assert!(response.id.is_some());
+                assert!(response.id().is_some());
                 assert_eq!(out.len(), 1);
 
                 let props = first_text_input(&out[0]).expect("expected text input element");
@@ -641,7 +641,7 @@ mod tests {
                     },
                 );
 
-                assert!(response.id.is_some());
+                assert!(response.id().is_some());
                 assert_eq!(out.len(), 1);
 
                 let props = first_text_area(&out[0]).expect("expected text area element");

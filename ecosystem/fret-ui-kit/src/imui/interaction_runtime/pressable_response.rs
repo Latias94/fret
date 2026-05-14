@@ -22,7 +22,7 @@ pub(in super::super) fn populate_pressable_response<H: UiHost>(
     response.set_nav_highlighted(
         state.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
     );
-    response.id = Some(id);
+    response.set_id(Some(id));
     response.core.clicked = clicked;
     response.core.changed = changed;
     response.core.rect = cx.last_bounds_for_element(id);

@@ -30,7 +30,7 @@ pub(crate) fn render_imui_disabled_scope_overlay_scene(
                         ..Default::default()
                     },
                 );
-                over_id.set(over.id);
+                over_id.set(over.id());
                 over_clicked.set(over.clicked());
                 over_hovered.set(over.core.hovered);
                 over_hovered_like_imgui.set(over.hovered_like_imgui());
@@ -142,7 +142,7 @@ pub(crate) fn render_imui_shared_hover_delay_scene(
                     ..Default::default()
                 },
             );
-            id_a.set(a.id);
+            id_a.set(a.id());
 
             let b = ui.menu_item_with_options(
                 "B",
@@ -151,7 +151,7 @@ pub(crate) fn render_imui_shared_hover_delay_scene(
                     ..Default::default()
                 },
             );
-            id_b.set(b.id);
+            id_b.set(b.id());
             b_stationary_met.set(b.hover_stationary_met());
             b_delay_short_met.set(b.hover_delay_short_met());
             b_delay_short_shared_met.set(b.hover_delay_short_shared_met());

@@ -125,8 +125,10 @@ Readiness order for the next locally testable review slices:
    assemblers use crate-local setters, while disabled sanitization only clears nav highlight.
    2026-05-14 enabled follow-up: `ResponseExt.enabled` storage is private too. Public/demo/test
    callers use `enabled()`, while disabled sanitization and text controls use crate-local
-   `set_enabled(...)`. `ResponseExt.core` and `ResponseExt.id` remain explicit follow-up candidates
-   because they are broader shared-response and routing-identity surfaces.
+   `set_enabled(...)`. `ResponseExt.id` is now sealed as a routing-identity surface too: public
+   callers use `id()`, while response assemblers use crate-local `set_id(...)`. `ResponseExt.core`
+   remains the explicit follow-up candidate because it is the broader shared
+   `fret_authoring::Response` compatibility surface.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad

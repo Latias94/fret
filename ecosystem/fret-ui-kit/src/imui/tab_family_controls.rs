@@ -161,10 +161,10 @@ fn render_tab_bar<H: UiHost>(
                 set_size,
             );
             if first_focusable.is_none() && item.enabled {
-                first_focusable = built.response.id;
+                first_focusable = built.response.id();
             }
             if is_selected {
-                selected_trigger_id = built.response.id;
+                selected_trigger_id = built.response.id();
             }
             trigger_responses.push(TabTriggerResponse {
                 id: item.id.clone(),

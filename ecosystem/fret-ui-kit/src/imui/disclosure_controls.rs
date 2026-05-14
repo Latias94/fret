@@ -250,7 +250,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         state.focused
                             && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
                     );
-                    trigger_response.id = Some(trigger_id);
+                    trigger_response.set_id(Some(trigger_id));
                     trigger_response.core.clicked =
                         cx.take_transient_for(trigger_id, super::KEY_CLICKED);
                     trigger_response.set_secondary_clicked(

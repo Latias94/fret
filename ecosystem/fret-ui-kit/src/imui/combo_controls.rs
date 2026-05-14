@@ -193,7 +193,7 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
     let popup_opened = super::popup_overlay::begin_popup_menu_with_options(
         ui,
         id,
-        trigger.id,
+        trigger.id(),
         popup_options,
         false,
         f,
@@ -208,7 +208,7 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         })
         .unwrap_or(false)
     });
-    let toggled = trigger.id.is_some_and(|element_id| {
+    let toggled = trigger.id().is_some_and(|element_id| {
         ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, open_after))
     });
     trigger.set_activated(toggled && open_after);

@@ -29,7 +29,7 @@ fn click_sets_clicked_true_once() {
         |cx| {
             crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
-                button_id_frame1_out.set(resp.id);
+                button_id_frame1_out.set(resp.id());
                 clicked_out.set(resp.clicked());
             })
         },
@@ -77,7 +77,7 @@ fn click_sets_clicked_true_once() {
         |cx| {
             crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
-                button_id_frame2_out.set(resp.id);
+                button_id_frame2_out.set(resp.id());
                 clicked_out.set(resp.clicked());
             })
         },

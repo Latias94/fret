@@ -224,7 +224,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         && picker_candidate_visible
         && !hide_for_exact_match;
     let keyboard_repeat = options.keyboard_repeat;
-    let opened = ui.begin_popup_menu_with_options(id, input.id, options.popup, |ui| {
+    let opened = ui.begin_popup_menu_with_options(id, input.id(), options.popup, |ui| {
         if install_popup_keyboard_handler
             && let Some(keyboard_state) = keyboard_state_for_popup.clone()
         {
@@ -256,7 +256,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             );
             if active
                 && let (Some(state), Some(element)) =
-                    (keyboard_state_for_popup.as_ref(), response.id)
+                    (keyboard_state_for_popup.as_ref(), response.id())
             {
                 let _ = ui
                     .cx_mut()
@@ -279,7 +279,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
                 if let Some(state) = keyboard_state_for_popup.as_ref() {
                     let _ = ui.cx_mut().app.models_mut().update(state, |state| {
                         state.active_source_index = Some(*source_index);
-                        state.active_element = response.id;
+                        state.active_element = response.id();
                     });
                 }
                 picked_index = Some(*source_index);
@@ -295,7 +295,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             })
             .unwrap_or_default()
         });
-        let picked_changed = input.id.is_some_and(|element_id| {
+        let picked_changed = input.id().is_some_and(|element_id| {
             ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, selected_now))
         });
         input.core.changed |= picked_changed;

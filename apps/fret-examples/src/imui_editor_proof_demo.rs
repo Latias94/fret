@@ -3233,7 +3233,7 @@ fn render_authoring_parity_imui_group(
                         id: item.id.clone(),
                         label: item.label.clone(),
                     };
-                    let sortable = sortable_row(ui, row.trigger, payload);
+                    let sortable = sortable_row(ui, row.response(), payload);
                     let ghost_id = format!(
                         "imui-editor-proof.authoring.imui.outliner.reorder.row.{}.ghost",
                         item.id

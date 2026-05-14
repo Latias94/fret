@@ -85,7 +85,7 @@ impl std::ops::BitOrAssign for ImUiHoveredFlags {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ResponseExt {
     pub core: Response,
-    pub id: Option<GlobalElementId>,
+    id: Option<GlobalElementId>,
     enabled: bool,
     /// True on the frame an item enters its active or engaged state.
     activated: bool,
@@ -146,6 +146,14 @@ pub struct ResponseExt {
 }
 
 impl ResponseExt {
+    pub(crate) fn set_id(&mut self, id: Option<GlobalElementId>) {
+        self.id = id;
+    }
+
+    pub fn id(self) -> Option<GlobalElementId> {
+        self.id
+    }
+
     pub(crate) fn drag_mut(&mut self) -> &mut DragResponse {
         &mut self.drag
     }

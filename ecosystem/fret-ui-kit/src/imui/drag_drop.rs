@@ -182,7 +182,7 @@ pub(super) fn drag_source_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
     payload: T,
     options: DragSourceOptions,
 ) -> DragSourceResponse {
-    let Some(trigger_id) = trigger.id else {
+    let Some(trigger_id) = trigger.id() else {
         return DragSourceResponse::inactive();
     };
 
@@ -315,7 +315,7 @@ pub(super) fn drop_target_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
     trigger: ResponseExt,
     options: DropTargetOptions,
 ) -> DropTargetResponse<T> {
-    let Some(trigger_id) = trigger.id else {
+    let Some(trigger_id) = trigger.id() else {
         return DropTargetResponse::empty();
     };
 

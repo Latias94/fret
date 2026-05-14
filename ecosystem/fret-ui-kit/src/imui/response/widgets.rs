@@ -88,7 +88,7 @@ impl DisclosureResponse {
     }
 
     pub fn id(self) -> Option<GlobalElementId> {
-        self.trigger.id
+        self.trigger.id()
     }
 
     pub fn response(self) -> ResponseExt {
@@ -122,7 +122,7 @@ impl DisclosureResponse {
 
 impl ComboResponse {
     pub fn id(self) -> Option<GlobalElementId> {
-        self.trigger.id
+        self.trigger.id()
     }
 
     pub fn response(self) -> ResponseExt {
@@ -156,7 +156,7 @@ impl ComboResponse {
 
 impl InputTextPickerResponse {
     pub fn id(&self) -> Option<GlobalElementId> {
-        self.input.id
+        self.input.id()
     }
 
     pub fn response(&self) -> ResponseExt {

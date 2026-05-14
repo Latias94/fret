@@ -330,11 +330,11 @@ impl View for ImUiResponseSignalsView {
                     );
                 },
             );
-            if combo_resp.trigger.activated() {
+            if combo_resp.response().activated() {
                 let _ = lifecycle_combo_activations
                     .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
             }
-            if combo_resp.trigger.deactivated() {
+            if combo_resp.response().deactivated() {
                 let _ = lifecycle_combo_deactivations
                     .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
             }

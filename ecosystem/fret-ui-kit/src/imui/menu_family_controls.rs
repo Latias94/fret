@@ -144,7 +144,7 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
     if let Some(policy) = menubar_policy.as_ref()
         && open_after_trigger
         && !trigger.clicked()
-        && let Some(trigger_id) = trigger.id
+        && let Some(trigger_id) = trigger.id()
     {
         let is_active_trigger = ui.with_cx_mut(|cx| {
             cx.read_model(
@@ -193,7 +193,7 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
                     *value = None;
                 }
             });
-            if let Some(trigger_id) = trigger.id {
+            if let Some(trigger_id) = trigger.id() {
                 let _ = cx.app.models_mut().update(&policy.group_active, |value| {
                     if value
                         .as_ref()
@@ -278,7 +278,7 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
 
     if open_requested
         && let Some(menubar_policy) = menubar_policy.as_ref()
-        && let Some(trigger_id) = trigger.id
+        && let Some(trigger_id) = trigger.id()
     {
         ui.with_cx_mut(|cx| {
             let open_for_state = row_open.clone();
@@ -301,7 +301,7 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
     let popup_opened = super::popup_overlay::begin_popup_menu_with_options(
         ui,
         id,
-        trigger.id,
+        trigger.id(),
         options.popup,
         menubar_policy.is_some(),
         f,
@@ -436,16 +436,16 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
                     ui,
                     policy,
                     submenu_value.as_ref(),
-                    trigger.id,
+                    trigger.id(),
                     trigger.core.rect.is_none(),
                 );
             } else if !is_selected_before {
-                select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id);
+                select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id());
             }
         }
 
         if !open_before && was_open_before_render {
-            clear_imui_submenu(ui, policy, submenu_value.as_ref(), trigger.id, true);
+            clear_imui_submenu(ui, policy, submenu_value.as_ref(), trigger.id(), true);
         }
 
         let open_submenu_now = ui.with_cx_mut(|cx| {
@@ -471,7 +471,7 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
     let popup_opened = super::popup_overlay::begin_popup_menu_with_options(
         ui,
         id,
-        trigger.id,
+        trigger.id(),
         options.popup,
         false,
         f,

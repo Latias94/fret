@@ -43,7 +43,7 @@ pub fn report_adapter_signal(
 ) -> ResponseExt {
     if let Some(reporter) = &mut options.reporter {
         (**reporter)(AdapterSignalRecord {
-            identity: response.id,
+            identity: response.id(),
             response,
             metadata: AdapterSignalMetadata {
                 rect: response.core.rect,

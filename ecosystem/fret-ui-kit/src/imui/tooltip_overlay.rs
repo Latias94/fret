@@ -85,7 +85,7 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
     options: TooltipOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> bool {
-    let Some(trigger_id) = trigger.id else {
+    let Some(trigger_id) = trigger.id() else {
         return false;
     };
 

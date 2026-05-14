@@ -180,9 +180,15 @@ Run evidence:
   keep working.
 - 2026-05-14: made `ResponseExt.enabled` storage private too. Public/demo/test callers use
   `enabled()`, while disabled sanitization and text controls use crate-local `set_enabled(...)`.
-  `ResponseExt.core` and `ResponseExt.id` intentionally remain public in this slice because current
-  source evidence shows they are broader shared-response and routing-identity surfaces that need a
-  separate contract audit.
+- 2026-05-14: made `ResponseExt.id` storage private too. Public/demo/test callers use `id()`, while
+  pressable, disclosure, and text-control response assemblers use crate-local `set_id(...)`.
+  Routing consumers in combo, menu/popup, tooltip, drag/drop, tab focus, text-picker, facade
+  focusable recording, and the editor proof now consume identity through accessors. `ResponseExt.core`
+  intentionally remains public in this slice because it is the broader shared
+  `fret_authoring::Response` compatibility surface and needs a separate contract audit before
+  accessor-only migration. The same compile sweep also migrated stale `apps/fret-examples-imui`
+  demo reads for previously sealed floating/disclosure/combo/table response fields back onto their
+  accessor APIs.
 
 ## P3 Design Surface Readiness Gates
 

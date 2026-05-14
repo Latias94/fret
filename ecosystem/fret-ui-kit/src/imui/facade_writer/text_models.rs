@@ -14,7 +14,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::input_text_model_with_options(self, model, options);
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 
@@ -93,7 +93,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::textarea_model_with_options(self, model, options);
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 }

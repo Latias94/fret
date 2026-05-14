@@ -2144,7 +2144,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                                             if collection_active_id
                                                                 .as_ref()
                                                                 .is_some_and(|active_id| active_id == &asset.id)
-                                                                && let Some(focus_target) = trigger.id
+                                                                && let Some(focus_target) = trigger.id()
                                                             {
                                                                 let _ = ui
                                                                     .cx_mut()
@@ -2417,7 +2417,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
 
                                                             if let Some(scope_origin) = scope_origin
                                                                 && let Some(bounds) = trigger
-                                                                    .id
+                                                                    .id()
                                                                     .and_then(|element_id| {
                                                                         ui.cx_mut()
                                                                             .last_visual_bounds_for_element(element_id)
