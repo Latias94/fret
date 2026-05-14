@@ -130,6 +130,13 @@ cargo nextest run -p fret-ui-editor default_preset_keeps_existing_editor_patch_b
 cargo nextest run -p fret-ui-kit --features imui input_text_model_uses_compact_imui_chrome_without_focus_ring textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast
 ```
 
+Run evidence:
+
+- 2026-05-14: deleted the unused `apply_editor_theme_patch_v1` compatibility wrapper from
+  `ecosystem/fret-ui-editor/src/theme.rs`. In-tree callers already use
+  `apply_editor_theme_preset_v1(...)` or `install_editor_theme_preset_v1(...)`, and
+  `tools/gate_imui_workstream_source.py` rejects the old wrapper from returning.
+
 ## P3 Porting Sugar Readiness Gates
 
 Use these for the current porting-sugar readiness note:

@@ -2518,6 +2518,21 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/theme.rs"),
+            required=[
+                "pub fn apply_editor_theme_preset_v1<H: UiHost>",
+                "pub fn install_editor_theme_preset_v1<H: UiHost>",
+                "pub fn reapply_installed_editor_theme_preset_v1<H: UiHost>",
+                "pub fn sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change<",
+                "EditorThemePresetV1::Default",
+                "EditorThemePresetV1::ImguiLikeDense",
+            ],
+            forbidden=[
+                "apply_editor_theme_patch_v1",
+                "compatibility wrapper for older callsites",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/inspector_panel.rs"),
             required=[
                 "pub struct InspectorPanelCx",

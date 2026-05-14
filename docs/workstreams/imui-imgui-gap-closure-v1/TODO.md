@@ -95,6 +95,8 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
    editor tokens cover the active proof; a style editor, preset selector, or visual gate should be a
    narrow follow-on with evidence.
+   2026-05-14 cleanup: the unused `apply_editor_theme_patch_v1` compatibility wrapper was deleted;
+   apps and tests now stay on explicit preset entry points.
 4. Porting sugar readiness: `SameLine`/item-width/label-ID helpers only if two proof surfaces pay
    the same tax. Current proof surfaces already keep most of that tax local with
    `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and

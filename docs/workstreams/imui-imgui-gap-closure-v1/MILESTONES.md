@@ -81,6 +81,8 @@ Exit criteria:
   Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
   outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
+  2026-05-14 cleanup result: the unused `apply_editor_theme_patch_v1` compatibility wrapper was
+  deleted; explicit preset entry points remain the only editor theme patch authoring path.
   Current porting-sugar audit result: keep `SameLine` / item-width / label-ID sugar candidate-only
   until at least two proof surfaces pay the same authoring tax. Prefer typed Fret helpers
   (`horizontal_with_options`, `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over

@@ -349,8 +349,12 @@ surface.
     after migrating first-party in-tree consumers (`fret-chart`) to the canonical
     `fret_canvas::ui::*` owner seam.
   - Closeout note on 2026-03-15:
-    the remaining explicitly labeled compatibility helpers are now domain-local aliases
-    (`fret-ui-editor::apply_editor_theme_patch_v1`, `fret-ui-kit::toggle_group_item_a11y`) rather
-    than temporary cross-ecosystem adapter layers, so they are no longer tracked by this item.
+    the explicitly labeled compatibility helpers at that point were domain-local aliases rather
+    than temporary cross-ecosystem adapter layers, so they were no longer tracked by this item.
+  - IMUI/editor cleanup note on 2026-05-14:
+    `fret-ui-editor::apply_editor_theme_patch_v1` is now deleted after all in-tree callers moved to
+    the explicit preset entry points (`apply_editor_theme_preset_v1` /
+    `install_editor_theme_preset_v1`). `fret-ui-kit::toggle_group_item_a11y` remains outside this
+    IMUI cleanup slice.
 - [ ] Keep the migration matrix updated until all tracked old postures are either deleted or
   intentionally retained as explicit advanced seams.
