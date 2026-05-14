@@ -20,6 +20,7 @@ LABEL_AFTER_REMOVE = "todo-after-remove"
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
 
@@ -287,6 +288,43 @@ def _validate_tool_app_discovery(
         raise SystemExit("diag doctor campaigns --json should report ok=true")
 
 
+def _validate_devtools_gui_first_open_source(
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
+    name = "fret-devtools gui first-open source"
+    print(f"[diag-gate-imui-p2-devtools] {name}")
+    path = cwd / DEVTOOLS_GUI_SOURCE
+    if progress is not None:
+        progress.record("step.start", name=name, path=str(path))
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError as err:
+        if progress is not None:
+            progress.record("step.fail", name=name, error=str(err))
+        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
+
+    for marker in (
+        f'const DEVTOOLS_FIRST_OPEN_DOC: &str = "{FIRST_OPEN_DOC}"',
+        f'const DEVTOOLS_GUI_BRANCH_DOC: &str =\n    "{DEVTOOLS_GUI_DOC}"',
+        "const DEVTOOLS_REPO_PREFLIGHT_COMMAND: &str =",
+        "const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =",
+        "const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =",
+        f'const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "{CAMPAIGN_ID}"',
+        "First-open Evidence Path",
+        "Canonical docs, repo preflight, artifact roots, and smoke gate stay visible in the GUI shell.",
+        "devtools_first_open_lines(st.cfg.fs_out_dir.as_ref())",
+        "fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String>",
+        "direct loop: diag run -> diag latest -> diag compare",
+        "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard",
+        "devtools_first_open_lines_surface_canonical_paths",
+    ):
+        _assert_text_contains(name, source, marker)
+    if progress is not None:
+        progress.record("step.pass", name=name, path=str(path))
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="target/imui-p2-devtools-first-open-smoke")
@@ -341,6 +379,7 @@ def main(argv: list[str]) -> int:
         raise SystemExit(f"fretboard-dev exe not found: {fretboard_exe}")
 
     _validate_tool_app_discovery(fretboard_exe, cwd=repo_root, progress=progress)
+    _validate_devtools_gui_first_open_source(cwd=repo_root, progress=progress)
     if args.discovery_only:
         progress.record("gate.pass", mode="discovery")
         print("[diag-gate-imui-p2-devtools] discovery done")

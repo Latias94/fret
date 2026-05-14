@@ -622,6 +622,7 @@
     "apps/fret-examples/src/editor_notes_device_shell_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-devtools/src/main.rs",
+    "apps/fret-devtools/src/native.rs",
     "apps/fret-devtools-mcp/src/main.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
     "tools/diag-campaigns/devtools-first-open-smoke.json",

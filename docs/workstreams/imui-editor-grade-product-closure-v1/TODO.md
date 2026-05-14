@@ -131,6 +131,10 @@ reopen.
       freeze one canonical first-open diagnostics entry, while the existing inspect, bundles/scripts,
       GUI dogfood, and diagnostics-v2 navigation notes are explicitly demoted to branch/reference
       roles instead of competing start pages.
+      Maintenance: `apps/fret-devtools/src/native.rs` now surfaces that same first-open evidence
+      path directly in the DevTools GUI shell, and
+      `tools/diag_gate_imui_p2_devtools_first_open.py` checks the GUI source projection so the
+      CLI index does not remain the only discoverability anchor.
 
 ## P3 - Multi-window hand-feel closure
 

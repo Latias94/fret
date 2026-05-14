@@ -183,6 +183,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `apps/fret-examples/src/editor_notes_device_shell_demo.rs`
 - `apps/fret-examples/src/docking_arbitration_demo.rs`
 - `apps/fret-devtools/src/main.rs`
+- `apps/fret-devtools/src/native.rs`
 - `apps/fret-devtools-mcp/src/main.rs`
 - `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `tools/diag_gate_imui_p2_devtools_first_open.py`
@@ -441,6 +442,7 @@ Run evidence:
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
 - `python tools/diag_gate_imui_product_chain.py`
 - `cargo build -p fret-devtools`
+- `cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
 - `cargo run -p fretboard-dev -- list tool-apps`
 - `cargo run -p fretboard-dev -- list tool-apps --json`
@@ -458,6 +460,11 @@ This package currently proves:
   same shared contracts,
 - one canonical first-open doc now routes diagnostics readers before they open branch/reference
   notes,
+- `apps/fret-devtools/src/native.rs` now mirrors that first-open route in the GUI shell via a
+  `First-open Evidence Path` panel, so the GUI exposes the canonical doc, GUI branch doc, repo
+  preflight, artifacts root, direct run/latest/compare loop, campaign summarize/dashboard loop,
+  and bounded P2 smoke gate without inventing a second run model,
+- `tools/diag_gate_imui_p2_devtools_first_open.py` now source-checks that GUI first-open projection,
 - DevTools GUI and MCP stay aligned as consumers of the same artifacts root,
 - `fretboard-dev list tool-apps` exposes the DevTools GUI and MCP launch commands as one
   repo-maintainer discovery surface,
@@ -470,6 +477,17 @@ This package currently proves:
   through `--html-check-out`,
 - and the committed schema2 sample bundle lets maintainers exercise that path without launching a
   demo first.
+
+Latest DevTools GUI first-open source projection proof (2026-05-14):
+
+- `cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast`
+  passed.
+- `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-gui-source-2026-05-14`
+  passed, including the new `fret-devtools gui first-open source` step.
+- Run root:
+  `target/imui-p2-devtools-first-open-gui-source-2026-05-14/1778733748418`.
+- Campaign root:
+  `target/imui-p2-devtools-first-open-gui-source-2026-05-14/1778733748418/campaign/campaigns/devtools-first-open-smoke/1778733762096`.
 
 ### Multi-window hand-feel gates
 
