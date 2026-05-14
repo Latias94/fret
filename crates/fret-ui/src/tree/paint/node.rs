@@ -36,7 +36,7 @@ impl<H: UiHost> UiTree<H> {
             .get(node)
             .map(|n| n.view_cache)
             .unwrap_or_default();
-        let prev_cache = self.boundary_paint_cache_entry(node);
+        let prev_cache = self.paint_cache_entry_for_node(node);
         let (invalidated, hit_test_only_paint_invalidated) = match self.nodes.get(node) {
             Some(n) => (n.invalidation.paint, n.paint_invalidated_by_hit_test_only),
             None => return,
@@ -222,7 +222,7 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.debug_record_paint_cache_replay(node, replayed_ops as u32);
 
-                self.set_boundary_paint_cache_entry(
+                self.set_paint_cache_entry_for_node(
                     node,
                     PaintCacheEntry {
                         generation: self.paint_cache.target_generation,
@@ -290,7 +290,7 @@ impl<H: UiHost> UiTree<H> {
                                 else {
                                     continue;
                                 };
-                                self.translate_boundary_paint_cache_origin(id, delta);
+                                self.translate_paint_cache_entry_origin(id, delta);
                                 if let Some(window) = window
                                     && let Some(element) = element
                                 {
@@ -590,11 +590,11 @@ impl<H: UiHost> UiTree<H> {
                 text_blob_start: text_blob_start as u32,
                 text_blob_end: scene.text_blob_ids().len() as u32,
             };
-            self.set_boundary_paint_cache_entry(node, entry);
+            self.set_paint_cache_entry_for_node(node, entry);
         } else {
             // When caching is disabled for this node (e.g. due to a render transform), ensure we
             // don't keep a stale cache entry that could be replayed later.
-            self.clear_boundary_paint_cache_entry(node);
+            self.clear_paint_cache_entry_for_node(node);
         }
     }
 }

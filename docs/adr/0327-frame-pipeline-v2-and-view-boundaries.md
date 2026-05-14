@@ -133,13 +133,12 @@ M4D consolidated element-runtime view-cache build-time rendered/next side maps i
 open.
 M4E moved boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`, and M4F
 deleted the remaining node-owned `PaintCacheEntry` fallback. True runtime boundaries now own their
-entries through `ViewBoundaryState::paint_cache`; plain retained paint-cache nodes use
-`UiTree::boundary_paint_cache_entries`, a boundary-shaped side store that migrates into
-`ViewBoundaryState::paint_cache` if the node becomes a runtime boundary. M4G split previous-frame
-scene recording storage into `PreviousFramePaintRecording`, so the remaining previous-frame replay
-carrier is now named separately from paint-cache generation and counter control. M4H moved replay
-range validation, op slicing, and text blob side-index replay into that carrier. Its final owner
-remains an open paint-cache replay decision.
+entries through `ViewBoundaryState::paint_cache`; M4L names
+`UiTree::retained_paint_cache_entries` as the explicitly retained plain-node entry store that
+migrates into `ViewBoundaryState::paint_cache` if the node becomes a runtime boundary. M4G split
+previous-frame scene recording storage into `PreviousFramePaintRecording`, so the previous-frame
+replay carrier is now named separately from paint-cache generation and counter control. M4H moved
+replay range validation, op slicing, and text blob side-index replay into that carrier.
 M4I deleted the obsolete `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch, so
 view-cache-active paint-cache recording can no longer bypass boundary ownership for non-boundary
 nodes.

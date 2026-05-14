@@ -100,6 +100,11 @@ pub(in crate::tree) struct BoundaryPaintCacheState {
     entry: Option<PaintCacheEntry>,
 }
 
+#[derive(Default)]
+pub(in crate::tree) struct PaintCacheEntryState {
+    entry: Option<PaintCacheEntry>,
+}
+
 impl BoundaryPaintCacheState {
     pub(super) fn entry(&self) -> Option<PaintCacheEntry> {
         self.entry
@@ -113,6 +118,26 @@ impl BoundaryPaintCacheState {
         self.entry = None;
     }
 
+    pub(super) fn translate_origin(&mut self, delta: Point) {
+        if let Some(entry) = &mut self.entry {
+            entry.origin = Point::new(entry.origin.x + delta.x, entry.origin.y + delta.y);
+        }
+    }
+
+    pub(super) fn has_entry(&self) -> bool {
+        self.entry.is_some()
+    }
+}
+
+impl PaintCacheEntryState {
+    pub(super) fn entry(&self) -> Option<PaintCacheEntry> {
+        self.entry
+    }
+
+    pub(super) fn set_entry(&mut self, entry: PaintCacheEntry) {
+        self.entry = Some(entry);
+    }
+
     pub(super) fn take_entry(&mut self) -> Option<PaintCacheEntry> {
         self.entry.take()
     }
@@ -123,6 +148,7 @@ impl BoundaryPaintCacheState {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn has_entry(&self) -> bool {
         self.entry.is_some()
     }
@@ -369,7 +395,7 @@ impl<H: UiHost> UiTree<H> {
         let state = self.view_boundaries.get_mut(node)?;
         state.refresh_runtime(parent, flags);
         if let Some(entry) = self
-            .boundary_paint_cache_entries
+            .retained_paint_cache_entries
             .remove(node)
             .and_then(|mut state| state.take_entry())
         {
@@ -381,7 +407,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn sync_view_boundary_state_for_node(&mut self, node: NodeId) {
         if self.nodes.get(node).is_none() {
             self.view_boundaries.remove(node);
-            self.boundary_paint_cache_entries.remove(node);
+            self.retained_paint_cache_entries.remove(node);
             return;
         }
 
@@ -397,11 +423,11 @@ impl<H: UiHost> UiTree<H> {
 
     pub(in crate::tree) fn remove_view_boundary_state(&mut self, node: NodeId) {
         self.view_boundaries.remove(node);
-        self.boundary_paint_cache_entries.remove(node);
+        self.retained_paint_cache_entries.remove(node);
         self.dirty_boundaries.remove(&node);
     }
 
-    pub(in crate::tree) fn boundary_paint_cache_entry(
+    pub(in crate::tree) fn paint_cache_entry_for_node(
         &self,
         node: NodeId,
     ) -> Option<PaintCacheEntry> {
@@ -409,13 +435,13 @@ impl<H: UiHost> UiTree<H> {
             .get(node)
             .and_then(|state| state.paint_cache.entry())
             .or_else(|| {
-                self.boundary_paint_cache_entries
+                self.retained_paint_cache_entries
                     .get(node)
-                    .and_then(BoundaryPaintCacheState::entry)
+                    .and_then(PaintCacheEntryState::entry)
             })
     }
 
-    pub(in crate::tree) fn set_boundary_paint_cache_entry(
+    pub(in crate::tree) fn set_paint_cache_entry_for_node(
         &mut self,
         node: NodeId,
         entry: PaintCacheEntry,
@@ -427,31 +453,31 @@ impl<H: UiHost> UiTree<H> {
             boundary.paint_cache.set_entry(entry);
             return;
         }
-        if !self.boundary_paint_cache_entries.contains_key(node) {
-            self.boundary_paint_cache_entries
-                .insert(node, BoundaryPaintCacheState::default());
+        if !self.retained_paint_cache_entries.contains_key(node) {
+            self.retained_paint_cache_entries
+                .insert(node, PaintCacheEntryState::default());
         }
-        if let Some(state) = self.boundary_paint_cache_entries.get_mut(node) {
+        if let Some(state) = self.retained_paint_cache_entries.get_mut(node) {
             state.set_entry(entry);
         }
     }
 
-    pub(in crate::tree) fn clear_boundary_paint_cache_entry(&mut self, node: NodeId) {
+    pub(in crate::tree) fn clear_paint_cache_entry_for_node(&mut self, node: NodeId) {
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
             boundary.paint_cache.clear();
         } else {
-            self.boundary_paint_cache_entries.remove(node);
+            self.retained_paint_cache_entries.remove(node);
         }
     }
 
-    pub(in crate::tree) fn translate_boundary_paint_cache_origin(
+    pub(in crate::tree) fn translate_paint_cache_entry_origin(
         &mut self,
         node: NodeId,
         delta: Point,
     ) {
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
             boundary.paint_cache.translate_origin(delta);
-        } else if let Some(state) = self.boundary_paint_cache_entries.get_mut(node) {
+        } else if let Some(state) = self.retained_paint_cache_entries.get_mut(node) {
             state.translate_origin(delta);
         }
     }
@@ -613,15 +639,15 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
-    pub(crate) fn test_boundary_paint_cache_entry_has_entry(&self, node: NodeId) -> bool {
-        self.boundary_paint_cache_entry(node).is_some()
+    pub(crate) fn test_paint_cache_entry_for_node_has_entry(&self, node: NodeId) -> bool {
+        self.paint_cache_entry_for_node(node).is_some()
     }
 
     #[cfg(test)]
-    pub(crate) fn test_boundary_paint_cache_side_store_has_entry(&self, node: NodeId) -> bool {
-        self.boundary_paint_cache_entries
+    pub(crate) fn test_retained_paint_cache_entry_store_has_entry(&self, node: NodeId) -> bool {
+        self.retained_paint_cache_entries
             .get(node)
-            .is_some_and(BoundaryPaintCacheState::has_entry)
+            .is_some_and(PaintCacheEntryState::has_entry)
     }
 
     #[cfg(test)]

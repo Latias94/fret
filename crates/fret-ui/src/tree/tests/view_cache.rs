@@ -57,7 +57,7 @@ fn view_cache_disables_paint_cache_for_non_boundary_nodes() {
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 1);
     assert!(
-        !ui.test_boundary_paint_cache_entry_has_entry(node),
+        !ui.test_paint_cache_entry_for_node_has_entry(node),
         "view-cache-active non-cache nodes should not record paint-cache entries"
     );
 
@@ -67,7 +67,7 @@ fn view_cache_disables_paint_cache_for_non_boundary_nodes() {
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 2);
     assert!(
-        !ui.test_boundary_paint_cache_entry_has_entry(node),
+        !ui.test_paint_cache_entry_for_node_has_entry(node),
         "view-cache-active non-cache nodes should keep paint-cache disabled"
     );
 }
@@ -102,8 +102,8 @@ fn view_cache_allows_paint_cache_for_boundary_nodes() {
         "view-cache boundary nodes should store replay entries in ViewBoundaryState"
     );
     assert!(
-        !ui.test_boundary_paint_cache_side_store_has_entry(node),
-        "view-cache boundary nodes should not use the plain paint-cache side store"
+        !ui.test_retained_paint_cache_entry_store_has_entry(node),
+        "view-cache boundary nodes should not use the retained plain-node paint-cache entry store"
     );
 
     ui.ingest_paint_cache_source(&mut scene);

@@ -23,11 +23,12 @@ Progress ledger:
 - [ ] Broader paint-cache replay stores are consolidated into boundary-owned scene-fragment state or
   retained behind an accepted ADR/workstream reason. M4E moves boundary-node `PaintCacheEntry`
   ownership into `ViewBoundaryState::paint_cache`; M4F deletes the remaining node-owned
-  `PaintCacheEntry` fallback and introduces a plain-node boundary-shaped side store; M4G splits the
+  `PaintCacheEntry` fallback and introduces a retained plain-node entry store; M4G splits the
   previous-frame scene recording into `PreviousFramePaintRecording`; M4H moves replay range
   validation and text side-index replay into that recording carrier; M4K explicitly retains the
   previous-frame recording source inside `PaintCacheState` because the current `Scene` contract is
-  a per-tree linear display list while boundary entries own replay metadata.
+  a per-tree linear display list while boundary entries own replay metadata; M4L renames and
+  retains `UiTree::retained_paint_cache_entries` as the final plain-node entry store.
 - [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
   boundary-hint API. `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces
   `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring.
@@ -130,7 +131,7 @@ Progress ledger:
   - [x] Move boundary-node `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`
     (`M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md`).
   - [x] Delete the non-boundary node-owned `PaintCacheEntry` fallback and route plain paint-cache
-    entries through `UiTree::boundary_paint_cache_entries`, with migration into
+    entries through `UiTree::retained_paint_cache_entries`, with migration into
     `ViewBoundaryState::paint_cache` when the node becomes a true runtime boundary
     (`M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md`).
   - [x] Split paint-cache previous-frame recording storage out of generation/counter control into

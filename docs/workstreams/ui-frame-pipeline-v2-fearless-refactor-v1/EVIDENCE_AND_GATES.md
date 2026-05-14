@@ -432,8 +432,9 @@ Observed result:
 This slice is a runtime ownership-consolidation step, not a new perf claim. It deletes the
 node-owned `PaintCacheEntry` field, routes true runtime-boundary entries through
 `ViewBoundaryState::paint_cache`, routes plain retained paint-cache entries through
-`UiTree::boundary_paint_cache_entries`, and keeps `PaintCacheState` as the still-open
-previous-frame op storage owner for the next paint-cache replay decision.
+the retained plain-node entry store later named `UiTree::retained_paint_cache_entries`, and kept
+`PaintCacheState` as the then-open previous-frame op storage owner for the next paint-cache replay
+decision.
 
 Most recent previous-frame paint recording slice evidence:
 
@@ -599,6 +600,43 @@ This slice is an owner-retention decision, not a new perf claim. It makes
 `PaintCacheState::previous_frame` private and records that `PreviousFramePaintRecording` remains the
 per-tree previous-frame linear scene recording source while boundary `PaintCacheEntry` metadata
 continues to own the replay decision.
+
+Most recent retained paint-cache entry store slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4L_RETAINED_PAINT_CACHE_ENTRY_STORE_SLICE_2026-05-14.md`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- View-cache paint-cache gating gate:
+  `cargo nextest run -p fret-ui tree::tests::view_cache::view_cache_disables_paint_cache_for_non_boundary_nodes tree::tests::view_cache::view_cache_allows_paint_cache_for_boundary_nodes --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source-deletion check:
+  `rg -n "boundary_paint_cache_entries|test_boundary_paint_cache_side_store_has_entry|side store|side-store" crates/fret-ui/src -g '*.rs'`
+
+Observed result:
+
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- paint-cache regression gate: `12 passed, 929 skipped`;
+- view-cache paint-cache gating gate: `2 passed, 939 skipped`;
+- layering check: passed;
+- workstream catalog: passed;
+- `WORKSTREAM.json` validation: passed;
+- `git diff --check`: passed;
+- source-deletion check: no old `boundary_paint_cache_entries` / side-store naming remains in
+  `crates/fret-ui/src`.
+
+This slice is an owner-retention and naming cleanup step, not a new perf claim. It records
+`UiTree::retained_paint_cache_entries` as the explicit retained plain-node paint-cache entry store,
+while true runtime boundary entries remain in `ViewBoundaryState::paint_cache`.
 
 Most recent code-editor closeout perf evidence:
 

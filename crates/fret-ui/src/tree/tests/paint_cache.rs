@@ -25,12 +25,12 @@ fn paint_cache_replays_ops_when_plain_node_translates_from_boundary_entry_store(
     assert_eq!(paints.load(Ordering::SeqCst), 1);
     assert_eq!(scene.ops_len(), 1);
     assert!(
-        ui.test_boundary_paint_cache_entry_has_entry(node),
+        ui.test_paint_cache_entry_for_node_has_entry(node),
         "plain paint-cache roots should store replay entries in boundary paint-cache entry storage"
     );
     assert!(
-        ui.test_boundary_paint_cache_side_store_has_entry(node),
-        "plain paint-cache roots should use the side store instead of becoming runtime ViewBoundaries"
+        ui.test_retained_paint_cache_entry_store_has_entry(node),
+        "plain paint-cache roots should use the retained entry store instead of becoming runtime ViewBoundaries"
     );
     assert!(
         !ui.test_view_boundary_exists(node),
@@ -138,7 +138,7 @@ fn paint_cache_side_store_entry_migrates_when_node_becomes_view_boundary() {
 
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 1);
-    assert!(ui.test_boundary_paint_cache_side_store_has_entry(node));
+    assert!(ui.test_retained_paint_cache_entry_store_has_entry(node));
     assert!(!ui.test_view_boundary_exists(node));
 
     ui.set_node_view_cache_flags(node, true, true, true);
@@ -148,8 +148,8 @@ fn paint_cache_side_store_entry_migrates_when_node_becomes_view_boundary() {
         "promoting a cached plain node to a runtime boundary should migrate the replay entry"
     );
     assert!(
-        !ui.test_boundary_paint_cache_side_store_has_entry(node),
-        "promoted boundaries should not keep a duplicate side-store entry"
+        !ui.test_retained_paint_cache_entry_store_has_entry(node),
+        "promoted boundaries should not keep a duplicate retained entry"
     );
 
     let boundary = ui

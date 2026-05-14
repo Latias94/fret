@@ -192,10 +192,11 @@ Status after M4F on 2026-05-14:
 
 - `M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md` deletes the remaining
   `Node::paint_cache` field and routes plain paint-cache node entries through
-  `UiTree::boundary_paint_cache_entries`.
+  the retained plain-node entry store that M4L later names as
+  `UiTree::retained_paint_cache_entries`.
 - True runtime boundaries still store entries in `ViewBoundaryState::paint_cache`; if a plain cached
-  node becomes a runtime boundary, the side-store entry migrates into the boundary state.
-- The plain-node replay, hit-test-only replay, side-store-to-boundary migration, scroll
+  node becomes a runtime boundary, the retained entry migrates into the boundary state.
+- The plain-node replay, hit-test-only replay, retained-entry-to-boundary migration, scroll
   invalidation, model invalidation, and view-cache gating tests now prove the node fallback is gone
   without polluting the full `view_boundaries` table.
 - Ordinary `PaintCacheEntry` ownership no longer has a node fallback. `PaintCacheState` still owns
@@ -256,9 +257,21 @@ Status after M4K on 2026-05-14:
 - Boundary ownership still holds for the reuse decision: `ViewBoundaryState::paint_cache` owns
   boundary `PaintCacheEntry` metadata and diagnostics, while the retained recording source only
   provides replay bytes for those entries.
-- M4 remains open for the plain `UiTree::boundary_paint_cache_entries` side-store decision,
-  `ViewCacheBuildBoundaryStore` final ownership/retention, layout aggregation/sweep knob
-  decisions, and the second non-code-editor proof surface.
+- M4L resolves the plain-entry store decision. M4 remains open for
+  `ViewCacheBuildBoundaryStore` final ownership/retention, layout aggregation/sweep knob decisions,
+  and the second non-code-editor proof surface.
+
+Status after M4L on 2026-05-14:
+
+- `M4L_RETAINED_PAINT_CACHE_ENTRY_STORE_SLICE_2026-05-14.md` records the final plain-node
+  paint-cache entry store decision.
+- `UiTree::retained_paint_cache_entries` is the explicit retained owner for plain paint-cache
+  entries that are not full runtime boundaries.
+- True runtime boundaries continue to own entries in `ViewBoundaryState::paint_cache`.
+- If a plain cached node is promoted to a runtime boundary, the retained entry migrates into
+  `ViewBoundaryState::paint_cache` and the retained copy is removed.
+- M4 remains open for `ViewCacheBuildBoundaryStore` final ownership/retention, layout
+  aggregation/sweep knob decisions, and the second non-code-editor proof surface.
 
 Status after closeout audit on 2026-05-14:
 
