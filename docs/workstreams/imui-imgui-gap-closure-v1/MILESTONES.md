@@ -90,6 +90,8 @@ Exit criteria:
   path instead of growing a second row-policy wrapper.
   2026-05-14 follow-up result: both eager and virtualized grid row contexts are now opaque; row
   options stay crate-local while external callers use row helpers instead of public fields.
+  2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
+  methods and keeps `query_lower` private.
   Current child-region audit result: keep `child-region depth` as a candidate-only item until a
   behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
   proof and gate.

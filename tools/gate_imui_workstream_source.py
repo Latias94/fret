@@ -2518,6 +2518,21 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/inspector_panel.rs"),
+            required=[
+                "pub struct InspectorPanelCx",
+                "pub fn density(&self) -> EditorDensity",
+                "pub fn query(&self) -> &str",
+                "pub fn is_query_empty(&self) -> bool",
+                "pub fn matches(&self, s: &str) -> bool",
+            ],
+            forbidden=[
+                "pub density: EditorDensity",
+                "pub query: Arc<str>",
+                "pub query_lower: Arc<str>",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/property_grid.rs"),
             required=[
                 "pub struct PropertyGridRowCx",

@@ -170,6 +170,9 @@ Run evidence:
   path on `row(...)` / `row_with(...)`; editor-internal composites that need row-local policy
   patches use crate-local `row_options()`. The source gate rejects public `row_options` /
   `density` fields from returning.
+- 2026-05-14: made `InspectorPanelCx` opaque as well: callers get `density()`, `query()`,
+  `is_query_empty()`, and `matches(...)` instead of public `query_lower` implementation state. The
+  source gate rejects the old public context fields from returning.
 
 ## P3 Child Region Readiness Gates
 
