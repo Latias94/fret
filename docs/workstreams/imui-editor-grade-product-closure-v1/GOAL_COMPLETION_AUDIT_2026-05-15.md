@@ -44,7 +44,7 @@ architecture intact:
 | Docking bounded campaign is green | `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records the launched bounded P3 campaign passing 4/4 scripts. | Met for generic bounded campaign |
 | Wayland source/admission posture is current | `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, and `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md` cover local source policy, manifest/script drift, and non-Wayland `skipped_policy` behavior. | Met for local policy gates |
 | Full platform-specific hand-feel is closed | `DW-P1-linux-003` still requires a real Linux Wayland compositor run from `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`. | Not met |
-| Performance discipline is closed | Product-chain `perf-docking` now has CPU/layout/pointer/renderer thresholds and P4 is registered, but broad smoothness attribution remains in dedicated perf lanes. | Partially met |
+| Performance discipline is closed | Product-chain `perf-docking` now has CPU/layout/pointer/renderer thresholds, DevTools selected-summary drill-down surfaces perf evidence, and P4 is registered, but broad smoothness attribution remains in dedicated perf lanes. | Partially met |
 | Helper/API widening remains proof-led | The gap lane keeps widget/API widening candidate-only unless repeated first-party proof surfaces justify the owner and gate. | Met as a rule; not a completion claim |
 | Full Dear ImGui-class editor maturity is closed | Remaining gaps include real-host OS-window hand-feel, DevTools GUI productization, perf attribution/smoothness, and future proof-led helper candidates. | Not met |
 
@@ -70,8 +70,8 @@ architecture intact:
   and a GUI `demo-metrics-debug` route are now gated, but Dear ImGui-style always-available
   demo/metrics/debug discoverability still needs deeper GUI/product work in diagnostics lanes.
 - **Performance is guarded, not closed.** The `perf-docking` product-chain entrypoint now enforces
-  conservative thresholds, but that is not the same as full smoothness attribution or broad editor
-  workload acceptance.
+  conservative thresholds and DevTools can surface selected perf evidence, but that is not the same
+  as full smoothness attribution or broad editor workload acceptance.
 - **Future helper/API growth remains intentionally constrained.** This is correct architecture, but
   it means Dear ImGui API breadth is not the completion criterion until repeated proof surfaces pay
   the same tax.

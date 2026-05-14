@@ -293,6 +293,9 @@ Current status:
   notes/device shell demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`,
   `diag triage`, and `diag hotspots` entrypoints. This is a productization step for
   always-available demo/metrics/debug discoverability, not a `fret-imui` API expansion.
+- 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
+  evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
+  `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.
 - 2026-05-15 DevTools MCP product-workflow projection adds a sessionless
   `fret-diag://first-open.md` resource in `apps/fret-devtools-mcp/src/native.rs` and points the MCP
   server instructions at it. That resource mirrors the same `imui-product-chain` command/focused

@@ -155,6 +155,9 @@ reopen.
       demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
       and `diag hotspots` entrypoints. This improves Dear ImGui-style demo/metrics/debug
       discoverability without widening `fret-imui`.
+      Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
+      `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
+      curated metrics, and threshold failure evidence from regression summaries.
       Maintenance: `apps/fret-devtools-mcp/src/native.rs` now exposes a sessionless
       `fret-diag://first-open.md` resource and mirrors the same shared IMUI product-chain route in
       its server instructions/resource text, so the MCP adapter does not invent a parallel

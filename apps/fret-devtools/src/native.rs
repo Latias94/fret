@@ -189,6 +189,7 @@ struct State {
     regression_selected_bundle_dirs: Model<Vec<Arc<str>>>,
     regression_selected_capability_sources: Model<Vec<Arc<str>>>,
     regression_selected_capabilities_checks: Model<Vec<Arc<str>>>,
+    regression_selected_perf_evidence: Model<Vec<Arc<str>>>,
     regression_selected_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
 
@@ -358,6 +359,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let regression_selected_bundle_dirs = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_capability_sources = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_capabilities_checks = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_perf_evidence = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
         DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
@@ -486,6 +488,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         regression_selected_bundle_dirs,
         regression_selected_capability_sources,
         regression_selected_capabilities_checks,
+        regression_selected_perf_evidence,
         regression_selected_error,
         log_lines,
         semantics_cache,
@@ -632,6 +635,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         &st.regression_selected_capabilities_checks,
         Invalidation::Paint,
     );
+    cx.observe_model(&st.regression_selected_perf_evidence, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_error, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
     cx.observe_model(&st.semantics_cache, Invalidation::Paint);
@@ -2416,6 +2420,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.regression_selected_capabilities_checks, |v| v.clone())
         .unwrap_or_default();
+    let selected_perf_evidence = cx
+        .app
+        .models()
+        .read(&st.regression_selected_perf_evidence, |v| v.clone())
+        .unwrap_or_default();
     let selected_error = cx
         .app
         .models()
@@ -2450,6 +2459,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_bundle_count = selected_bundle_dirs.len();
     let selected_capability_source_count = selected_capability_sources.len();
     let selected_capabilities_check_count = selected_capabilities_checks.len();
+    let selected_perf_evidence_count = selected_perf_evidence.len();
     let summarize_status_line = {
         let err = summarize_last_error
             .as_deref()
@@ -2533,6 +2543,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 st.regression_selected_capability_sources.clone();
             let selected_capabilities_checks_model =
                 st.regression_selected_capabilities_checks.clone();
+            let selected_perf_evidence_model = st.regression_selected_perf_evidence.clone();
             let selected_error_model = st.regression_selected_error.clone();
             let log_lines_model = st.log_lines.clone();
             let copy_path = resolved_summary_path_str.clone();
@@ -2570,6 +2581,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                                         .collect();
                                 },
                             );
+                            let _ = host.models_mut().update(&selected_perf_evidence_model, |v| {
+                                *v = data
+                                    .perf_evidence_lines
+                                    .into_iter()
+                                    .map(Arc::<str>::from)
+                                    .collect();
+                            });
                             let _ = host
                                 .models_mut()
                                 .update(&selected_error_model, |v| *v = None);
@@ -2590,6 +2608,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                             let _ = host
                                 .models_mut()
                                 .update(&selected_capabilities_checks_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_perf_evidence_model, |v| v.clear());
                             let _ = host.models_mut().update(&selected_error_model, |v| {
                                 *v = Some(Arc::<str>::from(format!(
                                     "failed to load selected regression summary {}: {err}",
@@ -2711,6 +2732,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
         .join("\r\n");
+    let selected_perf_evidence_text = selected_perf_evidence
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
     let selected_summary_overview = {
         let mut parts: Vec<String> = Vec::new();
         match selected_summary_path.as_deref() {
@@ -2733,6 +2759,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if let Some(first) = selected_capabilities_checks.first() {
             parts.push(format!("First capability check: {}", first.as_ref()));
         }
+        parts.push(format!(
+            "Selected perf evidence lines: {selected_perf_evidence_count}"
+        ));
+        if let Some(first) = selected_perf_evidence.first() {
+            parts.push(format!("First perf evidence: {}", first.as_ref()));
+        }
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("Selected error: {err}"));
         }
@@ -2754,6 +2786,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if !selected_capabilities_checks_text.trim().is_empty() {
             parts.push("capabilities_check_paths:".to_string());
             parts.push(selected_capabilities_checks_text.clone());
+        }
+        if !selected_perf_evidence_text.trim().is_empty() {
+            parts.push("perf_evidence:".to_string());
+            parts.push(selected_perf_evidence_text.clone());
         }
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("error: {err}"));
@@ -2916,6 +2952,25 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_copy)
+                .into_element(cx),
+            );
+        }
+        if !selected_perf_evidence_text.trim().is_empty() {
+            let perf_evidence = selected_perf_evidence_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
+                    text: perf_evidence.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy perf evidence")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
                     .into_element(cx),
             );
         }
@@ -2962,6 +3017,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 shadcn::BadgeVariant::Outline
             })
             .into_element(cx),
+            shadcn::Badge::new(format!("perf evidence {selected_perf_evidence_count}"))
+                .variant(if selected_perf_evidence_count > 0 {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
             shadcn::Badge::new(if selected_error.is_some() {
                 "Selection error"
             } else {
@@ -3094,6 +3156,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         text_blob_sized(cx, selected_capability_sources_text.clone(), Px(96.0));
     let selected_capabilities_blob =
         text_blob_sized(cx, selected_capabilities_checks_text.clone(), Px(96.0));
+    let selected_perf_evidence_blob =
+        text_blob_sized(cx, selected_perf_evidence_text.clone(), Px(120.0));
     let selected_raw_summary_blob = text_blob_sized(cx, selected_detail_content, Px(220.0));
     let selected_overview_section = diag_section(
         cx,
@@ -3125,6 +3189,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Policy-skipped summaries can point at campaign capability check artifacts even when no bundle dir exists.",
         vec![selected_capabilities_blob],
     );
+    let selected_perf_evidence_section = diag_section(
+        cx,
+        "Perf Evidence",
+        "Perf summary paths, threshold artifacts, curated metrics, and threshold failures stay above the raw JSON.",
+        vec![selected_perf_evidence_blob],
+    );
     let selected_raw_summary_section = diag_section(
         cx,
         "Raw Selected Summary",
@@ -3142,6 +3212,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_bundle_dirs_section,
             selected_capability_sources_section,
             selected_capabilities_section,
+            selected_perf_evidence_section,
             selected_raw_summary_section,
         ],
     );
@@ -4849,6 +4920,9 @@ pub(crate) fn clear_regression_selection(app: &mut App, st: &State) {
         .update(&st.regression_selected_capabilities_checks, |v| v.clear());
     let _ = app
         .models_mut()
+        .update(&st.regression_selected_perf_evidence, |v| v.clear());
+    let _ = app
+        .models_mut()
         .update(&st.regression_selected_error, |v| *v = None);
 }
 
@@ -4936,7 +5010,22 @@ struct RegressionSummaryDrilldownData {
     bundle_dirs: Vec<String>,
     capability_sources: Vec<String>,
     capabilities_check_paths: Vec<String>,
+    perf_evidence_lines: Vec<String>,
 }
+
+const PERF_DRILLDOWN_METRIC_KEYS: &[&str] = &[
+    "top_total_time_us",
+    "top_layout_time_us",
+    "top_layout_engine_solve_time_us",
+    "pointer_move_max_dispatch_time_us",
+    "pointer_move_max_hit_test_time_us",
+    "pointer_move_snapshots_with_global_changes",
+    "top_renderer_encode_scene_us",
+    "top_renderer_prepare_text_us",
+    "top_renderer_draw_calls",
+    "top_renderer_instance_bytes",
+    "top_renderer_encode_scene_text_ops",
+];
 
 fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
     if let Some(path) = value.get("path").and_then(|value| value.as_str())
@@ -4988,6 +5077,79 @@ fn regression_item_capability_source_display(
         })
 }
 
+fn regression_status_label(status: RegressionStatusV1) -> &'static str {
+    match status {
+        RegressionStatusV1::Passed => "passed",
+        RegressionStatusV1::FailedDeterministic => "failed_deterministic",
+        RegressionStatusV1::FailedFlaky => "failed_flaky",
+        RegressionStatusV1::FailedTooling => "failed_tooling",
+        RegressionStatusV1::FailedTimeout => "failed_timeout",
+        RegressionStatusV1::SkippedPolicy => "skipped_policy",
+        RegressionStatusV1::Quarantined => "quarantined",
+    }
+}
+
+fn push_unique_line(lines: &mut Vec<String>, line: String) {
+    if !lines.iter().any(|existing| existing == &line) {
+        lines.push(line);
+    }
+}
+
+fn regression_item_perf_evidence_lines(
+    item: &fret_diag::regression_summary::RegressionItemSummaryV1,
+) -> Vec<String> {
+    let Some(evidence) = item.evidence.as_ref() else {
+        return Vec::new();
+    };
+    let label = if item.name.trim().is_empty() {
+        item.item_id.as_str()
+    } else {
+        item.name.as_str()
+    };
+    let prefix = format!("{} [{}]", label, regression_status_label(item.status));
+    let mut lines = Vec::new();
+    if let Some(path) = evidence
+        .perf_summary_json
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+    {
+        lines.push(format!("{prefix} perf_summary_json: {path}"));
+    }
+    if let Some(path) = evidence
+        .compare_json
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+    {
+        lines.push(format!("{prefix} compare_json: {path}"));
+    }
+    let Some(extra) = evidence.extra.as_ref() else {
+        return lines;
+    };
+    if let Some(metrics) = extra.get("metrics").and_then(|value| value.as_object()) {
+        for key in PERF_DRILLDOWN_METRIC_KEYS {
+            if let Some(value) = metrics.get(*key) {
+                lines.push(format!("{prefix} metric {key}: {value}"));
+            }
+        }
+        if let Some(stats) = metrics.get("stats") {
+            lines.push(format!("{prefix} metrics.stats: {stats}"));
+        }
+    }
+    if let Some(threshold_failures) = extra.get("threshold_failures") {
+        let count = threshold_failures
+            .as_array()
+            .map(Vec::len)
+            .unwrap_or_else(|| usize::from(!threshold_failures.is_null()));
+        lines.push(format!("{prefix} threshold_failures: {count}"));
+        if count > 0 {
+            lines.push(format!(
+                "{prefix} threshold_failures_json: {threshold_failures}"
+            ));
+        }
+    }
+    lines
+}
+
 fn regression_failing_summary_rows(
     index_json: &str,
     top: usize,
@@ -5016,7 +5178,11 @@ fn load_regression_summary_drilldown(
     let mut bundle_dirs: Vec<String> = Vec::new();
     let mut capability_sources: Vec<String> = Vec::new();
     let mut capabilities_check_paths: Vec<String> = Vec::new();
+    let mut perf_evidence_lines: Vec<String> = Vec::new();
     for item in summary.items {
+        for line in regression_item_perf_evidence_lines(&item) {
+            push_unique_line(&mut perf_evidence_lines, line);
+        }
         if item.status == RegressionStatusV1::Passed {
             continue;
         }
@@ -5053,6 +5219,7 @@ fn load_regression_summary_drilldown(
         bundle_dirs,
         capability_sources,
         capabilities_check_paths,
+        perf_evidence_lines,
     })
 }
 
@@ -5097,6 +5264,15 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
                 });
             let _ = app
                 .models_mut()
+                .update(&st.regression_selected_perf_evidence, |v| {
+                    *v = data
+                        .perf_evidence_lines
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
                 .update(&st.regression_selected_error, |v| *v = None);
         }
         Err(err) => {
@@ -5112,6 +5288,9 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
             let _ = app
                 .models_mut()
                 .update(&st.regression_selected_capabilities_checks, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_perf_evidence, |v| v.clear());
             let _ = app.models_mut().update(&st.regression_selected_error, |v| {
                 *v = Some(Arc::<str>::from(format!(
                     "failed to load selected regression summary {}: {err}",
@@ -5474,6 +5653,84 @@ mod tests {
             data.capabilities_check_paths,
             vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_regression_summary_drilldown_collects_perf_evidence() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-regression-drilldown-perf-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("regression.summary.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "perf-docking", "lane": "perf" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "fretboard-dev diag perf" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 1, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 0, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "perf-case",
+                    "kind": "perf_case",
+                    "name": "docking steady drag",
+                    "status": "failed_deterministic",
+                    "lane": "perf",
+                    "evidence": {
+                        "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "perf_summary_json": "target/fret-diag/perf-docking/layout.perf.summary.v1.json",
+                        "compare_json": "target/fret-diag/perf-docking/check.perf_thresholds.json",
+                        "extra": {
+                            "metrics": {
+                                "top_total_time_us": 24000,
+                                "top_renderer_encode_scene_us": 6000,
+                                "top_renderer_instance_bytes": 700000,
+                                "stats": {
+                                    "total_time_us": 24000,
+                                    "top_renderer_encode_scene_us": 6000
+                                }
+                            },
+                            "threshold_failures": [
+                                {
+                                    "metric": "top_total_time_us",
+                                    "observed": 24000,
+                                    "threshold": 20000
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
+
+        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
+        assert_eq!(
+            data.bundle_dirs,
+            vec!["target/fret-diag/perf-docking/run-a".to_string()]
+        );
+        let text = data.perf_evidence_lines.join("\n");
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] perf_summary_json: target/fret-diag/perf-docking/layout.perf.summary.v1.json"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] compare_json: target/fret-diag/perf-docking/check.perf_thresholds.json"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_total_time_us: 24000"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_renderer_encode_scene_us: 6000"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_renderer_instance_bytes: 700000"
+        ));
+        assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
+        assert!(text.contains("threshold_failures_json"));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

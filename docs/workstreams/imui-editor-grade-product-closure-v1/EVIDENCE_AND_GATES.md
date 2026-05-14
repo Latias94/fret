@@ -538,6 +538,20 @@ python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/gate_imui_workstream_source.py
 ```
 
+DevTools GUI perf-evidence drill-down follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now extracts selected regression summary perf evidence into a
+  dedicated `Perf Evidence` section above raw JSON.
+- The drill-down surfaces `perf_summary_json`, `compare_json`, curated metrics such as
+  `top_total_time_us`, `top_renderer_encode_scene_us`, `top_renderer_instance_bytes`, and
+  `threshold_failures` counts/JSON for selected summaries.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
 DevTools MCP product-workflow projection follow-up (2026-05-15):
 
 - `apps/fret-devtools-mcp/src/native.rs` now exposes `fret-diag://first-open.md` as a sessionless
