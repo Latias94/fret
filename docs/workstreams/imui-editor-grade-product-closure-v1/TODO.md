@@ -168,6 +168,10 @@ reopen.
       metrics into a conservative threshold gate by requiring shared `check.perf_thresholds.json`
       evidence, empty `threshold_failures`, and CLI-sourced `--max-top-total-us` /
       `--max-pointer-move-dispatch-us` / `--max-pointer-move-global-changes` thresholds.
+      A second 2026-05-15 follow-up exposes renderer threshold CLI flags and gates
+      `--max-renderer-encode-scene-us` / `--max-renderer-instance-bytes` / related renderer
+      thresholds in the same `perf-docking` product-chain slice, so renderer metrics are no longer
+      read-only evidence.
 
 ## Closeout / follow-on management
 

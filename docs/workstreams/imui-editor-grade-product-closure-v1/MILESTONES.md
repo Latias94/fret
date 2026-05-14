@@ -337,6 +337,13 @@ Current status:
   `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, and
   `--max-pointer-move-global-changes`) and verifies the shared `check.perf_thresholds.json`
   artifact before accepting the summary.
+- 2026-05-15 renderer threshold refresh:
+  `diag perf` now exposes renderer threshold CLI flags, and the `perf-docking` product-chain slice
+  gates the renderer telemetry that was previously only projected as summary metrics
+  (`--max-renderer-encode-scene-us`, `--max-renderer-upload-us`,
+  `--max-renderer-record-passes-us`, `--max-renderer-encoder-finish-us`,
+  `--max-renderer-prepare-text-us`, `--max-renderer-prepare-svg-us`,
+  `--max-renderer-instance-bytes`, and `--max-renderer-encode-scene-text-ops`).
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

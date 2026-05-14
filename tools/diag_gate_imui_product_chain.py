@@ -36,6 +36,14 @@ DOCKING_PERF_THRESHOLDS: tuple[tuple[str, str, int], ...] = (
     ("--max-pointer-move-dispatch-us", "max_pointer_move_dispatch_us", 5_000),
     ("--max-pointer-move-hit-test-us", "max_pointer_move_hit_test_us", 5_000),
     ("--max-pointer-move-global-changes", "max_pointer_move_global_changes", 0),
+    ("--max-renderer-encode-scene-us", "max_renderer_encode_scene_us", 5_000),
+    ("--max-renderer-upload-us", "max_renderer_upload_us", 5_000),
+    ("--max-renderer-record-passes-us", "max_renderer_record_passes_us", 2_000),
+    ("--max-renderer-encoder-finish-us", "max_renderer_encoder_finish_us", 2_000),
+    ("--max-renderer-prepare-text-us", "max_renderer_prepare_text_us", 5_000),
+    ("--max-renderer-prepare-svg-us", "max_renderer_prepare_svg_us", 2_000),
+    ("--max-renderer-instance-bytes", "max_renderer_instance_bytes", 500_000),
+    ("--max-renderer-encode-scene-text-ops", "max_renderer_encode_scene_text_ops", 10_000),
 )
 
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"

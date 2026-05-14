@@ -579,6 +579,29 @@ Latest local docking perf threshold evidence (2026-05-15):
   threshold sources are `cli`. This turns the previous readable metric projection into a conservative
   product-chain perf threshold gate.
 
+Renderer threshold follow-up evidence (2026-05-15):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15`
+- `target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/regression.summary.json`
+  reports `items_total=2`, `passed=2`, `failed_tooling=0`, and empty item `threshold_failures`.
+- `target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/check.perf_thresholds.json`
+  reports `failures=[]` and `threshold_sources` of `cli` for renderer metrics including
+  `max_renderer_encode_scene_us`, `max_renderer_upload_us`, `max_renderer_record_passes_us`,
+  `max_renderer_encoder_finish_us`, `max_renderer_prepare_text_us`, `max_renderer_prepare_svg_us`,
+  `max_renderer_instance_bytes`, and `max_renderer_encode_scene_text_ops`.
+- `diag perf` now exposes renderer threshold CLI flags, including
+  `--max-renderer-encode-scene-us`, `--max-renderer-upload-us`,
+  `--max-renderer-record-passes-us`, `--max-renderer-encoder-finish-us`,
+  `--max-renderer-prepare-text-us`, `--max-renderer-prepare-svg-us`,
+  `--max-renderer-instance-bytes`, and `--max-renderer-encode-scene-text-ops`.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-diag contract_help_mentions_the_migrated_command_surfaces migrated_perf_subset_builds_a_real_perf_context perf_thresholds_json_projects_renderer_thresholds --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15
+```
+
 The 2026-05-13 launched bounded campaign result is `campaign: ok` at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
 verification rerun also green at

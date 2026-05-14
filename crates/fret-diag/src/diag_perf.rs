@@ -540,6 +540,14 @@ pub(crate) struct PerfCmdContext {
     pub max_pointer_move_global_changes: Option<u64>,
     pub max_pointer_move_hit_test_us: Option<u64>,
     pub max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64>,
+    pub max_renderer_encode_scene_text_ops: Option<u64>,
+    pub max_renderer_encode_scene_us: Option<u64>,
+    pub max_renderer_encoder_finish_us: Option<u64>,
+    pub max_renderer_instance_bytes: Option<u64>,
+    pub max_renderer_prepare_svg_us: Option<u64>,
+    pub max_renderer_prepare_text_us: Option<u64>,
+    pub max_renderer_record_passes_us: Option<u64>,
+    pub max_renderer_upload_us: Option<u64>,
     pub max_top_layout_us: Option<u64>,
     pub max_top_solve_us: Option<u64>,
     pub max_top_total_us: Option<u64>,
@@ -600,6 +608,14 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         max_pointer_move_global_changes,
         max_pointer_move_hit_test_us,
         max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+        max_renderer_encode_scene_text_ops,
+        max_renderer_encode_scene_us,
+        max_renderer_encoder_finish_us,
+        max_renderer_instance_bytes,
+        max_renderer_prepare_svg_us,
+        max_renderer_prepare_text_us,
+        max_renderer_record_passes_us,
+        max_renderer_upload_us,
         max_top_layout_us,
         max_top_solve_us,
         max_top_total_us,
@@ -733,14 +749,14 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         max_pointer_move_global_changes,
         min_run_paint_cache_hit_test_only_replay_allowed_max,
         max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-        max_renderer_encode_scene_us: None,
-        max_renderer_upload_us: None,
-        max_renderer_record_passes_us: None,
-        max_renderer_encoder_finish_us: None,
-        max_renderer_prepare_text_us: None,
-        max_renderer_prepare_svg_us: None,
-        max_renderer_instance_bytes: None,
-        max_renderer_encode_scene_text_ops: None,
+        max_renderer_encode_scene_us,
+        max_renderer_upload_us,
+        max_renderer_record_passes_us,
+        max_renderer_encoder_finish_us,
+        max_renderer_prepare_text_us,
+        max_renderer_prepare_svg_us,
+        max_renderer_instance_bytes,
+        max_renderer_encode_scene_text_ops,
     };
     let perf_baseline = perf_baseline_path
         .clone()
@@ -3155,6 +3171,72 @@ mod tests {
             Some("top_total_time_us")
         );
         assert_eq!(item.name, "apps/demo.perf.json");
+    }
+
+    #[test]
+    fn perf_thresholds_json_projects_renderer_thresholds() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-thresholds-renderer-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).expect("create temp threshold dir");
+
+        let thresholds = PerfThresholds {
+            max_top_total_us: Some(20_000),
+            max_top_layout_us: None,
+            max_top_solve_us: None,
+            max_frame_p95_total_us: None,
+            max_frame_p95_layout_us: None,
+            max_frame_p95_solve_us: None,
+            max_pointer_move_dispatch_us: None,
+            max_pointer_move_hit_test_us: None,
+            max_pointer_move_global_changes: None,
+            min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+            max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            max_renderer_encode_scene_us: Some(5_000),
+            max_renderer_upload_us: Some(5_000),
+            max_renderer_record_passes_us: Some(2_000),
+            max_renderer_encoder_finish_us: Some(2_000),
+            max_renderer_prepare_text_us: Some(5_000),
+            max_renderer_prepare_svg_us: Some(2_000),
+            max_renderer_instance_bytes: Some(500_000),
+            max_renderer_encode_scene_text_ops: Some(10_000),
+        };
+
+        let out_path = outputs::write_perf_thresholds_json(
+            &out_dir,
+            5,
+            PerfThresholdAggregate::Max,
+            &[],
+            &[],
+            false,
+            &thresholds,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+        );
+        let payload: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&out_path).expect("threshold JSON should exist"))
+                .expect("threshold JSON should parse");
+
+        assert_eq!(
+            payload.pointer("/thresholds/max_renderer_encode_scene_us"),
+            Some(&serde_json::json!(5_000))
+        );
+        assert_eq!(
+            payload.pointer("/thresholds/max_renderer_instance_bytes"),
+            Some(&serde_json::json!(500_000))
+        );
+        assert_eq!(
+            payload.pointer("/thresholds/max_renderer_encode_scene_text_ops"),
+            Some(&serde_json::json!(10_000))
+        );
+
+        let _ = std::fs::remove_dir_all(&out_dir);
     }
 
     #[test]

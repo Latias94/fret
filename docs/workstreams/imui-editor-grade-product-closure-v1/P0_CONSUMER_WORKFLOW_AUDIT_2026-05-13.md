@@ -173,3 +173,14 @@ that each `perf_case` item exposes readable `compare_json` evidence and empty
 reports `kind=perf_thresholds`, `observed_aggregate=max`, and `failures=[]`, while
 `target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/regression.summary.json`
 reports two passing rows with `wants_perf_thresholds=true`.
+
+Follow-up renderer threshold refresh on 2026-05-15: the previous diagnostics model already measured
+renderer encode/upload/record/finish/text/SVG/payload fields, but `diag perf` did not expose CLI
+thresholds for them. The repair adds renderer threshold flags such as
+`--max-renderer-encode-scene-us`, `--max-renderer-upload-us`, and
+`--max-renderer-instance-bytes`, projects them into `check.perf_thresholds.json`, and wires them
+into the same launched `perf-docking` product-chain slice. The local run at
+`target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/regression.summary.json`
+reports two passing `perf_case` rows; the paired
+`target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/check.perf_thresholds.json`
+reports `failures=[]` and CLI-sourced renderer threshold rows.
