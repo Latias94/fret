@@ -86,6 +86,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - GUI-launched follow-up results are also retained as a bounded in-memory history and filtered by
   the selected bundle, so authors do not confuse a previous bundle's last result with the current
   selected-summary evidence.
+- That selected-bundle history is now rendered as selectable result entries, allowing authors to
+  switch the summary/raw JSON/copy target between recent follow-up artifacts.
 - The copy action now uses the selected bundle's latest follow-up history entry rather than the
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue

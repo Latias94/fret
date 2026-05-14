@@ -324,6 +324,8 @@ Current status:
 - 2026-05-15 follow-up results are retained as a bounded in-memory history filtered to the selected
   bundle, so selected-summary triage can distinguish current evidence from a previous bundle's last
   launched follow-up.
+- 2026-05-15 selected-bundle follow-up history now renders as selectable result entries, allowing
+  authors to switch the summary/raw JSON/copy target between recent artifacts.
 - 2026-05-15 the follow-up result copy action now resolves the selected bundle's latest history
   path instead of the global last result artifact, keeping copied evidence aligned with selection.
 - 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping

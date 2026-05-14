@@ -118,6 +118,8 @@ Conventions:
         above raw JSON for status, command, duration, and error preview.
   - [x] GUI selected-summary inspector keeps a bounded follow-up result history filtered to the
         selected bundle, preventing stale global-last results from masquerading as current evidence.
+  - [x] GUI selected-summary inspector renders selected-bundle follow-up history as selectable
+        result entries that switch the summary/raw JSON/copy target.
   - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
         the global last result artifact.
   - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.

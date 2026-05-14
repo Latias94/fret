@@ -183,6 +183,8 @@ reopen.
       Maintenance: follow-up results are retained as a bounded in-memory history filtered to the
       selected bundle, so the GUI no longer implies that a previous bundle's last result belongs to
       the current selected-summary evidence.
+      Maintenance: that selected-bundle follow-up history now renders as selectable result entries,
+      allowing authors to switch the summary/raw JSON/copy target between recent artifacts.
       Maintenance: the follow-up result copy action now uses the selected bundle's latest history
       entry instead of the global last result artifact, keeping copied evidence paths aligned with
       the current selection.

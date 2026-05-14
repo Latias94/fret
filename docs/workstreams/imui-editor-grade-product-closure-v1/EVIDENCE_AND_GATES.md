@@ -566,6 +566,8 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 - A bounded `Follow-up Result History` section filters recent GUI-launched follow-up results to the
   selected bundle, preventing a previous bundle's global-last result from being read as current
   selected-summary evidence.
+- The history section now renders selectable result entries; selecting an older matching entry
+  changes the summary/raw JSON/copy target while preserving newest-first fallback.
 - The follow-up result copy action resolves the selected bundle's latest history path and refuses
   when no selected-bundle result exists, rather than copying the global last artifact.
 - The same inspector can copy the selected bundle's follow-up JSON payload directly, so issue
@@ -577,7 +579,7 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 ```text
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
-cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery

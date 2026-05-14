@@ -196,6 +196,7 @@ struct State {
     followup_last_result_path: Model<Option<Arc<str>>>,
     followup_last_result_json: Model<String>,
     followup_result_history: Model<Vec<followup::FollowupResultHistoryEntry>>,
+    followup_selected_result_path: Model<Option<Arc<str>>>,
     followup_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
@@ -377,6 +378,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let followup_result_history = app
         .models_mut()
         .insert(Vec::<followup::FollowupResultHistoryEntry>::new());
+    let followup_selected_result_path = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
@@ -513,6 +515,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         followup_last_result_path,
         followup_last_result_json,
         followup_result_history,
+        followup_selected_result_path,
         followup_last_error,
         viewer_url,
         last_pick_json,
@@ -663,6 +666,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.followup_last_result_path, Invalidation::Paint);
     cx.observe_model(&st.followup_last_result_json, Invalidation::Paint);
     cx.observe_model(&st.followup_result_history, Invalidation::Paint);
+    cx.observe_model(&st.followup_selected_result_path, Invalidation::Paint);
     cx.observe_model(&st.followup_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
@@ -2538,6 +2542,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.followup_result_history, |v| v.clone())
         .unwrap_or_default();
+    let followup_selected_result_path = cx
+        .app
+        .models()
+        .read(&st.followup_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
     let followup_last_error = cx
         .app
         .models()
@@ -2550,19 +2560,27 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             &st.script_paths,
             &selected_bundle_dirs,
         );
-    let selected_followup_result_path = followup::followup_result_history_latest_path(
+    let selected_followup_history_entries =
+        followup::followup_result_history_entries_for_selected_bundle(
+            &followup_result_history,
+            selected_followup_history_filter_dirs
+                .iter()
+                .map(|value| value.as_str()),
+        );
+    let selected_followup_result_entry = followup::followup_result_history_selected_or_latest_entry(
         &followup_result_history,
         selected_followup_history_filter_dirs
             .iter()
             .map(|value| value.as_str()),
+        followup_selected_result_path.as_deref(),
     );
-    let selected_followup_result_json = followup::followup_result_history_latest_json(
-        &followup_result_history,
-        selected_followup_history_filter_dirs
-            .iter()
-            .map(|value| value.as_str()),
-    )
-    .unwrap_or_default();
+    let selected_followup_result_path = selected_followup_result_entry
+        .as_ref()
+        .map(|entry| entry.result_path.clone());
+    let selected_followup_result_json = selected_followup_result_entry
+        .as_ref()
+        .map(|entry| entry.result_json.clone())
+        .unwrap_or_default();
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
@@ -3439,6 +3457,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .join("\r\n"),
         Px(120.0),
     );
+    let selected_followup_result_history_list = followup_history_list(
+        cx,
+        &st.followup_selected_result_path,
+        &selected_followup_history_entries,
+        selected_followup_result_path.as_deref(),
+    );
     let selected_followup_result_json_blob = text_blob_sized(
         cx,
         if selected_followup_result_json.trim().is_empty() {
@@ -3490,8 +3514,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_followup_result_history_section = diag_section(
         cx,
         "Follow-up Result History",
-        "Recent GUI-launched follow-up results for the selected bundle, newest first.",
-        vec![selected_followup_result_history_blob],
+        "Select a GUI-launched follow-up result for the selected bundle, newest first.",
+        vec![
+            selected_followup_result_history_blob,
+            selected_followup_result_history_list,
+        ],
     );
     let selected_followup_result_json_section = diag_section(
         cx,
@@ -3663,6 +3690,74 @@ fn text_blob_sized(cx: &mut ElementContext<'_, App>, text: String, min_h: Px) ->
                 .min_h(min_h),
         )
         .into_element(cx)
+}
+
+fn followup_history_list(
+    cx: &mut ElementContext<'_, App>,
+    selected_result_path_model: &Model<Option<Arc<str>>>,
+    entries: &[followup::FollowupResultHistoryEntry],
+    active_result_path: Option<&str>,
+) -> AnyElement {
+    if entries.is_empty() {
+        return text_blob_sized(
+            cx,
+            "follow-up history entries: <none for selected bundle>".to_string(),
+            Px(84.0),
+        );
+    }
+
+    let mut rows: Vec<AnyElement> = Vec::new();
+    for entry in entries.iter().take(8) {
+        let is_selected = active_result_path.is_some_and(|path| path == entry.result_path);
+        let result_path = entry.result_path.clone();
+        let selected_result_path_model = selected_result_path_model.clone();
+        let label = format!(
+            "{} | {} | {}",
+            entry.status,
+            entry.id,
+            short_followup_result_path(&entry.result_path)
+        );
+        let on_activate: fret_ui::action::OnActivate =
+            Arc::new(move |host, action_cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&selected_result_path_model, |value| {
+                        *value = Some(Arc::<str>::from(result_path.clone()))
+                    });
+                host.request_redraw(action_cx.window);
+            });
+        rows.push(
+            shadcn::Button::new(label)
+                .variant(if is_selected {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Ghost
+                })
+                .size(shadcn::ButtonSize::Sm)
+                .on_activate(on_activate)
+                .into_element(cx),
+        );
+    }
+
+    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
+            .w_full()
+            .min_h(Px(116.0)),
+    )
+    .into_element(cx)
+}
+
+fn short_followup_result_path(path: &str) -> String {
+    Path::new(path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(path)
+        .to_string()
 }
 
 fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
@@ -3968,28 +4063,33 @@ fn followup_result_history_from_state(
         .unwrap_or_default()
 }
 
-fn selected_followup_latest_result_path_from_state(app: &App, st: &State) -> Option<String> {
+fn selected_followup_result_entry_from_state(
+    app: &App,
+    st: &State,
+) -> Option<followup::FollowupResultHistoryEntry> {
     let selected_followup_history_filter_dirs =
         selected_followup_history_filter_dirs_from_state(app, st);
     let followup_result_history = followup_result_history_from_state(app, st);
-    followup::followup_result_history_latest_path(
+    let followup_selected_result_path = app
+        .models()
+        .read(&st.followup_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    followup::followup_result_history_selected_or_latest_entry(
         &followup_result_history,
         selected_followup_history_filter_dirs
             .iter()
             .map(|value| value.as_str()),
+        followup_selected_result_path.as_deref(),
     )
 }
 
-fn selected_followup_latest_result_json_from_state(app: &App, st: &State) -> Option<String> {
-    let selected_followup_history_filter_dirs =
-        selected_followup_history_filter_dirs_from_state(app, st);
-    let followup_result_history = followup_result_history_from_state(app, st);
-    followup::followup_result_history_latest_json(
-        &followup_result_history,
-        selected_followup_history_filter_dirs
-            .iter()
-            .map(|value| value.as_str()),
-    )
+fn selected_followup_result_path_from_state(app: &App, st: &State) -> Option<String> {
+    selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_path)
+}
+
+fn selected_followup_result_json_from_state(app: &App, st: &State) -> Option<String> {
+    selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_json)
 }
 
 fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
@@ -4164,7 +4264,7 @@ fn on_command(
             app.request_redraw(window);
         }
         CMD_COPY_FOLLOWUP_RESULT_PATH => {
-            let Some(path) = selected_followup_latest_result_path_from_state(app, st) else {
+            let Some(path) = selected_followup_result_path_from_state(app, st) else {
                 push_log(
                     app,
                     &st.log_lines,
@@ -4180,7 +4280,7 @@ fn on_command(
             });
         }
         CMD_COPY_FOLLOWUP_RESULT_JSON => {
-            let Some(result_json) = selected_followup_latest_result_json_from_state(app, st) else {
+            let Some(result_json) = selected_followup_result_json_from_state(app, st) else {
                 push_log(
                     app,
                     &st.log_lines,
