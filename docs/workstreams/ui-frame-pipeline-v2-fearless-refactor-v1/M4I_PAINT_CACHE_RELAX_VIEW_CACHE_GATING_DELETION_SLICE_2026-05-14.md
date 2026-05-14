@@ -41,10 +41,11 @@ Avoided:
 - restoring node-owned paint-cache fallback semantics through an env knob;
 - treating a historical A/B experiment as a supported v2 compatibility path.
 
-Retained:
+Retained at M4I time:
 
 - `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`, because it has focused hit-test-only replay gates and
-  still represents a separate repaint/replay policy decision;
+  still represented a separate repaint/replay policy decision at that slice. M4J later promotes
+  this path to canonical behavior and deletes the env knob.
 - layout aggregation/sweep env knobs, because their owning workstreams still need separate
   deletion/retention decisions.
 
@@ -94,8 +95,8 @@ Observed results:
 
 ## Remaining Work
 
-- Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should become default, stay an explicit
-  retained diagnostic/policy switch, or be deleted after a dedicated non-code-editor proof surface.
+- M4J resolves `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` by promoting hit-test-only replay to the
+  default paint-cache behavior and deleting the env knob.
 - Decide the layout aggregation/sweep env knobs in their owning workstreams.
 - Continue the final owner decision for `PreviousFramePaintRecording` and
   `UiTree::boundary_paint_cache_entries`.

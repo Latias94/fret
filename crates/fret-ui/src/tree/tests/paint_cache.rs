@@ -490,69 +490,8 @@ fn paint_cache_is_cleared_when_caching_is_disabled_for_a_node() {
     assert_eq!(paints.load(Ordering::SeqCst), 3);
 }
 
-struct PaintCacheAllowHitTestOnlyOverrideGuard;
-
-impl PaintCacheAllowHitTestOnlyOverrideGuard {
-    fn set(value: bool) -> Self {
-        UiTree::<crate::test_host::TestHost>::test_set_paint_cache_allow_hit_test_only_override(
-            Some(value),
-        );
-        Self
-    }
-}
-
-impl Drop for PaintCacheAllowHitTestOnlyOverrideGuard {
-    fn drop(&mut self) {
-        UiTree::<crate::test_host::TestHost>::test_set_paint_cache_allow_hit_test_only_override(
-            None,
-        );
-    }
-}
-
 #[test]
-fn paint_cache_hit_test_only_invalidation_does_not_replay_when_toggle_off() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(false);
-    let mut app = crate::test_host::TestHost::new();
-
-    let paints = Arc::new(AtomicUsize::new(0));
-    let mut ui = UiTree::new();
-    ui.set_window(AppWindowId::default());
-    ui.set_paint_cache_enabled(true);
-
-    let node = ui.create_node(CountingPaintWidget {
-        paints: paints.clone(),
-    });
-    ui.set_root(node);
-
-    let mut services = FakeUiServices;
-    let mut scene = Scene::default();
-    let bounds = Rect::new(
-        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
-    );
-
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-    assert_eq!(paints.load(Ordering::SeqCst), 1);
-
-    ui.ingest_paint_cache_source(&mut scene);
-    scene.clear();
-
-    ui.invalidate(node, Invalidation::HitTestOnly);
-    assert!(ui.nodes[node].paint_invalidated_by_hit_test_only);
-
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-
-    assert_eq!(
-        paints.load(Ordering::SeqCst),
-        2,
-        "expected hit-test-only invalidation to force repaint when replay toggle is off"
-    );
-    assert!(!ui.nodes[node].paint_invalidated_by_hit_test_only);
-}
-
-#[test]
-fn paint_cache_hit_test_only_invalidation_replays_when_toggle_on() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(true);
+fn paint_cache_hit_test_only_invalidation_replays_when_cache_key_matches() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -587,7 +526,7 @@ fn paint_cache_hit_test_only_invalidation_replays_when_toggle_on() {
     assert_eq!(
         paints.load(Ordering::SeqCst),
         1,
-        "expected hit-test-only invalidation to replay cached paint when toggle is on"
+        "expected hit-test-only invalidation to replay cached paint when cache key stays stable"
     );
     let stats = ui.debug_stats();
     assert_eq!(
@@ -602,8 +541,60 @@ fn paint_cache_hit_test_only_invalidation_replays_when_toggle_on() {
 }
 
 #[test]
+fn paint_cache_hit_test_only_invalidation_from_descendant_does_not_replay_ancestor() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let child_paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(CountingPaintWidget {
+        paints: child_paints.clone(),
+    });
+    ui.set_children(root, vec![child]);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(child_paints.load(Ordering::SeqCst), 1);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.invalidate(child, Invalidation::HitTestOnly);
+    assert!(ui.nodes[child].paint_invalidated_by_hit_test_only);
+    assert!(
+        !ui.nodes[root].paint_invalidated_by_hit_test_only,
+        "ancestor paint dirtied by descendant hit-test-only invalidation must not replay its cached subtree"
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        !ui.debug_paint_cache_replays.contains_key(&root),
+        "ancestor should not replay cached paint when hit-test-only invalidation came from a descendant"
+    );
+    assert!(
+        ui.debug_paint_cache_replays.contains_key(&child),
+        "descendant should still use the local hit-test-only replay path"
+    );
+    assert_eq!(
+        child_paints.load(Ordering::SeqCst),
+        1,
+        "local descendant hit-test-only invalidation should replay cached paint when the key matches"
+    );
+}
+
+#[test]
 fn paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(true);
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -657,8 +648,7 @@ fn paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch() {
 }
 
 #[test]
-fn paint_cache_does_not_replay_non_hit_test_invalidations_when_toggle_on() {
-    let _guard = PaintCacheAllowHitTestOnlyOverrideGuard::set(true);
+fn paint_cache_does_not_replay_non_hit_test_invalidations() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -692,7 +682,7 @@ fn paint_cache_does_not_replay_non_hit_test_invalidations_when_toggle_on() {
     assert_eq!(
         paints.load(Ordering::SeqCst),
         2,
-        "expected plain paint invalidation to keep forcing repaint even with toggle on"
+        "expected plain paint invalidation to keep forcing repaint"
     );
 }
 

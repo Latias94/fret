@@ -96,7 +96,6 @@ impl<H: UiHost> UiTree<H> {
                 child_transform,
             )
         });
-        let allow_hit_test_only = super::paint_cache_allow_hit_test_only();
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
@@ -108,8 +107,7 @@ impl<H: UiHost> UiTree<H> {
                 .saturating_add(key_elapsed);
         }
 
-        let replay_allowed_by_hit_test_only_gate =
-            invalidated && allow_hit_test_only && hit_test_only_paint_invalidated;
+        let replay_allowed_by_hit_test_only_gate = invalidated && hit_test_only_paint_invalidated;
         let paint_cache_replay_allowed = !invalidated || replay_allowed_by_hit_test_only_gate;
         if cache_enabled && paint_cache_replay_allowed {
             if replay_allowed_by_hit_test_only_gate && self.debug_enabled {

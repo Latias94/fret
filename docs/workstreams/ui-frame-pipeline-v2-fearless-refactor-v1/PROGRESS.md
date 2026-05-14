@@ -94,7 +94,7 @@ Out of scope:
 | Layout containment | Authoring API replaced; runtime consolidation still partial | `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring. `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` removes flat element-runtime view-cache rendered/next side maps, but runtime still maps boundary hints into low-level view-cache flags. | Consolidate remaining internal `contained_layout` flags/debug fields when final boundary dependency ownership lands. |
 | Old-path deletion | Complete for replaced slice paths | Closeout audit records deleted node-owned prepaint storage, row replay carriers, dirty cache-root maps, and nested boundary diagnostics. | Keep deleting only when a replacement path has gates and evidence. |
 | Perf gate | Complete for the slice | `paint.widget` p95 improved from `1494us` to `650us`; total p95 improved from `1811us` to `1396us`. | Add a stricter code-editor paint stressor only if resize probes stop catching regressions. |
-| Env knob cleanup | Partial | `M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md` deletes the live `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch now that view-cache-active paint-cache ownership is boundary-gated. Other paint-cache/layout env knobs remain open. | Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` and the layout aggregation/sweep knobs are retained, defaulted, or deleted in their owning workstreams. |
+| Env knob cleanup | Partial | `M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md` deletes the live `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch now that view-cache-active paint-cache ownership is boundary-gated. `M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md` promotes local hit-test-only paint-cache replay to canonical behavior and deletes `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`; descendant-originated hit-test-only dirtiness still repaints ancestors. Layout env knobs remain open. | Decide layout aggregation/sweep knobs in their owning workstreams. |
 
 ## Current Done Boundary
 
@@ -112,8 +112,8 @@ Continue this workstream for broader ADR 0327 follow-ons:
 - Wider paint-cache previous-op-range and scene-fragment replay consolidation after the M4E/M4F
   paint-cache entry ownership slices, the M4G previous-frame recording split, and the M4H replay
   span owner narrowing.
-- Ownership and deletion decisions for remaining paint-cache/layout env knobs after M4I deleted the
-  obsolete relax-view-cache-gating switch.
+- Ownership and deletion decisions for remaining layout env knobs after M4I/M4J deleted the
+  obsolete paint-cache env switches.
 
 ## Completion Contract
 
@@ -161,10 +161,9 @@ Not complete:
   decision.
 - internal low-level `contained_layout` flags and diagnostic fields remain after public authoring
   moved to boundary hints.
-- some old env knobs or compatibility paths remain without an owner and a deletion/retention
-  decision. `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` is deleted, but
-  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` and layout aggregation/sweep knobs still need final
-  decisions.
+- some old layout env knobs or compatibility paths remain without an owner and a
+  deletion/retention decision. `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` is deleted, and
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` is promoted to default behavior and deleted.
 - diagnostics require reading both old cache-root boundary data and new boundary data as independent
   sources of truth.
 

@@ -48,8 +48,6 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) hit_test_bounds_tree_disabled: bool,
     pub(crate) hit_test_bounds_tree_min_records: usize,
 
-    pub(crate) paint_cache_allow_hit_test_only: bool,
-
     pub(crate) validate_semantics: bool,
     pub(crate) validate_semantics_panic: bool,
     pub(crate) validate_element_tree_unique_ids: bool,
@@ -208,9 +206,6 @@ impl UiRuntimeEnvConfig {
                 .unwrap_or(256)
                 .max(1);
 
-        let paint_cache_allow_hit_test_only =
-            env_non_empty("FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY");
-
         let validate_semantics = env_present("FRET_VALIDATE_SEMANTICS");
         let validate_semantics_panic = env_present("FRET_VALIDATE_SEMANTICS_PANIC");
         let validate_element_tree_unique_ids = env_present("FRET_VALIDATE_ELEMENT_TREE_UNIQUE_IDS");
@@ -361,7 +356,6 @@ impl UiRuntimeEnvConfig {
             resizable_split_log,
             hit_test_bounds_tree_disabled,
             hit_test_bounds_tree_min_records,
-            paint_cache_allow_hit_test_only,
             validate_semantics,
             validate_semantics_panic,
             validate_element_tree_unique_ids,

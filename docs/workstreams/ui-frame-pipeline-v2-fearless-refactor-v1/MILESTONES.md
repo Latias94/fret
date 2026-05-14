@@ -232,6 +232,18 @@ Status after M4I on 2026-05-14:
   `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`, layout aggregation/sweep knob decisions, final
   previous-frame recording ownership, and the second non-code-editor proof surface.
 
+Status after M4J on 2026-05-14:
+
+- `M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md` promotes local hit-test-only
+  paint-cache replay to the canonical paint-cache path and deletes
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`.
+- Stable local `HitTestOnly` invalidation now replays cached paint when the cache key and
+  previous-frame entry checks match; descendant-originated `HitTestOnly` dirtiness, key mismatches,
+  and non-hit-test paint invalidations still force repaint.
+- This resolves the paint-cache env-knob cleanup item. M4 remains open for layout
+  aggregation/sweep knob decisions, final previous-frame recording ownership, and the second
+  non-code-editor proof surface.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.

@@ -143,6 +143,9 @@ remains an open paint-cache replay decision.
 M4I deleted the obsolete `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch, so
 view-cache-active paint-cache recording can no longer bypass boundary ownership for non-boundary
 nodes.
+M4J promoted local hit-test-only paint-cache replay to the canonical paint-cache path, prevented
+descendant-originated hit-test-only dirtiness from replaying ancestors, and deleted
+`FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`.
 
 ### 3. Layout containment is a dependency contract
 

@@ -527,6 +527,44 @@ Observed result:
 This slice deletes an obsolete runtime env branch, not a new perf claim. It locks the M4E/M4F owner
 model by making view-cache-active paint-cache recording boundary-gated without an experiment bypass.
 
+Most recent hit-test-only paint-cache replay default slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- Scroll anti-replay gate:
+  `cargo nextest run -p fret-ui tree::tests::scroll_invalidation::scroll_offset_changes_do_not_replay_paint_cache --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Boundary/lane gates:
+  `python3 tools/check_layering.py`,
+  `python3 tools/check_workstream_catalog.py`,
+  `python3 -m json.tool docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/WORKSTREAM.json >/dev/null`,
+  and `git diff --check`
+- Source-deletion check:
+  `rg -n "FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY|paint_cache_allow_hit_test_only|PAINT_CACHE_ALLOW_HIT_TEST_ONLY|test_set_paint_cache_allow_hit_test_only" crates/fret-ui/src tools/diag-scripts docs/workstreams/perf-baselines -g '*.rs' -g '*.json'`
+
+Observed result:
+
+- `cargo check -p fret-ui --all-targets`: passed;
+- `cargo check -p fret-ui --features diagnostics --all-targets`: passed;
+- paint-cache regression gate: `12 passed, 930 skipped`;
+- scroll-offset anti-replay gate: `1 passed, 940 skipped`;
+- layering check: passed;
+- workstream catalog: passed;
+- `WORKSTREAM.json` validation: passed;
+- `git diff --check`: passed;
+- source-deletion check: no live runtime/source/script/baseline references remain.
+
+This slice is an env-knob deletion and behavior promotion step, not a new perf claim. Existing
+dedicated probe evidence from `ui-perf-zed-smoothness-v1` proved the local path is reachable and
+mixed to neutral on latency; M4J makes the correctness-checked local path canonical, prevents
+descendant-originated hit-test-only dirtiness from replaying ancestors, and keeps the counters as
+diagnostic evidence.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

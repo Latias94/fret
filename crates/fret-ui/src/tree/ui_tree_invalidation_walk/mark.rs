@@ -171,7 +171,7 @@ impl<H: UiHost> UiTree<H> {
                 if invalidation_active {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    Self::mark_node_invalidation_state(n, inv);
+                    Self::mark_node_invalidation_state(n, inv, id == source_root);
                     let layout_after = n.invalidation.layout;
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
@@ -333,7 +333,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    Self::mark_node_invalidation_state(n, inv);
+                    Self::mark_node_invalidation_state(n, inv, false);
                     let layout_after = n.invalidation.layout;
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
@@ -460,7 +460,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    Self::mark_node_invalidation_state(n, inv);
+                    Self::mark_node_invalidation_state(n, inv, id == source_root);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
@@ -621,7 +621,7 @@ impl<H: UiHost> UiTree<H> {
                         if (already & needed) != needed {
                             let prev = n.invalidation;
                             let layout_before = n.invalidation.layout;
-                            Self::mark_node_invalidation_state(n, inv);
+                            Self::mark_node_invalidation_state(n, inv, false);
                             let layout_after = n.invalidation.layout;
                             record_layout_invalidation_transition(
                                 &mut self.layout_invalidations_count,

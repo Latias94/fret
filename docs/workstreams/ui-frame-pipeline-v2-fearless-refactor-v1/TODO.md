@@ -144,6 +144,7 @@ Progress ledger:
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.
   - [x] Delete the obsolete `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING` runtime branch
     (`M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md`).
-  - [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` becomes default, remains an
-    explicitly retained diagnostic/policy switch, or is deleted.
+  - [x] Promote hit-test-only paint-cache replay to default behavior and delete
+    `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY`
+    (`M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md`).
   - [ ] Decide layout aggregation/sweep env knobs in their owning workstreams.

@@ -2,11 +2,17 @@ use super::*;
 use std::any::{Any, TypeId};
 
 impl<H: UiHost> UiTree<H> {
-    pub(in crate::tree) fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
+    pub(in crate::tree) fn mark_node_invalidation_state(
+        node: &mut Node<H>,
+        inv: Invalidation,
+        local: bool,
+    ) {
         match inv {
             Invalidation::HitTestOnly => {
-                if !node.invalidation.paint {
+                if local && !node.invalidation.paint {
                     node.paint_invalidated_by_hit_test_only = true;
+                } else if !local {
+                    node.paint_invalidated_by_hit_test_only = false;
                 }
             }
             Invalidation::Paint | Invalidation::Layout | Invalidation::HitTest => {
@@ -83,7 +89,7 @@ impl<H: UiHost> UiTree<H> {
             };
             let prev = n.invalidation;
             let layout_before = n.invalidation.layout;
-            Self::mark_node_invalidation_state(n, inv);
+            Self::mark_node_invalidation_state(n, inv, true);
             let next = n.invalidation;
             let layout_after = n.invalidation.layout;
             (prev, next, layout_before, layout_after)
