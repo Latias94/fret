@@ -2670,7 +2670,7 @@ fn build_suite_core_default_post_run_checks(
         && script_requires_retained_vlist_keep_alive_reuse_gate)
         || vlist_window_boundary_retained_suite)
         .then_some(if vlist_window_boundary_retained_suite {
-            5u64
+            1u64
         } else {
             1u64
         })

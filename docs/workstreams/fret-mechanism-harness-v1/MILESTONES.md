@@ -333,7 +333,7 @@ Status: complete for first runtime gates
 
 ## M28: Virtual-List Boundary Owner Slice
 
-Status: complete for focused mechanism gates; retained runtime suite wrapper follow-up remains
+Status: complete
 
 - Boundary-crossing virtual-list diagnostics exposed confirmed owner defects in the mechanism layer:
   non-retained wheel handling could dirty the view-cache root before prepaint observed the stale
@@ -345,6 +345,9 @@ Status: complete for focused mechanism gates; retained runtime suite wrapper fol
 - Focused gates passed for the new prepaint reason regression, retained virtual-list window update,
   revision-only window update, prepaint escape invalidation, and overscan-policy mismatch cases.
 - The non-retained `ui-gallery-vlist-window-boundary` runtime suite passed after the owner fix.
-  The retained script produced evidence, but the outer suite did not write `suite.summary.json`, so
-  the retained runtime suite wrapper needs a clean-exit follow-up before it is considered fully
-  closed.
+  The retained `ui-gallery-vlist-window-boundary-retained` runtime suite now also passes with a
+  normal `suite.summary.json`.
+- The retained follow-up exposed diagnostics harness drift rather than a retained-host mechanism
+  defect: the original script did not bounce back to exercise reuse, and the streaming post-run
+  gate was still reading the older reconcile-record field names. The script and gate now observe
+  current `retained_virtual_list_reconciles[].reused_from_keep_alive_items` telemetry.

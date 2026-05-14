@@ -71,7 +71,7 @@ cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-dr
 cargo build -p fret-ui-gallery --release
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json --dir target/fret-diag-virtual-list-harness-commit-check --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary --dir target/fret-diag-vlist-window-boundary-after-reason-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
-$env:FRET_UI_GALLERY_VLIST_RETAINED='1'; cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-after-owner-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
+cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-bounce-script-final --session-auto --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
@@ -100,10 +100,13 @@ Current runtime evidence anchors:
   - suite membership:
     `tools/diag-scripts/suites/ui-gallery-vlist-window-boundary-retained/suite.json`
   - current evidence:
-    `target/fret-diag-vlist-window-boundary-retained-after-owner-fix/sessions/1778718929118-137636/script.result.json`
+    `target/fret-diag-vlist-window-boundary-retained-bounce-script-final/sessions/1778726366803-140844/suite.summary.json`
   - status:
-    the retained script produced evidence after the owner fix, but the outer suite command returned
-    non-zero and no `suite.summary.json` was written. Keep this as a follow-up clean-exit gap.
+    suite `status=passed`; the script now bounces back after the boundary-crossing scroll and
+    asserts retained keep-alive reuse before capture.
+  - proof:
+    bundle frame 54 recorded an `escape` retained reconcile with
+    `reused_from_keep_alive_items=9` and `keep_alive_pool_len_after=9`.
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:

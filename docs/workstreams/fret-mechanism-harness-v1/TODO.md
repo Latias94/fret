@@ -61,10 +61,13 @@ date: 2026-05-12
     and the default Checkbox page now gates post-scroll RTL viewport idle stability.
 - [x] Add boundary-crossing Virtual List runtime gates for non-retained and retained owner paths.
   - Result: the non-retained `ui-gallery-vlist-window-boundary` suite passes after the owner fix.
-    The retained script produced evidence, but the outer suite wrapper still needs a clean-exit
-    follow-up because no `suite.summary.json` was written.
-- [ ] Fix or explain the retained Virtual List boundary suite wrapper clean-exit gap so retained
+    The retained `ui-gallery-vlist-window-boundary-retained` suite now runs a real bounce path,
+    asserts keep-alive reuse, and writes a normal passing `suite.summary.json`.
+- [x] Fix or explain the retained Virtual List boundary suite wrapper clean-exit gap so retained
   boundary-crossing coverage has a normal `suite.summary.json` proof.
+  - Result: the gap was a diagnostics harness issue. The suite finalizer now summarizes success-tail
+    failures, the retained script now bounces back to exercise reuse, and the streaming post-run
+    gate reads current `retained_virtual_list_reconciles[].reused_from_keep_alive_items` schema.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes

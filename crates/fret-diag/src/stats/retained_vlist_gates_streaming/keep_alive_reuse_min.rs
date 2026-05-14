@@ -3,6 +3,14 @@ use std::rc::Rc;
 
 use serde::de::{DeserializeSeed, IgnoredAny, MapAccess, SeqAccess, Visitor};
 
+fn keep_alive_reuse_count_from_value(value: Option<&serde_json::Value>) -> u64 {
+    match value {
+        Some(serde_json::Value::Number(number)) => number.as_u64().unwrap_or(0),
+        Some(serde_json::Value::Bool(true)) => 1,
+        _ => 0,
+    }
+}
+
 pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
     bundle_path: &Path,
     min_keep_alive_reuse_frames: u64,
@@ -135,7 +143,10 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
                 })?
                 .is_some()
             {
-                let done = { self.out.borrow().keep_alive_reuse_frames >= 3 };
+                let done = {
+                    self.out.borrow().keep_alive_reuse_frames
+                        >= self.cfg.min_keep_alive_reuse_frames
+                };
                 if done {
                     return Err(serde::de::Error::custom(STOP_MARKER));
                 }
@@ -350,7 +361,8 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
         {
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
-                    "retained_virtual_list_reconcile_records" => {
+                    "retained_virtual_list_reconciles"
+                    | "retained_virtual_list_reconcile_records" => {
                         self.out.records = Some(map.next_value_seed(ReconcileRecordsSeed)?);
                     }
                     _ => {
@@ -398,7 +410,7 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
                 self.out.len = self.out.len.saturating_add(1);
                 self.out.kept_alive_items_sum =
                     self.out.kept_alive_items_sum.saturating_add(kept_alive);
-                self.out.any_keep_alive_reuse |= reused_keep_alive;
+                self.out.any_keep_alive_reuse |= reused_keep_alive > 0;
 
                 if self.out.any_keep_alive_reuse && self.out.len >= 2 {
                     while seq.next_element::<IgnoredAny>()?.is_some() {}
@@ -412,26 +424,26 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
     struct ReconcileRecordSeed;
 
     impl<'de> DeserializeSeed<'de> for ReconcileRecordSeed {
-        type Value = (u64, bool);
+        type Value = (u64, u64);
 
-        fn deserialize<D>(self, deserializer: D) -> Result<(u64, bool), D::Error>
+        fn deserialize<D>(self, deserializer: D) -> Result<(u64, u64), D::Error>
         where
             D: serde::Deserializer<'de>,
         {
             deserializer.deserialize_map(ReconcileRecordVisitor {
                 kept_alive: 0,
-                reused_keep_alive: false,
+                reused_keep_alive: 0,
             })
         }
     }
 
     struct ReconcileRecordVisitor {
         kept_alive: u64,
-        reused_keep_alive: bool,
+        reused_keep_alive: u64,
     }
 
     impl<'de> Visitor<'de> for ReconcileRecordVisitor {
-        type Value = (u64, bool);
+        type Value = (u64, u64);
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "reconcile record object")
@@ -447,7 +459,12 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
                         self.kept_alive = map.next_value::<Option<u64>>()?.unwrap_or(0);
                     }
                     "reused_keep_alive_items" | "reusedKeepAliveItems" => {
-                        self.reused_keep_alive = map.next_value::<Option<bool>>()?.unwrap_or(false);
+                        let value = map.next_value::<Option<serde_json::Value>>()?;
+                        self.reused_keep_alive = keep_alive_reuse_count_from_value(value.as_ref());
+                    }
+                    "reused_from_keep_alive_items" | "reusedFromKeepAliveItems" => {
+                        let value = map.next_value::<Option<serde_json::Value>>()?;
+                        self.reused_keep_alive = keep_alive_reuse_count_from_value(value.as_ref());
                     }
                     _ => {
                         map.next_value::<IgnoredAny>()?;
