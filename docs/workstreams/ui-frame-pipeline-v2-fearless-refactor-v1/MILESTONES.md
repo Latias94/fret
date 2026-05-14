@@ -168,6 +168,17 @@ Status after M4C on 2026-05-14:
   `contained_layout` names are internal low-level flags, diagnostic fields, or historical notes
   until broader view-cache/build-boundary consolidation can remove or rename them.
 
+Status after M4D on 2026-05-14:
+
+- `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` consolidates element-runtime
+  view-cache build-time rendered/next maps, key mismatch roots, reuse roots, last-reused frame
+  tracking, transitioned reuse roots, and the active scope stack behind
+  `ViewCacheBuildBoundaryStore`.
+- Existing `ElementContext` and declarative mount method calls are preserved, so this is a
+  runtime ownership slice rather than an authoring/API slice.
+- M4D removes the flat side maps from `WindowElementState`, but it does not yet make
+  `ViewBoundaryState` the final build-owner and does not touch node-owned paint-cache replay.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.
@@ -211,5 +222,6 @@ Exit criteria:
 Status on 2026-05-14:
 
 - Open. The code-editor vertical slice is complete, but the global contract is not complete while
-  broader view-cache/paint-cache consolidation, internal contained-layout flag cleanup, old
-  env-knob ownership, and the second non-code-editor proof surface remain open.
+  the consolidated view-cache build-boundary store still needs a final `ViewBoundaryState`
+  ownership/retention decision, broader paint-cache consolidation, internal contained-layout flag
+  cleanup, old env-knob ownership, and the second non-code-editor proof surface remain open.

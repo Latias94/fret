@@ -347,6 +347,31 @@ This slice is an authoring-contract step, not a new perf claim. It introduces
 `contain_layout_when_bounds_known(...)`, and leaves internal low-level contained-layout flags for
 the broader view-cache/build-boundary consolidation.
 
+Most recent view-cache build-boundary store slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md`
+- Direct runtime store gate:
+  `cargo nextest run -p fret-ui elements::runtime::tests::view_cache_build_boundary_store_advances_rendered_next_and_clears_frame_local_flags --no-fail-fast`
+- View-cache behavior gates:
+  `cargo nextest run -p fret-ui declarative::tests::core::view_cache_subtree_membership_includes_nested_cache_roots declarative::tests::view_cache::view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements declarative::tests::view_cache::view_cache_inherits_model_observations_on_cache_hit_layout --no-fail-fast`
+- Compile gate:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+
+Observed result:
+
+- direct runtime store gate: `1 passed, 933 skipped`;
+- view-cache behavior gates: `3 passed, 931 skipped`;
+- both `cargo check` commands passed.
+
+This slice is a runtime ownership-consolidation step, not a new perf claim. It replaces
+element-runtime flat view-cache build-time rendered/next maps and frame-local side sets with
+`ViewCacheBuildBoundaryStore`, while preserving the existing `ElementContext` and declarative mount
+method surface. The final migration into `ViewBoundaryState`, paint-cache replay ownership, and
+non-code-editor proof surface remain open.
+
 Most recent code-editor closeout perf evidence:
 
 - Perf output directory:

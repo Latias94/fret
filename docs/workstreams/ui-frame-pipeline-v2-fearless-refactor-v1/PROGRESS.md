@@ -87,11 +87,11 @@ Out of scope:
 | --- | --- | --- | --- |
 | ADR 0327 contract | Accepted; implementation in progress | `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md` is accepted as the target contract; `M0_CONTRACT_FREEZE_2026-05-14.md` records the contract freeze. | Continue implementation against the accepted contract. |
 | Code-editor vertical slice | Complete | `CLOSEOUT_AUDIT_2026-05-14.md` closes the slice with correctness, layering, diagnostics, deletion, and perf evidence. | Keep as the first proof surface and regression gate. |
-| Boundary runtime core | Partial global, complete for the slice | `ViewBoundaryState` owns dirty, prepaint, and scene-fragment state for the migrated code-editor path. | Generalize beyond the code-editor path where view-cache and paint-cache still keep separate maps. |
+| Boundary runtime core | Partial global, complete for the slice | `ViewBoundaryState` owns dirty, prepaint, and scene-fragment state for the migrated code-editor path. `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` consolidates view-cache build-time rendered/next maps into a single runtime store. | Migrate or explicitly retain the consolidated build-boundary store under the final `ViewBoundary` model, then resolve paint-cache replay ownership. |
 | Boundary diagnostics | Complete for the slice | `debug.boundaries[]` is canonical; nested `debug.cache_roots[].boundary` is retired. | Keep diagnostics stable while broader boundary stores are consolidated. |
 | Prepaint ownership | Partial global, complete for the slice | Code-editor row-derived state moved out of paint into boundary-owned prepaint/scene-fragment state. | Audit other geometry-derived paint work and migrate only with proof surfaces. |
 | Scene-fragment replay | Partial global, complete for row replay | `CanvasSceneFragment<RowSceneFragmentPayload>` is boundary-owned for the code-editor row path. | Decide final paint-cache replay store shape for non-code-editor surfaces. |
-| Layout containment | Authoring API replaced; runtime consolidation still partial | `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring. Runtime still maps that hint into low-level view-cache flags. | Consolidate remaining internal `contained_layout` flags/debug fields when broader view-cache/build-boundary ownership is migrated. |
+| Layout containment | Authoring API replaced; runtime consolidation still partial | `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md` introduces `ViewBoundaryHints` and first-party `contain_layout_when_bounds_known(...)` authoring. `M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md` removes flat element-runtime view-cache rendered/next side maps, but runtime still maps boundary hints into low-level view-cache flags. | Consolidate remaining internal `contained_layout` flags/debug fields when final boundary dependency ownership lands. |
 | Old-path deletion | Complete for replaced slice paths | Closeout audit records deleted node-owned prepaint storage, row replay carriers, dirty cache-root maps, and nested boundary diagnostics. | Keep deleting only when a replacement path has gates and evidence. |
 | Perf gate | Complete for the slice | `paint.widget` p95 improved from `1494us` to `650us`; total p95 improved from `1811us` to `1396us`. | Add a stricter code-editor paint stressor only if resize probes stop catching regressions. |
 | Env knob cleanup | Open | Older paint-cache/layout knobs remain intentionally out of this slice. | Decide ownership and deletion policy in the relevant follow-on workstreams. |
@@ -108,7 +108,7 @@ Continue this workstream for broader ADR 0327 follow-ons:
 - Implementation against accepted ADR 0327.
 - Broader runtime consolidation after the public/ecosystem boundary hint design landed in
   `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`.
-- Wider view-cache rendered/next map consolidation.
+- Wider view-cache rendered/next map consolidation after the M4D build-boundary store slice.
 - Wider paint-cache previous-op-range and scene-fragment replay consolidation.
 - Ownership and deletion decisions for older paint-cache/layout env knobs.
 
@@ -147,8 +147,10 @@ Final result:
 Not complete:
 
 - `ViewBoundaryState` only covers the code-editor vertical slice.
-- view-cache rendered/next maps and paint-cache replay stores still have parallel ownership that
-  the boundary model could own but has not migrated.
+- view-cache build-time rendered/next maps are consolidated in `ViewCacheBuildBoundaryStore`, but
+  that store is not yet the final `ViewBoundaryState` owner.
+- paint-cache replay stores still have parallel ownership that the boundary model could own but has
+  not migrated.
 - internal low-level `contained_layout` flags and diagnostic fields remain after public authoring
   moved to boundary hints.
 - old env knobs or compatibility paths remain without an owner and a deletion/retention decision.

@@ -128,6 +128,9 @@ Current `ViewCacheProps`, cache roots, paint-cache roots, and low-level containe
 should migrate toward this boundary model rather than expanding as separate one-off mechanisms.
 M4C introduced `ViewBoundaryHints` as the first public authoring step away from direct
 `contained_layout` knobs; the remaining migration is internal runtime consolidation.
+M4D consolidated element-runtime view-cache build-time rendered/next side maps into
+`ViewCacheBuildBoundaryStore`; final `ViewBoundaryState` ownership or explicit retention is still
+open.
 
 ### 3. Layout containment is a dependency contract
 

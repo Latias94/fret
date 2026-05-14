@@ -18,7 +18,8 @@ Progress ledger:
 - [ ] The final `ViewBoundary` or renamed equivalent is the canonical runtime owner for
   build/layout/prepaint/paint reuse and diagnostics.
 - [ ] Broader view-cache rendered/next maps are consolidated into boundary-owned state or retained
-  behind an accepted ADR/workstream reason.
+  behind an accepted ADR/workstream reason. M4D consolidates element-runtime build-time maps into
+  `ViewCacheBuildBoundaryStore`; final `ViewBoundaryState` ownership remains open.
 - [ ] Broader paint-cache replay stores are consolidated into boundary-owned scene-fragment state or
   retained behind an accepted ADR/workstream reason.
 - [x] Direct page-specific `contained_layout` authoring hints are replaced by a reviewed
@@ -116,4 +117,9 @@ Progress ledger:
   `M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md`.
 - [ ] Consolidate broader view-cache rendered/next maps and paint-cache previous-op-range replay
   into final boundary-owned build/paint stores.
+  - [x] Consolidate element-runtime view-cache build-time rendered/next side maps into one
+    `ViewCacheBuildBoundaryStore` (`M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md`).
+  - [ ] Decide whether `ViewCacheBuildBoundaryStore` migrates into `ViewBoundaryState` directly or
+    remains as an explicitly retained build-boundary mechanism.
+  - [ ] Consolidate paint-cache previous-op-range replay ownership.
 - [ ] Decide the future of older paint-cache/layout env knobs in their owning workstreams.
