@@ -7,18 +7,18 @@ use super::super::options::TableSortDirection;
 use super::drag::DragResponse;
 use super::hover::ResponseExt;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct DisclosureResponse {
-    pub trigger: ResponseExt,
-    pub open: bool,
-    pub toggled: bool,
+    pub(crate) trigger: ResponseExt,
+    pub(crate) open: bool,
+    pub(crate) toggled: bool,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct ComboResponse {
-    pub trigger: ResponseExt,
-    pub open: bool,
-    pub toggled: bool,
+    pub(crate) trigger: ResponseExt,
+    pub(crate) open: bool,
+    pub(crate) toggled: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -79,8 +79,20 @@ pub struct VirtualListResponse {
 }
 
 impl DisclosureResponse {
+    pub(crate) fn empty() -> Self {
+        Self {
+            trigger: ResponseExt::default(),
+            open: false,
+            toggled: false,
+        }
+    }
+
     pub fn id(self) -> Option<GlobalElementId> {
         self.trigger.id
+    }
+
+    pub fn response(self) -> ResponseExt {
+        self.trigger
     }
 
     pub fn open(self) -> bool {
@@ -111,6 +123,10 @@ impl DisclosureResponse {
 impl ComboResponse {
     pub fn id(self) -> Option<GlobalElementId> {
         self.trigger.id
+    }
+
+    pub fn response(self) -> ResponseExt {
+        self.trigger
     }
 
     pub fn open(self) -> bool {

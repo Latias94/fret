@@ -86,7 +86,7 @@ pub(super) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             .unwrap_or(None)
     });
 
-    let mut response = combo.trigger;
+    let mut response = combo.response();
     let changed = enabled
         && response.id.is_some_and(|element_id| {
             ui.with_cx_mut(|cx| {

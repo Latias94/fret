@@ -679,10 +679,10 @@ fn begin_submenu_helper_hover_switches_sibling_after_open_delay() {
                                 },
                             );
                             history_open.set(history.open());
-                            history_hovered.set(history.trigger.core.hovered);
-                            history_hovered_raw.set(history.trigger.pointer_hovered_raw);
+                            history_hovered.set(history.response().core.hovered);
+                            history_hovered_raw.set(history.response().pointer_hovered_raw);
                             history_hovered_raw_below_barrier
-                                .set(history.trigger.pointer_hovered_raw_below_barrier);
+                                .set(history.response().pointer_hovered_raw_below_barrier);
                         },
                     );
                 },
@@ -948,10 +948,10 @@ fn begin_submenu_helper_defers_sibling_switch_inside_grace_corridor() {
                                     );
                                 },
                             );
-                            history_hovered.set(history.trigger.core.hovered);
-                            history_hovered_raw.set(history.trigger.pointer_hovered_raw);
+                            history_hovered.set(history.response().core.hovered);
+                            history_hovered_raw.set(history.response().pointer_hovered_raw);
                             history_hovered_raw_below_barrier
-                                .set(history.trigger.pointer_hovered_raw_below_barrier);
+                                .set(history.response().pointer_hovered_raw_below_barrier);
                         },
                     );
                 },

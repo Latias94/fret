@@ -57,6 +57,7 @@ Last updated: 2026-05-14
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
+  - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
@@ -128,6 +129,10 @@ Run evidence:
 - 2026-05-14: made `FloatingAreaResponse` / `FloatingWindowResponse` accessor-first too. Floating
   response identity, geometry, drag, resize, and collapse state now stay behind methods instead of
   public fields, and the floating tests use `resp.id()` instead of `resp.area.id`.
+- 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
+  state too. Public callers now read trigger details through `response()` and semantic helpers, the
+  response types no longer expose external `Default` construction, and
+  `tools/gate_imui_workstream_source.py` rejects public fields from returning.
 
 ## P3 Design Surface Readiness Gates
 

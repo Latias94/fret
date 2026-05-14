@@ -2561,6 +2561,30 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/widgets.rs"),
+            required=[
+                "#[derive(Debug, Clone, Copy)]\npub struct DisclosureResponse",
+                "pub struct DisclosureResponse {\n    pub(crate) trigger: ResponseExt,\n    pub(crate) open: bool,\n    pub(crate) toggled: bool,\n}",
+                "#[derive(Debug, Clone, Copy)]\npub struct ComboResponse",
+                "pub struct ComboResponse {\n    pub(crate) trigger: ResponseExt,\n    pub(crate) open: bool,\n    pub(crate) toggled: bool,\n}",
+                "pub(crate) fn empty() -> Self",
+                "pub fn response(self) -> ResponseExt",
+                "pub fn open(self) -> bool",
+                "pub fn toggled(self) -> bool",
+            ],
+            forbidden=[
+                "#[derive(Debug, Clone, Copy, Default)]\npub struct DisclosureResponse",
+                "pub struct DisclosureResponse {\n    pub trigger: ResponseExt",
+                "pub struct DisclosureResponse {\n    pub(crate) trigger: ResponseExt,\n    pub open: bool",
+                "pub struct DisclosureResponse {\n    pub(crate) trigger: ResponseExt,\n    pub(crate) open: bool,\n    pub toggled: bool",
+                "#[derive(Debug, Clone, Copy, Default)]\npub struct ComboResponse",
+                "pub struct ComboResponse {\n    pub trigger: ResponseExt",
+                "pub struct ComboResponse {\n    pub(crate) trigger: ResponseExt,\n    pub open: bool",
+                "pub struct ComboResponse {\n    pub(crate) trigger: ResponseExt,\n    pub(crate) open: bool,\n    pub toggled: bool",
+                "DisclosureResponse::default()",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/theme.rs"),
             required=[
                 "pub fn apply_editor_theme_preset_v1<H: UiHost>",

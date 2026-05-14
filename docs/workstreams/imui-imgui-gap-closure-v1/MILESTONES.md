@@ -75,6 +75,9 @@ Exit criteria:
   accessors for facade-created area id, position, and drag kind.
   2026-05-14 follow-up result: floating responses now expose area/window state through accessors
   instead of public fields.
+  2026-05-14 response follow-up result: disclosure and combo responses now expose trigger state
+  through `response()`, keep trigger/open/toggle storage crate-local, and no longer allow external
+  default construction.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and

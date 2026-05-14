@@ -512,8 +512,8 @@ fn menu_and_submenu_helpers_report_toggle_and_trigger_edges() {
                     menu_open.set(menu.open());
                     menu_opened.set(menu.opened());
                     menu_closed.set(menu.closed());
-                    menu_activated.set(menu.trigger.activated());
-                    menu_deactivated.set(menu.trigger.deactivated());
+                    menu_activated.set(menu.response().activated());
+                    menu_deactivated.set(menu.response().deactivated());
                 },
             );
         })
