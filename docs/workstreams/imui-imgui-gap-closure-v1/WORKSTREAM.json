@@ -222,6 +222,10 @@
       "command": "cargo nextest run -p fret-imui models_combo --no-fail-fast"
     },
     {
+      "name": "fret-imui model controls ownership tests",
+      "command": "cargo nextest run -p fret-imui models_controls --no-fail-fast"
+    },
+    {
       "name": "fret-imui popup hover ownership tests",
       "command": "cargo nextest run -p fret-imui popup_hover --no-fail-fast"
     },
@@ -297,6 +301,7 @@
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/mod.rs",
     "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
+    "ecosystem/fret-imui/src/tests/models_controls/mod.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/mod.rs"
   ],
   "adr_refs": [
