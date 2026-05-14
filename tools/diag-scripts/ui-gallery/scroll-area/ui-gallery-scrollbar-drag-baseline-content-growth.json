@@ -117,10 +117,24 @@
       "button": "left"
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "input_pointer_capture_active_is",
+        "active": true
+      }
+    },
+    {
       "type": "pointer_move",
       "delta_x": 0.0,
       "delta_y": 40.0,
       "steps": 12
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "input_pointer_capture_active_is",
+        "active": true
+      }
     },
     {
       "type": "wait_until",
@@ -150,6 +164,13 @@
       }
     },
     { "type": "pointer_up" },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "input_pointer_capture_active_is",
+        "active": false
+      }
+    },
     { "type": "capture_bundle", "label": "scrollbar-drag-baseline-content-growth" }
   ]
 }

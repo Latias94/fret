@@ -438,3 +438,19 @@ Status: complete
 - No pointer occlusion mechanism defect was reproduced. The defect found in this slice was a
   harness weakness: the previous gate could pass without proving that underlay wheel pass-through
   actually moved a scroll container.
+
+## M34: Pointer-Capture Runtime Lifecycle Gate
+
+Status: complete
+
+- Diagnostics protocol now exposes `input_pointer_capture_active_is`, backed by
+  `debug.input_arbitration.pointer_capture_active`, so runtime scripts can assert pointer-capture
+  lifecycle directly instead of inferring it from pixels or widget-specific semantics.
+- The ScrollArea scrollbar drag baseline gate now asserts capture is active immediately after
+  scrollbar `pointer_down`, remains active during drag, and is released after `pointer_up`.
+- The real UI Gallery gate passed while preserving the existing `semantics_scroll_approx_eq y=20`
+  scroll-progress oracle. No pointer-capture mechanism defect was reproduced. The defect fixed in
+  this slice was a harness observability gap: runtime diagnostics could not previously lock
+  capture active/release state.
+- Remaining follow-up: add owner/test-id attribution, underlay blocking probes, and
+  release-on-cancel coverage once a stable public demo exposes those surfaces.

@@ -2501,6 +2501,14 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         upgraded_to_layout_bindings_min: Option<u64>,
     },
+    /// True when `debug.input_arbitration.pointer_capture_active == active`.
+    ///
+    /// This is a mechanism-level predicate for self-drawn input routing. It lets scripts gate
+    /// pointer-capture lifecycle without relying on pixels or widget-specific semantics:
+    /// press/drag should report capture, and pointer-up/cancel should release it.
+    InputPointerCaptureActiveIs {
+        active: bool,
+    },
     /// True when the app snapshot field addressed by JSON Pointer `pointer` equals `value`.
     ///
     /// This predicate reads the best-effort `app_snapshot` payload published by the app into
@@ -4518,6 +4526,27 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::ScrollHandleChangesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_input_pointer_capture_active_is_serializes() {
+        let value =
+            serde_json::to_value(UiPredicateV1::InputPointerCaptureActiveIs { active: true })
+                .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "input_pointer_capture_active_is",
+                "active": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::InputPointerCaptureActiveIs { active: true }
         ));
     }
 

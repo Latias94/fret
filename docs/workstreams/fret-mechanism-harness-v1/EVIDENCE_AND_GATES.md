@@ -236,11 +236,27 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routin
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_occlusion -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-pointer-capture --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json --dir target/fret-diag-context-menu-occlusion-wheel-structured-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current runtime evidence:
 
+- Scrollbar drag pointer-capture lifecycle:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
+  - asserts `input_pointer_capture_active_is active=true` after `pointer_down` on
+    `ui-gallery-scroll-area-drag-baseline-y-scrollbar`, asserts it stays true during the drag,
+    keeps the existing `semantics_scroll_approx_eq y=20` scroll-progress oracle, and asserts
+    `active=false` after `pointer_up`.
+  - current run result:
+    `target/fret-diag-scrollbar-drag-pointer-capture/sessions/1778752007390-149896/1778752011220/script.result.json`
+  - current AI packet:
+    `target/fret-diag-scrollbar-drag-pointer-capture/sessions/1778752007390-149896/1778752011220/ai.packet`
+  - current share pack:
+    `target/fret-diag-scrollbar-drag-pointer-capture/sessions/1778752007390-149896/share/1778752011220.zip`
+  - result:
+    passed; no pointer-capture mechanism defect reproduced. The fixed defect was a harness
+    observability gap: runtime scripts could not directly gate capture active/release state.
 - Context-menu pointer occlusion wheel pass-through:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
   - asserts `ui-gallery-content-viewport.scroll.y_max != 0` and `scroll.y == 0` before the wheel,
@@ -647,6 +663,10 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/tree/tests/pointer_occlusion_routing_harness.rs`
 - Pointer occlusion runtime gate:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
+- Pointer-capture lifecycle predicate:
+  `crates/fret-diag-protocol/src/lib.rs` (`input_pointer_capture_active_is`)
+- Pointer-capture lifecycle runtime gate:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
 - Focus barrier routing fixture:
   `crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`
 - Focus barrier routing runner:

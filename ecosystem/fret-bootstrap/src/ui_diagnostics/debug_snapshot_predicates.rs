@@ -117,6 +117,10 @@ pub(super) fn eval_debug_snapshot_predicate(
     debug: &UiTreeDebugSnapshotV1,
     predicate: &UiPredicateV1,
 ) -> Option<bool> {
+    if let Some(ok) = eval_input_arbitration_predicate_from_debug_snapshot(debug, predicate) {
+        return Some(ok);
+    }
+
     if let Some(ok) = eval_virtual_list_predicate_from_debug_snapshot(debug, predicate) {
         return Some(ok);
     }
@@ -135,6 +139,18 @@ pub(super) fn eval_debug_snapshot_predicate(
         .and_then(|resource_loading| {
             eval_resource_loading_predicate_from_debug_snapshot(resource_loading, predicate)
         })
+}
+
+fn eval_input_arbitration_predicate_from_debug_snapshot(
+    debug: &UiTreeDebugSnapshotV1,
+    predicate: &UiPredicateV1,
+) -> Option<bool> {
+    match predicate {
+        UiPredicateV1::InputPointerCaptureActiveIs { active } => {
+            Some(debug.input_arbitration.pointer_capture_active == *active)
+        }
+        _ => None,
+    }
 }
 
 fn eval_virtual_list_predicate_from_debug_snapshot(
@@ -776,6 +792,13 @@ mod tests {
         snapshot_with_debug(debug)
     }
 
+    fn snapshot_with_pointer_capture_active(active: bool) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug.input_arbitration.pointer_capture_active = active;
+
+        snapshot_with_debug(debug)
+    }
+
     fn snapshot_with_debug(debug: UiTreeDebugSnapshotV1) -> UiDiagnosticsSnapshotV1 {
         UiDiagnosticsSnapshotV1 {
             schema_version: 1,
@@ -831,6 +854,34 @@ mod tests {
             eval_debug_snapshot_predicate_from_ring(
                 &ring,
                 &UiPredicateV1::VirtualListWindowShiftSamplesLenLe { max: 1 },
+            ),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn input_pointer_capture_active_predicate_reads_debug_snapshot() {
+        let captured = snapshot_with_pointer_capture_active(true);
+        let released = snapshot_with_pointer_capture_active(false);
+
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &captured.debug,
+                &UiPredicateV1::InputPointerCaptureActiveIs { active: true },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &released.debug,
+                &UiPredicateV1::InputPointerCaptureActiveIs { active: true },
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &released.debug,
+                &UiPredicateV1::InputPointerCaptureActiveIs { active: false },
             ),
             Some(true)
         );

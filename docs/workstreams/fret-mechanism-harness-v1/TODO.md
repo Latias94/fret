@@ -112,8 +112,13 @@ date: 2026-05-12
   - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
     viewport starts at `scroll.y=0`, has a non-zero scroll range, receives a wheel through
     `BlockMouseExceptScroll`, ends with `scroll.y != 0`, and keeps the context menu mounted.
-- [ ] Add a UI Gallery captured-pointer diagnostics gate once a stable demo exposes pointer-capture
-  owner and underlay probes.
+- [x] Add a UI Gallery captured-pointer lifecycle diagnostics gate.
+  - Result: `ui-gallery-scrollbar-drag-baseline-content-growth.json` now asserts
+    `input_pointer_capture_active_is active=true` immediately after scrollbar `pointer_down`, keeps
+    it true during drag, and asserts `active=false` after `pointer_up`, while preserving the
+    existing scroll progress oracle.
+- [ ] Add a UI Gallery captured-pointer owner/underlay/cancel companion once a stable demo exposes
+  pointer-capture owner ids and underlay probes.
 - [x] Add active-descendant interaction fixture coverage for combobox query-driven active descendant
   selection.
 - [x] Add nested focus scope fixture coverage for inner/outer trapped scope traversal and pointer

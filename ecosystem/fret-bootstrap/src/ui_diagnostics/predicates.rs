@@ -1753,6 +1753,7 @@ fn eval_predicate(
             .and_then(|d| d.dock_graph_signature.as_ref())
             .is_some_and(|s| s.fingerprint64 == *fingerprint64),
         UiPredicateV1::EventKindSeen { event_kind: _ } => false,
+        UiPredicateV1::InputPointerCaptureActiveIs { .. } => false,
     }
 }
 

@@ -486,6 +486,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::VirtualListWindowsMatchingGe { .. }
                 | UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { .. }
                 | UiPredicateV1::ScrollHandleChangesMatchingGe { .. }
+                | UiPredicateV1::InputPointerCaptureActiveIs { .. }
                 | UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { .. }
                 | UiPredicateV1::AssetLoadStaleManifestRequestsGe { .. }
                 | UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { .. }
