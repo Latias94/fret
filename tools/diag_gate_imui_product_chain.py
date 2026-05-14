@@ -49,6 +49,7 @@ DOCKING_PERF_THRESHOLDS: tuple[tuple[str, str, int], ...] = (
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
 IMUI_PRODUCT_CHAIN_DOC = "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
@@ -333,6 +334,35 @@ def _validate_tool_apps_json(payload: dict) -> None:
             raise SystemExit(f"Step failed: list tool apps json (missing {tool_id} best_for)")
 
 
+def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
+    name = "devtools gui product workflow source"
+    path = repo_root / DEVTOOLS_GUI_SOURCE
+    print(f"[diag-gate-imui-product-chain] {name}", flush=True)
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError as err:
+        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
+
+    for marker in (
+        'const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain"',
+        'const IMUI_PRODUCT_WORKFLOW_DOC: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py"',
+        'const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
+        "product workflow: {IMUI_PRODUCT_WORKFLOW_ID}",
+        "product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}",
+        "product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}",
+        "product workflow launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}",
+        "product workflow suite: {IMUI_PRODUCT_WORKFLOW_SUITE}",
+        "product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}",
+        "product workflow artifacts: {}",
+        "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
+    ):
+        _assert_contains(source, marker, name)
+
+
 def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     root_help = _run_capture_checked(
         "fretboard help",
@@ -409,6 +439,7 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
         cwd=repo_root,
     )
     _validate_tool_apps_json(_parse_json_stdout("list tool apps json", tool_apps_json))
+    _validate_devtools_gui_product_workflow_source(repo_root)
 
     doctor = _run_capture_checked(
         "diag doctor campaigns",

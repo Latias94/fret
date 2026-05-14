@@ -509,11 +509,15 @@ DevTools GUI product-workflow projection follow-up (2026-05-15):
   GUI first-open evidence panel: default command, focused discovery command, launched
   `perf-docking` command, `perf-docking-arbitration-steady` suite, product-closure docs, and
   `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`.
+- The default product-chain discovery gate now source-checks that GUI projection, so
+  `fretboard-dev list tool-apps`, `fretboard-dev list tool-apps --json`, and the DevTools GUI
+  first-open panel cannot silently diverge on the product workflow route.
 - Focused source gates:
 
 ```text
 cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/gate_imui_workstream_source.py
 ```
 

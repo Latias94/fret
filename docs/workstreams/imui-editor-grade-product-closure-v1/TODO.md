@@ -148,7 +148,8 @@ reopen.
       `imui-product-chain` route in the GUI first-open evidence panel, including the default
       command, focused discovery command, launched `perf-docking` command, suite, docs, and expected
       perf artifacts. This keeps GUI discoverability aligned with `fretboard-dev list tool-apps`
-      instead of making the GUI a second source of truth.
+      instead of making the GUI a second source of truth. The default product-chain discovery gate
+      now also source-checks that GUI projection.
 
 ## P3 - Multi-window hand-feel closure
 
