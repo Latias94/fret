@@ -88,6 +88,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   selected-summary evidence.
 - The copy action now uses the selected bundle's latest follow-up history entry rather than the
   global last result, so copied evidence paths stay aligned with the current selected summary.
+- The same selected-bundle result JSON can be copied directly from the inspector, giving issue
+  reports and AI-assisted triage the exact payload shown in the panel.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.

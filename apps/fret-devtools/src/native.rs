@@ -69,6 +69,7 @@ const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.follo
 const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
 const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
 const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
+const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.copy_result_json";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -3091,6 +3092,15 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if !selected_followup_result_json.trim().is_empty() {
+            out.push(
+                shadcn::Button::new("Copy selected follow-up JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
         if let Some(first_bundle_dir) = selected_bundle_dirs.first().map(|v| v.to_string()) {
             let on_copy_first: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
@@ -3941,6 +3951,47 @@ fn selected_followup_history_filter_dirs_from_bundle_dirs(
     dirs
 }
 
+fn selected_followup_history_filter_dirs_from_state(app: &App, st: &State) -> Vec<String> {
+    let selected_bundle_dirs = app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.clone())
+        .unwrap_or_default();
+    selected_followup_history_filter_dirs_from_bundle_dirs(&st.script_paths, &selected_bundle_dirs)
+}
+
+fn followup_result_history_from_state(
+    app: &App,
+    st: &State,
+) -> Vec<followup::FollowupResultHistoryEntry> {
+    app.models()
+        .read(&st.followup_result_history, |v| v.clone())
+        .unwrap_or_default()
+}
+
+fn selected_followup_latest_result_path_from_state(app: &App, st: &State) -> Option<String> {
+    let selected_followup_history_filter_dirs =
+        selected_followup_history_filter_dirs_from_state(app, st);
+    let followup_result_history = followup_result_history_from_state(app, st);
+    followup::followup_result_history_latest_path(
+        &followup_result_history,
+        selected_followup_history_filter_dirs
+            .iter()
+            .map(|value| value.as_str()),
+    )
+}
+
+fn selected_followup_latest_result_json_from_state(app: &App, st: &State) -> Option<String> {
+    let selected_followup_history_filter_dirs =
+        selected_followup_history_filter_dirs_from_state(app, st);
+    let followup_result_history = followup_result_history_from_state(app, st);
+    followup::followup_result_history_latest_json(
+        &followup_result_history,
+        selected_followup_history_filter_dirs
+            .iter()
+            .map(|value| value.as_str()),
+    )
+}
+
 fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
     let selected_bundle_dirs = app
         .models()
@@ -4113,25 +4164,7 @@ fn on_command(
             app.request_redraw(window);
         }
         CMD_COPY_FOLLOWUP_RESULT_PATH => {
-            let selected_bundle_dirs = app
-                .models()
-                .read(&st.regression_selected_bundle_dirs, |v| v.clone())
-                .unwrap_or_default();
-            let selected_followup_history_filter_dirs =
-                selected_followup_history_filter_dirs_from_bundle_dirs(
-                    &st.script_paths,
-                    &selected_bundle_dirs,
-                );
-            let followup_result_history = app
-                .models()
-                .read(&st.followup_result_history, |v| v.clone())
-                .unwrap_or_default();
-            let Some(path) = followup::followup_result_history_latest_path(
-                &followup_result_history,
-                selected_followup_history_filter_dirs
-                    .iter()
-                    .map(|value| value.as_str()),
-            ) else {
+            let Some(path) = selected_followup_latest_result_path_from_state(app, st) else {
                 push_log(
                     app,
                     &st.log_lines,
@@ -4144,6 +4177,22 @@ fn on_command(
                 window,
                 token,
                 text: path,
+            });
+        }
+        CMD_COPY_FOLLOWUP_RESULT_JSON => {
+            let Some(result_json) = selected_followup_latest_result_json_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected follow-up JSON refused (no selected-bundle result JSON yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: result_json,
             });
         }
         CMD_SCRIPT_FORK => {

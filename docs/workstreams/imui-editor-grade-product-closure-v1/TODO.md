@@ -186,6 +186,8 @@ reopen.
       Maintenance: the follow-up result copy action now uses the selected bundle's latest history
       entry instead of the global last result artifact, keeping copied evidence paths aligned with
       the current selection.
+      Maintenance: the selected-bundle follow-up JSON can now be copied directly from the same
+      inspector, keeping the exact payload one click away for issue reports and AI triage.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

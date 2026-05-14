@@ -326,6 +326,8 @@ Current status:
   launched follow-up.
 - 2026-05-15 the follow-up result copy action now resolves the selected bundle's latest history
   path instead of the global last result artifact, keeping copied evidence aligned with selection.
+- 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping
+  the exact payload one click away for issue reports and AI triage.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

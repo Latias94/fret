@@ -568,6 +568,8 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   selected-summary evidence.
 - The follow-up result copy action resolves the selected bundle's latest history path and refuses
   when no selected-bundle result exists, rather than copying the global last artifact.
+- The same inspector can copy the selected bundle's follow-up JSON payload directly, so issue
+  reports and AI-assisted triage can use the exact payload shown in the panel.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
 - Focused source gates:

@@ -120,6 +120,7 @@ Conventions:
         selected bundle, preventing stale global-last results from masquerading as current evidence.
   - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
         the global last result artifact.
+  - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,
