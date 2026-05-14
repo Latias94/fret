@@ -162,6 +162,12 @@ def _suite_scripts(repo_root: Path, suite_path: str) -> list[str]:
     return scripts
 
 
+def _path_from_json(value: object) -> Path | None:
+    if not isinstance(value, str) or not value:
+        return None
+    return Path(value)
+
+
 def _selected_gate_names(raw_only: list[str]) -> set[str]:
     selected = {name for raw in raw_only for name in raw.split(",") if name.strip()}
     selected = {name.strip() for name in selected}
@@ -367,6 +373,67 @@ def _validate_product_surface(repo_root: Path, fretboard_exe: Path, surface: Pro
         _validate_script(repo_root, fretboard_exe, script)
     if surface.campaign is not None:
         _validate_campaign(repo_root, fretboard_exe, surface.campaign)
+
+
+def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
+    summary_path = out_dir / "regression.summary.json"
+    summary = _read_json_file(summary_path)
+    if summary.get("kind") != "diag_regression_summary":
+        raise SystemExit("docking perf regression summary has unexpected kind")
+    run = summary.get("run")
+    if not isinstance(run, dict) or run.get("tool") != "fretboard-dev diag perf":
+        raise SystemExit("docking perf regression summary has unexpected run metadata")
+    totals = summary.get("totals")
+    if not isinstance(totals, dict):
+        raise SystemExit("docking perf regression summary is missing totals")
+    if totals.get("items_total") != 2 or totals.get("passed") != 2 or totals.get("failed_tooling") != 0:
+        raise SystemExit("docking perf regression summary did not pass both perf cases")
+
+    expected_scripts = set(
+        _suite_scripts(
+            repo_root,
+            "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json",
+        )
+    )
+    seen_scripts: set[str] = set()
+    seen_bundles: set[Path] = set()
+    seen_perf_summaries: set[Path] = set()
+    items = summary.get("items")
+    if not isinstance(items, list) or len(items) != len(expected_scripts):
+        raise SystemExit("docking perf regression summary did not record both perf scripts")
+    for item in items:
+        if item.get("kind") != "perf_case" or item.get("status") != "passed":
+            raise SystemExit("docking perf regression summary contains a non-passing item")
+        script = item.get("source", {}).get("script")
+        if not isinstance(script, str):
+            raise SystemExit("docking perf regression summary item is missing source.script")
+        seen_scripts.add(script)
+        evidence = item.get("evidence")
+        if not isinstance(evidence, dict):
+            raise SystemExit(f"docking perf item is missing evidence: {script}")
+        bundle_path = _path_from_json(evidence.get("bundle_artifact"))
+        if bundle_path is None or not bundle_path.is_file():
+            raise SystemExit(f"docking perf item has no readable bundle artifact: {script}")
+        seen_bundles.add(bundle_path)
+        perf_summary_path = _path_from_json(evidence.get("perf_summary_json"))
+        if perf_summary_path is None or not perf_summary_path.is_file():
+            raise SystemExit(f"docking perf item has no readable perf summary artifact: {script}")
+        seen_perf_summaries.add(perf_summary_path)
+
+    if seen_scripts != expected_scripts:
+        raise SystemExit("docking perf regression summary scripts do not match the promoted suite")
+    for perf_summary_path in seen_perf_summaries:
+        perf_summary = _read_json_file(perf_summary_path)
+        if perf_summary.get("kind") != "layout_perf_summary":
+            raise SystemExit(f"docking perf layout summary has unexpected kind: {perf_summary_path}")
+        summary_bundle_path = _path_from_json(perf_summary.get("bundle_artifact"))
+        if summary_bundle_path not in seen_bundles:
+            raise SystemExit(
+                f"docking perf layout summary does not point at a recorded item bundle: {perf_summary_path}"
+            )
+        stats = perf_summary.get("stats")
+        if not isinstance(stats, dict) or not isinstance(stats.get("total_time_us"), int):
+            raise SystemExit(f"docking perf layout summary has invalid stats: {perf_summary_path}")
 
 
 def _run_source_gates(repo_root: Path) -> None:
@@ -627,18 +694,7 @@ def _run_launched_gates(
             ),
         ]
         _run_checked("launched docking perf suite", cmd, cwd=repo_root)
-        summary = _read_json_file(out_dir / "regression.summary.json")
-        totals = summary.get("totals")
-        if not isinstance(totals, dict):
-            raise SystemExit("docking perf regression summary is missing totals")
-        if totals.get("passed") != 2 or totals.get("failed_tooling") != 0:
-            raise SystemExit("docking perf regression summary did not pass both perf cases")
-        items = summary.get("items")
-        if not isinstance(items, list) or len(items) != 2:
-            raise SystemExit("docking perf regression summary did not record both perf scripts")
-        for item in items:
-            if item.get("kind") != "perf_case" or item.get("status") != "passed":
-                raise SystemExit("docking perf regression summary contains a non-passing item")
+        _validate_docking_perf_summary(repo_root, out_dir)
 
 
 def main(argv: list[str]) -> int:

@@ -162,6 +162,7 @@ fn perf_row_to_regression_item(
         .as_ref()
         .and_then(|v| v.get("bundle"))
         .and_then(|v| v.as_str())
+        .or_else(|| row.get("bundle").and_then(|v| v.as_str()))
         .map(|v| v.to_string());
     let (status, reason_code, source_reason_code) =
         perf_row_status_and_reason(row, threshold_failures, hint_failures);
@@ -211,6 +212,7 @@ fn perf_row_to_regression_item(
                 "sort": sort,
                 "repeat": repeat,
                 "stats": row.get("stats").cloned(),
+                "bundle": row.get("bundle").cloned(),
                 "worst_run": worst_run,
                 "row_error": row.get("error").cloned(),
                 "threshold_failures": threshold_failures,
@@ -3153,5 +3155,40 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_uses_single_run_bundle_artifact() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "bundle": "F:/repo/.fret/single-run/bundle.schema2.json",
+            "top_total_time_us": 0
+        });
+
+        let item = perf_row_to_regression_item(
+            workspace_root,
+            &row,
+            &[],
+            &[],
+            Some(Path::new("F:/repo/out/layout.perf.summary.v1.json")),
+            None,
+            None,
+        );
+
+        let evidence = item.evidence.expect("perf item should carry evidence");
+        assert_eq!(
+            evidence.bundle_artifact.as_deref(),
+            Some("F:/repo/.fret/single-run/bundle.schema2.json")
+        );
+        assert_eq!(
+            evidence
+                .extra
+                .as_ref()
+                .and_then(|v| v.get("bundle"))
+                .and_then(|v| v.as_str()),
+            Some("F:/repo/.fret/single-run/bundle.schema2.json")
+        );
     }
 }

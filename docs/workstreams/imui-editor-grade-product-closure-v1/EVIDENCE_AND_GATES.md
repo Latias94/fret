@@ -523,7 +523,8 @@ This package currently proves:
   or dock-tabs drags with an active pointer session,
 - the product-chain perf entrypoint now runs `diag perf perf-docking-arbitration-steady` against
   `docking_arbitration_demo` and verifies `regression.summary.json` records two passing
-  `perf_case` items rather than trusting process exit alone,
+  `perf_case` items with readable bundle artifacts and a readable shared `layout.perf.summary.v1.json`
+  artifact rather than trusting process exit alone,
 - and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
   IMUI lane's new umbrella package.
 
@@ -531,21 +532,27 @@ The first product-chain docking perf run on 2026-05-14 exposed a diagnostics too
 `diag perf` printed human `PERF ...` rows, but its `regression.summary.json` synthesized
 `tooling.diag_perf.no_rows` unless `--json` was used. The fix is in `crates/fret-diag/src/diag_perf.rs`:
 row evidence is now recorded for summaries regardless of stdout mode, while `--json` only controls
-stdout formatting. The focused source gate is:
+stdout formatting. The follow-up artifact projection repair keeps single-run `bundle` rows visible
+as `bundle_artifact` evidence in the regression summary. The focused source gates are:
 
 ```text
 cargo nextest run -p fret-diag perf_regression_summary_uses_rows_when_stdout_is_human --no-fail-fast
+cargo nextest run -p fret-diag perf_row_to_regression_item_uses_single_run_bundle_artifact --no-fail-fast
 ```
 
 Latest local docking perf entrypoint evidence (2026-05-14):
 
 - Command:
-  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-gate-2026-05-14`
-- `target/imui-product-chain-perf-docking-gate-2026-05-14/1778772670718/perf-docking/regression.summary.json` reports
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-artifacts-gate-2026-05-14`
+- `target/imui-product-chain-perf-docking-artifacts-gate-2026-05-14/1778774161668/perf-docking/regression.summary.json` reports
   `items_total=2`, `passed=2`, and `failed_tooling=0`.
 - The two items are `perf_case` rows for
   `docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json` and
   `docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json`.
+- The product-chain gate now checks the item scripts against
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, requires each item to
+  expose a readable `bundle_artifact`, and requires the shared `layout.perf.summary.v1.json` artifact
+  to parse as a `layout_perf_summary` for one of the recorded bundles.
 
 The 2026-05-13 launched bounded campaign result is `campaign: ok` at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
@@ -662,7 +669,8 @@ Latest local default product-chain evidence (2026-05-14):
   help screens.
 - Added coverage: the default lightweight gate now validates the
   `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` scripts, while the
-  explicit launched `perf-docking` product-chain slice verifies the perf regression summary shape.
+  explicit launched `perf-docking` product-chain slice verifies the perf regression summary shape,
+  item bundle artifacts, and shared layout perf summary artifact.
 
 Use `--launched` when the local machine should also execute the existing launched proof commands
 sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:

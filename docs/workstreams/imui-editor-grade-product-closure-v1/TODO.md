@@ -162,7 +162,9 @@ reopen.
       Result: `tools/diag_gate_imui_product_chain.py` now validates
       `perf-docking-arbitration-steady` in the lightweight source/script pass and can launch the
       `perf-docking` slice explicitly. The slice also repaired `diag perf` summary evidence so
-      human stdout mode still writes `perf_case` rows into `regression.summary.json`.
+      human stdout mode still writes `perf_case` rows into `regression.summary.json`, and the
+      product-chain gate now requires readable item bundle artifacts plus a readable shared layout
+      perf summary artifact.
 
 ## Closeout / follow-on management
 
