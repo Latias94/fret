@@ -619,8 +619,27 @@ Latest local editor-notes product-chain evidence (2026-05-14):
   `scripts_with_evidence=2`.
 - `editor-notes-device-shell/suite.summary.json` reports `status=passed`, `stage_counts.passed=1`,
   and `scripts_with_evidence=1`.
-- The device-shell run still reports one `semantics.missing_label` warning. Treat that as a
-  follow-up accessibility/product-polish slice, not as a blocker for admitting the promoted suite.
+
+Follow-up accessibility repair evidence (2026-05-14):
+
+- Cause:
+  `editor_notes_device_shell_demo` exposed the shared modal backdrop/barrier as a full-window
+  unlabeled `button` semantics node. The fix stays in the headless policy layer:
+  `ecosystem/fret-ui-kit/src/primitives/dialog.rs` hides shared modal barriers from the
+  accessibility tree while leaving them pointer-invokable, and
+  `ecosystem/fret-ui-kit/src/primitives/select.rs` applies the same policy to Select's
+  pointer-up-guard barrier.
+- Source gates:
+  `cargo nextest run -p fret-ui-kit modal_barrier_is_hidden_from_accessibility_tree_but_still_invokable select_pointer_up_guard_barrier_is_hidden_from_accessibility_tree --no-fail-fast`
+- Launched proof:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes-device-shell --out-dir target/imui-product-chain-editor-notes-device-shell-a11y-2026-05-14 --timeout-ms 240000 --poll-ms 50`
+- Run root:
+  `target/imui-product-chain-editor-notes-device-shell-a11y-2026-05-14/1778731960670`
+- `editor-notes-device-shell/suite.summary.json` reports `status=passed`,
+  `stage_counts.passed=1`, `scripts_with_evidence=1`, and `warning_issues=0`.
+- `check.lint.json` for
+  `1778731966234-editor-notes-device-shell-demo.mobile-drawer-open` reports
+  `counts_by_code=[]`, `findings=[]`, `error_issues=0`, and `warning_issues=0`.
 
 ### P3 multi-window parity gate
 

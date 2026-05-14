@@ -110,6 +110,11 @@ into product-chain signal.
 Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed
-1/1 script. The device-shell suite emitted one `semantics.missing_label` warning, which should be
-routed as a later accessibility/product-polish slice rather than widening this gate-admission
-change.
+1/1 script.
+
+The follow-up accessibility repair stays in the shared headless overlay policy layer rather than in
+the demo: `fret-ui-kit` now hides modal backdrop/barrier pressables from the accessibility tree
+while keeping pointer dismissal working. Local verification on 2026-05-14 passed with run root
+`target/imui-product-chain-editor-notes-device-shell-a11y-2026-05-14/1778731960670`; the
+`editor-notes-device-shell-demo` suite passed 1/1 script and its lint output reported
+`warning_issues: 0` and `findings: []`.

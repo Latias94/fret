@@ -580,6 +580,8 @@
     "tools/diag-scripts/suites/editor-notes-demo/suite.json",
     "tools/diag-scripts/suites/editor-notes-device-shell-demo/suite.json",
     "tools/diag_gate_imui_product_chain.py",
+    "ecosystem/fret-ui-kit/src/primitives/dialog.rs",
+    "ecosystem/fret-ui-kit/src/primitives/select.rs",
     "apps/fret-cookbook/src/lib.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/options.rs",

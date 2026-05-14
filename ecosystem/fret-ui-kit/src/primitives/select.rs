@@ -1621,6 +1621,10 @@ where
                 layout: select_modal_barrier_layout(),
                 enabled: true,
                 focusable: false,
+                a11y: PressableA11y {
+                    hidden: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             move |cx, _st| {
@@ -2451,6 +2455,46 @@ mod tests {
             );
             assert_eq!(expected, actual);
         });
+    }
+
+    #[test]
+    fn select_pointer_up_guard_barrier_is_hidden_from_accessibility_tree() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+        let open = app.models_mut().insert(true);
+        let guard = SelectMouseOpenGuard::default();
+
+        let elements = fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let content = cx.container(ContainerProps::default(), |_cx| Vec::new());
+            select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler(
+                cx,
+                open,
+                true,
+                None,
+                guard,
+                Vec::<AnyElement>::new(),
+                content,
+            )
+        });
+        let barrier = elements
+            .into_iter()
+            .next()
+            .expect("expected barrier element");
+
+        let ElementKind::Pressable(PressableProps {
+            enabled,
+            focusable,
+            a11y,
+            ..
+        }) = &barrier.kind
+        else {
+            panic!("expected select barrier to be a pressable");
+        };
+        assert!(*enabled);
+        assert!(!focusable);
+        assert!(a11y.hidden);
+        assert!(a11y.label.is_none());
     }
 
     #[test]
