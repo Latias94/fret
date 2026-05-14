@@ -360,3 +360,6 @@ Status: complete
   mechanism defect: prepaint debug telemetry kept the specific viewport/items-revision reason, but
   the actual dirty cache-root reason regressed to generic prefetch/window-update detail. The
   prepaint path now uses one classifier for both debug telemetry and cache-root dirty attribution.
+- The same fixture now covers a length-shrink input-change case. It exposed that stale rendered
+  window counts were not classified as `InputsChange` before offset deltas. Prepaint now emits a
+  dedicated `scroll_handle_inputs_change_window_update` invalidation detail for this case.

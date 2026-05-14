@@ -81,6 +81,10 @@ date: 2026-05-12
     debug telemetry recorded the specific viewport/items-revision reason, but actual cache-root
     dirty attribution fell back to the generic prefetch/window-update detail. Prepaint now shares
     one classifier for debug telemetry and dirty cache-root attribution.
+- [x] Extend prepaint virtual-list window-update fixtures to length-shrink/input-change cases.
+  - Result: a stale render-window count now classifies as `InputsChange` before offset deltas and
+    uses the dedicated `scroll_handle_inputs_change_window_update` invalidation detail. The first
+    run showed the length-shrink case was not exposed as an input change.
 - [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
   demo page exists.
 - [ ] Add a UI Gallery pointer occlusion/capture diagnostics gate once a stable overlay demo exposes

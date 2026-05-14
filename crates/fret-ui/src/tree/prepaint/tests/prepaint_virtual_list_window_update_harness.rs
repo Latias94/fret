@@ -33,6 +33,8 @@ enum PrepaintScenario {
 struct VirtualRangeSpec {
     start_index: usize,
     end_index: usize,
+    #[serde(default)]
+    count: Option<usize>,
 }
 
 #[test]
@@ -171,7 +173,7 @@ fn observe_virtual_list_prepaint_case(
                 start_index: render_window.start_index,
                 end_index: render_window.end_index,
                 overscan,
-                count: len,
+                count: render_window.count.unwrap_or(len),
             });
         },
     );
@@ -217,6 +219,9 @@ fn set_prepaint_window_metrics(
         "prepaint.window_mismatch",
         bool_metric(record.window_mismatch),
     );
+    observed.set_metric("prepaint.items_len", record.items_len as f32);
+    observed.set_metric("prepaint.offset_px", record.offset.0);
+    observed.set_metric("prepaint.content_extent_px", record.content_extent.0);
     match record.window_shift_kind {
         crate::tree::UiDebugVirtualListWindowShiftKind::None => {
             observed.set_metric("prepaint.window_shift.kind.none", 1.0);

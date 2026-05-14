@@ -450,6 +450,10 @@ fn classify_virtual_list_window_shift(
         crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
     } else if (update.viewport.0 - update.prev_viewport.0).abs() > 0.01 {
         crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize
+    } else if update.render_window_range.map(|r| (r.count, r.overscan))
+        != update.window_range.map(|r| (r.count, r.overscan))
+    {
+        crate::tree::UiDebugVirtualListWindowShiftReason::InputsChange
     } else if (update.offset.0 - update.prev_offset.0).abs() > 0.01 {
         crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
     } else if let (Some(rendered), Some(visible)) =
@@ -487,6 +491,9 @@ fn classify_virtual_list_window_shift(
             }
             crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => {
                 crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+            }
+            crate::tree::UiDebugVirtualListWindowShiftReason::InputsChange => {
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleInputsChangeWindowUpdate
             }
             _ => fallback_virtual_list_window_shift_detail(update.window_shift_kind),
         })

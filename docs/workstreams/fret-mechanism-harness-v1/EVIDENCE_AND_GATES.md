@@ -133,7 +133,11 @@ Current runtime evidence anchors:
   - current command:
     `cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles`
   - current result:
-    passed, 1 test; Nextest run id `faf3bf59-56a5-4d09-9bf2-cc1a4c1694a4`.
+    passed, 1 test; Nextest run id `7fd6de79-fd32-421c-88f4-7844cc05ea2f` after adding the
+    length-shrink inputs-change case.
+  - companion focused result:
+    `cargo nextest run -p fret-ui prepaint_detects_render_window_insufficient_for_overscan_policy prepaint_marks_scroll_to_item_window_updates_with_distinct_invalidation_detail prepaint_attributes_window_escape_to_scroll_offset_when_state_offset_was_synced prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape virtual_list_window_shift_detail_classifies_items_revision view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks_window_update`
+    passed, 6 tests; Nextest run id `3f91c35e-f1ff-4e06-8b13-155dc289a493`.
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:

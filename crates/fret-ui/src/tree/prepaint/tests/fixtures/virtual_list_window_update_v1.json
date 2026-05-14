@@ -192,6 +192,71 @@
       "evidence": {
         "note": "A scroll-to-item-driven escape should keep its distinct invalidation detail."
       }
+    },
+    {
+      "id": "length-shrink-clamps-offset-and-classifies-inputs-change",
+      "scenario": {
+        "kind": "virtual_list_prepaint",
+        "len": 100,
+        "items_revision": 1,
+        "state_items_revision": 1,
+        "viewport_height": 40.0,
+        "state_viewport_height": 40.0,
+        "row_height": 10.0,
+        "overscan": 10,
+        "scroll_offset_y": 620.0,
+        "state_offset_y": 620.0,
+        "render_window": { "start_index": 60, "end_index": 63, "count": 1000 }
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "prepaint.items_len",
+            "comparison": "eq",
+            "value": 100.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "prepaint.offset_px",
+            "comparison": "eq",
+            "value": 620.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "prepaint.content_extent_px",
+            "comparison": "eq",
+            "value": 1000.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "prepaint.window_shift.kind.escape",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "prepaint.window_shift.reason.inputs_change",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "prepaint.window_shift.invalidation_detail.scroll_handle_inputs_change_window_update",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "cache_root.dirty_reason.scroll_handle_inputs_change_window_update",
+            "comparison": "eq",
+            "value": 1.0
+          }
+        ]
+      },
+      "evidence": {
+        "note": "When a filter/data update shrinks the virtual-list length, prepaint should treat the stale rendered window count as an input change rather than a new user scroll reason."
+      }
     }
   ]
 }
