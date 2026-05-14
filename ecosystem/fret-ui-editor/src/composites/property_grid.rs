@@ -126,11 +126,19 @@ impl PropertyGrid {
 
 #[derive(Clone)]
 pub struct PropertyGridRowCx {
-    pub density: EditorDensity,
-    pub row_options: PropertyRowOptions,
+    density: EditorDensity,
+    row_options: PropertyRowOptions,
 }
 
 impl PropertyGridRowCx {
+    pub fn density(&self) -> EditorDensity {
+        self.density
+    }
+
+    pub(crate) fn row_options(&self) -> PropertyRowOptions {
+        self.row_options.clone()
+    }
+
     pub fn row<H: UiHost>(
         &self,
         cx: &mut ElementContext<'_, H>,
@@ -148,7 +156,7 @@ impl PropertyGridRowCx {
         value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
     ) -> AnyElement {
-        row.options(self.row_options.clone())
+        row.options(self.row_options())
             .into_element(cx, label, value, actions)
     }
 }

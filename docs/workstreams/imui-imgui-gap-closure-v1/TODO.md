@@ -105,6 +105,8 @@ Readiness order for the next locally testable review slices:
    2026-05-14 cleanup: the unused `PropertyGridRow` wrapper was deleted so property-grid row
    authoring stays on `PropertyGridRowCx::row(...)` / `row_with(...)` plus raw `PropertyRow` for
    genuinely custom rows.
+   2026-05-14 follow-up: eager and virtualized grid row contexts now keep `row_options`
+   crate-local, so proof/app code cannot drift back to copying row policy fields by default.
 5. Diagnostics/devtools readiness: define a Fret equivalent of Demo/Metrics/Debug discoverability.
    Follow-on: `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` and
    `docs/workstreams/diag-fearless-refactor-v2/README.md` keep the GUI

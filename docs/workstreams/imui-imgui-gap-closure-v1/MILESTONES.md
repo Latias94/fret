@@ -88,6 +88,8 @@ Exit criteria:
   2026-05-14 cleanup result: the unused public `PropertyGridRow` wrapper was deleted so the grid
   row authoring surface stays on the canonical `PropertyGridRowCx::row(...)` / `row_with(...)`
   path instead of growing a second row-policy wrapper.
+  2026-05-14 follow-up result: both eager and virtualized grid row contexts are now opaque; row
+  options stay crate-local while external callers use row helpers instead of public fields.
   Current child-region audit result: keep `child-region depth` as a candidate-only item until a
   behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
   proof and gate.

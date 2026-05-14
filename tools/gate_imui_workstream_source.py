@@ -2521,13 +2521,17 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/composites/property_grid.rs"),
             required=[
                 "pub struct PropertyGridRowCx",
+                "pub fn density(&self) -> EditorDensity",
+                "pub(crate) fn row_options(&self) -> PropertyRowOptions",
                 "pub fn row<H: UiHost>(",
                 "pub fn row_with<H: UiHost>(",
-                "row.options(self.row_options.clone())",
+                "row.options(self.row_options())",
             ],
             forbidden=[
                 "pub struct PropertyGridRow {",
                 "impl PropertyGridRow {",
+                "pub density: EditorDensity",
+                "pub row_options: PropertyRowOptions",
             ],
         ),
         SourceCheck(
@@ -2543,11 +2547,16 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/composites/property_grid_virtualized.rs"),
             required=[
                 "impl PropertyGridVirtualizedRowCx",
+                "pub fn density(&self) -> EditorDensity",
+                "pub(crate) fn row_options(&self) -> PropertyRowOptions",
                 "pub fn row<H: UiHost>(",
                 "pub fn row_with<H: UiHost>(",
-                "row.options(self.row_options.clone())",
+                "row.options(self.row_options())",
             ],
-            forbidden=[],
+            forbidden=[
+                "pub density: EditorDensity",
+                "pub row_options: PropertyRowOptions",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs"),

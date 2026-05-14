@@ -165,6 +165,11 @@ Run evidence:
   `PropertyGridRowCx::row(...)` / `row_with(...)`, with custom raw rows still using
   `PropertyRow` directly. `tools/gate_imui_workstream_source.py` rejects the redundant wrapper and
   re-export from returning.
+- 2026-05-14: made `PropertyGridRowCx` and `PropertyGridVirtualizedRowCx` opaque row contexts
+  instead of exposing `row_options` as a public field. External authoring now keeps the row policy
+  path on `row(...)` / `row_with(...)`; editor-internal composites that need row-local policy
+  patches use crate-local `row_options()`. The source gate rejects public `row_options` /
+  `density` fields from returning.
 
 ## P3 Child Region Readiness Gates
 
