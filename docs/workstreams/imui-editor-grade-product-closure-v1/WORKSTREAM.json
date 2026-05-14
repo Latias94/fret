@@ -430,6 +430,10 @@
       "command": "cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast"
     },
     {
+      "name": "imui-p2-shared-regression-followup-command-classification",
+      "command": "cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast"
+    },
+    {
       "name": "imui-p2-devtools-gate-command-source",
       "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast"
     },

@@ -71,6 +71,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
   visual compare, and footprint compare), so authors can move from failing aggregate summary to the
   next diagnostic command without re-deriving paths by hand.
+- The same projection now carries structured follow-up command metadata. The GUI separates
+  bundle-local runnable commands from manual compare commands that still require a baseline, so
+  placeholder compare commands are visible without being presented as ready-to-run actions.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.

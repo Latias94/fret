@@ -106,6 +106,8 @@ Conventions:
         perf-threshold, and resource-footprint diagnostics command templates.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
         stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
+  - [x] Structured follow-up command projection separates bundle-local runnable commands from
+        baseline-required manual compare commands for GUI and MCP consumers.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

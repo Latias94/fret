@@ -9,7 +9,8 @@ use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
-    regression_bundle_followup_command_lines, regression_summary_drilldown,
+    regression_bundle_followup_command_lines, regression_bundle_followup_commands,
+    regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -1669,6 +1670,10 @@ struct RegressionDashboardEvidenceV1 {
     perf_evidence_lines: Vec<String>,
     #[serde(default)]
     followup_command_lines: Vec<String>,
+    #[serde(default)]
+    runnable_followup_command_lines: Vec<String>,
+    #[serde(default)]
+    manual_followup_command_lines: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1697,6 +1702,10 @@ struct RegressionDashboardResultV1 {
     perf_evidence_lines: Vec<String>,
     #[serde(default)]
     followup_command_lines: Vec<String>,
+    #[serde(default)]
+    runnable_followup_command_lines: Vec<String>,
+    #[serde(default)]
+    manual_followup_command_lines: Vec<String>,
     human_summary: String,
     #[serde(default)]
     index_json: Option<String>,
@@ -2261,14 +2270,28 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
         return RegressionDashboardEvidenceV1::default();
     };
     let drilldown = regression_summary_drilldown(&summary);
+    let followup_commands =
+        regression_bundle_followup_commands(drilldown.bundle_dirs.iter().map(String::as_str));
     let followup_command_lines =
         regression_bundle_followup_command_lines(drilldown.bundle_dirs.iter().map(String::as_str));
+    let runnable_followup_command_lines = followup_commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect();
+    let manual_followup_command_lines = followup_commands
+        .iter()
+        .filter(|command| command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect();
     RegressionDashboardEvidenceV1 {
         bundle_dirs: drilldown.bundle_dirs,
         capability_sources: drilldown.capability_sources,
         capabilities_check_paths: drilldown.capabilities_check_paths,
         perf_evidence_lines: drilldown.perf_evidence_lines,
         followup_command_lines,
+        runnable_followup_command_lines,
+        manual_followup_command_lines,
     }
 }
 
@@ -2324,6 +2347,24 @@ fn build_regression_dashboard_result(
                 .map(|line| format!("  - {line}")),
         );
     }
+    if !evidence.runnable_followup_command_lines.is_empty() {
+        human_lines.push("runnable follow-up commands:".to_string());
+        human_lines.extend(
+            evidence
+                .runnable_followup_command_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.manual_followup_command_lines.is_empty() {
+        human_lines.push("manual compare follow-up commands:".to_string());
+        human_lines.extend(
+            evidence
+                .manual_followup_command_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
     let human_summary = human_lines.join("\n");
 
     RegressionDashboardResultV1 {
@@ -2364,6 +2405,8 @@ fn build_regression_dashboard_result(
         capabilities_check_paths: evidence.capabilities_check_paths,
         perf_evidence_lines: evidence.perf_evidence_lines,
         followup_command_lines: evidence.followup_command_lines,
+        runnable_followup_command_lines: evidence.runnable_followup_command_lines,
+        manual_followup_command_lines: evidence.manual_followup_command_lines,
         human_summary,
         index_json: if include_json { index_json } else { None },
     }
@@ -3080,11 +3123,31 @@ mod tests {
         assert!(result.followup_command_lines.iter().any(|line| line.contains(
             "diag stats: cargo run -p fretboard-dev -- diag stats target/fret-diag/campaigns/ui-gallery/run-a --json"
         )));
+        assert!(
+            result
+                .runnable_followup_command_lines
+                .iter()
+                .any(|line| line.contains("diag stats: cargo run -p fretboard-dev -- diag stats"))
+        );
+        assert!(result
+            .manual_followup_command_lines
+            .iter()
+            .any(|line| line.contains("visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir>")));
         assert!(result.human_summary.contains("bundle dirs:"));
         assert!(result.human_summary.contains("capability sources:"));
         assert!(result.human_summary.contains("capability checks:"));
         assert!(result.human_summary.contains("perf evidence:"));
         assert!(result.human_summary.contains("follow-up commands:"));
+        assert!(
+            result
+                .human_summary
+                .contains("runnable follow-up commands:")
+        );
+        assert!(
+            result
+                .human_summary
+                .contains("manual compare follow-up commands:")
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

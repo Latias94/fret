@@ -47,6 +47,23 @@ pub struct RegressionSummaryDrilldownV1 {
     pub perf_evidence_lines: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RegressionBundleFollowupCommandV1 {
+    pub id: String,
+    pub label: String,
+    pub command_line: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diag_args: Vec<String>,
+    #[serde(default)]
+    pub requires_baseline: bool,
+}
+
+impl RegressionBundleFollowupCommandV1 {
+    pub fn display_line(&self) -> String {
+        format!("{}: {}", self.label, self.command_line)
+    }
+}
+
 pub const REGRESSION_PERF_DRILLDOWN_METRIC_KEYS: &[&str] = &[
     "top_total_time_us",
     "top_layout_time_us",
@@ -95,9 +112,9 @@ pub fn regression_summary_drilldown(summary: &RegressionSummaryV1) -> Regression
     drilldown
 }
 
-pub fn regression_bundle_followup_command_lines<'a>(
+pub fn regression_bundle_followup_commands<'a>(
     bundle_dirs: impl IntoIterator<Item = &'a str>,
-) -> Vec<String> {
+) -> Vec<RegressionBundleFollowupCommandV1> {
     let Some(first_bundle_dir) = bundle_dirs
         .into_iter()
         .map(str::trim)
@@ -107,23 +124,105 @@ pub fn regression_bundle_followup_command_lines<'a>(
     };
     let bundle_arg = shell_quote_arg(first_bundle_dir);
     vec![
-        format!("selected bundle: {first_bundle_dir}"),
-        format!("diag stats: cargo run -p fretboard-dev -- diag stats {bundle_arg} --json"),
-        format!(
-            "layout perf summary: cargo run -p fretboard-dev -- diag layout-perf-summary {bundle_arg} --json"
-        ),
-        format!(
-            "memory summary: cargo run -p fretboard-dev -- diag memory-summary {bundle_arg} --json"
-        ),
-        format!("triage: cargo run -p fretboard-dev -- diag triage {bundle_arg} --json"),
-        format!("hotspots: cargo run -p fretboard-dev -- diag hotspots {bundle_arg} --json"),
-        format!(
-            "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> {bundle_arg} --json"
-        ),
-        format!(
-            "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> {bundle_arg} --footprint --json"
-        ),
+        RegressionBundleFollowupCommandV1 {
+            id: "stats".to_string(),
+            label: "diag stats".to_string(),
+            command_line: format!("cargo run -p fretboard-dev -- diag stats {bundle_arg} --json"),
+            diag_args: vec![
+                "stats".to_string(),
+                first_bundle_dir.to_string(),
+                "--json".to_string(),
+            ],
+            requires_baseline: false,
+        },
+        RegressionBundleFollowupCommandV1 {
+            id: "layout-perf-summary".to_string(),
+            label: "layout perf summary".to_string(),
+            command_line: format!(
+                "cargo run -p fretboard-dev -- diag layout-perf-summary {bundle_arg} --json"
+            ),
+            diag_args: vec![
+                "layout-perf-summary".to_string(),
+                first_bundle_dir.to_string(),
+                "--json".to_string(),
+            ],
+            requires_baseline: false,
+        },
+        RegressionBundleFollowupCommandV1 {
+            id: "memory-summary".to_string(),
+            label: "memory summary".to_string(),
+            command_line: format!(
+                "cargo run -p fretboard-dev -- diag memory-summary {bundle_arg} --json"
+            ),
+            diag_args: vec![
+                "memory-summary".to_string(),
+                first_bundle_dir.to_string(),
+                "--json".to_string(),
+            ],
+            requires_baseline: false,
+        },
+        RegressionBundleFollowupCommandV1 {
+            id: "triage".to_string(),
+            label: "triage".to_string(),
+            command_line: format!("cargo run -p fretboard-dev -- diag triage {bundle_arg} --json"),
+            diag_args: vec![
+                "triage".to_string(),
+                first_bundle_dir.to_string(),
+                "--json".to_string(),
+            ],
+            requires_baseline: false,
+        },
+        RegressionBundleFollowupCommandV1 {
+            id: "hotspots".to_string(),
+            label: "hotspots".to_string(),
+            command_line: format!(
+                "cargo run -p fretboard-dev -- diag hotspots {bundle_arg} --json"
+            ),
+            diag_args: vec![
+                "hotspots".to_string(),
+                first_bundle_dir.to_string(),
+                "--json".to_string(),
+            ],
+            requires_baseline: false,
+        },
+        RegressionBundleFollowupCommandV1 {
+            id: "visual-compare".to_string(),
+            label: "visual compare".to_string(),
+            command_line: format!(
+                "cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> {bundle_arg} --json"
+            ),
+            diag_args: Vec::new(),
+            requires_baseline: true,
+        },
+        RegressionBundleFollowupCommandV1 {
+            id: "footprint-compare".to_string(),
+            label: "footprint compare".to_string(),
+            command_line: format!(
+                "cargo run -p fretboard-dev -- diag compare <baseline-session> {bundle_arg} --footprint --json"
+            ),
+            diag_args: Vec::new(),
+            requires_baseline: true,
+        },
     ]
+}
+
+pub fn regression_bundle_followup_command_lines<'a>(
+    bundle_dirs: impl IntoIterator<Item = &'a str>,
+) -> Vec<String> {
+    let mut iter = bundle_dirs
+        .into_iter()
+        .map(str::trim)
+        .filter(|dir| !dir.is_empty());
+    let Some(first_bundle_dir) = iter.next() else {
+        return Vec::new();
+    };
+    let mut lines = vec![format!("selected bundle: {first_bundle_dir}")];
+    lines.extend(
+        regression_bundle_followup_commands([first_bundle_dir])
+            .into_iter()
+            .map(|command| command.display_line()),
+    );
+    lines
 }
 
 fn shell_quote_arg(value: &str) -> String {
@@ -752,6 +851,38 @@ mod tests {
         assert!(text.contains(
             "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> 'target/fret-diag/perf-docking/run-a/bundle dir' --footprint --json"
         ));
+    }
+
+    #[test]
+    fn regression_bundle_followup_commands_classify_runnable_and_baseline_required() {
+        let commands = regression_bundle_followup_commands(["target/fret-diag/perf-docking/run-a"]);
+        let runnable = commands
+            .iter()
+            .filter(|command| !command.requires_baseline)
+            .collect::<Vec<_>>();
+        let manual = commands
+            .iter()
+            .filter(|command| command.requires_baseline)
+            .collect::<Vec<_>>();
+
+        assert_eq!(runnable.len(), 5);
+        assert_eq!(manual.len(), 2);
+        assert!(runnable.iter().any(|command| {
+            command.id == "stats"
+                && command.diag_args
+                    == vec![
+                        "stats".to_string(),
+                        "target/fret-diag/perf-docking/run-a".to_string(),
+                        "--json".to_string(),
+                    ]
+        }));
+        assert!(manual.iter().all(|command| command.diag_args.is_empty()));
+        assert!(manual.iter().any(|command| command.id == "visual-compare"));
+        assert!(
+            manual
+                .iter()
+                .any(|command| command.id == "footprint-compare")
+        );
     }
 
     #[test]

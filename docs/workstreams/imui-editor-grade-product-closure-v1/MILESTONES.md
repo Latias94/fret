@@ -306,6 +306,9 @@ Current status:
 - 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
   projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
   lines in both structured JSON and the human summary.
+- 2026-05-15 shared regression follow-up commands are now structured in
+  `crates/fret-diag/src/regression_summary.rs`, with GUI/MCP consumers separating bundle-local
+  runnable commands from baseline-required manual compare commands.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

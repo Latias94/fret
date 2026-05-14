@@ -547,12 +547,16 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   follow-up projection, generating concrete commands from the selected `bundle_dir`: `diag stats`,
   `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, `diag hotspots`, visual
   compare, and footprint compare.
+- That projection is now structured: direct bundle-local commands carry concrete `diag_args`, while
+  visual/footprint compare commands are marked as baseline-required manual follow-ups. GUI and MCP
+  consumers can therefore separate runnable actions from placeholder compare templates.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
 - Focused source gates:
 
 ```text
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
+cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
@@ -588,6 +592,9 @@ DevTools MCP product-workflow projection follow-up (2026-05-15):
 - `fret_diag_regression_dashboard` now consumes the shared `fret-diag` regression drill-down and
   follow-up command projection, returning bundle dirs, capability provenance, perf evidence, and
   follow-up command lines instead of maintaining a MCP-private regression evidence parser.
+- The MCP dashboard result also exposes `runnable_followup_command_lines` and
+  `manual_followup_command_lines`, mirroring the GUI's separation between direct bundle-local
+  follow-ups and baseline-required compare follow-ups.
 - The default product-chain discovery gate now source-checks the MCP projection alongside the GUI
   first-open panel, so `fretboard-dev list tool-apps`, the GUI shell, and the MCP adapter cannot
   silently diverge on the product workflow route.

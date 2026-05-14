@@ -83,6 +83,8 @@ Batch run:
   - returns a structured first-open dashboard view plus a human-readable summary string,
   - includes the shared `fret-diag` regression drill-down projection for bundle dirs, capability
     provenance, perf evidence, and concrete follow-up commands,
+  - separates bundle-local runnable follow-up commands from manual compare commands that still need
+    a baseline input,
   - can optionally include the raw index JSON inline.
 
 ### Step 4: Pack the latest bundle and open the offline viewer

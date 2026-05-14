@@ -10,7 +10,8 @@ use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
-    regression_bundle_followup_command_lines, regression_summary_drilldown,
+    regression_bundle_followup_command_lines, regression_bundle_followup_commands,
+    regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -2758,6 +2759,43 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
         .join("\r\n");
+    let selected_followup_commands =
+        regression_bundle_followup_commands(selected_bundle_dirs.iter().map(|v| v.as_ref()));
+    let selected_runnable_followup_command_lines = selected_followup_commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect::<Vec<_>>();
+    let selected_manual_followup_command_lines = selected_followup_commands
+        .iter()
+        .filter(|command| command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect::<Vec<_>>();
+    let selected_runnable_followup_count = selected_runnable_followup_command_lines.len();
+    let selected_manual_followup_count = selected_manual_followup_command_lines.len();
+    let selected_followup_command_lines =
+        regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()));
+    let selected_followup_commands_text = selected_followup_command_lines.join("\r\n");
+    let selected_followup_commands_display = if selected_followup_command_lines.is_empty() {
+        "Select a non-passing summary with bundle_dir evidence to generate concrete follow-up commands.".to_string()
+    } else {
+        selected_followup_commands_text.clone()
+    };
+    let selected_runnable_followup_commands_text =
+        selected_runnable_followup_command_lines.join("\r\n");
+    let selected_runnable_followup_commands_display =
+        if selected_runnable_followup_command_lines.is_empty() {
+            "No bundle-local follow-up command is runnable from this selection yet.".to_string()
+        } else {
+            selected_runnable_followup_commands_text.clone()
+        };
+    let selected_manual_followup_commands_text = selected_manual_followup_command_lines.join("\r\n");
+    let selected_manual_followup_commands_display =
+        if selected_manual_followup_command_lines.is_empty() {
+            "No baseline-required compare follow-up command for this selection.".to_string()
+        } else {
+            selected_manual_followup_commands_text.clone()
+        };
     let selected_summary_overview = {
         let mut parts: Vec<String> = Vec::new();
         match selected_summary_path.as_deref() {
@@ -2786,6 +2824,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if let Some(first) = selected_perf_evidence.first() {
             parts.push(format!("First perf evidence: {}", first.as_ref()));
         }
+        parts.push(format!(
+            "Runnable follow-up commands: {selected_runnable_followup_count}"
+        ));
+        parts.push(format!(
+            "Manual compare follow-up commands: {selected_manual_followup_count}"
+        ));
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("Selected error: {err}"));
         }
@@ -2829,15 +2873,6 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             )
         }
     };
-    let selected_followup_command_lines =
-        regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()));
-    let selected_followup_commands_text = selected_followup_command_lines.join("\r\n");
-    let selected_followup_commands_display = if selected_followup_command_lines.is_empty() {
-        "Select a non-passing summary with bundle_dir evidence to generate concrete follow-up commands.".to_string()
-    } else {
-        selected_followup_commands_text.clone()
-    };
-
     let selected_actions = ui::h_row(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
         if let Some(path) = selected_summary_path.as_ref().map(|v| v.to_string()) {
@@ -3209,6 +3244,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         text_blob_sized(cx, selected_perf_evidence_text.clone(), Px(120.0));
     let selected_followup_commands_blob =
         text_blob_sized(cx, selected_followup_commands_display, Px(116.0));
+    let selected_runnable_followup_commands_blob =
+        text_blob_sized(cx, selected_runnable_followup_commands_display, Px(96.0));
+    let selected_manual_followup_commands_blob =
+        text_blob_sized(cx, selected_manual_followup_commands_display, Px(96.0));
     let selected_raw_summary_blob = text_blob_sized(cx, selected_detail_content, Px(220.0));
     let selected_overview_section = diag_section(
         cx,
@@ -3227,6 +3266,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Follow-up Commands",
         "Concrete stats, triage, hotspot, visual-compare, and footprint commands are generated from the selected bundle directory.",
         vec![selected_followup_commands_blob],
+    );
+    let selected_runnable_followup_commands_section = diag_section(
+        cx,
+        "Runnable Follow-ups",
+        "Bundle-local commands have concrete diag args and do not require a baseline selection.",
+        vec![selected_runnable_followup_commands_blob],
+    );
+    let selected_manual_followup_commands_section = diag_section(
+        cx,
+        "Manual Compare Follow-ups",
+        "Compare commands stay visible but are separated because they still require a baseline input.",
+        vec![selected_manual_followup_commands_blob],
     );
     let selected_bundle_dirs_section = diag_section(
         cx,
@@ -3267,6 +3318,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_overview_section,
             selected_actions_section,
             selected_followup_commands_section,
+            selected_runnable_followup_commands_section,
+            selected_manual_followup_commands_section,
             selected_bundle_dirs_section,
             selected_capability_sources_section,
             selected_capabilities_section,

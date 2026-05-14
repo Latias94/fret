@@ -166,6 +166,9 @@ reopen.
       Maintenance: MCP `fret_diag_regression_dashboard` now consumes that same shared regression
       drill-down/follow-up projection, so AI-driven diagnostics receives the same bundle dirs,
       capability provenance, perf evidence, and concrete next-command hints as the GUI.
+      Maintenance: the shared follow-up projection now carries structured command metadata and
+      separates bundle-local runnable commands from baseline-required manual compare commands, so
+      GUI and MCP consumers do not present placeholder compare commands as ready-to-run actions.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.
