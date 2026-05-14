@@ -85,6 +85,9 @@ Exit criteria:
   until at least two proof surfaces pay the same authoring tax. Prefer typed Fret helpers
   (`horizontal_with_options`, `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over
   copying Dear ImGui's mutable cursor, item-width stack, or label suffix parser.
+  2026-05-14 cleanup result: the unused public `PropertyGridRow` wrapper was deleted so the grid
+  row authoring surface stays on the canonical `PropertyGridRowCx::row(...)` / `row_with(...)`
+  path instead of growing a second row-policy wrapper.
   Current child-region audit result: keep `child-region depth` as a candidate-only item until a
   behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
   proof and gate.

@@ -13,9 +13,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
 
 use crate::composites::property_row::PropertyRow;
-use crate::composites::property_row::{
-    PropertyRowLayoutVariant, PropertyRowOptions, PropertyRowReset,
-};
+use crate::composites::property_row::{PropertyRowLayoutVariant, PropertyRowOptions};
 use crate::primitives::EditorDensity;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 
@@ -152,41 +150,5 @@ impl PropertyGridRowCx {
     ) -> AnyElement {
         row.options(self.row_options.clone())
             .into_element(cx, label, value, actions)
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct PropertyGridRow {
-    pub options: Option<PropertyRowOptions>,
-    pub reset: Option<PropertyRowReset>,
-}
-
-impl PropertyGridRow {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn options(mut self, options: Option<PropertyRowOptions>) -> Self {
-        self.options = options;
-        self
-    }
-
-    pub fn reset(mut self, reset: Option<PropertyRowReset>) -> Self {
-        self.reset = reset;
-        self
-    }
-
-    #[track_caller]
-    pub fn into_element<H: UiHost>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        row_cx: &PropertyGridRowCx,
-        label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
-    ) -> AnyElement {
-        let options = self.options.unwrap_or_else(|| row_cx.row_options.clone());
-        let row = PropertyRow::new().options(options).reset(self.reset);
-        row.into_element(cx, label, value, actions)
     }
 }

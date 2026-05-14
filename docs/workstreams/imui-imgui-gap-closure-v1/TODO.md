@@ -102,6 +102,9 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen sugar until a
    second surface repeats the same pattern; do not copy Dear ImGui's string-label parser or
    stack/next-item width grammar into Fret by default.
+   2026-05-14 cleanup: the unused `PropertyGridRow` wrapper was deleted so property-grid row
+   authoring stays on `PropertyGridRowCx::row(...)` / `row_with(...)` plus raw `PropertyRow` for
+   genuinely custom rows.
 5. Diagnostics/devtools readiness: define a Fret equivalent of Demo/Metrics/Debug discoverability.
    Follow-on: `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` and
    `docs/workstreams/diag-fearless-refactor-v2/README.md` keep the GUI

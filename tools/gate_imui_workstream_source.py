@@ -2518,6 +2518,28 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/property_grid.rs"),
+            required=[
+                "pub struct PropertyGridRowCx",
+                "pub fn row<H: UiHost>(",
+                "pub fn row_with<H: UiHost>(",
+                "row.options(self.row_options.clone())",
+            ],
+            forbidden=[
+                "pub struct PropertyGridRow {",
+                "impl PropertyGridRow {",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/mod.rs"),
+            required=[
+                "pub use property_grid::{PropertyGrid, PropertyGridOptions, PropertyGridRowCx};",
+            ],
+            forbidden=[
+                "PropertyGridRow,",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/property_grid_virtualized.rs"),
             required=[
                 "impl PropertyGridVirtualizedRowCx",

@@ -159,6 +159,12 @@ Run evidence:
   `row_with(...)`, so virtualized property-grid callers can keep row policy centralized instead of
   copying `row_cx.row_options` into each row. The adapter smoke now uses the helper, and
   `tools/gate_imui_workstream_source.py` rejects that manual copy from returning there.
+- 2026-05-14: deleted the unused public `PropertyGridRow` wrapper from
+  `ecosystem/fret-ui-editor/src/composites/property_grid.rs` and its composite re-export. The
+  editor row authoring surface now has one canonical grid policy path:
+  `PropertyGridRowCx::row(...)` / `row_with(...)`, with custom raw rows still using
+  `PropertyRow` directly. `tools/gate_imui_workstream_source.py` rejects the redundant wrapper and
+  re-export from returning.
 
 ## P3 Child Region Readiness Gates
 
