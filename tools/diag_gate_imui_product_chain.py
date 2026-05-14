@@ -411,6 +411,26 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
         evidence = item.get("evidence")
         if not isinstance(evidence, dict):
             raise SystemExit(f"docking perf item is missing evidence: {script}")
+        extra = evidence.get("extra")
+        if not isinstance(extra, dict):
+            raise SystemExit(f"docking perf item is missing evidence.extra: {script}")
+        metrics = extra.get("metrics")
+        if not isinstance(metrics, dict):
+            raise SystemExit(f"docking perf item is missing summary metrics: {script}")
+        for metric_key in (
+            "top_total_time_us",
+            "top_layout_time_us",
+            "top_layout_engine_solve_time_us",
+            "pointer_move_frames_present",
+            "pointer_move_max_dispatch_time_us",
+            "pointer_move_max_hit_test_time_us",
+            "top_renderer_encode_scene_us",
+            "top_renderer_instance_bytes",
+        ):
+            if metric_key not in metrics:
+                raise SystemExit(
+                    f"docking perf item summary metrics are missing {metric_key}: {script}"
+                )
         bundle_path = _path_from_json(evidence.get("bundle_artifact"))
         if bundle_path is None or not bundle_path.is_file():
             raise SystemExit(f"docking perf item has no readable bundle artifact: {script}")

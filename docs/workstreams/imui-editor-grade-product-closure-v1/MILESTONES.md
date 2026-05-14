@@ -329,7 +329,8 @@ Current status:
   `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` is now wired into the
   product-chain gate as the docking perf/smoothness entrypoint, with a launched `perf-docking`
   slice that verifies `diag perf` writes passing `perf_case` rows, readable item bundle artifacts,
-  and a readable shared `layout.perf.summary.v1.json` artifact to the regression evidence chain.
+  a readable shared `layout.perf.summary.v1.json` artifact, and lightweight summary metrics to the
+  regression evidence chain.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

@@ -164,7 +164,7 @@ reopen.
       `perf-docking` slice explicitly. The slice also repaired `diag perf` summary evidence so
       human stdout mode still writes `perf_case` rows into `regression.summary.json`, and the
       product-chain gate now requires readable item bundle artifacts plus a readable shared layout
-      perf summary artifact.
+      perf summary artifact and lightweight summary metrics.
 
 ## Closeout / follow-on management
 

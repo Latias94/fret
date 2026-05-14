@@ -155,6 +155,9 @@ tooling bug rather than an app bug: `diag perf` printed human `PERF ...` rows bu
 stdout modes in `crates/fret-diag/src/diag_perf.rs`, with the focused test
 `perf_regression_summary_uses_rows_when_stdout_is_human`. The follow-up artifact projection test
 `perf_row_to_regression_item_uses_single_run_bundle_artifact` keeps single-run bundle paths visible
-as `bundle_artifact` evidence. The repaired local run at
-`target/imui-product-chain-perf-docking-artifacts-gate-2026-05-14/1778774161668/perf-docking/regression.summary.json`
+as `bundle_artifact` evidence, and
+`perf_row_to_regression_item_projects_single_run_metrics` /
+`perf_row_to_regression_item_projects_repeat_stats_metrics` keep curated perf metrics visible in
+`evidence.extra.metrics`. The repaired local run at
+`target/imui-product-chain-perf-docking-metrics-gate-2026-05-14/1778775354481/perf-docking/regression.summary.json`
 reports two passing `perf_case` rows and `failed_tooling=0`.

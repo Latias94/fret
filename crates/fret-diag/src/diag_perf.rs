@@ -141,6 +141,83 @@ fn perf_row_status_and_reason(
     (RegressionStatusV1::Passed, None, None)
 }
 
+fn copy_perf_metric_if_present(
+    row: &serde_json::Value,
+    out: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+) {
+    if let Some(value) = row.get(key)
+        && (value.is_number() || value.is_boolean())
+    {
+        out.insert(key.to_string(), value.clone());
+    }
+}
+
+fn perf_row_summary_metrics(row: &serde_json::Value) -> serde_json::Value {
+    let mut metrics = serde_json::Map::new();
+    for key in [
+        "repeat",
+        "top_total_time_us",
+        "top_layout_time_us",
+        "top_layout_engine_solve_time_us",
+        "top_prepaint_time_us",
+        "top_paint_time_us",
+        "top_dispatch_time_us",
+        "top_hit_test_time_us",
+        "top_tick_id",
+        "top_frame_id",
+        "pointer_move_frames_present",
+        "pointer_move_frames_considered",
+        "pointer_move_max_dispatch_time_us",
+        "pointer_move_max_hit_test_time_us",
+        "pointer_move_snapshots_with_global_changes",
+        "top_renderer_encode_scene_us",
+        "top_renderer_prepare_text_us",
+        "top_renderer_draw_calls",
+        "top_renderer_instance_bytes",
+        "top_renderer_encode_scene_text_ops",
+    ] {
+        copy_perf_metric_if_present(row, &mut metrics, key);
+    }
+
+    if let Some(stats) = row.get("stats").and_then(|v| v.as_object()) {
+        let mut summary_stats = serde_json::Map::new();
+        for key in [
+            "total_time_us",
+            "layout_time_us",
+            "layout_engine_solve_time_us",
+            "prepaint_time_us",
+            "paint_time_us",
+            "dispatch_time_us",
+            "hit_test_time_us",
+            "pointer_move_max_dispatch_time_us",
+            "pointer_move_max_hit_test_time_us",
+            "pointer_move_snapshots_with_global_changes",
+            "top_renderer_encode_scene_us",
+            "top_renderer_prepare_text_us",
+            "top_renderer_draw_calls",
+            "top_renderer_instance_bytes",
+            "top_renderer_encode_scene_text_ops",
+        ] {
+            if let Some(value) = stats.get(key) {
+                summary_stats.insert(key.to_string(), value.clone());
+            }
+        }
+        if !summary_stats.is_empty() {
+            metrics.insert(
+                "stats".to_string(),
+                serde_json::Value::Object(summary_stats),
+            );
+        }
+    }
+
+    if let Some(worst_run) = row.get("worst_run") {
+        metrics.insert("worst_run".to_string(), worst_run.clone());
+    }
+
+    serde_json::Value::Object(metrics)
+}
+
 fn perf_row_to_regression_item(
     workspace_root: &Path,
     row: &serde_json::Value,
@@ -213,6 +290,7 @@ fn perf_row_to_regression_item(
                 "repeat": repeat,
                 "stats": row.get("stats").cloned(),
                 "bundle": row.get("bundle").cloned(),
+                "metrics": perf_row_summary_metrics(row),
                 "worst_run": worst_run,
                 "row_error": row.get("error").cloned(),
                 "threshold_failures": threshold_failures,
@@ -3190,5 +3268,87 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("F:/repo/.fret/single-run/bundle.schema2.json")
         );
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_projects_single_run_metrics() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "bundle": "F:/repo/.fret/single-run/bundle.schema2.json",
+            "top_total_time_us": 123,
+            "top_layout_time_us": 45,
+            "top_layout_engine_solve_time_us": 6,
+            "pointer_move_frames_present": true,
+            "pointer_move_frames_considered": 8,
+            "pointer_move_max_dispatch_time_us": 7,
+            "pointer_move_max_hit_test_time_us": 9,
+            "top_renderer_encode_scene_us": 11,
+            "top_renderer_instance_bytes": 2048,
+            "top_renderer_encode_scene_text_ops": 12
+        });
+
+        let item = perf_row_to_regression_item(workspace_root, &row, &[], &[], None, None, None);
+        let metrics = item
+            .evidence
+            .as_ref()
+            .and_then(|e| e.extra.as_ref())
+            .and_then(|extra| extra.get("metrics"))
+            .expect("perf item should expose summary metrics");
+
+        assert_eq!(metrics["top_total_time_us"], 123);
+        assert_eq!(metrics["top_layout_time_us"], 45);
+        assert_eq!(metrics["top_layout_engine_solve_time_us"], 6);
+        assert_eq!(metrics["pointer_move_frames_present"], true);
+        assert_eq!(metrics["pointer_move_frames_considered"], 8);
+        assert_eq!(metrics["pointer_move_max_dispatch_time_us"], 7);
+        assert_eq!(metrics["pointer_move_max_hit_test_time_us"], 9);
+        assert_eq!(metrics["top_renderer_encode_scene_us"], 11);
+        assert_eq!(metrics["top_renderer_instance_bytes"], 2048);
+        assert_eq!(metrics["top_renderer_encode_scene_text_ops"], 12);
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_projects_repeat_stats_metrics() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "repeat": 3,
+            "stats": {
+                "total_time_us": { "max": 123, "p95": 120 },
+                "layout_time_us": { "max": 45 },
+                "pointer_move_max_dispatch_time_us": { "max": 7 },
+                "top_renderer_encode_scene_us": { "max": 11 },
+                "top_renderer_instance_bytes": { "max": 2048 }
+            },
+            "worst_run": {
+                "bundle": "F:/repo/.fret/repeat/bundle.schema2.json",
+                "run_index": 2,
+                "top_total_time_us": 123
+            }
+        });
+
+        let item = perf_row_to_regression_item(workspace_root, &row, &[], &[], None, None, None);
+        let metrics = item
+            .evidence
+            .as_ref()
+            .and_then(|e| e.extra.as_ref())
+            .and_then(|extra| extra.get("metrics"))
+            .expect("perf item should expose summary metrics");
+
+        assert_eq!(metrics["repeat"], 3);
+        assert_eq!(metrics["stats"]["total_time_us"]["max"], 123);
+        assert_eq!(metrics["stats"]["total_time_us"]["p95"], 120);
+        assert_eq!(metrics["stats"]["layout_time_us"]["max"], 45);
+        assert_eq!(
+            metrics["stats"]["pointer_move_max_dispatch_time_us"]["max"],
+            7
+        );
+        assert_eq!(metrics["stats"]["top_renderer_encode_scene_us"]["max"], 11);
+        assert_eq!(metrics["stats"]["top_renderer_instance_bytes"]["max"], 2048);
+        assert_eq!(metrics["worst_run"]["run_index"], 2);
+        assert_eq!(metrics["worst_run"]["top_total_time_us"], 123);
     }
 }
