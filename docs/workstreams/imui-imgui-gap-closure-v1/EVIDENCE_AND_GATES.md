@@ -318,6 +318,12 @@ python tools/gate_imui_editor_collection_source.py
 cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast
 ```
 
+- 2026-05-14: `ImUiMultiSelectState` now exposes explicit storage operations instead of public
+  `selected`/`anchor` fields. The proof collection uses `selected()`, `anchor()`,
+  `first_selected()`, `selected_count()`, `is_empty()`, `clear()`, `new(...)`, and `single(...)`;
+  `tools/gate_imui_workstream_source.py` rejects the public-field shape and direct proof-side field
+  mutation from returning.
+
 ## P3 Execution Priority Review Gates
 
 Use these when changing the P3 execution-priority read:

@@ -148,7 +148,7 @@ fn proof_collection_selected_assets<'a>(
         .collect::<HashMap<_, _>>();
 
     selection
-        .selected
+        .selected()
         .iter()
         .filter_map(|id| by_id.get(id.as_ref()).copied())
         .collect()
@@ -248,8 +248,8 @@ fn proof_collection_active_id(
         .active_id
         .clone()
         .filter(contains)
-        .or_else(|| selection.anchor.clone().filter(contains))
-        .or_else(|| selection.selected.first().cloned().filter(contains))
+        .or_else(|| selection.anchor().cloned().filter(contains))
+        .or_else(|| selection.first_selected().cloned().filter(contains))
         .or_else(|| collection_keys.first().cloned())
 }
 
@@ -330,16 +330,13 @@ fn proof_collection_select_all_selection(
     let contains = |id: &Arc<str>| collection_keys.iter().any(|key| key == id);
     let next_active = proof_collection_active_id(collection_keys, selection, keyboard)?;
     let next_anchor = selection
-        .anchor
-        .clone()
+        .anchor()
+        .cloned()
         .filter(contains)
         .or_else(|| collection_keys.first().cloned());
 
     Some((
-        ImUiMultiSelectState {
-            selected: collection_keys.to_vec(),
-            anchor: next_anchor,
-        },
+        ImUiMultiSelectState::new(collection_keys.to_vec(), next_anchor),
         ProofCollectionKeyboardState {
             active_id: Some(next_active),
         },
@@ -672,10 +669,7 @@ fn proof_collection_context_menu_selection(
     let next_selection = if selection.is_selected(&asset_id) {
         selection.clone()
     } else {
-        ImUiMultiSelectState {
-            selected: vec![asset_id.clone()],
-            anchor: Some(asset_id.clone()),
-        }
+        ImUiMultiSelectState::single(asset_id.clone())
     };
 
     (
@@ -711,24 +705,18 @@ fn proof_collection_keyboard_move_selection(
     extend_range: bool,
 ) -> ImUiMultiSelectState<Arc<str>> {
     if !extend_range {
-        return ImUiMultiSelectState {
-            selected: vec![next_id.clone()],
-            anchor: Some(next_id),
-        };
+        return ImUiMultiSelectState::single(next_id);
     }
 
-    let anchor = selection.anchor.clone().unwrap_or_else(|| next_id.clone());
+    let anchor = selection
+        .anchor()
+        .cloned()
+        .unwrap_or_else(|| next_id.clone());
     let Some(anchor_index) = collection_keys.iter().position(|key| key == &anchor) else {
-        return ImUiMultiSelectState {
-            selected: vec![next_id.clone()],
-            anchor: Some(next_id),
-        };
+        return ImUiMultiSelectState::single(next_id);
     };
     let Some(next_index) = collection_keys.iter().position(|key| key == &next_id) else {
-        return ImUiMultiSelectState {
-            selected: vec![next_id.clone()],
-            anchor: Some(next_id),
-        };
+        return ImUiMultiSelectState::single(next_id);
     };
     let (start, end) = if anchor_index <= next_index {
         (anchor_index, next_index)
@@ -736,10 +724,7 @@ fn proof_collection_keyboard_move_selection(
         (next_index, anchor_index)
     };
 
-    ImUiMultiSelectState {
-        selected: collection_keys[start..=end].to_vec(),
-        anchor: Some(anchor),
-    }
+    ImUiMultiSelectState::new(collection_keys[start..=end].to_vec(), Some(anchor))
 }
 
 fn proof_collection_keyboard_selection(
@@ -844,10 +829,7 @@ fn proof_collection_delete_selection(
     };
     let next_selection = next_active
         .clone()
-        .map(|id| ImUiMultiSelectState {
-            selected: vec![id.clone()],
-            anchor: Some(id),
-        })
+        .map(ImUiMultiSelectState::single)
         .unwrap_or_default();
 
     Some(ProofCollectionDeleteResult {
@@ -988,10 +970,7 @@ fn proof_collection_duplicate_selection(
     let next_selection = duplicated_ids
         .first()
         .cloned()
-        .map(|anchor| ImUiMultiSelectState {
-            selected: duplicated_ids.clone(),
-            anchor: Some(anchor),
-        })
+        .map(|anchor| ImUiMultiSelectState::new(duplicated_ids.clone(), Some(anchor)))
         .unwrap_or_default();
 
     Some(ProofCollectionDuplicateResult {
@@ -1054,10 +1033,8 @@ fn proof_collection_box_select_state_for_hits(
         proof_collection_normalize_selection(collection_keys, hits.to_vec())
     };
 
-    ImUiMultiSelectState {
-        anchor: selected.first().cloned(),
-        selected,
-    }
+    let anchor = selected.first().cloned();
+    ImUiMultiSelectState::new(selected, anchor)
 }
 
 fn proof_collection_box_select_selection(
@@ -1202,10 +1179,7 @@ fn authoring_parity_collection_selection_model<H: UiHost>(
             let default_id = assets.first().map(|asset| asset.id.clone());
             let state = default_id
                 .clone()
-                .map(|id| ImUiMultiSelectState {
-                    selected: vec![id.clone()],
-                    anchor: Some(id),
-                })
+                .map(ImUiMultiSelectState::single)
                 .unwrap_or_default();
             cx.app.models_mut().insert(state)
         },
@@ -1518,7 +1492,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     let duplicate_selected = ui.button_with_options(
         "Duplicate selected assets",
         kit::ButtonOptions {
-            enabled: !collection_selection.selected.is_empty(),
+            enabled: !collection_selection.is_empty(),
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.duplicate-selected",
             )),
@@ -1587,7 +1561,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     let delete_selected = ui.button_with_options(
         "Delete selected assets",
         kit::ButtonOptions {
-            enabled: !collection_selection.selected.is_empty(),
+            enabled: !collection_selection.is_empty(),
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.delete-selected",
             )),
@@ -1823,7 +1797,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                             )
                         {
                             let next_status =
-                                proof_collection_select_all_status(next_selection.selected.len());
+                                proof_collection_select_all_status(next_selection.selected_count());
                             let _ = host.update_model(&selection_model_for_keys, |state| {
                                 *state = next_selection.clone();
                             });
@@ -1919,7 +1893,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                         }
                         let baseline_selected = host
                             .models_mut()
-                            .read(&selection_model_for_down, |state| state.selected.clone())
+                            .read(&selection_model_for_down, |state| state.selected().to_vec())
                             .unwrap_or_default();
                         let append_mode = down.modifiers.ctrl || down.modifiers.meta;
                         let _ = host.update_model(&box_select_model_for_down, |state| {
@@ -1977,7 +1951,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                 *state = next_selection.clone();
                             });
                             let _ = host.update_model(&keyboard_model_for_move, |state| {
-                                state.active_id = next_selection.selected.first().cloned();
+                                state.active_id = next_selection.first_selected().cloned();
                             });
                         }
 
@@ -2039,12 +2013,11 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                 *state = next_selection.clone();
                             });
                             let _ = host.update_model(&keyboard_model_for_up, |state| {
-                                state.active_id = next_selection.selected.first().cloned();
+                                state.active_id = next_selection.first_selected().cloned();
                             });
                         } else if !session.append_mode {
                             let _ = host.update_model(&selection_model_for_up, |state| {
-                                state.selected.clear();
-                                state.anchor = None;
+                                state.clear();
                             });
                             let _ = host.update_model(&keyboard_model_for_clear, |state| {
                                 state.active_id = None;
@@ -2538,14 +2511,14 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         );
         ui.text(format!(
             "Selection: {} item(s)",
-            popup_collection_selection.selected.len()
+            popup_collection_selection.selected_count()
         ));
         ui.separator();
 
         let duplicate_from_menu = ui.menu_item_with_options(
             "Duplicate selected assets",
             kit::MenuItemOptions {
-                enabled: !popup_collection_selection.selected.is_empty(),
+                enabled: !popup_collection_selection.is_empty(),
                 close_popup: Some(collection_context_menu_open.clone()),
                 shortcut: Some(Arc::from("Primary+D")),
                 test_id: Some(Arc::from(
@@ -2620,7 +2593,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         let delete_from_menu = ui.menu_item_with_options(
             "Delete selected assets",
             kit::MenuItemOptions {
-                enabled: !popup_collection_selection.selected.is_empty(),
+                enabled: !popup_collection_selection.is_empty(),
                 close_popup: Some(collection_context_menu_open.clone()),
                 shortcut: Some(Arc::from("Del")),
                 test_id: Some(Arc::from(
@@ -2739,6 +2712,21 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
 mod tests {
     use super::*;
 
+    fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
+        ImUiMultiSelectState::new(
+            selected.iter().map(|id| Arc::from(*id)).collect(),
+            anchor.map(Arc::from),
+        )
+    }
+
+    fn selected_ids(selection: &ImUiMultiSelectState<Arc<str>>) -> Vec<&str> {
+        selection.selected().iter().map(|id| id.as_ref()).collect()
+    }
+
+    fn anchor_id(selection: &ImUiMultiSelectState<Arc<str>>) -> Option<&str> {
+        selection.anchor().map(|id| id.as_ref())
+    }
+
     #[test]
     fn proof_collection_drag_rect_normalizes_drag_direction() {
         let rect = proof_collection_drag_rect(
@@ -2793,14 +2781,10 @@ mod tests {
             proof_collection_box_select_selection(&collection_keys, &rendered_items, &session);
 
         assert_eq!(
-            selection.selected,
-            vec![
-                Arc::from("stone-albedo"),
-                Arc::from("stone-normal"),
-                Arc::from("stone-orm"),
-            ]
+            selected_ids(&selection),
+            vec!["stone-albedo", "stone-normal", "stone-orm",]
         );
-        assert_eq!(selection.anchor, Some(Arc::from("stone-albedo")));
+        assert_eq!(anchor_id(&selection), Some("stone-albedo"));
     }
 
     #[test]
@@ -2819,14 +2803,10 @@ mod tests {
         );
 
         assert_eq!(
-            selection.selected,
-            vec![
-                Arc::from("stone-albedo"),
-                Arc::from("stone-orm"),
-                Arc::from("dust-mask"),
-            ]
+            selected_ids(&selection),
+            vec!["stone-albedo", "stone-orm", "dust-mask",]
         );
-        assert_eq!(selection.anchor, Some(Arc::from("stone-albedo")));
+        assert_eq!(anchor_id(&selection), Some("stone-albedo"));
     }
 
     #[test]
@@ -2835,10 +2815,7 @@ mod tests {
             .iter()
             .map(|asset| asset.id.clone())
             .collect::<Vec<_>>();
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-albedo")],
-            anchor: Some(Arc::from("stone-albedo")),
-        };
+        let selection = selection_state(&["stone-albedo"], Some("stone-albedo"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-albedo")),
         };
@@ -2853,8 +2830,8 @@ mod tests {
         )
         .expect("plain arrow navigation should be handled");
 
-        assert_eq!(next_selection.selected, vec![Arc::from("stone-normal")]);
-        assert_eq!(next_selection.anchor, Some(Arc::from("stone-normal")));
+        assert_eq!(selected_ids(&next_selection), vec!["stone-normal"]);
+        assert_eq!(anchor_id(&next_selection), Some("stone-normal"));
         assert_eq!(next_keyboard.active_id, Some(Arc::from("stone-normal")));
     }
 
@@ -2864,10 +2841,7 @@ mod tests {
             .iter()
             .map(|asset| asset.id.clone())
             .collect::<Vec<_>>();
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-normal")],
-            anchor: Some(Arc::from("stone-normal")),
-        };
+        let selection = selection_state(&["stone-normal"], Some("stone-normal"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-normal")),
         };
@@ -2886,15 +2860,10 @@ mod tests {
         .expect("shift+arrow navigation should be handled");
 
         assert_eq!(
-            next_selection.selected,
-            vec![
-                Arc::from("stone-normal"),
-                Arc::from("stone-orm"),
-                Arc::from("moss-overlay"),
-                Arc::from("pebble-height"),
-            ]
+            selected_ids(&next_selection),
+            vec!["stone-normal", "stone-orm", "moss-overlay", "pebble-height",]
         );
-        assert_eq!(next_selection.anchor, Some(Arc::from("stone-normal")));
+        assert_eq!(anchor_id(&next_selection), Some("stone-normal"));
         assert_eq!(next_keyboard.active_id, Some(Arc::from("pebble-height")));
     }
 
@@ -2904,10 +2873,7 @@ mod tests {
             .iter()
             .map(|asset| asset.id.clone())
             .collect::<Vec<_>>();
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-normal"), Arc::from("stone-orm")],
-            anchor: Some(Arc::from("stone-normal")),
-        };
+        let selection = selection_state(&["stone-normal", "stone-orm"], Some("stone-normal"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-orm")),
         };
@@ -2922,8 +2888,8 @@ mod tests {
         )
         .expect("escape should be handled by the collection scope");
 
-        assert!(next_selection.selected.is_empty());
-        assert_eq!(next_selection.anchor, None);
+        assert!(next_selection.is_empty());
+        assert_eq!(next_selection.anchor(), None);
         assert_eq!(next_keyboard.active_id, Some(Arc::from("stone-orm")));
     }
 
@@ -2933,10 +2899,7 @@ mod tests {
             .iter()
             .map(|asset| asset.id.clone())
             .collect::<Vec<_>>();
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-albedo")],
-            anchor: Some(Arc::from("stone-albedo")),
-        };
+        let selection = selection_state(&["stone-albedo"], Some("stone-albedo"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-albedo")),
         };
@@ -2961,10 +2924,7 @@ mod tests {
     #[test]
     fn proof_collection_begin_rename_session_prefers_active_visible_asset() {
         let visible_assets = authoring_parity_collection_assets();
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-albedo"), Arc::from("stone-normal")],
-            anchor: Some(Arc::from("stone-albedo")),
-        };
+        let selection = selection_state(&["stone-albedo", "stone-normal"], Some("stone-albedo"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-normal")),
         };
@@ -3080,10 +3040,7 @@ mod tests {
             Arc::from("pebble-height"),
             Arc::from("moss-overlay"),
         ];
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("moss-overlay")],
-            anchor: Some(Arc::from("moss-overlay")),
-        };
+        let selection = selection_state(&["moss-overlay"], Some("moss-overlay"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("pebble-height")),
         };
@@ -3092,8 +3049,8 @@ mod tests {
             proof_collection_select_all_selection(&collection_keys, &selection, &keyboard)
                 .expect("select-all should run when visible assets exist");
 
-        assert_eq!(next_selection.selected, collection_keys);
-        assert_eq!(next_selection.anchor, Some(Arc::from("moss-overlay")));
+        assert_eq!(next_selection.selected(), collection_keys.as_slice());
+        assert_eq!(anchor_id(&next_selection), Some("moss-overlay"));
         assert_eq!(next_keyboard.active_id, Some(Arc::from("pebble-height")));
     }
 
@@ -3109,8 +3066,8 @@ mod tests {
             proof_collection_select_all_selection(&collection_keys, &selection, &keyboard)
                 .expect("select-all should fall back to the first visible asset");
 
-        assert_eq!(next_selection.selected, collection_keys);
-        assert_eq!(next_selection.anchor, Some(Arc::from("stone-albedo")));
+        assert_eq!(next_selection.selected(), collection_keys.as_slice());
+        assert_eq!(anchor_id(&next_selection), Some("stone-albedo"));
         assert_eq!(next_keyboard.active_id, Some(Arc::from("stone-albedo")));
     }
 
@@ -3200,10 +3157,7 @@ mod tests {
             Arc::<[ProofCollectionAsset]>::from(stored_assets.clone()),
             false,
         );
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-normal"), Arc::from("stone-orm")],
-            anchor: Some(Arc::from("stone-normal")),
-        };
+        let selection = selection_state(&["stone-normal", "stone-orm"], Some("stone-normal"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-orm")),
         };
@@ -3251,12 +3205,12 @@ mod tests {
             ]
         );
         assert_eq!(
-            duplicate.next_selection.selected,
-            vec![Arc::from("stone-normal-copy"), Arc::from("stone-orm-copy")]
+            selected_ids(&duplicate.next_selection),
+            vec!["stone-normal-copy", "stone-orm-copy"]
         );
         assert_eq!(
-            duplicate.next_selection.anchor,
-            Some(Arc::from("stone-normal-copy"))
+            anchor_id(&duplicate.next_selection),
+            Some("stone-normal-copy")
         );
         assert_eq!(
             duplicate.next_keyboard.active_id,
@@ -3281,10 +3235,7 @@ mod tests {
             Arc::<[ProofCollectionAsset]>::from(stored_assets.clone()),
             false,
         );
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-normal")],
-            anchor: Some(Arc::from("stone-normal")),
-        };
+        let selection = selection_state(&["stone-normal"], Some("stone-normal"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-normal")),
         };
@@ -3334,10 +3285,7 @@ mod tests {
             Arc::<[ProofCollectionAsset]>::from(stored_assets.clone()),
             false,
         );
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-normal"), Arc::from("stone-orm")],
-            anchor: Some(Arc::from("stone-normal")),
-        };
+        let selection = selection_state(&["stone-normal", "stone-orm"], Some("stone-normal"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("stone-normal")),
         };
@@ -3367,14 +3315,8 @@ mod tests {
                 Arc::from("dust-mask"),
             ]
         );
-        assert_eq!(
-            delete.next_selection.selected,
-            vec![Arc::from("moss-overlay")]
-        );
-        assert_eq!(
-            delete.next_selection.anchor,
-            Some(Arc::from("moss-overlay"))
-        );
+        assert_eq!(selected_ids(&delete.next_selection), vec!["moss-overlay"]);
+        assert_eq!(anchor_id(&delete.next_selection), Some("moss-overlay"));
         assert_eq!(
             delete.next_keyboard.active_id,
             Some(Arc::from("moss-overlay"))
@@ -3391,10 +3333,7 @@ mod tests {
             Arc::<[ProofCollectionAsset]>::from(stored_assets.clone()),
             false,
         );
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("dust-mask")],
-            anchor: Some(Arc::from("dust-mask")),
-        };
+        let selection = selection_state(&["dust-mask"], Some("dust-mask"));
         let keyboard = ProofCollectionKeyboardState {
             active_id: Some(Arc::from("dust-mask")),
         };
@@ -3408,14 +3347,8 @@ mod tests {
         .expect("delete should run when the tail item is selected");
 
         assert_eq!(delete.deleted_ids, vec![Arc::from("dust-mask")]);
-        assert_eq!(
-            delete.next_selection.selected,
-            vec![Arc::from("pebble-height")]
-        );
-        assert_eq!(
-            delete.next_selection.anchor,
-            Some(Arc::from("pebble-height"))
-        );
+        assert_eq!(selected_ids(&delete.next_selection), vec!["pebble-height"]);
+        assert_eq!(anchor_id(&delete.next_selection), Some("pebble-height"));
         assert_eq!(
             delete.next_keyboard.active_id,
             Some(Arc::from("pebble-height"))
@@ -3487,34 +3420,28 @@ mod tests {
 
     #[test]
     fn proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile() {
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-albedo"), Arc::from("stone-normal")],
-            anchor: Some(Arc::from("stone-albedo")),
-        };
+        let selection = selection_state(&["stone-albedo", "stone-normal"], Some("stone-albedo"));
 
         let (next_selection, next_keyboard) =
             proof_collection_context_menu_selection(&selection, Arc::from("dust-mask"));
 
-        assert_eq!(next_selection.selected, vec![Arc::from("dust-mask")]);
-        assert_eq!(next_selection.anchor, Some(Arc::from("dust-mask")));
+        assert_eq!(selected_ids(&next_selection), vec!["dust-mask"]);
+        assert_eq!(anchor_id(&next_selection), Some("dust-mask"));
         assert_eq!(next_keyboard.active_id, Some(Arc::from("dust-mask")));
     }
 
     #[test]
     fn proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile() {
-        let selection = ImUiMultiSelectState {
-            selected: vec![Arc::from("stone-normal"), Arc::from("stone-orm")],
-            anchor: Some(Arc::from("stone-normal")),
-        };
+        let selection = selection_state(&["stone-normal", "stone-orm"], Some("stone-normal"));
 
         let (next_selection, next_keyboard) =
             proof_collection_context_menu_selection(&selection, Arc::from("stone-orm"));
 
         assert_eq!(
-            next_selection.selected,
-            vec![Arc::from("stone-normal"), Arc::from("stone-orm")]
+            selected_ids(&next_selection),
+            vec!["stone-normal", "stone-orm"]
         );
-        assert_eq!(next_selection.anchor, Some(Arc::from("stone-normal")));
+        assert_eq!(anchor_id(&next_selection), Some("stone-normal"));
         assert_eq!(next_keyboard.active_id, Some(Arc::from("stone-orm")));
     }
 }

@@ -188,6 +188,9 @@ Readiness order for the next locally testable review slices:
    `ImUiMultiSelectState`, sortable row recipes, and drag-preview recipes. `fret-node` is useful
    comparison evidence but not a second IMUI collection proof because it owns graph-specific
    node/edge/group semantics.
+   2026-05-14 multi-select storage follow-up: `ImUiMultiSelectState` now keeps selection and anchor
+   storage private behind explicit accessors/constructors. The collection proof remains app-owned,
+   but it can no longer bypass the shared selection-storage API by mutating public fields.
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
