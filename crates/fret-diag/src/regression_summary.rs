@@ -95,6 +95,54 @@ pub fn regression_summary_drilldown(summary: &RegressionSummaryV1) -> Regression
     drilldown
 }
 
+pub fn regression_bundle_followup_command_lines<'a>(
+    bundle_dirs: impl IntoIterator<Item = &'a str>,
+) -> Vec<String> {
+    let Some(first_bundle_dir) = bundle_dirs
+        .into_iter()
+        .map(str::trim)
+        .find(|dir| !dir.is_empty())
+    else {
+        return Vec::new();
+    };
+    let bundle_arg = shell_quote_arg(first_bundle_dir);
+    vec![
+        format!("selected bundle: {first_bundle_dir}"),
+        format!("diag stats: cargo run -p fretboard-dev -- diag stats {bundle_arg} --json"),
+        format!(
+            "layout perf summary: cargo run -p fretboard-dev -- diag layout-perf-summary {bundle_arg} --json"
+        ),
+        format!(
+            "memory summary: cargo run -p fretboard-dev -- diag memory-summary {bundle_arg} --json"
+        ),
+        format!("triage: cargo run -p fretboard-dev -- diag triage {bundle_arg} --json"),
+        format!("hotspots: cargo run -p fretboard-dev -- diag hotspots {bundle_arg} --json"),
+        format!(
+            "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> {bundle_arg} --json"
+        ),
+        format!(
+            "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> {bundle_arg} --footprint --json"
+        ),
+    ]
+}
+
+fn shell_quote_arg(value: &str) -> String {
+    let value = value.trim();
+    if value.is_empty() {
+        return "''".to_string();
+    }
+    if value.chars().all(|ch| {
+        ch.is_ascii_alphanumeric()
+            || matches!(
+                ch,
+                '.' | '/' | '\\' | ':' | '_' | '-' | '=' | '+' | ',' | '@' | '[' | ']' | '(' | ')'
+            )
+    }) {
+        return value.to_string();
+    }
+    format!("'{}'", value.replace('\'', "''"))
+}
+
 fn push_unique_line(lines: &mut Vec<String>, line: String) {
     if !lines.iter().any(|existing| existing == &line) {
         lines.push(line);
@@ -674,6 +722,36 @@ mod tests {
         ));
         assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
         assert!(text.contains("threshold_failures_json"));
+    }
+
+    #[test]
+    fn regression_bundle_followup_command_lines_use_selected_bundle_dir() {
+        let lines = regression_bundle_followup_command_lines([
+            "target/fret-diag/perf-docking/run-a/bundle dir",
+        ]);
+        let text = lines.join("\n");
+        assert!(text.contains("selected bundle: target/fret-diag/perf-docking/run-a/bundle dir"));
+        assert!(text.contains(
+            "diag stats: cargo run -p fretboard-dev -- diag stats 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
+            "layout perf summary: cargo run -p fretboard-dev -- diag layout-perf-summary 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
+            "memory summary: cargo run -p fretboard-dev -- diag memory-summary 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
+            "triage: cargo run -p fretboard-dev -- diag triage 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
+            "hotspots: cargo run -p fretboard-dev -- diag hotspots 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
+            "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
+            "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> 'target/fret-diag/perf-docking/run-a/bundle dir' --footprint --json"
+        ));
     }
 
     #[test]

@@ -543,15 +543,17 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 - `apps/fret-devtools/src/native.rs` now surfaces a `Gate Commands` block in the first-open GUI
   shell for stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics
   entrypoints.
-- The selected-summary inspector now also generates concrete follow-up commands from the selected
-  `bundle_dir`: `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
-  `diag hotspots`, visual compare, and footprint compare.
+- The selected-summary inspector now also consumes the shared `fret-diag` regression-bundle
+  follow-up projection, generating concrete commands from the selected `bundle_dir`: `diag stats`,
+  `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, `diag hotspots`, visual
+  compare, and footprint compare.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
 - Focused source gates:
 
 ```text
-cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates selected_regression_followup_command_lines_use_selected_bundle_dir --no-fail-fast
+cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/gate_imui_workstream_source.py

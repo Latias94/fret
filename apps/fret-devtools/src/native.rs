@@ -9,8 +9,8 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
-    RegressionSummaryV1, regression_summary_drilldown,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
+    regression_bundle_followup_command_lines, regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -2830,7 +2830,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         }
     };
     let selected_followup_command_lines =
-        selected_regression_followup_command_lines(&selected_bundle_dirs);
+        regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()));
     let selected_followup_commands_text = selected_followup_command_lines.join("\r\n");
     let selected_followup_commands_display = if selected_followup_command_lines.is_empty() {
         "Select a non-passing summary with bundle_dir evidence to generate concrete follow-up commands.".to_string()
@@ -5268,63 +5268,6 @@ fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
     ]
 }
 
-fn selected_regression_followup_command_lines(bundle_dirs: &[Arc<str>]) -> Vec<String> {
-    let Some(first_bundle_dir) = bundle_dirs.first().map(|value| value.as_ref().trim()) else {
-        return Vec::new();
-    };
-    if first_bundle_dir.is_empty() {
-        return Vec::new();
-    }
-    let bundle_arg = shell_quote_arg(first_bundle_dir);
-    vec![
-        format!("selected bundle: {first_bundle_dir}"),
-        format!("diag stats: cargo run -p fretboard-dev -- diag stats {bundle_arg} --json"),
-        format!(
-            "layout perf summary: cargo run -p fretboard-dev -- diag layout-perf-summary {bundle_arg} --json"
-        ),
-        format!(
-            "memory summary: cargo run -p fretboard-dev -- diag memory-summary {bundle_arg} --json"
-        ),
-        format!("triage: cargo run -p fretboard-dev -- diag triage {bundle_arg} --json"),
-        format!("hotspots: cargo run -p fretboard-dev -- diag hotspots {bundle_arg} --json"),
-        format!(
-            "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> {bundle_arg} --json"
-        ),
-        format!(
-            "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> {bundle_arg} --footprint --json"
-        ),
-    ]
-}
-
-fn shell_quote_arg(value: &str) -> String {
-    let value = value.trim();
-    if value.is_empty() {
-        return "''".to_string();
-    }
-    if value.chars().all(|ch| {
-        ch.is_ascii_alphanumeric()
-            || matches!(
-                ch,
-                '.' | '/'
-                    | '\\'
-                    | ':'
-                    | '_'
-                    | '-'
-                    | '='
-                    | '+'
-                    | ','
-                    | '@'
-                    | '['
-                    | ']'
-                    | '('
-                    | ')'
-            )
-    }) {
-        return value.to_string();
-    }
-    format!("'{}'", value.replace('\'', "''"))
-}
-
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
     if is_abs_path(raw) {
         PathBuf::from(raw)
@@ -5488,37 +5431,6 @@ mod tests {
         assert!(text.contains("check.pixels_changed.json"));
         assert!(text.contains("check.perf_thresholds.json"));
         assert!(text.contains("resource.footprint.json"));
-    }
-
-    #[test]
-    fn selected_regression_followup_command_lines_use_selected_bundle_dir() {
-        let bundle_dirs = vec![Arc::<str>::from(
-            "target/fret-diag/perf-docking/run-a/bundle dir",
-        )];
-        let lines = selected_regression_followup_command_lines(&bundle_dirs);
-        let text = lines.join("\n");
-        assert!(text.contains("selected bundle: target/fret-diag/perf-docking/run-a/bundle dir"));
-        assert!(text.contains(
-            "diag stats: cargo run -p fretboard-dev -- diag stats 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
-        ));
-        assert!(text.contains(
-            "layout perf summary: cargo run -p fretboard-dev -- diag layout-perf-summary 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
-        ));
-        assert!(text.contains(
-            "memory summary: cargo run -p fretboard-dev -- diag memory-summary 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
-        ));
-        assert!(text.contains(
-            "triage: cargo run -p fretboard-dev -- diag triage 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
-        ));
-        assert!(text.contains(
-            "hotspots: cargo run -p fretboard-dev -- diag hotspots 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
-        ));
-        assert!(text.contains(
-            "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
-        ));
-        assert!(text.contains(
-            "footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> 'target/fret-diag/perf-docking/run-a/bundle dir' --footprint --json"
-        ));
     }
 
     #[test]
