@@ -36,13 +36,7 @@ impl<H: UiHost> UiTree<H> {
             .get(node)
             .map(|n| n.view_cache)
             .unwrap_or_default();
-        let prev_cache = if self.view_boundaries.contains_key(node) {
-            self.view_boundaries
-                .get(node)
-                .and_then(|boundary| boundary.paint_cache.entry())
-        } else {
-            self.nodes.get(node).and_then(|n| n.paint_cache)
-        };
+        let prev_cache = self.boundary_paint_cache_entry(node);
         let (invalidated, hit_test_only_paint_invalidated) = match self.nodes.get(node) {
             Some(n) => (n.invalidation.paint, n.paint_invalidated_by_hit_test_only),
             None => return,
@@ -238,23 +232,16 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.debug_record_paint_cache_replay(node, replayed_ops as u32);
 
-                if let Some(boundary) = self.view_boundaries.get_mut(node) {
-                    boundary.paint_cache.set_entry(PaintCacheEntry {
+                self.set_boundary_paint_cache_entry(
+                    node,
+                    PaintCacheEntry {
                         generation: self.paint_cache.target_generation,
                         key,
                         origin: bounds.origin,
                         start: start as u32,
                         end: (start + replayed_ops) as u32,
-                    });
-                } else if let Some(n) = self.nodes.get_mut(node) {
-                    n.paint_cache = Some(PaintCacheEntry {
-                        generation: self.paint_cache.target_generation,
-                        key,
-                        origin: bounds.origin,
-                        start: start as u32,
-                        end: (start + replayed_ops) as u32,
-                    });
-                }
+                    },
+                );
 
                 if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                     let prev = n.invalidation;
@@ -295,34 +282,42 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             while let Some(id) = stack.pop() {
-                                let Some(n) = self.nodes.get_mut(id) else {
+                                let Some((element, node_bounds)) =
+                                    self.nodes.get_mut(id).and_then(|n| {
+                                        if n.bounds_written_paint_pass == paint_pass {
+                                            return None;
+                                        }
+                                        translated_nodes = translated_nodes.saturating_add(1);
+                                        n.bounds.origin = Point::new(
+                                            n.bounds.origin.x + delta.x,
+                                            n.bounds.origin.y + delta.y,
+                                        );
+                                        n.bounds_written_paint_pass = paint_pass;
+                                        Some((n.element, n.bounds))
+                                    })
+                                else {
                                     continue;
                                 };
-                                if n.bounds_written_paint_pass == paint_pass {
-                                    continue;
-                                }
-                                translated_nodes = translated_nodes.saturating_add(1);
-                                n.bounds.origin = Point::new(
-                                    n.bounds.origin.x + delta.x,
-                                    n.bounds.origin.y + delta.y,
-                                );
-                                n.bounds_written_paint_pass = paint_pass;
-                                if let Some(mut cache) = n.paint_cache {
-                                    cache.origin = Point::new(
-                                        cache.origin.x + delta.x,
-                                        cache.origin.y + delta.y,
-                                    );
-                                    n.paint_cache = Some(cache);
-                                }
+                                self.translate_boundary_paint_cache_origin(id, delta);
                                 if let Some(window) = window
-                                    && let Some(element) = n.element
+                                    && let Some(element) = element
                                 {
                                     crate::elements::record_bounds_for_element(
-                                        app, window, element, n.bounds,
+                                        app,
+                                        window,
+                                        element,
+                                        node_bounds,
                                     );
                                 }
-                                for &child in &n.children {
+                                let mut i = 0usize;
+                                loop {
+                                    let child =
+                                        self.nodes.get(id).and_then(|n| n.children.get(i)).copied();
+                                    let Some(child) = child else {
+                                        break;
+                                    };
                                     stack.push(child);
+                                    i += 1;
                                 }
                             }
                             self.restore_scratch_node_stack(stack);
@@ -599,19 +594,11 @@ impl<H: UiHost> UiTree<H> {
                 start: start as u32,
                 end: end as u32,
             };
-            if let Some(boundary) = self.view_boundaries.get_mut(node) {
-                boundary.paint_cache.set_entry(entry);
-            } else if let Some(n) = self.nodes.get_mut(node) {
-                n.paint_cache = Some(entry);
-            }
+            self.set_boundary_paint_cache_entry(node, entry);
         } else {
-            if let Some(boundary) = self.view_boundaries.get_mut(node) {
-                boundary.paint_cache.clear();
-            } else if let Some(n) = self.nodes.get_mut(node) {
-                // When caching is disabled for this node (e.g. due to a render transform),
-                // ensure we don't keep a stale cache entry that could be replayed later.
-                n.paint_cache = None;
-            }
+            // When caching is disabled for this node (e.g. due to a render transform), ensure we
+            // don't keep a stale cache entry that could be replayed later.
+            self.clear_boundary_paint_cache_entry(node);
         }
     }
 }

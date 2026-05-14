@@ -188,6 +188,19 @@ Status after M4E on 2026-05-14:
 - Boundary diagnostics now include `paint_cache_owner`, so bundles can distinguish boundary-owned
   paint-cache entries from missing or retained fallback ownership.
 
+Status after M4F on 2026-05-14:
+
+- `M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md` deletes the remaining
+  `Node::paint_cache` field and routes plain paint-cache node entries through
+  `UiTree::boundary_paint_cache_entries`.
+- True runtime boundaries still store entries in `ViewBoundaryState::paint_cache`; if a plain cached
+  node becomes a runtime boundary, the side-store entry migrates into the boundary state.
+- The plain-node replay, hit-test-only replay, side-store-to-boundary migration, scroll
+  invalidation, model invalidation, and view-cache gating tests now prove the node fallback is gone
+  without polluting the full `view_boundaries` table.
+- Ordinary `PaintCacheEntry` ownership no longer has a node fallback. `PaintCacheState` still owns
+  previous-frame op storage and remains the next paint-cache replay ownership decision.
+
 Status after closeout audit on 2026-05-14:
 
 - `CLOSEOUT_AUDIT_2026-05-14.md` closes the code-editor vertical slice.
@@ -232,6 +245,6 @@ Status on 2026-05-14:
 
 - Open. The code-editor vertical slice is complete, but the global contract is not complete while
   the consolidated view-cache build-boundary store still needs a final `ViewBoundaryState`
-  ownership/retention decision, previous-op paint-cache storage and non-boundary fallback still
-  need migration or retention decisions, internal contained-layout flag cleanup, old env-knob
-  ownership, and the second non-code-editor proof surface remain open.
+  ownership/retention decision, previous-op paint-cache storage still needs migration or retention
+  decision, internal contained-layout flag cleanup, old env-knob ownership, and the second
+  non-code-editor proof surface remain open.

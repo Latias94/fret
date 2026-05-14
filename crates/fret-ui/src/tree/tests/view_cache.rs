@@ -56,12 +56,20 @@ fn view_cache_disables_paint_cache_for_non_boundary_nodes() {
 
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert!(
+        !ui.test_boundary_paint_cache_entry_has_entry(node),
+        "view-cache-active non-cache nodes should not record paint-cache entries"
+    );
 
     ui.ingest_paint_cache_source(&mut scene);
     scene.clear();
 
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 2);
+    assert!(
+        !ui.test_boundary_paint_cache_entry_has_entry(node),
+        "view-cache-active non-cache nodes should keep paint-cache disabled"
+    );
 }
 
 #[test]
@@ -77,8 +85,7 @@ fn view_cache_allows_paint_cache_for_boundary_nodes() {
     let node = ui.create_node(CountingPaintWidget {
         paints: paints.clone(),
     });
-    ui.nodes[node].view_cache.enabled = true;
-    ui.nodes[node].view_cache.contained_layout = true;
+    ui.set_node_view_cache_flags(node, true, true, true);
     ui.set_root(node);
 
     let mut services = FakeUiServices;
@@ -90,6 +97,14 @@ fn view_cache_allows_paint_cache_for_boundary_nodes() {
 
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 1);
+    assert!(
+        ui.test_view_boundary_paint_cache_has_entry(node),
+        "view-cache boundary nodes should store replay entries in ViewBoundaryState"
+    );
+    assert!(
+        !ui.test_boundary_paint_cache_side_store_has_entry(node),
+        "view-cache boundary nodes should not use the plain paint-cache side store"
+    );
 
     ui.ingest_paint_cache_source(&mut scene);
     scene.clear();

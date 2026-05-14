@@ -272,8 +272,14 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if did_stop {
-                if mark_dirty || mark_dirty_for_contained_layout {
+                if mark_dirty {
                     self.mark_boundary_layout_dirty(id, source, detail);
+                } else if mark_dirty_for_contained_layout {
+                    self.mark_boundary_layout_dirty(
+                        id,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                    );
                 }
                 invalidation_active = false;
             }
@@ -356,8 +362,14 @@ impl<H: UiHost> UiTree<H> {
                 if let Some((prev, next)) = counter_update {
                     self.update_invalidation_counters(prev, next);
                 }
-                if mark_dirty || mark_dirty_for_contained_layout {
+                if mark_dirty {
                     self.mark_boundary_layout_dirty(id, source, detail);
+                } else if mark_dirty_for_contained_layout {
+                    self.mark_boundary_layout_dirty(
+                        id,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                    );
                 }
                 parent = next_parent;
             }
@@ -535,8 +547,14 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if did_stop {
-                if mark_dirty || mark_dirty_for_contained_layout {
+                if mark_dirty {
                     self.mark_boundary_layout_dirty(id, source, detail);
+                } else if mark_dirty_for_contained_layout {
+                    self.mark_boundary_layout_dirty(
+                        id,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                    );
                 }
                 invalidation_active = false;
             }
@@ -629,8 +647,14 @@ impl<H: UiHost> UiTree<H> {
                     if let Some((prev, next)) = counter_update {
                         self.update_invalidation_counters(prev, next);
                     }
-                    if mark_dirty || mark_dirty_for_contained_layout {
+                    if mark_dirty {
                         self.mark_boundary_layout_dirty(id, source, detail);
+                    } else if mark_dirty_for_contained_layout {
+                        self.mark_boundary_layout_dirty(
+                            id,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+                        );
                     }
                     visited.set_mask(id, already | needed);
                 }

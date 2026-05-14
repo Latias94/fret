@@ -400,7 +400,40 @@ Observed result:
 This slice is a runtime ownership-consolidation step, not a new perf claim. It moves boundary-node
 `PaintCacheEntry` ownership into `ViewBoundaryState::paint_cache`, adds `paint_cache_owner` to
 boundary diagnostics, and preserves node-owned paint-cache entries as the fallback for
-non-boundary nodes. The global previous-op storage and env-knob retention decisions remain open.
+non-boundary nodes at the time of M4E. M4F below deletes that fallback. The global previous-op
+storage and env-knob retention decisions remain open.
+
+Most recent node paint-cache fallback deletion slice evidence:
+
+- Slice note:
+  `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md`
+- Paint-cache regression gate:
+  `cargo nextest run -p fret-ui tree::tests::paint_cache --no-fail-fast`
+- View-cache paint-cache gating gate:
+  `cargo nextest run -p fret-ui tree::tests::view_cache::view_cache_disables_paint_cache_for_non_boundary_nodes tree::tests::view_cache::view_cache_allows_paint_cache_for_boundary_nodes tree::tests::view_cache::descendant_layout_invalidation_marks_contained_view_cache_root_dirty --no-fail-fast`
+- Ordinary retained-subtree replay and invalidation gates:
+  `cargo nextest run -p fret-ui tree::tests::hit_test::paint_cache_replays_subtree_ops_when_clean tree::tests::scroll_invalidation::scroll_offset_changes_do_not_replay_paint_cache tree::tests::models --no-fail-fast`
+- Compile gates:
+  `cargo check -p fret-ui --all-targets`
+  and
+  `cargo check -p fret-ui --features diagnostics --all-targets`
+- Bootstrap diagnostics gate:
+  `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics cache_root_boundary boundary_diagnostics_are_built_from_boundary_stats_with_cache_root_outcomes --no-fail-fast`
+
+Observed result:
+
+- paint-cache regression gate: `10 passed, 926 skipped`;
+- view-cache paint-cache gating and contained-boundary dirty reason gate:
+  `3 passed, 933 skipped`;
+- ordinary retained-subtree replay and invalidation gates: `13 passed, 923 skipped`;
+- bootstrap boundary diagnostics gate: `5 passed, 97 skipped`;
+- both compile gates passed.
+
+This slice is a runtime ownership-consolidation step, not a new perf claim. It deletes the
+node-owned `PaintCacheEntry` field, routes true runtime-boundary entries through
+`ViewBoundaryState::paint_cache`, routes plain retained paint-cache entries through
+`UiTree::boundary_paint_cache_entries`, and keeps `PaintCacheState` as the still-open
+previous-frame op storage owner for the next paint-cache replay decision.
 
 Most recent code-editor closeout perf evidence:
 
