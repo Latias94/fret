@@ -35,6 +35,22 @@ pub(crate) fn fret_find_active_listbox_option<'a>(
     None
 }
 
+pub(crate) fn fret_find_listbox_controller<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let listbox = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBox)
+        .max_by(|a, b| rect_area(a.bounds).total_cmp(&rect_area(b.bounds)))?;
+
+    snap.nodes
+        .iter()
+        .filter(|n| matches!(n.role, SemanticsRole::ComboBox | SemanticsRole::TextField))
+        .filter(|n| n.controls.contains(&listbox.id))
+        .max_by(|a, b| rect_area(a.bounds).total_cmp(&rect_area(b.bounds)))
+}
+
 pub(crate) fn fret_find_topmost_menu_item_in_menu<'a>(
     snap: &'a fret_core::SemanticsSnapshot,
     menu_bounds: Rect,

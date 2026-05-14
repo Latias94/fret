@@ -179,11 +179,18 @@ type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 /// combobox is triggered from a button-like control.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ComboboxTriggerVariant {
-    /// Default Fret shadcn combobox trigger (medium weight).
+    /// Default Fret shadcn combobox trigger (input-like weight).
     #[default]
     Default,
-    /// Button-like trigger (normal weight).
+    /// Button-like trigger (`font-medium`, matching shadcn Button).
     Button,
+}
+
+fn combobox_trigger_icon_id(trigger_variant: ComboboxTriggerVariant) -> fret_icons::IconId {
+    match trigger_variant {
+        ComboboxTriggerVariant::Default => ids::ui::CHEVRON_DOWN,
+        ComboboxTriggerVariant::Button => ids::ui::CHEVRONS_UP_DOWN,
+    }
 }
 
 /// shadcn/ui `ComboboxValue` (v4).
@@ -864,6 +871,7 @@ pub struct Combobox {
     search_enabled: bool,
     show_clear: bool,
     show_trigger: bool,
+    show_trigger_explicit: bool,
     input_addons: Vec<crate::input_group::InputGroupAddon>,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -906,6 +914,7 @@ impl Combobox {
         }
         if let Some(show_trigger) = patch.show_trigger {
             self.show_trigger = show_trigger;
+            self.show_trigger_explicit = true;
         }
         if let Some(show_clear) = patch.show_clear {
             self.show_clear = show_clear;
@@ -980,6 +989,7 @@ impl Combobox {
             search_enabled: true,
             show_clear: false,
             show_trigger: true,
+            show_trigger_explicit: false,
             input_addons: Vec::new(),
             trigger_variant: ComboboxTriggerVariant::default(),
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
@@ -1259,6 +1269,7 @@ impl Combobox {
             self.auto_highlight,
             self.show_clear,
             self.show_trigger,
+            self.show_trigger_explicit,
             self.input_addons,
             self.trigger_variant,
             self.consume_outside_pointer_events,
@@ -1308,6 +1319,7 @@ fn combobox_with_patch<H: UiHost>(
     auto_highlight: bool,
     show_clear: bool,
     show_trigger: bool,
+    show_trigger_explicit: bool,
     input_addons: Vec<crate::input_group::InputGroupAddon>,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -1436,13 +1448,20 @@ fn combobox_with_patch<H: UiHost>(
             })
             .map(|it| (it.label.clone(), true))
             .unwrap_or((placeholder.clone(), false));
+        let show_trigger = if trigger_variant == ComboboxTriggerVariant::Button
+            && !show_trigger_explicit
+        {
+            false
+        } else {
+            show_trigger
+        };
 
         let text_style = TextStyle {
             font: FontId::default(),
             size: size.control_text_px(Theme::global(&*cx.app)),
             weight: match trigger_variant {
-                ComboboxTriggerVariant::Default => FontWeight::MEDIUM,
-                ComboboxTriggerVariant::Button => FontWeight::NORMAL,
+                ComboboxTriggerVariant::Default => FontWeight::NORMAL,
+                ComboboxTriggerVariant::Button => FontWeight::MEDIUM,
             },
             line_height: theme
                 .metric_by_key("font.line_height")
@@ -1463,11 +1482,13 @@ fn combobox_with_patch<H: UiHost>(
             .map(|m| m.resolve(&theme))
             .unwrap_or(Px(1.0));
 
+        let effective_trigger_width = combobox_effective_trigger_width(device_shell_responsive, width);
+
         let mut trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
                 .min_h(min_h)
-                .merge(if let Some(w) = width {
+                .merge(if let Some(w) = effective_trigger_width {
                     LayoutRefinement::default().w_px(w)
                 } else {
                     LayoutRefinement::default().w_full()
@@ -1972,10 +1993,10 @@ fn combobox_with_patch<H: UiHost>(
                                                         clear
                                                     };
                                                     out.push(clear);
-                                                    } else if show_trigger {
-                                                        let mut icon = decl_icon::icon_with(
-                                                            cx,
-                                                        ids::ui::CHEVRON_DOWN,
+                                                } else if show_trigger {
+                                                    let mut icon = decl_icon::icon_with(
+                                                        cx,
+                                                        combobox_trigger_icon_id(trigger_variant),
                                                         Some(Px(16.0)),
                                                         Some(ColorRef::Color(icon_fg)),
                                                     );
@@ -1985,26 +2006,24 @@ fn combobox_with_patch<H: UiHost>(
                                                         icon = icon.test_id(format!(
                                                             "{prefix}-trigger-icon"
                                                         ));
-                                                        }
-                                                        out.push(icon);
                                                     }
-                                                    if let Some(inline_end) = inline_end {
-                                                        out.push(inline_end);
-                                                    }
-                                                    out
-                                                },
-                                            )
-                                        });
-                                        let mut children =
-                                            crate::rtl::vec_main_with_inline_end(
-                                                dir, label_el, right,
-                                            );
-                                        if let Some(inline_start) = inline_start {
-                                            children.push(inline_start);
-                                        }
-                                        children
-                                    },
-                                );
+                                                    out.push(icon);
+                                                }
+                                                if let Some(inline_end) = inline_end {
+                                                    out.push(inline_end);
+                                                }
+                                                out
+                                            },
+                                        )
+                                    });
+                                    let mut children =
+                                        crate::rtl::vec_main_with_inline_end(dir, label_el, right);
+                                    if let Some(inline_start) = inline_start {
+                                        children.push(inline_start);
+                                    }
+                                    children
+                                },
+                            );
                                 vec![row]
                             })
                         })
@@ -2448,7 +2467,10 @@ fn combobox_with_patch<H: UiHost>(
                 popper::Align::Center => PopoverAlign::Center,
                 popper::Align::End => PopoverAlign::End,
             })
-            .side_offset(content_side_offset)
+            .side_offset(combobox_effective_side_offset(
+                device_shell_responsive,
+                content_side_offset,
+            ))
             .align_offset(content_align_offset)
             .on_dismiss_request(Some(
                 kit_combobox::set_open_change_reason_on_dismiss_request(
@@ -2782,7 +2804,7 @@ fn combobox_with_patch<H: UiHost>(
                                         } else if show_trigger {
                                             let mut icon = decl_icon::icon_with(
                                                 cx,
-                                                ids::ui::CHEVRON_DOWN,
+                                                combobox_trigger_icon_id(trigger_variant),
                                                 Some(Px(16.0)),
                                                 Some(ColorRef::Color(icon_fg)),
                                             );
@@ -2823,8 +2845,12 @@ fn combobox_with_patch<H: UiHost>(
 	                    .metric_by_key("component.combobox.max_list_height")
 	                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
 	                    .unwrap_or(Px(280.0));
-	                let desired_w =
-	                    combobox_desired_content_width(width, content_width, anchor.size.width);
+                    let desired_w = combobox_effective_content_width(
+                        device_shell_responsive,
+                        effective_trigger_width,
+                        content_width,
+                        anchor.size.width,
+                    );
 	                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 	                let mut items = Some(items);
 	                let mut groups = Some(groups);
@@ -3216,6 +3242,34 @@ fn combobox_desired_content_width(
         .unwrap_or_else(|| Px(anchor_width.0.max(180.0)))
 }
 
+fn combobox_effective_trigger_width(
+    device_shell_responsive: bool,
+    trigger_width: Option<Px>,
+) -> Option<Px> {
+    trigger_width.or((device_shell_responsive && trigger_width.is_none()).then_some(Px(150.0)))
+}
+
+fn combobox_effective_content_width(
+    device_shell_responsive: bool,
+    trigger_width: Option<Px>,
+    content_width: Option<Px>,
+    anchor_width: Px,
+) -> Px {
+    if device_shell_responsive && content_width.is_none() {
+        Px(200.0)
+    } else {
+        combobox_desired_content_width(trigger_width, content_width, anchor_width)
+    }
+}
+
+fn combobox_effective_side_offset(device_shell_responsive: bool, content_side_offset: Px) -> Px {
+    if device_shell_responsive && content_side_offset == Px(6.0) {
+        Px(4.0)
+    } else {
+        content_side_offset
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3248,6 +3302,35 @@ mod tests {
         assert_eq!(placement.align_offset, Px(12.0));
         assert!(placement.shift_cross_axis);
         assert_eq!(placement.sticky, popper::StickyMode::Partial);
+    }
+
+    #[test]
+    fn responsive_combobox_uses_shadcn_popover_demo_defaults() {
+        assert_eq!(
+            combobox_effective_trigger_width(true, None),
+            Some(Px(150.0))
+        );
+        assert_eq!(
+            combobox_effective_content_width(true, Some(Px(150.0)), None, Px(150.0)),
+            Px(200.0)
+        );
+        assert_eq!(combobox_effective_side_offset(true, Px(6.0)), Px(4.0));
+
+        assert_eq!(
+            combobox_effective_trigger_width(false, None),
+            None,
+            "ordinary combobox triggers still fill by default"
+        );
+        assert_eq!(
+            combobox_effective_content_width(false, Some(Px(150.0)), None, Px(150.0)),
+            Px(150.0),
+            "ordinary ComboboxContent still inherits the trigger width"
+        );
+        assert_eq!(
+            combobox_effective_side_offset(false, Px(6.0)),
+            Px(6.0),
+            "ordinary ComboboxContent keeps the Base UI sideOffset default"
+        );
     }
 
     #[test]
@@ -3947,6 +4030,84 @@ mod tests {
     }
 
     #[test]
+    fn button_trigger_hides_icon_unless_explicit() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let mut render_frame = |ui: &mut UiTree<App>, app: &mut App, show_trigger: Option<bool>| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                &mut services,
+                window,
+                bounds,
+                "combobox-responsive-button-trigger",
+                |cx| {
+                    let mut input = ComboboxInput::new().placeholder("+ Set status");
+                    if let Some(show_trigger) = show_trigger {
+                        input = input.show_trigger(show_trigger);
+                    }
+
+                    vec![
+                        Combobox::new(model.clone(), open.clone())
+                            .a11y_label("Status")
+                            .test_id_prefix("combobox-responsive-button-trigger")
+                            .items([ComboboxItem::new("todo", "Todo")])
+                            .trigger(
+                                ComboboxTrigger::new()
+                                    .variant(ComboboxTriggerVariant::Button)
+                                    .width_px(Px(150.0)),
+                            )
+                            .input(input)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, &mut services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, &mut services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, None);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-responsive-button-trigger-trigger-icon")
+            }),
+            "expected Button trigger to match upstream text-only examples by default"
+        );
+
+        render_frame(&mut ui, &mut app, Some(true));
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-responsive-button-trigger-trigger-icon")
+            }),
+            "expected explicit show_trigger=true to keep the trigger icon available"
+        );
+    }
+
+    #[test]
     fn combobox_trigger_places_chevron_at_inline_end() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4042,11 +4203,14 @@ mod tests {
                             "Enterprise Observability Platform With Extremely Long Label",
                         )])
                         .into_element_parts(cx, |_cx| {
-                            vec![ComboboxPart::trigger(
-                                ComboboxTrigger::new()
-                                    .variant(ComboboxTriggerVariant::Button)
-                                    .width_px(Px(180.0)),
-                            )]
+                            vec![
+                                ComboboxPart::trigger(
+                                    ComboboxTrigger::new()
+                                        .variant(ComboboxTriggerVariant::Button)
+                                        .width_px(Px(180.0)),
+                                ),
+                                ComboboxPart::input(ComboboxInput::new().show_trigger(true)),
+                            ]
                         }),
                 ]
             },

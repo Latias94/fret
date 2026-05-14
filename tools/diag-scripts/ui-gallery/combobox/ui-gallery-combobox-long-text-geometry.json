@@ -30,7 +30,7 @@
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 640.0 },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 760.0 },
     { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
@@ -130,7 +130,7 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-long-text-trigger",
-        "content_test_id": "ui-gallery-combobox-long-text-listbox",
+        "content_test_id": "ui-gallery-combobox-long-text-content",
         "preferred_side": "bottom",
         "chosen_side": "bottom",
         "flipped": false,

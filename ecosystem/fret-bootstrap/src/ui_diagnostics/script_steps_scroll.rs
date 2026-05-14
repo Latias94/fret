@@ -1,6 +1,7 @@
 use super::*;
 
 const SCROLL_INTO_VIEW_VISIBILITY_EPS_PX: f32 = 0.5;
+const SCROLL_INTO_VIEW_PROGRESS_EPS_PX: f32 = 0.5;
 
 fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
     let ax0 = a.origin.x.0;
@@ -46,6 +47,159 @@ fn rect_fully_contains_with_epsilon(outer: Rect, inner: Rect, eps_px: f32) -> bo
     ix0 + eps >= ox0 && iy0 + eps >= oy0 && ix1 <= ox1 + eps && iy1 <= oy1 + eps
 }
 
+fn rects_close_with_epsilon(a: Rect, b: Rect, eps_px: f32) -> bool {
+    let eps = eps_px.max(0.0);
+    (a.origin.x.0 - b.origin.x.0).abs() <= eps
+        && (a.origin.y.0 - b.origin.y.0).abs() <= eps
+        && (a.size.width.0 - b.size.width.0).abs() <= eps
+        && (a.size.height.0 - b.size.height.0).abs() <= eps
+}
+
+fn bounded_scroll_delta_for_axis(
+    configured_delta: f32,
+    target_start: f32,
+    target_end: f32,
+    preferred_start: f32,
+    preferred_end: f32,
+    fallback_start: f32,
+    fallback_end: f32,
+) -> f32 {
+    let max_step = configured_delta.abs();
+    if max_step <= 0.01 {
+        return 0.0;
+    }
+
+    let target_len = (target_end - target_start).max(0.0);
+    let preferred_len = (preferred_end - preferred_start).max(0.0);
+    let (visible_start, visible_end) = if target_len <= preferred_len + 0.5 {
+        (preferred_start, preferred_end)
+    } else {
+        (fallback_start, fallback_end)
+    };
+
+    if target_start < visible_start {
+        (visible_start - target_start).min(max_step)
+    } else if target_end > visible_end {
+        -(target_end - visible_end).min(max_step)
+    } else {
+        0.0
+    }
+}
+
+fn ui_rect_from_rect(rect: Rect) -> UiRectV1 {
+    UiRectV1 {
+        x_px: rect.origin.x.0,
+        y_px: rect.origin.y.0,
+        w_px: rect.size.width.0,
+        h_px: rect.size.height.0,
+    }
+}
+
+fn sign_with_epsilon_f32(value: f32, eps: f32) -> Option<i8> {
+    if value > eps {
+        Some(1)
+    } else if value < -eps {
+        Some(-1)
+    } else {
+        None
+    }
+}
+
+fn sign_with_epsilon_f64(value: f64, eps: f64) -> Option<i8> {
+    if value > eps {
+        Some(1)
+    } else if value < -eps {
+        Some(-1)
+    } else {
+        None
+    }
+}
+
+fn record_scroll_motion_check(
+    active: &mut ActiveScript,
+    step_index: usize,
+    container: &UiSelectorV1,
+    target: &UiSelectorV1,
+    check: &UiScrollMotionCheckV1,
+    state: &mut V2ScrollIntoViewState,
+    scroll_node: Option<&fret_core::SemanticsNode>,
+    target_bounds: Option<Rect>,
+) -> Option<String> {
+    state.motion_sample_count = state.motion_sample_count.saturating_add(1);
+
+    let scroll_value = scroll_node.and_then(|node| semantics_scroll_field_value(node, check.field));
+    let scroll_delta = scroll_value
+        .zip(state.motion_last_scroll_value)
+        .map(|(value, last)| value - last);
+    let target_delta_y = target_bounds
+        .zip(state.motion_last_target_y)
+        .map(|(bounds, last)| bounds.origin.y.0 - last);
+
+    let mut note = "scroll_into_view.motion.sample".to_string();
+    let mut reason = None;
+
+    if let Some(delta) = scroll_delta.filter(|delta| delta.is_finite()) {
+        if delta.abs() > 0.01 {
+            state.motion_saw_scroll_progress = true;
+        }
+        if let Some(sign) = sign_with_epsilon_f64(delta, check.max_scroll_reverse_px) {
+            if state.motion_scroll_direction.is_none() {
+                state.motion_scroll_direction = Some(sign);
+            } else if state.motion_scroll_direction != Some(sign) {
+                note = format!(
+                    "scroll_into_view.motion.scroll_reversed delta={delta:.3} last_direction={:?}",
+                    state.motion_scroll_direction
+                );
+                reason = Some("scroll_into_view_motion_scroll_reversed".to_string());
+            }
+        }
+    }
+
+    if reason.is_none() {
+        if let Some(delta) = target_delta_y {
+            if let Some(sign) = sign_with_epsilon_f32(delta, check.max_target_reverse_px) {
+                if state.motion_target_direction.is_none() {
+                    state.motion_target_direction = Some(sign);
+                } else if state.motion_target_direction != Some(sign) {
+                    note = format!(
+                        "scroll_into_view.motion.target_reversed delta={delta:.3} last_direction={:?}",
+                        state.motion_target_direction
+                    );
+                    reason = Some("scroll_into_view_motion_target_reversed".to_string());
+                }
+            }
+        }
+    }
+
+    push_scroll_motion_trace(
+        &mut active.scroll_motion_trace,
+        UiScrollMotionTraceEntryV1 {
+            step_index: step_index as u32,
+            container: container.clone(),
+            scroll_target: check.scroll_target.clone(),
+            target: target.clone(),
+            field: check.field,
+            sample_count: state.motion_sample_count,
+            scroll_value,
+            scroll_delta,
+            target_bounds: target_bounds.map(ui_rect_from_rect),
+            target_delta_y_px: target_delta_y,
+            max_target_reverse_px: Some(check.max_target_reverse_px),
+            max_scroll_reverse_px: Some(check.max_scroll_reverse_px),
+            note: Some(note),
+        },
+    );
+
+    if let Some(value) = scroll_value.filter(|value| value.is_finite()) {
+        state.motion_last_scroll_value = Some(value);
+    }
+    if let Some(bounds) = target_bounds {
+        state.motion_last_target_y = Some(bounds.origin.y.0);
+    }
+
+    reason
+}
+
 pub(super) fn handle_scroll_into_view_step(
     svc: &mut UiDiagnosticsService,
     _app: &App,
@@ -76,6 +230,7 @@ pub(super) fn handle_scroll_into_view_step(
         require_fully_within_window,
         padding_px,
         padding_insets_px,
+        motion_check,
         timeout_frames,
     } = step
     else {
@@ -109,6 +264,13 @@ pub(super) fn handle_scroll_into_view_step(
             remaining_frames: timeout_frames,
             no_progress_frames: 0,
             last_target_bounds: None,
+            last_container_bounds: None,
+            motion_sample_count: 0,
+            motion_last_scroll_value: None,
+            motion_last_target_y: None,
+            motion_scroll_direction: None,
+            motion_target_direction: None,
+            motion_saw_scroll_progress: false,
         },
     };
 
@@ -122,6 +284,24 @@ pub(super) fn handle_scroll_into_view_step(
         svc.cfg.redact_text,
         &mut active.selector_resolution_trace,
     );
+    let scroll_target_selector = motion_check
+        .as_ref()
+        .and_then(|check| check.scroll_target.as_ref())
+        .unwrap_or(&container);
+    let scroll_node = if motion_check.is_some() {
+        select_semantics_node_with_trace(
+            snapshot,
+            window,
+            element_runtime,
+            scroll_target_selector,
+            active.scope_root_for_window(window),
+            step_index as u32,
+            svc.cfg.redact_text,
+            &mut active.selector_resolution_trace,
+        )
+    } else {
+        container_node
+    };
     let target_node = select_semantics_node_with_trace(
         snapshot,
         window,
@@ -143,6 +323,26 @@ pub(super) fn handle_scroll_into_view_step(
             .and_then(|ui| ui.debug_node_visual_bounds(node.id))
             .unwrap_or(node.bounds)
     });
+
+    if let Some(check) = motion_check.as_ref() {
+        if let Some(reason) = record_scroll_motion_check(
+            active,
+            step_index,
+            &container,
+            &target,
+            check,
+            &mut state,
+            scroll_node,
+            target_bounds,
+        ) {
+            *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
+            *stop_script = true;
+            *failure_reason = Some(reason);
+            active.v2_step_state = None;
+            output.request_redraw = true;
+            return true;
+        }
+    }
 
     // `padding_px` / `padding_insets_px` is a *scroll margin preference* (how much breathing room we
     // try to maintain while scrolling), not a hard correctness requirement.
@@ -176,6 +376,35 @@ pub(super) fn handle_scroll_into_view_step(
     };
 
     if visible_ok && container_ok {
+        if let Some(check) = motion_check.as_ref() {
+            if check.require_scroll_progress && !state.motion_saw_scroll_progress {
+                let reason = "scroll_into_view_motion_no_scroll_progress".to_string();
+                push_scroll_motion_trace(
+                    &mut active.scroll_motion_trace,
+                    UiScrollMotionTraceEntryV1 {
+                        step_index: step_index as u32,
+                        container: container.clone(),
+                        scroll_target: check.scroll_target.clone(),
+                        target: target.clone(),
+                        field: check.field,
+                        sample_count: state.motion_sample_count,
+                        scroll_value: state.motion_last_scroll_value,
+                        scroll_delta: None,
+                        target_bounds: target_bounds.map(ui_rect_from_rect),
+                        target_delta_y_px: None,
+                        max_target_reverse_px: Some(check.max_target_reverse_px),
+                        max_scroll_reverse_px: Some(check.max_scroll_reverse_px),
+                        note: Some(reason.clone()),
+                    },
+                );
+                *force_dump_label = Some(format!("script-step-{step_index:04}-{reason}"));
+                *stop_script = true;
+                *failure_reason = Some(reason);
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return true;
+            }
+        }
         active.v2_step_state = None;
         active.next_step = active.next_step.saturating_add(1);
         output.request_redraw = true;
@@ -256,15 +485,23 @@ pub(super) fn handle_scroll_into_view_step(
                     }
                 }
 
-                if state
-                    .last_target_bounds
-                    .is_some_and(|prev| prev == target_bounds)
-                {
+                let target_stable = state.last_target_bounds.is_some_and(|prev| {
+                    rects_close_with_epsilon(prev, target_bounds, SCROLL_INTO_VIEW_PROGRESS_EPS_PX)
+                });
+                let container_stable = state.last_container_bounds.is_some_and(|prev| {
+                    rects_close_with_epsilon(
+                        prev,
+                        container_bounds,
+                        SCROLL_INTO_VIEW_PROGRESS_EPS_PX,
+                    )
+                });
+                if target_stable && container_stable {
                     state.no_progress_frames = state.no_progress_frames.saturating_add(1);
                 } else {
                     state.no_progress_frames = 0;
                 }
                 state.last_target_bounds = Some(target_bounds);
+                state.last_container_bounds = Some(container_bounds);
 
                 if state.no_progress_frames >= 20 {
                     *force_dump_label = Some(format!(
@@ -278,29 +515,39 @@ pub(super) fn handle_scroll_into_view_step(
                 }
 
                 if effective_dx.abs() > 0.01 {
-                    let abs_dx = effective_dx.abs();
                     let target_left = target_bounds.origin.x.0;
                     let target_right = target_left + target_bounds.size.width.0.max(0.0);
                     let inner_left = inner_visible.origin.x.0;
                     let inner_right = inner_left + inner_visible.size.width.0.max(0.0);
-                    if target_left < inner_left {
-                        effective_dx = abs_dx;
-                    } else if target_right > inner_right {
-                        effective_dx = -abs_dx;
-                    }
+                    let visible_left = visible_container.origin.x.0;
+                    let visible_right = visible_left + visible_container.size.width.0.max(0.0);
+                    effective_dx = bounded_scroll_delta_for_axis(
+                        effective_dx,
+                        target_left,
+                        target_right,
+                        inner_left,
+                        inner_right,
+                        visible_left,
+                        visible_right,
+                    );
                 }
 
                 if effective_dy.abs() > 0.01 {
-                    let abs_dy = effective_dy.abs();
                     let target_top = target_bounds.origin.y.0;
                     let target_bottom = target_top + target_bounds.size.height.0.max(0.0);
                     let inner_top = inner_visible.origin.y.0;
                     let inner_bottom = inner_top + inner_visible.size.height.0.max(0.0);
-                    if target_top < inner_top {
-                        effective_dy = abs_dy;
-                    } else if target_bottom > inner_bottom {
-                        effective_dy = -abs_dy;
-                    }
+                    let visible_top = visible_container.origin.y.0;
+                    let visible_bottom = visible_top + visible_container.size.height.0.max(0.0);
+                    effective_dy = bounded_scroll_delta_for_axis(
+                        effective_dy,
+                        target_top,
+                        target_bottom,
+                        inner_top,
+                        inner_bottom,
+                        visible_top,
+                        visible_bottom,
+                    );
                 }
             }
 
@@ -468,5 +715,43 @@ mod tests {
             rect(10.0, 10.0, 90.75, 90.75),
             0.5,
         ));
+    }
+
+    #[test]
+    fn scroll_progress_treats_subpixel_bounds_jitter_as_stable() {
+        assert!(rects_close_with_epsilon(
+            rect(10.0, 20.0, 30.0, 40.0),
+            rect(10.25, 19.75, 30.25, 39.75),
+            0.5,
+        ));
+        assert!(!rects_close_with_epsilon(
+            rect(10.0, 20.0, 30.0, 40.0),
+            rect(10.75, 20.0, 30.0, 40.0),
+            0.5,
+        ));
+    }
+
+    #[test]
+    fn scroll_delta_is_capped_to_axis_visibility_gap() {
+        assert_eq!(
+            bounded_scroll_delta_for_axis(-40.0, 170.0, 206.0, 178.0, 234.0, 176.0, 236.0),
+            8.0,
+        );
+        assert_eq!(
+            bounded_scroll_delta_for_axis(-40.0, 204.0, 242.0, 178.0, 234.0, 176.0, 236.0),
+            -8.0,
+        );
+        assert_eq!(
+            bounded_scroll_delta_for_axis(-40.0, 180.0, 220.0, 178.0, 234.0, 176.0, 236.0),
+            0.0,
+        );
+    }
+
+    #[test]
+    fn scroll_delta_falls_back_when_padding_makes_fit_impossible() {
+        assert_eq!(
+            bounded_scroll_delta_for_axis(-40.0, 170.0, 232.0, 178.0, 234.0, 176.0, 236.0),
+            6.0,
+        );
     }
 }

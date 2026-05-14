@@ -137,6 +137,258 @@
         "upstream_ref": "ARIA labelledby/describedby/controls state relation parity",
         "note": "SemanticsProps wrapper and attach_semantics decoration must expose equivalent relation outcomes."
       }
+    },
+    {
+      "id": "text-input-region-value-and-editing-metadata",
+      "scenario": { "kind": "text_input_region_value_and_editing_metadata" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "role_is",
+              "target": { "kind": "test_id", "id": "editor-region" },
+              "role": "text_field"
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "value_equals",
+              "target": { "kind": "test_id", "id": "editor-region" },
+              "text": "hello"
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "text_composition_is",
+              "target": { "kind": "test_id", "id": "editor-region" },
+              "composing": true
+            }
+          },
+          {
+            "kind": "semantics_text_selection_is",
+            "target": { "kind": "test_id", "id": "editor-region" },
+            "expected": { "anchor": 2, "focus": 2 }
+          },
+          {
+            "kind": "semantics_text_composition_range_is",
+            "target": { "kind": "test_id", "id": "editor-region" },
+            "expected": { "start": 1, "end": 3 }
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "editor-region" },
+            "action": "focus",
+            "expected": true
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "editor-region" },
+            "action": "set_value",
+            "expected": false
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "editor-region" },
+            "action": "set_text_selection",
+            "expected": true
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ADR 0071 text selection/composition semantics",
+        "note": "TextInputRegion publishes value and editing ranges only while focused; mechanism harness must be able to observe and assert that surface."
+      }
+    },
+    {
+      "id": "pressable-collection-metadata-and-state",
+      "scenario": { "kind": "pressable_collection_metadata" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "pos_in_set_is",
+              "target": { "kind": "test_id", "id": "option-two" },
+              "pos_in_set": 2
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "set_size_is",
+              "target": { "kind": "test_id", "id": "option-two" },
+              "set_size": 5
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "selected_is",
+              "target": { "kind": "test_id", "id": "option-two" },
+              "selected": true
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "checked_is",
+              "target": { "kind": "test_id", "id": "option-two" },
+              "checked": true
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "checked_is_none",
+              "target": { "kind": "test_id", "id": "option-three" }
+            }
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "option-two" },
+            "action": "invoke",
+            "expected": true
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA setsize/posinset and selectable option state",
+        "note": "Pressable listbox options must expose collection metadata and state so recipe parity can catch virtualized/listbox drift."
+      }
+    },
+    {
+      "id": "semantics-wrapper-live-and-structured-metadata",
+      "scenario": { "kind": "semantics_wrapper_live_and_structured_metadata" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "semantics_live_is",
+            "target": { "kind": "test_id", "id": "live-status" },
+            "live": "polite"
+          },
+          {
+            "kind": "semantics_live_atomic_is",
+            "target": { "kind": "test_id", "id": "live-status" },
+            "expected": true
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "value_contains",
+              "target": { "kind": "test_id", "id": "live-status" },
+              "text": "Sav"
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "semantics_numeric_approx_eq",
+              "target": { "kind": "test_id", "id": "volume-slider" },
+              "field": "value",
+              "value": 50.0,
+              "eps": 0.01
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "semantics_numeric_approx_eq",
+              "target": { "kind": "test_id", "id": "volume-slider" },
+              "field": "step",
+              "value": 1.0,
+              "eps": 0.01
+            }
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "volume-slider" },
+            "action": "increment",
+            "expected": true
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "volume-slider" },
+            "action": "decrement",
+            "expected": true
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "volume-slider" },
+            "action": "set_value",
+            "expected": true
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "semantics_scroll_is_finite",
+              "target": { "kind": "test_id", "id": "results-viewport" },
+              "field": "y"
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "semantics_scroll_approx_eq",
+              "target": { "kind": "test_id", "id": "results-viewport" },
+              "field": "y_max",
+              "value": 120.0,
+              "eps": 0.01
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA live region plus structured range/scroll metadata",
+        "note": "SemanticsProps is the mechanism layer surface for non-recipe semantic metadata; harness must prove it is observable through the shared oracle."
+      }
+    },
+    {
+      "id": "hidden-subtree-policy-excludes-default-selectors-but-keeps-diagnostics",
+      "scenario": { "kind": "hidden_subtree_policy" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "exists",
+              "target": { "kind": "test_id", "id": "visible-button" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "hidden-group" }
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "not_exists",
+              "target": { "kind": "test_id", "id": "hidden-child-button" }
+            }
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "hidden-group" },
+            "flag": "hidden",
+            "expected": true
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "hidden-child-button" },
+            "flag": "hidden",
+            "expected": false
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ADR 0293 a11y hidden semantics",
+        "note": "Default harness selectors model the filtered AT tree and exclude a hidden subtree, while unfiltered diagnostics can still observe the hidden flag and retained child nodes."
+      }
     }
   ]
 }

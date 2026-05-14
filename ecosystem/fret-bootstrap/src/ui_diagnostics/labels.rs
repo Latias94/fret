@@ -123,6 +123,15 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
         "wait_semantics_scroll_stable_impossible_stable_frames_gt_timeout_frames" => {
             Some("wait_semantics_scroll_stable.impossible_stable_frames_gt_timeout_frames")
         }
+        "assert_semantics_scroll_idle_stable_frame_delta_exceeded" => {
+            Some("assert_semantics_scroll_idle_stable.frame_delta_exceeded")
+        }
+        "assert_semantics_scroll_idle_stable_total_delta_exceeded" => {
+            Some("assert_semantics_scroll_idle_stable.total_delta_exceeded")
+        }
+        "assert_semantics_scroll_idle_stable_missing_scroll_field" => {
+            Some("assert_semantics_scroll_idle_stable.missing_scroll_field")
+        }
         "click_stable_impossible_stable_frames_gt_timeout_frames" => {
             Some("click_stable.impossible_stable_frames_gt_timeout_frames")
         }

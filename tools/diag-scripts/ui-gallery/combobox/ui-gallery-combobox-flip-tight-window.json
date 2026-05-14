@@ -125,7 +125,7 @@
       "type": "scroll_into_view",
       "container": {
         "kind": "test_id",
-        "id": "ui-gallery-content-scroll"
+        "id": "ui-gallery-content-viewport"
       },
       "target": {
         "kind": "test_id",
@@ -138,6 +138,16 @@
       "padding_px": 2.0,
       "padding_insets_px": null,
       "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-combobox-rtl-trigger"
+      },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
     },
     {
       "type": "click_stable",
@@ -177,9 +187,19 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-rtl-trigger",
-        "content_test_id": "ui-gallery-combobox-rtl-listbox",
+        "content_test_id": "ui-gallery-combobox-rtl-content",
         "flipped": true
       },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-combobox-rtl-content"
+      },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
       "timeout_frames": 240
     },
     {

@@ -39,6 +39,22 @@ impl UiVirtualListWindowShiftKindV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiRetainedVirtualListReconcileKindV1 {
+    Prefetch,
+    Escape,
+}
+
+impl UiRetainedVirtualListReconcileKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugRetainedVirtualListReconcileKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugRetainedVirtualListReconcileKind::Prefetch => Self::Prefetch,
+            fret_ui::tree::UiDebugRetainedVirtualListReconcileKind::Escape => Self::Escape,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiVirtualListWindowShiftReasonV1 {
     ScrollOffset,
     ViewportResize,
@@ -284,6 +300,8 @@ impl UiWindowedRowsSurfaceWindowV1 {
 pub struct UiRetainedVirtualListReconcileV1 {
     pub node: u64,
     pub element: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reconcile_kind: Option<UiRetainedVirtualListReconcileKindV1>,
     pub prev_items: u64,
     pub next_items: u64,
     pub preserved_items: u64,
@@ -306,6 +324,9 @@ impl UiRetainedVirtualListReconcileV1 {
         Self {
             node: key_to_u64(record.node),
             element: record.element.0,
+            reconcile_kind: Some(UiRetainedVirtualListReconcileKindV1::from_kind(
+                record.reconcile_kind,
+            )),
             prev_items: record.prev_items as u64,
             next_items: record.next_items as u64,
             preserved_items: record.preserved_items as u64,

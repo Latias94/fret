@@ -74,6 +74,13 @@ pub(crate) struct RecordedTextPrepare {
 pub(crate) struct StyleAwareServices {
     pub(crate) prepared: Vec<RecordedTextPrepare>,
     materials: SlotMap<fret_core::MaterialId, fret_core::MaterialDescriptor>,
+    svgs: SlotMap<fret_core::SvgId, Vec<u8>>,
+}
+
+impl StyleAwareServices {
+    pub(crate) fn svg_bytes(&self, id: fret_core::SvgId) -> Option<&[u8]> {
+        self.svgs.get(id).map(Vec::as_slice)
+    }
 }
 
 impl fret_core::TextService for StyleAwareServices {
@@ -153,12 +160,12 @@ impl fret_core::PathService for StyleAwareServices {
 }
 
 impl fret_core::SvgService for StyleAwareServices {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
+    fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
+        self.svgs.insert(bytes.to_vec())
     }
 
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        true
+    fn unregister_svg(&mut self, svg: fret_core::SvgId) -> bool {
+        self.svgs.remove(svg).is_some()
     }
 }
 

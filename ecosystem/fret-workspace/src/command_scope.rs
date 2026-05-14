@@ -99,19 +99,41 @@ impl<T> WorkspaceCommandScope<T> {
                 })
                 .unwrap_or(false)
         });
-        let _ = cx.app.models_mut().update(&focus_state, |st| {
-            let entry = st.last_focused_by_window.entry(window).or_insert(None);
-            if *entry != focused_now {
-                *entry = focused_now;
-            }
+        let needs_focus_state_update = cx
+            .app
+            .models_mut()
+            .read(&focus_state, |st| {
+                let focused_changed = st
+                    .last_focused_by_window
+                    .get(&window)
+                    .copied()
+                    .unwrap_or(None)
+                    != focused_now;
+                let non_tabstrip_changed = if let Some(focused) = focused_now {
+                    !focused_is_tabstrip
+                        && st.last_non_tabstrip_focused_by_window.get(&window).copied()
+                            != Some(focused)
+                } else {
+                    false
+                };
+                focused_changed || non_tabstrip_changed
+            })
+            .unwrap_or(true);
+        if needs_focus_state_update {
+            let _ = cx.app.models_mut().update(&focus_state, |st| {
+                let entry = st.last_focused_by_window.entry(window).or_insert(None);
+                if *entry != focused_now {
+                    *entry = focused_now;
+                }
 
-            if let Some(focused) = focused_now
-                && !focused_is_tabstrip
-            {
-                st.last_non_tabstrip_focused_by_window
-                    .insert(window, focused);
-            }
-        });
+                if let Some(focused) = focused_now
+                    && !focused_is_tabstrip
+                {
+                    st.last_non_tabstrip_focused_by_window
+                        .insert(window, focused);
+                }
+            });
+        }
 
         let root = cx.container(
             ContainerProps {

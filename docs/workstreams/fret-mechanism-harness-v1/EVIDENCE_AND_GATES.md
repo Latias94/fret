@@ -65,7 +65,82 @@ cargo test --profile dev-fast -p fret-ui --lib view_cache_scroll -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache_virtual_list -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib retained_virtual_list_host_updates_window_without_rerendering_view_cache_root -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib scroll_handle_changes_classify -- --nocapture
+cargo test --profile dev-fast -p fret-diag-protocol --lib predicate_virtual_list_window_shift_samples_len_le_serializes -- --nocapture
+cargo test --profile dev-fast -p fret-diag-protocol --lib step_assert_semantics_scroll_idle_stable_deserializes_with_defaults -- --nocapture
+cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-driver --lib step_start_retains_semantics_scroll_idle_stable_trace_for_passed_evidence -- --nocapture
+cargo build -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json --dir target/fret-diag-virtual-list-harness-commit-check --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary --dir target/fret-diag-vlist-window-boundary-after-reason-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
+$env:FRET_UI_GALLERY_VLIST_RETAINED='1'; cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-after-owner-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 ```
+
+Current runtime evidence anchors:
+
+- Virtual-list small-scroll no-window-shift gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-no-window-shifts-small-scroll/suite.json`
+  - evidence:
+    `target/fret-diag-virtual-list-harness-commit-check/sessions/1778697640180-135472/1778697641371/script.result.json`
+  - share pack:
+    `target/fret-diag-virtual-list-harness-commit-check/sessions/1778697640180-135472/share/1778697641371.zip`
+- Virtual-list boundary-crossing non-retained gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-window-boundary/suite.json`
+  - evidence:
+    `target/fret-diag-vlist-window-boundary-after-reason-fix/sessions/1778718360331-96416/suite.summary.json`
+  - proof:
+    suite `status=passed`.
+- Virtual-list boundary-crossing retained gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-window-boundary-retained/suite.json`
+  - current evidence:
+    `target/fret-diag-vlist-window-boundary-retained-after-owner-fix/sessions/1778718929118-137636/script.result.json`
+  - status:
+    the retained script produced evidence after the owner fix, but the outer suite command returned
+    non-zero and no `suite.summary.json` was written. Keep this as a follow-up clean-exit gap.
+- Checkbox RTL post-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - evidence:
+    `target/fret-diag-rtl-scroll-idle-stability-v2/sessions/1778699811444-47076/1778699812656/script.result.json`
+  - share pack:
+    `target/fret-diag-rtl-scroll-idle-stability-v2/sessions/1778699811444-47076/share/1778699812656.zip`
+  - trace proof:
+    `sample_count=45`, `required_samples=45`, `baseline_value=2495.999755859375`,
+    `value=2495.999755859375`, `frame_delta=0.0`, `total_delta=0.0`.
+- ScrollArea RTL nested-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - evidence:
+    `target/fret-diag-scroll-area-rtl-idle-stability/sessions/1778705030563-134220/1778705031873/script.result.json`
+  - share pack:
+    `target/fret-diag-scroll-area-rtl-idle-stability/sessions/1778705030563-134220/share/1778705031873.zip`
+  - trace proof:
+    nested RTL viewport `sample_count=60`, `baseline_value=480.0`, `value=480.0`,
+    `frame_delta=0.0`, `total_delta=0.0`; outer content viewport `sample_count=60`,
+    `baseline_value=1220.0`, `value=1220.0`, `frame_delta=0.0`, `total_delta=0.0`.
+- Table RTL post-scroll idle-stability gate:
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - evidence:
+    `target/fret-diag-table-rtl-idle-stability/sessions/1778705380996-128024/1778705382221/script.result.json`
+  - share pack:
+    `target/fret-diag-table-rtl-idle-stability/sessions/1778705380996-128024/share/1778705382221.zip`
+  - trace proof:
+    outer content viewport `sample_count=60`, `baseline_value=1260.0`, `value=1260.0`,
+    `frame_delta=0.0`, `total_delta=0.0`.
 
 ## Environment View-Cache Gates
 
@@ -95,6 +170,7 @@ cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
 
 ```powershell
 cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
+cargo test --profile dev-fast -p fret-mechanism-harness --lib default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_controls_element_is_exposed -- --nocapture
@@ -459,6 +535,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
 - Semantics relation runner:
   `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+- Hidden-subtree selector/oracle fix:
+  `crates/fret-mechanism-harness/src/observe.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`
+- Hidden-subtree focused gate:
+  `default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable`
 - Combobox active-descendant interaction fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/combobox_active_descendant_interaction_v1.json`
 - Combobox active-descendant interaction runner:

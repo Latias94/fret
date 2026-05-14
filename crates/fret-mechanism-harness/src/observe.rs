@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use fret_core::{NodeId, Point, Rect, SemanticsRole, SemanticsSnapshot};
+use fret_core::{
+    NodeId, Point, Rect, SemanticsCheckedState, SemanticsLive, SemanticsPressedState,
+    SemanticsRole, SemanticsSnapshot,
+};
 use fret_diag_protocol::UiSelectorV1;
 use serde::{Deserialize, Serialize};
 use slotmap::Key as _;
@@ -128,7 +131,7 @@ impl ObservedTree {
                 hit_bounds: None,
                 visible: all_visible || visible_ids.contains(&node_id),
                 hit_testable: true,
-                focusable: None,
+                focusable: Some(node.actions.focus),
                 active_descendant_node_id: node.active_descendant.map(|id| id.data().as_ffi()),
                 labelled_by_node_ids: node
                     .labelled_by
@@ -143,6 +146,31 @@ impl ObservedTree {
                 controls_node_ids: node.controls.iter().map(|id| id.data().as_ffi()).collect(),
                 disabled: Some(node.flags.disabled),
                 hidden: Some(node.flags.hidden),
+                selected: Some(node.flags.selected),
+                expanded: Some(node.flags.expanded),
+                checked: node.flags.checked,
+                checked_state: node
+                    .flags
+                    .checked_state
+                    .map(ObservedSemanticsCheckedState::from),
+                pressed_state: node
+                    .flags
+                    .pressed_state
+                    .map(ObservedSemanticsPressedState::from),
+                value: node.value.clone(),
+                pos_in_set: node.pos_in_set,
+                set_size: node.set_size,
+                text_selection: node
+                    .text_selection
+                    .map(|(anchor, focus)| ObservedTextSelection { anchor, focus }),
+                text_composition: node
+                    .text_composition
+                    .map(|(start, end)| ObservedTextRange { start, end }),
+                actions: ObservedSemanticsActions::from(node.actions),
+                live: node.flags.live.map(ObservedSemanticsLive::from),
+                live_atomic: Some(node.flags.live_atomic),
+                numeric: ObservedSemanticsNumeric::from_extra(node.extra.numeric),
+                scroll: ObservedSemanticsScroll::from_extra(node.extra.scroll),
             });
         }
 
@@ -402,12 +430,33 @@ impl ObservedTree {
         if !node.visible {
             return false;
         }
+        if node
+            .node_id
+            .and_then(|id| self.nearest_semantics_hidden_ancestor_or_self(id))
+            .is_some()
+        {
+            return false;
+        }
         let Some(barrier) = self.barrier_root_node_id else {
             return true;
         };
         node.node_id
             .map(|id| self.is_descendant_of_or_self(id, barrier))
             .unwrap_or(false)
+    }
+
+    fn nearest_semantics_hidden_ancestor_or_self(&self, mut id: u64) -> Option<u64> {
+        loop {
+            let node = self.nodes.iter().find(|node| node.node_id == Some(id))?;
+            if node.hidden == Some(true) {
+                return Some(id);
+            }
+            id = node.parent_node_id?;
+        }
+    }
+
+    pub fn node_is_descendant_of_or_self(&self, id: u64, ancestor: u64) -> bool {
+        self.is_descendant_of_or_self(id, ancestor)
     }
 
     fn is_descendant_of_or_self(&self, mut id: u64, ancestor: u64) -> bool {
@@ -487,6 +536,36 @@ pub struct ObservedNode {
     pub disabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hidden: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expanded: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checked: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checked_state: Option<ObservedSemanticsCheckedState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pressed_state: Option<ObservedSemanticsPressedState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pos_in_set: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub set_size: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_selection: Option<ObservedTextSelection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_composition: Option<ObservedTextRange>,
+    #[serde(default, skip_serializing_if = "ObservedSemanticsActions::is_default")]
+    pub actions: ObservedSemanticsActions,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live: Option<ObservedSemanticsLive>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live_atomic: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub numeric: Option<ObservedSemanticsNumeric>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll: Option<ObservedSemanticsScroll>,
 }
 
 impl ObservedNode {
@@ -511,6 +590,21 @@ impl ObservedNode {
             controls_node_ids: Vec::new(),
             disabled: None,
             hidden: None,
+            selected: None,
+            expanded: None,
+            checked: None,
+            checked_state: None,
+            pressed_state: None,
+            value: None,
+            pos_in_set: None,
+            set_size: None,
+            text_selection: None,
+            text_composition: None,
+            actions: ObservedSemanticsActions::default(),
+            live: None,
+            live_atomic: None,
+            numeric: None,
+            scroll: None,
         }
     }
 
@@ -540,6 +634,232 @@ pub enum ObservedSemanticsRelation {
 pub enum ObservedSemanticsFlag {
     Disabled,
     Hidden,
+    Selected,
+    Expanded,
+    Checked,
+    LiveAtomic,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ObservedSemanticsActions {
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub focus: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub invoke: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub set_value: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub decrement: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub increment: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub scroll_by: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub set_text_selection: bool,
+}
+
+impl ObservedSemanticsActions {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
+impl From<fret_core::SemanticsActions> for ObservedSemanticsActions {
+    fn from(actions: fret_core::SemanticsActions) -> Self {
+        Self {
+            focus: actions.focus,
+            invoke: actions.invoke,
+            set_value: actions.set_value,
+            decrement: actions.decrement,
+            increment: actions.increment,
+            scroll_by: actions.scroll_by,
+            set_text_selection: actions.set_text_selection,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsAction {
+    Focus,
+    Invoke,
+    SetValue,
+    Decrement,
+    Increment,
+    ScrollBy,
+    SetTextSelection,
+}
+
+impl ObservedSemanticsActions {
+    pub fn get(self, action: ObservedSemanticsAction) -> bool {
+        match action {
+            ObservedSemanticsAction::Focus => self.focus,
+            ObservedSemanticsAction::Invoke => self.invoke,
+            ObservedSemanticsAction::SetValue => self.set_value,
+            ObservedSemanticsAction::Decrement => self.decrement,
+            ObservedSemanticsAction::Increment => self.increment,
+            ObservedSemanticsAction::ScrollBy => self.scroll_by,
+            ObservedSemanticsAction::SetTextSelection => self.set_text_selection,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsLive {
+    Off,
+    Polite,
+    Assertive,
+    Unknown,
+}
+
+impl From<SemanticsLive> for ObservedSemanticsLive {
+    fn from(live: SemanticsLive) -> Self {
+        match live {
+            SemanticsLive::Off => Self::Off,
+            SemanticsLive::Polite => Self::Polite,
+            SemanticsLive::Assertive => Self::Assertive,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsCheckedState {
+    False,
+    True,
+    Mixed,
+    Unknown,
+}
+
+impl From<SemanticsCheckedState> for ObservedSemanticsCheckedState {
+    fn from(state: SemanticsCheckedState) -> Self {
+        match state {
+            SemanticsCheckedState::False => Self::False,
+            SemanticsCheckedState::True => Self::True,
+            SemanticsCheckedState::Mixed => Self::Mixed,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsPressedState {
+    False,
+    True,
+    Mixed,
+    Unknown,
+}
+
+impl From<SemanticsPressedState> for ObservedSemanticsPressedState {
+    fn from(state: SemanticsPressedState) -> Self {
+        match state {
+            SemanticsPressedState::False => Self::False,
+            SemanticsPressedState::True => Self::True,
+            SemanticsPressedState::Mixed => Self::Mixed,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ObservedTextSelection {
+    pub anchor: u32,
+    pub focus: u32,
+}
+
+impl ObservedTextSelection {
+    pub fn as_tuple(self) -> (u32, u32) {
+        (self.anchor, self.focus)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ObservedTextRange {
+    pub start: u32,
+    pub end: u32,
+}
+
+impl ObservedTextRange {
+    pub fn as_tuple(self) -> (u32, u32) {
+        (self.start, self.end)
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ObservedSemanticsNumeric {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jump: Option<f64>,
+}
+
+impl ObservedSemanticsNumeric {
+    fn from_extra(numeric: fret_core::SemanticsNumeric) -> Option<Self> {
+        let observed = Self {
+            value: numeric.value,
+            min: numeric.min,
+            max: numeric.max,
+            step: numeric.step,
+            jump: numeric.jump,
+        };
+        (!observed.is_empty()).then_some(observed)
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.value.is_none()
+            && self.min.is_none()
+            && self.max.is_none()
+            && self.step.is_none()
+            && self.jump.is_none()
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ObservedSemanticsScroll {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_max: Option<f64>,
+}
+
+impl ObservedSemanticsScroll {
+    fn from_extra(scroll: fret_core::SemanticsScroll) -> Option<Self> {
+        let observed = Self {
+            x: scroll.x,
+            x_min: scroll.x_min,
+            x_max: scroll.x_max,
+            y: scroll.y,
+            y_min: scroll.y_min,
+            y_max: scroll.y_max,
+        };
+        (!observed.is_empty()).then_some(observed)
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.x.is_none()
+            && self.x_min.is_none()
+            && self.x_max.is_none()
+            && self.y.is_none()
+            && self.y_min.is_none()
+            && self.y_max.is_none()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -591,6 +911,7 @@ pub fn role_label(role: SemanticsRole) -> &'static str {
         SemanticsRole::Window => "window",
         SemanticsRole::Panel => "panel",
         SemanticsRole::Group => "group",
+        SemanticsRole::Region => "region",
         SemanticsRole::Toolbar => "toolbar",
         SemanticsRole::Heading => "heading",
         SemanticsRole::Dialog => "dialog",
@@ -604,8 +925,11 @@ pub fn role_label(role: SemanticsRole) -> &'static str {
         SemanticsRole::Checkbox => "checkbox",
         SemanticsRole::Switch => "switch",
         SemanticsRole::Slider => "slider",
+        SemanticsRole::SpinButton => "spin_button",
         SemanticsRole::ProgressBar => "progress_bar",
+        SemanticsRole::Meter => "meter",
         SemanticsRole::ScrollBar => "scroll_bar",
+        SemanticsRole::Splitter => "splitter",
         SemanticsRole::ComboBox => "combo_box",
         SemanticsRole::RadioGroup => "radio_group",
         SemanticsRole::RadioButton => "radio_button",
@@ -672,6 +996,10 @@ fn collect_subtree_ids(root: u64, children: &HashMap<u64, Vec<u64>>, out: &mut H
 
 fn default_true() -> bool {
     true
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 #[allow(dead_code)]

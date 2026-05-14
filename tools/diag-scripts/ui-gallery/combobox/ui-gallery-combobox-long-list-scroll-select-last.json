@@ -168,7 +168,7 @@
       "query": {
         "kind": "anchored_panel",
         "anchor_test_id": "ui-gallery-combobox-long-list-trigger",
-        "content_test_id": "ui-gallery-combobox-long-list-listbox"
+        "content_test_id": "ui-gallery-combobox-long-list-content"
       },
       "timeout_frames": 240
     },

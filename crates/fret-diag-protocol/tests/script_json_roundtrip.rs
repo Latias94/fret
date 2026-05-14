@@ -227,6 +227,20 @@ fn script_v2_roundtrip_ui_gallery_input_group_text_non_overlap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_long_text_geometry() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"
@@ -398,6 +412,30 @@ fn script_v2_roundtrip_wait_bounds_stable() {
       "target": { "kind": "test_id", "id": "x" },
       "stable_frames": 4,
       "max_move_px": 0.5,
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_scroll_into_view_motion_check() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "content-scroll" },
+      "target": { "kind": "test_id", "id": "rtl-section" },
+      "motion_check": {
+        "scroll_target": { "kind": "test_id", "id": "content-viewport" },
+        "field": "y",
+        "max_target_reverse_px": 1.25,
+        "max_scroll_reverse_px": 1.25,
+        "require_scroll_progress": true
+      },
       "timeout_frames": 10
     }
   ]

@@ -92,7 +92,11 @@
     },
     {
       "type": "wait_overlay_placement_trace",
-      "query": { "kind": "anchored_panel" },
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-popover-align-start-trigger",
+        "content_test_id": "ui-gallery-popover-align-start-content"
+      },
       "timeout_frames": 600
     },
     {
@@ -177,7 +181,11 @@
     },
     {
       "type": "wait_overlay_placement_trace",
-      "query": { "kind": "anchored_panel" },
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-popover-align-start-trigger",
+        "content_test_id": "ui-gallery-popover-align-start-content"
+      },
       "timeout_frames": 600
     },
     {

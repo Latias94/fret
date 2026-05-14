@@ -537,6 +537,50 @@
       ]
     },
     {
+      "id": "cookbook-imui-editor-controls-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "imui",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the IMUI editor controls lesson root and key controls.",
+        "Focuses the text-assist field, waits for the anchored assist list, then captures layout, screenshot, and bundle evidence."
+      ]
+    },
+    {
+      "id": "cookbook-imui-editor-controls-roughness-typing",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "drag-value",
+        "editor-controls",
+        "imui",
+        "typing"
+      ],
+      "target_hints": [
+        "Proves DragValue typing test ids are published only while typing mode is active.",
+        "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again."
+      ]
+    },
+    {
       "id": "cookbook-markdown-and-code-basics-smoke",
       "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
       "required_capabilities": [
@@ -3443,6 +3487,52 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-input-group-geometry",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button_group",
+        "geometry",
+        "input_group",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Button Group Input Group fixture.",
+        "Asserts the trailing voice button icon is observable, centered, and not clipped.",
+        "Asserts the grouped input keeps meaningful width next to the Add and trailing Voice controls."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-input-group-long-text",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button_group",
+        "input_group",
+        "long_text",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Button Group Input Group fixture.",
+        "Injects a long value into the grouped input through the SetValue path.",
+        "Asserts the input, trailing voice button, and IME/caret anchor remain bounded under long text."
+      ]
+    },
+    {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [
@@ -3463,51 +3553,6 @@
         "Sets theme preset to zinc/light then zinc/dark.",
         "Navigates to the Button Group page.",
         "Captures screenshots for the Size section (icon-only Add button should not be clipped)."
-      ]
-    },
-    {
-      "id": "ui-gallery-button-group-input-group-geometry",
-      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "button-group",
-        "geometry",
-        "input-group",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Starts on the Button Group Input Group fixture.",
-        "Asserts trailing voice-button/icon centering, input width, and control non-overlap."
-      ]
-    },
-    {
-      "id": "ui-gallery-button-group-input-group-long-text",
-      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "button-group",
-        "input-group",
-        "long-text",
-        "shadcn",
-        "text-input",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Starts on the Button Group Input Group fixture.",
-        "Injects a long input value and asserts overflow, horizontal offset, visible-text viewport clipping, IME caret bounds, and trailing-control non-overlap."
       ]
     },
     {
@@ -4695,6 +4740,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-scroll-to-rtl-field",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "checkbox",
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the default Checkbox page to the RTL section and then samples the content viewport with no scripted input.",
+        "The final idle-stability assertion fails if the viewport keeps drifting or oscillating after the RTL section is visible."
+      ]
+    },
+    {
       "id": "ui-gallery-chrome-torture-layout",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-layout.json",
       "required_capabilities": [],
@@ -5391,6 +5461,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-input-group-long-query-text",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "input_group",
+        "long_text",
+        "shadcn",
+        "text_input",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Input Group fixture.",
+        "Opens the searchable combobox input with an inline search addon.",
+        "Injects a long query and asserts TextInput paint-time overflow, offset, and visible viewport clipping."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-keyboard-commit-apple",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-keyboard-commit-apple.json",
       "required_capabilities": [
@@ -5415,6 +5510,31 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-combobox-long-text-geometry",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "long_text",
+        "shadcn",
+        "truncation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox Long Text fixture.",
+        "Asserts the selected trigger label is constrained before the chevron.",
+        "Opens the popup and asserts the long option label remains within its row before the checkmark."
+      ]
     },
     {
       "id": "ui-gallery-combobox-multiple-chips",
@@ -5463,90 +5583,14 @@
         "combobox",
         "popup",
         "shadcn",
+        "tight_window",
         "trigger",
         "ui_gallery"
       ],
       "target_hints": [
-        "Navigates to the Combobox popup-trigger example.",
-        "Keeps the trigger near the viewport bottom so collision solving must flip the popup to top.",
+        "Starts on the Combobox Popup section.",
+        "Uses a short viewport so bottom placement has insufficient room and collision solving must flip the popup to top.",
         "Asserts shadcn v4 ComboboxContent sideOffset parity at 6px."
-      ]
-    },
-    {
-      "id": "ui-gallery-combobox-input-group-long-query-text",
-      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-combobox",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "combobox",
-        "input-group",
-        "long-text",
-        "shadcn",
-        "text-input",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Starts on the Combobox Input Group fixture.",
-        "Injects a long query into the searchable input with an inline addon.",
-        "Asserts TextInput paint-time overflow, horizontal offset range, and visible text viewport clipping."
-      ]
-    },
-    {
-      "id": "ui-gallery-combobox-long-text-geometry",
-      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json",
-      "required_capabilities": [
-        "diag.overlay_placement_trace",
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-combobox",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "combobox",
-        "long_text",
-        "shadcn",
-        "truncation",
-        "ui_gallery"
-      ],
-      "target_hints": [
-        "Starts on the Combobox Long Text fixture.",
-        "Asserts selected trigger label truncation before the chevron.",
-        "Asserts selected option label truncation before the checkmark."
-      ]
-    },
-    {
-      "id": "ui-gallery-combobox-rtl-long-text-geometry",
-      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
-      "required_capabilities": [
-        "diag.overlay_placement_trace",
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-combobox",
-        "ui-gallery-rtl-smoke",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "combobox",
-        "long_text",
-        "rtl",
-        "shadcn",
-        "truncation",
-        "ui_gallery"
-      ],
-      "target_hints": [
-        "Starts on the Combobox RTL Long Text fixture.",
-        "Asserts selected trigger label ownership against the physical-left RTL chevron.",
-        "Asserts selected option label ownership against the physical-right RTL checkmark."
       ]
     },
     {
@@ -5612,6 +5656,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-rtl-long-text-geometry",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "truncation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox RTL Long Text fixture.",
+        "Asserts the selected trigger label stays after the physical-left RTL chevron.",
+        "Opens the popup, records the content-shell collision flip, and asserts the selected option label stays before the physical-right RTL checkmark."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-rtl-open-screenshot",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-open-screenshot.json",
       "required_capabilities": [
@@ -5632,6 +5703,30 @@
         "Navigates to the Combobox page.",
         "Opens the RTL combobox trigger.",
         "Captures a screenshot to validate inline-end mirroring for padding/trailing chrome."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-trigger-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-trigger-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-combobox"
+      ],
+      "tags": [
+        "combobox",
+        "screenshots",
+        "shadcn",
+        "trigger",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the Combobox page.",
+        "Captures a screenshot of the trigger chrome."
       ]
     },
     {
@@ -7144,29 +7239,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-input-button-group-and-file-controls-fill",
-      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "button-group",
-        "file",
-        "input",
-        "layout",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Navigates to the Input page via the left nav search.",
-        "Asserts that the composed Input controls inside File and Button Group examples keep a visible width instead of collapsing to the button width."
-      ]
-    },
-    {
       "id": "ui-gallery-input-basic-and-file-long-text",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json",
       "required_capabilities": [
@@ -7188,6 +7260,29 @@
         "Navigates to the Input page through the stable UI Gallery nav path.",
         "Injects long values into a plain Input and the file-composition Input.",
         "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, and text-height coverage."
+      ]
+    },
+    {
+      "id": "ui-gallery-input-button-group-and-file-controls-fill",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-button-group-and-file-controls-fill.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "file",
+        "input",
+        "layout",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page via the left nav search.",
+        "Asserts that the composed Input controls inside File and Button Group examples keep a visible width instead of collapsing to the button width."
       ]
     },
     {
@@ -7231,6 +7326,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-group-rtl-addon-order",
+      "path": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "input_group",
+        "layout",
+        "rtl",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Input Group RTL fixture.",
+        "Asserts authored leading/trailing addons map to the correct physical sides under RTL.",
+        "Asserts leading/control/trailing remain non-overlapping and vertically aligned."
+      ]
     },
     {
       "id": "ui-gallery-input-group-rtl-screenshot",
@@ -8392,6 +8510,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-rtl-idle-stability",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "scroll_area",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the Scroll Area docs page to the RTL ScrollArea, then scrolls the nested RTL viewport.",
+        "The idle-stability assertions fail if either the outer content viewport or the nested RTL ScrollArea keeps drifting after scripted input stops."
+      ]
+    },
+    {
       "id": "ui-gallery-scroll-area-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
       "required_capabilities": [],
@@ -9161,6 +9304,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-table-rtl-idle-stability",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "idle_stability",
+        "mechanism_harness",
+        "rtl",
+        "scroll",
+        "shadcn",
+        "table",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Scrolls the Table docs page to the RTL section and samples the outer Gallery content viewport with no scripted input.",
+        "This covers the table/RTL companion to the Checkbox and ScrollArea idle-stability gates."
+      ]
+    },
+    {
       "id": "ui-gallery-table-smoke",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json",
       "required_capabilities": [],
@@ -9553,12 +9721,23 @@
     {
       "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-vlist-no-window-shifts-small-scroll"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Small wheel deltas on the retained virtual list must not emit any virtual-list window-shift samples after the script resets diagnostics on the settled page."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-torture",
@@ -9623,25 +9802,49 @@
     {
       "id": "ui-gallery-virtual-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-vlist-window-boundary",
-        "ui-gallery-vlist-window-boundary-retained"
+      "required_capabilities": [
+        "diag.script_v2"
       ],
-      "tags": [],
-      "target_hints": []
+      "suite_memberships": [
+        "ui-gallery-vlist-window-boundary"
+      ],
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "Run with env: FRET_UI_GALLERY_VLIST_RETAINED=0.",
+        "Crossing the non-retained virtual-list window boundary must move the scroll handle and emit a prepaint escape shift attributed to scroll_offset and applied by non_retained_rerender."
+      ]
     },
     {
       "id": "ui-gallery-virtual-list-window-boundary-scroll-retained",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-virt-retained",
-        "ui-gallery-virt-retained-measured"
+        "ui-gallery-virt-retained-measured",
+        "ui-gallery-vlist-window-boundary-retained"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "scroll",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
+        "Crossing the retained virtual-list window boundary must move the scroll handle and schedule an escape retained-host reconcile that attaches and detaches row items."
+      ]
     },
     {
       "id": "ui-gallery-wheel-burst-coalescing",
@@ -9861,7 +10064,7 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Activates doc-a-1 (pane A) via the tab overflow menu so the hidden tab is revealed before closing.",
         "Closes doc-a-1 via the close button.",
         "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
       ]
@@ -9911,7 +10114,7 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates a different tab so the drag source tab is inactive.",
+        "Activates doc-a-1 through the overflow menu so the drag source tab is inactive and visible.",
         "Drags the inactive tab toward pane B's right edge until the split preview appears.",
         "Drops to split and asserts the tab moved into the new pane."
       ]
@@ -10018,8 +10221,8 @@
         "workspace"
       ],
       "target_hints": [
-        "Waits for a known tab in pane A to exist.",
-        "Middle-clicks the tab.",
+        "Waits for the initially active tab in pane A to exist.",
+        "Middle-clicks the visible active tab body.",
         "Asserts the tab is removed from the UI tree (not_exists)."
       ]
     },
@@ -10191,7 +10394,7 @@
       ],
       "target_hints": [
         "Asserts initial pos_in_set for a known tab.",
-        "Drags the first tab to the end and drops it.",
+        "Drags the first tab onto the visible end-drop surface.",
         "Asserts pos_in_set updates after the reorder."
       ]
     },

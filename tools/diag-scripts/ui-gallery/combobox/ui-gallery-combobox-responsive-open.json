@@ -96,7 +96,7 @@
         "preferred_side": "bottom",
         "chosen_side": "bottom",
         "flipped": false,
-        "side_offset_px": 6.0,
+        "side_offset_px": 4.0,
         "side_offset_eps_px": 0.25
       },
       "timeout_frames": 240

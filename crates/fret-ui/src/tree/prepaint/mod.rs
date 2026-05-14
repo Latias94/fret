@@ -22,6 +22,7 @@ struct VirtualListPrepaintWindowUpdate {
     prev_items_revision: u64,
     prev_viewport: Px,
     prev_offset: Px,
+    visible_range: Option<crate::virtual_list::VirtualRange>,
     prev_window_range: Option<crate::virtual_list::VirtualRange>,
     render_window_range: Option<crate::virtual_list::VirtualRange>,
     window_range: Option<crate::virtual_list::VirtualRange>,

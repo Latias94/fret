@@ -267,6 +267,36 @@ already produced these relationships in `SemanticsSnapshot`, but the mechanism h
 express them as reusable fixture predicates. This blocked proactive parity sweeps for combobox,
 listbox, autocomplete, menu, and future Material 3 composite widgets.
 
+The semantics-state extension expands the same suite beyond relations. The observed tree now mirrors
+`SemanticsSnapshot` value text, selected/expanded/checked state, collection metadata, editing ranges,
+action support, live-region metadata, and structured numeric/scroll metadata. The shared oracle now
+supports the corresponding existing `UiPredicateV1` semantics predicates plus harness-native
+action/live/range predicates.
+
+New fixture cases:
+
+- `text-input-region-value-and-editing-metadata`: focused `TextInputRegion` value, selection,
+  composition, focus action, set-value suppression, and set-text-selection support.
+- `pressable-collection-metadata-and-state`: listbox option `pos_in_set`, `set_size`, selected,
+  checked/unchecked, and invoke action.
+- `semantics-wrapper-live-and-structured-metadata`: `SemanticsProps` live region, live atomic,
+  structured slider numeric metadata/action support, and viewport scroll metadata.
+
+Findings from this extension:
+
+- The runtime already emitted the state/action/metadata facts, but `fret-mechanism-harness` could not
+  observe or assert them, so recipe parity sweeps could not catch many state-level regressions.
+- `role_label` did not cover `Region`, `SpinButton`, `Meter`, or `Splitter`, causing those known core
+  roles to appear as `unknown` in observed snapshots.
+- `WindowTextInputSnapshot` test constructors had not been updated for the `visual` field, blocking
+  targeted `fret-ui` nextest gates before the semantics fixture could run.
+
+Validation:
+
+- `cargo nextest run -p fret-mechanism-harness`
+- `cargo nextest run -p fret-ui mechanism_harness_semantics_relations_match_oracles`
+- `cargo nextest run -p fret-ui window_text_input_snapshot`
+
 ## Phase 2.9 Roving Focus Interaction Coverage
 
 The roving focus interaction fixture suite is
@@ -409,6 +439,652 @@ The first draft exposed a harness schema constraint rather than a runtime defect
 the fixed mechanism enum and cannot accept a free-form `dispatch` tag. After aligning the fixture
 to the allowed domain set, the suite passed.
 
+## Phase 2.14 Shadcn Recipe Semantics Coverage
+
+The shadcn recipe semantics fixture suite is
+`ecosystem/fret-ui-shadcn/tests/fixtures/recipe_semantics_cases_v1.json`, run by
+`mechanism_harness_recipe_semantics_cases_match_oracles` in
+`ecosystem/fret-ui-shadcn/tests/recipe_semantics_mechanism_harness.rs`.
+
+This suite is the first consumer of the expanded semantics/state/action oracle from a shadcn recipe
+surface. It intentionally verifies behavior outcomes instead of source shape.
+
+It covers:
+
+- open combobox search input exposing `role=combo_box`, `expanded=true`, focus/set-value actions,
+  `controls` linkage to its listbox, and reciprocal listbox labelling;
+- committed combobox selection exposing selected option state plus `pos_in_set` / `set_size`
+  collection metadata;
+- combobox ArrowDown highlight using `active_descendant` while keeping committed selection false;
+- open select listbox ↔ trigger labelled-by/controls relationships across the modal barrier root;
+- selected select option active-item, selected-state, collection metadata, and invoke-action
+  semantics.
+
+The first run exposed a real mechanism-harness oracle defect. `SemanticsRelationIncludes` resolved
+both relation endpoints through the normal barrier-filtered selector path. That made a valid modal
+select relation fail: the open listbox lives inside the barrier while its `labelled_by` target is the
+underlay trigger. Relation predicates now resolve source and target with unfiltered selectors, while
+ordinary `role_is`, `expanded`, and similar current-surface predicates remain barrier-filtered.
+
+This slice also clarified an authoring rule for future recipe fixtures:
+
+- use relation predicates for cross-root semantics edges such as `labelled_by` and `controls`;
+- do not assert underlay trigger role/state through normal selectors while a modal barrier is active;
+- assert the current accessible surface on the overlay listbox/options, and use metrics or relation
+  predicates for hidden/outside nodes when they are still needed as semantics references.
+
+Validation:
+
+- `cargo nextest run -p fret-mechanism-harness`
+- `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
+
+## Phase 2.15 Combobox Overlay Placement and Chrome Sweep
+
+The combobox web-golden overlay sweep is still an ecosystem parity surface rather than a core
+mechanism fixture, but it now acts as an active defect-discovery lane for overlay positioning,
+controller semantics, and option chrome.
+
+It covers:
+
+- desktop and mobile `combobox-demo`, `combobox-popover`, and `combobox-responsive` listbox sizing,
+  option height, option insets, and overlay placement;
+- highlighted and focused command-item chrome across light/dark themes and desktop/mobile
+  viewports;
+- the `device_shell_responsive` desktop Popover shell versus mobile Drawer shell split.
+
+Findings from this sweep:
+
+- `combobox-responsive.overlay_placement` exposed a recipe source drift: Fret used the Base UI
+  `ComboboxContent` default `sideOffset=6` and a 200px trigger, while the upstream shadcn responsive
+  example is a Popover/Button/Command recipe with a 150px trigger, 200px content, and Popover
+  `sideOffset=4`. Responsive mode now keeps those demo-owned defaults separate from ordinary
+  `ComboboxContent`.
+- `combobox-demo.focus-first` exposed a harness driver gap: overlay chrome fallback logic only
+  searched for `TextField` controllers, but Fret correctly exposes the cmdk input as a `ComboBox`
+  controller with `aria-activedescendant` semantics. The chrome harness now finds the node that
+  controls the listbox and renders once after ArrowDown before reading the semantics snapshot.
+
+Validation:
+
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement combobox::fixtures::web_vs_fret_combobox_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome combobox::fixtures::web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox::tests::responsive_combobox_uses_shadcn_popover_demo_defaults -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --test combobox_responsive_breakpoint -- --nocapture`
+
+The next slice promoted that uncovered trigger-slot risk into a dedicated fixture suite.
+
+## Phase 2.16 Combobox Trigger Slot Geometry Sweep
+
+The combobox trigger-slot fixture suite is
+`ecosystem/fret-ui-shadcn/tests/fixtures/layout_combobox_trigger_cases_v1.json`, run by
+`web_vs_fret_layout_combobox_trigger_slots_match_web_fixtures` in the web-vs-Fret layout harness.
+
+It covers:
+
+- `combobox-demo` trigger width/height, right icon size, right inset, center-y alignment, and label
+  bounds staying before the icon;
+- `combobox-responsive` and `combobox-popover` trigger width/height and the upstream text-only
+  trigger shape, where the label owns the full content lane and no icon slot is rendered;
+- a long selected-label case that keeps truncation pressure visible while asserting the label does
+  not overlap the icon slot.
+- trigger label `fontWeight` against the web golden's computed style, so chrome drift can be caught
+  without relying on screenshots.
+- trigger icon SVG identity for icon-bearing Button examples, so the harness can distinguish an
+  upstream `ChevronsUpDown` glyph from a geometrically-correct but visually-wrong `ChevronDown`.
+
+Finding from this sweep:
+
+- `combobox-responsive.trigger_text_only` exposed a real recipe drift. Upstream shadcn responsive
+  combobox uses a plain outline Button with `w-[150px] justify-start` and no right-side icon, while
+  Fret's responsive `Combobox` recipe inherited the default combobox trigger icon. That extra 16px
+  slot reduced the already-narrow text lane and is the kind of issue users see as "text collapses to
+  ellipsis" or "arrow positioning looks wrong". Responsive Button triggers now hide the trigger icon
+  by default, while an explicit `ComboboxInput::show_trigger(true)` still restores it for callers
+  that intentionally want the icon.
+- The font-weight extension exposed a second recipe chrome drift. Upstream shadcn Button triggers
+  compute to `fontWeight=500`, but Fret's `ComboboxTriggerVariant::Button` rendered the label at
+  `400`. Button-like combobox triggers now use `FontWeight::MEDIUM`, while the default input-like
+  trigger stays normal-weight.
+- UI Gallery docs-surface inspection exposed a diagnostics coverage gap: the Combobox page had
+  `Long Text` and `RTL Long Text` follow-up sections, but the docs smoke script did not wait for
+  them. The smoke gate now includes both truncation-oriented sections.
+- Adding `combobox-popover.trigger_text_only` exposed that the responsive-only icon default was
+  still too narrow. Upstream Button-trigger combobox examples are text-only by default; the simple
+  `combobox-demo` is the special case that explicitly authors an icon. Fret now treats
+  `ComboboxTriggerVariant::Button` as text-only unless `ComboboxInput::show_trigger(true)` is
+  explicitly set, and the Usage/Long Text follow-ups opt into the icon where their examples need
+  truncation-plus-icon coverage.
+- The icon-identity extension first exposed a harness setup gap: the web-vs-Fret layout test app
+  applied shadcn theme tokens but did not install the lucide icon pack, so painted SVG assertions
+  observed `MISSING_ICON_SVG`. The shared layout harness now installs lucide semantic aliases like
+  real gallery/bootstrap paths.
+- After the harness installed real icons, the same fixture exposed a recipe glyph drift: explicit
+  Button trigger icons rendered `ChevronDown`, while upstream `combobox-demo` authors
+  `ChevronsUpDown`. `ComboboxTriggerVariant::Button` now uses the semantic double-chevron icon for
+  its explicit trigger slot; the default input-like trigger keeps `ChevronDown`.
+
+Validation:
+
+- `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib button_trigger_hides_icon_unless_explicit -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox_show_trigger_hides_chevron_icon -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib combobox_trigger_long_label_stays_before_chevron -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_docs_surface -- --nocapture`
+
+## Phase 2.17 RTL Combobox Scroll Settle and Overlay Gate
+
+The runtime RTL combobox gate is
+`tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json`.
+
+This slice started from a user-visible symptom: after scrolling the UI Gallery Combobox page near
+the RTL demo in a tight window, the page appeared to move up and down. The first failing run showed
+two separate harness defects:
+
+- `scroll_into_view` drove the page with a fixed 40px wheel delta even when the target was only
+  about 5px outside the padded visible region. That made the script overshoot and bounce between
+  adjacent offsets instead of converging.
+- The RTL flip script waited for an anchored-panel placement trace whose `content_test_id` was the
+  internal listbox. Runtime traces correctly report the positioned panel shell
+  (`ui-gallery-combobox-rtl-content`), while the listbox remains the inner geometry target.
+
+Fixes:
+
+- Diagnostics `scroll_into_view` now caps each axis delta to the remaining visibility gap and treats
+  subpixel target/container jitter as stable progress.
+- The RTL flip script targets `ui-gallery-content-viewport` as the scroll viewport, waits for the
+  trigger bounds to settle after scrolling, queries overlay placement with
+  `ui-gallery-combobox-rtl-content`, and then waits for the content bounds to settle before checking
+  the visible listbox.
+- `combobox_diag_surface` now locks the content/listbox split so future script edits do not regress
+  the panel-vs-inner-listbox contract.
+
+Evidence:
+
+- Failing artifact:
+  `target/fret-diag/codex-combobox-rtl-scroll-20260513-1619/sessions/1778660392387-48984/1778660666632-script-step-0018-wait_overlay_placement_trace-timeout`
+- Passing artifact:
+  `target/fret-diag/codex-combobox-rtl-scroll-fix-20260513-1650/sessions/1778662143311-113768/1778662380264-ui-gallery-combobox-flip-tight-window`
+
+Validation:
+
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" script_steps_scroll::tests -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
+- `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json --dir target/fret-diag/codex-combobox-rtl-scroll-fix-20260513-1650 --session-auto --launch -- cargo run -p fret-ui-gallery`
+
+Follow-up recommendation:
+
+- Promote "scroll to target, then prove target/content bounds stability before interaction" as the
+  default pattern for tight-window overlay scripts. This should be swept across combobox, select,
+  dropdown menu, popover, hover card, and future Material 3 anchored surfaces.
+
+## Phase 2.18 Combobox Overlay Content-Shell Sweep
+
+The Phase 2.17 RTL fix exposed a family-level diagnostics drift: many older combobox scripts waited
+for `wait_overlay_placement_trace` using the inner `*-listbox` as `content_test_id`. The current
+Combobox recipe derives `*-content` from `test_id_prefix` and records overlay placement against that
+positioned content shell; `*-listbox` is the inner list geometry target.
+
+Fixes:
+
+- All UI Gallery Combobox overlay trace scripts now query the positioned `*-content` shell.
+- Existing `bounds_within_window` and `wait_bounds_stable` checks stay on `*-listbox` where they are
+  checking visible list geometry rather than overlay placement.
+- `combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes` scans the whole
+  combobox script directory and fails if a future overlay trace query regresses to `*-listbox`.
+
+Evidence:
+
+- Runtime proof:
+  `target/fret-diag/codex-combobox-content-shell-sweep-20260513-1745/sessions/1778665071077-117228/1778665303231-ui-gallery-combobox-demo-open-narrow`
+- The representative legacy script now records
+  `anchor=ui-gallery-combobox-demo-trigger`, `content=ui-gallery-combobox-demo-content`, and
+  `chosen_side=top` in the passing run.
+
+Validation:
+
+- All combobox scripts passed `target/debug/fretboard-dev.exe diag script validate`.
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
+- `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-demo-narrow-open-screenshot.json --dir target/fret-diag/codex-combobox-content-shell-sweep-20260513-1745 --session-auto --launch -- cargo run -p fret-ui-gallery`
+
+## Phase 2.19 Cross-Family Overlay Trace Selector Sweep
+
+After the combobox-only sweep, the remaining UI Gallery overlay-trace corpus was audited for the
+same "inner listbox as overlay content" drift. The only remaining occurrence was in
+`tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json`, whose combobox
+segment still queried `ui-gallery-combobox-demo-listbox` as the placement content.
+
+Fixes:
+
+- The popup/menu narrow sweep now queries `ui-gallery-combobox-demo-content` for the overlay
+  placement trace and still checks `ui-gallery-combobox-demo-listbox` for inner list geometry.
+- `popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace` locks that split.
+
+Validation:
+
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json`
+- Full UI Gallery overlay-trace script audit found zero `*-listbox` `content_test_id` queries across
+  68 overlay trace gates.
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
+
+## Phase 2.20 Overlay Trace Selector Strictness Sweep
+
+The cross-family selector audit then checked whether any UI Gallery `wait_overlay_placement_trace`
+step could match an unrelated overlay because it only queried `kind=anchored_panel`. Four such gates
+remained:
+
+- `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+- `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
+
+Fixes:
+
+- Tooltip placement gates now name both trigger and panel selectors for the main demo and the RTL
+  top demo.
+- Popover placement gates now name both `ui-gallery-popover-align-start-trigger` and
+  `ui-gallery-popover-align-start-content` before and after the code-tab scroll round trip.
+- `ui_gallery_overlay_trace_steps_use_stable_selectors` scans the UI Gallery script corpus and fails
+  any future overlay trace step that omits both `anchor_test_id` and `content_test_id`.
+
+Validation:
+
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+- `target/debug/fretboard-dev.exe diag script validate tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
+- Full UI Gallery overlay-trace script audit found zero unscoped overlay trace gates across 68
+  overlay trace gates.
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
+
+## Phase 2.21 Overlay Trace Timeout Explainability
+
+The combobox content-shell fixes exposed a diagnostics mechanism gap: a failed
+`wait_overlay_placement_trace` gate only reported `wait_overlay_placement_trace_timeout`, even when
+the bundle already contained a near-match trace. That made selector drift such as
+`*-listbox` vs `*-content` look like a missing overlay instead of a mismatched query.
+
+Fixes:
+
+- On `wait_overlay_placement_trace` timeout, diagnostics now appends a
+  `wait_overlay_placement_trace.candidate_mismatch` event-log entry when any recorded overlay trace
+  exists but does not satisfy the query.
+- The event note includes the query, trace count, best candidate trace, and mismatched fields such
+  as `anchor_test_id`, `content_test_id`, `chosen_side`, `flipped`, `align`, `sticky`, and
+  `side_offset_px`.
+- This stays inside `fret-bootstrap` diagnostics and reuses the existing event-log schema; no
+  protocol migration is needed.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Apply the same "timeout with candidate mismatch evidence" pattern to shortcut-routing,
+  command-dispatch, hit-test, focus, and bounds-stability waits where a near-match trace can turn a
+  generic timeout into a mechanism or selector diagnosis.
+
+## Phase 2.22 Routing Trace Timeout Explainability
+
+After overlay timeout explainability, shortcut-routing and command-dispatch gates still had the same
+blind spot: `wait_shortcut_routing_trace_timeout` and `wait_command_dispatch_trace_timeout` did not
+say whether a near-match trace existed. This is a routing harness problem because command and
+shortcut regressions often look like "nothing happened" unless the evidence names the route that was
+actually observed.
+
+Fixes:
+
+- `wait_shortcut_routing_trace` now emits
+  `wait_shortcut_routing_trace.candidate_mismatch` when a trace at or after the wait start frame
+  exists but misses the query.
+- `wait_command_dispatch_trace` now emits
+  `wait_command_dispatch_trace.candidate_mismatch` with the same start-frame scoping.
+- The notes include the query, scoped trace count, best candidate, and mismatched fields such as
+  shortcut `outcome`, `command`, `ime_composing`, `key_context`, and command-dispatch
+  `source_kind`, `source_test_id`, `handled`, `handled_by_scope`, `handled_by_driver`,
+  `handled_by_test_id`, and `used_default_root_fallback`.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
+
+Follow-up recommendation:
+
+- Extend candidate-mismatch evidence to focus and hit-test waits next. Those are the remaining high
+  value interaction surfaces where a wrong target, blocking root, or stale focus owner can still
+  collapse into a generic timeout.
+
+## Phase 2.23 Click-Stable Hit-Test Timeout Explainability
+
+The next interaction audit showed that focus and hit-test evidence is not a standalone
+`wait_*_trace` gate. It is recorded during procedural steps such as `click_stable`,
+`click_selectable_text_span_stable`, pointer moves, wheels, and slider drags. The highest value
+timeout path was `click_stable`: it already recorded a final hit-test trace on timeout, but the
+script result still surfaced only `click_stable_timeout`, forcing maintainers to inspect the raw
+evidence to learn whether the target moved, missed, hit an overlay, or was blocked by pointer
+capture/occlusion.
+
+Fixes:
+
+- `click_stable` timeout now emits a `click_stable.timeout_hit_test` event-log entry when a
+  hit-test trace exists for that step.
+- The note summarizes the selector, click position, intended node/test id, actual hit node/test id,
+  `includes_intended`, `hit_path_contains_intended`, `blocking_reason`, barrier roots, pointer
+  occlusion, pointer capture, and the existing human-readable `routing_explain`.
+- This keeps the detailed hit-test trace unchanged while making the failure summary directly useful
+  for UI Gallery and harness triage.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Apply the same failure-summary pattern to `click_selectable_text_span_stable` and focus steps.
+  Selectable text needs span lookup state plus hit-test blocking evidence; focus needs expected vs
+  actual focused node/test id and barrier ownership in the timeout/failure event.
+
+## Phase 2.24 Selectable-Span Hit-Test Timeout Explainability
+
+Selectable text span clicks add another mechanism layer on top of normal `click_stable`: the script
+must first find runtime span bounds for a tagged inline region, wait for those bounds to settle, and
+then prove the chosen point routes to the intended text node. The existing timeout paths already
+distinguished `no_semantics_match`, `no_runtime_state`, and `empty_span_bounds` in the failure
+reason, and they recorded hit-test traces, but the script result still did not summarize both the
+span lookup state and the final routing evidence in one place.
+
+Fixes:
+
+- `click_selectable_text_span_stable` timeout now emits
+  `click_selectable_text_span_stable.timeout_hit_test` for both the normal semantics path and the
+  cached-test-id fallback path.
+- The note includes the requested tag, `last_lookup_state`, stable-frame counters, remaining
+  frames, and the same intended/hit/blocking/pointer-capture summary used by `click_stable`.
+- This makes inline editor/link failures distinguishable as span-generation bugs, stale semantics
+  bugs, or hit-test routing bugs without opening raw traces first.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" selectable_span_timeout_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Add the focus failure summary next: `focus` should report expected node/test id, actual focused
+  node/test id, focus/modal barrier roots, pointer occlusion/capture state, and `matches_expected`
+  directly in the failure event.
+
+## Phase 2.25 Focus Trace Summary Events
+
+The focus audit showed that `Focus` is an immediate procedural step rather than a multi-frame
+`wait_*` gate. It calls `ui.set_focus`, publishes runtime snapshots, and advances. The existing
+focus trace type already carried the useful mechanism evidence, but the step did not emit a compact
+event-log summary, so focus-owner or barrier mismatches could remain buried in the raw evidence.
+
+Fixes:
+
+- `Focus` now records a `UiFocusTraceEntryV1` immediately after `ui.set_focus` and publishes either
+  `focus.trace` or `focus.trace_mismatch` in the script event log.
+- The note summarizes expected node/test id, actual focused element/node/test id, focused role,
+  `matches_expected`, modal/focus barrier roots, pointer occlusion/capture state, and text-input
+  focus state.
+- This reuses existing focus trace protocol fields and does not add a protocol migration.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" focus_trace_summary_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Extend the same summary helper to the multi-phase text-input steps (`paste_text_into`,
+  `type_text_into`, `set_text_value`) when they fail waiting for focus or clipboard/IME state. Those
+  are the next highest risk editor-grade focus paths.
+
+## Phase 2.26 Text Input Timeout Evidence Events
+
+The text-input audit showed that multi-phase input steps already recorded the right mechanism
+evidence while waiting for focus, clipboard completion, and Web IME state, but their timeout paths
+still collapsed to generic failure reasons. That made editor-grade failures hard to triage: a script
+could not distinguish a focus barrier mismatch, stale focused node, missing text-input focus, or Web
+IME bridge state without opening the full evidence trace.
+
+Fixes:
+
+- `type_text_into` focus timeouts now publish `type_text_into.focus_timeout` with the latest focus
+  trace summary for the failing step.
+- `paste_text_into` focus timeouts now publish `paste_text_into.focus_timeout` with the same focus
+  evidence.
+- `paste_text_into` clipboard-write timeouts now publish
+  `paste_text_into.clipboard_write_timeout`, including expected node/test id, clipboard token
+  presence, focus state, and Web IME bridge state.
+- A Web IME summary helper now reports textarea focus, active DOM tag, bridge mode, selection,
+  cursor, input/composition counters, and suppressed-input counters in a compact event note.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" text_input_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Extend the same failure-event pattern to `set_text_value` selector/action failures and then add a
+  promoted UI Gallery editor fixture that captures focus + Web IME traces for a real text field.
+
+## Phase 2.27 Set Text Value Failure Evidence Events
+
+The accessibility text-input audit showed that `set_text_value` is the narrow scripted path that
+tests the semantics/accessibility action contract directly. It does not inject keyboard input; it
+requires a resolvable semantics node with `actions.set_value=true` and a live `UiTree`. Before this
+slice, failures collapsed into `set_text_value_timeout`, `set_text_value_disabled`,
+`set_text_value_unsupported`, or `set_text_value_no_ui` without a compact event-log explanation.
+
+Fixes:
+
+- `set_text_value` now publishes `set_text_value.no_semantics_timeout` when no semantics snapshot is
+  available before timeout.
+- Selector misses now publish `set_text_value.selector_timeout` with selector resolution evidence:
+  match count, chosen node id, trace note, and candidate role/name/test-id summaries.
+- Disabled, unsupported, and no-UI-tree action failures now publish `set_text_value.disabled`,
+  `set_text_value.unsupported`, or `set_text_value.no_ui_tree` with node role/test id, disabled,
+  read-only, focused state, value length, text selection, and supported actions.
+- This makes semantics contract failures distinguishable from harness targeting mistakes and from
+  component recipes that forgot to expose the portable set-value action.
+
+Validation:
+
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
+
+Follow-up recommendation:
+
+- Promote one UI Gallery text-field/editor diagnostic script that uses both `set_text_value` and
+  `type_text_into`, then captures a bundle. That will connect the semantics/action failure summaries
+  to a real recipe-consumer page instead of only pure helper coverage.
+
+## Phase 2.28 Diagnostics Script Registry Drift
+
+The promoted UI Gallery input evidence script already existed and was listed in the shadcn
+conformance suite, but the generated diagnostics script registry had drifted. That meant
+`check_diag_scripts_registry.py` failed on a clean worktree, and discovery surfaces could miss or
+misclassify recently promoted text-input, button-group, and combobox evidence scripts.
+
+Fixes:
+
+- Refreshed `tools/diag-scripts/index.json` with the canonical registry generator.
+- Verified the refreshed index contains the promoted text-input and geometry scripts used by this
+  harness lane, including:
+  - `ui-gallery-input-basic-and-file-long-text`;
+  - `ui-gallery-button-group-input-group-geometry`;
+  - `ui-gallery-button-group-input-group-long-text`;
+  - `ui-gallery-combobox-input-group-long-query-text`;
+  - `ui-gallery-combobox-long-text-geometry`;
+  - `ui-gallery-combobox-popup-trigger-bottom-room`.
+
+Validation:
+
+- `python tools/check_diag_scripts_registry.py`
+
+Follow-up recommendation:
+
+- Add this registry check to any local shadcn diagnostics preflight bundle so promoted scripts cannot
+  disappear from discovery after fixture or suite edits.
+
+## Phase 2.29 Real UI Gallery Input Evidence Run
+
+The first attempt to run `ui-gallery-input-basic-and-file-long-text` through `cargo run -p
+fret-ui-gallery` timed out before the script stage because the app build/startup path dominated the
+diagnostics timeout. The same script passed once the already-built UI Gallery binary was launched
+directly, proving the promoted input evidence script is viable as a real recipe-consumer gate.
+
+Findings:
+
+- The script exercises both `type_text_into` and `set_text_value` on the real UI Gallery Input page.
+- The run produced a passing `script.result.json` with event log, focus trace, selector resolution
+  trace, layout sidecar, screenshot, bundle, share zip, and AI packet.
+- The passing run observed 204 unique test ids and 813 semantics nodes in the considered window.
+- The main operational gap is startup hygiene: long-running diagnostics should prefer a prebuilt
+  binary or a higher launch timeout instead of wrapping expensive app builds in the script timeout.
+
+Evidence:
+
+- Command:
+  `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- Session:
+  `target/fret-diag-input-evidence-bin/sessions/1778674220354-122916`
+- Share artifact:
+  `target/fret-diag-input-evidence-bin/sessions/1778674220354-122916/share/1778674223664.zip`
+- AI packet:
+  `target/fret-diag-input-evidence-bin/sessions/1778674220354-122916/1778674223664/ai.packet`
+- Result:
+  `stage=passed`, `run_id=1778674223664`, `step_index=31`,
+  `last_bundle_dir=1778674231617-ui-gallery-input-basic-and-file-long-text`.
+
+Validation:
+
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag meta target/fret-diag-input-evidence-bin/sessions/1778674220354-122916/1778674223664 --json`
+
+Follow-up recommendation:
+
+- Add a documented prebuilt-binary diagnostics lane for promoted UI Gallery gates so CI/local agents
+  do not conflate build time with script execution time.
+
+## Phase 2.30 Combobox Long Text Geometry Gate
+
+The combobox long-text audit found a real diagnostics gate defect, not a component/runtime defect.
+`ui-gallery-combobox-long-text-geometry` was meant to assert trigger/item truncation and bottom
+placement in a non-colliding viewport, while separate scripts already cover bottom-room and
+tight-window flip behavior. At `900x640`, the Long Text trigger was near the bottom of the window:
+the overlay trace reported only `133.33px` available below the trigger for a `140px` panel, so the
+correct collision outcome was `chosen_side=top` and `flipped=true`. The script incorrectly expected
+bottom/no-flip and timed out.
+
+Fixes:
+
+- Raised the long-text geometry script viewport from `900x640` to `900x760` so the gate tests long
+  text geometry rather than collision flip.
+- Kept the bottom/no-flip assertion in this script because enough bottom room is now part of the
+  scenario contract.
+- Left flip coverage in the existing `ui-gallery-combobox-flip-tight-window` and
+  `ui-gallery-combobox-popup-trigger-bottom-room` scripts.
+
+Evidence:
+
+- Failing run:
+  `target/fret-diag-combobox-evidence/sessions/1778674553514-117240`
+- Failure note:
+  `wait_overlay_placement_trace.candidate_mismatch` with `preferred_available_main_px=133.33`,
+  `desired.h=140`, `chosen_side=Top`, `flipped=true`.
+- Passing long-text run:
+  `target/fret-diag-combobox-evidence-fixed/sessions/1778674801724-124080`,
+  `run_id=1778674872931`, `stage=passed`, `step_index=24`,
+  `last_bundle_dir=1778674874277-ui-gallery-combobox-long-text-open`.
+- Passing input-group long-query run:
+  `target/fret-diag-combobox-input-group-evidence/sessions/1778674921550-121564`,
+  `run_id=1778674924032`, `stage=passed`, `step_index=21`,
+  `last_bundle_dir=1778674925736-ui-gallery-combobox-input-group-long-query-text`.
+
+Validation:
+
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-evidence-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json --dir target/fret-diag-combobox-input-group-evidence --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+
+Follow-up recommendation:
+
+- Add a preflight rule for overlay-placement scripts: if a script asserts `chosen_side=bottom` and
+  `flipped=false`, its viewport/scroll setup should leave at least `content_height + side_offset`
+  available below the anchor, or the script should explicitly be a collision/flip test.
+
+## Phase 2.31 Bottom Overlay Placement Script Preflight
+
+After fixing the combobox long-text geometry gate, the next harness gap was preventing the same class
+of script drift from coming back. The diagnostics corpus now has a UI Gallery surface test that scans
+overlay-placement scripts and checks that any `wait_overlay_placement_trace` query asserting
+`chosen_side=bottom` and `flipped=false` also declares a non-colliding viewport via
+`set_window_inner_size`.
+
+Fixes:
+
+- Added `ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport` to
+  `apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs`.
+- The test is case-addressable by script path and step index, so future failures point directly at
+  the script that is mixing geometry assertions with collision/flip conditions.
+- The current corpus has bottom/no-flip coverage in combobox, context-menu, and hover-card scripts;
+  each now uses an explicit viewport height of at least `700px`.
+
+Validation:
+
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport -- --nocapture`
+
+Follow-up recommendation:
+
+- Promote this from a height heuristic to a sidecar-backed preflight when overlay traces expose
+  expected content height before the wait step, so the gate can verify available space from actual
+  anchor geometry rather than using a conservative viewport threshold.
+
+## Phase 2.32 Combobox Responsive Overlay Source-Axis Gate
+
+The responsive combobox desktop diagnostic run exposed a diagnostics gate defect rather than a
+runtime placement defect. `ui-gallery-combobox-responsive-open` asserted `side_offset_px=6`, but the
+measured overlay trace reported `side_offset_px=4`.
+
+Findings:
+
+- The upstream responsive example is authored with `PopoverContent` + `Command`, not the v4
+  `ComboboxContent` component. `ComboboxContent` defaults to `sideOffset=6`; `PopoverContent`
+  defaults to `sideOffset=4`.
+- Fret's `device_shell_responsive(true)` path already models this split through
+  `combobox_effective_side_offset(true, Px(6.0)) == Px(4.0)`, so the component recipe was correct.
+- The script had drifted across source axes and was treating the responsive Popover/Button/Command
+  example as if it used the generic `ComboboxContent` default.
+
+Fixes:
+
+- Updated `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json` to assert
+  `side_offset_px=4.0`.
+- Added a UI Gallery surface test that parses the responsive desktop script and locks this source
+  axis decision, instead of relying on a broad string check.
+
+Evidence:
+
+- Failing run:
+  `target/fret-diag-combobox-responsive-probe/sessions/1778683486763-54568`,
+  `run_id=1778683489586`, `stage=failed`, reason `wait_overlay_placement_trace_timeout`.
+- Failure note:
+  `wait_overlay_placement_trace.candidate_mismatch`, expected side offset `6+/-0.25`, actual `4`.
+- Passing run:
+  `target/fret-diag-combobox-responsive-fixed/sessions/1778684914836-122188`,
+  `run_id=1778684917709`, `stage=passed`.
+- Share artifact:
+  `target/fret-diag-combobox-responsive-fixed/sessions/1778684914836-122188/share/1778684917709.zip`.
+
+Validation:
+
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_responsive_diag_scripts_pin_exact_viewport_variants -- --nocapture`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json --dir target/fret-diag-combobox-responsive-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+
+Follow-up recommendation:
+
+- Add a source-axis preflight for overlay scripts that compares the component/example family against
+  the expected default offset (`PopoverContent=4`, `ComboboxContent=6`, `DropdownMenuContent=4`,
+  `MenubarContent=8`) so future diagnostics do not silently mix component-default and example-local
+  parity truths.
+
 ## Diagnostics Reuse
 
 Diagnostics reuse happens through the protocol predicate layer, not by linking UI Gallery to the Rust
@@ -463,6 +1139,28 @@ diagnostics should not need to link recipe-specific test harnesses to assert bas
 - `cargo nextest run -p fret-ui mechanism_harness_focus_scope_stale_parent_interaction_matches_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout mechanism_harness_recipe_layout_cases_match_oracles`
 - `cargo nextest run -p fret-ui-shadcn --test focus_restore_mechanism_harness mechanism_harness_focus_restore_recipe_cases_match_oracles`
+- `cargo test -p fret-ui-shadcn --test recipe_semantics_mechanism_harness mechanism_harness_recipe_semantics_cases_match_oracles -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement combobox::fixtures::web_vs_fret_combobox_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome combobox::fixtures::web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures -- --exact --nocapture`
+- `cargo test -p fret-ui-shadcn --test web_vs_fret_layout combobox_trigger -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" script_steps_scroll::tests -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_rtl_flip_diag_script_separates_overlay_shell_from_listbox_geometry -- --nocapture`
+- `cargo test -p fret-ui-gallery --test combobox_diag_surface combobox_overlay_trace_scripts_target_content_shells_not_inner_listboxes -- --nocapture`
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface popup_menu_narrow_sweep_uses_combobox_content_shell_for_overlay_trace -- --nocapture`
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_overlay_trace_steps_use_stable_selectors -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" overlay_trace_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" timeout_note_names -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" click_stable_timeout_hit_test_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" selectable_span_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" focus_trace_summary_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" text_input_timeout_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" web_ime_trace_summary_note -- --nocapture`
+- `cargo test -p fret-bootstrap --features "ui-app-driver diagnostics" set_text_value_failure_note -- --nocapture`
+- `python tools/check_diag_scripts_registry.py`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-evidence-bin --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-evidence-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json --dir target/fret-diag-combobox-input-group-evidence --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+- `cargo test -p fret-ui-gallery --test popup_menu_narrow_surface ui_gallery_bottom_overlay_trace_steps_declare_non_colliding_viewport -- --nocapture`
 - `cargo check -p fret-bootstrap`
 - `python tools/check_layering.py`
 

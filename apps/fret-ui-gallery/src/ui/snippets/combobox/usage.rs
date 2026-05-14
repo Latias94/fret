@@ -22,8 +22,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(200.0)))
-        .input(shadcn::ComboboxInput::new().placeholder("Select framework..."))
+        .trigger(
+            shadcn::ComboboxTrigger::new()
+                .variant(shadcn::ComboboxTriggerVariant::Button)
+                .width_px(Px(200.0)),
+        )
+        .input(
+            shadcn::ComboboxInput::new()
+                .placeholder("Select framework...")
+                .show_trigger(true),
+        )
         .into_element(cx)
 }
 // endregion: example

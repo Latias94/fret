@@ -167,7 +167,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-checkbox-rtl-field",
+          "id": "ui-gallery-checkbox-rtl",
           "kind": "test_id"
         }
       },
@@ -183,11 +183,42 @@
       "padding_px": 24.0,
       "require_fully_within_window": true,
       "target": {
-        "id": "ui-gallery-checkbox-rtl-field",
+        "id": "ui-gallery-checkbox-rtl",
         "kind": "test_id"
+      },
+      "motion_check": {
+        "scroll_target": {
+          "id": "ui-gallery-content-viewport",
+          "kind": "test_id"
+        },
+        "field": "y",
+        "max_target_reverse_px": 1.0,
+        "max_scroll_reverse_px": 1.0,
+        "require_scroll_progress": true
       },
       "timeout_frames": 600,
       "type": "scroll_into_view"
+    },
+    {
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-content-viewport",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_semantics_scroll_stable"
+    },
+    {
+      "max_move_px": 0.5,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-checkbox-rtl",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_bounds_stable"
     },
     {
       "n": 10,

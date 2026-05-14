@@ -37,3 +37,46 @@ fn checkbox_demo_snippet_keeps_upstream_composite_preview_surface() {
         "checkbox demo should leave snapshot/action authoring to the dedicated Checked State section"
     );
 }
+
+#[test]
+fn checkbox_rtl_diag_scripts_use_current_section_anchor_and_scroll_stability_gate() {
+    let scroll_to_rtl = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json"
+    );
+    let rtl_and_checked = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json"
+    );
+
+    for (path, source) in [
+        (
+            "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+            scroll_to_rtl,
+        ),
+        (
+            "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+            rtl_and_checked,
+        ),
+    ] {
+        assert!(
+            !source.contains("ui-gallery-checkbox-rtl-field"),
+            "{path} should not target the retired single-field RTL id"
+        );
+        assert!(
+            source.contains("\"id\": \"ui-gallery-checkbox-rtl\""),
+            "{path} should target the current RTL section anchor"
+        );
+        assert!(
+            source.contains("\"type\": \"wait_semantics_scroll_stable\"")
+                && source.contains("\"id\": \"ui-gallery-content-viewport\"")
+                && source.contains("\"field\": \"y\"")
+                && source.contains("\"type\": \"wait_bounds_stable\""),
+            "{path} should gate RTL scroll/bounds stability instead of relying on screenshots only"
+        );
+        assert!(
+            source.contains("\"motion_check\"")
+                && source.contains("\"scroll_target\"")
+                && source.contains("\"require_scroll_progress\": true"),
+            "{path} should check scroll motion during scroll_into_view, not only final stability"
+        );
+    }
+}

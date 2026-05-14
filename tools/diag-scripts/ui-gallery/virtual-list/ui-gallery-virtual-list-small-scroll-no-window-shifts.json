@@ -1,6 +1,58 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "scroll", "virtual_list", "mechanism_harness", "feature:gallery-dev"],
+    "target_hints": [
+      "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+      "Small wheel deltas on the retained virtual list must not emit any virtual-list window-shift samples after the script resets diagnostics on the settled page."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "virtual_list_torture" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "padding_px": 8.0,
+        "eps_px": 1.0,
+        "target": {
+          "id": "ui-gallery-nav-virtual-list-torture",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": {
+        "id": "ui-gallery-nav-virtual-list-torture",
+        "kind": "test_id"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 2.0,
+      "timeout_frames": 600
+    },
     {
       "button": "left",
       "target": {
@@ -11,25 +63,14 @@
     },
     {
       "predicate": {
-        "kind": "focus_is",
+        "kind": "exists",
         "target": {
-          "id": "ui-gallery-nav-virtual-list-torture",
+          "id": "ui-gallery-page-virtual-list-torture",
           "kind": "test_id"
         }
       },
-      "timeout_frames": 60,
+      "timeout_frames": 240,
       "type": "wait_until"
-    },
-    {
-      "key": "enter",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
     },
     {
       "predicate": {
@@ -54,6 +95,19 @@
       "type": "wait_until"
     },
     {
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-content-viewport-virtual_list_torture",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_semantics_scroll_stable"
+    },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 2 },
+    {
       "target": {
         "id": "ui-gallery-virtual-list-row-0-label",
         "kind": "test_id"
@@ -65,6 +119,13 @@
       "type": "wait_frames"
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "virtual_list_window_shift_samples_len_le",
+        "max": 0
+      }
+    },
+    {
       "label": "ui-gallery-virtual-list-small-scroll-no-window-shifts-before",
       "type": "capture_bundle"
     },
@@ -72,7 +133,7 @@
       "delta_x": 0.0,
       "delta_y": 60.0,
       "target": {
-        "id": "ui-gallery-virtual-list-root",
+        "id": "ui-gallery-content-viewport-virtual_list_torture",
         "kind": "test_id"
       },
       "type": "wheel"
@@ -82,10 +143,17 @@
       "type": "wait_frames"
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "virtual_list_window_shift_samples_len_le",
+        "max": 0
+      }
+    },
+    {
       "delta_x": 0.0,
       "delta_y": -60.0,
       "target": {
-        "id": "ui-gallery-virtual-list-root",
+        "id": "ui-gallery-content-viewport-virtual_list_torture",
         "kind": "test_id"
       },
       "type": "wheel"
@@ -93,6 +161,24 @@
     {
       "n": 12,
       "type": "wait_frames"
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "virtual_list_window_shift_samples_len_le",
+        "max": 0
+      }
+    },
+    {
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 8,
+      "target": {
+        "id": "ui-gallery-content-viewport-virtual_list_torture",
+        "kind": "test_id"
+      },
+      "timeout_frames": 300,
+      "type": "wait_semantics_scroll_stable"
     },
     {
       "label": "ui-gallery-virtual-list-small-scroll-no-window-shifts-after",

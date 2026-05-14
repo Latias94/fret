@@ -80,6 +80,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::ClickSelectableTextSpanStable(_)
                 | V2StepState::WaitBoundsStable(_)
                 | V2StepState::WaitSemanticsScrollStable(_)
+                | V2StepState::AssertSemanticsScrollIdleStable(_)
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
@@ -112,6 +113,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
         | UiActionStepV2::WaitSemanticsScrollStable { .. }
+        | UiActionStepV2::AssertSemanticsScrollIdleStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::PointerDown { .. }
         | UiActionStepV2::DragPointer { .. }
@@ -199,6 +201,9 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::WaitMs { .. } => "wait_ms",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
         UiActionStepV2::WaitSemanticsScrollStable { .. } => "wait_semantics_scroll_stable",
+        UiActionStepV2::AssertSemanticsScrollIdleStable { .. } => {
+            "assert_semantics_scroll_idle_stable"
+        }
         UiActionStepV2::WaitCommandDispatchTrace { .. } => "wait_command_dispatch_trace",
         UiActionStepV2::Assert { .. } => "assert",
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
@@ -250,6 +255,8 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         && active.hit_test_trace.is_empty()
         && active.click_stable_trace.is_empty()
         && active.bounds_stable_trace.is_empty()
+        && active.scroll_motion_trace.is_empty()
+        && active.semantics_scroll_idle_stable_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
         && active.command_dispatch_trace.is_empty()
@@ -267,6 +274,8 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         hit_test_trace: active.hit_test_trace.clone(),
         click_stable_trace: active.click_stable_trace.clone(),
         bounds_stable_trace: active.bounds_stable_trace.clone(),
+        scroll_motion_trace: active.scroll_motion_trace.clone(),
+        semantics_scroll_idle_stable_trace: active.semantics_scroll_idle_stable_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
         command_dispatch_trace: active.command_dispatch_trace.clone(),
@@ -596,7 +605,9 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitShortcutRoutingTrace { .. } => {
             let handled = script_steps_wait::handle_wait_shortcut_routing_trace_step(
+                &service.cfg,
                 app,
+                window,
                 step_index,
                 step,
                 active,
@@ -609,7 +620,9 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitCommandDispatchTrace { .. } => {
             let handled = script_steps_wait::handle_wait_command_dispatch_trace_step(
+                &service.cfg,
                 app,
+                window,
                 step_index,
                 step,
                 active,
@@ -622,6 +635,7 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitOverlayPlacementTrace { .. } => {
             let handled = script_steps_wait::handle_wait_overlay_placement_trace_step(
+                &service.cfg,
                 window,
                 step_index,
                 step,
@@ -1060,6 +1074,22 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitSemanticsScrollStable { .. } => {
             let handled = script_steps_wait::handle_wait_semantics_scroll_stable_step(
+                service,
+                window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::AssertSemanticsScrollIdleStable { .. } => {
+            let handled = script_steps_wait::handle_assert_semantics_scroll_idle_stable_step(
                 service,
                 window,
                 step_index,

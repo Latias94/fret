@@ -1339,6 +1339,7 @@ mod tests {
                     require_fully_within_window: true,
                     padding_px: 24.0,
                     padding_insets_px: None,
+                    motion_check: None,
                     timeout_frames: 600,
                 },
                 UiActionStepV2::WaitUntil {
@@ -1405,6 +1406,7 @@ mod tests {
                     require_fully_within_window: true,
                     padding_px: 24.0,
                     padding_insets_px: None,
+                    motion_check: None,
                     timeout_frames: 600,
                 },
                 UiActionStepV2::ClickStable {
@@ -1449,6 +1451,7 @@ mod tests {
                     require_fully_within_window: true,
                     padding_px: 12.0,
                     padding_insets_px: None,
+                    motion_check: None,
                     timeout_frames: 1200,
                 },
                 UiActionStepV2::WaitFrames { window: None, n: 6 },

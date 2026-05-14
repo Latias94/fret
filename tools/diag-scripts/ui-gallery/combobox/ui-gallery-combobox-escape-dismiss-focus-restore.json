@@ -203,7 +203,7 @@
     {
       "query": {
         "anchor_test_id": "ui-gallery-combobox-demo-trigger",
-        "content_test_id": "ui-gallery-combobox-demo-listbox",
+        "content_test_id": "ui-gallery-combobox-demo-content",
         "kind": "anchored_panel"
       },
       "timeout_frames": 240,

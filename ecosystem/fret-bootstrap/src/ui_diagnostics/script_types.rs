@@ -35,6 +35,8 @@ pub(super) struct ActiveScript {
     pub(super) hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     pub(super) click_stable_trace: Vec<UiClickStableTraceEntryV1>,
     pub(super) bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
+    pub(super) scroll_motion_trace: Vec<UiScrollMotionTraceEntryV1>,
+    pub(super) semantics_scroll_idle_stable_trace: Vec<UiSemanticsScrollIdleStableTraceEntryV1>,
     pub(super) focus_trace: Vec<UiFocusTraceEntryV1>,
     pub(super) last_clipboard_write_completion: Option<ObservedClipboardWriteCompletion>,
     pub(super) shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -160,6 +162,7 @@ pub(super) enum V2StepState {
     LongPress(V2LongPressState),
     WaitBoundsStable(V2WaitBoundsStableState),
     WaitSemanticsScrollStable(V2WaitSemanticsScrollStableState),
+    AssertSemanticsScrollIdleStable(V2AssertSemanticsScrollIdleStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -244,6 +247,14 @@ pub(super) struct V2WaitSemanticsScrollStableState {
 }
 
 #[derive(Debug, Clone)]
+pub(super) struct V2AssertSemanticsScrollIdleStableState {
+    pub(super) step_index: usize,
+    pub(super) sample_count: u32,
+    pub(super) baseline_value: Option<f64>,
+    pub(super) last_value: Option<f64>,
+}
+
+#[derive(Debug, Clone)]
 pub(super) struct V2EnsureVisibleState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
@@ -255,6 +266,13 @@ pub(super) struct V2ScrollIntoViewState {
     pub(super) remaining_frames: u32,
     pub(super) no_progress_frames: u32,
     pub(super) last_target_bounds: Option<fret_core::Rect>,
+    pub(super) last_container_bounds: Option<fret_core::Rect>,
+    pub(super) motion_sample_count: u32,
+    pub(super) motion_last_scroll_value: Option<f64>,
+    pub(super) motion_last_target_y: Option<f32>,
+    pub(super) motion_scroll_direction: Option<i8>,
+    pub(super) motion_target_direction: Option<i8>,
+    pub(super) motion_saw_scroll_progress: bool,
 }
 
 #[derive(Debug, Clone)]
