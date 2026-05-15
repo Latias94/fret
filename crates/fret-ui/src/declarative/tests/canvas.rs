@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use super::*;
 use fret_core::FontId;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct TestFragmentPlan {
     entries: usize,
 }
@@ -397,6 +397,98 @@ fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
         seen.load(Ordering::SeqCst),
         1,
         "changing the prepaint key should reset the boundary scene fragment"
+    );
+}
+
+#[test]
+fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let seen = Arc::new(AtomicUsize::new(0));
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-prepaint-prepares-text-fragment",
+        |cx| {
+            let seen = seen.clone();
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                move |cx| {
+                    let fragment =
+                        cx.prepare_scene_fragment(cx.bounds(), cx.bounds().origin, move |p| {
+                            let key = p.child_key(p.key_scope(&"prepaint-text-fragment"), &0u8).0;
+                            let _ = p.text_with_blob(
+                                key,
+                                fret_core::DrawOrder(0),
+                                Point::new(Px(4.0), Px(12.0)),
+                                "hello",
+                                TextStyle::default(),
+                                Color {
+                                    r: 1.0,
+                                    g: 1.0,
+                                    b: 1.0,
+                                    a: 1.0,
+                                },
+                                crate::canvas::CanvasTextConstraints::default(),
+                                p.scale_factor(),
+                            );
+                            TestFragmentPlan { entries: 1 }
+                        });
+                    cx.set_scene_fragment_debug(fragment);
+                },
+                move |p| {
+                    if let Some(fragment) = p
+                        .scene_fragment::<crate::canvas::CanvasSceneFragment<TestFragmentPlan>>()
+                        .cloned()
+                    {
+                        p.touch_hosted_resources(&fragment.hosted_resources);
+                        p.scene().replay_ops_translated_with_text_blob_ids(
+                            fragment.ops.as_ref(),
+                            Point::new(Px(0.0), Px(0.0)),
+                            fragment.hosted_resources.text_blob_ids(),
+                        );
+                        seen.store(fragment.payload.entries, Ordering::SeqCst);
+                        p.record_scene_fragment_used_entries(1);
+                    }
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        services.prepare_calls, 1,
+        "prepaint should prepare the text blob before paint"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(seen.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        services.prepare_calls, 1,
+        "paint should replay the prepared fragment without preparing text again"
+    );
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| matches!(op, SceneOp::Text { .. })),
+        "paint should replay the prepaint-prepared text op"
     );
 }
 

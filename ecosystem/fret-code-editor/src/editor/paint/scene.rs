@@ -5,6 +5,12 @@ use crate::editor::syntax::ensure_syntax_row_cache_fresh;
 
 use super::*;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum RowSceneStoreSource {
+    Paint,
+    PrepaintEdge,
+}
+
 pub(super) fn ensure_row_scene_cache_fresh(st: &mut CodeEditorState) {
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
@@ -621,6 +627,7 @@ pub(super) fn store_row_scene_cache(
     ops: Vec<SceneOp>,
     syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
     max_entries: usize,
+    source: RowSceneStoreSource,
 ) {
     if max_entries == 0 || ops.is_empty() {
         return;
@@ -682,32 +689,55 @@ pub(super) fn store_row_scene_cache(
                 st.cache_stats.row_scene_evictions.saturating_add(1);
         }
     }
-    if let Some(started) = store_started {
-        add_paint_perf_elapsed(
-            &mut st.paint_perf_frame.us_row_scene_store,
-            &mut st.paint_perf_frame.ns_row_scene_store,
-            started,
-        );
-    }
-    if st.paint_perf_enabled {
-        st.paint_perf_frame.rows_scene_stored =
-            st.paint_perf_frame.rows_scene_stored.saturating_add(1);
-        if row == st.paint_perf_frame.visible_start as usize {
-            st.paint_perf_frame.rows_scene_stored_at_visible_start = st
-                .paint_perf_frame
-                .rows_scene_stored_at_visible_start
-                .saturating_add(1);
+    match source {
+        RowSceneStoreSource::Paint => {
+            if let Some(started) = store_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_scene_store,
+                    &mut st.paint_perf_frame.ns_row_scene_store,
+                    started,
+                );
+            }
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_stored =
+                    st.paint_perf_frame.rows_scene_stored.saturating_add(1);
+                if row == st.paint_perf_frame.visible_start as usize {
+                    st.paint_perf_frame.rows_scene_stored_at_visible_start = st
+                        .paint_perf_frame
+                        .rows_scene_stored_at_visible_start
+                        .saturating_add(1);
+                }
+                if row == st.paint_perf_frame.visible_end as usize {
+                    st.paint_perf_frame.rows_scene_stored_at_visible_end = st
+                        .paint_perf_frame
+                        .rows_scene_stored_at_visible_end
+                        .saturating_add(1);
+                }
+                st.paint_perf_frame.row_scene_ops_stored = st
+                    .paint_perf_frame
+                    .row_scene_ops_stored
+                    .saturating_add(ops_len);
+            }
         }
-        if row == st.paint_perf_frame.visible_end as usize {
-            st.paint_perf_frame.rows_scene_stored_at_visible_end = st
-                .paint_perf_frame
-                .rows_scene_stored_at_visible_end
-                .saturating_add(1);
+        RowSceneStoreSource::PrepaintEdge => {
+            if let Some(started) = store_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_scene_prepaint_edge_store,
+                    &mut st.paint_perf_frame.ns_row_scene_prepaint_edge_store,
+                    started,
+                );
+            }
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_edge_stored = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_edge_stored
+                    .saturating_add(1);
+                st.paint_perf_frame.row_scene_prepaint_edge_ops_stored = st
+                    .paint_perf_frame
+                    .row_scene_prepaint_edge_ops_stored
+                    .saturating_add(ops_len);
+            }
         }
-        st.paint_perf_frame.row_scene_ops_stored = st
-            .paint_perf_frame
-            .row_scene_ops_stored
-            .saturating_add(ops_len);
     }
 }
 

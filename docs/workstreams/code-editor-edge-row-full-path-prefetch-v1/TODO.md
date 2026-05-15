@@ -1,6 +1,6 @@
 # TODO
 
-Status: Active after M2 follow-up syntax replay key reduction
+Status: Closed after M3 edge-row payload prebuild
 Date: 2026-05-15
 
 ## Done
@@ -15,6 +15,11 @@ Date: 2026-05-15
 - [x] Run the M2 diagnostics perf repro and record the evidence.
 - [x] Reduce syntax replay key-mismatch skips by allowing content-equivalent replay keys.
 - [x] Run the M2 follow-up perf repro and record the remaining visible-end no-cache miss.
+- [x] Add a narrow canvas prepaint scratch-painter surface for hosted text resource preparation.
+- [x] Prebuild the missing visible-end row scene payload before replay planning.
+- [x] Split paint row-scene store diagnostics from prepaint edge-store diagnostics.
+- [x] Run M3 focused gates, layering checks, and resize perf repro.
+- [x] Record M3 evidence and closeout audit.
 
 ## Next Executable Slices
 
@@ -26,18 +31,13 @@ Date: 2026-05-15
   - M2 diagnostics showed high key-mismatch skips in prepaint planning even when paint could still
     replay the row later.
   - Match syntax replay keys by content equivalence, with pointer identity kept as the fast case.
-- [ ] M3: seed or prebuild the newly exposed visible-end row.
+- [x] M3: seed or prebuild the newly exposed visible-end row.
   - M2 evidence shows the remaining full miss is a no-cache row stored at `visible_end`.
   - Prefer a code-editor-local edge seeding path before considering any `CanvasPainter` or
     framework prepaint API expansion.
-- [ ] M3: make replay-plan candidate selection edge-aware.
-  - Prefer newly exposed viewport edge rows and cached rows that are likely to be consumed in the
-    same frame.
-  - Avoid increasing `us_row_scene_prepaint_plan` while chasing a small row-content win.
-- [ ] M4: only if M3 evidence still points there, design a true edge-row payload prebuild.
-  - Decide whether the payload can be built from existing row rich/geom caches without new
-    `CanvasPainter` or `Scene` API surface.
-  - If new API is required, split it into a separate contract-first lane.
+
+No more executable slices remain in this lane. New work should start as a narrow follow-on with a
+fresh objective and perf bundle.
 
 ## Stop Conditions
 

@@ -254,7 +254,7 @@ impl<H: UiHost> UiTree<H> {
         {
             self.debug_stats.layout_fast_path_taken = true;
             let prepaint_started = self.debug_enabled.then(Instant::now);
-            self.prepaint_after_layout(app, scale_factor);
+            self.prepaint_after_layout(app, services, scale_factor);
             if let Some(prepaint_started) = prepaint_started {
                 self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
             }
@@ -522,7 +522,7 @@ impl<H: UiHost> UiTree<H> {
                         pass_kind = ?pass_kind,
                     )
                 },
-                || self.prepaint_after_layout(app, scale_factor),
+                || self.prepaint_after_layout(app, services, scale_factor),
             );
             if profile_layout_all {
                 t_prepaint_after_layout = prepaint_elapsed;

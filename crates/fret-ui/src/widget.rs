@@ -923,6 +923,7 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
 /// - Prepaint may request redraw/animation frames, but should avoid structural tree mutations.
 pub struct PrepaintCx<'a, H: UiHost> {
     pub app: &'a mut H,
+    pub services: &'a mut dyn fret_core::UiServices,
     pub tree: &'a mut crate::tree::UiTree<H>,
     pub node: NodeId,
     pub window: Option<AppWindowId>,

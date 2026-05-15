@@ -187,8 +187,23 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         "expected first frame to seed syntax-replayable row scene cache; sizes={after_seed:?}"
     );
 
-    let before = handle.cache_stats();
     let resized_bounds = Rect::new(bounds.origin, Size::new(Px(704.0), bounds.size.height));
+    let resized_visible_end = {
+        let st = handle.state.borrow();
+        *st.row_scene_cache
+            .keys()
+            .max()
+            .expect("first frame should seed row scene cache entries")
+    };
+    {
+        let mut st = handle.state.borrow_mut();
+        if let Some((old, _)) = st.row_scene_cache.remove(&resized_visible_end) {
+            st.row_scene_cache_scene_ops_len_total = st
+                .row_scene_cache_scene_ops_len_total
+                .saturating_sub(old.ops.len() as u64);
+        }
+    }
+    let before = handle.cache_stats();
     let _ = render_code_editor_frame(
         &mut ui,
         &mut app,
@@ -235,8 +250,32 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         "paint should not probe rich row content for planned replay rows"
     );
     assert_eq!(
-        row_text_delta, 0,
-        "prepaint planning should reuse row content snapshots from row scene cache"
+        perf.rows_scene_prepaint_skip_no_cache, 0,
+        "prepaint should seed newly exposed edge rows before replay planning observes no-cache skips"
+    );
+    assert_eq!(
+        perf.rows_scene_fast_miss_no_entry, 0,
+        "paint should not miss the fast row scene cache because the edge row had no entry"
+    );
+    assert_eq!(
+        perf.rows_scene_full_miss_no_entry, 0,
+        "paint should not run the full row scene path because the edge row had no entry"
+    );
+    assert_eq!(
+        perf.rows_scene_stored_at_visible_end, 0,
+        "paint should not store the newly exposed visible-end row"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_edge_stored, 1,
+        "prepaint should explicitly prebuild the missing visible-end row"
+    );
+    assert!(
+        perf.row_scene_prepaint_edge_ops_stored > 0,
+        "prepaint edge storage should retain replayable scene ops"
+    );
+    assert_eq!(
+        row_text_delta, perf.rows_scene_prepaint_edge_stored,
+        "only prepaint edge prebuild should resolve row content for the missing cache entry"
     );
     assert!(
         scene_hits_delta >= perf.rows_scene_prepaint_planned,

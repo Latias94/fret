@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "code-editor-edge-row-full-path-prefetch-v1",
   "title": "Code Editor Edge Row Full Path Prefetch v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-15",
   "scope_kind": "execution",
   "follow_on_of": "code-editor-row-content-snapshot-cache-v1",
@@ -25,6 +25,14 @@
       "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_FOLLOWUP_SYNTAX_REPLAY_KEY_2026-05-15.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M3_EDGE_ROW_PREBUILD_2026-05-15.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/CLOSEOUT_AUDIT_2026-05-15.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/TODO.md"
     },
@@ -42,9 +50,9 @@
     }
   ],
   "repro": {
-    "summary": "Run the code editor resize probes with paint attribution enabled and compare worst-bundle code_editor_paint_perf fields against the row-content snapshot closeout bundle.",
+    "summary": "Run the code editor resize probes with paint attribution enabled and confirm prepaint edge stores are present while paint no-entry/full-miss/store counters remain zero.",
     "commands": [
-      "target/release/fretboard-dev diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+      "target/release/fretboard-dev diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-edge-prebuild-diagnostics-split-20260515 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
     ]
   },
   "gates": [
@@ -66,7 +74,7 @@
     },
     {
       "name": "fret-code-editor-check",
-      "command": "cargo check -p fret-code-editor --features syntax-rust --all-targets"
+      "command": "cargo check -p fret-ui -p fret-ui-kit -p fret-code-editor -p fret-diag --features syntax-rust --all-targets"
     },
     {
       "name": "format",
@@ -86,17 +94,26 @@
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M1_PLAIN_CACHED_REPLAY_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_DIAGNOSTICS_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_FOLLOWUP_SYNTAX_REPLAY_KEY_2026-05-15.md",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M3_EDGE_ROW_PREBUILD_2026-05-15.md",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/CLOSEOUT_AUDIT_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/EVIDENCE_AND_GATES.md",
     "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515/1778830062977/bundle.schema2.json",
     "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515/1778832028679/bundle.schema2.json",
     "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515/1778835965902/bundle.schema2.json",
+    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-edge-prebuild-diagnostics-split-20260515/1778841130928/bundle.schema2.json",
     "target/fret-diag/code-editor-row-content-snapshot-cache-v1-after-m2-20260515/1778827921081/bundle.schema2.json",
+    "crates/fret-ui/src/canvas.rs",
+    "crates/fret-ui/src/declarative/tests/canvas.rs",
     "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs"
   ],
-  "adr_refs": [],
+  "adr_refs": [
+    "docs/adr/0175-prepaint-windowed-virtual-surfaces.md",
+    "docs/adr/0178-ephemeral-prepaint-items-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue only while the evidence points at code-editor-owned row content, geometry, rich text, or row scene replay work. Start a separate lane for global fret-ui layout, view-cache, Scroll, or VirtualList semantics if future evidence clearly points there."
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed because the edge-row paint full-path objective is complete. Start a narrow follow-on for planner-cost work, CanvasPrepaint API cleanup, renderer/display-list work, or global fret-ui layout/view-cache/VirtualList semantics if future evidence points there."
   }
 }

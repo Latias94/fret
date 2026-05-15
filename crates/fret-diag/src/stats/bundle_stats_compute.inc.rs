@@ -38,6 +38,8 @@ fn snapshot_code_editor_paint_perf(
         rows_scene_stored_at_visible_start: u64_field!("rows_scene_stored_at_visible_start"),
         rows_scene_stored_at_visible_end: u64_field!("rows_scene_stored_at_visible_end"),
         row_scene_ops_stored: u64_field!("row_scene_ops_stored"),
+        rows_scene_prepaint_edge_stored: u64_field!("rows_scene_prepaint_edge_stored"),
+        row_scene_prepaint_edge_ops_stored: u64_field!("row_scene_prepaint_edge_ops_stored"),
         rows_scene_prepaint_candidates: u64_field!("rows_scene_prepaint_candidates"),
         rows_scene_prepaint_skip_no_cache: u64_field!("rows_scene_prepaint_skip_no_cache"),
         rows_scene_prepaint_skip_unsupported_key: u64_field!(
@@ -102,6 +104,10 @@ fn snapshot_code_editor_paint_perf(
             "ns_row_scene_capture_ops"
         ),
         us_row_scene_store: us_field!("us_row_scene_store", "ns_row_scene_store"),
+        us_row_scene_prepaint_edge_store: us_field!(
+            "us_row_scene_prepaint_edge_store",
+            "ns_row_scene_prepaint_edge_store"
+        ),
         us_row_scene_fast_path: us_field!("us_row_scene_fast_path", "ns_row_scene_fast_path"),
         us_row_scene_full_path: us_field!("us_row_scene_full_path", "ns_row_scene_full_path"),
         us_syntax_spans: us_field!("us_syntax_spans", "ns_syntax_spans"),
@@ -2261,6 +2267,8 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_scene_stored_at_visible_start: metric!(rows_scene_stored_at_visible_start),
             rows_scene_stored_at_visible_end: metric!(rows_scene_stored_at_visible_end),
             row_scene_ops_stored: metric!(row_scene_ops_stored),
+            rows_scene_prepaint_edge_stored: metric!(rows_scene_prepaint_edge_stored),
+            row_scene_prepaint_edge_ops_stored: metric!(row_scene_prepaint_edge_ops_stored),
             rows_scene_prepaint_candidates: metric!(rows_scene_prepaint_candidates),
             rows_scene_prepaint_skip_no_cache: metric!(rows_scene_prepaint_skip_no_cache),
             rows_scene_prepaint_skip_unsupported_key: metric!(
@@ -2296,6 +2304,7 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),
             us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
             us_row_scene_store: metric!(us_row_scene_store),
+            us_row_scene_prepaint_edge_store: metric!(us_row_scene_prepaint_edge_store),
             us_row_scene_fast_path: metric!(us_row_scene_fast_path),
             us_row_scene_full_path: metric!(us_row_scene_full_path),
             us_syntax_spans: metric!(us_syntax_spans),

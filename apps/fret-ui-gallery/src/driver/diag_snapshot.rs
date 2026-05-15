@@ -65,14 +65,14 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(95);
+    let mut out = serde_json::Map::with_capacity(101);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
         };
     }
 
-    insert_u64!("schema_version", 9);
+    insert_u64!("schema_version", 10);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -101,6 +101,14 @@ fn code_editor_paint_perf_json(
         frame.rows_scene_stored_at_visible_end
     );
     insert_u64!("row_scene_ops_stored", frame.row_scene_ops_stored);
+    insert_u64!(
+        "rows_scene_prepaint_edge_stored",
+        frame.rows_scene_prepaint_edge_stored
+    );
+    insert_u64!(
+        "row_scene_prepaint_edge_ops_stored",
+        frame.row_scene_prepaint_edge_ops_stored
+    );
     insert_u64!(
         "rows_scene_prepaint_candidates",
         frame.rows_scene_prepaint_candidates
@@ -164,6 +172,10 @@ fn code_editor_paint_perf_json(
     );
     insert_u64!("us_row_scene_capture_ops", frame.us_row_scene_capture_ops);
     insert_u64!("us_row_scene_store", frame.us_row_scene_store);
+    insert_u64!(
+        "us_row_scene_prepaint_edge_store",
+        frame.us_row_scene_prepaint_edge_store
+    );
     insert_u64!("us_row_scene_fast_path", frame.us_row_scene_fast_path);
     insert_u64!("us_row_scene_full_path", frame.us_row_scene_full_path);
     insert_u64!("us_selection_rects", frame.us_selection_rects);
@@ -204,6 +216,10 @@ fn code_editor_paint_perf_json(
     );
     insert_u64!("ns_row_scene_capture_ops", frame.ns_row_scene_capture_ops);
     insert_u64!("ns_row_scene_store", frame.ns_row_scene_store);
+    insert_u64!(
+        "ns_row_scene_prepaint_edge_store",
+        frame.ns_row_scene_prepaint_edge_store
+    );
     insert_u64!("ns_row_scene_fast_path", frame.ns_row_scene_fast_path);
     insert_u64!("ns_row_scene_full_path", frame.ns_row_scene_full_path);
     insert_u64!("ns_selection_rects", frame.ns_selection_rects);

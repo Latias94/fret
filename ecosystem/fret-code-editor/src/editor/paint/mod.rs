@@ -114,6 +114,56 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame(
     )
 }
 
+#[cfg(feature = "syntax")]
+#[allow(clippy::too_many_arguments)]
+pub(super) fn prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
+    cx: &mut fret_ui::canvas::CanvasPrepaintCx<'_>,
+    st: &mut CodeEditorState,
+    frame: WindowedRowsPaintFrame,
+    content_bounds: Rect,
+    cell_w: Px,
+    text_cache_max_entries: usize,
+    text_style: &TextStyle,
+    fg: Color,
+    theme_revision: u64,
+    scale_factor: f32,
+) -> RowSceneReplayPlan {
+    let row_count = st.display_map.row_count();
+    if row_count > 0 {
+        let edge = frame.visible_end.min(row_count.saturating_sub(1));
+        if !st.row_scene_cache.contains_key(&edge)
+            && let Some(rect) = frame.row_rect(content_bounds, edge)
+        {
+            let _ = cx.with_scene_painter(|painter| {
+                prebuild_edge_row_scene_fragment_for_frame(
+                    painter,
+                    st,
+                    edge,
+                    rect,
+                    frame.row_height,
+                    cell_w,
+                    text_cache_max_entries,
+                    text_style,
+                    fg,
+                    theme_revision,
+                )
+            });
+        }
+    }
+
+    prepaint_row_scene_replay_plan_for_frame(
+        st,
+        frame,
+        content_bounds,
+        cell_w,
+        text_cache_max_entries,
+        text_style,
+        fg,
+        theme_revision,
+        scale_factor,
+    )
+}
+
 pub(super) fn take_row_scene_replay_plan_entry(
     plan: Option<&mut RowSceneReplayPlan>,
     frame_seq: u64,
@@ -151,6 +201,312 @@ pub(super) fn take_row_scene_replay_plan_entry(
         rejected,
         (rejected > 0).then_some("row_advanced_past_entry"),
     )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn row_text_origin_and_constraints(
+    st: &mut CodeEditorState,
+    row_h: Px,
+    cell_w: Px,
+    text_style: &TextStyle,
+    rect: Rect,
+    scale_factor: f32,
+    perf_enabled: bool,
+) -> (fret_core::Point, CanvasTextConstraints, TextMetrics) {
+    let stable_max_width = if cell_w.0 > 0.01 {
+        Px((cell_w.0 * 512.0).max(rect.size.width.0))
+    } else {
+        rect.size.width
+    };
+    let scale_bits = scale_factor.to_bits();
+    let cached = st.baseline_measure_cache.as_ref().is_some_and(|cache| {
+        cache.max_width == stable_max_width
+            && cache.row_h == row_h
+            && cache.scale_bits == scale_bits
+            && &cache.text_style == text_style
+    });
+    let (metrics, measured_h) = if cached {
+        let cache = st
+            .baseline_measure_cache
+            .as_ref()
+            .expect("checked cache presence");
+        (cache.metrics, cache.measured_h)
+    } else {
+        let measured_h = Px(row_h.0.max(text_style.size.0).max(16.0));
+        let metrics = TextMetrics {
+            size: Size::new(Px(0.0), measured_h),
+            baseline: Px((measured_h.0 * 0.5).max(0.0)),
+        };
+        st.baseline_measure_cache = Some(BaselineMeasureCache {
+            max_width: stable_max_width,
+            row_h,
+            scale_bits,
+            text_style: text_style.clone(),
+            metrics,
+            measured_h,
+        });
+        if perf_enabled {
+            st.paint_perf_frame.us_baseline_measure =
+                st.paint_perf_frame.us_baseline_measure.saturating_add(0);
+        }
+        (metrics, measured_h)
+    };
+    let text_y_pad = Px(((row_h.0 - measured_h.0).max(0.0)) / 2.0);
+    let origin = fret_core::Point::new(
+        rect.origin.x,
+        Px(rect.origin.y.0 + text_y_pad.0 + metrics.baseline.0),
+    );
+    let constraints = CanvasTextConstraints {
+        max_width: Some(stable_max_width),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    (origin, constraints, metrics)
+}
+
+#[cfg(feature = "syntax")]
+#[allow(clippy::too_many_arguments)]
+pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
+    painter: &mut fret_ui::canvas::CanvasPrepaintPainter<'_>,
+    st: &mut CodeEditorState,
+    row: usize,
+    rect: Rect,
+    row_h: Px,
+    cell_w: Px,
+    text_cache_max_entries: usize,
+    text_style: &TextStyle,
+    fg: Color,
+    theme_revision: u64,
+) -> Option<RowSceneReplayPlanEntry> {
+    if st.preedit.is_some() {
+        return None;
+    }
+    if st.row_scene_cache.contains_key(&row) {
+        return None;
+    }
+
+    let perf_enabled = st.paint_perf_enabled;
+    let text_cache_max_entries = frame_cache_max_entries(st, text_cache_max_entries);
+    let scale_factor = painter.scale_factor();
+    let (origin, constraints, _baseline_metrics) = row_text_origin_and_constraints(
+        st,
+        row_h,
+        cell_w,
+        text_style,
+        rect,
+        scale_factor,
+        perf_enabled,
+    );
+
+    let row_content = cached_row_content_snapshot(st, row, text_cache_max_entries);
+    if row_content.preedit_range.is_some() {
+        return None;
+    }
+
+    let row_range = row_content.range.clone();
+    let line = Arc::clone(&row_content.text);
+    let row_spans = Arc::clone(&row_content.row_spans);
+    let line_idx = st.display_map.display_row_line(row);
+    let syntax_spans = match lookup_row_syntax_spans(st, line_idx, text_cache_max_entries) {
+        SyntaxRowCacheLookup::Hit(spans) => spans,
+        SyntaxRowCacheLookup::Miss { tick } => {
+            populate_row_syntax_spans_after_miss(st, line_idx, text_cache_max_entries, tick)
+        }
+    };
+
+    let scope = painter.key_scope(&"fret-code-editor-row-text");
+    let key: u64 = painter.child_key(scope, &(row, 0u8)).into();
+    let mut row_scene_syntax_replay_key = None::<RowSceneSyntaxReplayKey>;
+    let mut row_scene_is_rich = false;
+    let row_scene_key;
+    let (blob, blob_metrics) = if !syntax_spans.is_empty()
+        && let Some(mapped) = mapped_row_syntax_spans_for_rich_text(
+            line.as_ref(),
+            row_range
+                .start
+                .saturating_sub(st.buffer.line_start(line_idx).unwrap_or(row_range.start)),
+            row_range.end.saturating_sub(row_range.start),
+            row_spans.as_ref(),
+            syntax_spans.as_ref(),
+        ) {
+        let rich = {
+            let theme = painter.theme();
+            materialize_row_rich_text(
+                theme,
+                Arc::clone(&line),
+                mapped.as_ref(),
+                &st.code_font_shaping_style,
+            )
+        };
+        let row_geom_key = geom::RowGeomKey::for_attributed(
+            &rich,
+            text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                scale_factor,
+            ),
+            st.font_stack_key,
+        );
+        row_scene_key = RowSceneKey::syntax(row_geom_key.clone(), fg, theme_revision);
+        row_scene_syntax_replay_key = Some(RowSceneSyntaxReplayKey::new(
+            row_range.clone(),
+            Arc::clone(&line),
+            Arc::clone(&row_spans),
+            Arc::clone(&syntax_spans),
+            text_style,
+            constraints,
+            st.font_stack_key,
+            scale_factor,
+            theme_revision,
+            st.code_font_feature_policy_rev,
+            fg,
+        ));
+        row_scene_is_rich = true;
+        st.row_rich_cache_tick = st.row_rich_cache_tick.saturating_add(1);
+        let tick = st.row_rich_cache_tick;
+        store_row_rich_cache_entry(
+            st,
+            row,
+            row_range.clone(),
+            Arc::clone(&line),
+            Arc::clone(&syntax_spans),
+            Arc::clone(&row_spans),
+            theme_revision,
+            st.code_font_feature_policy_rev,
+            rich.clone(),
+            text_cache_max_entries.min(2048),
+            tick,
+        );
+        painter.rich_text_with_blob(
+            key,
+            DrawOrder(2),
+            origin,
+            rich,
+            text_style.clone(),
+            fg,
+            constraints,
+            scale_factor,
+        )
+    } else if !st.code_font_shaping_style.features.is_empty() {
+        let rich = AttributedText::new(
+            Arc::clone(&line),
+            vec![TextSpan {
+                len: line.len(),
+                shaping: st.code_font_shaping_style.clone(),
+                paint: Default::default(),
+            }],
+        );
+        let row_geom_key = geom::RowGeomKey::for_attributed(
+            &rich,
+            text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                scale_factor,
+            ),
+            st.font_stack_key,
+        );
+        row_scene_key = RowSceneKey::plain(row_geom_key, fg);
+        row_scene_is_rich = true;
+        painter.rich_text_with_blob(
+            key,
+            DrawOrder(2),
+            origin,
+            rich,
+            text_style.clone(),
+            fg,
+            constraints,
+            scale_factor,
+        )
+    } else {
+        let row_geom_key = geom::RowGeomKey::for_plain(
+            &line,
+            text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                scale_factor,
+            ),
+            st.font_stack_key,
+        );
+        row_scene_key = RowSceneKey::plain(row_geom_key, fg);
+        painter.text_with_blob(
+            key,
+            DrawOrder(2),
+            origin,
+            Arc::clone(&line),
+            text_style.clone(),
+            fg,
+            constraints,
+            scale_factor,
+        )
+    };
+
+    let mut stops: Vec<(usize, Px)> = Vec::new();
+    let caret_rect = {
+        let (services, _) = painter.services_and_scene();
+        services.text().caret_stops(blob, &mut stops);
+        services
+            .text()
+            .caret_rect(blob, 0, CaretAffinity::Downstream)
+    };
+    let text_box_top_in_row = Px(origin.y.0 - blob_metrics.baseline.0 - rect.origin.y.0);
+    let (caret_rect_top, caret_rect_height) = if caret_rect.size.height.0 > 0.0 {
+        (
+            Some(Px(text_box_top_in_row.0 + caret_rect.origin.y.0)),
+            Some(caret_rect.size.height),
+        )
+    } else if blob_metrics.size.height.0 > 0.0 {
+        (Some(text_box_top_in_row), Some(blob_metrics.size.height))
+    } else {
+        (None, None)
+    };
+    let geom = RowGeom {
+        row_range: row_range.clone(),
+        key: row_scene_key.row_geom_key.clone(),
+        caret_stops: stops,
+        fold_map: row_content.fold_map.clone(),
+        caret_rect_top,
+        caret_rect_height,
+        has_preedit: false,
+        preedit: None,
+    };
+
+    let fragment = painter.scene_fragment(
+        RowSceneFragmentPayload {
+            row,
+            content: Arc::clone(&row_content),
+            geom: geom.clone(),
+            is_rich: row_scene_is_rich,
+        },
+        rect,
+        origin,
+    );
+
+    #[cfg(feature = "syntax")]
+    scene::store_row_scene_cache(
+        st,
+        row,
+        row_scene_key,
+        Arc::clone(&row_content),
+        origin,
+        geom.clone(),
+        row_scene_is_rich,
+        fragment.ops.as_ref().to_vec(),
+        row_scene_syntax_replay_key,
+        text_cache_max_entries,
+        scene::RowSceneStoreSource::PrepaintEdge,
+    );
+    geom_cache::store_row_geom_cache(st, row, Some(geom), text_cache_max_entries, perf_enabled);
+
+    Some(fragment)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1499,6 +1855,7 @@ pub(super) fn paint_row(
             ops,
             syntax_replay_key,
             text_cache_max_entries,
+            scene::RowSceneStoreSource::Paint,
         );
     }
     #[cfg(not(feature = "syntax"))]

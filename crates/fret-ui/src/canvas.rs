@@ -160,7 +160,9 @@ pub(crate) struct CanvasPaintHooks {
 pub(crate) trait UiCanvasPrepaintHost {
     fn bounds(&self) -> Rect;
     fn scale_factor(&self) -> f32;
+    fn text_font_stack_key(&mut self) -> u64;
     fn theme(&self) -> &Theme;
+    fn services(&mut self) -> &mut dyn fret_core::UiServices;
     fn request_redraw(&mut self);
     fn request_animation_frame(&mut self);
     fn set_output_box(&mut self, ty: TypeId, value: Box<dyn Any>);
@@ -198,8 +200,20 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
         self.cx.scale_factor
     }
 
+    fn text_font_stack_key(&mut self) -> u64 {
+        self.cx
+            .app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0)
+    }
+
     fn theme(&self) -> &Theme {
         self.cx.theme()
+    }
+
+    fn services(&mut self) -> &mut dyn fret_core::UiServices {
+        self.cx.services
     }
 
     fn request_redraw(&mut self) {
@@ -262,11 +276,12 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
 
 pub struct CanvasPrepaintCx<'a> {
     host: &'a mut dyn UiCanvasPrepaintHost,
+    cache: &'a mut CanvasCache,
 }
 
 impl<'a> CanvasPrepaintCx<'a> {
-    pub(crate) fn new(host: &'a mut dyn UiCanvasPrepaintHost) -> Self {
-        Self { host }
+    pub(crate) fn new(host: &'a mut dyn UiCanvasPrepaintHost, cache: &'a mut CanvasCache) -> Self {
+        Self { host, cache }
     }
 
     pub fn bounds(&self) -> Rect {
@@ -341,6 +356,167 @@ impl<'a> CanvasPrepaintCx<'a> {
     pub fn record_scene_fragment_rejected_entries(&mut self, count: usize, reason: &'static str) {
         self.host
             .record_scene_fragment_rejected_entries(count, reason);
+    }
+
+    /// Prepare a retained scene fragment during prepaint without mutating the live paint scene.
+    ///
+    /// This is for prepaint-windowed surfaces that need to stage a small amount of canvas work
+    /// before paint, then replay it through the boundary scene-fragment carrier. The closure draws
+    /// into a scratch scene using the canvas hosted-resource cache shared with the later paint pass.
+    pub fn prepare_scene_fragment<T>(
+        &mut self,
+        local_bounds: Rect,
+        scene_origin: Point,
+        prepare: impl FnOnce(&mut CanvasPrepaintPainter<'_>) -> T,
+    ) -> CanvasSceneFragment<T> {
+        let mut painter = CanvasPrepaintPainter {
+            host: self.host,
+            cache: self.cache,
+            scene: Scene::default(),
+        };
+        let payload = prepare(&mut painter);
+        let ops: Arc<[SceneOp]> = Arc::from(painter.scene.ops().to_vec());
+        let hosted_resources = CanvasHostedResources::from_scene_ops(ops.as_ref());
+        CanvasSceneFragment::new(payload, ops, hosted_resources, local_bounds, scene_origin)
+    }
+
+    /// Run a closure with a scratch prepaint painter.
+    ///
+    /// Use this when the caller needs to return both a prepared scene fragment and additional
+    /// side-channel state for local caches.
+    pub fn with_scene_painter<R>(
+        &mut self,
+        prepare: impl FnOnce(&mut CanvasPrepaintPainter<'_>) -> R,
+    ) -> R {
+        let mut painter = CanvasPrepaintPainter {
+            host: self.host,
+            cache: self.cache,
+            scene: Scene::default(),
+        };
+        prepare(&mut painter)
+    }
+}
+
+/// Scratch canvas painter used only by `CanvasPrepaintCx::prepare_scene_fragment`.
+///
+/// It exposes the hosted-resource/text preparation subset needed to build a replayable
+/// `CanvasSceneFragment` while keeping the real paint scene untouched.
+pub struct CanvasPrepaintPainter<'a> {
+    host: &'a mut dyn UiCanvasPrepaintHost,
+    cache: &'a mut CanvasCache,
+    scene: Scene,
+}
+
+impl<'a> CanvasPrepaintPainter<'a> {
+    pub fn bounds(&self) -> Rect {
+        self.host.bounds()
+    }
+
+    pub fn scale_factor(&self) -> f32 {
+        self.host.scale_factor()
+    }
+
+    pub fn theme(&self) -> &Theme {
+        self.host.theme()
+    }
+
+    /// Compute a deterministic `u64` key for `value`.
+    pub fn key<T: Hash>(&self, value: &T) -> u64 {
+        CanvasKey::from_hash(value).0
+    }
+
+    /// Create a deterministic base key for a logical key namespace.
+    pub fn key_scope<T: Hash>(&self, scope: &T) -> CanvasKey {
+        CanvasKey::from_hash(scope)
+    }
+
+    /// Combine a child identifier into a scoped key.
+    pub fn child_key<T: Hash>(&self, parent: CanvasKey, child: &T) -> CanvasKey {
+        parent.combine_hash(child)
+    }
+
+    pub fn scene(&mut self) -> &mut Scene {
+        &mut self.scene
+    }
+
+    pub fn scene_fragment<T>(
+        &self,
+        payload: T,
+        local_bounds: Rect,
+        scene_origin: Point,
+    ) -> CanvasSceneFragment<T> {
+        let ops: Arc<[SceneOp]> = Arc::from(self.scene.ops().to_vec());
+        let hosted_resources = CanvasHostedResources::from_scene_ops(ops.as_ref());
+        CanvasSceneFragment::new(payload, ops, hosted_resources, local_bounds, scene_origin)
+    }
+
+    /// Access UI services and the scratch scene backing this prepaint fragment.
+    pub fn services_and_scene(&mut self) -> (&mut dyn fret_core::UiServices, &mut Scene) {
+        let services = self.host.services();
+        (services, &mut self.scene)
+    }
+
+    /// Draw a cached text blob into the scratch scene and return its hosted `TextBlobId`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn text_with_blob(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        text: impl Into<Arc<str>>,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = text.into();
+        let font_stack_key = self.host.text_font_stack_key();
+        let services = self.host.services();
+        let draw = self.cache.text_draw(
+            services,
+            key,
+            order,
+            origin,
+            HostedTextContent::Plain(text),
+            style,
+            color,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+            &mut self.scene,
+        );
+        (draw.blob, draw.metrics)
+    }
+
+    /// Draw cached rich text into the scratch scene and return its hosted `TextBlobId`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn rich_text_with_blob(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        rich: AttributedText,
+        base_style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let font_stack_key = self.host.text_font_stack_key();
+        let services = self.host.services();
+        let draw = self.cache.text_draw(
+            services,
+            key,
+            order,
+            origin,
+            HostedTextContent::Rich(rich),
+            base_style,
+            color,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+            &mut self.scene,
+        );
+        (draw.blob, draw.metrics)
     }
 }
 

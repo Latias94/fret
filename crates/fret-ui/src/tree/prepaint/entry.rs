@@ -1,7 +1,12 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
-    pub(in crate::tree) fn prepaint_after_layout(&mut self, app: &mut H, scale_factor: f32) {
+    pub(in crate::tree) fn prepaint_after_layout(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn fret_core::UiServices,
+        scale_factor: f32,
+    ) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
             self.hit_test_bounds_trees.clear();
@@ -49,7 +54,13 @@ impl<H: UiHost> UiTree<H> {
                     let hit_testable = self.layers[layer_id].hit_testable;
 
                     let start = self.interaction_cache.records.len();
-                    self.prepaint_interaction_node(app, root, scale_factor, theme_revision);
+                    self.prepaint_interaction_node(
+                        app,
+                        services,
+                        root,
+                        scale_factor,
+                        theme_revision,
+                    );
                     let end = self.interaction_cache.records.len();
 
                     if hit_testable {

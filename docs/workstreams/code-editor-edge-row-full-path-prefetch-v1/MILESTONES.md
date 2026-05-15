@@ -51,16 +51,30 @@ Evidence:
 
 ## M3 - True Edge Payload Prebuild
 
-Status: Recommended next code slice, but keep it code-editor-local first
+Status: Done on 2026-05-15
 
-M2 follow-up evidence shows that key mismatch is no longer the blocker. The remaining full miss is
-still a no-cache row at `visible_end`. Start with the smallest code-editor-owned edge seeding path.
-If it requires new `CanvasPainter`, `Scene`, or framework-level prepaint contracts, split that
-contract work into a separate lane before implementing it.
+Shipped:
+
+- `CanvasPrepaintCx` can prepare hosted text resources and replayable scene fragments through a
+  scratch `CanvasPrepaintPainter`.
+- The code editor prebuilds the missing visible-end row scene payload before replay planning.
+- Paint diagnostics distinguish paint row-scene stores from prepaint edge-row stores.
 
 Exit criteria:
 
-- The implementation seeds or prebuilds only the smallest needed visible-edge row payload.
-- Any new `CanvasPainter`, `Scene`, or framework-level prepaint contract is handled in a separate
-  ADR/workstream if needed.
-- Code-editor paint p95 improves without a larger prepaint/layout regression.
+- [x] The implementation seeds or prebuilds only the smallest needed visible-edge row payload.
+- [x] Any framework-level prepaint contract change is narrow and covered by ADR alignment evidence.
+- [x] Code-editor paint no-entry/full-miss/store counters disappear in the resize perf surface.
+
+Evidence:
+
+- `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M3_EDGE_ROW_PREBUILD_2026-05-15.md`
+- `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/CLOSEOUT_AUDIT_2026-05-15.md`
+- `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-edge-prebuild-diagnostics-split-20260515/1778841130928/bundle.schema2.json`
+
+## Closeout
+
+Status: Closed on 2026-05-15
+
+The original edge-row paint full-path objective is complete. Further planner-cost, renderer, or
+generic virtual-surface work should start as a separate follow-on lane.

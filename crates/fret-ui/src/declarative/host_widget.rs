@@ -1006,11 +1006,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         sync_internal_drag_region_route(cx.app, window, cx.node, &instance);
 
-        let canvas_has_prepaint =
-            matches!(instance, ElementInstance::Canvas(props) if props.prepaint);
-        if !canvas_has_prepaint {
-            return;
-        }
+        let canvas_props = match instance {
+            ElementInstance::Canvas(props) if props.prepaint => props,
+            _ => return,
+        };
 
         let on_prepaint = crate::elements::with_element_state(
             &mut *cx.app,
@@ -1023,8 +1022,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return;
         };
 
+        self.canvas_cache
+            .begin_paint(cx.app.frame_id().0, canvas_props.cache_policy);
         let mut host = crate::canvas::UiCanvasPrepaintHostAdapter::new(cx);
-        let mut canvas_cx = crate::canvas::CanvasPrepaintCx::new(&mut host);
+        let mut canvas_cx = crate::canvas::CanvasPrepaintCx::new(&mut host, &mut self.canvas_cache);
         (on_prepaint)(&mut canvas_cx);
     }
 

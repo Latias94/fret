@@ -25,6 +25,7 @@ impl<H: UiHost> UiTree<H> {
     pub(super) fn prepaint_interaction_node(
         &mut self,
         app: &mut H,
+        services: &mut dyn fret_core::UiServices,
         node: NodeId,
         scale_factor: f32,
         theme_revision: u64,
@@ -93,6 +94,7 @@ impl<H: UiHost> UiTree<H> {
             self.with_widget_mut(node, |widget, tree| {
                 let mut cx = crate::widget::PrepaintCx {
                     app,
+                    services,
                     tree,
                     node,
                     window,
@@ -256,7 +258,7 @@ impl<H: UiHost> UiTree<H> {
             children_buf.set(children);
         }
         for &child in children_buf.as_slice() {
-            self.prepaint_interaction_node(app, child, scale_factor, theme_revision);
+            self.prepaint_interaction_node(app, services, child, scale_factor, theme_revision);
         }
 
         let end = self.interaction_cache.records.len();

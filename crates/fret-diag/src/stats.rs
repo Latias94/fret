@@ -912,6 +912,8 @@ mod tests {
                                     "rows_scene_stored_at_visible_start": 1,
                                     "rows_scene_stored_at_visible_end": 1,
                                     "row_scene_ops_stored": 19,
+                                    "rows_scene_prepaint_edge_stored": 1,
+                                    "row_scene_prepaint_edge_ops_stored": 7,
                                     "rows_scene_prepaint_candidates": 10,
                                     "rows_scene_prepaint_skip_no_cache": 2,
                                     "rows_scene_prepaint_skip_unsupported_key": 1,
@@ -945,6 +947,7 @@ mod tests {
                                     "us_row_scene_prepaint_plan": 7,
                                     "us_row_scene_capture_ops": 70,
                                     "us_row_scene_store": 20,
+                                    "us_row_scene_prepaint_edge_store": 4,
                                     "us_row_scene_fast_path": 15,
                                     "us_row_scene_full_path": 17,
                                     "us_syntax_spans": 60,
@@ -980,6 +983,8 @@ mod tests {
         assert_eq!(perf.rows_scene_stored_at_visible_start, 1);
         assert_eq!(perf.rows_scene_stored_at_visible_end, 1);
         assert_eq!(perf.row_scene_ops_stored, 19);
+        assert_eq!(perf.rows_scene_prepaint_edge_stored, 1);
+        assert_eq!(perf.row_scene_prepaint_edge_ops_stored, 7);
         assert_eq!(perf.rows_scene_prepaint_candidates, 10);
         assert_eq!(perf.rows_scene_prepaint_skip_no_cache, 2);
         assert_eq!(perf.rows_scene_prepaint_skip_unsupported_key, 1);
@@ -993,6 +998,7 @@ mod tests {
         assert_eq!(perf.quads_caret, 1);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
         assert_eq!(perf.us_row_scene_prepaint_plan, 7);
+        assert_eq!(perf.us_row_scene_prepaint_edge_store, 4);
         assert_eq!(perf.us_row_scene_capture_ops, 70);
         assert_eq!(perf.us_row_scene_store, 20);
         assert_eq!(perf.us_row_content_resolve, 45);
