@@ -124,6 +124,9 @@ Budgets are guidance for representative probes. The committed gate is the script
   non-instrumented baseline check
   `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passes the current
   v1 contract. Keep the baseline unchanged unless a deliberate re-seed policy is chosen.
+- The target-machine editor paint closeout now has a post-sync verifier:
+  `python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`.
+  Use it to check the copied Windows RTX4090 validation dirs without rerunning the probes.
 - Hit-test torture dispatch now has a direct repeat=7 pointer-move gate after dispatch snapshot reuse. Keep the
   threshold form unless the workload becomes machine-sensitive enough to need environment-specific baselines; the
   architectural invariant is that stable tree/layer topology keeps context build near single-digit microseconds rather
