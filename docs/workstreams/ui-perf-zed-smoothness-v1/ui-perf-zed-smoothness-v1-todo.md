@@ -678,6 +678,7 @@ Conventions:
           only for the follow-up attribution pass after baseline validation. The runner collects the
           worst-bundle `diag stats --sort cpu_cycles --top 15 --json` output for each validation probe and
           checks that the required paint-widget, renderer, and paint-perf field groups are present.
+          Non-empty `check.perf_thresholds.json.failures` is treated as a failed validation run.
         - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
           renderer text/encode/upload, and no threshold loosening unless intentionally justified.

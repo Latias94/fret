@@ -75,6 +75,12 @@ class EditorPaintContractValidateTests(unittest.TestCase):
 
         self.assertEqual(0, summary["check_perf_thresholds_failures"])
         self.assertEqual("target/fret-diag/run/worst/bundle.schema2.json", summary["worst_bundle"])
+        self.assertTrue(validate.thresholds_pass_for_artifacts(summary))
+
+    def test_thresholds_pass_requires_empty_failures(self) -> None:
+        self.assertFalse(validate.thresholds_pass_for_artifacts({"check_perf_thresholds_failures": None}))
+        self.assertFalse(validate.thresholds_pass_for_artifacts({"check_perf_thresholds_failures": 1}))
+        self.assertTrue(validate.thresholds_pass_for_artifacts({"check_perf_thresholds_failures": 0}))
 
     def test_artifact_summary_falls_back_to_regression_summary(self) -> None:
         with TemporaryDirectory() as td:

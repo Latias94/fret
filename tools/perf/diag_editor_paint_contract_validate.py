@@ -342,6 +342,10 @@ def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
     }
 
 
+def thresholds_pass_for_artifacts(artifacts: dict[str, Any]) -> bool:
+    return artifacts.get("check_perf_thresholds_failures") == 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Run the Windows RTX4090 editor paint contract validation plan.",
@@ -464,6 +468,10 @@ def main() -> int:
         ok = rc == 0
         pass_all = pass_all and ok
         artifacts = artifact_summary_for_step(_resolve_workspace_path(workspace_root, str(step.get("out_dir", ""))))
+        thresholds_ok: bool | None = None
+        if bool(step.get("wants_stats")):
+            thresholds_ok = thresholds_pass_for_artifacts(artifacts)
+            pass_all = pass_all and thresholds_ok
         stats_result: dict[str, Any] | None = None
         if bool(step.get("wants_stats")) and not bool(args.skip_stats):
             bundle = artifacts.get("worst_bundle")
@@ -524,10 +532,15 @@ def main() -> int:
                 "stdout": str(stdout_path),
                 "stderr": str(stderr_path),
                 "artifacts": artifacts,
+                "thresholds_ok": thresholds_ok,
                 "stats": stats_result,
             }
         )
-        if (not ok or (stats_result is not None and not bool(stats_result.get("ok")))) and not bool(args.keep_going):
+        if (
+            not ok
+            or thresholds_ok is False
+            or (stats_result is not None and not bool(stats_result.get("ok")))
+        ) and not bool(args.keep_going):
             break
 
     summary = {
