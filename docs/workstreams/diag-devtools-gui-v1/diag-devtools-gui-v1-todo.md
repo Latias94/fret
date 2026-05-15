@@ -106,6 +106,8 @@ Conventions:
         perf-threshold, and resource-footprint diagnostics command templates.
   - [x] Shared `fret-diag` gate profile projection owns gate ids, command templates, evidence
         files, and notes; the GUI now renders that projection instead of owning the taxonomy.
+  - [x] GUI `Gate Commands` profile rows expose a `Copy command` action for each shared profile,
+        turning the first-open gate taxonomy into an explicit per-profile action surface.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
         stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from

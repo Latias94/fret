@@ -8,7 +8,7 @@ use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
-use fret_diag::devtools_gate_profile_lines;
+use fret_diag::{devtools_gate_profile_lines, devtools_gate_profiles_v1};
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
     regression_bundle_followup_command_lines, regression_bundle_followup_commands,
@@ -873,6 +873,7 @@ fn header_bar(
     for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
         gate_command_rows.push(cx.text(line));
     }
+    gate_command_rows.extend(devtools_gate_profile_action_rows(cx));
     let gate_commands_panel = diag_section(
         cx,
         "Gate Commands",
@@ -5875,6 +5876,39 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
 
 fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
     devtools_gate_profile_lines(artifacts_root)
+}
+
+fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    devtools_gate_profiles_v1()
+        .iter()
+        .map(|profile| {
+            let command_line = profile.command_line.to_string();
+            let on_copy: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let token = host.next_clipboard_token();
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token,
+                        text: command_line.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            ui::h_row(|cx| {
+                [
+                    cx.text(format!("{} ({})", profile.label, profile.id)),
+                    shadcn::Button::new("Copy command")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_copy)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx)
+        })
+        .collect()
 }
 
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {

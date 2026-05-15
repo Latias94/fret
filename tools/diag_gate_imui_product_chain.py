@@ -361,7 +361,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
-        "use fret_diag::devtools_gate_profile_lines;",
+        "use fret_diag::{devtools_gate_profile_lines, devtools_gate_profiles_v1};",
         "mod followup;",
         'const CMD_REGRESSION_RUN_FOLLOWUP_STATS: &str =',
         'const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =',
@@ -396,8 +396,11 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "Gate Commands",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_gate_profile_lines(artifacts_root)",
+        "devtools_gate_profile_action_rows(cx)",
+        "Copy command",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
+        "fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
@@ -482,6 +485,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "check.resource_footprint.json",
         "resource.footprint.json",
         "pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String>",
+        "pub fn devtools_gate_profiles_v1() -> &'static [DevtoolsGateProfileV1]",
     ):
         _assert_contains(gate_profile_source, marker, name)
 
