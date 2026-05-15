@@ -470,6 +470,10 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.
+6. Formal editor torture probes now default `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0` in the three contract
+   scripts, and the overlay-disabled repeat=3 typical smoke reports `top_code_editor_torture_overlay_us=0` in all
+   runs (`target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`).
+   That keeps the diagnostic HUD available for manual debugging while removing it from the measured contract.
 ## Audit Conclusion
 
 The goal is not complete. The Windows `ui-resize-probes` and `ui-code-editor-resize-probes` contracts now have

@@ -478,6 +478,19 @@ Conventions:
         typical `392/422us -> 360/376us`, complex wheel `412/435us -> 381/412us`, and resize
         jitter `419/419us -> 379/379us`.
       - Contract decision: keep checked-in payload baselines unchanged; strict baseline audit still passes.
+    - [x] Exclude the diagnostic torture overlay from the formal editor perf probes.
+      - Change: `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0` is now the default env for the
+        three formal editor torture scripts that drive the contract matrix.
+      - Validation:
+        `cargo nextest run -p fret-ui-gallery code_editor_perf_contract_scripts_disable_torture_overlay_by_default --no-fail-fast`
+        and
+        `cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_overlay_env --no-fail-fast`.
+      - Evidence: perf log entry `2026-05-16 04:54:35 +08:00`
+        (`formal editor probes exclude torture overlay`).
+      - Result: overlay-disabled repeat=3 typical smoke
+        `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`
+        reports `top_code_editor_torture_overlay_us=0` in all three runs, while row replay remains healthy
+        (`top_code_editor_rows_scene_replayed=289`, `top_code_editor_rows_scene_stored=0`).
     - [ ] Close the remaining Canvas wrapper / `paint.widget` attribution gap.
       - Current evidence after the renderer slice: `paint.widget` p95 is still `414us` typical,
         `633us` complex wheel, and `421us` resize jitter, while `code_editor.paint_perf` p95 is

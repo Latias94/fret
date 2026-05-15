@@ -6,6 +6,24 @@ use fret_ui_editor::controls::{
     TextAssistFieldSurface, TextAssistItem, TextFieldOptions,
 };
 
+const ENV_CODE_EDITOR_TORTURE_OVERLAY: &str = "FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY";
+
+fn env_bool_value(value: Option<&std::ffi::OsStr>, default: bool) -> bool {
+    let Some(value) = value.filter(|value| !value.is_empty()) else {
+        return default;
+    };
+
+    let value = value.to_string_lossy().trim().to_ascii_lowercase();
+    !(value == "0" || value == "false" || value == "no" || value == "off")
+}
+
+fn code_editor_torture_overlay_enabled() -> bool {
+    env_bool_value(
+        std::env::var_os(ENV_CODE_EDITOR_TORTURE_OVERLAY).as_deref(),
+        true,
+    )
+}
+
 fn first_range(text: &str, needle: &str) -> Option<std::ops::Range<usize>> {
     let start = text.find(needle)?;
     Some(start..start.saturating_add(needle.len()))
@@ -579,10 +597,13 @@ pub(in crate::ui) fn preview_code_editor_torture(
         },
     );
 
+    let mut torture = code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0));
+    torture.show_overlay = code_editor_torture_overlay_enabled();
+
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
         .soft_wrap_cols(soft_wrap_enabled.then_some(80))
-        .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .torture(torture)
         .viewport_test_id("ui-gallery-code-editor-torture-viewport")
         .into_element(cx);
 
@@ -610,4 +631,30 @@ pub(in crate::ui) fn preview_code_editor_torture(
         doc_layout::wrap_preview_page(cx, None, "Code editor (torture)", vec![header, panel]);
 
     vec![page.into_element(cx)]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn code_editor_torture_overlay_env_defaults_to_enabled() {
+        assert!(env_bool_value(None, true));
+        assert!(!env_bool_value(None, false));
+    }
+
+    #[test]
+    fn code_editor_torture_overlay_env_accepts_disabled_values() {
+        for value in ["0", "false", "no", "off", " OFF "] {
+            assert!(!env_bool_value(Some(OsStr::new(value)), true));
+        }
+    }
+
+    #[test]
+    fn code_editor_torture_overlay_env_accepts_enabled_values() {
+        for value in ["1", "true", "yes", "on", "debug"] {
+            assert!(env_bool_value(Some(OsStr::new(value)), false));
+        }
+    }
 }

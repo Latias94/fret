@@ -10,7 +10,8 @@
     ],
     "env_defaults": {
       "FRET_A11Y_DISABLE": "1",
-      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+      "FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY": "0"
     }
   },
   "steps": [

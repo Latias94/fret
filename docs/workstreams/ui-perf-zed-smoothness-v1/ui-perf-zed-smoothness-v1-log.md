@@ -14396,3 +14396,52 @@ Decision:
 - The next optimization should not target renderer payload thresholds or broad row replay/cache. The next narrow owner
   should inspect `WindowedRowsSurface` callback overhead, especially hook/non-row/row-loop accounting, before changing
   behavior.
+
+## 2026-05-16 04:54:35 +08:00 (formal editor probes exclude torture overlay)
+
+Question:
+- Can the formal editor perf probes keep the diagnostic torture overlay out of the measured contract while still
+  preserving the overlay for manual debugging?
+
+Change:
+- Added `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY` as a boolean env gate in the code editor torture preview.
+- Defaulted the formal editor perf scripts to `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0`:
+  `ui-gallery-code-editor-torture-autoscroll-steady`,
+  `ui-gallery-code-editor-torture-autoscroll-typical`,
+  `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady`, and
+  `ui-gallery-code-editor-window-resize-drag-jitter-steady`.
+- Added regression coverage for the env parser and the script defaults.
+
+Validation:
+```bash
+cargo fmt -p fret-ui-gallery --check
+cargo nextest run -p fret-ui-gallery code_editor_perf_contract_scripts_disable_torture_overlay_by_default --no-fail-fast
+cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_overlay_env --no-fail-fast
+cargo build -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Evidence:
+- `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`
+  reported `top_code_editor_torture_overlay_us=0`, `top_code_editor_rows_scene_replayed=289`, and
+  `top_code_editor_rows_scene_stored=0` in the worst repeat=3 run.
+- The three repeat=3 runs stayed in the same low-paint range as the earlier formal pass while removing the
+  diagnostic HUD from the contract surface.
+
+Decision:
+- The torture overlay is now isolated from the formal editor perf contract. Keep it available for manual diagnosis,
+  but do not count it in the baseline contract surface.

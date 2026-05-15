@@ -1,7 +1,10 @@
 {
   "schema_version": 2,
   "meta": {
-    "required_launch_features": ["gallery-dev"]
+    "required_launch_features": ["gallery-dev"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY": "0"
+    }
   },
   "steps": [
     { "type": "press_key", "key": "escape" },
