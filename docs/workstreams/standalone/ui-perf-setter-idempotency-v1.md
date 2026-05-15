@@ -77,10 +77,11 @@ Preferred evidence loop (commit-addressable):
 | `TextArea` | `set_text` | Done | `perf(fret-ui): make TextArea::set_text idempotent` (commit `fcd1ada2d`) |
 | `DockManager` / `DockSpace` | viewport layout publication | Done | `DockManager::sync_viewport_layouts_for_window(...)` reconciles per-window viewport layouts and returns `false` for identical render-frame layout sets; perf log entry `2026-05-15 21:45:00` |
 | `ViewportToolArbitrator` | `set_tools` | Audited: not render-safe by design | `set_tools(...)` is a replacement/cancellation command for boxed tools, not an idempotent render setter; regression test locks hot/active clearing so callers must use it only when the logical tool set changes |
+| `fret-code-view` / `fret-markdown` | code block prepared state / markdown preview editor setup | Audited / guarded | `CodeBlockPreparedState::prepare(...)` is idempotent for identical inputs and rebuilds on changed inputs; markdown preview reuses `CodeEditorHandle` setters already covered above and gates fold/inlay fixture updates with slot-local last-value checks. Perf log entry `2026-05-15 22:20:00` |
 
 ## Next
 
-- Extend this audit to markdown/editor preview surfaces that are configured from render in the UI
-  gallery.
+- Extend this audit to remaining editor-adjacent preview surfaces only when a render path introduces
+  a new mutable handle/configuration surface.
 - Consider adding a short "render-time setter safety" guideline in the main perf workstream doc once
   we have 2–3 surfaces audited.

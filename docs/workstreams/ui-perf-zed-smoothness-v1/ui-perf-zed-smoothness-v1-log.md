@@ -13649,3 +13649,32 @@ Decision:
 - Treat `set_soft_wrap_cols(...)`, `set_code_font_feature_policy(...)`, and `set_interaction(...)`
   as audited render-safe configuration setters. This is a contract-locking slice rather than a
   runtime behavior change.
+
+## 2026-05-15 22:20:00 +08:00 (markdown and code-view render-state audit)
+
+Question:
+- Do markdown/editor preview surfaces introduce any independent render-time setter or prepare-state
+  churn beyond the already-audited code editor handle setters?
+
+Change:
+- Audited the UI gallery markdown editor preview. Its per-frame `set_language(...)` and text-boundary
+  publication use the already-audited `CodeEditorHandle` path; fold and inlay fixtures are gated by
+  slot-local last-value checks, and preview text is cached by buffer revision.
+- Added `fret-code-view` prepared-state regression tests proving identical code block inputs keep
+  the same `Arc<PreparedCodeBlock>` and changed inputs rebuild the prepared state.
+
+Validation:
+- `cargo fmt -p fret-code-view`
+- `cargo nextest run -p fret-code-view prepared_state_is_idempotent_for_identical_inputs prepared_state_rebuilds_when_inputs_change --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs` and
+  `ecosystem/fret-code-view/src/prepare.rs`.
+- Focused nextest result: both `fret-code-view` prepared-state tests passed.
+
+Decision:
+- Treat markdown preview and code-view code block preparation as audited for P0.6 render-state
+  idempotency. Note that `CodeBlockPreparedState` still keys by hash+length for performance; if we
+  later need collision-proof source identity, that should be a separate correctness/design slice,
+  not a setter-idempotency change.
