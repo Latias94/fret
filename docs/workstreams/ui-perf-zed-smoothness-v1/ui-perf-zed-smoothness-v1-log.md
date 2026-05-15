@@ -14052,3 +14052,49 @@ Decision:
 - The existing host-widget subphases are already the same scale as the remaining `paint.widget` residual.
 - `ElementHostWidget::paint_impl` should be treated as the next narrow owner lane, starting with observed-dependency
   replay and instance-record lookup, not with canvas replay or renderer payload.
+
+## 2026-05-16 02:23:09 +08:00 (host-widget record lookup slimming)
+
+Question:
+- Can the generic host-widget instance lookup slice avoid cloning the full `ElementRecord` during paint without
+  changing paint semantics?
+
+Change:
+- `ElementHostWidget::paint_impl` now reads only the fields needed by paint from the retained element record:
+  inherited foreground, inherited text style, and the element instance.
+- This keeps the scoped foreground/text style behavior unchanged, but avoids cloning unrelated record fields on the
+  paint path.
+
+Validation:
+```bash
+cargo fmt -p fret-ui --check
+cargo check -p fret-ui
+cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast
+```
+
+Exploratory evidence:
+- A same-command `--reuse-launch` repeat=3 formal run did not complete because the script timed out while already on
+  the `code_editor_torture` page, so this slice does **not** re-seed or loosen any baseline.
+- No-reuse repeat=3 evidence was collected instead:
+  - typical autoscroll: `target/fret-diag/editor-host-record-slim-20260516-typical-r3-noreuse`
+  - complex wheel: `target/fret-diag/editor-host-record-slim-20260516-complex-wheel-r3-noreuse`
+  - resize jitter: `target/fret-diag/editor-host-record-slim-20260516-resize-jitter-r3-noreuse`
+
+Results (us, per-run p95):
+| probe | total p95 | `paint.widget` p95 | host lookup p95 |
+| --- | ---: | ---: | ---: |
+| typical autoscroll run 1 | 837 | 432 | 41 |
+| typical autoscroll run 2 | 813 | 405 | 40 |
+| typical autoscroll run 3 | 767 | 368 | 39 |
+| complex wheel run 1 | 933 | 532 | 42 |
+| complex wheel run 2 | 902 | 535 | 40 |
+| complex wheel run 3 | 968 | 507 | 43 |
+| resize jitter run 1 | 1137 | 422 | 43 |
+| resize jitter run 2 | 1157 | 464 | 41 |
+| resize jitter run 3 | 1150 | 445 | 40 |
+
+Decision:
+- The older same-mouth formal bundles reported host lookup p95 around `47/47/45us`; the no-reuse evidence now lands
+  around `39..43us`, so the optimization is directionally useful but intentionally small.
+- Keep existing perf baselines unchanged. The next contract-quality step is to fix the reuse-launch navigation/state
+  issue or define a no-reuse formal sample policy before making a baseline decision.

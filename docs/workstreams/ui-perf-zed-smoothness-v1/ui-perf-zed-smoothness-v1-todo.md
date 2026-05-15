@@ -560,6 +560,36 @@ Conventions:
           The next optimization should be a narrow `ElementHostWidget::paint_impl` owner slice
           around observed-dependency replay and instance-record lookup, with the same three editor
           probes as formal evidence.
+      - [x] Slim `ElementHostWidget::paint_impl` instance-record lookup to avoid cloning the full
+        retained element record.
+        - Implementation: `crates/fret-ui/src/declarative/host_widget/paint.rs` now extracts only
+          inherited foreground, inherited text style, and element instance from the record before
+          dispatching paint.
+        - Gate:
+          `cargo fmt -p fret-ui --check`;
+          `cargo check -p fret-ui`;
+          `cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast`.
+        - Exploratory evidence: perf log entry `2026-05-16 02:23:09 +08:00`. No-reuse repeat=3
+          samples report host lookup p95 around `39..43us` versus the earlier same-mouth formal
+          `45..47us` range.
+        - Contract decision: do not update baselines from this evidence. The no-reuse command
+          completed, but the same-command `--reuse-launch` repeat=3 formal run timed out after
+          navigation state drift. Treat the slice as a small reversible lookup optimization and
+          keep formal contract closure blocked on stable same-mouth evidence.
+      - [ ] Fix or replace the editor paint `--reuse-launch` formal evidence path before the next
+        baseline decision.
+        - Current failure: `target/fret-diag/editor-host-record-slim-20260516-typical-r3` and
+          `target/fret-diag/editor-host-record-slim-20260516-typical-r3-reuse-prelude-each`
+          timed out while the app was already on `code_editor_torture`.
+        - Goal: either make the reused launch reset/navigation path deterministic for the three
+          editor paint probes, or define an explicit no-reuse formal sample policy with matching
+          baseline semantics.
+      - [ ] Continue host-widget paint aggregate attribution only after the formal evidence path is
+        stable.
+        - Candidate owners: observed model/global dependency replay, collapse observation cost,
+          generic paint traversal aggregation, and the remaining sampled non-Canvas top-N hotspots.
+        - Avoid: broad `WindowedRowsSurface` display-list rewrite, row replay rewrite, or renderer
+          payload threshold changes unless new evidence makes one of those surfaces the limiter.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

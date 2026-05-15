@@ -140,17 +140,20 @@ impl ElementHostWidget {
         }
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);
-        let record = with_element_record_for_node(cx.app, window, cx.node, Clone::clone);
+        let record = with_element_record_for_node(cx.app, window, cx.node, |record| {
+            (
+                record.inherited_foreground,
+                record.inherited_text_style.clone(),
+                record.instance.clone(),
+            )
+        });
         if let Some(instance_started) = instance_started {
             cx.tree
                 .debug_record_paint_host_widget_instance_lookup(instance_started.elapsed());
         }
-        let Some(record) = record else {
+        let Some((inherited_foreground, inherited_text_style, instance)) = record else {
             return;
         };
-        let inherited_foreground = record.inherited_foreground;
-        let inherited_text_style = record.inherited_text_style;
-        let instance = record.instance;
 
         with_scoped_foreground(cx, inherited_foreground, |cx| match instance {
             ElementInstance::Container(props) => {
