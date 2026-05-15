@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "syntax-rust")]
+use crate::editor::syntax::ensure_syntax_row_cache_fresh;
 
 #[test]
 fn cached_row_text_hits_and_reuses_arc_for_repeated_calls() {
@@ -281,6 +283,158 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         scene_hits_delta >= perf.rows_scene_prepaint_planned,
         "prepaint planning should account for row scene cache hits"
     );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
+    let handle = CodeEditorHandle::new("fn main() {}\n");
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut st = handle.state.borrow_mut();
+    ensure_syntax_row_cache_fresh(&mut st);
+    st.sync_row_scene_cache_epoch();
+
+    let fg = Color {
+        r: 0.2,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let theme_revision = 17;
+    let scale_factor = 1.0;
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(640.0), Px(16.0)));
+    let cell_w = Px(8.0);
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let line = Arc::<str>::from("fn main() {}");
+    let row_range = 0..line.len();
+    let row_spans = Arc::<[fret_code_editor_view::DisplayRowSpan]>::from([]);
+    let syntax_spans = Arc::<[SyntaxSpan]>::from(vec![SyntaxSpan {
+        range: 0..2,
+        highlight: "keyword",
+    }]);
+    let content = Arc::new(RowContentSnapshot {
+        text: Arc::clone(&line),
+        range: row_range.clone(),
+        fold_map: None,
+        preedit_range: None,
+        row_spans: Arc::clone(&row_spans),
+    });
+    let rich = AttributedText::new(
+        Arc::clone(&line),
+        vec![TextSpan {
+            len: line.len(),
+            shaping: st.code_font_shaping_style.clone(),
+            paint: Default::default(),
+        }],
+    );
+    let row_geom_key = geom::RowGeomKey::for_attributed(
+        &rich,
+        &text_style,
+        (
+            constraints.max_width,
+            constraints.wrap,
+            constraints.overflow,
+            fret_core::TextAlign::Start,
+            scale_factor,
+        ),
+        st.font_stack_key,
+    );
+    let syntax_replay_key = RowSceneSyntaxReplayKey::new(
+        row_range.clone(),
+        Arc::clone(&line),
+        Arc::clone(&row_spans),
+        Arc::clone(&syntax_spans),
+        &text_style,
+        constraints,
+        st.font_stack_key,
+        scale_factor,
+        theme_revision,
+        st.code_font_feature_policy_rev,
+        fg,
+    );
+    let row_scene_key = RowSceneKey::syntax(row_geom_key.clone(), fg, theme_revision);
+    let geom = RowGeom {
+        row_range,
+        key: row_geom_key,
+        caret_stops: Vec::new(),
+        fold_map: None,
+        caret_rect_top: None,
+        caret_rect_height: None,
+        has_preedit: false,
+        preedit: None,
+    };
+    let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Quad {
+        order: DrawOrder(2),
+        rect: content_bounds,
+        background: fret_core::Paint::Solid(fg).into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    }]);
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+    st.row_scene_cache.insert(
+        0,
+        (
+            RowSceneCacheEntry {
+                key: row_scene_key,
+                content,
+                origin: content_bounds.origin,
+                geom,
+                is_rich: true,
+                ops,
+                hosted_resources,
+                syntax_replay_key: Some(syntax_replay_key),
+            },
+            1,
+        ),
+    );
+    st.row_scene_cache_tick = 1;
+    st.cache_stats.syntax_get_calls = 0;
+    st.paint_perf_frame = CodeEditorPaintPerfFrame::default();
+
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(16.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 0,
+    };
+    st.begin_paint_frame(frame);
+    let plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        cell_w,
+        64,
+        &text_style,
+        fg,
+        theme_revision,
+        scale_factor,
+    );
+
+    assert_eq!(plan.entries.len(), 1);
+    assert_eq!(
+        st.cache_stats.syntax_get_calls, 0,
+        "planner should trust cached replay context instead of looking up syntax spans"
+    );
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_candidates, 1);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_planned, 1);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch, 0);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_skip_no_cache, 0);
 }
 
 #[cfg(feature = "syntax-rust")]

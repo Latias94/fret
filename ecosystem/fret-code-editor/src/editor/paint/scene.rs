@@ -124,6 +124,23 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     }
 
     let end = frame.visible_end.min(row_count.saturating_sub(1));
+    struct ReplayCandidate {
+        content: Arc<RowContentSnapshot>,
+        scene_origin: Point,
+        geom: RowGeom,
+        is_rich: bool,
+        ops: Arc<[SceneOp]>,
+        hosted_resources: fret_ui::canvas::CanvasHostedResources,
+    }
+
+    enum ReplayCandidateProbe {
+        NoCache,
+        Unsupported,
+        Preedit,
+        KeyMismatch,
+        Hit(ReplayCandidate),
+    }
+
     let mut planned = 0u64;
     for row in frame.visible_start..=end {
         if st.paint_perf_enabled {
@@ -132,113 +149,111 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                 .rows_scene_prepaint_candidates
                 .saturating_add(1);
         }
-        let Some((cached, _)) = st.row_scene_cache.get(&row) else {
-            if st.paint_perf_enabled {
-                st.paint_perf_frame.rows_scene_prepaint_skip_no_cache = st
-                    .paint_perf_frame
-                    .rows_scene_prepaint_skip_no_cache
-                    .saturating_add(1);
-            }
-            continue;
-        };
-        let has_syntax_replay_key = cached.syntax_replay_key.is_some();
-        let is_plain_replay_key = matches!(cached.key.paint_key, RowScenePaintKey::Plain { .. });
-        if !has_syntax_replay_key && !is_plain_replay_key {
-            if st.paint_perf_enabled {
-                st.paint_perf_frame.rows_scene_prepaint_skip_unsupported_key = st
-                    .paint_perf_frame
-                    .rows_scene_prepaint_skip_unsupported_key
-                    .saturating_add(1);
-            }
-            continue;
-        }
-        let cached_row_geom_key = cached.key.row_geom_key.clone();
-        st.cache_stats.row_scene_fast_get_calls =
-            st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
+        let probe = match st.row_scene_cache.get(&row) {
+            Some((cached, _)) => {
+                let content = cached.content.clone();
+                if cached.syntax_replay_key.is_none()
+                    && !matches!(cached.key.paint_key, RowScenePaintKey::Plain { .. })
+                {
+                    ReplayCandidateProbe::Unsupported
+                } else if content.preedit_range.is_some() {
+                    ReplayCandidateProbe::Preedit
+                } else {
+                    let matches = if let Some(key) = cached.syntax_replay_key.as_ref() {
+                        key.matches_cached_replay_context(
+                            &content,
+                            text_style,
+                            constraints,
+                            font_stack_key,
+                            scale_factor,
+                            theme_revision,
+                            code_font_feature_policy_rev,
+                            fg,
+                        )
+                    } else {
+                        let expected = RowSceneKey::plain(cached.key.row_geom_key.clone(), fg);
+                        cached.key == expected
+                    };
 
-        let content = cached.content.clone();
-        if content.preedit_range.is_some() {
-            if st.paint_perf_enabled {
-                st.paint_perf_frame.rows_scene_prepaint_skip_preedit = st
-                    .paint_perf_frame
-                    .rows_scene_prepaint_skip_preedit
-                    .saturating_add(1);
-            }
-            continue;
-        }
-
-        let syntax_spans = if has_syntax_replay_key {
-            let line_idx = st.display_map.display_row_line(row);
-            let spans = match lookup_row_syntax_spans(st, line_idx, max_entries) {
-                SyntaxRowCacheLookup::Hit(spans) => spans,
-                SyntaxRowCacheLookup::Miss { tick } => {
-                    populate_row_syntax_spans_after_miss(st, line_idx, max_entries, tick)
+                    if matches {
+                        ReplayCandidateProbe::Hit(ReplayCandidate {
+                            content,
+                            scene_origin: cached.origin,
+                            geom: cached.geom.clone(),
+                            is_rich: cached.is_rich,
+                            ops: Arc::clone(&cached.ops),
+                            hosted_resources: cached.hosted_resources.clone(),
+                        })
+                    } else {
+                        ReplayCandidateProbe::KeyMismatch
+                    }
                 }
-            };
-            if spans.is_empty() {
+            }
+            None => ReplayCandidateProbe::NoCache,
+        };
+
+        let ReplayCandidate {
+            content,
+            scene_origin,
+            geom,
+            is_rich,
+            ops,
+            hosted_resources,
+        } = match probe {
+            ReplayCandidateProbe::Hit(candidate) => {
+                st.cache_stats.row_scene_fast_get_calls =
+                    st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
+                candidate
+            }
+            ReplayCandidateProbe::NoCache => {
                 if st.paint_perf_enabled {
-                    st.paint_perf_frame.rows_scene_prepaint_skip_syntax_empty = st
+                    st.paint_perf_frame.rows_scene_prepaint_skip_no_cache = st
                         .paint_perf_frame
-                        .rows_scene_prepaint_skip_syntax_empty
+                        .rows_scene_prepaint_skip_no_cache
                         .saturating_add(1);
                 }
                 continue;
             }
-            Some(spans)
-        } else {
-            None
-        };
-
-        let expected_plain_key = if syntax_spans.is_none() {
-            Some(RowSceneKey::plain(cached_row_geom_key, fg))
-        } else {
-            None
-        };
-
-        let Some((cached, last_used)) = st.row_scene_cache.get_mut(&row) else {
-            continue;
-        };
-        let matches = if let Some(syntax_spans) = syntax_spans.as_ref() {
-            row_scene_cached_entry_matches_syntax(
-                cached,
-                &content.range,
-                &content.text,
-                &content.row_spans,
-                syntax_spans,
-                text_style,
-                constraints,
-                font_stack_key,
-                scale_factor,
-                theme_revision,
-                code_font_feature_policy_rev,
-                fg,
-            )
-        } else {
-            expected_plain_key
-                .as_ref()
-                .is_some_and(|expected| &cached.key == expected)
-        };
-        if !matches {
-            if st.paint_perf_enabled {
-                st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch = st
-                    .paint_perf_frame
-                    .rows_scene_prepaint_skip_key_mismatch
-                    .saturating_add(1);
+            ReplayCandidateProbe::Unsupported => {
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_prepaint_skip_unsupported_key = st
+                        .paint_perf_frame
+                        .rows_scene_prepaint_skip_unsupported_key
+                        .saturating_add(1);
+                }
+                continue;
             }
-            st.cache_stats.row_scene_fast_misses =
-                st.cache_stats.row_scene_fast_misses.saturating_add(1);
-            continue;
-        }
+            ReplayCandidateProbe::Preedit => {
+                st.cache_stats.row_scene_fast_get_calls =
+                    st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_prepaint_skip_preedit = st
+                        .paint_perf_frame
+                        .rows_scene_prepaint_skip_preedit
+                        .saturating_add(1);
+                }
+                continue;
+            }
+            ReplayCandidateProbe::KeyMismatch => {
+                st.cache_stats.row_scene_fast_get_calls =
+                    st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch = st
+                        .paint_perf_frame
+                        .rows_scene_prepaint_skip_key_mismatch
+                        .saturating_add(1);
+                }
+                st.cache_stats.row_scene_fast_misses =
+                    st.cache_stats.row_scene_fast_misses.saturating_add(1);
+                continue;
+            }
+        };
 
-        let scene_origin = cached.origin;
-        let geom = cached.geom.clone();
-        let is_rich = cached.is_rich;
-        let ops = Arc::clone(&cached.ops);
-        let hosted_resources = cached.hosted_resources.clone();
         st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
         let tick = st.row_scene_cache_tick;
-        *last_used = tick;
-        let _ = cached;
+        if let Some((_, last_used)) = st.row_scene_cache.get_mut(&row) {
+            *last_used = tick;
+        }
         st.row_scene_cache_queue.push_back((row, tick));
 
         let Some(rect) = frame.row_rect(content_bounds, row) else {

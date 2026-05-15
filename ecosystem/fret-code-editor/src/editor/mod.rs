@@ -756,6 +756,31 @@ impl RowSceneSyntaxReplayKey {
             && self.code_font_feature_policy_rev == code_font_feature_policy_rev
             && self.fg == fg.into()
     }
+
+    fn matches_cached_replay_context(
+        &self,
+        content: &RowContentSnapshot,
+        text_style: &TextStyle,
+        constraints: CanvasTextConstraints,
+        font_stack_key: fret_runtime::TextFontStackKey,
+        scale_factor: f32,
+        theme_revision: u64,
+        code_font_feature_policy_rev: u64,
+        fg: Color,
+    ) -> bool {
+        self.row_range == content.range
+            && (Arc::ptr_eq(&self.line, &content.text)
+                || self.line.as_ref() == content.text.as_ref())
+            && (Arc::ptr_eq(&self.row_spans, &content.row_spans)
+                || self.row_spans.as_ref() == content.row_spans.as_ref())
+            && self.text_style == RowSceneTextStyleKey::from_style(text_style)
+            && self.constraints == RowSceneTextConstraintsKey::from_constraints(constraints)
+            && self.font_stack_key == font_stack_key.0
+            && self.scale_bits == scale_factor.max(1.0).to_bits()
+            && self.theme_revision == theme_revision
+            && self.code_font_feature_policy_rev == code_font_feature_policy_rev
+            && self.fg == fg.into()
+    }
 }
 
 pub struct CodeEditor {
