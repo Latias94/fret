@@ -672,6 +672,10 @@ Conventions:
       - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
         - Required artifact: Windows RTX4090 overlay-disabled validation/re-seed for typical autoscroll,
           complex wheel, and code-editor resize jitter.
+        - Target-machine runner:
+          `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`.
+          Use `--dry-run` on non-target hosts to inspect the command plan, and use `--with-paint-perf`
+          only for the follow-up attribution pass after baseline validation.
         - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
           renderer text/encode/upload, and no threshold loosening unless intentionally justified.
