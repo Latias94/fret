@@ -23,9 +23,9 @@
 
 - [x] Add `diag stats --sort cpu_cycles` (or equivalent) to find frames where UI thread actually ran.
 - [ ] Add a `diag stats --diff` view that highlights both typical (p95) and tail (max) deltas.
-- [ ] Make `check.perf_thresholds.json` link to:
-  - [ ] worst bundle per failing metric
-  - [ ] optional trace artifact path when `--trace` is enabled
+- [x] Make `check.perf_thresholds.json` link to:
+  - [x] worst bundle per failing metric
+  - [x] optional trace artifact path when `--trace` is enabled
 
 ## Phase timeline coverage
 

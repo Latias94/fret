@@ -168,3 +168,5 @@ Tail-spike triage:
   scope, suggested aggregates, and Chrome trace event/category mapping. `trace.chrome.json` exposes these keys via
   `registered_perf_keys` so trace artifacts can explain their managed perf fields. Full bundle/stats/gate key coverage
   is still open.
+- Perf threshold failure rows now attach per-metric evidence via `evidence_bundle`, `evidence_run`,
+  `evidence_artifacts`, and optional `evidence_trace_chrome` when a sibling `trace.chrome.json` exists.

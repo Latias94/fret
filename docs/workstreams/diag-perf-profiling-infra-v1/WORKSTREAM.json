@@ -46,6 +46,10 @@
       "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique trace_exported_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events --no-fail-fast"
     },
     {
+      "name": "perf-threshold-evidence-tests",
+      "command": "cargo nextest run -p fret-diag single_threshold_failure_links_bundle_and_trace_artifact repeat_failure_context_links_existing_bundle_trace_artifact repeat_failure_context_uses_metric_specific_renderer_run repeat_failure_context_keeps_existing_non_renderer_evidence perf_thresholds_json_projects_renderer_thresholds --no-fail-fast"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
@@ -66,6 +70,7 @@
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-render-wgpu/src/renderer",
     "crates/fret-diag/src/trace.rs",
+    "crates/fret-diag/src/diag_perf/thresholds.rs",
     "crates/fret-diag/src/diag_repro/launch.rs",
     "docs/tracy.md"
   ],
