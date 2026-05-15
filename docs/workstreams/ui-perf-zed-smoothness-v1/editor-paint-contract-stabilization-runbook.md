@@ -172,7 +172,19 @@ default. If it is used, the perf log must explain the machine-profile or contrac
 
 ## Closeout Gate
 
-Before closing P1.5:
+After copying the target-machine validation directories back into the workspace, prefer the one-command local closeout
+gate:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_closeout.py `
+  target/fret-diag/editor-paint-contract-validate-<date> `
+  --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib
+```
+
+It verifies the synced artifacts, then runs the strict baseline matrix audit, `WORKSTREAM.json` parsing, workstream
+catalog check, and `git diff --check`.
+
+Equivalent manual gates before closing P1.5:
 
 ```powershell
 python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
