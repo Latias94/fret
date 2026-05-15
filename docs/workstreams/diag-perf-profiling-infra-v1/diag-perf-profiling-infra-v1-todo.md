@@ -46,13 +46,16 @@
   - [ ] Migrate more layout sub-phases beyond request/build + roots:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
     - `crates/fret-ui/src/layout/engine.rs` (solve/measure sub-spans, if we want tighter attribution)
-  - [ ] Migrate remaining paint sub-phases and hot node paths:
+  - [x] Migrate remaining paint sub-phases and hot node paths:
     - [x] Migrate `paint_all` entry-layer sub-phases to `fret_perf::measure_span`:
       input context, scroll-handle invalidation, root collection, visual-bounds flush,
       text-input snapshot publish, and paint-observation collapse.
       - Evidence: `crates/fret-ui/src/tree/paint/entry.rs`
-    - `crates/fret-ui/src/tree/paint/entry.rs` (input ctx, cache replay, etc.)
-    - `crates/fret-ui/src/tree/paint/node.rs` (cache key, hit check, replay/translate, widget paint)
+    - [x] Migrate `paint_node` hot-path timers to `fret_perf::measure_span` while preserving the
+      existing debug stats buckets:
+      visual-bounds record, cache key, cache hit check, cache bounds translate, widget paint,
+      and paint-observation record.
+      - Evidence: `crates/fret-ui/src/tree/paint/node.rs`
   - [ ] Extend runner/renderer phase spans where needed:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (frame phase spans)
     - `crates/fret-render-*` (prepare/record/submit/present boundaries)

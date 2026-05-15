@@ -192,7 +192,10 @@ Example bundle:
   timings and `fret_perf::measure_span` wrappers aligned.
 - `paint_all` entry-layer sub-phases now use `fret_perf::measure_span` for input context,
   scroll-handle invalidation, root collection, visual-bounds flushing, text-input snapshot publishing,
-  and paint-observation collapse. `paint/node.rs` hot paths remain a separate open migration item.
+  and paint-observation collapse.
+- `paint_node` hot-path timers now also use `fret_perf::measure_span` for visual-bounds record,
+  cache key, cache hit check, cache bounds translate, widget paint, and observation record while
+  preserving the existing debug stats buckets.
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
   subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.
