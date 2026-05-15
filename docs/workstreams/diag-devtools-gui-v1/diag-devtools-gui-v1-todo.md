@@ -147,11 +147,17 @@ Conventions:
   - [x] pixels changed launch/run + result artifact history,
   - [x] perf thresholds,
   - [x] resource footprint thresholds.
-- [ ] Live inspect payloads (keep minimal):
+- [x] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
   - [x] focus events (`inspect.focus`) with summary + path (best-effort),
   - [x] hovered node bounds + viewport overlay hooks,
   - [x] overlay barrier root id + blocking roots summary.
+        Evidence: IMUI product-closure
+        `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
+        "DevTools live inspect overlay payload closure - 2026-05-15 follow-up"; focused gates:
+        `cargo nextest run -p fret-diag-protocol live_inspect_payloads_roundtrip_bounds_and_overlay_summary --no-fail-fast`,
+        `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics-ws" inspect_node_summary_v1_includes_bounds_and_root_hint overlay_summary_v1_reports_barrier_and_blocking_roots --no-fail-fast`, and
+        `cargo nextest run -p fret-devtools inspect_hover_bounds_lines_project_bounds_and_selector inspect_hover_bounds_lines_missing_bounds_returns_none inspect_overlay_hook_lines_project_overlay_summary --no-fail-fast`.
 - [x] Add at least one “dogfood” demo workflow:
   - [x] open UI gallery, pick a button, generate a script, run it, pack zip, open viewer.
         The GUI first-open shell now exposes the `ui-gallery-button-dogfood` path with the
