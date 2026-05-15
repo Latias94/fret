@@ -31,7 +31,8 @@ Evidence:
 
 ## M2 - Edge Miss Taxonomy And Candidate Cost
 
-Status: Diagnostics shipped on 2026-05-15; candidate-cost reduction remains open
+Status: Diagnostics and syntax-key mismatch reduction shipped on 2026-05-15; edge-aware candidate
+selection remains open
 
 Exit criteria:
 
@@ -44,15 +45,18 @@ Exit criteria:
 Evidence:
 
 - `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_DIAGNOSTICS_2026-05-15.md`
+- `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_FOLLOWUP_SYNTAX_REPLAY_KEY_2026-05-15.md`
 - `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515/1778832028679/bundle.schema2.json`
+- `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515/1778835965902/bundle.schema2.json`
 
 ## M3 - True Edge Payload Prebuild
 
 Status: Recommended next code slice, but keep it code-editor-local first
 
-M2 shows that the remaining full miss is a no-cache row at `visible_end`. Start with the smallest
-code-editor-owned edge seeding path. If it requires new `CanvasPainter`, `Scene`, or framework-level
-prepaint contracts, split that contract work into a separate lane before implementing it.
+M2 follow-up evidence shows that key mismatch is no longer the blocker. The remaining full miss is
+still a no-cache row at `visible_end`. Start with the smallest code-editor-owned edge seeding path.
+If it requires new `CanvasPainter`, `Scene`, or framework-level prepaint contracts, split that
+contract work into a separate lane before implementing it.
 
 Exit criteria:
 

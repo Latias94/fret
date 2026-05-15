@@ -1,6 +1,6 @@
 # TODO
 
-Status: Active after M2 diagnostics
+Status: Active after M2 follow-up syntax replay key reduction
 Date: 2026-05-15
 
 ## Done
@@ -13,6 +13,8 @@ Date: 2026-05-15
 - [x] Add resize edge-row miss taxonomy counters to code-editor paint perf diagnostics.
 - [x] Surface the new counters through gallery snapshots and `fretboard-dev diag stats`.
 - [x] Run the M2 diagnostics perf repro and record the evidence.
+- [x] Reduce syntax replay key-mismatch skips by allowing content-equivalent replay keys.
+- [x] Run the M2 follow-up perf repro and record the remaining visible-end no-cache miss.
 
 ## Next Executable Slices
 
@@ -20,10 +22,10 @@ Date: 2026-05-15
   - Record how many paint frames miss because the row has no row scene cache entry, syntax replay
     validation fails, rich/geometry keys drift, or candidate planning skips the row.
   - Keep counters behind existing code-editor paint perf diagnostics.
-- [ ] M2 follow-up: make replay-plan candidate selection cheaper.
-  - Current M2 diagnostics show high key-mismatch skips in prepaint planning even when paint can
-    still replay the row later.
-  - Reduce planner work before broadening any true prebuild path.
+- [x] M2 follow-up: reduce replay-plan key-mismatch skips.
+  - M2 diagnostics showed high key-mismatch skips in prepaint planning even when paint could still
+    replay the row later.
+  - Match syntax replay keys by content equivalence, with pointer identity kept as the fast case.
 - [ ] M3: seed or prebuild the newly exposed visible-end row.
   - M2 evidence shows the remaining full miss is a no-cache row stored at `visible_end`.
   - Prefer a code-editor-local edge seeding path before considering any `CanvasPainter` or

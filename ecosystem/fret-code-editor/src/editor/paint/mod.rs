@@ -1575,7 +1575,7 @@ mod tests {
     }
 
     #[test]
-    fn syntax_replay_key_matches_current_inputs_by_pointer_identity() {
+    fn syntax_replay_key_matches_equivalent_current_inputs() {
         let line: Arc<str> = Arc::<str>::from("abc");
         let row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]> = Arc::from(Vec::new());
         let syntax_spans: Arc<[SyntaxSpan]> = Arc::from(vec![SyntaxSpan {
@@ -1627,12 +1627,40 @@ mod tests {
             },
         ));
 
+        let other_line: Arc<str> = Arc::<str>::from("abc");
         let other_row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]> = Arc::from(Vec::new());
+        let other_syntax_spans: Arc<[SyntaxSpan]> = Arc::from(vec![SyntaxSpan {
+            range: 0..3,
+            highlight: "keyword",
+        }]);
+        assert!(key.matches_current(
+            &(0..3),
+            &other_line,
+            &other_row_spans,
+            &other_syntax_spans,
+            &style,
+            constraints,
+            font_stack_key,
+            1.0,
+            9,
+            4,
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        ));
+
+        let different_syntax_spans: Arc<[SyntaxSpan]> = Arc::from(vec![SyntaxSpan {
+            range: 0..3,
+            highlight: "string",
+        }]);
         assert!(!key.matches_current(
             &(0..3),
-            &line,
+            &other_line,
             &other_row_spans,
-            &syntax_spans,
+            &different_syntax_spans,
             &style,
             constraints,
             font_stack_key,

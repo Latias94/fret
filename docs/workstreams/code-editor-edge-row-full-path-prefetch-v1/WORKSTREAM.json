@@ -21,6 +21,10 @@
       "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_DIAGNOSTICS_2026-05-15.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_FOLLOWUP_SYNTAX_REPLAY_KEY_2026-05-15.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/TODO.md"
     },
@@ -40,7 +44,7 @@
   "repro": {
     "summary": "Run the code editor resize probes with paint attribution enabled and compare worst-bundle code_editor_paint_perf fields against the row-content snapshot closeout bundle.",
     "commands": [
-      "target/release/fretboard-dev diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+      "target/release/fretboard-dev diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
     ]
   },
   "gates": [
@@ -81,9 +85,11 @@
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/DESIGN.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M1_PLAIN_CACHED_REPLAY_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_DIAGNOSTICS_2026-05-15.md",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_FOLLOWUP_SYNTAX_REPLAY_KEY_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/EVIDENCE_AND_GATES.md",
     "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515/1778830062977/bundle.schema2.json",
     "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515/1778832028679/bundle.schema2.json",
+    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515/1778835965902/bundle.schema2.json",
     "target/fret-diag/code-editor-row-content-snapshot-cache-v1-after-m2-20260515/1778827921081/bundle.schema2.json",
     "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs"

@@ -171,3 +171,63 @@ Interpretation: the remaining paint full miss is a no-cache row at the newly exp
 Key-mismatch skips are also meaningful because they make prepaint planning do work that paint can
 often recover from later. Continue with code-editor-local planner-cost reduction and visible-end row
 seeding; do not start a broad `fret-ui` architecture refactor from this evidence.
+
+## M2 Follow-Up Syntax Replay Key Equality
+
+Focused validation:
+
+```bash
+cargo nextest run -p fret-code-editor syntax_replay_key_matches_equivalent_current_inputs --features syntax-rust --no-fail-fast
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan --features syntax-rust --no-fail-fast
+cargo nextest run -p fret-code-editor --features syntax-rust --no-fail-fast
+```
+
+Result on 2026-05-15: passed.
+
+Perf repro:
+
+```bash
+target/release/fretboard-dev diag perf ui-code-editor-resize-probes \
+  --repeat 3 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --sort time \
+  --top 15 \
+  --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json \
+  --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515 \
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
+```
+
+Worst bundle:
+
+- `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515/1778835965902/bundle.schema2.json`
+
+Aggregate p95 from the follow-up perf run:
+
+- total: `1270us`
+- paint: `729us`
+- prepaint: `255us`
+- layout: `354us`
+
+Worst-bundle `code_editor_paint_perf.p95` after the follow-up:
+
+- `us_total`: `191us`
+- `us_row_content_resolve`: `116us`
+- `us_row_scene_prepaint_plan`: `75us`
+- `rows_scene_prepaint_skip_key_mismatch`: `0`
+- `rows_scene_prepaint_skip_no_cache`: `1`
+- `rows_scene_fast_miss_no_entry`: `1`
+- `rows_scene_full_miss_no_entry`: `1`
+- `rows_scene_stored_at_visible_end`: `1`
+
+Interpretation: syntax key content equality removed the planner key-mismatch tail, but the goal is
+still open because the newly exposed visible-end row still reaches paint without a row scene cache
+entry.

@@ -743,9 +743,11 @@ impl RowSceneSyntaxReplayKey {
         fg: Color,
     ) -> bool {
         self.row_range == *row_range
-            && Arc::ptr_eq(&self.line, line)
-            && Arc::ptr_eq(&self.row_spans, row_spans)
-            && Arc::ptr_eq(&self.syntax_spans, syntax_spans)
+            && (Arc::ptr_eq(&self.line, line) || self.line.as_ref() == line.as_ref())
+            && (Arc::ptr_eq(&self.row_spans, row_spans)
+                || self.row_spans.as_ref() == row_spans.as_ref())
+            && (Arc::ptr_eq(&self.syntax_spans, syntax_spans)
+                || self.syntax_spans.as_ref() == syntax_spans.as_ref())
             && self.text_style == RowSceneTextStyleKey::from_style(text_style)
             && self.constraints == RowSceneTextConstraintsKey::from_constraints(constraints)
             && self.font_stack_key == font_stack_key.0
