@@ -525,19 +525,15 @@ pub(super) fn paint_row(
             row_preedit.is_some()
         };
     #[cfg(feature = "syntax")]
-    let line_idx = st.display_map.display_row_line(row);
-    #[cfg(feature = "syntax")]
-    let theme_revision = {
-        let theme = painter.theme();
-        theme.revision()
-    };
-    #[cfg(feature = "syntax")]
-    #[allow(unused_assignments)]
-    let mut syntax_spans = None::<Arc<[SyntaxSpan]>>;
-    #[cfg(feature = "syntax")]
-    let mut syntax_lookup_miss_tick = None::<u64>;
-    #[cfg(feature = "syntax")]
-    {
+    if !row_scene_replayed && !drew_rich {
+        let line_idx = st.display_map.display_row_line(row);
+        let theme_revision = {
+            let theme = painter.theme();
+            theme.revision()
+        };
+        #[allow(unused_assignments)]
+        let mut syntax_spans = None::<Arc<[SyntaxSpan]>>;
+        let mut syntax_lookup_miss_tick = None::<u64>;
         let lookup_started = perf_enabled.then(Instant::now);
         match lookup_row_syntax_spans(st, line_idx, text_cache_max_entries) {
             SyntaxRowCacheLookup::Hit(spans) => {
@@ -588,9 +584,7 @@ pub(super) fn paint_row(
                 }
             }
         }
-    }
-    #[cfg(feature = "syntax")]
-    {
+
         if !row_scene_replayed && !drew_rich {
             let spans = if let Some(spans) = syntax_spans.as_ref() {
                 Arc::clone(spans)
