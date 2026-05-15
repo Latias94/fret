@@ -110,6 +110,11 @@ Tracker highlights:
   image button authoring in `fret-ui-kit::imui`, backed by Fret `ImageId` / `ImageProps` rather
   than Dear ImGui texture-ID runtime state): `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
   and `docs/workstreams/imui-image-item-proof-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
+- ImUi child-region resize follow-ons (closed narrow additive lanes for Dear ImGui-style
+  axis-specific child-region resize policy in `fret-ui-kit::imui`, with app-owned height/width
+  state and no `fret-imui` runtime widening):
+  `docs/workstreams/imui-child-region-resize-y-v1/CLOSEOUT_AUDIT_2026-05-15.md` and
+  `docs/workstreams/imui-child-region-resize-x-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
 - ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 ## P0 - Source Baseline
 
@@ -164,9 +164,9 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
    enough for the active editor proof; list-box, plot, image-item, style-editor, advanced-table, and
    child-flag mirrors remain behavior-specific candidates, not a broad widget backlog.
-   2026-05-16 follow-on: `imui-image-item-proof-v1` is open for the standalone response-bearing
-   image item / image button proof. The target is `fret-ui-kit::imui` only, using Fret `ImageId`
-   and `ImageProps`; it must not introduce Dear ImGui texture-ID runtime state or widen
+   2026-05-16 follow-on result: `imui-image-item-proof-v1` closed after adding standalone
+   response-bearing image item / image button authoring in `fret-ui-kit::imui`, using Fret
+   `ImageId` and `ImageProps` without introducing Dear ImGui texture-ID runtime state or widening
    `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
@@ -214,8 +214,10 @@ Readiness order for the next locally testable review slices:
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
-   collection behavior. The next credible follow-on is behavior-specific, with `ResizeY` first if a
-   proof needs it; do not open a generic `BeginChild()` flag-mirror lane.
+   collection behavior. The closed `imui-child-region-resize-y-v1` and
+   `imui-child-region-resize-x-v1` follow-ons now cover axis-specific manual resize with
+   app-owned size state; auto-resize, visibility-return, and nav-flattening remain
+   behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
 9. Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes and
    product-chain perf gates, not in a broad widget/API backlog.

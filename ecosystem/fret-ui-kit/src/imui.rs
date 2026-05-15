@@ -116,22 +116,22 @@ pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
     BeginMenuOptions, BeginSubmenuOptions, BulletTextOptions, ButtonArrowDirection, ButtonOptions,
     ButtonVariant, CheckboxOptions, ChildRegionChrome, ChildRegionOptions,
-    ChildRegionResizeYOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions,
-    DragSourceOptions, DropTargetOptions, GridOptions, HorizontalOptions, ImageItemOptions,
-    ImageItemVariant, InputTextCustomFilter, InputTextFilters, InputTextMode, InputTextOptions,
-    InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions, MenuItemOptions,
-    PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions,
-    SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn,
-    TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
-    TextAreaOptions, TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions,
-    VirtualListOptions,
+    ChildRegionResizeXOptions, ChildRegionResizeYOptions, CollapsingHeaderOptions,
+    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
+    HorizontalOptions, ImageItemOptions, ImageItemVariant, InputTextCustomFilter, InputTextFilters,
+    InputTextMode, InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions,
+    MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions,
+    SelectableOptions, SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions,
+    TabItemOptions, TableColumn, TableColumnResizeOptions, TableColumnWidth, TableOptions,
+    TableRowOptions, TableSortDirection, TextAreaOptions, TextAreaSubmitKey, TooltipOptions,
+    TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,
 };
 pub use response::{
-    ChildRegionResizeYResponse, ChildRegionResponse, ComboResponse, DisclosureResponse,
-    DragResponse, DragSourceResponse, DropTargetResponse, FloatingAreaResponse,
+    ChildRegionResizeXResponse, ChildRegionResizeYResponse, ChildRegionResponse, ComboResponse,
+    DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse, FloatingAreaResponse,
     FloatingWindowResponse, ImUiHoveredFlags, InputTextPickerResponse, ResponseExt, TabBarResponse,
     TabTriggerResponse, TableColumnResizeResponse, TableHeaderResponse, TableResponse,
     VirtualListResponse,

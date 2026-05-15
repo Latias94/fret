@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 ## Evidence Anchors
 
@@ -67,10 +67,14 @@ Last updated: 2026-05-15
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
-- Active image item follow-on:
+- Closed image item and child resize follow-ons:
   - `docs/workstreams/imui-image-item-proof-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
   - `docs/workstreams/imui-image-item-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-resize-y-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-resize-x-v1/EVIDENCE_AND_GATES.md`
 - Current proof surfaces:
   - `apps/fret-cookbook/README.md`
   - `apps/fret-cookbook/EXAMPLES.md`
@@ -324,6 +328,7 @@ Use these for the current child-region readiness note:
 ```powershell
 cargo nextest run -p fret-imui child_region --no-fail-fast
 cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast
 cargo check -p fret-demo --bin workspace_shell_demo
 ```
 

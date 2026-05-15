@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 ## M0 - Current Source Baseline
 
@@ -170,9 +170,10 @@ Exit criteria:
   options stay crate-local while external callers use row helpers instead of public fields.
   2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
   methods and keeps `query_lower` private.
-  Current child-region audit result: keep `child-region depth` as a candidate-only item until a
-  behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
-  proof and gate.
+  2026-05-16 child-region resize result: `imui-child-region-resize-y-v1` and
+  `imui-child-region-resize-x-v1` are the closed proof lanes for axis-specific manual child-region
+  resize. Height/width state stays app-owned through response helpers, and broader child-region
+  behavior such as auto-resize, clipping-return, or nav-flattening remains candidate-only.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

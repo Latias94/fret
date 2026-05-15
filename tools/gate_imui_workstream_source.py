@@ -208,6 +208,7 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/response/widgets.rs"),
             [
                 "ChildRegionResponse",
+                "ChildRegionResizeXResponse",
                 "ChildRegionResizeYResponse",
                 "DisclosureResponse",
                 "ComboResponse",
@@ -247,7 +248,7 @@ def main() -> None:
             required=[
                 '"slug": "imui-imgui-gap-closure-v1"',
                 '"status": "active"',
-                '"updated": "2026-05-15"',
+                '"updated": "2026-05-16"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md"',

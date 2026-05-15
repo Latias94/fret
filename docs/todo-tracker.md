@@ -216,6 +216,15 @@ It complements (but does not replace) ADRs:
     `fret-ui-kit::imui` over
     the existing Fret image mechanism, while keeping asset loading app-owned and `fret-imui`
     policy-light.
+- Closed child-region resize follow-ons:
+  - `docs/workstreams/imui-child-region-resize-y-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/CLOSEOUT_AUDIT_2026-05-15.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed after adding axis-specific child-region resize policy in
+    `fret-ui-kit::imui`. Height and width state remain app-owned through response helpers, while
+    auto-resize, nav flattening, visibility-return semantics, and generic `BeginChild()` flag
+    mirroring remain candidate-only follow-ons.
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
