@@ -160,9 +160,16 @@ Conventions:
         Source gates:
         `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only` and
         `python tools/diag_gate_imui_product_chain.py --only discovery`.
- - [ ] Validate tree scalability:
-   - [ ] virtualized rendering for 50k+ semantics nodes,
-   - [ ] low-traffic live updates (operations/polling) under scroll.
+- [x] Validate tree scalability:
+  - [x] virtualized rendering for 50k+ semantics nodes.
+        The Semantics tab keeps `VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16)`;
+        row projection is now iterative rather than recursive, with 50k flat, 50k deep, and
+        large-search focused tests.
+  - [x] low-traffic live updates (operations/polling) under scroll.
+        Live selected-node details still use on-demand `semantics.node.get` and
+        `hit_test.explain`; request eligibility is isolated in `live_semantics_request_decision`
+        and tested to throttle unchanged selection to 1Hz while allowing selection changes and
+        manual refreshes.
 
 ### M7: MCP server adapter (AI-friendly tooling API)
 

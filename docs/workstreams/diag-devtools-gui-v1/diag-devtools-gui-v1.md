@@ -138,6 +138,14 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   `tools/diag-scripts/ui-gallery-lite-smoke.json` and
   `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json` so the
   visible GUI path stays tied to existing script artifacts instead of a GUI-only workflow model.
+- The Semantics tree scalability slice is now locked by code-level gates. The left tree continues
+  to render through `VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16)`, while
+  `semantics::compute_rows` uses an explicit stack so a 50k-deep expanded tree cannot overflow the
+  Rust call stack. Focused tests cover 50k flat rows, 50k deep rows, and large-tree search.
+- Low-traffic live selected-node details are also source-gated: `ws::maybe_request_semantics_node_details`
+  still sends only on-demand `semantics.node.get` and `hit_test.explain` requests, and the extracted
+  `live_semantics_request_decision` test proves unchanged selections are throttled to 1Hz while
+  selection changes and manual refreshes bypass the throttle.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.
