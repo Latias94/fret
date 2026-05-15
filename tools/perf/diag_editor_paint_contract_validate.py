@@ -370,7 +370,8 @@ def main() -> int:
         action="store_true",
         default=False,
         help=(
-            "Also add FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 to the non-resize probes. "
+            "Also add FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 to the direct diag perf probes. "
+            "The resize helper already enables that env for ui-code-editor-resize-probes. "
             "Use this for attribution evidence, not silent baseline loosening."
         ),
     )

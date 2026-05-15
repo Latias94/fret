@@ -61,6 +61,8 @@ Use `--dry-run` on non-target hosts to inspect the exact command plan without pr
 Run the command once without `--with-paint-perf`; that baseline-validation pass is the source for
 `check.perf_thresholds.json.failures=[]`. Use `--with-paint-perf` only for the follow-up target-machine attribution
 pass after baseline validation; do not use its output to loosen checked-in thresholds without the re-seed policy below.
+The resize helper already enables `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1` for `ui-code-editor-resize-probes`; the flag
+mainly controls the direct `diag perf` typical-autoscroll and complex-wheel probes.
 After each validation probe, the runner collects the worst bundle and writes `diag stats --sort cpu_cycles --top 15
 --json` output under that probe's `runner-logs/<probe>/stats.stdout.json`. The runner also checks that the stats JSON
 contains paint-widget and renderer text/encode/upload fields; `--with-paint-perf` additionally requires
