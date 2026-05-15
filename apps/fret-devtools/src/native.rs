@@ -16,9 +16,9 @@ use fret_diag::{
     devtools_gate_script_target_profile_ids_v1,
 };
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
-    regression_bundle_followup_command_lines, regression_bundle_followup_commands,
-    regression_summary_drilldown,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    RegressionBundleFollowupCommandV1, RegressionSummaryV1, regression_bundle_followup_command_lines,
+    regression_bundle_followup_commands, regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -77,6 +77,8 @@ const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =
 const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.followup.memory";
 const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
 const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
+const CMD_REGRESSION_RUN_FOLLOWUP_COMMAND: &str =
+    "fret.devtools.regression.followup.run_command";
 const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
 const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.copy_result_json";
 const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
@@ -252,6 +254,7 @@ struct State {
     followup_result_history: Model<Vec<followup::FollowupResultHistoryEntry>>,
     followup_selected_result_path: Model<Option<Arc<str>>>,
     followup_last_error: Model<Option<Arc<str>>>,
+    followup_pending_command_id: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
@@ -515,6 +518,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         .insert(Vec::<followup::FollowupResultHistoryEntry>::new());
     let followup_selected_result_path = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
+    let followup_pending_command_id = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
@@ -690,6 +694,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         followup_result_history,
         followup_selected_result_path,
         followup_last_error,
+        followup_pending_command_id,
         viewer_url,
         last_pick_json,
         last_inspect_hover_json,
@@ -4194,6 +4199,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         &selected_followup_history_entries,
         selected_followup_result_path.as_deref(),
     );
+    let selected_runnable_followup_actions =
+        runnable_followup_command_actions(
+            cx,
+            &st.followup_pending_command_id,
+            &selected_followup_commands,
+            followup_in_flight,
+        );
     let selected_followup_result_json_blob = text_blob_sized(
         cx,
         if selected_followup_result_json.trim().is_empty() {
@@ -4260,6 +4272,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_followup_result_history_blob,
             selected_followup_result_history_list,
         ],
+    );
+    let selected_runnable_followup_actions_section = diag_section(
+        cx,
+        "Runnable Follow-up Actions",
+        "Run any bundle-local follow-up command generated for the selected summary.",
+        vec![selected_runnable_followup_actions],
     );
     let selected_followup_result_json_section = diag_section(
         cx,
@@ -4339,6 +4357,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_followup_result_detail_section,
             selected_followup_result_summary_section,
             selected_followup_result_history_section,
+            selected_runnable_followup_actions_section,
             selected_followup_result_json_section,
             selected_followup_commands_section,
             selected_runnable_followup_commands_section,
@@ -4503,6 +4522,76 @@ fn followup_history_list(
         fret_ui_kit::LayoutRefinement::default()
             .w_full()
             .min_h(Px(116.0)),
+    )
+    .into_element(cx)
+}
+
+fn runnable_followup_command_action_lines(
+    commands: &[RegressionBundleFollowupCommandV1],
+) -> Vec<String> {
+    commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .map(|command| format!("{} ({})", command.label, command.id))
+        .collect()
+}
+
+fn runnable_followup_command_actions(
+    cx: &mut ElementContext<'_, App>,
+    pending_command_id_model: &Model<Option<Arc<str>>>,
+    commands: &[RegressionBundleFollowupCommandV1],
+    in_flight: bool,
+) -> AnyElement {
+    let runnable = commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .collect::<Vec<_>>();
+    if runnable.is_empty() {
+        return cx.text("No runnable follow-up commands for this selection.");
+    }
+
+    let rows = runnable
+        .into_iter()
+        .map(|command| {
+            let command_id = command.id.clone();
+            let command_label = command.label.clone();
+            let command_line = command.command_line.clone();
+            let pending_command_id_model = pending_command_id_model.clone();
+            let action = CommandId::from(CMD_REGRESSION_RUN_FOLLOWUP_COMMAND);
+            let on_run: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, reason| {
+                    let _ = host.models_mut().update(&pending_command_id_model, |value| {
+                        *value = Some(Arc::<str>::from(command_id.clone()))
+                    });
+                    host.record_pending_command_dispatch_source(action_cx, &action, reason);
+                    host.dispatch_command(Some(action_cx.window), action.clone());
+                });
+            let label = shadcn::Badge::new(command_label)
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx);
+            let run = shadcn::Button::new("Run")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(in_flight)
+                .on_activate(on_run)
+                .into_element(cx);
+            let command = text_blob_sized(cx, command_line, Px(42.0));
+            ui::h_row(|_cx| [label, run, command])
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx)
+        })
+        .collect::<Vec<_>>();
+
+    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
+            .w_full()
+            .max_h(Px(160.0)),
     )
     .into_element(cx)
 }
@@ -5321,6 +5410,27 @@ fn on_command(
         }
         CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS => {
             run_selected_regression_followup(app, st, "hotspots");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_COMMAND => {
+            let command_id = app
+                .models()
+                .read(&st.followup_pending_command_id, |v| v.clone())
+                .ok()
+                .flatten();
+            let _ = app
+                .models_mut()
+                .update(&st.followup_pending_command_id, |v| *v = None);
+            let Some(command_id) = command_id else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "follow-up refused (missing command payload)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            run_selected_regression_followup(app, st, command_id.as_ref());
             app.request_redraw(window);
         }
         CMD_COPY_FOLLOWUP_RESULT_PATH => {
@@ -8180,6 +8290,25 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn runnable_followup_command_action_lines_surface_indexed_bundle_commands() {
+        let commands = regression_bundle_followup_commands([
+            "target/fret-diag/perf-docking/run-threshold",
+            "target/fret-diag/perf-docking/run-a",
+        ]);
+
+        let lines = runnable_followup_command_action_lines(&commands);
+        assert!(lines.contains(&"diag stats (stats)".to_string()));
+        assert!(lines.contains(&"triage (triage)".to_string()));
+        assert!(lines.contains(&"diag stats [2] (stats-2)".to_string()));
+        assert!(lines.contains(&"triage [2] (triage-2)".to_string()));
+        assert!(
+            !lines
+                .iter()
+                .any(|line| line.contains("visual compare") || line.contains("footprint compare"))
+        );
     }
 
     #[test]

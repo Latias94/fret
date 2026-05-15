@@ -797,13 +797,16 @@ DevTools GUI perf-threshold preset closure (2026-05-16):
 - The shared follow-up projection now emits commands for every selected bundle root, with stable
   first-bundle command ids for GUI run buttons and indexed labels/ids for additional
   threshold-failure bundles shown to GUI/MCP consumers.
+- The DevTools selected-summary inspector now renders runnable follow-up command actions from that
+  shared projection, so indexed threshold-failure bundle commands can be launched from the GUI
+  instead of only copied from the command text block.
 - Focused source gates:
 
 ```text
 cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast
 cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
-cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
+cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
 cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
 ```

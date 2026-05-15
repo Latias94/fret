@@ -72,7 +72,7 @@
   - Gate:
     `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
   - GUI bridge gate:
-    `cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast`
+    `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast`
   - MCP bridge gate:
     `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
