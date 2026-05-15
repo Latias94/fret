@@ -780,6 +780,24 @@ cargo nextest run -p fret-diag contract_help_mentions_the_migrated_command_surfa
 python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15
 ```
 
+DevTools GUI perf-threshold preset closure (2026-05-16):
+
+- `crates/fret-diag/src/devtools_gate_profiles.rs` now owns the product-chain docking perf preset
+  used by the GUI generated gate form: `perf-docking-arbitration-steady`, repeat `1`, warmup `5`,
+  aggregate `max`, and the full CPU/layout/pointer/renderer threshold flag set mirrored from
+  `tools/diag_gate_imui_product_chain.py`.
+- `apps/fret-devtools/src/native.rs` renders first-class inputs for top/layout/solve,
+  pointer-move dispatch/hit-test/global-change thresholds, renderer encode/upload/record/finish,
+  text/SVG prepare, instance bytes, and encode-scene text ops, then delegates command generation
+  and `diag_args` validation back to the shared `fret-diag` projection.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
+```
+
 DevTools/product workflow discovery follow-up (2026-05-15): `fretboard-dev list tool-apps` now
 prints a `workflow: imui-product-chain` row, and `fretboard-dev list tool-apps --json` exposes the
 same route under `product_workflows`. The default discovery gate validates the default

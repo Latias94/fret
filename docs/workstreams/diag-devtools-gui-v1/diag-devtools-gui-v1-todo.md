@@ -156,6 +156,13 @@ Conventions:
   - [x] stale paint/scene launch/run + result artifact history,
   - [x] pixels changed launch/run + result artifact history,
   - [x] perf thresholds,
+        Evidence: the generated perf-threshold gate form now uses shared
+        `fret-diag` product-chain docking defaults for `perf-docking-arbitration-steady`, including
+        repeat/warmup/aggregate run knobs and the full CPU/layout/pointer/renderer threshold flag
+        set mirrored from `tools/diag_gate_imui_product_chain.py`. Guarded by
+        `cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast`,
+        `cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`,
+        and `python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built`.
   - [x] resource footprint thresholds.
 - [x] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,

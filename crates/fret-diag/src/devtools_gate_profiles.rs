@@ -12,7 +12,7 @@ pub struct DevtoolsGateProfileV1 {
 pub const DEVTOOLS_GATE_STALE_COMMAND: &str = "cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json";
 pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json";
-pub const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str = "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json";
+pub const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str = "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-top-layout-us <us> --max-top-solve-us <us> --max-pointer-move-dispatch-us <us> --max-pointer-move-hit-test-us <us> --max-pointer-move-global-changes <count> --max-renderer-encode-scene-us <us> --max-renderer-upload-us <us> --max-renderer-record-passes-us <us> --max-renderer-encoder-finish-us <us> --max-renderer-prepare-text-us <us> --max-renderer-prepare-svg-us <us> --max-renderer-instance-bytes <bytes> --max-renderer-encode-scene-text-ops <ops> --json";
 pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLDS_COMMAND: &str = "cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>";
 pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str = "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
 pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1: &[&str] =
@@ -20,6 +20,24 @@ pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1: &[&str] =
 pub const DEVTOOLS_GATE_PERF_THRESHOLD_PROFILE_ID_V1: &str = "perf-thresholds";
 pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLD_PROFILE_ID_V1: &str =
     "resource-footprint-thresholds";
+pub const DEVTOOLS_GATE_PERF_DOCKING_TARGET_V1: &str = "perf-docking-arbitration-steady";
+pub const DEVTOOLS_GATE_PERF_DOCKING_REPEAT_V1: &str = "1";
+pub const DEVTOOLS_GATE_PERF_DOCKING_WARMUP_FRAMES_V1: &str = "5";
+pub const DEVTOOLS_GATE_PERF_DOCKING_AGG_V1: &str = "max";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_TOP_TOTAL_US_V1: &str = "20000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_TOP_LAYOUT_US_V1: &str = "10000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_TOP_SOLVE_US_V1: &str = "10000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_POINTER_MOVE_DISPATCH_US_V1: &str = "5000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_POINTER_MOVE_HIT_TEST_US_V1: &str = "5000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_POINTER_MOVE_GLOBAL_CHANGES_V1: &str = "0";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_ENCODE_SCENE_US_V1: &str = "5000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_UPLOAD_US_V1: &str = "5000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_RECORD_PASSES_US_V1: &str = "2000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_ENCODER_FINISH_US_V1: &str = "2000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_PREPARE_TEXT_US_V1: &str = "5000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_PREPARE_SVG_US_V1: &str = "2000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_INSTANCE_BYTES_V1: &str = "500000";
+pub const DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_ENCODE_SCENE_TEXT_OPS_V1: &str = "10000";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DevtoolsGateScriptTargetCommandInputV1<'a> {
@@ -43,7 +61,19 @@ pub struct DevtoolsGatePerfThresholdCommandInputV1<'a> {
     pub warmup_frames: &'a str,
     pub perf_threshold_agg: &'a str,
     pub max_top_total_us: &'a str,
+    pub max_top_layout_us: &'a str,
+    pub max_top_solve_us: &'a str,
+    pub max_pointer_move_dispatch_us: &'a str,
+    pub max_pointer_move_hit_test_us: &'a str,
+    pub max_pointer_move_global_changes: &'a str,
     pub max_renderer_encode_scene_us: &'a str,
+    pub max_renderer_upload_us: &'a str,
+    pub max_renderer_record_passes_us: &'a str,
+    pub max_renderer_encoder_finish_us: &'a str,
+    pub max_renderer_prepare_text_us: &'a str,
+    pub max_renderer_prepare_svg_us: &'a str,
+    pub max_renderer_instance_bytes: &'a str,
+    pub max_renderer_encode_scene_text_ops: &'a str,
 }
 
 impl<'a> DevtoolsGatePerfThresholdCommandInputV1<'a> {
@@ -53,7 +83,19 @@ impl<'a> DevtoolsGatePerfThresholdCommandInputV1<'a> {
         warmup_frames: &'a str,
         perf_threshold_agg: &'a str,
         max_top_total_us: &'a str,
+        max_top_layout_us: &'a str,
+        max_top_solve_us: &'a str,
+        max_pointer_move_dispatch_us: &'a str,
+        max_pointer_move_hit_test_us: &'a str,
+        max_pointer_move_global_changes: &'a str,
         max_renderer_encode_scene_us: &'a str,
+        max_renderer_upload_us: &'a str,
+        max_renderer_record_passes_us: &'a str,
+        max_renderer_encoder_finish_us: &'a str,
+        max_renderer_prepare_text_us: &'a str,
+        max_renderer_prepare_svg_us: &'a str,
+        max_renderer_instance_bytes: &'a str,
+        max_renderer_encode_scene_text_ops: &'a str,
     ) -> Self {
         Self {
             target,
@@ -61,7 +103,50 @@ impl<'a> DevtoolsGatePerfThresholdCommandInputV1<'a> {
             warmup_frames,
             perf_threshold_agg,
             max_top_total_us,
+            max_top_layout_us,
+            max_top_solve_us,
+            max_pointer_move_dispatch_us,
+            max_pointer_move_hit_test_us,
+            max_pointer_move_global_changes,
             max_renderer_encode_scene_us,
+            max_renderer_upload_us,
+            max_renderer_record_passes_us,
+            max_renderer_encoder_finish_us,
+            max_renderer_prepare_text_us,
+            max_renderer_prepare_svg_us,
+            max_renderer_instance_bytes,
+            max_renderer_encode_scene_text_ops,
+        }
+    }
+
+    pub fn product_chain_docking_defaults() -> DevtoolsGatePerfThresholdCommandInputV1<'static> {
+        DevtoolsGatePerfThresholdCommandInputV1 {
+            target: DEVTOOLS_GATE_PERF_DOCKING_TARGET_V1,
+            repeat: DEVTOOLS_GATE_PERF_DOCKING_REPEAT_V1,
+            warmup_frames: DEVTOOLS_GATE_PERF_DOCKING_WARMUP_FRAMES_V1,
+            perf_threshold_agg: DEVTOOLS_GATE_PERF_DOCKING_AGG_V1,
+            max_top_total_us: DEVTOOLS_GATE_PERF_DOCKING_MAX_TOP_TOTAL_US_V1,
+            max_top_layout_us: DEVTOOLS_GATE_PERF_DOCKING_MAX_TOP_LAYOUT_US_V1,
+            max_top_solve_us: DEVTOOLS_GATE_PERF_DOCKING_MAX_TOP_SOLVE_US_V1,
+            max_pointer_move_dispatch_us:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_POINTER_MOVE_DISPATCH_US_V1,
+            max_pointer_move_hit_test_us:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_POINTER_MOVE_HIT_TEST_US_V1,
+            max_pointer_move_global_changes:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_POINTER_MOVE_GLOBAL_CHANGES_V1,
+            max_renderer_encode_scene_us:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_ENCODE_SCENE_US_V1,
+            max_renderer_upload_us: DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_UPLOAD_US_V1,
+            max_renderer_record_passes_us:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_RECORD_PASSES_US_V1,
+            max_renderer_encoder_finish_us:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_ENCODER_FINISH_US_V1,
+            max_renderer_prepare_text_us:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_PREPARE_TEXT_US_V1,
+            max_renderer_prepare_svg_us: DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_PREPARE_SVG_US_V1,
+            max_renderer_instance_bytes: DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_INSTANCE_BYTES_V1,
+            max_renderer_encode_scene_text_ops:
+                DEVTOOLS_GATE_PERF_DOCKING_MAX_RENDERER_ENCODE_SCENE_TEXT_OPS_V1,
         }
     }
 }
@@ -239,11 +324,19 @@ pub fn devtools_gate_perf_threshold_command(
     let repeat = shell_quote_arg_or_placeholder(input.repeat, "<repeat>");
     let warmup_frames = shell_quote_arg_or_placeholder(input.warmup_frames, "<warmup-frames>");
     let perf_threshold_agg = shell_quote_arg_or_placeholder(input.perf_threshold_agg, "<agg>");
-    let max_top_total_us = shell_quote_arg_or_placeholder(input.max_top_total_us, "<us>");
-    let max_renderer_encode_scene_us =
-        shell_quote_arg_or_placeholder(input.max_renderer_encode_scene_us, "<us>");
+    let threshold_args = perf_threshold_fields(input)
+        .iter()
+        .map(|field| {
+            format!(
+                "{} {}",
+                field.flag,
+                shell_quote_arg_or_placeholder(field.value, field.placeholder)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
     let command_line = format!(
-        "cargo run -p fretboard-dev -- diag perf {target} --repeat {repeat} --warmup-frames {warmup_frames} --perf-threshold-agg {perf_threshold_agg} --max-top-total-us {max_top_total_us} --max-renderer-encode-scene-us {max_renderer_encode_scene_us} --json"
+        "cargo run -p fretboard-dev -- diag perf {target} --repeat {repeat} --warmup-frames {warmup_frames} --perf-threshold-agg {perf_threshold_agg} {threshold_args} --json"
     );
     let missing_inputs = perf_threshold_missing_inputs(input);
     let diag_args = if missing_inputs.is_empty() {
@@ -382,23 +475,25 @@ fn perf_threshold_missing_inputs(
     if parse_u64(input.warmup_frames).is_none() {
         missing.push("warmup-frames");
     }
-    if !matches!(
-        input.perf_threshold_agg.trim(),
-        "max" | "p95" | "p90" | "p50"
-    ) {
+    if !matches!(input.perf_threshold_agg.trim(), "max" | "p95" | "p90") {
         missing.push("perf-threshold-agg");
     }
-    if parse_nonzero_u64(input.max_top_total_us).is_none() {
-        missing.push("max-top-total-us");
-    }
-    if parse_nonzero_u64(input.max_renderer_encode_scene_us).is_none() {
-        missing.push("max-renderer-encode-scene-us");
+    for field in perf_threshold_fields(input) {
+        let ok = match field.kind {
+            DevtoolsGatePerfThresholdFieldKind::NonzeroU64 => {
+                parse_nonzero_u64(field.value).is_some()
+            }
+            DevtoolsGatePerfThresholdFieldKind::U64 => parse_u64(field.value).is_some(),
+        };
+        if !ok {
+            missing.push(field.missing_name);
+        }
     }
     missing
 }
 
 fn perf_threshold_diag_args(input: DevtoolsGatePerfThresholdCommandInputV1<'_>) -> Vec<String> {
-    vec![
+    let mut args = vec![
         "perf".to_string(),
         input.target.trim().to_string(),
         "--repeat".to_string(),
@@ -407,11 +502,134 @@ fn perf_threshold_diag_args(input: DevtoolsGatePerfThresholdCommandInputV1<'_>) 
         input.warmup_frames.trim().to_string(),
         "--perf-threshold-agg".to_string(),
         input.perf_threshold_agg.trim().to_string(),
-        "--max-top-total-us".to_string(),
-        input.max_top_total_us.trim().to_string(),
-        "--max-renderer-encode-scene-us".to_string(),
-        input.max_renderer_encode_scene_us.trim().to_string(),
-        "--json".to_string(),
+    ];
+    for field in perf_threshold_fields(input) {
+        args.push(field.flag.to_string());
+        args.push(field.value.trim().to_string());
+    }
+    args.push("--json".to_string());
+    args
+}
+
+#[derive(Clone, Copy)]
+enum DevtoolsGatePerfThresholdFieldKind {
+    NonzeroU64,
+    U64,
+}
+
+#[derive(Clone, Copy)]
+struct DevtoolsGatePerfThresholdField<'a> {
+    flag: &'static str,
+    missing_name: &'static str,
+    value: &'a str,
+    placeholder: &'static str,
+    kind: DevtoolsGatePerfThresholdFieldKind,
+}
+
+fn perf_threshold_fields<'a>(
+    input: DevtoolsGatePerfThresholdCommandInputV1<'a>,
+) -> [DevtoolsGatePerfThresholdField<'a>; 14] {
+    use DevtoolsGatePerfThresholdFieldKind::{NonzeroU64, U64};
+
+    [
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-top-total-us",
+            missing_name: "max-top-total-us",
+            value: input.max_top_total_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-top-layout-us",
+            missing_name: "max-top-layout-us",
+            value: input.max_top_layout_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-top-solve-us",
+            missing_name: "max-top-solve-us",
+            value: input.max_top_solve_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-pointer-move-dispatch-us",
+            missing_name: "max-pointer-move-dispatch-us",
+            value: input.max_pointer_move_dispatch_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-pointer-move-hit-test-us",
+            missing_name: "max-pointer-move-hit-test-us",
+            value: input.max_pointer_move_hit_test_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-pointer-move-global-changes",
+            missing_name: "max-pointer-move-global-changes",
+            value: input.max_pointer_move_global_changes,
+            placeholder: "<count>",
+            kind: U64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-encode-scene-us",
+            missing_name: "max-renderer-encode-scene-us",
+            value: input.max_renderer_encode_scene_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-upload-us",
+            missing_name: "max-renderer-upload-us",
+            value: input.max_renderer_upload_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-record-passes-us",
+            missing_name: "max-renderer-record-passes-us",
+            value: input.max_renderer_record_passes_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-encoder-finish-us",
+            missing_name: "max-renderer-encoder-finish-us",
+            value: input.max_renderer_encoder_finish_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-prepare-text-us",
+            missing_name: "max-renderer-prepare-text-us",
+            value: input.max_renderer_prepare_text_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-prepare-svg-us",
+            missing_name: "max-renderer-prepare-svg-us",
+            value: input.max_renderer_prepare_svg_us,
+            placeholder: "<us>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-instance-bytes",
+            missing_name: "max-renderer-instance-bytes",
+            value: input.max_renderer_instance_bytes,
+            placeholder: "<bytes>",
+            kind: NonzeroU64,
+        },
+        DevtoolsGatePerfThresholdField {
+            flag: "--max-renderer-encode-scene-text-ops",
+            missing_name: "max-renderer-encode-scene-text-ops",
+            value: input.max_renderer_encode_scene_text_ops,
+            placeholder: "<ops>",
+            kind: NonzeroU64,
+        },
     ]
 }
 
@@ -626,7 +844,19 @@ mod tests {
                 "warmup-frames",
                 "perf-threshold-agg",
                 "max-top-total-us",
+                "max-top-layout-us",
+                "max-top-solve-us",
+                "max-pointer-move-dispatch-us",
+                "max-pointer-move-hit-test-us",
+                "max-pointer-move-global-changes",
                 "max-renderer-encode-scene-us",
+                "max-renderer-upload-us",
+                "max-renderer-record-passes-us",
+                "max-renderer-encoder-finish-us",
+                "max-renderer-prepare-text-us",
+                "max-renderer-prepare-svg-us",
+                "max-renderer-instance-bytes",
+                "max-renderer-encode-scene-text-ops",
             ]
         );
         assert!(command.diag_args.is_empty());
@@ -638,6 +868,17 @@ mod tests {
                 .contains("--warmup-frames <warmup-frames>")
         );
         assert!(command.command_line.contains("--perf-threshold-agg <agg>"));
+        assert!(command.command_line.contains("--max-top-layout-us <us>"));
+        assert!(
+            command
+                .command_line
+                .contains("--max-pointer-move-global-changes <count>")
+        );
+        assert!(
+            command
+                .command_line
+                .contains("--max-renderer-prepare-svg-us <us>")
+        );
     }
 
     #[test]
@@ -649,6 +890,18 @@ mod tests {
             "p95",
             "35000",
             "12000",
+            "9000",
+            "4000",
+            "4000",
+            "0",
+            "12000",
+            "8000",
+            "1500",
+            "1000",
+            "3000",
+            "1000",
+            "250000",
+            "10000",
         );
         let command = devtools_gate_perf_threshold_command(input);
 
@@ -656,7 +909,7 @@ mod tests {
         assert!(command.missing_inputs.is_empty());
         assert_eq!(
             command.command_line,
-            "cargo run -p fretboard-dev -- diag perf perf-docking-arbitration-steady --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us 35000 --max-renderer-encode-scene-us 12000 --json"
+            "cargo run -p fretboard-dev -- diag perf perf-docking-arbitration-steady --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us 35000 --max-top-layout-us 12000 --max-top-solve-us 9000 --max-pointer-move-dispatch-us 4000 --max-pointer-move-hit-test-us 4000 --max-pointer-move-global-changes 0 --max-renderer-encode-scene-us 12000 --max-renderer-upload-us 8000 --max-renderer-record-passes-us 1500 --max-renderer-encoder-finish-us 1000 --max-renderer-prepare-text-us 3000 --max-renderer-prepare-svg-us 1000 --max-renderer-instance-bytes 250000 --max-renderer-encode-scene-text-ops 10000 --json"
         );
         assert_eq!(
             command.diag_args,
@@ -671,8 +924,32 @@ mod tests {
                 "p95",
                 "--max-top-total-us",
                 "35000",
+                "--max-top-layout-us",
+                "12000",
+                "--max-top-solve-us",
+                "9000",
+                "--max-pointer-move-dispatch-us",
+                "4000",
+                "--max-pointer-move-hit-test-us",
+                "4000",
+                "--max-pointer-move-global-changes",
+                "0",
                 "--max-renderer-encode-scene-us",
                 "12000",
+                "--max-renderer-upload-us",
+                "8000",
+                "--max-renderer-record-passes-us",
+                "1500",
+                "--max-renderer-encoder-finish-us",
+                "1000",
+                "--max-renderer-prepare-text-us",
+                "3000",
+                "--max-renderer-prepare-svg-us",
+                "1000",
+                "--max-renderer-instance-bytes",
+                "250000",
+                "--max-renderer-encode-scene-text-ops",
+                "10000",
                 "--json",
             ]
         );
@@ -688,6 +965,18 @@ mod tests {
                 "avg",
                 "-1",
                 "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
             ));
 
         assert!(!command.is_runnable());
@@ -699,8 +988,46 @@ mod tests {
                 "warmup-frames",
                 "perf-threshold-agg",
                 "max-top-total-us",
+                "max-top-layout-us",
+                "max-top-solve-us",
+                "max-pointer-move-dispatch-us",
+                "max-pointer-move-hit-test-us",
+                "max-pointer-move-global-changes",
                 "max-renderer-encode-scene-us",
+                "max-renderer-upload-us",
+                "max-renderer-record-passes-us",
+                "max-renderer-encoder-finish-us",
+                "max-renderer-prepare-text-us",
+                "max-renderer-prepare-svg-us",
+                "max-renderer-instance-bytes",
+                "max-renderer-encode-scene-text-ops",
             ]
+        );
+    }
+
+    #[test]
+    fn devtools_gate_perf_threshold_product_chain_defaults_are_runnable() {
+        let command = devtools_gate_perf_threshold_command(
+            DevtoolsGatePerfThresholdCommandInputV1::product_chain_docking_defaults(),
+        );
+
+        assert!(command.is_runnable());
+        assert!(command.missing_inputs.is_empty());
+        assert!(command.command_line.contains("--max-top-layout-us 10000"));
+        assert!(
+            command
+                .command_line
+                .contains("--max-pointer-move-global-changes 0")
+        );
+        assert!(
+            command
+                .command_line
+                .contains("--max-renderer-encode-scene-text-ops 10000")
+        );
+        assert!(
+            command
+                .command_line
+                .contains("--repeat 1 --warmup-frames 5 --perf-threshold-agg max")
         );
     }
 

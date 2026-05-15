@@ -171,7 +171,19 @@ struct State {
     gate_profile_perf_warmup_frames: Model<String>,
     gate_profile_perf_threshold_agg: Model<String>,
     gate_profile_perf_max_top_total_us: Model<String>,
+    gate_profile_perf_max_top_layout_us: Model<String>,
+    gate_profile_perf_max_top_solve_us: Model<String>,
+    gate_profile_perf_max_pointer_move_dispatch_us: Model<String>,
+    gate_profile_perf_max_pointer_move_hit_test_us: Model<String>,
+    gate_profile_perf_max_pointer_move_global_changes: Model<String>,
     gate_profile_perf_max_renderer_encode_scene_us: Model<String>,
+    gate_profile_perf_max_renderer_upload_us: Model<String>,
+    gate_profile_perf_max_renderer_record_passes_us: Model<String>,
+    gate_profile_perf_max_renderer_encoder_finish_us: Model<String>,
+    gate_profile_perf_max_renderer_prepare_text_us: Model<String>,
+    gate_profile_perf_max_renderer_prepare_svg_us: Model<String>,
+    gate_profile_perf_max_renderer_instance_bytes: Model<String>,
+    gate_profile_perf_max_renderer_encode_scene_text_ops: Model<String>,
     gate_profile_resource_target: Model<String>,
     gate_profile_resource_max_working_set_bytes: Model<String>,
     gate_profile_resource_max_peak_working_set_bytes: Model<String>,
@@ -367,14 +379,59 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let gate_profile_open = app.models_mut().insert(false);
     let gate_profile_script_json = app.models_mut().insert(String::new());
     let gate_profile_test_id = app.models_mut().insert(String::new());
+    let perf_defaults = DevtoolsGatePerfThresholdCommandInputV1::product_chain_docking_defaults();
     let gate_profile_perf_target = app
         .models_mut()
-        .insert("perf-docking-arbitration-steady".to_string());
-    let gate_profile_perf_repeat = app.models_mut().insert("7".to_string());
-    let gate_profile_perf_warmup_frames = app.models_mut().insert("5".to_string());
-    let gate_profile_perf_threshold_agg = app.models_mut().insert("p95".to_string());
-    let gate_profile_perf_max_top_total_us = app.models_mut().insert(String::new());
-    let gate_profile_perf_max_renderer_encode_scene_us = app.models_mut().insert(String::new());
+        .insert(perf_defaults.target.to_string());
+    let gate_profile_perf_repeat = app.models_mut().insert(perf_defaults.repeat.to_string());
+    let gate_profile_perf_warmup_frames = app
+        .models_mut()
+        .insert(perf_defaults.warmup_frames.to_string());
+    let gate_profile_perf_threshold_agg = app
+        .models_mut()
+        .insert(perf_defaults.perf_threshold_agg.to_string());
+    let gate_profile_perf_max_top_total_us = app
+        .models_mut()
+        .insert(perf_defaults.max_top_total_us.to_string());
+    let gate_profile_perf_max_top_layout_us = app
+        .models_mut()
+        .insert(perf_defaults.max_top_layout_us.to_string());
+    let gate_profile_perf_max_top_solve_us = app
+        .models_mut()
+        .insert(perf_defaults.max_top_solve_us.to_string());
+    let gate_profile_perf_max_pointer_move_dispatch_us = app
+        .models_mut()
+        .insert(perf_defaults.max_pointer_move_dispatch_us.to_string());
+    let gate_profile_perf_max_pointer_move_hit_test_us = app
+        .models_mut()
+        .insert(perf_defaults.max_pointer_move_hit_test_us.to_string());
+    let gate_profile_perf_max_pointer_move_global_changes = app
+        .models_mut()
+        .insert(perf_defaults.max_pointer_move_global_changes.to_string());
+    let gate_profile_perf_max_renderer_encode_scene_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_encode_scene_us.to_string());
+    let gate_profile_perf_max_renderer_upload_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_upload_us.to_string());
+    let gate_profile_perf_max_renderer_record_passes_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_record_passes_us.to_string());
+    let gate_profile_perf_max_renderer_encoder_finish_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_encoder_finish_us.to_string());
+    let gate_profile_perf_max_renderer_prepare_text_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_prepare_text_us.to_string());
+    let gate_profile_perf_max_renderer_prepare_svg_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_prepare_svg_us.to_string());
+    let gate_profile_perf_max_renderer_instance_bytes = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_instance_bytes.to_string());
+    let gate_profile_perf_max_renderer_encode_scene_text_ops = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_encode_scene_text_ops.to_string());
     let gate_profile_resource_target = app
         .models_mut()
         .insert("tools/diag-scripts/ui-gallery-intro-idle.json".to_string());
@@ -555,7 +612,19 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         gate_profile_perf_warmup_frames,
         gate_profile_perf_threshold_agg,
         gate_profile_perf_max_top_total_us,
+        gate_profile_perf_max_top_layout_us,
+        gate_profile_perf_max_top_solve_us,
+        gate_profile_perf_max_pointer_move_dispatch_us,
+        gate_profile_perf_max_pointer_move_hit_test_us,
+        gate_profile_perf_max_pointer_move_global_changes,
         gate_profile_perf_max_renderer_encode_scene_us,
+        gate_profile_perf_max_renderer_upload_us,
+        gate_profile_perf_max_renderer_record_passes_us,
+        gate_profile_perf_max_renderer_encoder_finish_us,
+        gate_profile_perf_max_renderer_prepare_text_us,
+        gate_profile_perf_max_renderer_prepare_svg_us,
+        gate_profile_perf_max_renderer_instance_bytes,
+        gate_profile_perf_max_renderer_encode_scene_text_ops,
         gate_profile_resource_target,
         gate_profile_resource_max_working_set_bytes,
         gate_profile_resource_max_peak_working_set_bytes,
@@ -729,8 +798,50 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.gate_profile_perf_warmup_frames, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_perf_threshold_agg, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_perf_max_top_total_us, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_max_top_layout_us, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_max_top_solve_us, Invalidation::Paint);
+    cx.observe_model(
+        &st.gate_profile_perf_max_pointer_move_dispatch_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_pointer_move_hit_test_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_pointer_move_global_changes,
+        Invalidation::Paint,
+    );
     cx.observe_model(
         &st.gate_profile_perf_max_renderer_encode_scene_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_upload_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_record_passes_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_encoder_finish_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_prepare_text_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_prepare_svg_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_instance_bytes,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_encode_scene_text_ops,
         Invalidation::Paint,
     );
     cx.observe_model(&st.gate_profile_resource_target, Invalidation::Paint);
@@ -4901,9 +5012,78 @@ fn generated_gate_command_from_state(
             .models()
             .read(&st.gate_profile_perf_max_top_total_us, |v| v.clone())
             .unwrap_or_default();
+        let max_top_layout_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_top_layout_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_top_solve_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_top_solve_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_pointer_move_dispatch_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_pointer_move_dispatch_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_pointer_move_hit_test_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_pointer_move_hit_test_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_pointer_move_global_changes = app
+            .models()
+            .read(&st.gate_profile_perf_max_pointer_move_global_changes, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
         let max_renderer_encode_scene_us = app
             .models()
             .read(&st.gate_profile_perf_max_renderer_encode_scene_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_renderer_upload_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_upload_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_record_passes_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_record_passes_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_encoder_finish_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_encoder_finish_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_prepare_text_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_prepare_text_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_prepare_svg_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_prepare_svg_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_instance_bytes = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_instance_bytes, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_encode_scene_text_ops = app
+            .models()
+            .read(
+                &st.gate_profile_perf_max_renderer_encode_scene_text_ops,
+                |v| v.clone(),
+            )
             .unwrap_or_default();
         let input = DevtoolsGatePerfThresholdCommandInputV1::new(
             &target,
@@ -4911,7 +5091,19 @@ fn generated_gate_command_from_state(
             &warmup_frames,
             &perf_threshold_agg,
             &max_top_total_us,
+            &max_top_layout_us,
+            &max_top_solve_us,
+            &max_pointer_move_dispatch_us,
+            &max_pointer_move_hit_test_us,
+            &max_pointer_move_global_changes,
             &max_renderer_encode_scene_us,
+            &max_renderer_upload_us,
+            &max_renderer_record_passes_us,
+            &max_renderer_encoder_finish_us,
+            &max_renderer_prepare_text_us,
+            &max_renderer_prepare_svg_us,
+            &max_renderer_instance_bytes,
+            &max_renderer_encode_scene_text_ops,
         );
         return Some(devtools_gate_perf_threshold_command(input));
     }
@@ -7092,56 +7284,223 @@ fn script_target_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> An
 }
 
 fn perf_threshold_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let target_input = shadcn::Input::new(st.gate_profile_perf_target.clone())
-        .placeholder("script-or-suite")
-        .a11y_label("Perf gate target")
-        .test_id("devtools.gate.perf_target")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(300.0)))
-        .into_element(cx);
-    let repeat_input = shadcn::Input::new(st.gate_profile_perf_repeat.clone())
-        .placeholder("repeat")
-        .a11y_label("Perf gate repeat")
-        .test_id("devtools.gate.perf_repeat")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(92.0)))
-        .into_element(cx);
-    let warmup_input = shadcn::Input::new(st.gate_profile_perf_warmup_frames.clone())
-        .placeholder("warmup")
-        .a11y_label("Perf gate warmup frames")
-        .test_id("devtools.gate.perf_warmup_frames")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(104.0)))
-        .into_element(cx);
-    let agg_input = shadcn::Input::new(st.gate_profile_perf_threshold_agg.clone())
-        .placeholder("agg")
-        .a11y_label("Perf gate aggregate")
-        .test_id("devtools.gate.perf_threshold_agg")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(84.0)))
-        .into_element(cx);
-    let max_total_input = shadcn::Input::new(st.gate_profile_perf_max_top_total_us.clone())
-        .placeholder("max total us")
-        .a11y_label("Perf gate max top total microseconds")
-        .test_id("devtools.gate.perf_max_top_total_us")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(150.0)))
-        .into_element(cx);
-    let max_renderer_input =
-        shadcn::Input::new(st.gate_profile_perf_max_renderer_encode_scene_us.clone())
-            .placeholder("max encode us")
-            .a11y_label("Perf gate max renderer encode scene microseconds")
-            .test_id("devtools.gate.perf_max_renderer_encode_scene_us")
-            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(160.0)))
-            .into_element(cx);
+    let target_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_target.clone(),
+        "script-or-suite",
+        "Perf gate target",
+        "devtools.gate.perf_target",
+        300.0,
+    );
+    let repeat_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_repeat.clone(),
+        "repeat",
+        "Perf gate repeat",
+        "devtools.gate.perf_repeat",
+        92.0,
+    );
+    let warmup_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_warmup_frames.clone(),
+        "warmup",
+        "Perf gate warmup frames",
+        "devtools.gate.perf_warmup_frames",
+        104.0,
+    );
+    let agg_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_threshold_agg.clone(),
+        "agg",
+        "Perf gate aggregate",
+        "devtools.gate.perf_threshold_agg",
+        84.0,
+    );
+    let max_total_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_top_total_us.clone(),
+        "max total us",
+        "Perf gate max top total microseconds",
+        "devtools.gate.perf_max_top_total_us",
+        136.0,
+    );
+    let max_layout_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_top_layout_us.clone(),
+        "max layout us",
+        "Perf gate max top layout microseconds",
+        "devtools.gate.perf_max_top_layout_us",
+        138.0,
+    );
+    let max_solve_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_top_solve_us.clone(),
+        "max solve us",
+        "Perf gate max top solve microseconds",
+        "devtools.gate.perf_max_top_solve_us",
+        132.0,
+    );
+    let max_pointer_dispatch_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_pointer_move_dispatch_us.clone(),
+        "max dispatch us",
+        "Perf gate max pointer-move dispatch microseconds",
+        "devtools.gate.perf_max_pointer_move_dispatch_us",
+        152.0,
+    );
+    let max_pointer_hit_test_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_pointer_move_hit_test_us.clone(),
+        "max hit-test us",
+        "Perf gate max pointer-move hit-test microseconds",
+        "devtools.gate.perf_max_pointer_move_hit_test_us",
+        152.0,
+    );
+    let max_pointer_global_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_pointer_move_global_changes.clone(),
+        "max global changes",
+        "Perf gate max pointer-move global changes",
+        "devtools.gate.perf_max_pointer_move_global_changes",
+        160.0,
+    );
+    let max_renderer_encode_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_encode_scene_us.clone(),
+        "max encode us",
+        "Perf gate max renderer encode scene microseconds",
+        "devtools.gate.perf_max_renderer_encode_scene_us",
+        148.0,
+    );
+    let max_renderer_upload_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_upload_us.clone(),
+        "max upload us",
+        "Perf gate max renderer upload microseconds",
+        "devtools.gate.perf_max_renderer_upload_us",
+        136.0,
+    );
+    let max_renderer_record_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_record_passes_us.clone(),
+        "max record us",
+        "Perf gate max renderer record passes microseconds",
+        "devtools.gate.perf_max_renderer_record_passes_us",
+        140.0,
+    );
+    let max_renderer_finish_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_encoder_finish_us.clone(),
+        "max finish us",
+        "Perf gate max renderer encoder finish microseconds",
+        "devtools.gate.perf_max_renderer_encoder_finish_us",
+        140.0,
+    );
+    let max_renderer_text_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_prepare_text_us.clone(),
+        "max text us",
+        "Perf gate max renderer prepare text microseconds",
+        "devtools.gate.perf_max_renderer_prepare_text_us",
+        130.0,
+    );
+    let max_renderer_svg_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_prepare_svg_us.clone(),
+        "max svg us",
+        "Perf gate max renderer prepare SVG microseconds",
+        "devtools.gate.perf_max_renderer_prepare_svg_us",
+        126.0,
+    );
+    let max_renderer_instance_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_instance_bytes.clone(),
+        "max instance bytes",
+        "Perf gate max renderer instance bytes",
+        "devtools.gate.perf_max_renderer_instance_bytes",
+        166.0,
+    );
+    let max_renderer_text_ops_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_encode_scene_text_ops.clone(),
+        "max text ops",
+        "Perf gate max renderer encode scene text ops",
+        "devtools.gate.perf_max_renderer_encode_scene_text_ops",
+        142.0,
+    );
     let run_inputs = ui::h_row(|_cx| [target_input, repeat_input, warmup_input, agg_input])
         .gap(fret_ui_kit::Space::N2)
         .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx);
-    let threshold_inputs = ui::h_row(|_cx| [max_total_input, max_renderer_input])
+    let top_threshold_inputs =
+        ui::h_row(|_cx| [max_total_input, max_layout_input, max_solve_input])
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
+    let pointer_threshold_inputs = ui::h_row(|_cx| {
+        [
+            max_pointer_dispatch_input,
+            max_pointer_hit_test_input,
+            max_pointer_global_input,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let renderer_time_inputs = ui::h_row(|_cx| {
+        [
+            max_renderer_encode_input,
+            max_renderer_upload_input,
+            max_renderer_record_input,
+            max_renderer_finish_input,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let renderer_payload_inputs = ui::h_row(|_cx| {
+        [
+            max_renderer_text_input,
+            max_renderer_svg_input,
+            max_renderer_instance_input,
+            max_renderer_text_ops_input,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    ui::v_stack(|_cx| {
+        [
+            run_inputs,
+            top_threshold_inputs,
+            pointer_threshold_inputs,
+            renderer_time_inputs,
+            renderer_payload_inputs,
+        ]
+    })
         .gap(fret_ui_kit::Space::N2)
-        .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx);
-    ui::v_stack(|_cx| [run_inputs, threshold_inputs])
-        .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn gate_string_input(
+    cx: &mut ElementContext<'_, App>,
+    model: Model<String>,
+    placeholder: &'static str,
+    a11y_label: &'static str,
+    test_id: &'static str,
+    width_px: f32,
+) -> AnyElement {
+    shadcn::Input::new(model)
+        .placeholder(placeholder)
+        .a11y_label(a11y_label)
+        .test_id(test_id)
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(width_px)))
         .into_element(cx)
 }
 
@@ -7548,8 +7907,10 @@ mod tests {
             "pixels changed: cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json"
         ));
         assert!(text.contains(
-            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json"
+            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-top-layout-us <us> --max-top-solve-us <us>"
         ));
+        assert!(text.contains("--max-pointer-move-global-changes <count>"));
+        assert!(text.contains("--max-renderer-encode-scene-text-ops <ops> --json"));
         assert!(text.contains(
             "resource footprint thresholds: cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>"
         ));
