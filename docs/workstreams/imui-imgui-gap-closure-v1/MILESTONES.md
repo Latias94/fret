@@ -151,6 +151,9 @@ Exit criteria:
   and pressable response assembly, including the container wrapper owner split, but did not widen
   the public surface. List-box, plotting, image item, style-editor, advanced-table, and child-flag
   work should be narrow proof-led follow-ons.
+  2026-05-16 image-item follow-on result: `imui-image-item-proof-v1` is the narrow proof lane for
+  response-bearing image item / image button authoring. It is intentionally a `fret-ui-kit::imui`
+  additive helper over existing `ImageId` / `ImageProps`, not a `fret-imui` runtime texture stack.
   Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
   outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.

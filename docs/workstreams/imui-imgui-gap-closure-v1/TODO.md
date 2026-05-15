@@ -164,6 +164,10 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
    enough for the active editor proof; list-box, plot, image-item, style-editor, advanced-table, and
    child-flag mirrors remain behavior-specific candidates, not a broad widget backlog.
+   2026-05-16 follow-on: `imui-image-item-proof-v1` is open for the standalone response-bearing
+   image item / image button proof. The target is `fret-ui-kit::imui` only, using Fret `ImageId`
+   and `ImageProps`; it must not introduce Dear ImGui texture-ID runtime state or widen
+   `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

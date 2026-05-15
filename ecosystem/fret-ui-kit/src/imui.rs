@@ -39,6 +39,7 @@ mod floating_options;
 mod floating_surface;
 mod floating_window;
 mod floating_window_on_area;
+mod image_item_controls;
 mod interaction_runtime;
 mod item_behavior;
 mod label_identity;
@@ -116,13 +117,14 @@ pub use options::{
     BeginMenuOptions, BeginSubmenuOptions, BulletTextOptions, ButtonArrowDirection, ButtonOptions,
     ButtonVariant, CheckboxOptions, ChildRegionChrome, ChildRegionOptions,
     ChildRegionResizeYOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions,
-    DragSourceOptions, DropTargetOptions, GridOptions, HorizontalOptions, InputTextCustomFilter,
-    InputTextFilters, InputTextMode, InputTextOptions, InputTextPickerFilter,
-    InputTextPickerOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions,
-    RadioOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions, SliderOptions,
-    SwitchOptions, TabBarOptions, TabItemOptions, TableColumn, TableColumnResizeOptions,
-    TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions,
-    TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    DragSourceOptions, DropTargetOptions, GridOptions, HorizontalOptions, ImageItemOptions,
+    ImageItemVariant, InputTextCustomFilter, InputTextFilters, InputTextMode, InputTextOptions,
+    InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions, MenuItemOptions,
+    PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions,
+    SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn,
+    TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
+    TextAreaOptions, TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions,
+    VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,

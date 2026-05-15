@@ -58,13 +58,19 @@ Last updated: 2026-05-15
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
+  - `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
+  - `ecosystem/fret-ui-kit/tests/imui_image_item_smoke.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
+- Active image item follow-on:
+  - `docs/workstreams/imui-image-item-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-image-item-proof-v1/EVIDENCE_AND_GATES.md`
 - Current proof surfaces:
   - `apps/fret-cookbook/README.md`
   - `apps/fret-cookbook/EXAMPLES.md`

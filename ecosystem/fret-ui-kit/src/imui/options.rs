@@ -16,10 +16,10 @@ pub use containers::{
 };
 pub use controls::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, CheckboxOptions, CollapsingHeaderOptions,
-    ComboModelOptions, ComboOptions, InputTextCustomFilter, InputTextFilters, InputTextMode,
-    InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, RadioOptions,
-    SelectableOptions, SliderOptions, SwitchOptions, TabItemOptions, TextAreaOptions,
-    TextAreaSubmitKey, TreeNodeOptions,
+    ComboModelOptions, ComboOptions, ImageItemOptions, ImageItemVariant, InputTextCustomFilter,
+    InputTextFilters, InputTextMode, InputTextOptions, InputTextPickerFilter,
+    InputTextPickerOptions, RadioOptions, SelectableOptions, SliderOptions, SwitchOptions,
+    TabItemOptions, TextAreaOptions, TextAreaSubmitKey, TreeNodeOptions,
 };
 pub use menus::{
     BeginMenuOptions, BeginSubmenuOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,

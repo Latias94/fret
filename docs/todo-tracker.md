@@ -205,6 +205,17 @@ It complements (but does not replace) ADRs:
   - Scope: split `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` into private command,
     paint, path, and geometry owners without public API widening or behavior changes; the
     closeout audit records the explicit no-split verdict for source-owner-specific test modules.
+- Closed image item proof follow-on:
+  - `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-image-item-proof-v1/TODO.md`
+  - `docs/workstreams/imui-image-item-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-image-item-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-image-item-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-image-item-proof-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed after adding response-bearing image item / image button authoring in
+    `fret-ui-kit::imui` over
+    the existing Fret image mechanism, while keeping asset loading app-owned and `fret-imui`
+    policy-light.
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`

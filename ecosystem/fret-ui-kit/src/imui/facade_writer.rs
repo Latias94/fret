@@ -955,6 +955,39 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         button_controls::invisible_button_with_options(self, id, size, options)
     }
 
+    fn image_item(&mut self, id: &str, image: fret_core::ImageId, size: Size) -> ResponseExt {
+        self.image_item_with_options(id, image, size, ImageItemOptions::default())
+    }
+
+    fn image_item_with_options(
+        &mut self,
+        id: &str,
+        image: fret_core::ImageId,
+        size: Size,
+        options: ImageItemOptions,
+    ) -> ResponseExt {
+        image_item_controls::image_item_with_options(self, id, image, size, options)
+    }
+
+    fn image_button(&mut self, id: &str, image: fret_core::ImageId, size: Size) -> ResponseExt {
+        self.image_button_with_options(id, image, size, ImageItemOptions::button())
+    }
+
+    fn image_button_with_options(
+        &mut self,
+        id: &str,
+        image: fret_core::ImageId,
+        size: Size,
+        mut options: ImageItemOptions,
+    ) -> ResponseExt {
+        let was_plain_image_options = matches!(options.variant, ImageItemVariant::Image);
+        options.variant = ImageItemVariant::Button;
+        if was_plain_image_options {
+            options.focusable = true;
+        }
+        image_item_controls::image_item_with_options(self, id, image, size, options)
+    }
+
     fn button_with_options(
         &mut self,
         label: impl Into<Arc<str>>,

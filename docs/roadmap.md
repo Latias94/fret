@@ -106,6 +106,10 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-owner-split-v1/M4_GEOMETRY_AND_PAINT_HELPERS_SLICE_2026-05-06.md`,
   `docs/workstreams/imui-debug-draw-owner-split-v1/CLOSEOUT_AUDIT_2026-05-06.md`, and
   `docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md`.
+- ImUi image item proof follow-on (closed narrow additive lane for response-bearing image item /
+  image button authoring in `fret-ui-kit::imui`, backed by Fret `ImageId` / `ImageProps` rather
+  than Dear ImGui texture-ID runtime state): `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
+  and `docs/workstreams/imui-image-item-proof-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
 - ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
