@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "slug": "diag-perf-profiling-infra-v1",
+  "title": "Diagnostics Perf Profiling Infra v1",
+  "status": "active",
+  "updated": "2026-05-15",
+  "scope_kind": "execution",
+  "problem": "Make Fret performance profiling surfaces review-grade by keeping frame stats, phase timelines, CPU-vs-wall signals, trace artifacts, and perf key contracts explainable, additive, and tied to reproducible evidence.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-todo.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-milestones.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from a perf bundle, compare wall time with CPU signals, then inspect stats or a synthetic Chrome trace before deciding whether external Tracy/ETW/RenderDoc is needed.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag stats <bundle.json> --sort time --top 30",
+      "cargo run -p fretboard-dev -- diag stats <bundle.json> --sort cpu_cycles --top 30",
+      "cargo run -p fretboard-dev -- diag trace <bundle.json>"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/diag-perf-profiling-infra-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1.md",
+    "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-todo.md",
+    "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md",
+    "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
+    "ecosystem/fret-bootstrap/src/lib.rs",
+    "crates/fret-ui/src/tree/layout/entrypoints.rs",
+    "crates/fret-ui/src/layout/engine.rs",
+    "crates/fret-ui/src/tree/prepaint/entry.rs",
+    "crates/fret-ui/src/tree/paint/entry.rs",
+    "crates/fret-ui/src/tree/paint/node.rs",
+    "crates/fret-ui/src/tree/dispatch/window.rs",
+    "crates/fret-ui/src/tree/hit_test.rs",
+    "crates/fret-render-wgpu/src/renderer",
+    "crates/fret-diag/src/trace.rs",
+    "crates/fret-diag/src/diag_repro/launch.rs",
+    "docs/tracy.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md",
+    "docs/adr/0095-renderer-perf-snapshot-and-stress-harness.md",
+    "docs/adr/0216-cache-root-tracing-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue here for perf profiling infrastructure, phase coverage, CPU-vs-wall attribution, and perf key registry work. Split a narrower follow-on for automated real-span capture/export if it needs runtime-wide tracing subscriber changes."
+  }
+}

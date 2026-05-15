@@ -262,9 +262,14 @@ Notes:
 - `ui-gallery-steady` scripts call `reset_diagnostics` just before the measured interaction(s).
   Prefer `--warmup-frames 0` (default) so the “first post-reset frames” are included.
 - `--reuse-launch` keeps the launched demo alive across repeats/scripts so caches are actually warm.
-- `FRET_DIAG_SCRIPT_AUTO_DUMP` defaults to true and dumps a full diagnostics bundle after many steps.
-  This is useful for debugging, but it can dominate disk I/O and distort perf runs.
-  For perf probes, prefer `--env FRET_DIAG_SCRIPT_AUTO_DUMP=0` and rely on `capture_bundle` steps.
+- `diag perf --launch` writes a tool-launched `diag.config.json` and is small-by-default:
+  `write_bundle_json=false`, `write_bundle_schema2=true`, `script_dump_max_snapshots=10`,
+  `script_auto_dump=false`, and `pick_auto_dump=false`.
+- The explicit `--env FRET_DIAG_SCRIPT_AUTO_DUMP=0` shown in older launched perf commands is redundant with the current
+  launched default, but still harmless and useful as an intent marker when commands are copied to older/manual setups.
+- If you attach to an already-running demo, or otherwise run without `--launch`, the tool-launched per-run config is not
+  injected. In that mode, explicitly disable script auto-dump through env/config and clean old run directories
+  periodically, because full diagnostic dumps can dominate disk I/O and distort perf runs.
 - If you already have a running demo (or cannot use `--launch`), you can run the suite against it:
 
 ```powershell

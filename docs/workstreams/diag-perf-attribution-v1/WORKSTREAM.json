@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "diag-perf-attribution-v1",
+  "title": "Diag Perf Attribution v1",
+  "status": "active",
+  "updated": "2026-05-15",
+  "scope_kind": "execution",
+  "problem": "Make Fret performance evidence explainable and reviewable by keeping stats, diffs, triage, gates, and trace artifacts versioned, additive-only, source-labeled, and tied to runnable repros. This lane owns attribution tooling, not the underlying UI hot-path optimizations.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-todo.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-milestones.md"
+    },
+    {
+      "role": "field-inventory",
+      "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use diag perf to create a bundle, then inspect stats, triage, diffs, hints, and trace artifacts from that same evidence root.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag perf ui-gallery-steady --repeat 1 --trace --launch -- cargo run -p fret-ui-gallery --release",
+      "cargo run -p fretboard-dev -- diag stats <bundle.json> --sort time --top 30",
+      "cargo run -p fretboard-dev -- diag trace <bundle.json>"
+    ]
+  },
+  "gates": [
+    {
+      "name": "perf-stats-schema",
+      "command": "cargo nextest run -p fret-diag stats_json_includes_avg_and_budget stats_diff_json_is_versioned_and_additive_only triage_includes_hints_and_unit_costs_for_worst_frame --no-fail-fast"
+    },
+    {
+      "name": "perf-gate-artifact-schema",
+      "command": "cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast"
+    },
+    {
+      "name": "perf-trace-artifact-schema",
+      "command": "cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/diag-perf-attribution-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "crates/fret-diag/src/perf_schema.rs",
+    "crates/fret-diag/src/stats.rs",
+    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
+    "crates/fret-diag/src/triage_json.rs",
+    "crates/fret-diag/src/diag_perf/outputs.rs",
+    "crates/fret-diag/src/trace.rs",
+    "crates/fret-diag/src/tests.rs",
+    "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1.md",
+    "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-todo.md",
+    "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0095-renderer-perf-snapshot-and-stress-harness.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue here for attribution artifact contracts, schema hygiene, and trace/diff/triage tooling. Split separate implementation lanes for UI hot-path optimizations, platform-specific perf baselines, or real-span tracing if the work requires runtime-wide instrumentation."
+  }
+}

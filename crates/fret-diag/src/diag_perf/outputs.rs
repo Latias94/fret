@@ -48,9 +48,10 @@ pub(crate) fn write_perf_thresholds_json(
 ) -> PathBuf {
     let out_path = out_dir.join("check.perf_thresholds.json");
     let payload = serde_json::json!({
-        "schema_version": 1,
+        "schema_version": crate::perf_schema::PERF_GATE_SCHEMA_VERSION,
         "generated_unix_ms": now_unix_ms(),
-        "kind": "perf_thresholds",
+        "kind": crate::perf_schema::PERF_THRESHOLDS_KIND,
+        "schema_policy": crate::perf_schema::schema_policy_json(),
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "observed_aggregate": observed_aggregate.as_str(),
@@ -98,9 +99,10 @@ pub(crate) fn write_perf_hints_json(
 ) -> PathBuf {
     let out_path = out_dir.join("check.perf_hints.json");
     let payload = serde_json::json!({
-        "schema_version": 1,
+        "schema_version": crate::perf_schema::PERF_GATE_SCHEMA_VERSION,
         "generated_unix_ms": now_unix_ms(),
-        "kind": "perf_hints",
+        "kind": crate::perf_schema::PERF_HINTS_KIND,
+        "schema_policy": crate::perf_schema::schema_policy_json(),
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_severity": perf_hint_gate_opts.min_severity.as_str(),

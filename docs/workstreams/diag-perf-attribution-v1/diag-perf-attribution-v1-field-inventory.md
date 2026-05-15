@@ -54,8 +54,20 @@ schema:
   - `schema_version`: `1`
   - `source_bundle_schema_version`: sniffed from the source bundle file.
   - `stats_schema_version`: copied from the nested `stats.schema_version`.
+- `check.perf_thresholds.json`
+  - `kind`: `perf_thresholds`
+  - `schema_version`: `1`
+- `check.perf_hints.json`
+  - `kind`: `perf_hints`
+  - `schema_version`: `1`
+- `trace.chrome.json`
+  - `kind`: `perf_trace_chrome`
+  - `schema_version`: `1`
+  - `source_bundle_schema_version`: copied from the source bundle when available.
+  - `trace_source`: `bundle_synthetic_phases`
+  - `real_spans_included`: `false`
 
-All three outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
+All six outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
 allowed inside the current schema version. Field removals, semantic renames, or type changes require
 either a schema version bump or a documented migration/compatibility window.
 
@@ -65,8 +77,14 @@ Evidence anchors:
 - Stats output: `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
 - Stats diff output: `crates/fret-diag/src/stats.rs`
 - Triage output: `crates/fret-diag/src/triage_json.rs`
+- Perf gate outputs: `crates/fret-diag/src/diag_perf/outputs.rs`
+- Chrome trace output: `crates/fret-diag/src/trace.rs`
 - Focused gate:
   `cargo nextest run -p fret-diag stats_json_includes_avg_and_budget stats_diff_json_is_versioned_and_additive_only triage_includes_hints_and_unit_costs_for_worst_frame --no-fail-fast`
+- Gate artifact focused gate:
+  `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
+- Trace artifact focused gate:
+  `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
 
 ## Core timing fields (per frame, in microseconds)
 
@@ -199,3 +217,8 @@ Opt-in artifact for timeline correlation:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 1 --trace`
 - `target/release/fretboard.exe diag trace <bundle.json>`
+
+Current trace artifacts are bundle-derived synthetic phase timelines. They are useful for correlating
+`fret.frame`, layout, prepaint, paint, and renderer-adjacent bundle stats in a Chrome trace viewer, but
+they do not contain live `tracing` / Tracy spans. Treat real-span capture as a separate opt-in profiling
+workflow until `real_spans_included=true` exists.

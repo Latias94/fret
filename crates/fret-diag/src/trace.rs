@@ -25,6 +25,7 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
         .get("windows")
         .and_then(|v| v.as_array())
         .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+    let source_bundle_schema_version = bundle.get("schema_version").and_then(|v| v.as_u64());
 
     let mut events: Vec<Value> = Vec::new();
     let pid: u32 = 1;
@@ -370,7 +371,12 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
     }
 
     Ok(serde_json::json!({
-        "schema_version": 1,
+        "schema_version": crate::perf_schema::PERF_TRACE_SCHEMA_VERSION,
+        "kind": crate::perf_schema::PERF_TRACE_CHROME_KIND,
+        "schema_policy": crate::perf_schema::schema_policy_json(),
+        "source_bundle_schema_version": source_bundle_schema_version,
+        "trace_source": crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES,
+        "real_spans_included": false,
         "displayTimeUnit": "ms",
         "traceEvents": events,
     }))
@@ -480,6 +486,7 @@ mod tests {
     #[test]
     fn chrome_trace_includes_trace_events() {
         let bundle = serde_json::json!({
+            "schema_version": 2,
             "windows": [{
                 "window": 1,
                 "snapshots": [{
@@ -501,6 +508,35 @@ mod tests {
         });
 
         let trace = chrome_trace_json_from_bundle_value(&bundle).expect("trace");
+        assert_eq!(
+            trace.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_TRACE_CHROME_KIND)
+        );
+        assert_eq!(
+            trace.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_TRACE_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            trace
+                .get("schema_policy")
+                .and_then(|v| v.get("compatibility"))
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
+        assert_eq!(
+            trace
+                .get("source_bundle_schema_version")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            trace.get("trace_source").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES)
+        );
+        assert_eq!(
+            trace.get("real_spans_included").and_then(|v| v.as_bool()),
+            Some(false)
+        );
         assert!(
             trace
                 .get("traceEvents")
