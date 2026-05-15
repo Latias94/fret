@@ -217,6 +217,15 @@ pub(crate) fn compute_rows(
 }
 
 fn node_matches(node: &UiSemanticsNodeV1, search_lower: &str) -> bool {
+    if node.id.to_string().contains(search_lower) {
+        return true;
+    }
+    if let Some(parent) = node.parent {
+        let parent_text = format!("parent={parent}");
+        if parent.to_string().contains(search_lower) || parent_text.contains(search_lower) {
+            return true;
+        }
+    }
     if node.role.to_lowercase().contains(search_lower) {
         return true;
     }
@@ -235,6 +244,15 @@ fn node_matches(node: &UiSemanticsNodeV1, search_lower: &str) -> bool {
             return true;
         }
     }
+    let bounds = &node.bounds;
+    let bounds_text = format!(
+        "{:.1},{:.1},{:.1},{:.1}",
+        bounds.x, bounds.y, bounds.w, bounds.h
+    )
+    .to_lowercase();
+    if bounds_text.contains(search_lower) {
+        return true;
+    }
     false
 }
 
@@ -243,6 +261,49 @@ pub(crate) fn node_label(node: &UiSemanticsNodeV1) -> String {
     let test_id = node.test_id.as_deref().unwrap_or("-");
     let label = node.label.as_deref().unwrap_or("-");
     format!("{role}  test_id={test_id}  label={label}  id={}", node.id)
+}
+
+pub(crate) fn layout_node_label(node: &UiSemanticsNodeV1) -> String {
+    let bounds = &node.bounds;
+    let test_id = node.test_id.as_deref().unwrap_or("-");
+    let parent = node
+        .parent
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    format!(
+        "id={} parent={} bounds=({:.1},{:.1} {:.1}x{:.1}) role={} test_id={}",
+        node.id, parent, bounds.x, bounds.y, bounds.w, bounds.h, node.role, test_id
+    )
+}
+
+pub(crate) fn element_node_label(node: &UiSemanticsNodeV1) -> String {
+    let test_id = node.test_id.as_deref().unwrap_or("-");
+    let parent = node
+        .parent
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    format!(
+        "sem_node={} parent={} role={} test_id={} labelled_by={} described_by={} controls={}",
+        node.id,
+        parent,
+        node.role,
+        test_id,
+        format_refs(&node.labelled_by),
+        format_refs(&node.described_by),
+        format_refs(&node.controls)
+    )
+}
+
+fn format_refs(values: &[u64]) -> String {
+    if values.is_empty() {
+        "-".to_string()
+    } else {
+        values
+            .iter()
+            .map(|value| value.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
 }
 
 pub(crate) fn selected_node_json(index: &SemanticsIndex, selected_id: Option<u64>) -> String {
@@ -303,6 +364,47 @@ mod tests {
             inline_spans: Vec::new(),
             scroll: Default::default(),
         }
+    }
+
+    #[test]
+    fn compute_rows_search_matches_id_parent_and_bounds() {
+        let index = SemanticsIndex::from_roots_and_nodes(
+            7,
+            vec![root()],
+            vec![node(1, None), node(42, Some(1))],
+        );
+
+        let by_id = compute_rows(&index, &HashSet::new(), "42");
+        let by_parent = compute_rows(&index, &HashSet::new(), "parent=1");
+        let by_bounds = compute_rows(&index, &HashSet::new(), "42.0");
+
+        assert_eq!(by_id.iter().map(|r| r.id).collect::<Vec<_>>(), vec![1, 42]);
+        assert_eq!(
+            by_parent.iter().map(|r| r.id).collect::<Vec<_>>(),
+            vec![1, 42]
+        );
+        assert_eq!(
+            by_bounds.iter().map(|r| r.id).collect::<Vec<_>>(),
+            vec![1, 42]
+        );
+    }
+
+    #[test]
+    fn secondary_tree_labels_surface_layout_and_identity_fields() {
+        let mut n = node(42, Some(1));
+        n.labelled_by = vec![7];
+        n.described_by = vec![8, 9];
+        n.controls = vec![10];
+
+        let layout = layout_node_label(&n);
+        let element = element_node_label(&n);
+
+        assert!(layout.contains("bounds=(0.0,42.0 10.0x10.0)"));
+        assert!(layout.contains("parent=1"));
+        assert!(element.contains("sem_node=42"));
+        assert!(element.contains("labelled_by=7"));
+        assert!(element.contains("described_by=8,9"));
+        assert!(element.contains("controls=10"));
     }
 
     #[test]

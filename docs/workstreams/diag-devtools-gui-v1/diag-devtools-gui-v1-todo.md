@@ -31,8 +31,18 @@ Conventions:
   - [x] max message size + hover event backpressure rules.
 - [x] Decide the default tree shown in the left panel:
   - [x] semantics tree (recommended default),
-  - [ ] layout tree (debugging layout engine),
-  - [ ] element tree (authoring identity / caching boundaries).
+  - [x] layout tree (debugging layout engine),
+        Evidence: `apps/fret-devtools` now exposes a secondary `Layout` tab in the left Inspect
+        Workspace. It is a semantics-derived layout-bounds view over the existing bundle/live
+        semantics cache, not a full native layout-engine snapshot. Guarded by
+        `cargo nextest run -p fret-devtools compute_rows_search_matches_id_parent_and_bounds secondary_tree_labels_surface_layout_and_identity_fields --no-fail-fast`
+        and `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+  - [x] element tree (authoring identity / caching boundaries).
+        Evidence: `apps/fret-devtools` now exposes a secondary `Elements` tab in the left Inspect
+        Workspace. It is a semantics-derived identity/relationship view (`sem_node`, parent,
+        `test_id`, `labelled_by`, `described_by`, `controls`) over the existing cache, not a full
+        declarative runtime element snapshot. Guarded by the same focused nextest and first-open
+        source gate.
 
 ### M1: Extract reusable tooling into crates
 

@@ -1429,3 +1429,33 @@ python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-b
 
 Result: passed. This closes the hygiene checklist only; broader DevTools GUI product maturity,
 real-host Wayland acceptance, and full perf/smoothness attribution remain outside this slice.
+
+## DevTools secondary tree views closure - 2026-05-15 follow-up
+
+Scope: close the DevTools M0 secondary tree entrypoints without widening the runtime protocol or
+claiming full native layout/element snapshots.
+
+- `apps/fret-devtools/src/native.rs` now adds `Layout` and `Elements` tabs beside the default
+  `Semantics` tree in the left Inspect Workspace.
+- The new tabs are lazily materialized from the active tab, so adding secondary tree views does not
+  build three 50k-row virtual-list projections in the same frame.
+- `apps/fret-devtools/src/semantics.rs` keeps one shared tree index and adds projection labels:
+  layout rows surface parent + bounds + role + `test_id`; element rows surface semantics-node
+  identity plus authoring relationships (`labelled_by`, `described_by`, `controls`).
+- Search now covers node id, `parent=<id>`, and bounds text, so the secondary views are useful for
+  layout and identity debugging without adding a new bundle schema.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` source-checks the secondary tabs, lazy active-tab
+  construction, projection labels, and focused tests.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` marks the M0 layout/element
+  tree items complete with the explicit caveat that these are semantics-derived secondary views,
+  not full layout-engine or declarative runtime snapshots.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools compute_rows_search_matches_id_parent_and_bounds secondary_tree_labels_surface_layout_and_identity_fields --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed. This removes the stale M0 secondary-view TODOs while keeping broader DevTools GUI
+product maturity, real-host Wayland acceptance, and full perf/smoothness attribution open.
