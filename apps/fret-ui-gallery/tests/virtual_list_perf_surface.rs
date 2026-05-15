@@ -32,19 +32,21 @@ fn first_step_index(steps: &[Value], expected_type: &str, expected_target: Optio
 }
 
 fn assert_jump_input_seeded_before_jump_click(script_name: &str, steps: &[Value]) {
-    let input_click = first_step_index(steps, "click", Some("ui-gallery-virtual-list-jump-input"));
-    let jump_click = first_step_index(steps, "click", Some("ui-gallery-virtual-list-jump-button"));
-    let type_9000 = steps
+    let input_set = steps
         .iter()
         .position(|step| {
-            step_type(step) == Some("type_text")
+            step_type(step) == Some("set_text_value")
+                && test_id_target(step) == Some("ui-gallery-virtual-list-jump-input")
                 && step.get("text").and_then(Value::as_str) == Some("9000")
         })
-        .unwrap_or_else(|| panic!("{script_name} should type the row 9000 target"));
+        .unwrap_or_else(|| {
+            panic!("{script_name} should deterministically set the jump input to row 9000")
+        });
+    let jump_click = first_step_index(steps, "click", Some("ui-gallery-virtual-list-jump-button"));
 
     assert!(
-        input_click < type_9000 && type_9000 < jump_click,
-        "{script_name} should seed the jump input with row 9000 before clicking Jump",
+        input_set < jump_click,
+        "{script_name} should set the jump input to row 9000 before clicking Jump",
     );
 }
 
@@ -77,16 +79,17 @@ fn virtual_list_steady_script_keeps_jump_input_setup_outside_perf_capture_window
     let steps = steps(script);
     let reset = first_step_index(&steps, "reset_diagnostics", None);
     let jump_click = first_step_index(&steps, "click", Some("ui-gallery-virtual-list-jump-button"));
-    let type_9000 = steps
+    let set_9000 = steps
         .iter()
         .position(|step| {
-            step_type(step) == Some("type_text")
+            step_type(step) == Some("set_text_value")
+                && test_id_target(step) == Some("ui-gallery-virtual-list-jump-input")
                 && step.get("text").and_then(Value::as_str) == Some("9000")
         })
-        .expect("steady script should type the row 9000 target");
+        .expect("steady script should set the row 9000 target");
 
     assert!(
-        type_9000 < reset && reset < jump_click,
+        set_9000 < reset && reset < jump_click,
         "steady perf script should prepare the jump input before reset_diagnostics, then measure jump/bottom behavior",
     );
 }

@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "slug": "ui-prepaint-derived-surfaces-v1",
+  "title": "UI Prepaint Derived Surfaces v1",
+  "status": "closed",
+  "updated": "2026-05-15",
+  "scope_kind": "execution",
+  "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1",
+  "problem": "Extend the accepted Frame Pipeline v2 boundary ownership model from the initial code-editor and view-cache-toggle proof surfaces to retained virtual-list and retained data-table surfaces, so derived prepaint and scene-fragment reuse becomes a reusable mechanism rather than a surface-specific optimization. Closed state: retained virtual-list boundary-owned prepaint output is implemented; retained data-table and view-cache proof surfaces pass; retained mechanisms and follow-ons are recorded in the closeout audit.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/ui-prepaint-derived-surfaces-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/ui-prepaint-derived-surfaces-v1/GOAL_HANDOFF_2026-05-14.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-prepaint-derived-surfaces-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-prepaint-derived-surfaces-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-prepaint-derived-surfaces-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/ui-prepaint-derived-surfaces-v1/CLOSEOUT_AUDIT_2026-05-15.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start with the retained virtual-list torture steady script, keep the rebuilt gallery-dev view-cache data-table repro as the comparison gate, and keep the retained data-table suite as the policy-heavy correctness proof surface.",
+    "commands": [
+      "cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery",
+      "target/release/fretboard-dev diag suite ui-gallery-data-table-view-cache-torture --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev",
+      "target/release/fretboard-dev diag suite ui-gallery-data-table-retained --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev"
+    ]
+  },
+  "gates": [
+    {
+      "name": "retained-virtual-list-window-update",
+      "command": "cargo nextest run -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root --no-fail-fast"
+    },
+    {
+      "name": "retained-virtual-list-reconcile-harness",
+      "command": "cargo nextest run -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles --no-fail-fast"
+    },
+    {
+      "name": "prepaint-virtual-list-window-harness",
+      "command": "cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles --no-fail-fast"
+    },
+    {
+      "name": "virtual-list-perf-surface",
+      "command": "cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --repeat 7 --warmup-frames 5 --reuse-launch --sort time --top 15 --json --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-virtual-list-torture-steady.windows-rtx4090.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery"
+    },
+    {
+      "name": "data-table-view-cache-torture",
+      "command": "target/release/fretboard-dev diag suite ui-gallery-data-table-view-cache-torture --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev"
+    },
+    {
+      "name": "data-table-retained",
+      "command": "target/release/fretboard-dev diag suite ui-gallery-data-table-retained --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev"
+    },
+    {
+      "name": "runtime-layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md",
+    "docs/workstreams/ui-prepaint-derived-surfaces-v1/DESIGN.md",
+    "docs/workstreams/ui-prepaint-derived-surfaces-v1/GOAL_HANDOFF_2026-05-14.md",
+    "docs/workstreams/ui-prepaint-derived-surfaces-v1/TODO.md",
+    "docs/workstreams/ui-prepaint-derived-surfaces-v1/MILESTONES.md",
+    "docs/workstreams/ui-prepaint-derived-surfaces-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-prepaint-derived-surfaces-v1/CLOSEOUT_AUDIT_2026-05-15.md",
+    "crates/fret-ui/src/tree/view_boundary.rs",
+    "crates/fret-ui/src/tree/prepaint/virtual_list.rs",
+    "crates/fret-ui/src/declarative/tests/virtual_list/retained.rs",
+    "crates/fret-ui/src/declarative/tests/retained_virtual_list_reconcile_harness.rs",
+    "crates/fret-ui/src/declarative/tests/canvas.rs",
+    "crates/fret-ui/src/tree/tests/view_cache.rs",
+    "crates/fret-ui/src/tree/tests/paint_cache.rs",
+    "crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-virtual-list-attrib/1778755322233/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-virtual-list-attrib/1778755328023-ui-gallery-virtual-list-bottom-steady/bundle.schema2.json",
+    "target/fret-diag/1778777905741/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-torture/1778759907796-script-step-0023-assert-failed/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-torture-current-dev/1778762426810-ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-current-dev-cargo-run/1778762568416-script-step-0022-assert-failed/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-after-sort-anchor-split-suite/suite.summary.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-after-sort-anchor-split-suite/1778776884214-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-after-sort-anchor-split-suite/1778776885328-ui-gallery-data-table-retained-multi-sort-shift-click/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-2026-05-15-after-scroll-wait/suite.summary.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-2026-05-15-after-scroll-wait/1778777531409-ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-2026-05-15-after-scroll-wait/suite.summary.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-2026-05-15-after-scroll-wait/1778777573643-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
+    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-2026-05-15-after-scroll-wait/1778777574739-ui-gallery-data-table-retained-multi-sort-shift-click/bundle.schema2.json",
+    "tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-data-table-view-cache-torture/suite.json",
+    "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json",
+    "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json",
+    "ecosystem/fret-ui-kit/src/declarative/table.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a separate ADR-backed follow-on for renderer Scene recording evolution, per-boundary previous-frame recording, public boundary API changes, or a new layout dirty-breadth optimization lane."
+  }
+}

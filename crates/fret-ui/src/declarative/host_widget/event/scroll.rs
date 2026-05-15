@@ -392,18 +392,23 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         // not force a layout pass.
         cx.invalidate_self(inv);
         if needs_visible_range_rerender {
-            crate::elements::with_window_state(&mut *cx.app, window, |window_state| {
-                let retained = window_state
-                    .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
-                    this.element,
-                );
-                if retained {
-                    window_state.mark_retained_virtual_list_needs_reconcile(
+            let retained =
+                crate::elements::with_window_state(&mut *cx.app, window, |window_state| {
+                    let retained = window_state
+                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
                         this.element,
-                        crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
                     );
-                }
-            });
+                    if retained {
+                        window_state.mark_retained_virtual_list_needs_reconcile(
+                            this.element,
+                            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+                        );
+                    }
+                    retained
+                });
+            if !retained {
+                cx.notify();
+            }
             // Non-retained window-boundary shifts are owned by prepaint. Forcing a view-cache
             // rerender from the wheel event lets render commit the new window before prepaint can
             // observe and attribute the "old rendered window + new offset" transition.

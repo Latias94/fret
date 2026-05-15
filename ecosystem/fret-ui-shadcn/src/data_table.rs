@@ -1029,8 +1029,9 @@ mod tests {
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point, Px,
-        Rect, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, Point, PointerEvent, PointerId, PointerType, Px, Rect, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_runtime::Model;
     use fret_ui::ThemeConfig;
@@ -1105,6 +1106,25 @@ mod tests {
         Arc::from(vec![1u32, 2, 3, 4])
     }
 
+    fn sortable_demo_columns() -> Arc<[ColumnDef<u32>]> {
+        Arc::from(vec![
+            {
+                let mut col =
+                    ColumnDef::new("status").sort_by(|left: &u32, right: &u32| left.cmp(right));
+                col.size = 180.0;
+                col.enable_resizing = false;
+                col
+            },
+            {
+                let mut col =
+                    ColumnDef::new("mem_mb").sort_by(|left: &u32, right: &u32| left.cmp(right));
+                col.size = 180.0;
+                col.enable_resizing = false;
+                col
+            },
+        ])
+    }
+
     fn render_data_table_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -1152,6 +1172,130 @@ mod tests {
         ui.layout_all(app, services, bounds, 1.0);
         let mut scene = fret_core::Scene::default();
         ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    fn render_retained_data_table_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        state: Model<TableState>,
+        data: Arc<[u32]>,
+        columns: Arc<[ColumnDef<u32>]>,
+    ) {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "retained-data-table",
+            |cx| {
+                vec![
+                    DataTable::new()
+                        .row_height(Px(40.0))
+                        .header_height(Px(40.0))
+                        .column_actions_menu(true)
+                        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
+                        .debug_ids(TableDebugIds {
+                            header_row_test_id: Some(Arc::<str>::from("data-table-header-row")),
+                            header_cell_test_id_prefix: Some(Arc::<str>::from(
+                                "data-table-header-",
+                            )),
+                            row_test_id_prefix: Some(Arc::<str>::from("data-table-row-")),
+                            ..Default::default()
+                        })
+                        .into_element_retained(
+                            cx,
+                            data.clone(),
+                            1,
+                            state.clone(),
+                            columns.clone(),
+                            |_row, index, _parent| RowKey::from_index(index),
+                            |col| Arc::from(col.id.as_ref()),
+                            |cx, col, row| cx.text(format!("{}-{row}", col.id.as_ref())),
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    fn pump_retained_data_table(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        state: Model<TableState>,
+        data: Arc<[u32]>,
+        columns: Arc<[ColumnDef<u32>]>,
+    ) {
+        for _ in 0..2 {
+            render_retained_data_table_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                state.clone(),
+                data.clone(),
+                columns.clone(),
+            );
+        }
+    }
+
+    fn click_test_id(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        test_id: &str,
+        modifiers: Modifiers,
+    ) {
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after data-table render");
+        let bounds = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .map(|node| node.bounds)
+            .unwrap_or_else(|| panic!("expected data-table debug anchor `{test_id}`"));
+        let click_pos = Point::new(
+            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers,
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers,
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
     }
 
     #[test]
@@ -1228,5 +1372,91 @@ mod tests {
             header.bounds,
             row0.bounds
         );
+    }
+
+    #[test]
+    fn retained_data_table_header_debug_ids_sort_with_column_actions() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = FakeServices;
+        let state = app.models_mut().insert({
+            let mut state = TableState::default();
+            state.pagination.page_size = 4;
+            state
+        });
+        let data = demo_data();
+        let columns = sortable_demo_columns();
+
+        pump_retained_data_table(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            state.clone(),
+            data.clone(),
+            columns.clone(),
+        );
+
+        click_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "data-table-header-status",
+            Modifiers::default(),
+        );
+        let sorting = app
+            .models()
+            .read(&state, |st| st.sorting.clone())
+            .expect("expected sorting after retained header click");
+        assert_eq!(sorting.len(), 1);
+        assert_eq!(sorting[0].column.as_ref(), "status");
+        assert!(!sorting[0].desc);
+
+        pump_retained_data_table(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            state.clone(),
+            data,
+            columns,
+        );
+
+        click_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "data-table-header-mem_mb",
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        );
+        let sorting = app
+            .models()
+            .read(&state, |st| st.sorting.clone())
+            .expect("expected sorting after retained shift-header click");
+        assert_eq!(sorting.len(), 2);
+        assert_eq!(sorting[0].column.as_ref(), "status");
+        assert!(!sorting[0].desc);
+        assert_eq!(sorting[1].column.as_ref(), "mem_mb");
+        assert!(!sorting[1].desc);
     }
 }

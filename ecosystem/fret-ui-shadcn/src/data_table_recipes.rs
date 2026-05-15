@@ -100,8 +100,18 @@ fn apply_global_filter_change(state: &mut TableState, value: &str) -> bool {
 }
 
 fn sync_global_filter<H: UiHost>(app: &mut H, state: &Model<TableState>, value: &str) {
+    let next = normalized_global_filter(value);
+    let should_update = app
+        .models()
+        .read(state, |st| st.global_filter != next)
+        .unwrap_or(true);
+    if !should_update {
+        return;
+    }
+
     let _ = app.models_mut().update(state, |st| {
-        let _ = apply_global_filter_change(st, value);
+        st.global_filter = next;
+        st.pagination.page_index = 0;
     });
 }
 
@@ -150,6 +160,18 @@ fn sync_column_pinning(
     state: &Model<TableState>,
     desired: &HashMap<ColumnId, Option<ColumnPinPosition>>,
 ) {
+    let should_update = app
+        .models()
+        .read(state, |st| {
+            desired
+                .iter()
+                .any(|(id, desired_position)| column_pin_position(st, id) != *desired_position)
+        })
+        .unwrap_or(true);
+    if !should_update {
+        return;
+    }
+
     let _ = app.models_mut().update(state, |st| {
         let _ = apply_column_pinning_change(st, desired);
     });
@@ -749,35 +771,48 @@ impl<TData> DataTableToolbar<TData> {
                     (self.column_filter.as_ref(), column_filter_model.as_ref())
                 {
                     let value = cx.watch_model(model).layout().cloned().unwrap_or_default();
-                    let _ = cx.app.models_mut().update(&self.state, |st| {
-                        let next = normalized_global_filter(&value);
-                        let existing = st
-                            .column_filters
-                            .iter()
-                            .position(|f| f.column.as_ref() == column_id.as_ref());
+                    let next = normalized_global_filter(&value);
+                    let should_update = cx
+                        .app
+                        .models()
+                        .read(&self.state, |st| {
+                            st.column_filters
+                                .iter()
+                                .find(|f| f.column.as_ref() == column_id.as_ref())
+                                .map(|f| f.value.clone())
+                                != next
+                        })
+                        .unwrap_or(true);
+                    if should_update {
+                        let _ = cx.app.models_mut().update(&self.state, |st| {
+                            let existing = st
+                                .column_filters
+                                .iter()
+                                .position(|f| f.column.as_ref() == column_id.as_ref());
 
-                        match (existing, next) {
-                            (None, None) => {}
-                            (Some(idx), None) => {
-                                st.column_filters.remove(idx);
-                                st.pagination.page_index = 0;
-                            }
-                            (Some(idx), Some(next)) => {
-                                if st.column_filters[idx].value != next {
-                                    st.column_filters[idx].value = next;
+                            match (existing, next) {
+                                (None, None) => {}
+                                (Some(idx), None) => {
+                                    st.column_filters.remove(idx);
+                                    st.pagination.page_index = 0;
+                                }
+                                (Some(idx), Some(next)) => {
+                                    if st.column_filters[idx].value != next {
+                                        st.column_filters[idx].value = next;
+                                        st.pagination.page_index = 0;
+                                    }
+                                }
+                                (None, Some(next)) => {
+                                    st.column_filters
+                                        .push(fret_ui_headless::table::ColumnFilter {
+                                            column: column_id.clone(),
+                                            value: next,
+                                        });
                                     st.pagination.page_index = 0;
                                 }
                             }
-                            (None, Some(next)) => {
-                                st.column_filters
-                                    .push(fret_ui_headless::table::ColumnFilter {
-                                        column: column_id.clone(),
-                                        value: next,
-                                    });
-                                st.pagination.page_index = 0;
-                            }
-                        }
-                    });
+                        });
+                    }
                 }
 
                 if let Some(cfg) = self.faceted_filter.as_ref() {
@@ -798,34 +833,47 @@ impl<TData> DataTableToolbar<TData> {
                         ))
                     };
 
-                    let _ = cx.app.models_mut().update(&self.state, |st| {
-                        let existing = st
-                            .column_filters
-                            .iter()
-                            .position(|f| f.column.as_ref() == cfg.column_id.as_ref());
+                    let should_update = cx
+                        .app
+                        .models()
+                        .read(&self.state, |st| {
+                            st.column_filters
+                                .iter()
+                                .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
+                                .map(|f| f.value.clone())
+                                != next
+                        })
+                        .unwrap_or(true);
+                    if should_update {
+                        let _ = cx.app.models_mut().update(&self.state, |st| {
+                            let existing = st
+                                .column_filters
+                                .iter()
+                                .position(|f| f.column.as_ref() == cfg.column_id.as_ref());
 
-                        match (existing, next.clone()) {
-                            (None, None) => {}
-                            (Some(idx), None) => {
-                                st.column_filters.remove(idx);
-                                st.pagination.page_index = 0;
-                            }
-                            (Some(idx), Some(next)) => {
-                                if st.column_filters[idx].value != next {
-                                    st.column_filters[idx].value = next;
+                            match (existing, next.clone()) {
+                                (None, None) => {}
+                                (Some(idx), None) => {
+                                    st.column_filters.remove(idx);
+                                    st.pagination.page_index = 0;
+                                }
+                                (Some(idx), Some(next)) => {
+                                    if st.column_filters[idx].value != next {
+                                        st.column_filters[idx].value = next;
+                                        st.pagination.page_index = 0;
+                                    }
+                                }
+                                (None, Some(next)) => {
+                                    st.column_filters
+                                        .push(fret_ui_headless::table::ColumnFilter {
+                                            column: cfg.column_id.clone(),
+                                            value: next,
+                                        });
                                     st.pagination.page_index = 0;
                                 }
                             }
-                            (None, Some(next)) => {
-                                st.column_filters
-                                    .push(fret_ui_headless::table::ColumnFilter {
-                                        column: cfg.column_id.clone(),
-                                        value: next,
-                                    });
-                                st.pagination.page_index = 0;
-                            }
-                        }
-                    });
+                        });
+                    }
                 }
 
                 let desired_visibility: HashMap<ColumnId, bool> = bindings
@@ -1325,6 +1373,7 @@ impl<TData> DataTableToolbar<TData> {
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.filter_placeholder.clone())
                         .test_id("data-table-toolbar-global-filter-input")
+                        .chrome_motion(false)
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });
@@ -1335,6 +1384,7 @@ impl<TData> DataTableToolbar<TData> {
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.column_filter_placeholder.clone())
                         .test_id("data-table-toolbar-column-filter-input")
+                        .chrome_motion(false)
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });

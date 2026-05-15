@@ -400,6 +400,8 @@ struct ScrollOverflowObservedNode {
     children: Vec<NodeId>,
     pinned_to_content_extent_x: bool,
     pinned_to_content_extent_y: bool,
+    synthetic_content_extent_x: bool,
+    synthetic_content_extent_y: bool,
 }
 
 const SCROLL_OVERFLOW_NONLEAF_OVERSHOOT_TOLERANCE: f32 = 32.0;
@@ -447,6 +449,7 @@ fn trust_scroll_overflow_nonleaf_axis(
     child_frontier: f32,
     child_count: usize,
     pinned_to_content_extent: bool,
+    synthetic_content_extent: bool,
 ) -> Px {
     let own = own.max(0.0);
     let child_frontier = child_frontier.max(0.0);
@@ -454,6 +457,9 @@ fn trust_scroll_overflow_nonleaf_axis(
         return Px(own);
     }
     if own + 0.5 < child_frontier {
+        return Px(child_frontier);
+    }
+    if synthetic_content_extent && pinned_to_content_extent {
         return Px(child_frontier);
     }
     if child_count != 1 {
@@ -502,12 +508,14 @@ fn validate_scroll_overflow_observed_subtree(
                 child_frontier.width.0,
                 info.children.len(),
                 info.pinned_to_content_extent_x,
+                info.synthetic_content_extent_x,
             ),
             trust_scroll_overflow_nonleaf_axis(
                 info.extent.height.0,
                 child_frontier.height.0,
                 info.children.len(),
                 info.pinned_to_content_extent_y,
+                info.synthetic_content_extent_y,
             ),
         )
     } else {
@@ -704,6 +712,12 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                 let Some(bounds) = tree.node_bounds(id) else {
                     continue;
                 };
+                let synthetic_content_extent_x = id == observe_root
+                    && (bounds.origin.x.0 - content_bounds.origin.x.0).abs() <= 0.5
+                    && (bounds.size.width.0 - content_bounds.size.width.0).abs() <= 0.5;
+                let synthetic_content_extent_y = id == observe_root
+                    && (bounds.origin.y.0 - content_bounds.origin.y.0).abs() <= 0.5
+                    && (bounds.size.height.0 - content_bounds.size.height.0).abs() <= 0.5;
                 let right =
                     (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
                 let bottom =
@@ -755,6 +769,8 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                         pinned_to_content_extent_y: axis.scroll_y()
                             && extent_may_be_stale
                             && bottom + 0.5 >= content_size.height.0,
+                        synthetic_content_extent_x,
+                        synthetic_content_extent_y,
                     },
                 );
             }

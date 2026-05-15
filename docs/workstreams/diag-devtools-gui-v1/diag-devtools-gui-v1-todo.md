@@ -150,10 +150,16 @@ Conventions:
 - [ ] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
   - [x] focus events (`inspect.focus`) with summary + path (best-effort),
-  - [ ] hovered node bounds + viewport overlay hooks,
-  - [ ] overlay barrier root id + blocking roots summary.
-- [ ] Add at least one “dogfood” demo workflow:
-  - [ ] open UI gallery, pick a button, generate a script, run it, pack zip, open viewer.
+  - [x] hovered node bounds + viewport overlay hooks,
+  - [x] overlay barrier root id + blocking roots summary.
+- [x] Add at least one “dogfood” demo workflow:
+  - [x] open UI gallery, pick a button, generate a script, run it, pack zip, open viewer.
+        The GUI first-open shell now exposes the `ui-gallery-button-dogfood` path with the
+        canonical UI gallery launch command, stable button selector, `pick-script` /
+        `pick-apply` commands, `diag run --pack`, `diag pack`, and offline bundle viewer command.
+        Source gates:
+        `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only` and
+        `python tools/diag_gate_imui_product_chain.py --only discovery`.
  - [ ] Validate tree scalability:
    - [ ] virtualized rendering for 50k+ semantics nodes,
    - [ ] low-traffic live updates (operations/polling) under scroll.

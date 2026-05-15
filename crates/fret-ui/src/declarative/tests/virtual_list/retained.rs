@@ -839,6 +839,10 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         "expected retained virtual list host marker state to exist"
     );
 
+    let vlist_node =
+        crate::declarative::node_for_element_in_window_frame(&mut app, window, vlist_element)
+            .expect("virtual list node exists");
+
     let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
         &mut app,
         window,
@@ -884,6 +888,53 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
     );
 
     let expected_start = (next_offset.0 / 10.0) as usize;
+    let boundary_window_range = crate::virtual_list::VirtualRange {
+        start_index: expected_start,
+        end_index: expected_start + 2,
+        overscan: 0,
+        count: 200,
+    };
+    ui.set_prepaint_output(
+        vlist_node,
+        crate::tree::VirtualListPrepaintWindowOutput {
+            element: vlist_element,
+            axis: fret_core::Axis::Vertical,
+            len: 200,
+            items_revision: 0,
+            measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+            overscan: 0,
+            estimate_row_height: Px(10.0),
+            gap: Px(0.0),
+            scroll_margin: Px(0.0),
+            visible_range: Some(boundary_window_range),
+            window_range: Some(boundary_window_range),
+            viewport: Px(30.0),
+            offset: next_offset,
+            window_shift_kind: crate::tree::UiDebugVirtualListWindowShiftKind::Escape,
+        },
+    );
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        vlist_element,
+        crate::element::VirtualListState::default,
+        |state| {
+            let stale = crate::virtual_list::VirtualRange {
+                start_index: 0,
+                end_index: 199,
+                overscan: 0,
+                count: 200,
+            };
+            state.window_range = Some(stale);
+            state.render_window_range = Some(stale);
+        },
+    );
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.mark_retained_virtual_list_needs_reconcile(
+            vlist_element,
+            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+        );
+    });
 
     let mut renders_after_scroll_frames: Vec<usize> = Vec::new();
     for _frame in 0..2 {
@@ -912,6 +963,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
         renders_after_scroll_frames.push(renders.load(Ordering::SeqCst));
+
         app.advance_frame();
     }
 
@@ -929,9 +981,6 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         "expected retained host reconciliation to avoid repeated rerendering the cache root (baseline_renders={baseline_renders}, renders_after_scroll_frames={renders_after_scroll_frames:?})"
     );
 
-    let vlist_node =
-        crate::declarative::node_for_element_in_window_frame(&mut app, window, vlist_element)
-            .expect("virtual list node exists");
     let (visible_indices, frame_children_len, ui_children_len): (Vec<usize>, usize, usize) =
         crate::declarative::with_window_frame(&mut app, window, |window_frame| {
             let window_frame = window_frame?;
@@ -962,6 +1011,12 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         !visible_indices.is_empty(),
         "expected virtual list to have visible items after scroll (expected_start={expected_start}, ui_children_len={ui_children_len}, frame_children_len={frame_children_len})"
     );
+    let expected_indices =
+        (boundary_window_range.start_index..=boundary_window_range.end_index).collect::<Vec<_>>();
+    assert_eq!(
+        visible_indices, expected_indices,
+        "expected retained reconcile to consume the precise boundary-owned prepaint window instead of the intentionally stale VirtualListState window"
+    );
     assert!(
         visible_indices.contains(&expected_start),
         "expected the reconciled window to include index {expected_start} (visible_indices={visible_indices:?})"
@@ -981,29 +1036,18 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         let captured = captured_ids.lock().expect("captured row ids");
         (
             captured.cache_root.expect("cache root id"),
-            vec![
-                (
-                    expected_start,
-                    *captured
-                        .rows
-                        .get(&expected_start)
-                        .expect("captured id for first expected row"),
-                ),
-                (
-                    expected_start + 1,
-                    *captured
-                        .rows
-                        .get(&(expected_start + 1))
-                        .expect("captured id for second expected row"),
-                ),
-                (
-                    expected_start + 2,
-                    *captured
-                        .rows
-                        .get(&(expected_start + 2))
-                        .expect("captured id for third expected row"),
-                ),
-            ],
+            expected_indices
+                .iter()
+                .map(|index| {
+                    (
+                        *index,
+                        *captured
+                            .rows
+                            .get(index)
+                            .expect("captured id for expected row"),
+                    )
+                })
+                .collect::<Vec<_>>(),
         )
     };
 

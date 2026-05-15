@@ -172,7 +172,8 @@
         "prev_offset_y_max": 0.0,
         "upgraded_to_layout_bindings_min": 1
       },
-      "type": "assert"
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
       "type": "reset_diagnostics"

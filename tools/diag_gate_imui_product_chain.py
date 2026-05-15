@@ -50,8 +50,13 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
+DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
+BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs"
+)
 DEVTOOLS_REPRO_CONTRACT_SOURCE = "crates/fret-diag/src/cli/contracts/commands/repro.rs"
 DEVTOOLS_CUTOVER_SOURCE = "crates/fret-diag/src/cli/cutover.rs"
 DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
@@ -343,20 +348,36 @@ def _validate_tool_apps_json(payload: dict) -> None:
 def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     name = "devtools gui product workflow source"
     path = repo_root / DEVTOOLS_GUI_SOURCE
+    ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
     gate_profile_path = repo_root / DEVTOOLS_GATE_PROFILE_SOURCE
+    protocol_path = repo_root / DEVTOOLS_PROTOCOL_SOURCE
+    bootstrap_ws_path = repo_root / BOOTSTRAP_DEVTOOLS_WS_SOURCE
     repro_contract_path = repo_root / DEVTOOLS_REPRO_CONTRACT_SOURCE
     cutover_path = repo_root / DEVTOOLS_CUTOVER_SOURCE
     print(f"[diag-gate-imui-product-chain] {name}", flush=True)
     try:
         source = path.read_text(encoding="utf-8")
+        ws_source = ws_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
+        protocol_source = protocol_path.read_text(encoding="utf-8")
+        bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
         repro_contract_source = repro_contract_path.read_text(encoding="utf-8")
         cutover_source = cutover_path.read_text(encoding="utf-8")
     except OSError as err:
         raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
-    source = "\n".join([source, gate_run_source, repro_contract_source, cutover_source])
+    source = "\n".join(
+        [
+            source,
+            ws_source,
+            gate_run_source,
+            protocol_source,
+            bootstrap_ws_source,
+            repro_contract_source,
+            cutover_source,
+        ]
+    )
 
     for marker in (
         'const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain"',
@@ -366,6 +387,15 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
         'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
         'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
+        'const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood"',
+        'const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release"',
+        'const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json"',
+        'const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =',
+        'const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev"',
         'const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
         'const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =',
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
@@ -374,6 +404,12 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
+        "UiInspectHoverV1",
+        "UiInspectFocusV1",
+        "UiInspectOverlayHookV1",
+        "UiInspectNodeSummaryV1",
+        "UiOverlayRootHintV1",
+        "UiOverlaySummaryV1",
         "devtools_gate_profile_lines",
         "devtools_gate_profiles_v1",
         "devtools_gate_perf_threshold_command",
@@ -412,9 +448,30 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "fn file_url_from_path(",
         "fn percent_encode_file_url_path(",
         "10%20stats%23failed.json",
+        "Dogfood Workflow",
+        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
+        "devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref())",
         "Demo / Metrics / Debug Routes",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "Gate Commands",
+        "Live Inspect Hover Bounds",
+        "Structured hovered-node bounds projected from inspect.hover.",
+        "Live Inspect Overlay Hooks",
+        "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
+        "Raw Inspect Payloads",
+        "devtools.inspect.hover_bounds",
+        "devtools.inspect.overlay_hooks",
+        "devtools.inspect.raw_payloads",
+        "last_overlay_summary_json",
+        '"overlay.summary"',
+        "inspect_hover_bounds_lines(",
+        "inspect_overlay_hook_lines(",
+        "ws_publish_live_inspect_payloads(",
+        "ws_send_live_payload_if_changed(",
+        "inspect_node_summary_v1(",
+        "overlay_summary_v1(",
+        "hovered-node-bounds",
+        "focused-node-bounds",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
         "gate_command_rows.push(devtools_gate_profile_command_builder(cx, st))",
         "devtools_gate_profile_lines(artifacts_root)",
@@ -477,14 +534,22 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "fn script_target_gate_inputs(",
         "fn perf_threshold_gate_inputs(",
         "fn resource_footprint_threshold_gate_inputs(",
+        "fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_profile_command_builder(",
         "fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>",
+        "dogfood workflow: {DEVTOOLS_DOGFOOD_WORKFLOW_ID}",
+        "open ui gallery: {DEVTOOLS_DOGFOOD_TARGET_COMMAND}",
+        'preferred selector: {\\"kind\\":\\"test_id\\",\\"id\\":\\"ui-gallery-nav-button\\"}',
+        "apply pick to script: {DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND}",
+        "run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}",
+        "open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
         "devtools_demo_metrics_debug_lines_surface_canonical_routes",
+        "devtools_dogfood_workflow_lines_surface_ui_gallery_loop",
         "devtools_gate_command_lines_surface_first_class_gates",
         "file_url_from_path_projects_native_artifact_paths",
         "regression_selected_perf_evidence",

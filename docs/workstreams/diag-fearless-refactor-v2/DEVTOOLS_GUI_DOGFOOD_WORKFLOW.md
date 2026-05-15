@@ -59,6 +59,40 @@ Recommended setup:
 For native or local workflows, the practical invariant is simple: the GUI must read and write against the same
 artifacts root that the run/summarize/pack flow will use.
 
+## Concrete UI gallery loop
+
+The first concrete dogfood path is `ui-gallery-button-dogfood`. It is intentionally small enough to
+stay visible in the DevTools first-open shell while still touching the full authoring loop:
+
+1. Open the target:
+   - `cargo run -p fret-ui-gallery --release`
+2. Pick a Button-page control through DevTools:
+   - enable inspect,
+   - arm `Pick`,
+   - click a Button page control,
+   - prefer the stable selector `{"kind":"test_id","id":"ui-gallery-nav-button"}` when the picked
+     target is the navigation button.
+3. Generate or patch a script:
+   - `cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json`
+   - `cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json`
+4. Run and pack the picked script:
+   - `cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release`
+5. Pack a selected bundle when starting from the GUI artifact browser:
+   - `cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only`
+6. Open the offline viewer:
+   - `pnpm -C tools/fret-bundle-viewer dev`
+   - drag `bundle.json`, `bundle.schema2.json`, or the packed zip into the viewer.
+
+Existing script anchors:
+
+- `tools/diag-scripts/ui-gallery-lite-smoke.json`
+- `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json`
+
+Source gates:
+
+- `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only`
+- `python tools/diag_gate_imui_product_chain.py --only discovery`
+
 ## End-to-end workflow
 
 ### 1. Pick selector from live UI

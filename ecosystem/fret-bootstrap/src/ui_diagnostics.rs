@@ -7,7 +7,9 @@ use fret_core::{
 use fret_diag_protocol::{
     DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
     DevtoolsScreenshotRequestV1, DevtoolsScreenshotResultV1, DiagTransportMessageV1,
-    UiHitTestExplainAckV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
+    UiHitTestExplainAckV1, UiInspectFocusV1, UiInspectHoverV1, UiInspectNodeSummaryV1,
+    UiInspectOverlayHookV1, UiOverlayRootHintV1, UiOverlaySummaryV1, UiSemanticsNodeGetAckV1,
+    UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiActivationPolicyV1, UiArtifactStatsV1,

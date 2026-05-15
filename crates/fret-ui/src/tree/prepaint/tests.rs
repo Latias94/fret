@@ -98,6 +98,28 @@ fn prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape() {
 
     scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(620.0)));
     ui.prepaint_virtual_list_window_from_interaction_record(&mut app, &record);
+    let boundary_output = ui
+        .test_view_boundary_prepaint_output::<VirtualListPrepaintWindowOutput>(vlist_node)
+        .expect("prepaint should store virtual-list window update in ViewBoundaryState");
+    assert_eq!(
+        boundary_output.element, element,
+        "expected boundary-owned virtual-list prepaint output to carry the source element"
+    );
+    assert_eq!(
+        boundary_output.window_shift_kind,
+        crate::tree::UiDebugVirtualListWindowShiftKind::Escape,
+        "expected boundary-owned output to mirror the computed window shift"
+    );
+    assert_eq!(
+        boundary_output.window_range.map(|range| (
+            range.start_index,
+            range.end_index,
+            range.overscan,
+            range.count,
+        )),
+        Some((62, 65, 10, 1000)),
+        "expected boundary-owned output to preserve the prepaint-derived next window"
+    );
     assert!(
         ui.nodes[cache_root].view_cache_needs_rerender,
         "expected prepaint window escape to dirty the nearest cache root"

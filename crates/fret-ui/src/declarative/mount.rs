@@ -7,7 +7,9 @@ use super::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
-use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
+use crate::tree::{
+    UiDebugInvalidationDetail, UiDebugInvalidationSource, VirtualListPrepaintWindowOutput,
+};
 
 fn keep_alive_view_cache_scratch_disabled() -> bool {
     crate::runtime_config::ui_runtime_config().keep_alive_view_cache_scratch_disabled
@@ -2027,6 +2029,20 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         }
         let props = props.clone();
+        let prepaint_window = ui
+            .prepaint_output::<VirtualListPrepaintWindowOutput>(node)
+            .copied()
+            .filter(|output| {
+                output.element == element
+                    && output.axis == props.axis
+                    && output.len == props.len
+                    && output.items_revision == props.items_revision
+                    && output.measure_mode == props.measure_mode
+                    && output.overscan == props.overscan
+                    && output.estimate_row_height == props.estimate_row_height
+                    && output.gap == props.gap
+                    && output.scroll_margin == props.scroll_margin
+            });
 
         let Some((key_at, row, range_extractor)) = window_state
             .try_with_state_mut::<crate::windowed_surface_host::RetainedVirtualListHostCallbacks<H>, _>(
@@ -2082,6 +2098,14 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                     state
                         .metrics
                         .visible_range(offset_axis, viewport, props.overscan);
+                let boundary_window = prepaint_window.and_then(|output| {
+                    output.window_range.filter(|range| {
+                        valid_window(*range)
+                            && output.visible_range == visible_range
+                            && output.viewport == viewport
+                            && output.offset == offset_axis
+                    })
+                });
 
                 // Prefer the prepaint-derived window range (ADR 0175), but only while it still
                 // covers the current visible range. Programmatic scroll-handle changes can schedule
@@ -2091,8 +2115,14 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                     .window_range
                     .or(state.render_window_range)
                     .filter(|r| valid_window(*r));
-                let window_range = match (cached_window, visible_range, ideal_window_range) {
-                    (Some(cached), Some(visible), Some(ideal)) => {
+                let window_range = match (
+                    boundary_window,
+                    cached_window,
+                    visible_range,
+                    ideal_window_range,
+                ) {
+                    (Some(boundary), _, _, _) => Some(boundary),
+                    (None, Some(cached), Some(visible), Some(ideal)) => {
                         let cached_start = cached.start_index.saturating_sub(cached.overscan);
                         let cached_end = (cached.end_index + cached.overscan)
                             .min(cached.count.saturating_sub(1));
@@ -2105,8 +2135,8 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                             Some(cached)
                         }
                     }
-                    (Some(cached), _, _) => Some(cached),
-                    (None, _, ideal) => ideal,
+                    (None, Some(cached), _, _) => Some(cached),
+                    (None, None, _, ideal) => ideal,
                 };
 
                 let Some(range) = window_range else {

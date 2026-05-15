@@ -34,6 +34,25 @@ struct VirtualListPrepaintWindowUpdate {
     content_extent: Px,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct VirtualListPrepaintWindowOutput {
+    pub(crate) element: GlobalElementId,
+    pub(crate) axis: fret_core::Axis,
+    pub(crate) len: usize,
+    pub(crate) items_revision: u64,
+    pub(crate) measure_mode: crate::element::VirtualListMeasureMode,
+    pub(crate) overscan: usize,
+    pub(crate) estimate_row_height: Px,
+    pub(crate) gap: Px,
+    pub(crate) scroll_margin: Px,
+    pub(crate) visible_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) window_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) viewport: Px,
+    pub(crate) offset: Px,
+    #[cfg(test)]
+    pub(crate) window_shift_kind: crate::tree::UiDebugVirtualListWindowShiftKind,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct InteractionCacheEntry {
     pub(super) generation: u64,

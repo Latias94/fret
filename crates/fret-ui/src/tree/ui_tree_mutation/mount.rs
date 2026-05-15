@@ -20,6 +20,14 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        let skip_redundant_initial_mount_walk = self.nodes.get(parent).is_some_and(|n| {
+            n.parent.is_none()
+                && n.children.is_empty()
+                && n.invalidation.layout
+                && n.invalidation.paint
+                && n.invalidation.hit_test
+        });
+
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
@@ -127,15 +135,20 @@ impl<H: UiHost> UiTree<H> {
         self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
 
         if propagate {
-            // Structural changes must invalidate ancestors so the next layout pass walks far
-            // enough to place newly mounted subtrees, even when view-cache invalidation
-            // truncation is enabled.
-            self.invalidate_with_source_and_detail(
-                parent,
-                Invalidation::HitTest,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::StructuralChildrenChanged,
-            );
+            if skip_redundant_initial_mount_walk {
+                self.bump_command_availability_revision();
+                self.mark_semantics_dirty();
+            } else {
+                // Structural changes must invalidate ancestors so the next layout pass walks far
+                // enough to place newly mounted subtrees, even when view-cache invalidation
+                // truncation is enabled.
+                self.invalidate_with_source_and_detail(
+                    parent,
+                    Invalidation::HitTest,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::StructuralChildrenChanged,
+                );
+            }
         }
     }
 }

@@ -29,7 +29,8 @@ use fret_diag::{
     project_dashboard_summary,
 };
 use fret_diag_protocol::{
-    DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiScriptStageV1,
+    DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiInspectFocusV1,
+    UiInspectHoverV1, UiOverlaySummaryV1, UiRectV1, UiScriptStageV1,
 };
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
@@ -97,6 +98,20 @@ const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
 const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =
     "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke";
 const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "devtools-first-open-smoke";
+const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood";
+const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release";
+const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json";
+const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json";
+const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json";
+const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json";
+const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release";
+const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only";
+const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev";
 const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
 const IMUI_PRODUCT_WORKFLOW_DOC: &str =
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
@@ -230,6 +245,7 @@ struct State {
     last_pick_json: Model<String>,
     last_inspect_hover_json: Model<String>,
     last_inspect_focus_json: Model<String>,
+    last_overlay_summary_json: Model<String>,
     last_script_result_json: Model<String>,
     last_bundle_json: Model<String>,
     last_screenshot_json: Model<String>,
@@ -444,6 +460,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
     let last_inspect_focus_json = app.models_mut().insert(String::new());
+    let last_overlay_summary_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
     let last_screenshot_json = app.models_mut().insert(String::new());
@@ -604,6 +621,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_pick_json,
         last_inspect_hover_json,
         last_inspect_focus_json,
+        last_overlay_summary_json,
         last_script_result_json,
         last_bundle_json,
         last_screenshot_json,
@@ -795,6 +813,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_hover_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_focus_json, Invalidation::Paint);
+    cx.observe_model(&st.last_overlay_summary_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_screenshot_json, Invalidation::Paint);
@@ -989,6 +1008,16 @@ fn header_bar(
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         first_open_rows,
     );
+    let mut dogfood_workflow_rows = Vec::new();
+    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
+        dogfood_workflow_rows.push(cx.text(line));
+    }
+    let dogfood_workflow_panel = diag_section(
+        cx,
+        "Dogfood Workflow",
+        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
+        dogfood_workflow_rows,
+    );
     let mut demo_metrics_debug_rows = Vec::new();
     for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
         demo_metrics_debug_rows.push(cx.text(line));
@@ -1083,6 +1112,7 @@ fn header_bar(
             endpoint_line,
             workspace_line,
             first_open_panel,
+            dogfood_workflow_panel,
             demo_metrics_debug_panel,
             gate_commands_panel,
             connection_actions,
@@ -2512,6 +2542,11 @@ fn right_panel(
         .models()
         .read(&st.last_inspect_focus_json, |v| v.clone())
         .unwrap_or_default();
+    let overlay_summary = cx
+        .app
+        .models()
+        .read(&st.last_overlay_summary_json, |v| v.clone())
+        .unwrap_or_default();
     let script = cx
         .app
         .models()
@@ -2530,16 +2565,12 @@ fn right_panel(
     let regression = regression_panel(cx, st);
     let semantics_node = sem_node_panel(cx, st);
 
-    let inspect = if inspect_hover.trim().is_empty() && inspect_focus.trim().is_empty() {
-        String::new()
-    } else {
-        format!("hover:\n{inspect_hover}\n\nfocus:\n{inspect_focus}")
-    };
+    let inspect = inspect_panel(cx, &inspect_hover, &inspect_focus, &overlay_summary);
 
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items([
-            shadcn::TabsItem::new("inspect", "Inspect", [text_blob(cx, inspect)]),
+            shadcn::TabsItem::new("inspect", "Inspect", [inspect]),
             shadcn::TabsItem::new("pick", "Pick", [text_blob(cx, pick)]),
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
@@ -2555,6 +2586,207 @@ fn right_panel(
         "Latest inspect, script, bundle, screenshot, and regression payloads.",
         vec![tabs],
     )
+}
+
+fn inspect_panel(
+    cx: &mut ElementContext<'_, App>,
+    hover_json: &str,
+    focus_json: &str,
+    overlay_json: &str,
+) -> AnyElement {
+    let hover_bounds = text_blob_sized(
+        cx,
+        inspect_hover_bounds_lines(hover_json).join("\n"),
+        Px(112.0),
+    )
+    .test_id("devtools.inspect.hover_bounds");
+    let overlay_hooks = text_blob_sized(
+        cx,
+        inspect_overlay_hook_lines(hover_json, focus_json, overlay_json).join("\n"),
+        Px(144.0),
+    )
+    .test_id("devtools.inspect.overlay_hooks");
+    let raw_payloads = text_blob_sized(
+        cx,
+        inspect_raw_payload_text(hover_json, focus_json, overlay_json),
+        Px(180.0),
+    )
+    .test_id("devtools.inspect.raw_payloads");
+
+    let hover_section = diag_section(
+        cx,
+        "Live Inspect Hover Bounds",
+        "Structured hovered-node bounds projected from inspect.hover.",
+        vec![hover_bounds],
+    );
+    let overlay_section = diag_section(
+        cx,
+        "Live Inspect Overlay Hooks",
+        "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
+        vec![overlay_hooks],
+    );
+    let raw_section = diag_section(
+        cx,
+        "Raw Inspect Payloads",
+        "Raw inspect.hover, inspect.focus, and overlay.summary payloads remain available for protocol triage.",
+        vec![raw_payloads],
+    );
+
+    ui::v_stack(|_cx| [hover_section, overlay_section, raw_section])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn inspect_hover_bounds_lines(hover_json: &str) -> Vec<String> {
+    let Some(payload) = parse_inspect_json::<UiInspectHoverV1>(hover_json) else {
+        return vec![
+            "hover: <none>".to_string(),
+            "hover bounds: <none>".to_string(),
+        ];
+    };
+
+    let mut lines = vec![format!("hover window={}", payload.window)];
+    lines.push(inspect_rect_line("viewport", &payload.viewport_bounds));
+
+    let Some(node) = payload.hovered else {
+        lines.push("hovered node: <none>".to_string());
+        lines.push("hover bounds: <none>".to_string());
+        return lines;
+    };
+
+    lines.push(inspect_node_line("hovered node", &node));
+    lines.push(inspect_rect_line("hover bounds", &node.bounds));
+    lines.push(format!("selector_json: {}", node.selector_json));
+    lines
+}
+
+fn inspect_overlay_hook_lines(
+    hover_json: &str,
+    focus_json: &str,
+    overlay_json: &str,
+) -> Vec<String> {
+    let hover = parse_inspect_json::<UiInspectHoverV1>(hover_json);
+    let focus = parse_inspect_json::<UiInspectFocusV1>(focus_json);
+    let overlay = parse_inspect_json::<UiOverlaySummaryV1>(overlay_json);
+
+    let mut lines = Vec::new();
+    if let Some(hover) = hover.as_ref() {
+        lines.push(inspect_overlay_hook_line("hover overlay hook", &hover.overlay_hook));
+    } else {
+        lines.push("hover overlay hook: <none>".to_string());
+    }
+    if let Some(focus) = focus.as_ref() {
+        lines.push(inspect_overlay_hook_line("focus overlay hook", &focus.overlay_hook));
+        if let Some(summary) = focus.summary.as_deref() {
+            lines.push(format!("focus summary: {summary}"));
+        }
+        if let Some(path) = focus.path.as_deref() {
+            lines.push(format!("focus path: {path}"));
+        }
+    } else {
+        lines.push("focus overlay hook: <none>".to_string());
+    }
+
+    if let Some(overlay) = overlay {
+        lines.push(format!(
+            "overlay barrier root: {}",
+            inspect_opt_u64(overlay.barrier_root)
+        ));
+        lines.push(format!(
+            "overlay focus barrier root: {}",
+            inspect_opt_u64(overlay.focus_barrier_root)
+        ));
+        lines.push(format!(
+            "overlay blocking roots: {}",
+            overlay.blocking_roots.len()
+        ));
+        for root in overlay.blocking_roots.iter().take(4) {
+            lines.push(format!(
+                "blocking root={} z={} visible={} hit_testable={}",
+                root.root, root.z_index, root.visible, root.hit_testable
+            ));
+        }
+        if let Some(root) = overlay.topmost_interactive_root {
+            lines.push(format!(
+                "topmost interactive root={} z={} blocks_underlay_input={}",
+                root.root, root.z_index, root.blocks_underlay_input
+            ));
+        } else {
+            lines.push("topmost interactive root: <none>".to_string());
+        }
+    } else {
+        lines.push("overlay summary: <none>".to_string());
+    }
+
+    lines
+}
+
+fn inspect_raw_payload_text(hover_json: &str, focus_json: &str, overlay_json: &str) -> String {
+    if hover_json.trim().is_empty() && focus_json.trim().is_empty() && overlay_json.trim().is_empty()
+    {
+        return String::new();
+    }
+    format!("hover:\n{hover_json}\n\nfocus:\n{focus_json}\n\noverlay.summary:\n{overlay_json}")
+}
+
+fn parse_inspect_json<T: serde::de::DeserializeOwned>(text: &str) -> Option<T> {
+    if text.trim().is_empty() {
+        return None;
+    }
+    serde_json::from_str(text).ok()
+}
+
+fn inspect_node_line(label: &str, node: &fret_diag_protocol::UiInspectNodeSummaryV1) -> String {
+    let test_id = node.test_id.as_deref().unwrap_or("<none>");
+    let root = node
+        .root
+        .map(|root| root.to_string())
+        .unwrap_or_else(|| "<none>".to_string());
+    let root_z = node
+        .root_z_index
+        .map(|z| z.to_string())
+        .unwrap_or_else(|| "<none>".to_string());
+    format!(
+        "{label}: node={} role={} test_id={} root={} root_z_index={}",
+        node.node_id, node.role, test_id, root, root_z
+    )
+}
+
+fn inspect_rect_line(label: &str, rect: &UiRectV1) -> String {
+    format!(
+        "{label}: x={:.1} y={:.1} w={:.1} h={:.1}",
+        rect.x_px, rect.y_px, rect.w_px, rect.h_px
+    )
+}
+
+fn inspect_overlay_hook_line(
+    label: &str,
+    hook: &fret_diag_protocol::UiInspectOverlayHookV1,
+) -> String {
+    let target = hook
+        .target_node_id
+        .map(|node| node.to_string())
+        .unwrap_or_else(|| "<none>".to_string());
+    let bounds = hook
+        .target_bounds
+        .as_ref()
+        .map(|rect| inspect_rect_line("target bounds", rect))
+        .unwrap_or_else(|| "target bounds: <none>".to_string());
+    format!(
+        "{label}: kind={} space={} target_node={} {} {}",
+        hook.kind,
+        hook.coordinate_space,
+        target,
+        bounds,
+        inspect_rect_line("viewport", &hook.viewport_bounds)
+    )
+}
+
+fn inspect_opt_u64(value: Option<u64>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "<none>".to_string())
 }
 
 fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
@@ -6248,6 +6480,32 @@ fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
     ]
 }
 
+fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        format!("dogfood workflow: {DEVTOOLS_DOGFOOD_WORKFLOW_ID}"),
+        format!("dogfood docs: {DEVTOOLS_GUI_BRANCH_DOC}"),
+        format!("artifacts root: {artifacts_root}"),
+        format!("open ui gallery: {DEVTOOLS_DOGFOOD_TARGET_COMMAND}"),
+        "pick target: enable inspect -> Pick -> click a Button page control".to_string(),
+        "preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}".to_string(),
+        format!("base script: {DEVTOOLS_DOGFOOD_BASE_SCRIPT}"),
+        format!("button script: {DEVTOOLS_DOGFOOD_BUTTON_SCRIPT}"),
+        format!("generate script from pick: {DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND}"),
+        format!("apply pick to script: {DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND}"),
+        format!("run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}"),
+        format!("pack selected bundle: {DEVTOOLS_DOGFOOD_PACK_COMMAND}"),
+        format!("open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}"),
+        "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
+            .to_string(),
+    ]
+}
+
 fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -6777,6 +7035,119 @@ mod tests {
     }
 
     #[test]
+    fn inspect_hover_bounds_lines_project_bounds_and_selector() {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "hovered": {
+                "node_id": 42,
+                "role": "button",
+                "test_id": "save",
+                "selector_json": "{\"kind\":\"test_id\",\"id\":\"save\"}",
+                "bounds": { "x_px": 12.0, "y_px": 24.0, "w_px": 96.0, "h_px": 32.0 },
+                "root": 1,
+                "root_z_index": 3
+            },
+            "overlay_hook": {
+                "kind": "hovered-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+                "target_bounds": { "x_px": 12.0, "y_px": 24.0, "w_px": 96.0, "h_px": 32.0 },
+                "target_node_id": 42
+            }
+        })
+        .to_string();
+
+        let lines = inspect_hover_bounds_lines(&payload).join("\n");
+        assert!(lines.contains("hover window=7"));
+        assert!(lines.contains("hovered node: node=42 role=button test_id=save"));
+        assert!(lines.contains("hover bounds: x=12.0 y=24.0 w=96.0 h=32.0"));
+        assert!(lines.contains("selector_json: {\"kind\":\"test_id\",\"id\":\"save\"}"));
+    }
+
+    #[test]
+    fn inspect_hover_bounds_lines_missing_bounds_returns_none() {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "hovered": {
+                "node_id": 42,
+                "role": "button",
+                "selector_json": "{\"kind\":\"node_id\",\"node\":42}"
+            },
+            "overlay_hook": {
+                "kind": "hovered-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
+            }
+        })
+        .to_string();
+
+        let lines = inspect_hover_bounds_lines(&payload).join("\n");
+        assert_eq!(lines, "hover: <none>\nhover bounds: <none>");
+    }
+
+    #[test]
+    fn inspect_overlay_hook_lines_project_overlay_summary() {
+        let hover = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "hovered": null,
+            "overlay_hook": {
+                "kind": "hovered-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
+            }
+        })
+        .to_string();
+        let focus = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "focused": null,
+            "summary": "focus: button node=42 test_id=save",
+            "path": "window > button(save)",
+            "overlay_hook": {
+                "kind": "focused-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
+            }
+        })
+        .to_string();
+        let overlay = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "barrier_root": 9,
+            "focus_barrier_root": 10,
+            "blocking_roots": [
+                { "root": 9, "visible": true, "blocks_underlay_input": true, "hit_testable": true, "z_index": 12 }
+            ],
+            "topmost_interactive_root": {
+                "root": 9,
+                "visible": true,
+                "blocks_underlay_input": true,
+                "hit_testable": true,
+                "z_index": 12
+            }
+        })
+        .to_string();
+
+        let lines = inspect_overlay_hook_lines(&hover, &focus, &overlay).join("\n");
+        assert!(lines.contains("hover overlay hook: kind=hovered-node-bounds"));
+        assert!(lines.contains("focus summary: focus: button node=42 test_id=save"));
+        assert!(lines.contains("overlay barrier root: 9"));
+        assert!(lines.contains("overlay blocking roots: 1"));
+        assert!(lines.contains("topmost interactive root=9 z=12"));
+    }
+
+    #[test]
     fn devtools_first_open_lines_surface_canonical_paths() {
         let lines = devtools_first_open_lines("target/fret-diag");
         let text = lines.join("\n");
@@ -6810,6 +7181,38 @@ mod tests {
         ));
         assert!(text.contains(
             "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+        ));
+    }
+
+    #[test]
+    fn devtools_dogfood_workflow_lines_surface_ui_gallery_loop() {
+        let lines = devtools_dogfood_workflow_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("dogfood workflow: ui-gallery-button-dogfood"));
+        assert!(text.contains(
+            "dogfood docs: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        ));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains("open ui gallery: cargo run -p fret-ui-gallery --release"));
+        assert!(
+            text.contains("pick target: enable inspect -> Pick -> click a Button page control")
+        );
+        assert!(
+            text.contains("preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}")
+        );
+        assert!(text.contains("base script: tools/diag-scripts/ui-gallery-lite-smoke.json"));
+        assert!(text.contains(
+            "button script: tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json"
+        ));
+        assert!(text.contains("generate script from pick: cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json"));
+        assert!(text.contains("apply pick to script: cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json"));
+        assert!(text.contains("run and pack: cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release"));
+        assert!(text.contains(
+            "pack selected bundle: cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only"
+        ));
+        assert!(text.contains("open viewer: pnpm -C tools/fret-bundle-viewer dev"));
+        assert!(text.contains(
+            "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
         ));
     }
 

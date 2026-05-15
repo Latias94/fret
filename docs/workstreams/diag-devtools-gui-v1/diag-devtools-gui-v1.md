@@ -124,6 +124,20 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue
   reports and AI-assisted triage the exact payload shown in the panel.
+- The live inspect path now has a real minimal WS payload loop instead of only a GUI raw-JSON
+  receiver. `fret-diag-protocol` owns `UiInspectHoverV1`, `UiInspectFocusV1`, overlay hook, and
+  `UiOverlaySummaryV1` types; `fret-bootstrap` publishes changed `inspect.hover`,
+  `inspect.focus`, and `overlay.summary` payloads with hovered/focused node bounds, viewport
+  bounds, barrier roots, blocking roots, and topmost interactive root hints; `fret-devtools`
+  projects them into `Live Inspect Hover Bounds`, `Live Inspect Overlay Hooks`, and raw payload
+  panels.
+- The GUI first-open shell now includes a `Dogfood Workflow` block for the concrete
+  `ui-gallery-button-dogfood` loop: open `fret-ui-gallery`, pick a Button-page selector, generate
+  or apply the selector into a script, run with `diag run --pack`, optionally pack a selected
+  bundle, and open `tools/fret-bundle-viewer`. The block references
+  `tools/diag-scripts/ui-gallery-lite-smoke.json` and
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json` so the
+  visible GUI path stays tied to existing script artifacts instead of a GUI-only workflow model.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.
@@ -448,6 +462,12 @@ For real-time UX, we push only the minimum stable summary required by the UI:
   - same shape as hover, plus focus-specific flags.
 - `overlay.summary`:
   - barrier root id, count of blocking roots, topmost interactive root hints.
+
+Implementation note (2026-05-15): the concrete v1 structs live in `crates/fret-diag-protocol`.
+`inspect.hover` and `inspect.focus` carry an `overlay_hook` in window-local logical pixels so the
+GUI can project a viewport overlay without asking the runtime to draw into the target app. The
+runtime sends these payloads only when their stable JSON changes, keeping hover traffic lossy and
+bounded under normal pointer movement.
 
 Full evidence remains bundle-based (`capture_bundle`).
 

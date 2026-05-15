@@ -38,7 +38,16 @@ Status: Active
 
 - Keep contained view-cache dirty work inside the contained relayout + nearest-scroll follow-up
   path instead of promoting clean scroll direct child roots to `Layout` invalidation.
+- Keep post-layout overflow observation authoritative when one direct child remains dirty and a
+  different child has descendant-only shrink work; synthetic scroll content roots must not keep
+  stale pinned extents ahead of the observed child frontier.
+- Preserve non-retained virtual-list view-cache rerender pressure when wheel scrolling escapes the
+  rendered visible range, while retained virtual lists continue using the retained reconcile path
+  without notifying the cache root.
 - Profile the remaining direct-child-invalidated / resize-measure path separately before attempting
   another layout skip or apply-only branch.
+  - 2026-05-15 normalized view-cache resize-stress attribution no longer shows
+    direct-child-invalidated / resize-measure as the steady-frame bottleneck; worst considered
+    frames are paint-dominant with bounded layout solves and no invalidation walks.
 - Keep representative `diag perf` samples normalized; repair stale prewarm command forms before
   using them as p95 baselines.

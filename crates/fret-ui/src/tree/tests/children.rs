@@ -142,6 +142,43 @@ fn set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_di
 }
 
 #[test]
+fn set_children_in_mount_new_dirty_detached_parent_skips_redundant_structural_walk() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.begin_debug_frame_if_needed(FrameId(1));
+
+    let parent = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    assert!(ui.nodes[parent].invalidation.layout);
+    assert!(ui.nodes[parent].invalidation.paint);
+    assert!(ui.nodes[parent].invalidation.hit_test);
+    assert_eq!(ui.node_parent(parent), None);
+    assert_eq!(ui.node_parent(child), None);
+    assert_eq!(ui.nodes[parent].subtree_layout_dirty_count, 1);
+
+    let walks_before = ui.debug_invalidation_walks().len();
+
+    ui.set_children_in_mount(parent, vec![child]);
+
+    assert_eq!(ui.node_parent(child), Some(parent));
+    assert_eq!(ui.nodes[parent].children, vec![child]);
+    assert!(ui.nodes[parent].invalidation.layout);
+    assert!(ui.nodes[parent].invalidation.paint);
+    assert!(ui.nodes[parent].invalidation.hit_test);
+    assert_eq!(ui.nodes[parent].subtree_layout_dirty_count, 2);
+
+    let new_walks = &ui.debug_invalidation_walks()[walks_before..];
+    assert!(
+        new_walks.iter().all(|w| {
+            w.detail != UiDebugInvalidationDetail::StructuralChildrenChanged || w.root != parent
+        }),
+        "new mount-time dirty parent should not emit a redundant structural invalidation walk; walks={new_walks:?}"
+    );
+}
+
+#[test]
 fn add_child_reparents_from_old_parent_without_leaving_stale_child_edges() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());

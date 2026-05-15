@@ -337,6 +337,27 @@ impl<H: UiHost> UiTree<H> {
                 window_range: update.window_range,
             });
 
+        self.set_prepaint_output(
+            record.node,
+            VirtualListPrepaintWindowOutput {
+                element: inputs.element,
+                axis: inputs.axis,
+                len: inputs.len,
+                items_revision: inputs.items_revision,
+                measure_mode: inputs.measure_mode,
+                overscan: inputs.overscan,
+                estimate_row_height: inputs.estimate_row_height,
+                gap: inputs.gap,
+                scroll_margin: inputs.scroll_margin,
+                visible_range: update.visible_range,
+                window_range: update.window_range,
+                viewport: update.viewport,
+                offset: update.offset,
+                #[cfg(test)]
+                window_shift_kind: update.window_shift_kind,
+            },
+        );
+
         if self.debug_enabled {
             let policy_key = {
                 let mut b = CacheKeyBuilder::new();

@@ -4,7 +4,7 @@ use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiAc
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RingPlacement, RingStyle, ScrollAxis,
-    ScrollProps, SemanticsDecoration, SemanticsProps, SpacerProps, VirtualListOptions,
+    ScrollProps, SemanticsDecoration, SemanticsProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{
@@ -556,7 +556,8 @@ pub struct TableViewOutput {
 ///
 /// These ids are intended for scripted diagnostics and geometry assertions:
 /// - `header_row_test_id` targets the fixed header viewport row.
-/// - `header_cell_test_id_prefix` targets table-owned header cell layout wrappers.
+/// - `header_cell_test_id_prefix` targets stable header-cell anchors for scripted diagnostics.
+///   Sortable retained headers attach this id to the fill pressable so clicks hit the action owner.
 /// - `row_test_id_prefix` targets table-owned body row / cell layout wrappers.
 #[derive(Debug, Clone, Default)]
 pub struct TableDebugIds {
@@ -578,6 +579,7 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect, TextWrap};
     use fret_ui::ThemeConfig;
+    use fret_ui::element::SpacerProps;
     use fret_ui::{Theme, UiTree, VirtualListScrollHandle};
 
     #[test]
@@ -765,6 +767,222 @@ mod tests {
         apply_single_sort_toggle(&mut state, &id);
         assert_eq!(state.pagination.page_index, 0);
         assert!(state.sorting.is_empty());
+    }
+
+    #[test]
+    fn table_virtualized_retained_header_debug_ids_click_sort_actions() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+        let data: Arc<[u32]> = Arc::from(vec![2u32, 1, 3]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![
+            {
+                let mut col =
+                    ColumnDef::new("name").sort_by(|left: &u32, right: &u32| left.cmp(right));
+                col.size = 120.0;
+                col.enable_resizing = false;
+                col
+            },
+            {
+                let mut col =
+                    ColumnDef::new("value").sort_by(|left: &u32, right: &u32| left.cmp(right));
+                col.size = 120.0;
+                col.enable_resizing = false;
+                col
+            },
+        ]);
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(220.0)),
+        );
+        let mut services = FakeServices;
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let accessory_state = state.clone();
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    TableViewProps {
+                        draw_frame: false,
+                        enable_column_resizing: false,
+                        header_height: Some(Px(40.0)),
+                        row_height: Some(Px(40.0)),
+                        ..Default::default()
+                    },
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    Some(Arc::new(
+                        move |cx: &mut dyn ElementContextAccess<'_, App>, col: &ColumnDef<u32>| {
+                            let col_id = col.id.clone();
+                            let accessory_state = accessory_state.clone();
+                            cx.elements().pressable(
+                                PressableProps {
+                                    layout: LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Px(Px(24.0)),
+                                            height: Length::Px(Px(24.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        test_id: Some(Arc::<str>::from(format!(
+                                            "table-retained-sort-menu-{}",
+                                            col_id.as_ref()
+                                        ))),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |cx, _| {
+                                    cx.pressable_update_model(&accessory_state, move |st| {
+                                        st.column_visibility.insert(col_id.clone(), false);
+                                    });
+                                    vec![cx.spacer(SpacerProps::default())]
+                                },
+                            )
+                        },
+                    )),
+                    Arc::new(
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         col: &ColumnDef<u32>,
+                         row: &u32| {
+                            let cx = cx.elements();
+                            cx.text(format!("{}-{row}", col.id.as_ref()))
+                        },
+                    ),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-sort-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-sort-row-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        let pump = |ui: &mut UiTree<App>,
+                    app: &mut App,
+                    services: &mut FakeServices,
+                    root: &mut fret_core::NodeId| {
+            for _ in 0..2 {
+                *root = render(ui, app, services);
+                ui.set_root(*root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+                let mut scene = fret_core::Scene::default();
+                ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            }
+        };
+
+        let click_header = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut FakeServices,
+                            test_id: &str,
+                            modifiers: Modifiers| {
+            let snap = ui
+                .semantics_snapshot()
+                .expect("expected a retained table semantics snapshot");
+            let bounds = snap
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+                .map(|node| node.bounds)
+                .unwrap_or_else(|| panic!("expected retained table header node `{test_id}`"));
+            let click_pos = Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+            );
+
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Down {
+                    position: click_pos,
+                    button: MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Up {
+                    position: click_pos,
+                    button: MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    is_click: true,
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+        };
+
+        let mut root = fret_core::NodeId::default();
+        pump(&mut ui, &mut app, &mut services, &mut root);
+
+        click_header(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "table-retained-sort-header-name",
+            Modifiers::default(),
+        );
+        let sorting = app
+            .models()
+            .read(&state, |st| st.sorting.clone())
+            .expect("expected table state after first header click");
+        assert_eq!(sorting.len(), 1);
+        assert_eq!(sorting[0].column.as_ref(), "name");
+        assert!(!sorting[0].desc);
+
+        pump(&mut ui, &mut app, &mut services, &mut root);
+        click_header(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "table-retained-sort-header-value",
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        );
+        let sorting = app
+            .models()
+            .read(&state, |st| st.sorting.clone())
+            .expect("expected table state after second header click");
+        assert_eq!(sorting.len(), 2);
+        assert_eq!(sorting[0].column.as_ref(), "name");
+        assert!(!sorting[0].desc);
+        assert_eq!(sorting[1].column.as_ref(), "value");
+        assert!(!sorting[1].desc);
     }
 
     #[test]
@@ -3646,14 +3864,15 @@ where
         .build();
     let core_snapshot = sizing_table.core_model_snapshot();
 
-    let columns: Arc<[ColumnDef<TData>]> = Arc::from(sizing_table.columns().to_vec());
+    let col_by_id_for_layout: std::collections::HashMap<&str, &ColumnDef<TData>> =
+        columns.iter().map(|c| (c.id.as_ref(), c)).collect();
 
     let visible_columns: Arc<[ColumnDef<TData>]> = Arc::from(
         core_snapshot
             .leaf_columns
             .visible
             .iter()
-            .filter_map(|id| sizing_table.column(id.as_ref()).cloned())
+            .filter_map(|id| col_by_id_for_layout.get(id.as_ref()).copied().cloned())
             .collect::<Vec<_>>(),
     );
 
@@ -3869,12 +4088,17 @@ where
                                                 ..Default::default()
                                             },
                                             move |cx| {
-                                                vec![cx.pressable(
+                                                let accessory =
+                                                    header_accessory_at.as_ref().map(|f| f(cx, col));
+                                                let sort_action = cx.pressable(
                                                     PressableProps {
                                                         layout: {
                                                             let mut layout = LayoutStyle::default();
                                                             layout.size.width = Length::Fill;
                                                             layout.size.height = Length::Fill;
+                                                            layout.flex.grow = 1.0;
+                                                            layout.flex.shrink = 1.0;
+                                                            layout.flex.basis = Length::Px(Px(0.0));
                                                             layout
                                                         },
                                                         enabled,
@@ -3991,33 +4215,22 @@ where
                                                                 },
                                                                 ..Default::default()
                                                             },
-                                                            move |_cx| {
-                                                                let accessory =
-                                                                    header_accessory_at.as_ref().map(|f| f(_cx, col));
-                                                                match accessory {
-                                                                    None => {
-                                                                        vec![_cx.text(header_text.as_ref())]
-                                                                    }
-                                                                    Some(accessory) => {
-                                                                        vec![ui::h_row(move |_cx| {
-                                                                            [
-                                                                                _cx.text(header_text.as_ref()),
-                                                                                _cx.spacer(
-                                                                                    SpacerProps::default(),
-                                                                                ),
-                                                                                accessory,
-                                                                            ]
-                                                                        })
-                                                                        .gap(Space::N1)
-                                                                        .justify_start()
-                                                                        .items_center()
-                                                                        .into_element(_cx)]
-                                                                    }
-                                                                }
-                                                            },
+                                                            move |_cx| vec![_cx.text(header_text.as_ref())],
                                                         )]
                                                     },
-                                                )]
+                                                );
+
+                                                match accessory {
+                                                    None => vec![sort_action],
+                                                    Some(accessory) => vec![
+                                                        ui::h_row(move |_cx| vec![sort_action, accessory])
+                                                            .gap(Space::N1)
+                                                            .justify_start()
+                                                            .items_center()
+                                                            .layout(LayoutRefinement::default().w_full())
+                                                            .into_element(cx),
+                                                    ],
+                                                }
                                             },
                                         )
                                     })
@@ -5974,6 +6187,7 @@ where
                                                                                             role: Some(
                                                                                                 SemanticsRole::Button,
                                                                                             ),
+                                                                                            test_id: explicit_test_id.clone(),
                                                                                         ..Default::default()
                                                                                     },
                                                                                     ..Default::default()
@@ -6063,7 +6277,7 @@ where
                                                                                                     .borrow_mut() =
                                                                                                     table_wrapper_test_id(
                                                                                                         &mut children,
-                                                                                                        explicit_test_id.clone(),
+                                                                                                        None,
                                                                                                     );
                                                                                                 children
                                                                                             },

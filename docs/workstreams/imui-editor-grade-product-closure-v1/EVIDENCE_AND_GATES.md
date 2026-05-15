@@ -1263,3 +1263,77 @@ completed successfully when run sequentially; `cargo clippy -p fret-diag -p fret
 --all-targets -- -D warnings`, `python tools/check_layering.py`, and `git diff --check` passed.
 `git diff --check` reported only the existing CRLF normalization warning for
 `tools/diag_gate_imui_p2_devtools_first_open.py`.
+
+## DevTools live inspect overlay payload closure - 2026-05-15 follow-up
+
+Scope: close the M6 live-inspect gap without widening `fret-imui` or moving interaction policy into
+`fret-ui`. The fix makes the existing `inspect.hover` / `inspect.focus` receiver contract real and
+adds the missing overlay hook/summary projection:
+
+- `crates/fret-diag-protocol/src/lib.rs` now owns `UiInspectHoverV1`, `UiInspectFocusV1`,
+  `UiInspectNodeSummaryV1`, `UiInspectOverlayHookV1`, `UiOverlayRootHintV1`, and
+  `UiOverlaySummaryV1`.
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs` publishes changed
+  `inspect.hover`, `inspect.focus`, and `overlay.summary` payloads over the diagnostics WS bridge,
+  including hovered/focused node bounds, viewport bounds, barrier roots, blocking roots, and
+  topmost interactive root hints.
+- `apps/fret-devtools/src/native.rs` now renders structured `Live Inspect Hover Bounds`,
+  `Live Inspect Overlay Hooks`, and raw inspect payload panels instead of only showing hover/focus
+  JSON blobs.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` now source-check the protocol/runtime/GUI split so the
+  first-open gates catch future raw-JSON-only regressions.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-diag-protocol live_inspect_payloads_roundtrip_bounds_and_overlay_summary --no-fail-fast
+cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics-ws" inspect_node_summary_v1_includes_bounds_and_root_hint overlay_summary_v1_reports_barrier_and_blocking_roots --no-fail-fast
+cargo nextest run -p fret-devtools inspect_hover_bounds_lines_project_bounds_and_selector inspect_hover_bounds_lines_missing_bounds_returns_none inspect_overlay_hook_lines_project_overlay_summary --no-fail-fast
+cargo clippy -p fret-bootstrap --features "ui-app-driver diagnostics-ws" --lib -- -D warnings
+cargo clippy -p fret-devtools -p fret-diag-protocol --all-targets -- -D warnings
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/check_layering.py
+git diff --check
+```
+
+Result: passed. The protocol nextest gate reported `1 test run: 1 passed`; the bootstrap focused
+gate reported `2 tests run: 2 passed`; the DevTools focused gate reported `3 tests run: 3 passed`;
+both discovery/source gates completed successfully; layering and diff whitespace checks passed.
+Note: the full bootstrap test-target clippy command
+`cargo clippy -p fret-bootstrap --features "ui-app-driver diagnostics-ws" --all-targets -- -D warnings`
+currently also hits pre-existing `items_after_test_module` warnings in diagnostics script-step test
+modules; this slice uses the lib clippy gate for the changed runtime path and leaves that broader
+test-target lint debt as a separate cleanup input.
+
+## DevTools UI gallery dogfood workflow closure - 2026-05-15 follow-up
+
+Scope: close the M6 DevTools dogfood workflow gap with one concrete authoring loop that stays on
+shared diagnostics contracts instead of adding a GUI-only campaign model.
+
+- `apps/fret-devtools/src/native.rs` now renders a `Dogfood Workflow` block in the first-open
+  shell. The block names the `ui-gallery-button-dogfood` path: open `fret-ui-gallery`, pick a
+  Button-page selector, generate or apply the selector into a script, run with `diag run --pack`,
+  pack a selected bundle, and open `tools/fret-bundle-viewer`.
+- The visible path references existing script evidence:
+  `tools/diag-scripts/ui-gallery-lite-smoke.json` and
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json`.
+- `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md` now records the
+  same concrete loop, and
+  `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` marks the M6 dogfood item
+  complete.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check the GUI surface and canonical command
+  markers so future edits do not silently hide the dogfood route.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_dogfood_workflow_lines_surface_ui_gallery_loop --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+```
+
+Result: passed. The `fret-devtools` focused nextest gate reported `1 test run: 1 passed`; both
+DevTools discovery/source gates completed successfully.

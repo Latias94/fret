@@ -47,6 +47,12 @@ pub struct UiDiagnosticsService {
     pending_devtools_hit_test_explain:
         Option<ui_diagnostics_devtools_ws::PendingDevtoolsHitTestExplainRequest>,
     #[cfg(feature = "diagnostics-ws")]
+    devtools_last_inspect_hover_json: HashMap<AppWindowId, String>,
+    #[cfg(feature = "diagnostics-ws")]
+    devtools_last_inspect_focus_json: HashMap<AppWindowId, String>,
+    #[cfg(feature = "diagnostics-ws")]
+    devtools_last_overlay_summary_json: HashMap<AppWindowId, String>,
+    #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
 }
 
@@ -1100,6 +1106,12 @@ impl UiDiagnosticsService {
             }
         }
         self.inspector.clear_for_window(window);
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            self.devtools_last_inspect_hover_json.remove(&window);
+            self.devtools_last_inspect_focus_json.remove(&window);
+            self.devtools_last_overlay_summary_json.remove(&window);
+        }
     }
 
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
@@ -1283,6 +1295,14 @@ impl UiDiagnosticsService {
         }
         self.apply_inspect_navigation(window, raw_semantics, element_runtime);
         self.update_inspect_focus_lines(window, raw_semantics, element_runtime);
+        #[cfg(feature = "diagnostics-ws")]
+        self.ws_publish_live_inspect_payloads(
+            window,
+            bounds,
+            scale_factor,
+            raw_semantics,
+            last_pointer_position,
+        );
 
         let semantics = (want_debug_snapshot && self.cfg.capture_semantics)
             .then_some(raw_semantics)
