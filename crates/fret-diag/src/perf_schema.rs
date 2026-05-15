@@ -9,6 +9,9 @@ pub(crate) const PERF_GATE_SCHEMA_VERSION: u32 = 1;
 pub(crate) const PERF_THRESHOLDS_KIND: &str = "perf_thresholds";
 pub(crate) const PERF_HINTS_KIND: &str = "perf_hints";
 
+pub(crate) const PERF_TRACE_SCHEMA_VERSION: u32 = 1;
+pub(crate) const PERF_TRACE_CHROME_KIND: &str = "perf_trace_chrome";
+
 pub(crate) fn schema_policy_json() -> serde_json::Value {
     serde_json::json!({
         "compatibility": "additive_only",

@@ -77,15 +77,14 @@ Shipped in this workstream (commit-addressable, additive changes):
 4. **M3**: explainability + optional gate
    - `triage.json` includes rule-based hints and unit-cost estimates.
    - `fretboard-dev diag perf ... --check-perf-hints` can turn selected hints into an explicit CI-style gate (`check.perf_hints.json`).
+5. **Schema + field inventory hardening**
+   - Stats, stats diff, triage, perf threshold, perf hint, and Chrome trace artifacts now emit `kind`,
+     `schema_version`, and `schema_policy.compatibility=additive_only`.
+   - The field inventory is the current reviewer entrypoint for perf artifact keys and measurement ownership.
 
 Remaining gaps / follow-ups:
 
-- Perf schema versioning for stats, stats diff, triage JSON, and gate artifacts is now in place.
-  These outputs carry `schema_policy.compatibility=additive_only`; removals, semantic renames, or
-  type changes require either a schema bump or a documented migration/compatibility window.
 - Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
-- A field inventory doc (keys + meaning + where measured) to reduce tribal knowledge:
-  - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
 
 ## Proposed architecture (v1)
 

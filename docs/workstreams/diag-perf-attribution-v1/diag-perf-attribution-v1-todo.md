@@ -56,8 +56,14 @@
   - `check.perf_thresholds.json` and `check.perf_hints.json` now share `PERF_GATE_SCHEMA_VERSION`.
   - Both gate artifacts emit `schema_policy.compatibility=additive_only`.
   - Gate: `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
+- [x] Add schema policy to Chrome trace artifacts.
+  - `trace.chrome.json` now emits `kind=perf_trace_chrome`, `schema_version`, `schema_policy`, and
+    `source_bundle_schema_version`.
+  - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
   - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
 - [x] Ensure additive-only changes unless a migration plan is documented.
-  - `schema_policy.compatibility=additive_only` is emitted by stats, stats diff, triage JSON, and perf gate artifacts.
-  - Field removals, semantic renames, or type changes now require either a schema bump or a documented compatibility window.
+  - `schema_policy.compatibility=additive_only` is emitted by stats, stats diff, triage JSON, perf gate artifacts, and
+    Chrome trace artifacts.
+  - Field removals, semantic renames, or type changes now require either a schema bump or a documented compatibility
+    window.
