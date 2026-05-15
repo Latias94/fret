@@ -88,6 +88,11 @@ Shipped in this workstream (commit-addressable, additive changes):
 Remaining gaps / follow-ups:
 
 - Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
+  - 2026-05-16: the Chrome trace exporter can merge the additive
+    `debug.extensions["fret.perf.spans.v1"]` payload into `traceEvents` and reports
+    `real_spans_included=true` when such spans are present.
+  - Still remaining: an explicit runtime/app writer that emits `fret.perf.spans.v1` only when
+    detailed span capture is requested.
 
 ## Proposed architecture (v1)
 

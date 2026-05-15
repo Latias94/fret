@@ -35,7 +35,8 @@
 - [x] Add a `--trace` toggle to `diag perf` that:
   - [x] exports a Chrome trace JSON (bundle-derived synthetic timeline),
   - [x] records the artifact in a run manifest (`manifest.json` file index).
-- [ ] Future: enable tracing spans (not just bundle-derived phases) when explicitly requested.
+- [ ] Future: emit runtime/app `fret.perf.spans.v1` spans when explicitly requested; the Chrome
+      trace exporter can already merge the extension payload when a bundle contains it.
 
 ## P3 (M3): optional perf hints gate
 
@@ -59,7 +60,13 @@
 - [x] Add schema policy to Chrome trace artifacts.
   - `trace.chrome.json` now emits `kind=perf_trace_chrome`, `schema_version`, `schema_policy`,
     `source_bundle_schema_version`, `trace_source=bundle_synthetic_phases`, and `real_spans_included=false`.
-  - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
+  - The trace exporter now also consumes the additive `debug.extensions["fret.perf.spans.v1"]`
+    payload when present, marking `real_spans_included=true`, switching `trace_source` to
+    `bundle_synthetic_phases_with_extension_spans`, and appending those frame-relative spans to
+    Chrome `traceEvents`.
+  - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
+  - Runtime-wide span capture is still not claimed complete; the remaining work is the P2
+    explicit opt-in writer for `fret.perf.spans.v1`.
 - [x] Keep perf regression summary rows actionable for attribution follow-ups.
   - New `diag perf` regression items now write `bundle_dir` derived from their `bundle_artifact`.
   - The shared regression-summary drill-down also recovers bundle roots from older

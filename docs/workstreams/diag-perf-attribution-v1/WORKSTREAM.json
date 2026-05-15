@@ -43,7 +43,7 @@
     },
     {
       "name": "perf-trace-artifact-schema",
-      "command": "cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast"
+      "command": "cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast"
     },
     {
       "name": "perf-regression-summary-attribution",

@@ -64,8 +64,28 @@ schema:
   - `kind`: `perf_trace_chrome`
   - `schema_version`: `1`
   - `source_bundle_schema_version`: copied from the source bundle when available.
-  - `trace_source`: `bundle_synthetic_phases`
-  - `real_spans_included`: `false`
+  - `trace_source`: `bundle_synthetic_phases` unless the source bundle also contains supported
+    real-span extensions, then `bundle_synthetic_phases_with_extension_spans`.
+  - `real_spans_included`: `false` for synthetic-only traces, `true` when supported real spans
+    were merged into `traceEvents`.
+  - `real_span_extension_keys`: sorted list of debug-extension keys that contributed real spans.
+  - `real_span_event_count`: count of merged real-span events.
+
+Supported real-span extension payload:
+
+- `debug.extensions["fret.perf.spans.v1"]`
+  - `schema_version`: `"v1"`
+  - `spans`: bounded array of frame-relative spans.
+  - Each span supports:
+    - `name`: Chrome trace event name.
+    - `cat` or `category`: Chrome trace category.
+    - `start_us` (or `ts_us`): microseconds after the synthetic frame start.
+    - `dur_us`: span duration in microseconds; zero-duration spans are ignored.
+    - `tid`: optional Chrome trace thread id override; defaults to the diagnostics window id.
+    - `args`: optional JSON payload nested under `traceEvents[].args.span_args`.
+
+This is an additive adapter only: the exporter consumes the extension when present, but runtime-wide
+real-span capture still needs an explicit opt-in writer in the app/runtime owner layer.
 
 All six outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
 allowed inside the current schema version. Field removals, semantic renames, or type changes require
@@ -84,7 +104,7 @@ Evidence anchors:
 - Gate artifact focused gate:
   `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
 - Trace artifact focused gate:
-  `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
+  `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
 
 ## Core timing fields (per frame, in microseconds)
 
