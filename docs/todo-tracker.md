@@ -216,6 +216,8 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - Current status: not complete; keep execution in narrow owner lanes for real-host Wayland
     hand-feel, DevTools GUI productization, and broader perf attribution/smoothness.
+    Latest docking evidence includes the M18 Windows plus Linux/X11 local policy-skip matrix, which
+    does not replace real-host Wayland compositor acceptance.
 - Closed narrow follow-on for IMUI text input policy depth (read-only, select-all-on-focus, and
   multiline AllowTabInput policy):
   - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`

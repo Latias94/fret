@@ -182,6 +182,7 @@ DevTools full clippy is now a current maintenance gate for the P2 diagnostics/de
 - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/diagnostics-first-open.md`
@@ -834,6 +835,11 @@ verification rerun also green at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778656624160`. This closes the generic
 bounded-campaign gap, but not Linux Wayland compositor acceptance or every platform-specific
 real-host hand-feel risk.
+
+The 2026-05-16 `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md` note broadens the M17 local
+policy-skip gate into a Windows plus Linux/X11 sidecar matrix. Both probes stop at
+`skipped_policy` before script execution, so the evidence strengthens local admission posture
+without claiming `DW-P1-linux-003` real-host Wayland acceptance.
 
 ### Lane hygiene gates
 

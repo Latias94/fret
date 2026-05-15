@@ -271,9 +271,10 @@ reopen.
 ## Closeout / follow-on management
 
 - [x] Refresh the goal-completion audit after the latest product-chain discovery, Wayland
-      admission/policy-skip, and perf-threshold slices.
+      admission/policy-skip including the M18 matrix, and perf-threshold slices.
       Result: `GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and
-      explicitly not complete. Real-host Wayland compositor acceptance, DevTools GUI
+      explicitly not complete. The M18 local policy-skip matrix broadens the M17 gate across
+      Windows and Linux/X11 sidecars, but real-host Wayland compositor acceptance, DevTools GUI
       productization, and broader perf attribution/smoothness remain owner-lane work, not
       `fret-imui` or runtime widening.
 - [x] Keep pure teaching-surface cleanup out of this umbrella unless it becomes the dominant

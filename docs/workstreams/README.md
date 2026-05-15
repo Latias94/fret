@@ -296,9 +296,9 @@ Current source of truth for the in-tree immediate-mode stack:
     stack-reset closeouts without reopening runtime widening or generic helper-growth by default;
     the 2026-05-15 audit keeps the goal explicitly not complete until real-host Wayland hand-feel,
     DevTools GUI productization, and broader perf attribution/smoothness close in their owner
-    lanes; future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget
-    before review, and implementation-heavy work should stay in narrower follow-ons or the active
-    docking parity lane.
+    lanes; the 2026-05-16 M18 docking matrix is local policy-skip evidence only; future
+    `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before review, and
+    implementation-heavy work should stay in narrower follow-ons or the active docking parity lane.
 
 - Closed narrow P1 text input policy depth follow-on:
   - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
