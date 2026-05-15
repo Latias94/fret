@@ -1,3 +1,5 @@
+use crate::util::shell_quote_arg;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DevtoolsGateProfileV1 {
     pub id: &'static str,
@@ -13,6 +15,23 @@ pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =
 pub const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str = "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json";
 pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLDS_COMMAND: &str = "cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>";
 pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str = "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
+pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1: &[&str] =
+    &["stale-paint-scene", "pixels-changed"];
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DevtoolsGateScriptTargetCommandInputV1<'a> {
+    pub script_json: &'a str,
+    pub test_id: &'a str,
+}
+
+impl<'a> DevtoolsGateScriptTargetCommandInputV1<'a> {
+    pub fn new(script_json: &'a str, test_id: &'a str) -> Self {
+        Self {
+            script_json,
+            test_id,
+        }
+    }
+}
 
 pub const DEVTOOLS_GATE_PROFILES_V1: &[DevtoolsGateProfileV1] = &[
     DevtoolsGateProfileV1 {
@@ -83,6 +102,31 @@ pub fn devtools_gate_profiles_v1() -> &'static [DevtoolsGateProfileV1] {
     DEVTOOLS_GATE_PROFILES_V1
 }
 
+pub fn devtools_gate_script_target_profile_ids_v1() -> &'static [&'static str] {
+    DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1
+}
+
+pub fn devtools_gate_script_target_command_line(
+    profile_id: &str,
+    input: DevtoolsGateScriptTargetCommandInputV1<'_>,
+) -> Option<String> {
+    let profile_id = profile_id.trim();
+    if !DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1.contains(&profile_id) {
+        return None;
+    }
+    let profile = DEVTOOLS_GATE_PROFILES_V1
+        .iter()
+        .find(|profile| profile.id == profile_id)?;
+    let script_json = shell_quote_arg_or_placeholder(input.script_json, "<script.json>");
+    let test_id = shell_quote_arg_or_placeholder(input.test_id, "<test-id>");
+    Some(
+        profile
+            .command_line
+            .replace("<script.json>", &script_json)
+            .replace("<test-id>", &test_id),
+    )
+}
+
 pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -109,6 +153,15 @@ pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String> {
         ));
     }
     lines
+}
+
+fn shell_quote_arg_or_placeholder(value: &str, placeholder: &str) -> String {
+    let value = value.trim();
+    if value.is_empty() {
+        placeholder.to_string()
+    } else {
+        shell_quote_arg(value)
+    }
 }
 
 #[cfg(test)]
@@ -156,5 +209,46 @@ mod tests {
         assert!(text.contains("check.resource_footprint.json"));
         assert!(text.contains("gate profile: resource-footprint-compare"));
         assert!(text.contains("--footprint --json"));
+    }
+
+    #[test]
+    fn devtools_gate_script_target_profiles_are_parameterized() {
+        assert_eq!(
+            devtools_gate_script_target_profile_ids_v1(),
+            &["stale-paint-scene", "pixels-changed"]
+        );
+
+        let input = DevtoolsGateScriptTargetCommandInputV1::new(
+            "tools/diag-scripts/ui-editor/imui/smoke.json",
+            "imui.editor.name",
+        );
+        let stale = devtools_gate_script_target_command_line("stale-paint-scene", input).unwrap();
+        assert_eq!(
+            stale,
+            "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/smoke.json --check-stale-paint imui.editor.name --check-stale-scene imui.editor.name --json"
+        );
+        let pixels = devtools_gate_script_target_command_line("pixels-changed", input).unwrap();
+        assert_eq!(
+            pixels,
+            "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/smoke.json --check-pixels-changed imui.editor.name --json"
+        );
+        assert!(devtools_gate_script_target_command_line("perf-thresholds", input).is_none());
+    }
+
+    #[test]
+    fn devtools_gate_script_target_command_preserves_placeholders_until_filled() {
+        let input = DevtoolsGateScriptTargetCommandInputV1::default();
+        let command = devtools_gate_script_target_command_line("stale-paint-scene", input).unwrap();
+
+        assert!(command.contains("<script.json>"));
+        assert!(command.contains("<test-id>"));
+
+        let quoted = devtools_gate_script_target_command_line(
+            "pixels-changed",
+            DevtoolsGateScriptTargetCommandInputV1::new("target/my script.json", "button ok"),
+        )
+        .unwrap();
+        assert!(quoted.contains("'target/my script.json'"));
+        assert!(quoted.contains("'button ok'"));
     }
 }

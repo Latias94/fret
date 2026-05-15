@@ -73,6 +73,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The GUI now renders a `Copy command` action for each shared gate profile, so authors can copy the
   exact stale/pixels/perf/resource-footprint command template from the structured profile row
   instead of selecting text from the raw first-open block.
+- The GUI also has a script-target command builder for the stale paint/scene and pixels-changed
+  profiles. `fret-diag` owns the script/test-id parameterization API; the GUI only supplies the
+  selected profile, input models, preview, and `Copy generated command` action.
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,

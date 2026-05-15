@@ -1,3 +1,5 @@
+use crate::util::shell_quote_arg;
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub const DIAG_REGRESSION_SUMMARY_KIND_V1: &str = "diag_regression_summary";
@@ -223,23 +225,6 @@ pub fn regression_bundle_followup_command_lines<'a>(
             .map(|command| command.display_line()),
     );
     lines
-}
-
-fn shell_quote_arg(value: &str) -> String {
-    let value = value.trim();
-    if value.is_empty() {
-        return "''".to_string();
-    }
-    if value.chars().all(|ch| {
-        ch.is_ascii_alphanumeric()
-            || matches!(
-                ch,
-                '.' | '/' | '\\' | ':' | '_' | '-' | '=' | '+' | ',' | '@' | '[' | ']' | '(' | ')'
-            )
-    }) {
-        return value.to_string();
-    }
-    format!("'{}'", value.replace('\'', "''"))
 }
 
 fn push_unique_line(lines: &mut Vec<String>, line: String) {

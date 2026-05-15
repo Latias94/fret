@@ -8,7 +8,11 @@ use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
-use fret_diag::{devtools_gate_profile_lines, devtools_gate_profiles_v1};
+use fret_diag::{
+    DevtoolsGateScriptTargetCommandInputV1, devtools_gate_profile_lines,
+    devtools_gate_profiles_v1, devtools_gate_script_target_command_line,
+    devtools_gate_script_target_profile_ids_v1,
+};
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
     regression_bundle_followup_command_lines, regression_bundle_followup_commands,
@@ -135,6 +139,10 @@ struct State {
     selected_session_id: Model<Option<Arc<str>>>,
     selected_session_open: Model<bool>,
     inspect_consume_clicks: Model<bool>,
+    gate_profile_selected_id: Model<Option<Arc<str>>>,
+    gate_profile_open: Model<bool>,
+    gate_profile_script_json: Model<String>,
+    gate_profile_test_id: Model<String>,
 
     script_paths: script_studio::ScriptPaths,
     script_library: Model<Vec<script_studio::ScriptItem>>,
@@ -307,6 +315,12 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let selected_session_id = app.models_mut().insert(None::<Arc<str>>);
     let selected_session_open = app.models_mut().insert(false);
     let inspect_consume_clicks = app.models_mut().insert(false);
+    let gate_profile_selected_id = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("stale-paint-scene")));
+    let gate_profile_open = app.models_mut().insert(false);
+    let gate_profile_script_json = app.models_mut().insert(String::new());
+    let gate_profile_test_id = app.models_mut().insert(String::new());
 
     let repo_root = script_studio::repo_root_from_manifest_dir()
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
@@ -457,6 +471,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         selected_session_id,
         selected_session_open,
         inspect_consume_clicks,
+        gate_profile_selected_id,
+        gate_profile_open,
+        gate_profile_script_json,
+        gate_profile_test_id,
         script_paths,
         script_library,
         loaded_script_origin,
@@ -603,6 +621,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.selected_session_id, Invalidation::Paint);
     cx.observe_model(&st.selected_session_open, Invalidation::Paint);
     cx.observe_model(&st.inspect_consume_clicks, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_selected_id, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_open, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_script_json, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_test_id, Invalidation::Paint);
     cx.observe_model(&st.script_library, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_origin, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_path, Invalidation::Paint);
@@ -873,6 +895,7 @@ fn header_bar(
     for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
         gate_command_rows.push(cx.text(line));
     }
+    gate_command_rows.push(devtools_gate_profile_command_builder(cx, st));
     gate_command_rows.extend(devtools_gate_profile_action_rows(cx));
     let gate_commands_panel = diag_section(
         cx,
@@ -5876,6 +5899,104 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
 
 fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
     devtools_gate_profile_lines(artifacts_root)
+}
+
+fn devtools_gate_profile_command_builder(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+) -> AnyElement {
+    let supported_profile_ids = devtools_gate_script_target_profile_ids_v1();
+    let default_profile_id = supported_profile_ids
+        .first()
+        .copied()
+        .unwrap_or("stale-paint-scene");
+    let selected_profile_id = cx
+        .app
+        .models()
+        .read(&st.gate_profile_selected_id, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from(default_profile_id));
+    let script_json = cx
+        .app
+        .models()
+        .read(&st.gate_profile_script_json, |v| v.clone())
+        .unwrap_or_default();
+    let test_id = cx
+        .app
+        .models()
+        .read(&st.gate_profile_test_id, |v| v.clone())
+        .unwrap_or_default();
+    let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
+    let generated_command =
+        devtools_gate_script_target_command_line(selected_profile_id.as_ref(), input);
+    let command_preview = generated_command
+        .clone()
+        .unwrap_or_else(|| "Select a script-target gate profile.".to_string());
+    let selected_profile_label = devtools_gate_profiles_v1()
+        .iter()
+        .find(|profile| profile.id == selected_profile_id.as_ref())
+        .map(|profile| format!("{} ({})", profile.label, profile.id))
+        .unwrap_or_else(|| selected_profile_id.to_string());
+
+    let profile_items = devtools_gate_profiles_v1()
+        .iter()
+        .filter(|profile| supported_profile_ids.contains(&profile.id))
+        .map(|profile| shadcn::SelectItem::new(profile.id, format!("{} ({})", profile.label, profile.id)))
+        .collect::<Vec<_>>();
+    let profile_select =
+        shadcn::Select::new(st.gate_profile_selected_id.clone(), st.gate_profile_open.clone())
+            .value(shadcn::SelectValue::new().placeholder("Gate profile"))
+            .items(profile_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(260.0)))
+            .into_element(cx);
+    let script_input = shadcn::Input::new(st.gate_profile_script_json.clone())
+        .placeholder("tools/diag-scripts/<script>.json")
+        .a11y_label("Gate script JSON")
+        .test_id("devtools.gate.script_json")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let test_id_input = shadcn::Input::new(st.gate_profile_test_id.clone())
+        .placeholder("test-id")
+        .a11y_label("Gate test id")
+        .test_id("devtools.gate.test_id")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+        .into_element(cx);
+    let copy_enabled = generated_command.is_some();
+    let command_line_for_copy = command_preview.clone();
+    let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let token = host.next_clipboard_token();
+        host.push_effect(Effect::ClipboardWriteText {
+            window: action_cx.window,
+            token,
+            text: command_line_for_copy.clone(),
+        });
+        host.request_redraw(action_cx.window);
+    });
+    let copy_button = shadcn::Button::new("Copy generated command")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
+        .disabled(!copy_enabled)
+        .on_activate(on_copy)
+        .into_element(cx);
+    let controls = ui::h_row(|_cx| [profile_select, script_input, test_id_input, copy_button])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    ui::v_stack(|cx| {
+        [
+            cx.text(format!(
+                "Runnable script-target gate: {selected_profile_label}"
+            )),
+            controls,
+            preview,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 
 fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

@@ -297,6 +297,11 @@ Current status:
   stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints.
   The owner remains `docs/workstreams/diag-devtools-gui-v1/`; this umbrella records the evidence
   only to keep the broader Dear ImGui-class product goal honest.
+- 2026-05-15 DevTools script-target gate command builder adds shared `fret-diag` command
+  parameterization for stale paint/scene and pixels-changed profiles plus a GUI selector,
+  `script.json`/`test-id` inputs, preview, and `Copy generated command` action. This starts the
+  profile-specific gate UI path without moving gate templates into `apps/fret-devtools` or
+  widening `fret-imui`.
 - 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
   projection that converts the selected `bundle_dir` into concrete `diag stats`,
   `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and

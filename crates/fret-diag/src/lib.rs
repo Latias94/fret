@@ -158,7 +158,9 @@ use tooling_failures::{
 use util::{advance_target_run_id, now_unix_ms, read_json_value, touch, write_json_value};
 
 pub use devtools_gate_profiles::{
-    DevtoolsGateProfileV1, devtools_gate_profile_lines, devtools_gate_profiles_v1,
+    DevtoolsGateProfileV1, DevtoolsGateScriptTargetCommandInputV1, devtools_gate_profile_lines,
+    devtools_gate_profiles_v1, devtools_gate_script_target_command_line,
+    devtools_gate_script_target_profile_ids_v1,
 };
 pub use diag_dashboard::{
     DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
