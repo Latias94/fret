@@ -66,6 +66,10 @@
       "command": "cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups prepaint_interaction_cache_replays_for_clean_view_cache_root prepaint_output_store_is_keyed_by_cache_root_prepaint_key --no-fail-fast"
     },
     {
+      "name": "fret-ui-layout-engine-phase-tests",
+      "command": "cargo nextest run -p fret-ui multiple_roots_do_not_couple_layout_results barrier_batch_solve_stamps_multiple_roots_in_one_generation flex_wrap_patch_profile_skips_roots_without_wrap_descendants flex_wrap_patch_profile_records_intrinsic_auto_min_work --no-fail-fast"
+    },
+    {
       "name": "fret-ui-paint-entry-phase-tests",
       "command": "cargo nextest run -p fret-ui view_cache_disables_paint_cache_for_non_boundary_nodes view_cache_allows_paint_cache_for_boundary_nodes paint_publishes_window_text_input_snapshot_for_focused_text_widget snapshot_resets_when_focus_is_not_text_input --no-fail-fast"
     },
@@ -99,6 +103,7 @@
     "crates/fret-diag/src/perf_keys.rs",
     "crates/fret-diag/src/stats.rs",
     "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
+    "crates/fret-perf/src/lib.rs",
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",

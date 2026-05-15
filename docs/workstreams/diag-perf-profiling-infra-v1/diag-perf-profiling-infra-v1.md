@@ -190,6 +190,10 @@ Example bundle:
 - `layout_all` final tail phases now share `run_layout_post_layout_phases`, so regular frames,
   layout fast-path frames, and skipped-engine stable frames keep prepaint/focus/semantics/deferred-cleanup
   timings and `fret_perf::measure_span` wrappers aligned.
+- `layout_engine.solve` spans now use the shared `fret_perf::measure_span_with_finish` helper for
+  both batched independent-root solves and single-root solves. The existing solve stats remain
+  unchanged (`elapsed_us`, `measure_calls`, `measure_cache_hits`, `measure_us`), and the span now
+  records an additive `outcome` field for solve errors without widening fallback timing semantics.
 - `paint_all` entry-layer sub-phases now use `fret_perf::measure_span` for input context,
   scroll-handle invalidation, root collection, visual-bounds flushing, text-input snapshot publishing,
   and paint-observation collapse.

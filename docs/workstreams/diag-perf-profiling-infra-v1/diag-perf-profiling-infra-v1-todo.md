@@ -45,7 +45,12 @@
     - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - [ ] Migrate more layout sub-phases beyond request/build + roots:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
-    - `crates/fret-ui/src/layout/engine.rs` (solve/measure sub-spans, if we want tighter attribution)
+    - [x] Align `crates/fret-ui/src/layout/engine.rs` solve spans with `fret_perf::measure_span_with_finish`
+      for batched independent-root solves and single-root solves while preserving `elapsed_us`,
+      `measure_calls`, `measure_cache_hits`, `measure_us`, and existing solve/profile stats.
+      - Evidence: `crates/fret-perf/src/lib.rs`, `crates/fret-ui/src/layout/engine.rs`
+    - Remaining: per-widget measure hotspot timing is intentionally still a local debug profiling
+      timer until a repro needs per-measure trace events; avoid per-node span explosion by default.
   - [x] Migrate remaining paint sub-phases and hot node paths:
     - [x] Migrate `paint_all` entry-layer sub-phases to `fret_perf::measure_span`:
       input context, scroll-handle invalidation, root collection, visual-bounds flush,
