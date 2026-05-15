@@ -105,6 +105,32 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:01:13 +0800 (local head `a84b72eab0`)
+
+Change:
+- Updated the editor paint stabilization runbook so it matches the stricter verifier behavior:
+  - both synced summaries must carry a non-empty `date_tag`,
+  - the stored commands must still match the required resize/direct-perf contract shape,
+  - and the baseline-validation summary must stay free of `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 -m unittest discover -s tools/perf -p 'test_*.py'
+python3 tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag runbook-sync-check
+git diff --check
+```
+
+Results:
+- Focused editor paint contract tests PASS (22 tests).
+- Full Python perf-tool tests PASS (32 tests).
+- Validation dry-run PASS and emits the expected Windows RTX4090 command shape.
+- Diff whitespace check PASS.
+
+Notes:
+- This is docs sync only. The objective still needs Windows RTX4090 validation + attribution artifacts before P1.5 can
+  close.
+
 ## 2026-05-16 06:59:39 +0800 (local head `cf5679a028`)
 
 Change:

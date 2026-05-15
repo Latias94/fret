@@ -77,9 +77,14 @@ python tools/perf/diag_editor_paint_contract_verify_artifacts.py `
   --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib
 ```
 
-This verifier checks that the baseline-validation pass used the expected repeat/warmup shape, that every probe has
-`check.perf_thresholds.json` with `failures=[]`, that `diag stats --json` output exists for every worst bundle, and
-that the attribution pass includes `code_editor_paint_perf` coverage.
+This verifier checks that both summaries carry a non-empty `date_tag`, that the baseline-validation pass used the
+expected repeat/warmup shape, that every probe has `check.perf_thresholds.json` with `failures=[]`, that `diag stats
+--json` output exists for every worst bundle, and that the attribution pass includes `code_editor_paint_perf` coverage.
+It also rejects target summaries whose stored commands drift from the contract shape: resize must use the Windows
+code-editor resize suite plus release `fretboard-dev.exe` / `fret-ui-gallery.exe`, while the direct `diag perf` probes
+must use `--reuse-launch`, the standard font prewarm and reset-diagnostics prelude, `--json`, the release gallery
+binary, and the required overlay-disabled env set. The baseline-validation directory must not be collected with
+`FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory.
 
 ## Validate Current Contracts First
 
