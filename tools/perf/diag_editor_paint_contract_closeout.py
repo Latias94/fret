@@ -98,6 +98,14 @@ def build_plan(
     return plan
 
 
+def verifier_date_tag(verifier: dict[str, Any], section: str) -> str | None:
+    value = verifier.get(section)
+    if not isinstance(value, dict):
+        return None
+    date_tag = value.get("date_tag")
+    return date_tag if isinstance(date_tag, str) and date_tag else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Run the local closeout gates for synced editor paint contract artifacts.",
@@ -166,6 +174,8 @@ def main() -> int:
             "ok": False,
             "validation_dir": str(validation_dir),
             "attribution_dir": str(attribution_dir) if attribution_dir is not None else None,
+            "validation_date_tag": verifier_date_tag(verifier, "validation"),
+            "attribution_date_tag": verifier_date_tag(verifier, "attribution"),
             "verifier": verifier,
             "steps": [],
         }
@@ -194,6 +204,8 @@ def main() -> int:
         "ok": pass_all,
         "validation_dir": str(validation_dir),
         "attribution_dir": str(attribution_dir) if attribution_dir is not None else None,
+        "validation_date_tag": verifier_date_tag(verifier, "validation"),
+        "attribution_date_tag": verifier_date_tag(verifier, "attribution"),
         "verifier": verifier,
         "steps": step_results,
     }

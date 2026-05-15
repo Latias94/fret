@@ -85,6 +85,16 @@ class EditorPaintContractCloseoutTests(unittest.TestCase):
 
         self.assertEqual(2, rc)
 
+    def test_verifier_date_tag_extracts_top_level_closeout_fields(self) -> None:
+        verifier = {
+            "validation": {"date_tag": "run-a"},
+            "attribution": {"date_tag": "run-a-attrib"},
+        }
+
+        self.assertEqual("run-a", closeout.verifier_date_tag(verifier, "validation"))
+        self.assertEqual("run-a-attrib", closeout.verifier_date_tag(verifier, "attribution"))
+        self.assertIsNone(closeout.verifier_date_tag(verifier, "missing"))
+
 
 if __name__ == "__main__":
     unittest.main()
