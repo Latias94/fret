@@ -74,6 +74,10 @@
       "command": "cargo nextest run -p fret-ui multiple_roots_do_not_couple_layout_results barrier_batch_solve_stamps_multiple_roots_in_one_generation flex_wrap_patch_profile_skips_roots_without_wrap_descendants flex_wrap_patch_profile_records_intrinsic_auto_min_work --no-fail-fast"
     },
     {
+      "name": "fret-ui-semantics-profile-phase-tests",
+      "command": "cargo nextest run -p fret-ui semantics_snapshot_includes_visible_roots_and_barrier semantics_snapshot_exposes_focus_barrier_root_independently_of_pointer_barrier semantics_snapshot_dirty_gate_rearms_on_semantic_invalidations semantics_snapshot_dirty_gate_tracks_pointer_capture_owner mechanism_harness_semantics_relations_match_oracles text_input_semantics_controls_element_is_exposed text_input_semantics_active_descendant_element_is_exposed declarative_attach_semantics_can_override_state_and_relations --no-fail-fast"
+    },
+    {
       "name": "fret-ui-paint-entry-phase-tests",
       "command": "cargo nextest run -p fret-ui view_cache_disables_paint_cache_for_non_boundary_nodes view_cache_allows_paint_cache_for_boundary_nodes paint_publishes_window_text_input_snapshot_for_focused_text_widget snapshot_resets_when_focus_is_not_text_input --no-fail-fast"
     },
@@ -124,6 +128,7 @@
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",
+    "crates/fret-ui/src/tree/ui_tree_semantics.rs",
     "crates/fret-ui/src/layout/engine.rs",
     "crates/fret-ui/src/tree/prepaint/entry.rs",
     "crates/fret-ui/src/tree/paint/entry.rs",

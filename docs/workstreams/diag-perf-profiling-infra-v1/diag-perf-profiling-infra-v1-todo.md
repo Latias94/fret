@@ -61,6 +61,10 @@
       for batched independent-root solves and single-root solves while preserving `elapsed_us`,
       `measure_calls`, `measure_cache_hits`, `measure_us`, and existing solve/profile stats.
       - Evidence: `crates/fret-perf/src/lib.rs`, `crates/fret-ui/src/layout/engine.rs`
+    - [x] Align semantics snapshot profiling with `fret_perf::measure_span`:
+      element-id map lookup, window-frame child graph lookup, semantics traversal, and
+      relation normalization now share the same opt-in profile timer and trace-span surface.
+      - Evidence: `crates/fret-ui/src/tree/ui_tree_semantics.rs`
     - Remaining: per-widget measure hotspot timing is intentionally still a local debug profiling
       timer until a repro needs per-measure trace events; avoid per-node span explosion by default.
   - [x] Migrate remaining paint sub-phases and hot node paths:
