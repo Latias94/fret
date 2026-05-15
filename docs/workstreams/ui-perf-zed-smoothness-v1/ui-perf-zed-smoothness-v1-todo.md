@@ -692,8 +692,8 @@ Conventions:
             `fret-ui-gallery.exe`, standard prewarm/prelude hooks, `--reuse-launch` on direct `diag perf`, and the
             overlay-disabled env set;
           - baseline-validation direct `diag perf` commands must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
-          - the attribution directory must include paint-perf coverage and the verifier must reject missing
-            `code_editor_paint_perf`.
+          - the attribution directory must include paint-perf coverage, `code_editor_paint_perf`, and overlay-zero
+            stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`).
         - Required evidence: ordinary validation must provide `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf, and
           renderer text/encode/upload. A deliberate re-seed path must additionally provide

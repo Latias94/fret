@@ -322,12 +322,23 @@ def _has_metric(doc: dict[str, Any], metric: str) -> bool:
     return False
 
 
+def _code_editor_max_metric_is_zero(doc: dict[str, Any], metric: str) -> bool:
+    code_editor = doc.get("code_editor_paint_perf")
+    if not isinstance(code_editor, dict):
+        return False
+    max_values = code_editor.get("max")
+    if not isinstance(max_values, dict):
+        return False
+    return max_values.get(metric) == 0
+
+
 def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
     if not isinstance(doc, dict):
         return {
             "paint_widget": False,
             "renderer_text_encode_upload": False,
             "code_editor_paint_perf": False,
+            "code_editor_torture_overlay_zero": False,
         }
     code_editor = doc.get("code_editor_paint_perf")
     return {
@@ -341,6 +352,7 @@ def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
             ]
         ),
         "code_editor_paint_perf": isinstance(code_editor, dict) and isinstance(code_editor.get("p95"), dict),
+        "code_editor_torture_overlay_zero": _code_editor_max_metric_is_zero(doc, "us_torture_overlay"),
     }
 
 
@@ -529,6 +541,7 @@ def main() -> int:
                     required_coverage = ["paint_widget", "renderer_text_encode_upload"]
                     if bool(args.with_paint_perf):
                         required_coverage.append("code_editor_paint_perf")
+                        required_coverage.append("code_editor_torture_overlay_zero")
                     missing_coverage = [name for name in required_coverage if not bool(coverage.get(name))]
                 stats_ok = stats_rc == 0 and not missing_coverage
                 pass_all = pass_all and stats_ok

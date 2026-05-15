@@ -18,6 +18,7 @@ def _step(
     *,
     with_paint_perf: bool,
     repeat: int,
+    torture_overlay_us: int = 0,
     stale_summary_paths: bool = False,
 ) -> dict[str, object]:
     step_dir = root / name
@@ -33,7 +34,10 @@ def _step(
         }
     }
     if with_paint_perf:
-        stats_doc["code_editor_paint_perf"] = {"p95": {"us_total": 14}}
+        stats_doc["code_editor_paint_perf"] = {
+            "max": {"us_torture_overlay": torture_overlay_us},
+            "p95": {"us_total": 14},
+        }
     _write_json(stats_path, stats_doc)
 
     plan = validate.build_plan(
@@ -78,6 +82,7 @@ def _write_summary(
     *,
     with_paint_perf: bool,
     resize_repeat: int = 7,
+    torture_overlay_us: int = 0,
     stale_summary_paths: bool = False,
 ) -> None:
     steps = [
@@ -86,6 +91,7 @@ def _write_summary(
             "resize-jitter",
             with_paint_perf=with_paint_perf,
             repeat=resize_repeat,
+            torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
         _step(
@@ -93,6 +99,7 @@ def _write_summary(
             "typical-autoscroll",
             with_paint_perf=with_paint_perf,
             repeat=15,
+            torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
         _step(
@@ -100,6 +107,7 @@ def _write_summary(
             "complex-wheel",
             with_paint_perf=with_paint_perf,
             repeat=7,
+            torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
     ]
@@ -152,6 +160,16 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertTrue(any("with_paint_perf" in error for error in report["errors"]))
         self.assertTrue(any("code_editor_paint_perf" in error for error in report["errors"]))
+
+    def test_attribution_summary_requires_torture_overlay_zero(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=True, torture_overlay_us=1)
+
+            report = verify.verify_summary_dir(root, expect_with_paint_perf=True)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("code_editor_torture_overlay_zero" in error for error in report["errors"]))
 
     def test_pair_verification_accepts_validation_and_attribution_dirs(self) -> None:
         with TemporaryDirectory() as td:

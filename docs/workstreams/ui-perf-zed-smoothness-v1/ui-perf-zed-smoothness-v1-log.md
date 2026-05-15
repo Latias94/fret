@@ -115,6 +115,9 @@ Change:
 - Clarified that the verifier rejects paint-perf env only on baseline-validation direct `diag perf` commands.
 - Kept attribution requirements unchanged: the attribution directory must provide `code_editor_paint_perf` coverage,
   and direct attribution probes must set `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+- Added the overlay-zero requirement to the attribution verifier:
+  `code_editor_paint_perf.max.us_torture_overlay=0`, the `diag stats` form of
+  `top_code_editor_torture_overlay_us=0`.
 
 Validation:
 - Documentation-only alignment with `tools/perf/diag_editor_paint_contract_verify_artifacts.py`.

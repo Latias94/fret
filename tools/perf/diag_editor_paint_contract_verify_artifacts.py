@@ -279,6 +279,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
         required = ["paint_widget", "renderer_text_encode_upload"]
         if expect_with_paint_perf:
             required.append("code_editor_paint_perf")
+            required.append("code_editor_torture_overlay_zero")
         missing = [key for key in required if not bool(coverage.get(key))]
         if missing:
             errors.append(f"{prefix}: missing stats coverage {missing}")

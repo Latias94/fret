@@ -120,9 +120,8 @@ class EditorPaintContractValidateTests(unittest.TestCase):
                     "renderer_upload_us": 13,
                 },
                 "code_editor_paint_perf": {
-                    "p95": {
-                        "us_total": 14,
-                    }
+                    "max": {"us_torture_overlay": 0},
+                    "p95": {"us_total": 14},
                 },
             }
         )
@@ -132,6 +131,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
                 "paint_widget": True,
                 "renderer_text_encode_upload": True,
                 "code_editor_paint_perf": True,
+                "code_editor_torture_overlay_zero": True,
             },
             coverage,
         )
@@ -142,6 +142,26 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertTrue(coverage["paint_widget"])
         self.assertFalse(coverage["renderer_text_encode_upload"])
         self.assertFalse(coverage["code_editor_paint_perf"])
+        self.assertFalse(coverage["code_editor_torture_overlay_zero"])
+
+    def test_stats_coverage_rejects_torture_overlay_work(self) -> None:
+        coverage = validate.stats_coverage_for_doc(
+            {
+                "p95": {
+                    "paint_widget_time_us": 10,
+                    "renderer_prepare_text_us": 11,
+                    "renderer_encode_scene_us": 12,
+                    "renderer_upload_us": 13,
+                },
+                "code_editor_paint_perf": {
+                    "max": {"us_torture_overlay": 1},
+                    "p95": {"us_total": 14},
+                },
+            }
+        )
+
+        self.assertTrue(coverage["code_editor_paint_perf"])
+        self.assertFalse(coverage["code_editor_torture_overlay_zero"])
 
     def test_dry_run_summary_records_date_tag(self) -> None:
         with TemporaryDirectory() as td:
