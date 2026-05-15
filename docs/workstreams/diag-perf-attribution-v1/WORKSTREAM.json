@@ -54,6 +54,10 @@
       "command": "cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast"
     },
     {
+      "name": "perf-trace-requested-artifact",
+      "command": "cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast"
+    },
+    {
       "name": "perf-regression-summary-attribution",
       "command": "cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast"
     },

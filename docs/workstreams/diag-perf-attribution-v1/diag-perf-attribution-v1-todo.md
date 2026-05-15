@@ -35,6 +35,10 @@
 - [x] Add a `--trace` toggle to `diag perf` that:
   - [x] exports a Chrome trace JSON (bundle-derived synthetic timeline),
   - [x] records the artifact in a run manifest (`manifest.json` file index).
+  - [x] treats requested trace export failures as visible tooling errors instead of silently
+        dropping the artifact.
+    - Gate:
+      `cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast`
 - [x] Emit initial app-loop `fret.perf.spans.v1` spans when explicitly requested.
   - `FRET_DIAG_REAL_SPANS=1` enables frame-relative View, Overlay, Layout, and Paint spans in
     `fret-bootstrap` `ui_app_driver` apps.

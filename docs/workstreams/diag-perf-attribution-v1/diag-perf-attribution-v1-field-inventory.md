@@ -118,6 +118,8 @@ Evidence anchors:
   `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
 - Trace artifact focused gate:
   `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
+- Requested trace artifact reliability gate:
+  `cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast`
 - Runtime extension writer focused gate:
   `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast`
 - CLI opt-in focused gate:

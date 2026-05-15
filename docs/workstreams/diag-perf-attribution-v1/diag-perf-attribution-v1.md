@@ -96,6 +96,8 @@ Remaining gaps / follow-ups:
   - 2026-05-16: `diag perf --trace-real-spans --launch -- <app command>` requests a Chrome trace
     artifact and injects that opt-in flag for launched perf runs while preserving explicit caller
     overrides.
+  - 2026-05-16: requested `diag perf` Chrome trace exports now fail visibly instead of silently
+    dropping the artifact when trace generation fails.
   - Still remaining: finer nested runtime spans and external profiler/Tracy correlation for
     concrete attribution cases.
 

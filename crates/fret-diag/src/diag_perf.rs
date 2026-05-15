@@ -115,6 +115,30 @@ fn apply_trace_real_spans_launch_env(
     Ok(())
 }
 
+fn write_perf_chrome_trace_if_requested(
+    bundle_path: &Path,
+    trace_chrome: bool,
+) -> Result<(), String> {
+    if !trace_chrome {
+        return Ok(());
+    }
+
+    let dir = bundle_path.parent().ok_or_else(|| {
+        format!(
+            "failed to write requested Chrome trace: bundle path has no parent: {}",
+            bundle_path.display()
+        )
+    })?;
+    let trace_path = dir.join("trace.chrome.json");
+    crate::trace::write_chrome_trace_from_bundle_path(bundle_path, &trace_path).map_err(|err| {
+        format!(
+            "failed to write requested Chrome trace for perf bundle {} to {}: {err}",
+            bundle_path.display(),
+            trace_path.display()
+        )
+    })
+}
+
 fn perf_row_status_and_reason(
     row: &serde_json::Value,
     threshold_failures: &[serde_json::Value],
@@ -1172,13 +1196,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     )?;
                     report_warmup_frames = 0;
                 }
-                if trace_chrome && let Some(dir) = bundle_path.parent() {
-                    let trace_path = dir.join("trace.chrome.json");
-                    let _ = crate::trace::write_chrome_trace_from_bundle_path(
-                        &bundle_path,
-                        &trace_path,
-                    );
-                }
+                write_perf_chrome_trace_if_requested(&bundle_path, trace_chrome)?;
                 if wants_perf_hints {
                     let triage =
                         triage_json_from_stats(&bundle_path, &report, sort, report_warmup_frames);
@@ -1837,11 +1855,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 )?;
                 report_warmup_frames = 0;
             }
-            if trace_chrome && let Some(dir) = bundle_path.parent() {
-                let trace_path = dir.join("trace.chrome.json");
-                let _ =
-                    crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &trace_path);
-            }
+            write_perf_chrome_trace_if_requested(&bundle_path, trace_chrome)?;
 
             if wants_perf_hints {
                 let triage =
@@ -3119,6 +3133,18 @@ mod tests {
         path
     }
 
+    fn write_temp_perf_bundle(tag: &str, bundle: serde_json::Value) -> PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("fret-diag-perf-{tag}-{}-{id}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp bundle dir");
+        let path = dir.join("bundle.json");
+        std::fs::write(&path, serde_json::to_string_pretty(&bundle).unwrap())
+            .expect("write temp bundle");
+        path
+    }
+
     #[test]
     fn perf_launch_env_merges_script_env_defaults_and_preserves_explicit_env() {
         let script = write_temp_perf_script(
@@ -3210,6 +3236,75 @@ mod tests {
 
         assert!(err.contains("--trace-real-spans requires --launch"));
         assert!(launch_env.is_empty());
+    }
+
+    #[test]
+    fn write_perf_chrome_trace_if_requested_writes_requested_artifact() {
+        let bundle = write_temp_perf_bundle(
+            "trace-write-ok",
+            serde_json::json!({
+                "schema_version": 2,
+                "windows": [{
+                    "window": 1,
+                    "snapshots": []
+                }]
+            }),
+        );
+
+        write_perf_chrome_trace_if_requested(&bundle, true)
+            .expect("requested trace should be written");
+
+        let trace_path = bundle.parent().unwrap().join("trace.chrome.json");
+        assert!(trace_path.is_file());
+        let trace: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&trace_path).expect("read trace"))
+                .expect("parse trace");
+        assert_eq!(
+            trace.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_TRACE_CHROME_KIND)
+        );
+
+        let _ = std::fs::remove_dir_all(bundle.parent().unwrap());
+    }
+
+    #[test]
+    fn write_perf_chrome_trace_if_requested_surfaces_export_failure() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-trace-write-fail-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp bundle dir");
+        let bundle = dir.join("bundle.json");
+        std::fs::write(&bundle, b"not-json").expect("write invalid bundle");
+
+        let err = write_perf_chrome_trace_if_requested(&bundle, true)
+            .expect_err("invalid bundle should fail trace export");
+
+        assert!(err.contains("failed to write requested Chrome trace"));
+        assert!(err.contains("bundle.json"));
+        assert!(!dir.join("trace.chrome.json").exists());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn write_perf_chrome_trace_if_requested_noops_when_disabled() {
+        let bundle = write_temp_perf_bundle(
+            "trace-write-off",
+            serde_json::json!({
+                "schema_version": 2,
+                "windows": []
+            }),
+        );
+
+        write_perf_chrome_trace_if_requested(&bundle, false)
+            .expect("disabled trace should not fail");
+
+        assert!(!bundle.parent().unwrap().join("trace.chrome.json").exists());
+
+        let _ = std::fs::remove_dir_all(bundle.parent().unwrap());
     }
 
     #[test]
