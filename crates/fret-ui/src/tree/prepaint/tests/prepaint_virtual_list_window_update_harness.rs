@@ -275,10 +275,10 @@ fn set_cache_root_dirty_reason_metrics(
     ui: &UiTree<crate::test_host::TestHost>,
     cache_root: NodeId,
 ) {
-    if let Some((_source, detail)) = ui.boundary_layout_dirty_reason(cache_root) {
-        if let Some(label) = detail.as_str() {
-            observed.set_metric(format!("cache_root.dirty_reason.{label}"), 1.0);
-        }
+    if let Some((_source, detail)) = ui.boundary_layout_dirty_reason(cache_root)
+        && let Some(label) = detail.as_str()
+    {
+        observed.set_metric(format!("cache_root.dirty_reason.{label}"), 1.0);
     }
 }
 

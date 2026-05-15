@@ -39,6 +39,10 @@
 - [ ] Add missing always-on phase timers for known uninstrumented work (keep additive keys).
 - [ ] Ensure chrome trace emits stable event names for new sub-phases.
 - [ ] Adopt `crates/fret-perf` helpers for new/updated timers so stats + spans stay aligned.
+  - [x] Migrate `layout_all` final tail phases through a shared `fret_perf::measure_span` path:
+    regular frames, layout fast-path frames, and skipped-engine stable frames now share the
+    prepaint/focus/semantics/deferred-cleanup timing and span wrapper surface.
+    - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - [ ] Migrate more layout sub-phases beyond request/build + roots:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
     - `crates/fret-ui/src/layout/engine.rs` (solve/measure sub-spans, if we want tighter attribution)

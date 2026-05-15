@@ -62,6 +62,10 @@
       "command": "cargo run -p fretboard-dev -- diag stats docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini --sort time --top 5 --json"
     },
     {
+      "name": "fret-ui-layout-tail-phase-tests",
+      "command": "cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups prepaint_interaction_cache_replays_for_clean_view_cache_root prepaint_output_store_is_keyed_by_cache_root_prepaint_key --no-fail-fast"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }

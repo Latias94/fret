@@ -177,7 +177,8 @@ Example bundle:
 - Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`,
   `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
 - Chrome trace exporter: `crates/fret-diag/src/trace.rs`
-- Layout phase timing sources: `crates/fret-ui/src/tree/layout.rs`
+- Layout phase timing sources: `crates/fret-ui/src/tree/layout/entrypoints.rs`,
+  `crates/fret-ui/src/tree/layout/node.rs`, `crates/fret-ui/src/layout/engine.rs`
 
 ## Current coverage audit
 
@@ -186,6 +187,9 @@ Example bundle:
 - Result: frame, high-level UI phases, layout, prepaint, paint, dispatch, hit-test, and renderer trace names have
   concrete source anchors. Chrome trace artifacts are currently bundle-derived synthetic phase timelines; real
   `tracing` / Tracy span export remains a separate gap.
+- `layout_all` final tail phases now share `run_layout_post_layout_phases`, so regular frames,
+  layout fast-path frames, and skipped-engine stable frames keep prepaint/focus/semantics/deferred-cleanup
+  timings and `fret_perf::measure_span` wrappers aligned.
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
   subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.
