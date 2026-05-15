@@ -70,6 +70,9 @@ architecture intact:
 
 - **Real-host multi-window hand-feel remains open.** Local campaign validation, source drift guards,
   and policy-skip probes do not replace a Linux Wayland compositor acceptance run.
+- **GUI productization is still not complete.** The current DevTools GUI slices close specific
+  first-open, gate-builder, follow-up, live-inspect, and semantics-tree surfaces, but that is not
+  yet the same as Dear ImGui-style always-available editor tooling across real workflows.
 - **DevTools GUI productization remains partial.** The CLI/tool-app/product-workflow discovery path,
   GUI `demo-metrics-debug` route, first-class gate UI, live inspect overlay details, UI-gallery
   dogfood workflow, 50k semantics-tree scalability proof, and semantics-derived Layout/Elements
