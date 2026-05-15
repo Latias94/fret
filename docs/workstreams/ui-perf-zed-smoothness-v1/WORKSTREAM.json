@@ -153,6 +153,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for broad editor-grade performance contract maintenance and evidence. Split narrow follow-ons for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when this lane's audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
+    "notes": "Current blocking action is target-machine Editor Canvas paint validation on Windows RTX4090 with tools/perf/diag_editor_paint_contract_validate.py, first without --with-paint-perf for the failures=[] artifact and then with --with-paint-perf for attribution stats. Do not start another local optimization or baseline update unless those target artifacts shift the owner attribution. Split narrow follow-ons only for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when the audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
   }
 }
