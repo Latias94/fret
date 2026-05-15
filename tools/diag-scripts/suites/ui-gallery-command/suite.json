@@ -10,6 +10,7 @@
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-cmdk-keybindings.json",
     "tools/diag-scripts/ui-gallery-command-palette-controlled-selection-arrowdown.json",
     "tools/diag-scripts/ui-gallery-command-palette-controlled-selection-value.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-loading-visible.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-group-force-mount-heading-visible.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-should-filter-false.json",

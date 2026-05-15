@@ -358,8 +358,10 @@ date: 2026-05-12
     script drafts exposed harness gaps: direct focus inside overlays was the wrong proof path, the
     status text oracle was stale, and the new script needed suite promotion before the registry
     would index it.
-- [ ] Add a command/listbox-style disabled-but-focusable runtime gate so the next proof exercises
+- [x] Add a command/listbox-style disabled-but-focusable runtime gate so the next proof exercises
   active-descendant/list semantics instead of menu roving focus.
+- [ ] Add retained/windowed active-descendant action-state mutation coverage where a disabled or
+  invokable row detaches, reattaches, or changes availability under filtering/virtualization.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

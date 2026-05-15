@@ -6679,6 +6679,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-palette-disabled-focusable-keyboard-suppression",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "a11y",
+        "action_state",
+        "active_descendant",
+        "command",
+        "keyboard",
+        "regression_pack",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves a CommandPalette disabled-but-focusable item remains reachable through active-descendant navigation.",
+        "Gates that disabled CommandPalette rows expose disabled=true and invoke=false while Enter does not dispatch the item's action."
+      ]
+    },
+    {
       "id": "ui-gallery-command-palette-force-mount-item-visible",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
       "required_capabilities": [

@@ -881,3 +881,28 @@ Status: complete
 - Remaining follow-up: document/use the selector convention for future promoted overlay fixtures:
   page/snippet containers own `*-content`; mounted overlay panels use `*-overlay-content` or an
   equivalent panel-specific suffix.
+
+## M57: Command Disabled-But-Focusable Active-Descendant Runtime Gate
+
+Status: complete
+
+- Added Command behavior rows for a default disabled item (`Legacy Export`) and an opt-in
+  disabled-but-focusable item (`Deploy API`), plus a stable last-action label so the runtime gate
+  can prove Enter does not dispatch a disabled active row.
+- Added focused Command tests proving default disabled rows are skipped by active-descendant
+  navigation, while opt-in disabled-focusable rows can become active descendants but expose
+  `disabled=true`, suppress `invoke`, and reject Enter activation.
+- Added and promoted
+  `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json` into both
+  `ui-gallery-command` and `ui-gallery-shadcn-conformance`.
+- The first full Command suite runs found harness-quality defects rather than a Command recipe
+  defect: `Ctrl+P` in the old keybindings script collided with the app-level command palette
+  shortcut, and several Command scripts captured bundles after only the input/control was visible
+  while the selected active row was outside the window.
+- Hardened the affected Command scripts so keybinding proof avoids the global shortcut collision
+  and every active-descendant capture first scrolls the selected row into view.
+- Focused tests, the single runtime gate, and the full `ui-gallery-command` suite passed with 17
+  scripts and zero lint findings.
+- Remaining follow-up: add retained/windowed active-descendant action-state mutation coverage where
+  a disabled or invokable row detaches, reattaches, or changes availability under filtering or
+  virtualization.

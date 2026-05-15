@@ -5526,6 +5526,221 @@ mod tests {
     }
 
     #[test]
+    fn cmdk_default_disabled_item_is_skipped_by_active_descendant_navigation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta")
+                    .disabled(true)
+                    .on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            build_items(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            build_items(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+        assert_eq!(
+            active_node.label.as_deref(),
+            Some("Gamma"),
+            "default disabled cmdk rows should not be active-descendant candidates"
+        );
+
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
+            .expect("disabled Beta row");
+        assert!(beta.flags.disabled);
+        assert!(
+            !beta.actions.invoke,
+            "default disabled cmdk row should not expose invoke"
+        );
+    }
+
+    #[test]
+    fn cmdk_focusable_disabled_item_can_be_active_descendant_without_keyboard_activation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+        let invoked = app.models_mut().insert(false);
+        let on_select: fret_ui::action::OnActivate = Arc::new({
+            let invoked = invoked.clone();
+            move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&invoked, |value| *value = true);
+                host.request_redraw(action_cx.window);
+            }
+        });
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Deploy API")
+                    .disabled(true)
+                    .focusable_when_disabled(true)
+                    .on_select_action(on_select.clone()),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            build_items(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            build_items(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.label.as_deref(), Some("Deploy API"));
+        assert!(
+            active_node.flags.disabled,
+            "focusable disabled cmdk row should keep disabled semantics"
+        );
+        assert!(
+            !active_node.actions.invoke,
+            "focusable disabled cmdk row should suppress invoke semantics"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            build_items(),
+        );
+        assert!(
+            !invoked
+                .read_ref(&app, |value| *value)
+                .expect("read invoked"),
+            "Enter should not activate a disabled-but-focusable cmdk row"
+        );
+    }
+
+    #[test]
     fn command_palette_test_id_prefix_derives_surface_ids() {
         let window = AppWindowId::default();
         let mut app = App::new();

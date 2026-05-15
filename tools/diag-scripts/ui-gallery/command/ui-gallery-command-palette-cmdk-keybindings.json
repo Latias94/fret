@@ -166,28 +166,6 @@
       "type": "wait_until"
     },
     {
-      "key": "p",
-      "modifiers": {
-        "ctrl": true
-      },
-      "type": "press_key"
-    },
-    {
-      "predicate": {
-        "container": {
-          "id": "ui-gallery-command-behavior-input",
-          "kind": "test_id"
-        },
-        "item": {
-          "id": "ui-gallery-command-behavior-item-open-project",
-          "kind": "test_id"
-        },
-        "kind": "active_item_is"
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
       "key": "n",
       "modifiers": {
         "ctrl": true
@@ -201,7 +179,7 @@
           "kind": "test_id"
         },
         "item": {
-          "id": "ui-gallery-command-behavior-item-toggle-sidebar",
+          "id": "ui-gallery-command-behavior-item-deploy-api",
           "kind": "test_id"
         },
         "kind": "active_item_is"
@@ -223,7 +201,7 @@
           "kind": "test_id"
         },
         "item": {
-          "id": "ui-gallery-command-behavior-item-go-to-file",
+          "id": "ui-gallery-command-behavior-item-toggle-sidebar",
           "kind": "test_id"
         },
         "kind": "active_item_is"
@@ -245,7 +223,7 @@
           "kind": "test_id"
         },
         "item": {
-          "id": "ui-gallery-command-behavior-item-toggle-sidebar",
+          "id": "ui-gallery-command-behavior-item-deploy-api",
           "kind": "test_id"
         },
         "kind": "active_item_is"
@@ -395,7 +373,7 @@
         "kind": "test_id"
       },
       "delta_x": 0.0,
-      "delta_y": -360.0,
+      "delta_y": -560.0,
       "padding_px": 4.0,
       "require_fully_within_window": true,
       "timeout_frames": 600,
@@ -428,6 +406,23 @@
       },
       "timeout_frames": 240,
       "type": "wait_until"
+    },
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
+      "target": {
+        "id": "ui-gallery-command-behavior-groups-item-calendar",
+        "kind": "test_id"
+      },
+      "delta_x": 0.0,
+      "delta_y": -160.0,
+      "padding_px": 4.0,
+      "require_fully_within_window": true,
+      "timeout_frames": 600,
+      "require_fully_within_container": true
     },
     {
       "predicate": {

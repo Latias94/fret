@@ -1530,6 +1530,31 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - registry gate:
     `python tools/check_diag_scripts_registry.py` passed after promotion into the overlay/focus
     suite.
+- Command disabled-but-focusable active-descendant keyboard suppression gate:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - focused shadcn gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib disabled_item -- --nocapture`
+  - focused shadcn result:
+    passed, 2 tests.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json --dir target/fret-diag-command-disabled-focusable-keyboard-suppression-v2 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778824893798`.
+  - runtime evidence:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-v2/sessions/1778824882684-64832/script.result.json`
+  - active-descendant bundle:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-v2/sessions/1778824882684-64832/1778824950725-ui-gallery-command-palette-disabled-focusable-active-descendant`
+  - keyboard-suppression bundle:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-v2/sessions/1778824882684-64832/1778824952379-ui-gallery-command-palette-disabled-focusable-keyboard-suppression`
+  - full Command suite:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-disabled-focusable-v7 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed; 17 scripts, zero lint errors, zero reason codes.
+  - suite evidence:
+    `target/fret-diag-command-suite-disabled-focusable-v7/sessions/1778825524424-52724/suite.summary.json`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
