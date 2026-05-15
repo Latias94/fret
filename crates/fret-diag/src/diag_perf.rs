@@ -3239,6 +3239,20 @@ mod tests {
                 .expect("threshold JSON should parse");
 
         assert_eq!(
+            payload.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_THRESHOLDS_KIND)
+        );
+        assert_eq!(
+            payload.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_GATE_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            payload
+                .pointer("/schema_policy/compatibility")
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
+        assert_eq!(
             payload.pointer("/thresholds/max_renderer_encode_scene_us"),
             Some(&serde_json::json!(5_000))
         );
@@ -3249,6 +3263,54 @@ mod tests {
         assert_eq!(
             payload.pointer("/thresholds/max_renderer_encode_scene_text_ops"),
             Some(&serde_json::json!(10_000))
+        );
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn perf_hints_json_is_versioned_and_additive_only() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-hints-schema-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).expect("create temp hints dir");
+
+        let deny_specs = vec!["layout.solve_heavy".to_string()];
+        let opts = parse_perf_hint_gate_options(true, &deny_specs, Some("error"))
+            .expect("parse hint gate opts");
+        let out_path = outputs::write_perf_hints_json(&out_dir, 5, &opts, None, None, &[], &[]);
+        let payload: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&out_path).expect("hints JSON should exist"))
+                .expect("hints JSON should parse");
+
+        assert_eq!(
+            payload.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_HINTS_KIND)
+        );
+        assert_eq!(
+            payload.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_GATE_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            payload
+                .pointer("/schema_policy/compatibility")
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
+        assert_eq!(
+            payload.get("min_severity").and_then(|v| v.as_str()),
+            Some("error")
+        );
+        assert_eq!(
+            payload
+                .get("deny")
+                .and_then(|v| v.as_array())
+                .and_then(|v| v.first())
+                .and_then(|v| v.as_str()),
+            Some("layout.solve_heavy")
         );
 
         let _ = std::fs::remove_dir_all(&out_dir);

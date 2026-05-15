@@ -80,9 +80,9 @@ Shipped in this workstream (commit-addressable, additive changes):
 
 Remaining gaps / follow-ups:
 
-- Perf schema versioning for stats, stats diff, and triage JSON is now in place. Gate artifacts
-  (`check.perf_thresholds.json` / `check.perf_hints.json`) already carry `schema_version=1`; their
-  schema should remain additive unless a dedicated migration is documented.
+- Perf schema versioning for stats, stats diff, triage JSON, and gate artifacts is now in place.
+  These outputs carry `schema_policy.compatibility=additive_only`; removals, semantic renames, or
+  type changes require either a schema bump or a documented migration/compatibility window.
 - Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
 - A field inventory doc (keys + meaning + where measured) to reduce tribal knowledge:
   - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
@@ -104,7 +104,7 @@ Define a stable schema for per-frame perf stats, conceptually:
 Rules:
 
 - Prefer `*_time_us` and `*_calls` / `*_items` pairs when meaningful.
-- Add `schema_version` (integer) plus `kind` to stats / stats diff / triage output.
+- Add `schema_version` (integer) plus `kind` to stats / stats diff / triage / perf gate outputs.
 - Emit `schema_policy.compatibility=additive_only`; avoid renaming keys without a compatibility
   window or a schema version bump.
 
