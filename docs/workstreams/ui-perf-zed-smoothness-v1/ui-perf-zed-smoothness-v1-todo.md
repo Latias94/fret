@@ -680,9 +680,10 @@ Conventions:
           worst-bundle `diag stats --sort cpu_cycles --top 15 --json` output for each validation probe and
           checks that the required paint-widget, renderer, and paint-perf field groups are present.
           Non-empty `check.perf_thresholds.json.failures` is treated as a failed validation run.
-        - After copying both validation directories back into the workspace, run
-          `python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`
-          to verify the synced artifacts without rerunning the probes.
+        - After copying both validation directories back into the workspace, prefer the local closeout gate:
+          `python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`.
+          Use `tools/perf/diag_editor_paint_contract_verify_artifacts.py` only when the artifact-only check is needed
+          without the repo-level closeout gates.
         - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
           renderer text/encode/upload, and no threshold loosening unless intentionally justified.
