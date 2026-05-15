@@ -201,6 +201,8 @@ Example bundle:
   diagnostics script drive. Existing hitch log field names are unchanged.
 - Native redraw runner phases now use the same helper for prepare, render, record, present, and
   nested render-scene spans. Existing redraw-hitch log field names are unchanged.
+- Web runner frame phases now use the same runner phase names for prepare, render, record, present,
+  and nested render-scene spans, keeping native/wasm timeline vocabulary aligned.
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
   subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.

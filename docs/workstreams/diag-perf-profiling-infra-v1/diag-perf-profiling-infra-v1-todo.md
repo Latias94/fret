@@ -65,4 +65,8 @@
       redraw-hitch log fields:
       prepare, render, record, present, and nested render scene.
       - Evidence: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+    - [x] Align web runner frame phases with `fret_perf::measure_span` using the same runner
+      phase names:
+      prepare, render, record, present, and nested render scene.
+      - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
     - `crates/fret-render-*` (prepare/record/submit/present boundaries)

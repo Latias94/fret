@@ -82,6 +82,10 @@
       "command": "cargo check -p fret-launch"
     },
     {
+      "name": "fret-launch-web-runner-phase-check",
+      "command": "cargo check -p fret-launch --target wasm32-unknown-unknown"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
