@@ -170,3 +170,5 @@ Tail-spike triage:
   is still open.
 - Perf threshold failure rows now attach per-metric evidence via `evidence_bundle`, `evidence_run`,
   `evidence_artifacts`, and optional `evidence_trace_chrome` when a sibling `trace.chrome.json` exists.
+- `diag stats --diff` now reports p95 deltas alongside max deltas and exposes a `typical_tail` highlight set in
+  both human and JSON output.

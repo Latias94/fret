@@ -648,6 +648,7 @@ The command prints the export directory path, and writes:
 
    - `cargo run -p fretboard-dev -- diag stats --diff <bundle_a> <bundle_b> --top 20`
    - JSON: `cargo run -p fretboard-dev -- diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
+   - The diff includes `typical_tail` highlights so p95 shifts and max spikes are visible together.
    - Stats-lite support matrix: `cargo run -p fretboard-dev -- diag stats --stats-lite-checks-json`
 
 5. Optional: inspect focused summaries without loading the full bundle by hand:
