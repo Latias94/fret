@@ -17,13 +17,13 @@ fn replace_buffer_resets_state() {
         st.row_text_cache.insert(
             0,
             (
-                RowTextCacheEntry {
+                Arc::new(RowContentSnapshot {
                     text: Arc::from("hello"),
                     range: 0..5,
                     fold_map: None,
                     preedit_range: None,
                     row_spans: Arc::from([]),
-                },
+                }),
                 1,
             ),
         );

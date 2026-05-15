@@ -32,7 +32,7 @@ use self::rich::{
 };
 #[cfg(test)]
 pub(super) use self::text::cached_row_text;
-pub(super) use self::text::cached_row_text_with_range;
+pub(super) use self::text::{cached_row_content_snapshot, cached_row_text_with_range};
 use fret_core::TextMetrics;
 
 const ROW_CACHE_QUEUE_COMPACT_FACTOR: usize = 4;
@@ -197,21 +197,14 @@ pub(super) fn paint_row(
     if replay_plan_entry_matches_rect {
         painter.record_scene_fragment_used_entries(1);
     }
-    let (row_range, line, row_folds, row_preedit_range, row_spans) = if let Some(entry) =
-        replay_plan_entry
-            .as_ref()
-            .filter(|_| replay_plan_entry_matches_rect)
+    let row_content = if let Some(entry) = replay_plan_entry
+        .as_ref()
+        .filter(|_| replay_plan_entry_matches_rect)
     {
-        (
-            entry.payload.row_range.clone(),
-            Arc::clone(&entry.payload.line),
-            entry.payload.row_folds.clone(),
-            entry.payload.row_preedit_range.clone(),
-            Arc::clone(&entry.payload.row_spans),
-        )
+        entry.payload.content.clone()
     } else if perf_enabled {
         let started = Instant::now();
-        let out = cached_row_text_with_range(st, row, text_cache_max_entries);
+        let out = cached_row_content_snapshot(st, row, text_cache_max_entries);
         add_paint_perf_elapsed(
             &mut st.paint_perf_frame.us_row_text,
             &mut st.paint_perf_frame.ns_row_text,
@@ -219,8 +212,13 @@ pub(super) fn paint_row(
         );
         out
     } else {
-        cached_row_text_with_range(st, row, text_cache_max_entries)
+        cached_row_content_snapshot(st, row, text_cache_max_entries)
     };
+    let row_range = row_content.range.clone();
+    let line = Arc::clone(&row_content.text);
+    let row_folds = row_content.fold_map.clone();
+    let row_preedit_range = row_content.preedit_range.clone();
+    let row_spans = Arc::clone(&row_content.row_spans);
     if replay_plan_entry.is_some() && !replay_plan_entry_matches_rect {
         painter.record_scene_fragment_rejected_entries(1, "rect_mismatch");
     }
@@ -1494,6 +1492,7 @@ pub(super) fn paint_row(
             st,
             row,
             row_scene_key,
+            row_content.clone(),
             origin,
             geom,
             is_rich,
@@ -1508,6 +1507,7 @@ pub(super) fn paint_row(
             st,
             row,
             row_scene_key,
+            row_content.clone(),
             origin,
             geom,
             is_rich,

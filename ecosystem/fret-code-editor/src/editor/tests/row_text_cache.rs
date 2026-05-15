@@ -234,9 +234,9 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         perf.us_row_rich_cache_compare, 0,
         "paint should not probe rich row content for planned replay rows"
     );
-    assert!(
-        row_text_delta >= perf.rows_scene_prepaint_planned,
-        "prepaint planning should account for row text work before paint"
+    assert_eq!(
+        row_text_delta, 0,
+        "prepaint planning should reuse row content snapshots from row scene cache"
     );
     assert!(
         scene_hits_delta >= perf.rows_scene_prepaint_planned,

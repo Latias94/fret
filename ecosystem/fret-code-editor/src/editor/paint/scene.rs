@@ -129,9 +129,8 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         st.cache_stats.row_scene_fast_get_calls =
             st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
 
-        let (row_range, line, row_folds, row_preedit_range, row_spans) =
-            cached_row_text_with_range(st, row, max_entries);
-        if row_preedit_range.is_some() {
+        let content = cached.content.clone();
+        if content.preedit_range.is_some() {
             continue;
         }
 
@@ -151,9 +150,9 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         };
         let matches = row_scene_cached_entry_matches_syntax(
             cached,
-            &row_range,
-            &line,
-            &row_spans,
+            &content.range,
+            &content.text,
+            &content.row_spans,
             &syntax_spans,
             text_style,
             constraints,
@@ -187,11 +186,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             .push_back(fret_ui::canvas::CanvasSceneFragment::new(
                 RowSceneFragmentPayload {
                     row,
-                    row_range,
-                    line,
-                    row_folds,
-                    row_preedit_range,
-                    row_spans,
+                    content,
                     geom,
                     is_rich,
                 },
@@ -539,6 +534,7 @@ pub(super) fn store_row_scene_cache(
     st: &mut CodeEditorState,
     row: usize,
     key: RowSceneKey,
+    content: Arc<RowContentSnapshot>,
     origin: fret_core::Point,
     geom: RowGeom,
     is_rich: bool,
@@ -563,6 +559,7 @@ pub(super) fn store_row_scene_cache(
         (
             RowSceneCacheEntry {
                 key,
+                content,
                 origin,
                 geom,
                 is_rich,
@@ -627,6 +624,7 @@ pub(super) fn store_row_scene_cache(
     st: &mut CodeEditorState,
     row: usize,
     key: RowSceneKey,
+    content: Arc<RowContentSnapshot>,
     origin: fret_core::Point,
     geom: RowGeom,
     is_rich: bool,
@@ -650,6 +648,7 @@ pub(super) fn store_row_scene_cache(
         (
             RowSceneCacheEntry {
                 key,
+                content,
                 origin,
                 geom,
                 is_rich,

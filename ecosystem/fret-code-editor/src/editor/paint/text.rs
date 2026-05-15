@@ -23,6 +23,14 @@ pub(in crate::editor) fn cached_row_text_with_range(
     Option<Range<usize>>,
     Arc<[fret_code_editor_view::DisplayRowSpan]>,
 ) {
+    cached_row_content_snapshot(st, row, max_entries).cloned_parts()
+}
+
+pub(in crate::editor) fn cached_row_content_snapshot(
+    st: &mut CodeEditorState,
+    row: usize,
+    max_entries: usize,
+) -> Arc<RowContentSnapshot> {
     st.cache_stats.row_text_get_calls = st.cache_stats.row_text_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
@@ -65,13 +73,7 @@ pub(in crate::editor) fn cached_row_text_with_range(
 
     if let Some((text, last_used)) = st.row_text_cache.get_mut(&row) {
         *last_used = tick;
-        let out = (
-            text.range.clone(),
-            Arc::clone(&text.text),
-            text.fold_map.clone(),
-            text.preedit_range.clone(),
-            Arc::clone(&text.row_spans),
-        );
+        let out = Arc::clone(text);
         st.row_text_cache_queue.push_back((row, tick));
         compact_row_lru_queue_if_needed(
             &st.row_text_cache,
@@ -102,19 +104,15 @@ pub(in crate::editor) fn cached_row_text_with_range(
     let entry_text_bytes = text.len() as u64;
     let entry_row_spans_len = row_spans.len() as u64;
 
-    if let Some((old, _)) = st.row_text_cache.insert(
-        row,
-        (
-            RowTextCacheEntry {
-                text: Arc::clone(&text),
-                range,
-                fold_map: fold_map.clone(),
-                preedit_range: preedit_range.clone(),
-                row_spans: Arc::clone(&row_spans),
-            },
-            tick,
-        ),
-    ) {
+    let snapshot = Arc::new(RowContentSnapshot {
+        text: Arc::clone(&text),
+        range,
+        fold_map: fold_map.clone(),
+        preedit_range: preedit_range.clone(),
+        row_spans: Arc::clone(&row_spans),
+    });
+
+    if let Some((old, _)) = st.row_text_cache.insert(row, (Arc::clone(&snapshot), tick)) {
         st.row_text_cache_text_bytes_estimate_total = st
             .row_text_cache_text_bytes_estimate_total
             .saturating_sub(old.text.len() as u64);
@@ -156,5 +154,10 @@ pub(in crate::editor) fn cached_row_text_with_range(
         }
     }
 
-    (range_for_return, text, fold_map, preedit_range, row_spans)
+    debug_assert_eq!(snapshot.range, range_for_return);
+    debug_assert!(Arc::ptr_eq(&snapshot.text, &text));
+    debug_assert_eq!(snapshot.fold_map, fold_map);
+    debug_assert_eq!(snapshot.preedit_range, preedit_range);
+    debug_assert!(Arc::ptr_eq(&snapshot.row_spans, &row_spans));
+    snapshot
 }

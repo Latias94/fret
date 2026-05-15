@@ -63,7 +63,7 @@ pub(super) struct CodeEditorState {
     pub(super) row_text_cache_inlays_epoch: u64,
     pub(super) row_text_cache_display_map_epoch: u64,
     pub(super) row_text_cache_tick: u64,
-    pub(super) row_text_cache: HashMap<usize, (RowTextCacheEntry, u64)>,
+    pub(super) row_text_cache: HashMap<usize, (Arc<RowContentSnapshot>, u64)>,
     pub(super) row_text_cache_queue: VecDeque<(usize, u64)>,
     pub(super) row_text_cache_text_bytes_estimate_total: u64,
     pub(super) row_text_cache_row_spans_len_total: u64,
@@ -153,12 +153,32 @@ pub(super) struct ImeSurroundingTextCache {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct RowTextCacheEntry {
+pub(super) struct RowContentSnapshot {
     pub(super) text: Arc<str>,
     pub(super) range: Range<usize>,
     pub(super) fold_map: Option<geom::RowFoldMap>,
     pub(super) preedit_range: Option<Range<usize>>,
     pub(super) row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+}
+
+impl RowContentSnapshot {
+    pub(super) fn cloned_parts(
+        &self,
+    ) -> (
+        Range<usize>,
+        Arc<str>,
+        Option<geom::RowFoldMap>,
+        Option<Range<usize>>,
+        Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    ) {
+        (
+            self.range.clone(),
+            Arc::clone(&self.text),
+            self.fold_map.clone(),
+            self.preedit_range.clone(),
+            Arc::clone(&self.row_spans),
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -235,6 +255,7 @@ impl RowSceneKey {
 #[derive(Debug, Clone)]
 pub(super) struct RowSceneCacheEntry {
     pub(super) key: RowSceneKey,
+    pub(super) content: Arc<RowContentSnapshot>,
     pub(super) origin: Point,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
@@ -247,11 +268,7 @@ pub(super) struct RowSceneCacheEntry {
 #[derive(Debug, Clone)]
 pub(super) struct RowSceneFragmentPayload {
     pub(super) row: usize,
-    pub(super) row_range: Range<usize>,
-    pub(super) line: Arc<str>,
-    pub(super) row_folds: Option<geom::RowFoldMap>,
-    pub(super) row_preedit_range: Option<Range<usize>>,
-    pub(super) row_spans: Arc<[fret_code_editor_view::DisplayRowSpan]>,
+    pub(super) content: Arc<RowContentSnapshot>,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
 }
