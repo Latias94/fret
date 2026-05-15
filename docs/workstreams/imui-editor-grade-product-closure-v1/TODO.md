@@ -167,6 +167,25 @@ reopen.
       Maintenance: the DevTools GUI `Gate Commands` profile rows now expose a `Copy command`
       action for each shared profile, making stale/pixels/perf/resource-footprint gate templates
       copyable from structured rows before adding profile-specific run forms.
+      Maintenance: `fret-diag` now parameterizes the script-target stale paint/scene and
+      pixels-changed gate profiles from `script.json` + `test-id`, and the DevTools GUI exposes a
+      selected-profile command builder with preview and `Copy generated command` without moving
+      gate templates into the GUI.
+      Maintenance: the same script-target gate projection now includes structured `diag_args` and
+      `missing_inputs`, giving the next GUI launch/run slice a safe execution contract instead of
+      parsing the copied shell command.
+      Maintenance: the DevTools GUI script-target gate builder can now launch the generated stale
+      paint/scene or pixels-changed command through the shared diagnostics engine and writes
+      `.fret/diag/gate-runs/*.json` result artifacts, keeping this as DevTools productization
+      rather than `fret-imui` runtime growth.
+      Maintenance: generated gate result artifacts now have a bounded selectable GUI history with
+      selected-result details, summary, raw JSON, copy actions, and platform URL open support.
+      Maintenance: the generated gate builder now supports the `perf-thresholds` profile from a
+      shared `fret-diag` structured `diag perf` command projection, so the GUI can copy/run
+      target/repeat/warmup/aggregate/threshold commands without parsing shell templates.
+      Maintenance: the same generated gate builder now supports `resource-footprint-thresholds`;
+      this also repairs the underlying `diag repro` contract so working-set, peak-working-set, and
+      CPU-average thresholds are real parsed CLI inputs before the GUI exposes them.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
       commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
       compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding

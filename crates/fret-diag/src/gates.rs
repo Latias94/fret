@@ -4,18 +4,18 @@ use super::util::{now_unix_ms, read_json_value, write_json_value};
 
 #[derive(Default)]
 pub(super) struct ResourceFootprintThresholds {
-    pub(super) max_working_set_bytes: Option<u64>,
-    pub(super) max_peak_working_set_bytes: Option<u64>,
-    pub(super) max_macos_physical_footprint_peak_bytes: Option<u64>,
-    pub(super) max_macos_owned_unmapped_memory_dirty_bytes: Option<u64>,
-    pub(super) max_macos_io_surface_dirty_bytes: Option<u64>,
-    pub(super) max_macos_io_accelerator_dirty_bytes: Option<u64>,
-    pub(super) max_macos_malloc_small_dirty_bytes: Option<u64>,
-    pub(super) max_macos_malloc_dirty_bytes_total: Option<u64>,
-    pub(super) max_macos_malloc_zones_total_allocated_bytes: Option<u64>,
-    pub(super) max_macos_malloc_zones_total_frag_bytes: Option<u64>,
-    pub(super) max_macos_malloc_zones_total_dirty_bytes: Option<u64>,
-    pub(super) max_cpu_avg_percent_total_cores: Option<f64>,
+    pub(crate) max_working_set_bytes: Option<u64>,
+    pub(crate) max_peak_working_set_bytes: Option<u64>,
+    pub(crate) max_macos_physical_footprint_peak_bytes: Option<u64>,
+    pub(crate) max_macos_owned_unmapped_memory_dirty_bytes: Option<u64>,
+    pub(crate) max_macos_io_surface_dirty_bytes: Option<u64>,
+    pub(crate) max_macos_io_accelerator_dirty_bytes: Option<u64>,
+    pub(crate) max_macos_malloc_small_dirty_bytes: Option<u64>,
+    pub(crate) max_macos_malloc_dirty_bytes_total: Option<u64>,
+    pub(crate) max_macos_malloc_zones_total_allocated_bytes: Option<u64>,
+    pub(crate) max_macos_malloc_zones_total_frag_bytes: Option<u64>,
+    pub(crate) max_macos_malloc_zones_total_dirty_bytes: Option<u64>,
+    pub(crate) max_cpu_avg_percent_total_cores: Option<f64>,
 }
 
 impl ResourceFootprintThresholds {

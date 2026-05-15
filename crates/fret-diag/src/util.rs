@@ -34,6 +34,23 @@ pub(crate) fn now_unix_ms() -> u64 {
         .unwrap_or(0)
 }
 
+pub(crate) fn shell_quote_arg(value: &str) -> String {
+    let value = value.trim();
+    if value.is_empty() {
+        return "''".to_string();
+    }
+    if value.chars().all(|ch| {
+        ch.is_ascii_alphanumeric()
+            || matches!(
+                ch,
+                '.' | '/' | '\\' | ':' | '_' | '-' | '=' | '+' | ',' | '@' | '[' | ']' | '(' | ')'
+            )
+    }) {
+        return value.to_string();
+    }
+    format!("'{}'", value.replace('\'', "''"))
+}
+
 pub(crate) fn read_json_value(path: &Path) -> Option<serde_json::Value> {
     let bytes = read_file_bytes_shared(path)?;
     serde_json::from_slice(&bytes).ok()
