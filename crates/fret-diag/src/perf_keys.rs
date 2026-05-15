@@ -241,20 +241,28 @@ pub(crate) const LAYOUT_ENGINE_SOLVE_TIME_US: PerfKey = trace_timing_key(
     "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US: PerfKey = trace_timing_key(
     "layout_pending_barrier_relayouts_time_us",
+    "layout.pending_barriers",
+    "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US: PerfKey = trace_timing_key(
     "layout_repair_view_cache_bounds_time_us",
+    "layout.view_cache.repair_bounds",
+    "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US: PerfKey = trace_timing_key(
     "layout_contained_view_cache_roots_time_us",
+    "layout.view_cache.layout_contained_roots",
+    "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US: PerfKey = trace_timing_key(
     "layout_collapse_layout_observations_time_us",
+    "layout.view_cache.collapse_observations",
+    "layout",
     PerfKeyAggregate::P95,
 );
 pub(crate) const LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US: PerfKey = timing_key(
@@ -263,12 +271,24 @@ pub(crate) const LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US: PerfKey = timing_key(
 );
 pub(crate) const LAYOUT_BARRIER_RELAYOUTS_TIME_US: PerfKey =
     timing_key("layout_barrier_relayouts_time_us", PerfKeyAggregate::P95);
-pub(crate) const LAYOUT_SEMANTICS_REFRESH_TIME_US: PerfKey =
-    timing_key("layout_semantics_refresh_time_us", PerfKeyAggregate::P95);
-pub(crate) const LAYOUT_FOCUS_REPAIR_TIME_US: PerfKey =
-    timing_key("layout_focus_repair_time_us", PerfKeyAggregate::P95);
-pub(crate) const LAYOUT_DEFERRED_CLEANUP_TIME_US: PerfKey =
-    timing_key("layout_deferred_cleanup_time_us", PerfKeyAggregate::P95);
+pub(crate) const LAYOUT_SEMANTICS_REFRESH_TIME_US: PerfKey = trace_timing_key(
+    "layout_semantics_refresh_time_us",
+    "layout.refresh_semantics",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_FOCUS_REPAIR_TIME_US: PerfKey = trace_timing_key(
+    "layout_focus_repair_time_us",
+    "layout.focus_repair",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_DEFERRED_CLEANUP_TIME_US: PerfKey = trace_timing_key(
+    "layout_deferred_cleanup_time_us",
+    "layout.flush_deferred_cleanup",
+    "layout",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const LAYOUT_ENGINE_CHILD_RECT_TIME_US: PerfKey =
     timing_key("layout_engine_child_rect_time_us", PerfKeyAggregate::P95);
 pub(crate) const LAYOUT_OBSERVATION_RECORD_MODELS_ITEMS: PerfKey = count_key(
@@ -338,20 +358,36 @@ pub(crate) const PAINT_WIDGET_TIME_US: PerfKey = trace_timing_key(
     "paint",
     PerfKeyAggregate::P95,
 );
-pub(crate) const PAINT_INPUT_CONTEXT_TIME_US: PerfKey =
-    timing_key("paint_input_context_time_us", PerfKeyAggregate::P95);
-pub(crate) const PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US: PerfKey = timing_key(
+pub(crate) const PAINT_INPUT_CONTEXT_TIME_US: PerfKey = trace_timing_key(
+    "paint_input_context_time_us",
+    "paint.input_context",
+    "paint",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US: PerfKey = trace_timing_key(
     "paint_scroll_handle_invalidation_time_us",
+    "paint.scroll_handle_invalidation",
+    "paint",
     PerfKeyAggregate::P95,
 );
-pub(crate) const PAINT_COLLECT_ROOTS_TIME_US: PerfKey =
-    timing_key("paint_collect_roots_time_us", PerfKeyAggregate::P95);
-pub(crate) const PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US: PerfKey = timing_key(
+pub(crate) const PAINT_COLLECT_ROOTS_TIME_US: PerfKey = trace_timing_key(
+    "paint_collect_roots_time_us",
+    "paint.collect_roots",
+    "paint",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US: PerfKey = trace_timing_key(
     "paint_publish_text_input_snapshot_time_us",
+    "paint.publish_text_input_snapshot",
+    "paint",
     PerfKeyAggregate::P95,
 );
-pub(crate) const PAINT_COLLAPSE_OBSERVATIONS_TIME_US: PerfKey =
-    timing_key("paint_collapse_observations_time_us", PerfKeyAggregate::P95);
+pub(crate) const PAINT_COLLAPSE_OBSERVATIONS_TIME_US: PerfKey = trace_timing_key(
+    "paint_collapse_observations_time_us",
+    "paint.collapse_observations",
+    "paint",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const PAINT_HOST_WIDGET_OBSERVED_MODELS_TIME_US: PerfKey = timing_key(
     "paint_host_widget_observed_models_time_us",
     PerfKeyAggregate::P95,
@@ -754,6 +790,13 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     LAYOUT_ROOTS_TIME_US,
     LAYOUT_VIEW_CACHE_TIME_US,
     LAYOUT_ENGINE_SOLVE_TIME_US,
+    LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
+    LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US,
+    LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US,
+    LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US,
+    LAYOUT_FOCUS_REPAIR_TIME_US,
+    LAYOUT_SEMANTICS_REFRESH_TIME_US,
+    LAYOUT_DEFERRED_CLEANUP_TIME_US,
     PAINT_OBSERVATION_RECORD_TIME_US,
     PAINT_TEXT_PREPARE_TIME_US,
     PAINT_RECORD_VISUAL_BOUNDS_TIME_US,
@@ -762,6 +805,11 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     PAINT_CACHE_REPLAY_TIME_US,
     PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US,
     PAINT_WIDGET_TIME_US,
+    PAINT_INPUT_CONTEXT_TIME_US,
+    PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US,
+    PAINT_COLLECT_ROOTS_TIME_US,
+    PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US,
+    PAINT_COLLAPSE_OBSERVATIONS_TIME_US,
 ];
 
 pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[

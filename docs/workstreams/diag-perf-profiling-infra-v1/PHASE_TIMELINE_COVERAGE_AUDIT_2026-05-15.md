@@ -40,7 +40,7 @@ before real-span trace export work starts.
 | Dispatch | `fret.ui.dispatch.*` spans for event body, context build, target routing, pointer arbitration, widget capture/bubble, hover/cursor, and post-dispatch snapshot | `crates/fret-ui/src/tree/dispatch/window.rs` | Covered for common input paths |
 | Hit-test | `fret.ui.hit_test.*` spans for layer walk, cached path, bounds-tree query, fallback traversal, and candidate checks | `crates/fret-ui/src/tree/hit_test.rs` | Covered |
 | Renderer | `fret.renderer.*` spans for render scene, prepare text/SVG, scene encode, plan compile, upload, record passes, passes, encoder finish, targets, pools, and pipeline creation. Frame-level text/SVG prepare, scene encode, and upload timers now route through `fret_perf::measure_span` so `RenderPerfStats` buckets and span boundaries share one call site. | `crates/fret-render-wgpu/src/renderer/**` | Covered for WGPU renderer internals |
-| Chrome trace artifact | Stable additive JSON schema, Chrome events generated from bundle stats | `crates/fret-diag/src/trace.rs`; `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md` | Covered as synthetic timeline only |
+| Chrome trace artifact | Stable additive JSON schema, Chrome events generated from bundle stats. UI layout/paint sub-phase events are driven by trace metadata in the perf key registry and covered by a synthetic-event test. | `crates/fret-diag/src/perf_keys.rs`; `crates/fret-diag/src/trace.rs`; `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json` | Covered as synthetic timeline only |
 | Tracy capture/export | `diag repro --with tracy` enables `FRET_TRACY=1` and can inject `fret-bootstrap/tracy`; capture saving remains manual in Tracy UI | `crates/fret-diag/src/diag_repro/launch.rs`; `crates/fret-diag/src/diag_repro/summary.rs`; `docs/tracy.md` | Partial |
 
 ## Missing or weakly verified areas
@@ -48,8 +48,11 @@ before real-span trace export work starts.
 - Real-span export into a local artifact is not implemented. Current Chrome trace output is explicitly synthetic.
 - Tracy capture-to-file is not automated or gateable; the UI must connect and save a capture manually.
 - The typed perf key registry now covers the `debug.stats` frame fields consumed by `diag stats` and keeps a
-  generated inventory in sync. Threshold/config `max_*`/`min_*` gate keys now have a separate generated registry,
-  keeping gate config explicit without mixing it into frame metric keys.
+  generated inventory in sync. The trace-exported UI layout/paint timing subset now carries stable Chrome event
+  names, and `chrome_trace_synthetic_ui_subphases_cover_registered_timing_events` guards against registering a
+  UI timing event without emitting it from the bundle-derived trace exporter. Threshold/config `max_*`/`min_*`
+  gate keys now have a separate generated registry, keeping gate config explicit without mixing it into frame
+  metric keys.
 - The audit proves source coverage, not runtime quality. It does not replace running a specific perf repro and
   comparing bundle stats / trace output for that repro.
 

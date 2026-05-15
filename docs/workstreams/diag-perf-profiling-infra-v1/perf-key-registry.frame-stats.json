@@ -131,6 +131,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.pending_barriers",
       "unit": "us"
     },
     {
@@ -138,6 +140,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.view_cache.repair_bounds",
       "unit": "us"
     },
     {
@@ -145,6 +149,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.view_cache.layout_contained_roots",
       "unit": "us"
     },
     {
@@ -152,6 +158,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.view_cache.collapse_observations",
       "unit": "us"
     },
     {
@@ -214,6 +222,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.refresh_semantics",
       "unit": "us"
     },
     {
@@ -221,6 +231,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.focus_repair",
       "unit": "us"
     },
     {
@@ -228,6 +240,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.flush_deferred_cleanup",
       "unit": "us"
     },
     {
@@ -389,6 +403,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.input_context",
       "unit": "us"
     },
     {
@@ -396,6 +412,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.scroll_handle_invalidation",
       "unit": "us"
     },
     {
@@ -403,6 +421,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.collect_roots",
       "unit": "us"
     },
     {
@@ -410,6 +430,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.publish_text_input_snapshot",
       "unit": "us"
     },
     {
@@ -417,6 +439,8 @@
       "kind": "timing",
       "scope": "frame",
       "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.collapse_observations",
       "unit": "us"
     },
     {

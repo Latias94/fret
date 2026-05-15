@@ -39,7 +39,13 @@
   - Result: existing spans/timers cover the major runtime phases, but Chrome trace output remains
     bundle-derived synthetic phases and does not include live `tracing` / Tracy spans.
 - [ ] Add missing always-on phase timers for known uninstrumented work (keep additive keys).
-- [ ] Ensure chrome trace emits stable event names for new sub-phases.
+- [x] Ensure chrome trace emits stable event names for new sub-phases.
+  - Evidence:
+    `crates/fret-diag/src/perf_keys.rs`,
+    `crates/fret-diag/src/trace.rs`,
+    `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`
+  - Gate:
+    `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_synthetic_ui_subphases_cover_registered_timing_events trace_exported_perf_key_units_match_names registered_perf_key_inventory_doc_is_in_sync --no-fail-fast`
 - [ ] Adopt `crates/fret-perf` helpers for new/updated timers so stats + spans stay aligned.
   - [x] Migrate `layout_all` final tail phases through a shared `fret_perf::measure_span` path:
     regular frames, layout fast-path frames, and skipped-engine stable frames now share the

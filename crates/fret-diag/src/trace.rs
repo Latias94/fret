@@ -4,6 +4,40 @@ use serde_json::Value;
 
 use crate::perf_keys;
 
+const LAYOUT_SYNTHETIC_SUBPHASE_KEYS: &[perf_keys::PerfKey] = &[
+    perf_keys::LAYOUT_COLLECT_ROOTS_TIME_US,
+    perf_keys::LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US,
+    perf_keys::LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US,
+    perf_keys::LAYOUT_REQUEST_BUILD_ROOTS_TIME_US,
+    perf_keys::LAYOUT_ENGINE_SOLVE_TIME_US,
+    perf_keys::LAYOUT_ROOTS_TIME_US,
+    perf_keys::LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
+    perf_keys::LAYOUT_VIEW_CACHE_TIME_US,
+    perf_keys::LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US,
+    perf_keys::LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US,
+    perf_keys::LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US,
+    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US,
+    perf_keys::LAYOUT_FOCUS_REPAIR_TIME_US,
+    perf_keys::LAYOUT_SEMANTICS_REFRESH_TIME_US,
+    perf_keys::LAYOUT_DEFERRED_CLEANUP_TIME_US,
+];
+
+const PAINT_SYNTHETIC_SUBPHASE_KEYS: &[perf_keys::PerfKey] = &[
+    perf_keys::PAINT_INPUT_CONTEXT_TIME_US,
+    perf_keys::PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US,
+    perf_keys::PAINT_COLLECT_ROOTS_TIME_US,
+    perf_keys::PAINT_RECORD_VISUAL_BOUNDS_TIME_US,
+    perf_keys::PAINT_CACHE_KEY_TIME_US,
+    perf_keys::PAINT_CACHE_HIT_CHECK_TIME_US,
+    perf_keys::PAINT_CACHE_REPLAY_TIME_US,
+    perf_keys::PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US,
+    perf_keys::PAINT_WIDGET_TIME_US,
+    perf_keys::PAINT_TEXT_PREPARE_TIME_US,
+    perf_keys::PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US,
+    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US,
+    perf_keys::PAINT_COLLAPSE_OBSERVATIONS_TIME_US,
+];
+
 pub(crate) fn write_chrome_trace_from_bundle_path(
     bundle_path: &Path,
     out_path: &Path,
@@ -66,41 +100,6 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 perf_keys::read_u64(stats, perf_keys::UI_THREAD_CPU_CYCLE_TIME_DELTA_CYCLES);
             let ui_thread_cpu_cycle_time_total_cycles =
                 perf_keys::read_u64(stats, perf_keys::UI_THREAD_CPU_CYCLE_TIME_TOTAL_CYCLES);
-
-            let layout_obs_record_time_us =
-                perf_keys::read_u64(stats, perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US);
-            let layout_collect_roots_time_us =
-                perf_keys::read_u64(stats, perf_keys::LAYOUT_COLLECT_ROOTS_TIME_US);
-            let layout_invalidate_scroll_handle_bindings_time_us = perf_keys::read_u64(
-                stats,
-                perf_keys::LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US,
-            );
-            let layout_expand_view_cache_invalidations_time_us = perf_keys::read_u64(
-                stats,
-                perf_keys::LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US,
-            );
-            let layout_request_build_roots_time_us =
-                perf_keys::read_u64(stats, perf_keys::LAYOUT_REQUEST_BUILD_ROOTS_TIME_US);
-            let layout_roots_time_us = perf_keys::read_u64(stats, perf_keys::LAYOUT_ROOTS_TIME_US);
-            let layout_view_cache_time_us =
-                perf_keys::read_u64(stats, perf_keys::LAYOUT_VIEW_CACHE_TIME_US);
-            let layout_engine_solve_time_us =
-                perf_keys::read_u64(stats, perf_keys::LAYOUT_ENGINE_SOLVE_TIME_US);
-            let paint_obs_record_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_OBSERVATION_RECORD_TIME_US);
-            let paint_text_prepare_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_TEXT_PREPARE_TIME_US);
-            let paint_record_visual_bounds_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_RECORD_VISUAL_BOUNDS_TIME_US);
-            let paint_cache_key_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_CACHE_KEY_TIME_US);
-            let paint_cache_hit_check_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_CACHE_HIT_CHECK_TIME_US);
-            let paint_cache_replay_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_CACHE_REPLAY_TIME_US);
-            let paint_cache_bounds_translate_time_us =
-                perf_keys::read_u64(stats, perf_keys::PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US);
-            let paint_widget_time_us = perf_keys::read_u64(stats, perf_keys::PAINT_WIDGET_TIME_US);
 
             let phase_sum_us = dispatch_time_us
                 .saturating_add(hit_test_time_us)
@@ -179,62 +178,27 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 layout_time_us,
             );
             if layout_dur_us > 0 {
-                push_subphases(
+                push_registered_subphases(
                     &mut events,
                     pid,
                     tid,
                     layout_ts,
                     layout_dur_us,
-                    perf_keys::LAYOUT_TIME_US.trace_category_name(),
-                    &[
-                        (
-                            perf_keys::LAYOUT_COLLECT_ROOTS_TIME_US.trace_event_name(),
-                            layout_collect_roots_time_us,
-                        ),
-                        (
-                            perf_keys::LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US
-                                .trace_event_name(),
-                            layout_invalidate_scroll_handle_bindings_time_us,
-                        ),
-                        (
-                            perf_keys::LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US
-                                .trace_event_name(),
-                            layout_expand_view_cache_invalidations_time_us,
-                        ),
-                        (
-                            perf_keys::LAYOUT_REQUEST_BUILD_ROOTS_TIME_US.trace_event_name(),
-                            layout_request_build_roots_time_us,
-                        ),
-                        (
-                            perf_keys::LAYOUT_ENGINE_SOLVE_TIME_US.trace_event_name(),
-                            layout_engine_solve_time_us,
-                        ),
-                        (
-                            perf_keys::LAYOUT_ROOTS_TIME_US.trace_event_name(),
-                            layout_roots_time_us,
-                        ),
-                        (
-                            perf_keys::LAYOUT_VIEW_CACHE_TIME_US.trace_event_name(),
-                            layout_view_cache_time_us,
-                        ),
-                    ],
+                    stats,
+                    LAYOUT_SYNTHETIC_SUBPHASE_KEYS,
                 );
             }
-            if layout_obs_record_time_us > 0 && layout_time_us > 0 {
-                let dur = layout_obs_record_time_us.min(layout_dur_us);
-                events.push(chrome_x(
-                    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US.trace_event_name(),
-                    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US.trace_category_name(),
-                    pid,
-                    tid,
-                    layout_ts,
-                    dur,
-                    serde_json::json!({
-                        "tick_id": tick_id,
-                        "frame_id": frame_id,
-                    }),
-                ));
-            }
+            push_frame_arg_phase(
+                &mut events,
+                pid,
+                tid,
+                layout_ts,
+                layout_dur_us,
+                stats,
+                perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US,
+                tick_id,
+                frame_id,
+            );
 
             cursor = push_phase(
                 &mut events,
@@ -260,79 +224,38 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 paint_time_us,
             );
             if paint_dur_us > 0 {
-                push_subphases(
+                push_registered_subphases(
                     &mut events,
                     pid,
                     tid,
                     paint_ts,
                     paint_dur_us,
-                    perf_keys::PAINT_TIME_US.trace_category_name(),
-                    &[
-                        (
-                            perf_keys::PAINT_RECORD_VISUAL_BOUNDS_TIME_US.trace_event_name(),
-                            paint_record_visual_bounds_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_CACHE_KEY_TIME_US.trace_event_name(),
-                            paint_cache_key_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_CACHE_HIT_CHECK_TIME_US.trace_event_name(),
-                            paint_cache_hit_check_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_CACHE_REPLAY_TIME_US.trace_event_name(),
-                            paint_cache_replay_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US.trace_event_name(),
-                            paint_cache_bounds_translate_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_WIDGET_TIME_US.trace_event_name(),
-                            paint_widget_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_event_name(),
-                            paint_text_prepare_time_us,
-                        ),
-                        (
-                            perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_event_name(),
-                            paint_obs_record_time_us,
-                        ),
-                    ],
+                    stats,
+                    PAINT_SYNTHETIC_SUBPHASE_KEYS,
                 );
             }
-            if paint_obs_record_time_us > 0 && paint_time_us > 0 {
-                let dur = paint_obs_record_time_us.min(paint_dur_us);
-                events.push(chrome_x(
-                    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_event_name(),
-                    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_category_name(),
-                    pid,
-                    tid,
-                    paint_ts,
-                    dur,
-                    serde_json::json!({
-                        "tick_id": tick_id,
-                        "frame_id": frame_id,
-                    }),
-                ));
-            }
-            if paint_text_prepare_time_us > 0 && paint_time_us > 0 {
-                let dur = paint_text_prepare_time_us.min(paint_dur_us);
-                events.push(chrome_x(
-                    perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_event_name(),
-                    perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_category_name(),
-                    pid,
-                    tid,
-                    paint_ts,
-                    dur,
-                    serde_json::json!({
-                        "tick_id": tick_id,
-                        "frame_id": frame_id,
-                    }),
-                ));
-            }
+            push_frame_arg_phase(
+                &mut events,
+                pid,
+                tid,
+                paint_ts,
+                paint_dur_us,
+                stats,
+                perf_keys::PAINT_OBSERVATION_RECORD_TIME_US,
+                tick_id,
+                frame_id,
+            );
+            push_frame_arg_phase(
+                &mut events,
+                pid,
+                tid,
+                paint_ts,
+                paint_dur_us,
+                stats,
+                perf_keys::PAINT_TEXT_PREPARE_TIME_US,
+                tick_id,
+                frame_id,
+            );
 
             if remaining > 0 {
                 let desired = remaining;
@@ -404,27 +327,59 @@ fn push_phase(
     cursor_us.saturating_add(dur)
 }
 
-fn push_subphases(
+#[allow(clippy::too_many_arguments)]
+fn push_frame_arg_phase(
+    events: &mut Vec<Value>,
+    pid: u32,
+    tid: u32,
+    ts_us: u64,
+    max_dur_us: u64,
+    stats: Option<&serde_json::Map<String, Value>>,
+    key: perf_keys::PerfKey,
+    tick_id: u64,
+    frame_id: u64,
+) {
+    let desired_us = perf_keys::read_u64(stats, key);
+    if desired_us == 0 || max_dur_us == 0 {
+        return;
+    }
+
+    events.push(chrome_x(
+        key.trace_event_name(),
+        key.trace_category_name(),
+        pid,
+        tid,
+        ts_us,
+        desired_us.min(max_dur_us),
+        serde_json::json!({
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+        }),
+    ));
+}
+
+fn push_registered_subphases(
     events: &mut Vec<Value>,
     pid: u32,
     tid: u32,
     parent_ts_us: u64,
     parent_dur_us: u64,
-    cat: &'static str,
-    phases: &[(&'static str, u64)],
+    stats: Option<&serde_json::Map<String, Value>>,
+    phases: &[perf_keys::PerfKey],
 ) {
     let mut cursor = parent_ts_us;
     let mut remaining = parent_dur_us;
-    for (name, desired_us) in phases {
+    for key in phases {
+        let desired_us = perf_keys::read_u64(stats, *key);
         cursor = push_phase(
             events,
             pid,
             tid,
             cursor,
             &mut remaining,
-            name,
-            cat,
-            *desired_us,
+            key.trace_event_name(),
+            key.trace_category_name(),
+            desired_us,
         );
         if remaining == 0 {
             break;
@@ -463,6 +418,17 @@ fn snapshot_frame_window_us(s: &Value, fallback_start_us: u64) -> (u64, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
+
+    fn trace_event_names(trace: &Value) -> BTreeSet<&str> {
+        trace
+            .get("traceEvents")
+            .and_then(|v| v.as_array())
+            .expect("trace events")
+            .iter()
+            .filter_map(|e| e.get("name").and_then(|v| v.as_str()))
+            .collect()
+    }
 
     #[test]
     fn chrome_trace_includes_trace_events() {
@@ -533,15 +499,68 @@ mod tests {
                 .and_then(|v| v.as_array())
                 .is_some()
         );
-        let names = trace
-            .get("traceEvents")
-            .and_then(|v| v.as_array())
-            .unwrap()
-            .iter()
-            .filter_map(|e| e.get("name").and_then(|v| v.as_str()))
-            .collect::<Vec<_>>();
+        let names = trace_event_names(&trace);
         assert!(names.contains(&"fret.frame"));
         assert!(names.contains(&"layout.collect_roots"));
         assert!(names.contains(&"layout.engine_solve"));
+    }
+
+    #[test]
+    fn chrome_trace_synthetic_ui_subphases_cover_registered_timing_events() {
+        let mut stats = serde_json::Map::new();
+        for key in perf_keys::TRACE_EXPORTED_FRAME_KEYS {
+            if matches!(key.kind, perf_keys::PerfKeyKind::Timing) {
+                stats.insert(key.key.to_string(), Value::from(10_u64));
+            }
+        }
+        stats.insert("total_time_us".to_string(), Value::from(2_000_u64));
+        stats.insert("layout_time_us".to_string(), Value::from(900_u64));
+        stats.insert("paint_time_us".to_string(), Value::from(900_u64));
+        stats.insert("dispatch_time_us".to_string(), Value::from(50_u64));
+        stats.insert("hit_test_time_us".to_string(), Value::from(50_u64));
+        stats.insert("prepaint_time_us".to_string(), Value::from(50_u64));
+
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "window": 1,
+                    "frame_clock": { "now_monotonic_ms": 1000, "delta_ms": 16 },
+                    "debug": { "stats": stats }
+                }]
+            }]
+        });
+
+        let trace = chrome_trace_json_from_bundle_value(&bundle).expect("trace");
+        let names = trace_event_names(&trace);
+        let top_level = [
+            perf_keys::LAYOUT_TIME_US.key,
+            perf_keys::PAINT_TIME_US.key,
+            perf_keys::PREPAINT_TIME_US.key,
+            perf_keys::DISPATCH_TIME_US.key,
+            perf_keys::HIT_TEST_TIME_US.key,
+            perf_keys::TOTAL_TIME_US.key,
+            perf_keys::UI_THREAD_CPU_TIME_US.key,
+        ];
+
+        let missing: Vec<&str> = perf_keys::TRACE_EXPORTED_FRAME_KEYS
+            .iter()
+            .filter(|key| {
+                matches!(key.kind, perf_keys::PerfKeyKind::Timing)
+                    && matches!(key.trace_category_name(), "layout" | "paint")
+                    && !top_level.contains(&key.key)
+            })
+            .filter_map(|key| {
+                let event = key.trace_event_name();
+                (!names.contains(event)).then_some(event)
+            })
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "trace-exported layout/paint timing keys missing synthetic events: {missing:?}"
+        );
     }
 }
