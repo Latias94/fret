@@ -674,7 +674,9 @@ Conventions:
           complex wheel, and code-editor resize jitter.
         - Target-machine runner:
           `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`.
-          Use `--dry-run` on non-target hosts to inspect the command plan. Run once without
+          Use `--dry-run` on non-target hosts to inspect the command plan. Use a fresh `--date-tag` / `--out-dir` for
+          non-dry-run validation; the runner rejects an existing non-empty output directory by default to avoid stale
+          dry-run or failed-run artifacts. Run once without
           `--with-paint-perf` for the baseline-validation `failures=[]` artifact, then run
           `--with-paint-perf` only for the follow-up attribution pass. The runner collects the
           worst-bundle `diag stats --sort cpu_cycles --top 15 --json` output for each validation probe and

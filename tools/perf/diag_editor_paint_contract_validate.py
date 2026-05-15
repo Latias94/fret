@@ -388,6 +388,16 @@ def main() -> int:
         default=False,
         help="Allow executing the Windows-profile command plan from a non-Windows host.",
     )
+    ap.add_argument(
+        "--allow-existing-out-dir",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow a non-dry-run validation to write into an existing non-empty output directory. "
+            "Use only when intentionally resuming/debugging a run; the default protects closeout "
+            "evidence from stale dry-run or failed-run artifacts."
+        ),
+    )
     ap.add_argument("--keep-going", action="store_true", default=False)
     args = ap.parse_args()
 
@@ -420,6 +430,19 @@ def main() -> int:
         print("error: required validation inputs are missing:", file=sys.stderr)
         for item in missing:
             print(f"  - {item}", file=sys.stderr)
+        return 2
+
+    if (
+        not bool(args.dry_run)
+        and out_dir_path.is_dir()
+        and any(out_dir_path.iterdir())
+        and not bool(args.allow_existing_out_dir)
+    ):
+        print(
+            "error: validation output directory already exists and is not empty "
+            f"({out_dir_path}); choose a fresh --date-tag/--out-dir or pass --allow-existing-out-dir",
+            file=sys.stderr,
+        )
         return 2
 
     plan = build_plan(

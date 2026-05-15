@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import json
 import sys
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 import diag_editor_paint_contract_validate as validate
@@ -165,6 +165,29 @@ class EditorPaintContractValidateTests(unittest.TestCase):
 
         self.assertEqual(0, rc)
         self.assertEqual("unit-date", summary["date_tag"])
+
+    def test_non_dry_run_rejects_non_empty_out_dir_by_default(self) -> None:
+        with TemporaryDirectory() as td:
+            out_dir = Path(td) / "validation"
+            out_dir.mkdir()
+            (out_dir / "validation-plan.json").write_text("{}", encoding="utf-8")
+            stderr = io.StringIO()
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_validate.py",
+                    "--allow-non-windows",
+                    "--out-dir",
+                    str(out_dir),
+                ],
+            ):
+                with patch.object(validate, "_validate_inputs", return_value=[]):
+                    with redirect_stderr(stderr):
+                        rc = validate.main()
+
+        self.assertEqual(2, rc)
+        self.assertIn("already exists and is not empty", stderr.getvalue())
 
 
 if __name__ == "__main__":

@@ -58,6 +58,9 @@ python tools/perf/diag_editor_paint_contract_validate.py `
 
 Run the release builds above first; the runner fails fast if the expected Windows binaries are missing.
 Use `--dry-run` on non-target hosts to inspect the exact command plan without producing misleading local evidence.
+For non-dry-run validation, use a fresh `--date-tag` / `--out-dir`; the runner rejects an existing non-empty output
+directory by default so closeout evidence cannot accidentally mix stale dry-run or failed-run artifacts. Use
+`--allow-existing-out-dir` only for an intentional debugging/resume run that will not be used as closeout evidence.
 Run the command once without `--with-paint-perf`; that baseline-validation pass is the source for
 `check.perf_thresholds.json.failures=[]`. Use `--with-paint-perf` only for the follow-up target-machine attribution
 pass after baseline validation; do not use its output to loosen checked-in thresholds without the re-seed policy below.

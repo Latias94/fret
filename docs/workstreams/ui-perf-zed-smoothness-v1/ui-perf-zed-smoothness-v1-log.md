@@ -105,6 +105,30 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:11:17 +0800 (local head `954dcd3ea4`)
+
+Change:
+- Added a validation runner output-directory guard for target-machine evidence integrity:
+  - non-dry-run validation now rejects an existing non-empty `--out-dir` unless
+    `--allow-existing-out-dir` is passed explicitly;
+  - runbook and TODO now call out the fresh `--date-tag` / `--out-dir` requirement for closeout-quality runs.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 -m unittest discover -s tools/perf -p 'test_*.py'
+git diff --check
+```
+
+Results:
+- Focused editor paint contract tests PASS (25 tests).
+- Full Python perf-tool tests PASS (35 tests).
+- Diff whitespace check PASS.
+
+Notes:
+- This prevents stale dry-run or failed-run artifacts from contaminating target-machine closeout evidence. It does not
+  replace the still-missing Windows RTX4090 validation and attribution runs.
+
 ## 2026-05-16 07:06:35 +0800 (local head `8e86524023`)
 
 Change:
