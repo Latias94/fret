@@ -153,6 +153,13 @@ Run evidence:
   bring-to-front hit-test order, `input_modes.rs` covers focus-on-click vs activation plus
   no-inputs / pointer-pass-through behavior, and `window_options.rs` covers close, resize, and
   collapse policy.
+- 2026-05-16: narrowed the table advanced-gap wording in
+  `docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`.
+  `TableOptions::striped` remains the existing alternating row-background policy, with proof in
+  `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`,
+  `ecosystem/fret-ui-kit/tests/imui_table_smoke.rs`, and
+  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`. The remaining table
+  background gap is explicit per-row/per-cell override policy, not all row background behavior.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

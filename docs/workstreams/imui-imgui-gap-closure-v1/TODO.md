@@ -179,6 +179,10 @@ Readiness order for the next locally testable review slices:
    Current `fret-imui` floating tests already cover bring-to-front hit-test order,
    focus-on-click vs activation, no-inputs / pointer-pass-through policy, close, resize, and
    collapse; OS-window tear-out and multi-viewport parity stay in docking/runner lanes.
+   2026-05-16 table gap wording refresh: the component catalog now distinguishes existing
+   `TableOptions::striped` alternating row backgrounds from the still-candidate per-row/per-cell
+   background override axis. Do not open a broad `imui-table-advanced-flags-v1` lane just because
+   the old wording said "row background targets."
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -558,8 +558,16 @@ def main() -> None:
             required=[
                 "The in-window floating-window posture has also been",
                 "z-order hit-testing, focus-on-click vs activation,",
+                "advanced-gap wording has also been narrowed",
+                "`TableOptions::striped` already covers alternating row",
+                "per-row/per-cell background overrides remain candidate-only",
                 "In-window floating windows / overlay areas",
                 "Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse",
+                "`TableOptions::striped`, sort/resize/header responses",
+                "Covered for basic/sort/resize/striped-row proof paths",
+                "Sorting, resize handles, and alternating row backgrounds already have proof.",
+                "Per-row/per-cell background override targets, freeze panes, column visibility policies, and",
+                "`TableOptions::striped` is already the current alternating row-background policy.",
                 "`window(...)` is no longer a v1 posture with z-order/focus arbitration deferred",
                 "the inherent `ImUiFacade` wrappers",
                 "for button/actions, menu items, selection/combo, disclosure, text/value/boolean models, and",
@@ -570,6 +578,7 @@ def main() -> None:
             ],
             forbidden=[
                 "Z-order and focus arbitration are tracked as a separate work item",
+                "Sorting and resize handles have proof, but row background targets",
             ],
         ),
         SourceCheck(

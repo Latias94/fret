@@ -185,6 +185,10 @@ Exit criteria:
   knobs through `WindowOptions` / `FloatingWindowOptions`, and `fret-imui` floating tests cover
   bring-to-front hit-test order, focus-on-click vs activation, no-inputs / pointer-pass-through,
   close, resize, and collapse. Multi-window / viewport parity remains outside this helper.
+  2026-05-16 table gap wording result: the component catalog now treats alternating row backgrounds
+  as covered through `TableOptions::striped` and leaves only explicit per-row/per-cell background
+  overrides, freeze panes, column visibility, and old columns API as advanced-table follow-on
+  candidates.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
