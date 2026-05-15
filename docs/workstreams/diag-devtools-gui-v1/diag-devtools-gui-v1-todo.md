@@ -131,11 +131,13 @@ Conventions:
   - [x] GUI generated gate results now keep a bounded selectable history with details, summary,
         raw JSON preview, copy actions, and platform URL open support for the selected artifact.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
-        stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
+        stats, layout perf, memory, triage, hotspots, trace, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from
         baseline-required manual compare commands for GUI and MCP consumers.
   - [x] GUI selected-summary inspector can launch bundle-local runnable follow-ups and records
         in-flight/error status without treating baseline-required compare commands as runnable.
+  - [x] GUI selected-summary inspector can launch the selected-bundle `trace` follow-up through the
+        same shared diagnostics runner as stats, layout, memory, triage, and hotspots.
   - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
         latest result path for copying.
   - [x] GUI selected-summary inspector mirrors the latest selected-bundle follow-up result JSON

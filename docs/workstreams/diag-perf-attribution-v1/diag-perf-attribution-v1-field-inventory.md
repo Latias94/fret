@@ -78,6 +78,9 @@ schema:
   - `trace_source`, `real_spans_included`, `real_span_event_count`, and
     `real_span_extension_keys`: copied from the generated trace so automation can inspect metadata
     without loading the full `traceEvents` array.
+  - Regression selected-bundle follow-ups surface this as a runnable `trace` command with direct
+    `diag_args=["trace", <bundle_dir>, "--json"]`; indexed bundle dirs use `trace-2`, `trace-3`,
+    and so on.
 
 Supported real-span extension payload:
 
@@ -132,6 +135,11 @@ Evidence anchors:
   `cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast`
 - Trace JSON report focused gate:
   `cargo nextest run -p fret-diag trace_command_report_json_projects_real_span_metadata trace_contract_captures_trace_out migrated_trace_builds_a_real_context contract_help_mentions_the_migrated_command_surfaces chrome_trace_merges_real_span_extension_events --no-fail-fast`
+- Regression follow-up trace action gate:
+  `cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast`
+- DevTools GUI/MCP trace projection gate:
+  `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args --no-fail-fast`
+  and `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - Runtime extension writer focused gate:
   `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
 - CLI opt-in focused gate:

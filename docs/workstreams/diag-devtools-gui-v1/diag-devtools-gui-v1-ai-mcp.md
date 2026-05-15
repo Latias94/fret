@@ -82,7 +82,8 @@ Batch run:
   - reads `regression.index.json` from the same shared artifacts root,
   - returns a structured first-open dashboard view plus a human-readable summary string,
   - includes the shared `fret-diag` regression drill-down projection for bundle dirs, capability
-    provenance, perf evidence, and concrete follow-up commands,
+    provenance, perf evidence, and concrete follow-up commands, including the bundle-local
+    `trace` action for Chrome trace metadata,
   - separates bundle-local runnable follow-up commands from manual compare commands that still need
     a baseline input,
   - can optionally include the raw index JSON inline.

@@ -556,6 +556,20 @@ mod tests {
                 "--json".to_string()
             ]
         );
+
+        let trace = commands
+            .iter()
+            .find(|command| command.id == "trace")
+            .expect("trace command");
+        let args = runnable_diag_args_for_followup_command(trace).expect("direct args");
+        assert_eq!(
+            args,
+            vec![
+                "trace".to_string(),
+                "target/fret-diag/run-a".to_string(),
+                "--json".to_string()
+            ]
+        );
     }
 
     #[test]

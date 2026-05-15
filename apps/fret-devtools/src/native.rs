@@ -77,6 +77,7 @@ const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =
 const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.followup.memory";
 const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
 const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
+const CMD_REGRESSION_RUN_FOLLOWUP_TRACE: &str = "fret.devtools.regression.followup.trace";
 const CMD_REGRESSION_RUN_FOLLOWUP_COMMAND: &str =
     "fret.devtools.regression.followup.run_command";
 const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
@@ -3759,6 +3760,19 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "trace")
+        {
+            out.push(
+                shadcn::Button::new("Run trace")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_TRACE)
+                    .into_element(cx),
+            );
+        }
         if selected_followup_result_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy selected follow-up result")
@@ -4288,7 +4302,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_followup_commands_section = diag_section(
         cx,
         "Follow-up Commands",
-        "Concrete stats, triage, hotspot, visual-compare, and footprint commands are generated from the selected bundle directory.",
+        "Concrete stats, triage, hotspot, trace, visual-compare, and footprint commands are generated from the selected bundle directory.",
         vec![selected_followup_commands_blob],
     );
     let selected_runnable_followup_commands_section = diag_section(
@@ -5410,6 +5424,10 @@ fn on_command(
         }
         CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS => {
             run_selected_regression_followup(app, st, "hotspots");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_TRACE => {
+            run_selected_regression_followup(app, st, "trace");
             app.request_redraw(window);
         }
         CMD_REGRESSION_RUN_FOLLOWUP_COMMAND => {
@@ -8302,8 +8320,10 @@ mod tests {
         let lines = runnable_followup_command_action_lines(&commands);
         assert!(lines.contains(&"diag stats (stats)".to_string()));
         assert!(lines.contains(&"triage (triage)".to_string()));
+        assert!(lines.contains(&"trace (trace)".to_string()));
         assert!(lines.contains(&"diag stats [2] (stats-2)".to_string()));
         assert!(lines.contains(&"triage [2] (triage-2)".to_string()));
+        assert!(lines.contains(&"trace [2] (trace-2)".to_string()));
         assert!(
             !lines
                 .iter()

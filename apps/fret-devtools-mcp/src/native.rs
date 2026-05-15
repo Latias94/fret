@@ -3169,6 +3169,12 @@ mod tests {
                 .iter()
                 .any(|line| line.contains("diag stats: cargo run -p fretboard-dev -- diag stats"))
         );
+        assert!(
+            result
+                .runnable_followup_command_lines
+                .iter()
+                .any(|line| line.contains("trace: cargo run -p fretboard-dev -- diag trace"))
+        );
         assert!(result
             .manual_followup_command_lines
             .iter()

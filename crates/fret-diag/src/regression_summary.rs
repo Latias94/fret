@@ -224,6 +224,17 @@ fn regression_bundle_followup_commands_for(
             requires_baseline: false,
         },
         RegressionBundleFollowupCommandV1 {
+            id: indexed_followup_id("trace", index),
+            label: indexed_followup_label("trace", index),
+            command_line: format!("cargo run -p fretboard-dev -- diag trace {bundle_arg} --json"),
+            diag_args: vec![
+                "trace".to_string(),
+                bundle_dir.to_string(),
+                "--json".to_string(),
+            ],
+            requires_baseline: false,
+        },
+        RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("visual-compare", index),
             label: indexed_followup_label("visual compare", index),
             command_line: format!(
@@ -1038,6 +1049,9 @@ mod tests {
             "hotspots: cargo run -p fretboard-dev -- diag hotspots 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
         ));
         assert!(text.contains(
+            "trace: cargo run -p fretboard-dev -- diag trace 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
+        ));
+        assert!(text.contains(
             "visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir> 'target/fret-diag/perf-docking/run-a/bundle dir' --json"
         ));
         assert!(text.contains(
@@ -1057,13 +1071,22 @@ mod tests {
             .filter(|command| command.requires_baseline)
             .collect::<Vec<_>>();
 
-        assert_eq!(runnable.len(), 5);
+        assert_eq!(runnable.len(), 6);
         assert_eq!(manual.len(), 2);
         assert!(runnable.iter().any(|command| {
             command.id == "stats"
                 && command.diag_args
                     == vec![
                         "stats".to_string(),
+                        "target/fret-diag/perf-docking/run-a".to_string(),
+                        "--json".to_string(),
+                    ]
+        }));
+        assert!(runnable.iter().any(|command| {
+            command.id == "trace"
+                && command.diag_args
+                    == vec![
+                        "trace".to_string(),
                         "target/fret-diag/perf-docking/run-a".to_string(),
                         "--json".to_string(),
                     ]
@@ -1085,7 +1108,7 @@ mod tests {
             "target/fret-diag/perf-docking/run-threshold",
         ]);
 
-        assert_eq!(commands.len(), 14);
+        assert_eq!(commands.len(), 16);
         assert!(commands.iter().any(|command| {
             command.id == "stats"
                 && command.label == "diag stats"
@@ -1102,6 +1125,16 @@ mod tests {
                 && command.diag_args
                     == vec![
                         "stats".to_string(),
+                        "target/fret-diag/perf-docking/run-a".to_string(),
+                        "--json".to_string(),
+                    ]
+        }));
+        assert!(commands.iter().any(|command| {
+            command.id == "trace-2"
+                && command.label == "trace [2]"
+                && command.diag_args
+                    == vec![
+                        "trace".to_string(),
                         "target/fret-diag/perf-docking/run-a".to_string(),
                         "--json".to_string(),
                     ]

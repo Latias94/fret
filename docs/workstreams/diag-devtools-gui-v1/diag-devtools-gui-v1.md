@@ -96,11 +96,14 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
-  visual compare, and footprint compare), so authors can move from failing aggregate summary to the
-  next diagnostic command without re-deriving paths by hand.
+  `trace`, visual compare, and footprint compare), so authors can move from failing aggregate
+  summary to the next diagnostic command without re-deriving paths by hand.
 - The same projection now carries structured follow-up command metadata. The GUI separates
   bundle-local runnable commands from manual compare commands that still require a baseline, so
   placeholder compare commands are visible without being presented as ready-to-run actions.
+- The bundle-local runnable set now includes `diag trace <bundle> --json`, which keeps Chrome trace
+  artifact generation in the same selected-summary action surface as stats, layout, memory, triage,
+  and hotspots.
 - Bundle-local runnable follow-ups can now be launched from the selected-summary inspector through
   the shared diagnostics engine, with in-flight/error status recorded in the GUI; baseline-required
   compare commands remain manual until the user supplies a baseline.

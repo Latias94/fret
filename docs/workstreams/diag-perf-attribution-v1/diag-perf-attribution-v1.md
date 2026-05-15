@@ -100,6 +100,9 @@ Remaining gaps / follow-ups:
     overrides.
   - 2026-05-16: requested `diag perf` Chrome trace exports now fail visibly instead of silently
     dropping the artifact when trace generation fails.
+  - 2026-05-16: regression-bundle follow-up projection now exposes `diag trace <bundle> --json`
+    alongside stats/triage/hotspots, so DevTools GUI and MCP consumers can generate trace artifacts
+    from selected failing bundle dirs without re-deriving commands.
   - Still remaining: finer nested runtime spans and external profiler/Tracy correlation for
     concrete attribution cases.
 
@@ -233,6 +236,8 @@ timeline; low overhead).
   - `fretboard-dev diag trace <bundle_dir|bundle.json>`
   - Optional output override: `--trace-out <path>`
   - Metadata report for scripts/automation: `--json`
+  - Regression dashboards expose the same command as a bundle-local runnable follow-up named
+    `trace`, indexed per selected bundle when a summary contains multiple failing bundle dirs.
 
 Open the resulting JSON in Chrome tracing UI (or compatible viewers) to correlate phases with
 `tick_id` / `frame_id`. Use `--json` when you only need the trace artifact path, trace source, and

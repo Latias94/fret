@@ -92,11 +92,13 @@
   - New `diag perf` regression items now write `bundle_dir` derived from their `bundle_artifact`.
   - The shared regression-summary drill-down also recovers bundle roots from older
     `bundle_artifact` fields and threshold failure `evidence_bundle` paths, so DevTools can offer
-    concrete stats/triage/hotspots follow-up commands for perf-threshold failures without a fresh
-    run.
+    concrete stats/triage/hotspots/trace follow-up commands for perf-threshold failures without a
+    fresh run.
   - Follow-up command projection now covers every selected bundle root instead of silently
     collapsing to the first one; the first bundle keeps the stable command ids used by GUI run
     buttons, and additional bundles get indexed labels/ids for display and MCP consumers.
+  - The runnable projection now includes `diag trace <bundle> --json`, so selected failing bundles
+    can produce Chrome trace metadata from the same GUI/MCP follow-up surface as stats and triage.
   - Gate:
     `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
   - GUI bridge gate:

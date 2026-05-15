@@ -187,9 +187,9 @@ reopen.
       this also repairs the underlying `diag repro` contract so working-set, peak-working-set, and
       CPU-average thresholds are real parsed CLI inputs before the GUI exposes them.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
-      commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
-      compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding
-      GUI-private diagnostics semantics.
+      commands for stats, layout perf, memory, triage, hotspots, trace, visual compare, and
+      footprint compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without
+      adding GUI-private diagnostics semantics.
       Maintenance: MCP `fret_diag_regression_dashboard` now consumes that same shared regression
       drill-down/follow-up projection, so AI-driven diagnostics receives the same bundle dirs,
       capability provenance, perf evidence, and concrete next-command hints as the GUI.
@@ -197,8 +197,8 @@ reopen.
       separates bundle-local runnable commands from baseline-required manual compare commands, so
       GUI and MCP consumers do not present placeholder compare commands as ready-to-run actions.
       Maintenance: the DevTools GUI selected-summary inspector can now launch bundle-local
-      runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`)
-      through the shared diagnostics engine and records in-flight/error status in the GUI.
+      runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
+      `trace`) through the shared diagnostics engine and records in-flight/error status in the GUI.
       Maintenance: each GUI-launched follow-up now writes a lightweight
       `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
       Maintenance: the selected-summary inspector mirrors that latest selected-bundle follow-up
