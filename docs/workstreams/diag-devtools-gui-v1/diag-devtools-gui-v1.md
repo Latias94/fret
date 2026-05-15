@@ -86,6 +86,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - Generated gate results are retained as a bounded selectable history. The panel shows selected
   result details, a structured summary, raw JSON, copy actions for path/command/JSON, and a
   platform URL open action for the selected result artifact.
+- The same generated-gate builder now includes a perf-threshold profile. `fret-diag` owns the
+  structured `diag perf` command projection for target, repeat, warmup frames, aggregate, and the
+  first threshold fields; the GUI only renders the form and runs the shared `diag_args`.
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,

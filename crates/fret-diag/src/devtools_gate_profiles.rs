@@ -17,6 +17,7 @@ pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLDS_COMMAND: &str = "cargo run
 pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str = "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
 pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1: &[&str] =
     &["stale-paint-scene", "pixels-changed"];
+pub const DEVTOOLS_GATE_PERF_THRESHOLD_PROFILE_ID_V1: &str = "perf-thresholds";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DevtoolsGateScriptTargetCommandInputV1<'a> {
@@ -33,8 +34,38 @@ impl<'a> DevtoolsGateScriptTargetCommandInputV1<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DevtoolsGatePerfThresholdCommandInputV1<'a> {
+    pub target: &'a str,
+    pub repeat: &'a str,
+    pub warmup_frames: &'a str,
+    pub perf_threshold_agg: &'a str,
+    pub max_top_total_us: &'a str,
+    pub max_renderer_encode_scene_us: &'a str,
+}
+
+impl<'a> DevtoolsGatePerfThresholdCommandInputV1<'a> {
+    pub fn new(
+        target: &'a str,
+        repeat: &'a str,
+        warmup_frames: &'a str,
+        perf_threshold_agg: &'a str,
+        max_top_total_us: &'a str,
+        max_renderer_encode_scene_us: &'a str,
+    ) -> Self {
+        Self {
+            target,
+            repeat,
+            warmup_frames,
+            perf_threshold_agg,
+            max_top_total_us,
+            max_renderer_encode_scene_us,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DevtoolsGateScriptTargetCommandV1 {
+pub struct DevtoolsGateCommandV1 {
     pub id: String,
     pub label: String,
     pub command_line: String,
@@ -42,7 +73,9 @@ pub struct DevtoolsGateScriptTargetCommandV1 {
     pub missing_inputs: Vec<&'static str>,
 }
 
-impl DevtoolsGateScriptTargetCommandV1 {
+pub type DevtoolsGateScriptTargetCommandV1 = DevtoolsGateCommandV1;
+
+impl DevtoolsGateCommandV1 {
     pub fn is_runnable(&self) -> bool {
         self.missing_inputs.is_empty() && !self.diag_args.is_empty()
     }
@@ -131,7 +164,7 @@ pub fn devtools_gate_script_target_command_line(
 pub fn devtools_gate_script_target_command(
     profile_id: &str,
     input: DevtoolsGateScriptTargetCommandInputV1<'_>,
-) -> Option<DevtoolsGateScriptTargetCommandV1> {
+) -> Option<DevtoolsGateCommandV1> {
     let profile_id = profile_id.trim();
     if !DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1.contains(&profile_id) {
         return None;
@@ -151,13 +184,51 @@ pub fn devtools_gate_script_target_command(
     } else {
         Vec::new()
     };
-    Some(DevtoolsGateScriptTargetCommandV1 {
+    Some(DevtoolsGateCommandV1 {
         id: profile.id.to_string(),
         label: profile.label.to_string(),
         command_line,
         diag_args,
         missing_inputs,
     })
+}
+
+pub fn devtools_gate_perf_threshold_command_line(
+    input: DevtoolsGatePerfThresholdCommandInputV1<'_>,
+) -> String {
+    devtools_gate_perf_threshold_command(input).command_line
+}
+
+pub fn devtools_gate_perf_threshold_command(
+    input: DevtoolsGatePerfThresholdCommandInputV1<'_>,
+) -> DevtoolsGateCommandV1 {
+    let profile = DEVTOOLS_GATE_PROFILES_V1
+        .iter()
+        .find(|profile| profile.id == DEVTOOLS_GATE_PERF_THRESHOLD_PROFILE_ID_V1)
+        .expect("perf threshold profile must exist");
+    let target = shell_quote_arg_or_placeholder(input.target, "<script-or-suite>");
+    let repeat = shell_quote_arg_or_placeholder(input.repeat, "<repeat>");
+    let warmup_frames = shell_quote_arg_or_placeholder(input.warmup_frames, "<warmup-frames>");
+    let perf_threshold_agg = shell_quote_arg_or_placeholder(input.perf_threshold_agg, "<agg>");
+    let max_top_total_us = shell_quote_arg_or_placeholder(input.max_top_total_us, "<us>");
+    let max_renderer_encode_scene_us =
+        shell_quote_arg_or_placeholder(input.max_renderer_encode_scene_us, "<us>");
+    let command_line = format!(
+        "cargo run -p fretboard-dev -- diag perf {target} --repeat {repeat} --warmup-frames {warmup_frames} --perf-threshold-agg {perf_threshold_agg} --max-top-total-us {max_top_total_us} --max-renderer-encode-scene-us {max_renderer_encode_scene_us} --json"
+    );
+    let missing_inputs = perf_threshold_missing_inputs(input);
+    let diag_args = if missing_inputs.is_empty() {
+        perf_threshold_diag_args(input)
+    } else {
+        Vec::new()
+    };
+    DevtoolsGateCommandV1 {
+        id: profile.id.to_string(),
+        label: profile.label.to_string(),
+        command_line,
+        diag_args,
+        missing_inputs,
+    }
 }
 
 pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String> {
@@ -228,6 +299,60 @@ fn script_target_diag_args(profile_id: &str, script_json: &str, test_id: &str) -
     }
     args.push("--json".to_string());
     args
+}
+
+fn perf_threshold_missing_inputs(
+    input: DevtoolsGatePerfThresholdCommandInputV1<'_>,
+) -> Vec<&'static str> {
+    let mut missing = Vec::new();
+    if input.target.trim().is_empty() {
+        missing.push("script-or-suite");
+    }
+    if parse_nonzero_u64(input.repeat).is_none() {
+        missing.push("repeat");
+    }
+    if parse_u64(input.warmup_frames).is_none() {
+        missing.push("warmup-frames");
+    }
+    if !matches!(
+        input.perf_threshold_agg.trim(),
+        "max" | "p95" | "p90" | "p50"
+    ) {
+        missing.push("perf-threshold-agg");
+    }
+    if parse_nonzero_u64(input.max_top_total_us).is_none() {
+        missing.push("max-top-total-us");
+    }
+    if parse_nonzero_u64(input.max_renderer_encode_scene_us).is_none() {
+        missing.push("max-renderer-encode-scene-us");
+    }
+    missing
+}
+
+fn perf_threshold_diag_args(input: DevtoolsGatePerfThresholdCommandInputV1<'_>) -> Vec<String> {
+    vec![
+        "perf".to_string(),
+        input.target.trim().to_string(),
+        "--repeat".to_string(),
+        input.repeat.trim().to_string(),
+        "--warmup-frames".to_string(),
+        input.warmup_frames.trim().to_string(),
+        "--perf-threshold-agg".to_string(),
+        input.perf_threshold_agg.trim().to_string(),
+        "--max-top-total-us".to_string(),
+        input.max_top_total_us.trim().to_string(),
+        "--max-renderer-encode-scene-us".to_string(),
+        input.max_renderer_encode_scene_us.trim().to_string(),
+        "--json".to_string(),
+    ]
+}
+
+fn parse_u64(value: &str) -> Option<u64> {
+    value.trim().parse::<u64>().ok()
+}
+
+fn parse_nonzero_u64(value: &str) -> Option<u64> {
+    parse_u64(value).filter(|value| *value > 0)
 }
 
 #[cfg(test)]
@@ -363,6 +488,101 @@ mod tests {
                 "--check-pixels-changed",
                 "button ok",
                 "--json"
+            ]
+        );
+    }
+
+    #[test]
+    fn devtools_gate_perf_threshold_command_preserves_placeholders_until_filled() {
+        let command = devtools_gate_perf_threshold_command(
+            DevtoolsGatePerfThresholdCommandInputV1::default(),
+        );
+
+        assert_eq!(command.id, "perf-thresholds");
+        assert_eq!(command.label, "perf thresholds");
+        assert!(!command.is_runnable());
+        assert_eq!(
+            command.missing_inputs,
+            vec![
+                "script-or-suite",
+                "repeat",
+                "warmup-frames",
+                "perf-threshold-agg",
+                "max-top-total-us",
+                "max-renderer-encode-scene-us",
+            ]
+        );
+        assert!(command.diag_args.is_empty());
+        assert!(command.command_line.contains("<script-or-suite>"));
+        assert!(command.command_line.contains("--repeat <repeat>"));
+        assert!(
+            command
+                .command_line
+                .contains("--warmup-frames <warmup-frames>")
+        );
+        assert!(command.command_line.contains("--perf-threshold-agg <agg>"));
+    }
+
+    #[test]
+    fn devtools_gate_perf_threshold_command_includes_runnable_diag_args() {
+        let input = DevtoolsGatePerfThresholdCommandInputV1::new(
+            "perf-docking-arbitration-steady",
+            "7",
+            "5",
+            "p95",
+            "35000",
+            "12000",
+        );
+        let command = devtools_gate_perf_threshold_command(input);
+
+        assert!(command.is_runnable());
+        assert!(command.missing_inputs.is_empty());
+        assert_eq!(
+            command.command_line,
+            "cargo run -p fretboard-dev -- diag perf perf-docking-arbitration-steady --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us 35000 --max-renderer-encode-scene-us 12000 --json"
+        );
+        assert_eq!(
+            command.diag_args,
+            vec![
+                "perf",
+                "perf-docking-arbitration-steady",
+                "--repeat",
+                "7",
+                "--warmup-frames",
+                "5",
+                "--perf-threshold-agg",
+                "p95",
+                "--max-top-total-us",
+                "35000",
+                "--max-renderer-encode-scene-us",
+                "12000",
+                "--json",
+            ]
+        );
+    }
+
+    #[test]
+    fn devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers() {
+        let command =
+            devtools_gate_perf_threshold_command(DevtoolsGatePerfThresholdCommandInputV1::new(
+                "target/my suite",
+                "0",
+                "abc",
+                "avg",
+                "-1",
+                "",
+            ));
+
+        assert!(!command.is_runnable());
+        assert!(command.command_line.contains("'target/my suite'"));
+        assert_eq!(
+            command.missing_inputs,
+            vec![
+                "repeat",
+                "warmup-frames",
+                "perf-threshold-agg",
+                "max-top-total-us",
+                "max-renderer-encode-scene-us",
             ]
         );
     }

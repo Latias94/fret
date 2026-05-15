@@ -9,9 +9,9 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::{
-    DevtoolsGateScriptTargetCommandInputV1, devtools_gate_profile_lines,
-    devtools_gate_profiles_v1, devtools_gate_script_target_command,
-    devtools_gate_script_target_profile_ids_v1,
+    DevtoolsGatePerfThresholdCommandInputV1, DevtoolsGateScriptTargetCommandInputV1,
+    devtools_gate_perf_threshold_command, devtools_gate_profile_lines, devtools_gate_profiles_v1,
+    devtools_gate_script_target_command, devtools_gate_script_target_profile_ids_v1,
 };
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
@@ -149,6 +149,12 @@ struct State {
     gate_profile_open: Model<bool>,
     gate_profile_script_json: Model<String>,
     gate_profile_test_id: Model<String>,
+    gate_profile_perf_target: Model<String>,
+    gate_profile_perf_repeat: Model<String>,
+    gate_profile_perf_warmup_frames: Model<String>,
+    gate_profile_perf_threshold_agg: Model<String>,
+    gate_profile_perf_max_top_total_us: Model<String>,
+    gate_profile_perf_max_renderer_encode_scene_us: Model<String>,
     gate_run_in_flight: Model<bool>,
     gate_run_last_command_line: Model<Option<Arc<str>>>,
     gate_run_last_result_path: Model<Option<Arc<str>>>,
@@ -336,6 +342,14 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let gate_profile_open = app.models_mut().insert(false);
     let gate_profile_script_json = app.models_mut().insert(String::new());
     let gate_profile_test_id = app.models_mut().insert(String::new());
+    let gate_profile_perf_target = app
+        .models_mut()
+        .insert("perf-docking-arbitration-steady".to_string());
+    let gate_profile_perf_repeat = app.models_mut().insert("7".to_string());
+    let gate_profile_perf_warmup_frames = app.models_mut().insert("5".to_string());
+    let gate_profile_perf_threshold_agg = app.models_mut().insert("p95".to_string());
+    let gate_profile_perf_max_top_total_us = app.models_mut().insert(String::new());
+    let gate_profile_perf_max_renderer_encode_scene_us = app.models_mut().insert(String::new());
     let gate_run_in_flight = app.models_mut().insert(false);
     let gate_run_last_command_line = app.models_mut().insert(None::<Arc<str>>);
     let gate_run_last_result_path = app.models_mut().insert(None::<Arc<str>>);
@@ -500,6 +514,12 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         gate_profile_open,
         gate_profile_script_json,
         gate_profile_test_id,
+        gate_profile_perf_target,
+        gate_profile_perf_repeat,
+        gate_profile_perf_warmup_frames,
+        gate_profile_perf_threshold_agg,
+        gate_profile_perf_max_top_total_us,
+        gate_profile_perf_max_renderer_encode_scene_us,
         gate_run_in_flight,
         gate_run_last_command_line,
         gate_run_last_result_path,
@@ -660,6 +680,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.gate_profile_open, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_script_json, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_test_id, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_target, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_repeat, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_warmup_frames, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_threshold_agg, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_max_top_total_us, Invalidation::Paint);
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_encode_scene_us,
+        Invalidation::Paint,
+    );
     cx.observe_model(&st.gate_run_in_flight, Invalidation::Paint);
     cx.observe_model(&st.gate_run_last_command_line, Invalidation::Paint);
     cx.observe_model(&st.gate_run_last_result_path, Invalidation::Paint);
@@ -4315,6 +4344,64 @@ fn selected_gate_run_result_json_from_state(app: &App, st: &State) -> Option<Str
     selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.result_json)
 }
 
+fn generated_gate_command_from_state(
+    app: &App,
+    st: &State,
+) -> Option<fret_diag::DevtoolsGateCommandV1> {
+    let selected_profile_id = app
+        .models()
+        .read(&st.gate_profile_selected_id, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
+    if selected_profile_id.as_ref() == "perf-thresholds" {
+        let target = app
+            .models()
+            .read(&st.gate_profile_perf_target, |v| v.clone())
+            .unwrap_or_default();
+        let repeat = app
+            .models()
+            .read(&st.gate_profile_perf_repeat, |v| v.clone())
+            .unwrap_or_default();
+        let warmup_frames = app
+            .models()
+            .read(&st.gate_profile_perf_warmup_frames, |v| v.clone())
+            .unwrap_or_default();
+        let perf_threshold_agg = app
+            .models()
+            .read(&st.gate_profile_perf_threshold_agg, |v| v.clone())
+            .unwrap_or_default();
+        let max_top_total_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_top_total_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_renderer_encode_scene_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_encode_scene_us, |v| v.clone())
+            .unwrap_or_default();
+        let input = DevtoolsGatePerfThresholdCommandInputV1::new(
+            &target,
+            &repeat,
+            &warmup_frames,
+            &perf_threshold_agg,
+            &max_top_total_us,
+            &max_renderer_encode_scene_us,
+        );
+        return Some(devtools_gate_perf_threshold_command(input));
+    }
+
+    let script_json = app
+        .models()
+        .read(&st.gate_profile_script_json, |v| v.clone())
+        .unwrap_or_default();
+    let test_id = app
+        .models()
+        .read(&st.gate_profile_test_id, |v| v.clone())
+        .unwrap_or_default();
+    let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
+    devtools_gate_script_target_command(selected_profile_id.as_ref(), input)
+}
+
 fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
     let selected_bundle_dirs = app
         .models()
@@ -4550,28 +4637,11 @@ fn on_command(
             });
         }
         CMD_GATE_RUN_GENERATED => {
-            let selected_profile_id = app
-                .models()
-                .read(&st.gate_profile_selected_id, |v| v.clone())
-                .ok()
-                .flatten()
-                .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
-            let script_json = app
-                .models()
-                .read(&st.gate_profile_script_json, |v| v.clone())
-                .unwrap_or_default();
-            let test_id = app
-                .models()
-                .read(&st.gate_profile_test_id, |v| v.clone())
-                .unwrap_or_default();
-            let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
-            let Some(command) =
-                devtools_gate_script_target_command(selected_profile_id.as_ref(), input)
-            else {
+            let Some(command) = generated_gate_command_from_state(app, st) else {
                 push_log(
                     app,
                     &st.log_lines,
-                    &format!("gate run refused (unsupported profile {selected_profile_id})"),
+                    "gate run refused (unsupported generated gate profile)",
                 );
                 app.request_redraw(window);
                 return;
@@ -6138,30 +6208,14 @@ fn devtools_gate_profile_command_builder(
     cx: &mut ElementContext<'_, App>,
     st: &State,
 ) -> AnyElement {
-    let supported_profile_ids = devtools_gate_script_target_profile_ids_v1();
-    let default_profile_id = supported_profile_ids
-        .first()
-        .copied()
-        .unwrap_or("stale-paint-scene");
     let selected_profile_id = cx
         .app
         .models()
         .read(&st.gate_profile_selected_id, |v| v.clone())
         .ok()
         .flatten()
-        .unwrap_or_else(|| Arc::<str>::from(default_profile_id));
-    let script_json = cx
-        .app
-        .models()
-        .read(&st.gate_profile_script_json, |v| v.clone())
-        .unwrap_or_default();
-    let test_id = cx
-        .app
-        .models()
-        .read(&st.gate_profile_test_id, |v| v.clone())
-        .unwrap_or_default();
-    let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
-    let generated_command = devtools_gate_script_target_command(selected_profile_id.as_ref(), input);
+        .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
+    let generated_command = generated_gate_command_from_state(cx.app, st);
     let command_preview = generated_command
         .as_ref()
         .map(|command| command.command_line.clone())
@@ -6174,7 +6228,10 @@ fn devtools_gate_profile_command_builder(
 
     let profile_items = devtools_gate_profiles_v1()
         .iter()
-        .filter(|profile| supported_profile_ids.contains(&profile.id))
+        .filter(|profile| {
+            devtools_gate_script_target_profile_ids_v1().contains(&profile.id)
+                || profile.id == "perf-thresholds"
+        })
         .map(|profile| shadcn::SelectItem::new(profile.id, format!("{} ({})", profile.label, profile.id)))
         .collect::<Vec<_>>();
     let profile_select =
@@ -6183,18 +6240,11 @@ fn devtools_gate_profile_command_builder(
             .items(profile_items)
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(260.0)))
             .into_element(cx);
-    let script_input = shadcn::Input::new(st.gate_profile_script_json.clone())
-        .placeholder("tools/diag-scripts/<script>.json")
-        .a11y_label("Gate script JSON")
-        .test_id("devtools.gate.script_json")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
-        .into_element(cx);
-    let test_id_input = shadcn::Input::new(st.gate_profile_test_id.clone())
-        .placeholder("test-id")
-        .a11y_label("Gate test id")
-        .test_id("devtools.gate.test_id")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
-        .into_element(cx);
+    let gate_inputs = if selected_profile_id.as_ref() == "perf-thresholds" {
+        perf_threshold_gate_inputs(cx, st)
+    } else {
+        script_target_gate_inputs(cx, st)
+    };
     let command_state_line = generated_command
         .as_ref()
         .map(|command| {
@@ -6351,15 +6401,7 @@ fn devtools_gate_profile_command_builder(
         .disabled(!run_enabled || gate_run_in_flight)
         .on_click(CMD_GATE_RUN_GENERATED)
         .into_element(cx);
-    let controls = ui::h_row(|_cx| {
-        [
-            profile_select,
-            script_input,
-            test_id_input,
-            copy_button,
-            run_button,
-        ]
-    })
+    let controls = ui::h_row(|_cx| [profile_select, copy_button, run_button])
     .gap(fret_ui_kit::Space::N2)
     .items_center()
     .layout(fret_ui_kit::LayoutRefinement::default().w_full())
@@ -6377,9 +6419,10 @@ fn devtools_gate_profile_command_builder(
     ui::v_stack(|cx| {
         [
             cx.text(format!(
-                "Runnable script-target gate: {selected_profile_label}"
+                "Runnable generated gate: {selected_profile_label}"
             )),
             controls,
+            gate_inputs,
             cx.text(command_state_line),
             cx.text(gate_run_status_line),
             preview,
@@ -6407,6 +6450,80 @@ fn devtools_gate_profile_command_builder(
     .gap(fret_ui_kit::Space::N2)
     .layout(fret_ui_kit::LayoutRefinement::default().w_full())
     .into_element(cx)
+}
+
+fn script_target_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let script_input = shadcn::Input::new(st.gate_profile_script_json.clone())
+        .placeholder("tools/diag-scripts/<script>.json")
+        .a11y_label("Gate script JSON")
+        .test_id("devtools.gate.script_json")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let test_id_input = shadcn::Input::new(st.gate_profile_test_id.clone())
+        .placeholder("test-id")
+        .a11y_label("Gate test id")
+        .test_id("devtools.gate.test_id")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+        .into_element(cx);
+    ui::h_row(|_cx| [script_input, test_id_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn perf_threshold_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let target_input = shadcn::Input::new(st.gate_profile_perf_target.clone())
+        .placeholder("script-or-suite")
+        .a11y_label("Perf gate target")
+        .test_id("devtools.gate.perf_target")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(300.0)))
+        .into_element(cx);
+    let repeat_input = shadcn::Input::new(st.gate_profile_perf_repeat.clone())
+        .placeholder("repeat")
+        .a11y_label("Perf gate repeat")
+        .test_id("devtools.gate.perf_repeat")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(92.0)))
+        .into_element(cx);
+    let warmup_input = shadcn::Input::new(st.gate_profile_perf_warmup_frames.clone())
+        .placeholder("warmup")
+        .a11y_label("Perf gate warmup frames")
+        .test_id("devtools.gate.perf_warmup_frames")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(104.0)))
+        .into_element(cx);
+    let agg_input = shadcn::Input::new(st.gate_profile_perf_threshold_agg.clone())
+        .placeholder("agg")
+        .a11y_label("Perf gate aggregate")
+        .test_id("devtools.gate.perf_threshold_agg")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(84.0)))
+        .into_element(cx);
+    let max_total_input = shadcn::Input::new(st.gate_profile_perf_max_top_total_us.clone())
+        .placeholder("max total us")
+        .a11y_label("Perf gate max top total microseconds")
+        .test_id("devtools.gate.perf_max_top_total_us")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(150.0)))
+        .into_element(cx);
+    let max_renderer_input =
+        shadcn::Input::new(st.gate_profile_perf_max_renderer_encode_scene_us.clone())
+            .placeholder("max encode us")
+            .a11y_label("Perf gate max renderer encode scene microseconds")
+            .test_id("devtools.gate.perf_max_renderer_encode_scene_us")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(160.0)))
+            .into_element(cx);
+    let run_inputs = ui::h_row(|_cx| [target_input, repeat_input, warmup_input, agg_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    let threshold_inputs = ui::h_row(|_cx| [max_total_input, max_renderer_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    ui::v_stack(|_cx| [run_inputs, threshold_inputs])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
 }
 
 fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

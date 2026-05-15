@@ -312,6 +312,10 @@ Current status:
 - 2026-05-15 generated gate result history makes stale paint/scene and pixels-changed gate runs
   reviewable inside the GUI: selected result details, structured summary, raw JSON, path/command/JSON
   copy actions, and platform URL open support all point at `.fret/diag/gate-runs/*.json` artifacts.
+- 2026-05-15 DevTools perf-threshold generated gate builder extends that same loop to
+  `perf-thresholds`: `fret-diag` owns the structured `diag perf` command projection, while the GUI
+  renders target/repeat/warmup/aggregate/threshold inputs and reuses the generated gate runner plus
+  `.fret/diag/gate-runs/*.json` result history.
 - 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
   projection that converts the selected `bundle_dir` into concrete `diag stats`,
   `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and

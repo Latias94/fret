@@ -145,7 +145,7 @@ Conventions:
   - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.
   - [x] stale paint/scene launch/run + result artifact history,
   - [x] pixels changed launch/run + result artifact history,
-  - [ ] perf thresholds,
+  - [x] perf thresholds,
   - [ ] resource footprint thresholds.
 - [ ] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,

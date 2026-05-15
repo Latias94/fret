@@ -1190,3 +1190,38 @@ Result: passed. The `fret-devtools` nextest gate reported `4 tests run: 4 passed
 successfully; `cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings`,
 `python tools/check_layering.py`, and `git diff --check` passed. `git diff --check` reported only
 the existing CRLF normalization warning for `tools/diag_gate_imui_p2_devtools_first_open.py`.
+
+## DevTools perf threshold generated gate builder - 2026-05-15 follow-up
+
+Scope: extend the generated-gate GUI loop from script-target stale/pixels gates to the first
+thresholded perf gate without making the GUI parse shell strings or own diagnostics policy.
+
+- `crates/fret-diag/src/devtools_gate_profiles.rs` now exposes a shared
+  `DevtoolsGateCommandV1` plus `DevtoolsGatePerfThresholdCommandInputV1` and
+  `devtools_gate_perf_threshold_command(...)` for `diag perf` threshold runs.
+- `apps/fret-devtools/src/native.rs` now includes `perf-thresholds` in the generated gate builder,
+  renders target/repeat/warmup/aggregate/threshold inputs, and reuses the existing generated gate
+  runner plus `.fret/diag/gate-runs/*.json` result history.
+- The legacy script-target API name remains as a type alias over the generic command shape, so the
+  existing stale paint/scene and pixels-changed UI path stays source-compatible while the shared
+  command model stops pretending every generated gate is script-target-only.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check the perf-threshold command projection, GUI
+  test ids, and helper split.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands devtools_gate_script_target_profiles_are_parameterized devtools_gate_script_target_commands_include_runnable_diag_args devtools_gate_script_target_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates gate_run_result_record_has_stable_shape gate_run_result_summary_lines_project_status_and_duration gate_run_result_history_selects_explicit_path_or_latest --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings
+```
+
+Result: passed. The `fret-diag` nextest gate reported `8 tests run: 8 passed`; the
+`fret-devtools` nextest gate reported `4 tests run: 4 passed`; both source/discovery gates
+completed successfully when run sequentially; `cargo clippy -p fret-diag -p fret-devtools
+--all-targets -- -D warnings`, `python tools/check_layering.py`, and `git diff --check` passed.
+`git diff --check` reported only the existing CRLF normalization warning for
+`tools/diag_gate_imui_p2_devtools_first_open.py`.

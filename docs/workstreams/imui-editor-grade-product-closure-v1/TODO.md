@@ -180,6 +180,9 @@ reopen.
       rather than `fret-imui` runtime growth.
       Maintenance: generated gate result artifacts now have a bounded selectable GUI history with
       selected-result details, summary, raw JSON, copy actions, and platform URL open support.
+      Maintenance: the generated gate builder now supports the `perf-thresholds` profile from a
+      shared `fret-diag` structured `diag perf` command projection, so the GUI can copy/run
+      target/repeat/warmup/aggregate/threshold commands without parsing shell templates.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
       commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
       compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding
