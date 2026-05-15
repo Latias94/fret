@@ -168,6 +168,9 @@ Readiness order for the next locally testable review slices:
    response-bearing image item / image button authoring in `fret-ui-kit::imui`, using Fret
    `ImageId` and `ImageProps` without introducing Dear ImGui texture-ID runtime state or widening
    `fret-imui`.
+   2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` closed after
+   adding a Dear ImGui-style forced-highlight policy to `SelectableOptions` and splitting the
+   input-text picker active-candidate visual from selected semantics.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -225,6 +225,12 @@ It complements (but does not replace) ADRs:
     `fret-ui-kit::imui`. Height and width state remain app-owned through response helpers, while
     auto-resize, nav flattening, visibility-return semantics, and generic `BeginChild()` flag
     mirroring remain candidate-only follow-ons.
+- Closed selectable highlight policy follow-on:
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed after adding `SelectableOptions::highlighted` in `fret-ui-kit::imui` and fixing
+    the input-text picker active candidate to use highlighted visuals without reporting selected
+    semantics.
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`

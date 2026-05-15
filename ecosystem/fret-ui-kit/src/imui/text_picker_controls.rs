@@ -249,7 +249,8 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             let response = ui.selectable_with_options(
                 candidate.clone(),
                 SelectableOptions {
-                    selected: checked || active,
+                    selected: checked,
+                    highlighted: active,
                     test_id: item_test_id,
                     ..Default::default()
                 },

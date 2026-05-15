@@ -75,6 +75,8 @@ Last updated: 2026-05-16
   - `docs/workstreams/imui-child-region-resize-y-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-child-region-resize-x-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-child-region-resize-x-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/EVIDENCE_AND_GATES.md`
 - Current proof surfaces:
   - `apps/fret-cookbook/README.md`
   - `apps/fret-cookbook/EXAMPLES.md`

@@ -6,7 +6,8 @@ Last updated: 2026-05-16
 Status note (2026-05-16): this catalog remains the current component-surface gap map, but the
 image-item and child-region manual-resize candidates below have since landed in narrow proof lanes:
 `imui-image-item-proof-v1`, `imui-child-region-resize-y-v1`, and
-`imui-child-region-resize-x-v1`.
+`imui-child-region-resize-x-v1`. Selectable forced-highlight visuals also landed in
+`imui-selectable-highlight-policy-v1`.
 
 ## Decision
 
@@ -33,7 +34,7 @@ Keep the owner split:
 | Boolean controls | `checkbox_model`, `radio`, `switch_model` | Covered; switch is a Fret policy addition, not Dear ImGui parity debt |
 | Input text / textarea | `input_text_model`, picker/history/completion helpers, `textarea_model`, input filters, undo command policy | Covered for current needs; mutable-buffer callback grammar remains intentionally absent |
 | Slider / drag value | `slider_f32_model` in kit, richer typed `Slider` / `DragValue` adapters in editor | Covered through split kit/editor ownership; generic numeric breadth belongs in editor controls first |
-| Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper remains candidate-only |
+| Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `SelectableOptions::highlighted`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper and broader selectable flag mirrors remain candidate-only |
 | Tree / disclosure | `collapsing_header`, `tree_node`, explicit `TreeNodeOptions::level` | Covered with Fret-native explicit identity/depth; do not copy implicit indent/ID stacks |
 | Child windows / scrolling | `child_region`, `scroll`, `virtual_list`, `ChildRegionResize{X,Y}Options` | Covered for keyed scrollable panes and manual axis resize; Dear ImGui child flags such as auto-resize, clipping-return, and nav flattening stay behavior-specific candidates |
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |

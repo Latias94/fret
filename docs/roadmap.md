@@ -115,6 +115,10 @@ Tracker highlights:
   state and no `fret-imui` runtime widening):
   `docs/workstreams/imui-child-region-resize-y-v1/CLOSEOUT_AUDIT_2026-05-15.md` and
   `docs/workstreams/imui-child-region-resize-x-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
+- ImUi selectable highlight policy follow-on (closed narrow additive lane for Dear ImGui-style
+  selectable forced-highlight visuals in `fret-ui-kit::imui`, with keyboard-active picker rows no
+  longer reported as selected): `docs/workstreams/imui-selectable-highlight-policy-v1/DESIGN.md`
+  and `docs/workstreams/imui-selectable-highlight-policy-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
 - ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
