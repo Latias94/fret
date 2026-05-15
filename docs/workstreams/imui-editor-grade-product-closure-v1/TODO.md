@@ -193,6 +193,8 @@ reopen.
       Maintenance: MCP `fret_diag_regression_dashboard` now consumes that same shared regression
       drill-down/follow-up projection, so AI-driven diagnostics receives the same bundle dirs,
       capability provenance, perf evidence, and concrete next-command hints as the GUI.
+      Maintenance: the MCP dashboard now exposes structured follow-up command rows with
+      `diag_args`, preserving the runnable/manual split without shell-string parsing.
       Maintenance: the shared follow-up projection now carries structured command metadata and
       separates bundle-local runnable commands from baseline-required manual compare commands, so
       GUI and MCP consumers do not present placeholder compare commands as ready-to-run actions.

@@ -155,7 +155,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   selection changes and manual refreshes bypass the throttle.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
-  provenance, perf evidence, and next-command hints.
+  provenance, perf evidence, and next-command hints. It exposes both command-line strings and
+  structured follow-up command rows with `diag_args`, so AI clients can run bundle-local actions
+  like `trace` without parsing shell text.
 
 ## Goals (v1)
 

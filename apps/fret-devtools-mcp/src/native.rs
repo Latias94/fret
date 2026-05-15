@@ -8,7 +8,8 @@ use std::time::Duration;
 use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    RegressionBundleFollowupCommandV1, RegressionSummaryV1,
     regression_bundle_followup_command_lines, regression_bundle_followup_commands,
     regression_summary_drilldown,
 };
@@ -1678,6 +1679,23 @@ struct RegressionDashboardEvidenceV1 {
     runnable_followup_command_lines: Vec<String>,
     #[serde(default)]
     manual_followup_command_lines: Vec<String>,
+    #[serde(default)]
+    followup_commands: Vec<RegressionDashboardFollowupCommandV1>,
+    #[serde(default)]
+    runnable_followup_commands: Vec<RegressionDashboardFollowupCommandV1>,
+    #[serde(default)]
+    manual_followup_commands: Vec<RegressionDashboardFollowupCommandV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct RegressionDashboardFollowupCommandV1 {
+    id: String,
+    label: String,
+    command_line: String,
+    #[serde(default)]
+    diag_args: Vec<String>,
+    #[serde(default)]
+    requires_baseline: bool,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1714,9 +1732,27 @@ struct RegressionDashboardResultV1 {
     runnable_followup_command_lines: Vec<String>,
     #[serde(default)]
     manual_followup_command_lines: Vec<String>,
+    #[serde(default)]
+    followup_commands: Vec<RegressionDashboardFollowupCommandV1>,
+    #[serde(default)]
+    runnable_followup_commands: Vec<RegressionDashboardFollowupCommandV1>,
+    #[serde(default)]
+    manual_followup_commands: Vec<RegressionDashboardFollowupCommandV1>,
     human_summary: String,
     #[serde(default)]
     index_json: Option<String>,
+}
+
+impl From<RegressionBundleFollowupCommandV1> for RegressionDashboardFollowupCommandV1 {
+    fn from(value: RegressionBundleFollowupCommandV1) -> Self {
+        Self {
+            id: value.id,
+            label: value.label,
+            command_line: value.command_line,
+            diag_args: value.diag_args,
+            requires_baseline: value.requires_baseline,
+        }
+    }
 }
 
 impl From<DashboardCountEntry> for DashboardCountEntryV1 {
@@ -2292,6 +2328,23 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
         .filter(|command| command.requires_baseline)
         .map(|command| command.display_line())
         .collect();
+    let followup_command_entries = followup_commands
+        .iter()
+        .cloned()
+        .map(RegressionDashboardFollowupCommandV1::from)
+        .collect();
+    let runnable_followup_command_entries = followup_commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .cloned()
+        .map(RegressionDashboardFollowupCommandV1::from)
+        .collect();
+    let manual_followup_command_entries = followup_commands
+        .iter()
+        .filter(|command| command.requires_baseline)
+        .cloned()
+        .map(RegressionDashboardFollowupCommandV1::from)
+        .collect();
     RegressionDashboardEvidenceV1 {
         bundle_dirs: drilldown.bundle_dirs,
         capability_sources: drilldown.capability_sources,
@@ -2302,6 +2355,9 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
         followup_command_lines,
         runnable_followup_command_lines,
         manual_followup_command_lines,
+        followup_commands: followup_command_entries,
+        runnable_followup_commands: runnable_followup_command_entries,
+        manual_followup_commands: manual_followup_command_entries,
     }
 }
 
@@ -2437,6 +2493,9 @@ fn build_regression_dashboard_result(
         followup_command_lines: evidence.followup_command_lines,
         runnable_followup_command_lines: evidence.runnable_followup_command_lines,
         manual_followup_command_lines: evidence.manual_followup_command_lines,
+        followup_commands: evidence.followup_commands,
+        runnable_followup_commands: evidence.runnable_followup_commands,
+        manual_followup_commands: evidence.manual_followup_commands,
         human_summary,
         index_json: if include_json { index_json } else { None },
     }
@@ -3174,6 +3233,22 @@ mod tests {
                 .runnable_followup_command_lines
                 .iter()
                 .any(|line| line.contains("trace: cargo run -p fretboard-dev -- diag trace"))
+        );
+        assert!(result.runnable_followup_commands.iter().any(|command| {
+            command.id == "trace"
+                && command.diag_args
+                    == vec![
+                        "trace".to_string(),
+                        "target/fret-diag/campaigns/ui-gallery/run-a".to_string(),
+                        "--json".to_string(),
+                    ]
+                && !command.requires_baseline
+        }));
+        assert!(
+            result
+                .manual_followup_commands
+                .iter()
+                .any(|command| command.id == "visual-compare" && command.requires_baseline)
         );
         assert!(result
             .manual_followup_command_lines

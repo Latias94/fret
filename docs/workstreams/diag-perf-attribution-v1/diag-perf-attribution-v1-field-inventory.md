@@ -84,6 +84,9 @@ schema:
   - DevTools follow-up result records expose the generated trace as
     `output_artifacts[].kind="trace.chrome.json"` plus `output_artifacts[].path`, and normalize the
     stored path to `/` separators for stable GUI/MCP evidence.
+  - MCP regression dashboards expose the same commands as structured rows under
+    `followup_commands`, `runnable_followup_commands`, and `manual_followup_commands`, preserving
+    `diag_args` for clients that should not parse shell text.
 
 Supported real-span extension payload:
 

@@ -105,6 +105,8 @@ Remaining gaps / follow-ups:
     from selected failing bundle dirs without re-deriving commands.
   - 2026-05-16: DevTools trace follow-up result records now carry `output_artifacts` for the
     generated `trace.chrome.json`, and the GUI summary/details surface that path directly.
+  - 2026-05-16: MCP regression dashboards now expose structured follow-up command rows with
+    `diag_args`, keeping AI-driven trace/stats/triage actions aligned with the GUI projection.
   - Still remaining: finer nested runtime spans and external profiler/Tracy correlation for
     concrete attribution cases.
 

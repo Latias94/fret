@@ -674,6 +674,9 @@ DevTools MCP product-workflow projection follow-up (2026-05-15):
 - The MCP dashboard result also exposes `runnable_followup_command_lines` and
   `manual_followup_command_lines`, mirroring the GUI's separation between direct bundle-local
   follow-ups and baseline-required compare follow-ups.
+- The same result now exposes structured `followup_commands`, `runnable_followup_commands`, and
+  `manual_followup_commands` rows with `diag_args`, so AI consumers can run bundle-local actions
+  like `trace` without parsing command-line strings.
 - The default product-chain discovery gate now source-checks the MCP projection alongside the GUI
   first-open panel, so `fretboard-dev list tool-apps`, the GUI shell, and the MCP adapter cannot
   silently diverge on the product workflow route.

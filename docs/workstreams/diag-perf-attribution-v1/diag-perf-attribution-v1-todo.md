@@ -102,6 +102,8 @@
   - GUI-launched trace follow-up result records now include the generated
     `trace.chrome.json` under `output_artifacts`, and the selected-result summary/details render the
     artifact path for immediate reuse.
+  - MCP dashboard results now include structured follow-up command rows with `diag_args`, mirroring
+    the GUI runnable/manual split without forcing AI clients to parse command-line strings.
   - Gate:
     `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
   - GUI bridge gate:

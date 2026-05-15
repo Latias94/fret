@@ -228,6 +228,8 @@ Conventions:
         through the `devtools mcp ai scenario doc` check, which validates the scenario steps,
         artifact resources, subscriptions, and matching `apps/fret-devtools-mcp` tool/resource
         implementation anchors.
+  - [x] `fret_diag_regression_dashboard` exposes structured follow-up command rows with
+        `diag_args` and baseline classification, alongside the existing command-line strings.
 
 ## Cross-cutting hygiene
 

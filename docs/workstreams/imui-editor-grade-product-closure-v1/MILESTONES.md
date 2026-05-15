@@ -334,6 +334,9 @@ Current status:
 - 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
   projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
   lines in both structured JSON and the human summary.
+- 2026-05-16 DevTools MCP regression dashboard adds structured follow-up command rows with
+  `diag_args` and baseline classification, so AI consumers no longer need to parse command strings
+  to run bundle-local trace/stats/triage actions.
 - 2026-05-15 shared regression follow-up commands are now structured in
   `crates/fret-diag/src/regression_summary.rs`, with GUI/MCP consumers separating bundle-local
   runnable commands from baseline-required manual compare commands.

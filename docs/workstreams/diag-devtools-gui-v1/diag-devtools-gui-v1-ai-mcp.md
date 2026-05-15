@@ -85,7 +85,8 @@ Batch run:
     provenance, perf evidence, and concrete follow-up commands, including the bundle-local
     `trace` action for Chrome trace metadata,
   - separates bundle-local runnable follow-up commands from manual compare commands that still need
-    a baseline input,
+    a baseline input, and exposes both command-line strings and structured command rows with `id`,
+    `label`, `command_line`, `diag_args`, and `requires_baseline`,
   - can optionally include the raw index JSON inline.
 
 ### Step 4: Pack the latest bundle and open the offline viewer
