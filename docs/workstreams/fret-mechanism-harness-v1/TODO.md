@@ -392,9 +392,66 @@ date: 2026-05-12
     selectors, so the underlay trigger was clipped out while the popup barrier was active even
     though the semantics edge existed. Relation predicates now use endpoint-specific selector
     resolution, while ordinary selectors still respect modal barrier scoping.
+- [x] Add a Select active-descendant runtime gate that exercises external active-row state through
+  view-cache reuse.
+  - Result: `ui-gallery-select-roving-skips-disabled-orange.json` caught a real Select
+    invalidation defect: keyboard navigation updated active-row state to the next enabled item, but
+    the runtime semantics snapshot kept the previous active descendant because the state lived
+    outside the element tree and only requested redraw. `fret-ui-kit` and `fret-ui-shadcn` now call
+    `host.notify` when active-row changes, and focused tests plus the full `ui-gallery-select`
+    suite pass.
+- [x] Classify Select wheel and active-descendant lint evidence so scrollable listbox state does
+  not create false fatal harness failures.
+  - Result: `wheel_scroll_hit_changes_test_id` now ignores wheel frames before the target test id
+    exists, and `layout.active_item_out_of_window` is a warning instead of an error when the active
+    descendant is inside a scrollable ancestor. This keeps the Select wheel gates focused on
+    component wheel routing while preserving useful lint evidence.
+- [x] Add a Select Scrollable placement baseline with layout sidecar evidence.
+  - Result: `ui-gallery-select-scrollable-placement-boundary.json` now opens the Scrollable Select
+    docs surface in a constrained viewport, waits for a placed-rect trace, checks window containment,
+    bounds listbox size, proves trigger/listbox relations, captures a screenshot, bundle, and layout
+    sidecar, and runs inside the promoted `ui-gallery-select` suite. The first drafts found harness
+    authoring defects in the start-section filter and `bounds_max_size` width oracle; no runtime
+    Select placement defect was confirmed.
 - [ ] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
   exercises scroll-container clipping, modal boundary choice, RTL direction, and viewport resize
   with placement/layout sidecar evidence.
+  - Progress: the Select item-aligned resize sub-axis is now covered by
+    `ui-gallery-select-demo-open-layout.json`; it proves first-open placement/relations and then
+    proves resize closes the item-positioned popup and clears `controls`. This intentionally does
+    not cover anchored overlays that should stay open.
+  - Progress: `ui-gallery-combobox-responsive-resize-open-placement.json` now covers the anchored
+    overlay stay-open resize companion: it keeps the Combobox popover mounted across resize, gates
+    a fresh post-resize placement trace, allows collision flip, checks top-flip side gap,
+    containment/stability, and preserves `controls`/`labelled_by` relation wiring.
+  - Progress: the same component-family suite run exposed and fixed an older
+    `ui-gallery-combobox-typeahead-commit-banana.json` harness defect: the script clicked an
+    existing but offscreen trigger. It now scrolls the trigger into view, asserts window bounds, and
+    uses `click_stable`; the full `ui-gallery-combobox` suite passes with 23 scripts.
+  - Progress: `ui-gallery-select-scrollable-placement-boundary.json` now covers the Select
+    Scrollable listbox baseline with placed-rect trace, window containment, listbox size bounds,
+    relation wiring, screenshot, bundle, and layout sidecar evidence.
+  - Progress: `ui-gallery-combobox-placement-ownership-scroll-rtl.json` now covers the explicit
+    scroll-container clipping plus RTL ownership sub-axis: the trigger sits inside a clipped
+    ScrollArea, the popover escapes to the overlay root, the content and option overflow the inner
+    viewport, and the overflowed option remains hittable/selectable.
+  - Progress: `ui-gallery-dialog-nested-combobox-modal-boundary.json` now covers the modal/root
+    boundary ownership sub-axis: a Combobox opened inside a modal Dialog remains selectable while
+    the modal/focus barrier is active, records placement and relation evidence, and verifies final
+    barrier cleanup.
+  - Remaining: add a multi-viewport ownership companion with placement/layout sidecar evidence.
+- [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
+  `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
+  precondition.
+  - Result: promoted as a scoped registry authoring gate in `tools/check_diag_scripts_registry.py`
+    for the active `ui-gallery-combobox` and `ui-gallery-select` suites. The audit found 495 unsafe
+    long-page content-click patterns across the promoted registry and cleared the active Combobox
+    and Select families by adding `require_fully_within_window` scrolls, `bounds_within_window`
+    guards, and `click_stable` to content-target actions. `python tools/check_diag_scripts_registry.py`
+    now fails future Combobox or Select scripts that regress to plain content clicks or unguarded
+    `click_stable` on `ui-gallery-combobox-*` or `ui-gallery-select-*` targets. The full
+    `ui-gallery-combobox` and `ui-gallery-select` suites pass after rebuilding the diagnostics
+    runner.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

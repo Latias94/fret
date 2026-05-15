@@ -50,6 +50,7 @@
     "tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json",
     "tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json",
     "tools/diag-scripts/ui-gallery-combobox-rtl-long-text-geometry.json",
+    "tools/diag-scripts/ui-gallery-combobox-responsive-resize-open-placement.json",
     "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
     "tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json",
     "tools/diag-scripts/ui-gallery-command-palette-controlled-selection-arrowdown.json",

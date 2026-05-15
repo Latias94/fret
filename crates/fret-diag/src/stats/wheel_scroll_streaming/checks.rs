@@ -60,9 +60,6 @@ pub(crate) fn check_bundle_for_wheel_scroll_streaming(
         let Some(before_sem) =
             resolve_semantics_lite(bundle_path, &inline_sem, before, window_id, test_id)?
         else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
             continue;
         };
         let Some(after_sem) =
@@ -75,9 +72,6 @@ pub(crate) fn check_bundle_for_wheel_scroll_streaming(
         };
 
         let Some(target_before) = before_sem.target_node_id else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
             continue;
         };
         let Some(target_after) = after_sem.target_node_id else {
@@ -156,9 +150,6 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_streaming(
         let Some(before_sem) =
             resolve_semantics_lite(bundle_path, &inline_sem, before, window_id, test_id)?
         else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
             continue;
         };
         let Some(after_sem) =
@@ -171,9 +162,6 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_streaming(
         };
 
         let Some(target_before) = before_sem.target_node_id else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
             continue;
         };
         let Some(target_after) = after_sem.target_node_id else {

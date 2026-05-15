@@ -460,7 +460,37 @@ cargo test --profile dev-fast -p fret-ui-kit --lib mouse_open_guard_pointer_up_d
 
 ```powershell
 cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
+target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-typeahead-commit-banana.json --dir target/fret-diag-combobox-typeahead-commit-banana-v2 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe
 ```
+
+Current runtime evidence:
+
+- Combobox typeahead commit runtime gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-typeahead-commit-banana.json`
+  - runtime assertions:
+    navigates to Combobox, scrolls the demo trigger into the content viewport, uses stable clicks to
+    open/reopen the popover, filters with `ban`, asserts Banana becomes the active item, commits
+    with Enter, verifies the selected label updates to `Selected: banana`, reopens, and asserts
+    Banana has `selected_is=true`.
+  - focused failure evidence before the precondition fix:
+    `target/fret-diag-combobox-suite-responsive-resize-v1/sessions/1778847873963-70928/script.result.json`
+  - failure proof:
+    step 14 hit-test trace recorded `clamped_outside_window=true`, intended trigger
+    `y_px=3831.333`, click `y_px=720`, and `blocking_reason=no_hit`.
+  - runtime evidence after the fix:
+    `target/fret-diag-combobox-typeahead-commit-banana-v2/sessions/1778848767000-28640/1778848774825/script.result.json`
+  - AI packet:
+    `target/fret-diag-combobox-typeahead-commit-banana-v2/sessions/1778848767000-28640/1778848774825/ai.packet`
+  - packed evidence:
+    `target/fret-diag-combobox-typeahead-commit-banana-v2/sessions/1778848767000-28640/share/1778848774825.zip`
+  - component-suite proof:
+    `target/fret-diag-combobox-suite-responsive-resize-v2/sessions/1778848841597-52396/suite.summary.json`
+  - suite result:
+    passed, 23 scripts; `reason_code_counts={}`; typeahead row passed with run id `1778849398883`.
+  - roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_typeahead_commit_banana --no-fail-fast`
+  - roundtrip result:
+    passed, 1 test; Nextest run id `87ecad1d-1d24-424a-a0ac-571d46d0963d`.
 
 ## Shadcn Combobox Placement and Visual Gates
 
@@ -1480,6 +1510,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag/combobox-position-fixed/sessions/1778592265006-81796/1778592267296/script.result.json`
   - Trace verification:
     `desired.w=200`, `final_rect.w=200`, `chosen_side=bottom`, `side_offset_px=6`
+- Combobox responsive resize-reposition gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-resize-open-placement.json`
+  - runtime assertions:
+    opens the responsive Combobox popover, proves first-open bottom placement, resizes the window
+    while open, proves the input/content/listbox remain mounted, waits for a fresh post-resize
+    `anchored_panel` trace with `preferred_side=bottom` and `side_offset_px=4`, allows collision
+    flip, asserts the content stays in-window, asserts the top-flip gap
+    `content.bottom - trigger.top = -4px`, checks the documented desktop content/trigger width
+    delta, preserves `controls`/`labelled_by` relation wiring, and waits for stable bounds before
+    capture.
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-combobox/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-resize-open-placement.json --dir target/fret-diag-combobox-responsive-resize-open-placement-v4 --session-auto --pack --ai-packet --include-screenshots --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778847566014`.
+  - runtime evidence:
+    `target/fret-diag-combobox-responsive-resize-open-placement-v4/sessions/1778847561470-88320/1778847566014/script.result.json`
+  - AI packet:
+    `target/fret-diag-combobox-responsive-resize-open-placement-v4/sessions/1778847561470-88320/1778847566014/ai.packet`
+  - packed evidence:
+    `target/fret-diag-combobox-responsive-resize-open-placement-v4/sessions/1778847561470-88320/share/1778847566014.zip`
+  - script roundtrip:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_responsive_resize_open_placement --no-fail-fast`
+  - script roundtrip result:
+    passed, 1 test; Nextest run id `f8d2693a-e141-4dfc-a171-169b051971de`.
 - Menubar submenu placement gates:
   `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-submenu-placement-trace.json`,
   `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json`
@@ -1656,6 +1713,242 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `ecosystem/fret-ui-shadcn/src/select.rs`,
     `apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs`,
     `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json`
+- Select item-aligned resize-close placement policy gate:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json`
+  - runtime assertions:
+    first-open placed-rect ownership, listbox containment and bounds stability, trigger `controls`
+    listbox, listbox `labelled_by` trigger, then window resize closes the item-positioned popup,
+    leaves the trigger stable in the viewport, and clears trigger `controls`.
+  - policy anchor:
+    `ecosystem/fret-ui-kit/src/primitives/select.rs` (`modal_select_request` opts into
+    `close_on_window_resize`).
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json --dir target/fret-diag-select-demo-open-layout-resize-closes-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778846116295`.
+  - runtime evidence:
+    `target/fret-diag-select-demo-open-layout-resize-closes-v1/sessions/1778846111779-85184/1778846116295/script.result.json`
+  - AI packet:
+    `target/fret-diag-select-demo-open-layout-resize-closes-v1/sessions/1778846111779-85184/1778846116295/ai.packet`
+  - packed evidence:
+    `target/fret-diag-select-demo-open-layout-resize-closes-v1/sessions/1778846111779-85184/share/1778846116295.zip`
+  - focused policy gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit modal_select_request_sets_default_root_name --no-fail-fast`
+  - focused policy result:
+    passed, 1 test; Nextest run id `fd96f104-b2ba-4fce-9390-ebd8ef9667aa`.
+  - script roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_select_demo_open_layout --no-fail-fast`
+  - script roundtrip result:
+    passed, 1 test; Nextest run id `228efd90-671a-42f6-81bf-bd9c8b1c1397`.
+- Diagnostics authoring long-page click visibility gate:
+  `tools/check_diag_scripts_registry.py`
+  - scope:
+    promoted `ui-gallery-combobox` suite scripts, content targets with
+    `ui-gallery-combobox-*` test ids.
+  - invariant:
+    long-page content targets may not use plain `click`; `click_stable` requires a prior
+    `scroll_into_view(require_fully_within_window=true)` or `bounds_within_window` guard for the
+    same target.
+  - found:
+    495 unsafe content-click patterns across the promoted registry, with 15 in
+    `ui-gallery-combobox`; the Combobox family is now cleared to zero and guarded.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - script roundtrip gate:
+    `cargo nextest run -p fret-diag-protocol --test script_json_roundtrip`
+  - script roundtrip result:
+    passed, 103 tests; Nextest run id `699852bd-a308-4657-bcd1-3f87f9243d3b`.
+  - build gate after stale diagnostics binary discovery:
+    `cargo build -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - focused responsive resize rerun:
+    `target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-resize-open-placement.json --dir target/fret-diag-combobox-responsive-resize-authoring-lint-v2 --session-auto --pack --ai-packet --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - focused runtime result:
+    passed; run id `1778851448831`.
+  - focused runtime evidence:
+    `target/fret-diag-combobox-responsive-resize-authoring-lint-v2/sessions/1778851446231-91900/1778851448831/script.result.json`
+  - focused AI packet:
+    `target/fret-diag-combobox-responsive-resize-authoring-lint-v2/sessions/1778851446231-91900/1778851448831/ai.packet`
+  - focused packed evidence:
+    `target/fret-diag-combobox-responsive-resize-authoring-lint-v2/sessions/1778851446231-91900/share/1778851448831.zip`
+  - family suite:
+    `target\debug\fretboard-dev.exe diag suite ui-gallery-combobox --dir target/fret-diag-combobox-suite-authoring-lint-v2 --session-auto --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - family suite result:
+    passed, 23 scripts.
+  - family suite evidence:
+    `target/fret-diag-combobox-suite-authoring-lint-v2/sessions/1778851461244-45400/suite.summary.json`
+  - proof:
+    `status=passed`, `stage_counts.passed=23`, `reason_code_counts={}`,
+    `scripts_with_evidence=23`, and `focus_mismatch_total=0`.
+- Select active-descendant/view-cache notification and scroll lint classification:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-roving-skips-disabled-orange.json`
+  - invariant:
+    keyboard navigation after pointer-open must update the active descendant in the real UI Gallery
+    semantics snapshot even when Select active-row state is stored outside the element tree and the
+    view cache can otherwise be reused.
+  - owning fixes:
+    `ecosystem/fret-ui-kit/src/primitives/select.rs`,
+    `ecosystem/fret-ui-shadcn/src/select.rs`,
+    `crates/fret-diag/src/stats/wheel_scroll.rs`,
+    `crates/fret-diag/src/stats/wheel_scroll_streaming/checks.rs`,
+    `crates/fret-diag/src/stats/wheel_scroll_streaming/tests.rs`,
+    and `crates/fret-diag/src/lint.rs`.
+  - focused headless gate:
+    `cargo test -p fret-ui-kit --lib content_arrow -- --nocapture`
+  - focused headless result:
+    passed, 3 tests.
+  - focused recipe gate:
+    `cargo test -p fret-ui-shadcn --lib select_grouped_pointer_open_arrow_down_moves_active_descendant -- --nocapture`
+  - focused recipe result:
+    passed.
+  - build gate:
+    `cargo build -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - original failing runtime gate:
+    `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-roving-skips-disabled-orange.json --dir target\fret-diag-select-roving-after-notify-v1 --session-auto --pack --ai-packet --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - original failing runtime result:
+    passed.
+  - original failing runtime evidence:
+    `target/fret-diag-select-roving-after-notify-v1/sessions/1778870575466-4348/1778870578695/script.result.json`
+  - original failing AI packet:
+    `target/fret-diag-select-roving-after-notify-v1/sessions/1778870575466-4348/1778870578695/ai.packet`
+  - original failing packed evidence:
+    `target/fret-diag-select-roving-after-notify-v1/sessions/1778870575466-4348/share/1778870578695.zip`
+  - wheel-scroll classification gate:
+    `cargo test -p fret-diag wheel_scroll_hit_changes -- --nocapture`
+  - wheel-scroll classification result:
+    passed, 5 tests.
+  - active-descendant lint classification gate:
+    `cargo test -p fret-diag lint_downgrades_scrollable_active_descendant_out_of_window_to_warning -- --nocapture`
+  - active-descendant lint classification result:
+    passed.
+  - family suite after merging local `main`:
+    `target\debug\fretboard-dev.exe diag suite ui-gallery-select --dir target\fret-diag-select-suite-post-main-merge-v1 --session-auto --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - family suite result:
+    passed, 14 scripts.
+  - family suite evidence:
+    `target/fret-diag-select-suite-post-main-merge-v1/sessions/1778876429637-35368/suite.summary.json`
+  - companion authoring gate:
+    `tools/check_diag_scripts_registry.py` now includes `ui-gallery-select` in the strict long-page
+    click-visibility suite set, so promoted Select scripts cannot regress to plain content clicks
+    or unguarded `click_stable` on `ui-gallery-select-*` content targets.
+- Select scrollable placement boundary baseline:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json`
+  - invariant:
+    the scrollable Select docs surface must expose stable trigger/listbox diagnostics ids, open a
+    long-list item-aligned popup inside a constrained viewport, emit a placed-rect trace, keep the
+    listbox inside the window, bound listbox size, preserve trigger/listbox relations, and leave
+    layout sidecar evidence for clipping-boundary inspection.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/snippets/select/scrollable.rs`,
+    `tools/diag-scripts/suites/ui-gallery-select/suite.json`,
+    `tools/diag-scripts/index.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - script roundtrip gate:
+    `cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_select_scrollable_placement_boundary --no-fail-fast`
+  - script roundtrip result:
+    passed, 1 test; Nextest run id `656d7088-0176-4aa6-a1d2-162e5be92930`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - focused runtime command:
+    `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-scrollable-placement-boundary.json --dir target\fret-diag-select-scrollable-placement-boundary-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - focused runtime result:
+    passed.
+  - focused runtime evidence:
+    `target/fret-diag-select-scrollable-placement-boundary-v4/sessions/1778877971968-93800/share/1778877974456.zip`
+  - focused AI packet:
+    `target/fret-diag-select-scrollable-placement-boundary-v4/sessions/1778877971968-93800/1778877974456/ai.packet`
+  - family suite:
+    `target\debug\fretboard-dev.exe diag suite ui-gallery-select --dir target\fret-diag-select-suite-scrollable-placement-boundary-v1 --session-auto --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - family suite result:
+    passed.
+  - family suite evidence:
+    `target/fret-diag-select-suite-scrollable-placement-boundary-v1/sessions/1778878050419-40260/suite.summary.json`
+- Combobox scroll-container/RTL placement ownership gate:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json`
+  - invariant:
+    an RTL Combobox trigger inside a clipped ScrollArea must place its popover on the overlay root,
+    not under the scroll viewport clip; the content and `Release Ready` option intentionally extend
+    below the ScrollArea viewport, and clicking that option must still commit selection.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/snippets/combobox/placement_ownership.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/combobox.rs`,
+    `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`,
+    `tools/diag-scripts/index.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - first failed evidence:
+    `target/fret-diag-combobox-placement-ownership-scroll-rtl-v1/sessions/1778879398702-31444/1778879401346/script.result.json`
+    showed a valid trace with `chosen_side=top`, `flipped=true`, and only
+    `preferred_available_main_px=57.33`; the failure was a harness setup issue, not a mechanism
+    defect.
+  - script roundtrip gate:
+    `cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl --no-fail-fast`
+  - script roundtrip result:
+    passed, 1 test; Nextest run id `487c4520-a050-4ba1-aa1b-3e6d93e591a3`.
+  - build gate:
+    `cargo build -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - focused runtime command:
+    `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-placement-ownership-scroll-rtl.json --dir target\fret-diag-combobox-placement-ownership-scroll-rtl-v3 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - focused runtime result:
+    passed.
+  - focused runtime evidence:
+    `target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/script.result.json`
+  - focused AI packet:
+    `target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/1778879725145/ai.packet`
+  - focused packed evidence:
+    `target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/share/1778879725145.zip`
+  - family suite:
+    `target\debug\fretboard-dev.exe diag suite ui-gallery-combobox --dir target\fret-diag-combobox-suite-placement-ownership-v1 --session-auto --timeout-ms 360000 --launch -- target\debug\fret-ui-gallery.exe`
+  - family suite result:
+    passed, 24 scripts.
+  - family suite evidence:
+    `target/fret-diag-combobox-suite-placement-ownership-v1/sessions/1778879747388-60292/suite.summary.json`
+- Dialog nested Combobox modal-boundary ownership gate:
+  `tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json`
+  - invariant:
+    a Combobox opened inside a modal Dialog must remain selectable while the Dialog modal/focus
+    barrier is active, even when the Combobox content lives in an overlay root above the barrier
+    rather than as a descendant of the barrier root. The gate also proves placement, relation
+    wiring, selected state, screenshot, bundle, layout sidecar evidence, and final barrier cleanup.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/dialog/nested_combobox.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/dialog.rs`,
+    `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`,
+    `tools/diag-scripts/index.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - focused diagnostics selector gate:
+    `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics" --lib wait_until_selector_trace_reports_modal_barrier_filtering`
+  - focused diagnostics selector result:
+    passed, 1 test.
+  - full diagnostics feature lib gate:
+    `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics" --lib --no-fail-fast`
+  - full diagnostics feature lib result:
+    passed, 154 tests.
+  - runtime command:
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json --dir target/fret-diag-dialog-nested-combobox-modal-boundary-v4 --session-auto --pack --pack-schema2-only --json --exit-after-run --launch cargo run -p fret-ui-gallery`
+  - runtime result:
+    passed; run id `1778885770482`.
+  - runtime evidence:
+    `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/script.result.json`
+  - schema2 bundle:
+    `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json`
+  - packed evidence:
+    `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

@@ -522,6 +522,41 @@ fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_select_scrollable_placement_boundary() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_responsive_resize_open_placement() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-resize-open-placement.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_dialog_nested_combobox_modal_boundary() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_typeahead_commit_banana() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-typeahead-commit-banana.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json"

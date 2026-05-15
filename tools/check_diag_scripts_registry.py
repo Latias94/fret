@@ -30,6 +30,11 @@ REGISTRY_PATH = SCRIPTS_DIR / "index.json"
 SUITES_DIR = SCRIPTS_DIR / "suites"
 PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
 SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
+STRICT_CLICK_VISIBILITY_SUITES = {"ui-gallery-combobox", "ui-gallery-select"}
+STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
+    "ui-gallery-combobox-",
+    "ui-gallery-select-",
+)
 
 
 def find_repo_root(start: Path) -> Path:
@@ -308,6 +313,105 @@ def canonical_json_bytes(obj: Any) -> bytes:
     return (json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
 
 
+def test_id_from_target_ref(value: Any) -> Optional[str]:
+    if (
+        isinstance(value, dict)
+        and value.get("kind") == "test_id"
+        and isinstance(value.get("id"), str)
+        and value["id"].strip()
+    ):
+        return value["id"].strip()
+    return None
+
+
+def is_strict_ui_gallery_content_target(test_id: str) -> bool:
+    return test_id.startswith(STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES)
+
+
+def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted UI Gallery content clicks that are known to run in long pages.
+
+    This intentionally expands suite-by-suite rather than across the full script
+    library: the full promoted registry still has legacy click-authoring debt,
+    while the strict suites have been cleared to zero violations.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+        memberships = entry.get("suite_memberships")
+        if not isinstance(memberships, list):
+            continue
+        if not STRICT_CLICK_VISIBILITY_SUITES.intersection(
+            item for item in memberships if isinstance(item, str)
+        ):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        steps = obj.get("steps") if isinstance(obj, dict) else None
+        if not isinstance(steps, list):
+            continue
+
+        visible_targets: set[str] = set()
+        for index, step in enumerate(steps):
+            if not isinstance(step, dict):
+                continue
+
+            step_type = step.get("type")
+            if step_type == "set_window_inner_size":
+                visible_targets.clear()
+
+            if step_type == "scroll_into_view":
+                target_id = test_id_from_target_ref(step.get("target"))
+                if (
+                    target_id is not None
+                    and is_strict_ui_gallery_content_target(target_id)
+                    and step.get("require_fully_within_window") is True
+                ):
+                    visible_targets.add(target_id)
+
+            if step_type in {"wait_until", "assert"}:
+                predicate = step.get("predicate")
+                if isinstance(predicate, dict) and predicate.get("kind") == "bounds_within_window":
+                    target_id = test_id_from_target_ref(predicate.get("target"))
+                    if target_id is not None and is_strict_ui_gallery_content_target(target_id):
+                        visible_targets.add(target_id)
+
+            if step_type == "click":
+                target_id = test_id_from_target_ref(step.get("target"))
+                if target_id is not None and is_strict_ui_gallery_content_target(target_id):
+                    violations.append(
+                        f"{rel_path}: step {index}: plain click targets long-page content "
+                        f"`{target_id}`; use click_stable with a prior bounds_within_window guard"
+                    )
+
+            if step_type == "click_stable":
+                target_id = test_id_from_target_ref(step.get("target"))
+                if (
+                    target_id is not None
+                    and is_strict_ui_gallery_content_target(target_id)
+                    and target_id not in visible_targets
+                ):
+                    violations.append(
+                        f"{rel_path}: step {index}: click_stable target `{target_id}` lacks a "
+                        "prior scroll_into_view(require_fully_within_window=true) or "
+                        "bounds_within_window guard"
+                    )
+
+    return violations
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Validate the diag script registry (index.json).")
     ap.add_argument(
@@ -344,6 +448,13 @@ def main() -> None:
         print("error: diag script registry is out of date:", file=sys.stderr)
         print(f"- file: {REGISTRY_PATH.as_posix()}", file=sys.stderr)
         print("hint: run `python tools/check_diag_scripts_registry.py --write`", file=sys.stderr)
+        raise SystemExit(2)
+
+    click_visibility_violations = lint_strict_click_visibility(repo_root, expected)
+    if click_visibility_violations:
+        print("error: promoted diag scripts have unsafe long-page click authoring:", file=sys.stderr)
+        for violation in click_visibility_violations:
+            print(f"- {violation}", file=sys.stderr)
         raise SystemExit(2)
 
     print("ok: diag script registry is up to date.")

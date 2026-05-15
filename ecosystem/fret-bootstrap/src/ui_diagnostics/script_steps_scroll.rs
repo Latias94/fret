@@ -55,6 +55,41 @@ fn rects_close_with_epsilon(a: Rect, b: Rect, eps_px: f32) -> bool {
         && (a.size.height.0 - b.size.height.0).abs() <= eps
 }
 
+fn scroll_into_view_visibility_satisfied(
+    window_bounds: Rect,
+    container_bounds: Option<Rect>,
+    target_bounds: Option<Rect>,
+    require_fully_within_container: bool,
+    require_fully_within_window: bool,
+) -> bool {
+    let visible_ok = target_bounds.is_some_and(|bounds| {
+        if require_fully_within_window {
+            rect_fully_contains_with_epsilon(
+                window_bounds,
+                bounds,
+                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+            )
+        } else {
+            rect_intersection(bounds, window_bounds).is_some()
+        }
+    });
+    let container_ok = if require_fully_within_container {
+        container_bounds
+            .zip(target_bounds)
+            .is_some_and(|(container_bounds, target_bounds)| {
+                rect_fully_contains_with_epsilon(
+                    container_bounds,
+                    target_bounds,
+                    SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+                )
+            })
+    } else {
+        true
+    };
+
+    visible_ok && container_ok
+}
+
 fn bounded_scroll_delta_for_axis(
     configured_delta: f32,
     target_start: f32,
@@ -312,16 +347,8 @@ pub(super) fn handle_scroll_into_view_step(
         &mut active.selector_resolution_trace,
     );
 
-    let container_bounds: Option<Rect> = container_node.map(|node| {
-        ui.as_deref()
-            .and_then(|ui| ui.debug_node_visual_bounds(node.id))
-            .unwrap_or(node.bounds)
-    });
-    let target_bounds: Option<Rect> = target_node.map(|node| {
-        ui.as_deref()
-            .and_then(|ui| ui.debug_node_visual_bounds(node.id))
-            .unwrap_or(node.bounds)
-    });
+    let container_bounds = container_node.map(|node| node.bounds);
+    let target_bounds = target_node.map(|node| node.bounds);
 
     if let Some(check) = motion_check.as_ref()
         && let Some(reason) = record_scroll_motion_check(
@@ -349,32 +376,13 @@ pub(super) fn handle_scroll_into_view_step(
     // Treat "require fully within window/container" as a strict visibility requirement against the
     // raw bounds. This avoids pathological loops where the target is already fully visible, but
     // cannot satisfy the padded inset at a scroll boundary (leading to `stuck_no_progress`).
-    let visible_ok = target_bounds.is_some_and(|bounds| {
-        if require_fully_within_window {
-            rect_fully_contains_with_epsilon(
-                window_bounds,
-                bounds,
-                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
-            )
-        } else {
-            rect_intersection(bounds, window_bounds).is_some()
-        }
-    });
-    let container_ok = if require_fully_within_container {
-        container_bounds
-            .zip(target_bounds)
-            .is_some_and(|(container_bounds, target_bounds)| {
-                rect_fully_contains_with_epsilon(
-                    container_bounds,
-                    target_bounds,
-                    SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
-                )
-            })
-    } else {
-        true
-    };
-
-    if visible_ok && container_ok {
+    if scroll_into_view_visibility_satisfied(
+        window_bounds,
+        container_bounds,
+        target_bounds,
+        require_fully_within_container,
+        require_fully_within_window,
+    ) {
         if let Some(check) = motion_check.as_ref()
             && check.require_scroll_progress
             && !state.motion_saw_scroll_progress
@@ -728,6 +736,21 @@ mod tests {
             rect(10.0, 20.0, 30.0, 40.0),
             rect(10.75, 20.0, 30.0, 40.0),
             0.5,
+        ));
+    }
+
+    #[test]
+    fn scroll_visibility_rejects_target_outside_container_even_if_visual_bounds_would_fit() {
+        let window = rect(0.0, 0.0, 1080.0, 720.0);
+        let container = rect(296.0, 546.0, 178.0, 164.0);
+        let raw_target = rect(300.0, 1224.0, 170.0, 32.0);
+
+        assert!(!scroll_into_view_visibility_satisfied(
+            window,
+            Some(container),
+            Some(raw_target),
+            true,
+            true,
         ));
     }
 

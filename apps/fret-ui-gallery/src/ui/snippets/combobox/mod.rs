@@ -12,6 +12,7 @@ pub mod label;
 pub mod long_list;
 pub mod long_text;
 pub mod multiple_selection;
+pub mod placement_ownership;
 pub mod responsive;
 pub mod rtl;
 pub mod rtl_long_text;

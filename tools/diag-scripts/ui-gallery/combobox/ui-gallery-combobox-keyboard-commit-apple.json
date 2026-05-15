@@ -292,12 +292,15 @@
       "type": "wait_until"
     },
     {
+      "type": "click_stable",
       "button": "left",
       "target": {
         "id": "ui-gallery-combobox-demo-trigger",
         "kind": "test_id"
       },
-      "type": "click"
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "predicate": {

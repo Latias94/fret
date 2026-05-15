@@ -159,7 +159,8 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     clear_initial_scroll_to_y: impl Fn() + Clone + 'static,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
-    consume_pending_active_scroll_into_view: impl Fn() -> bool + Clone + 'static,
+    should_scroll_active_into_view: impl Fn() -> bool + Clone + 'static,
+    clear_pending_active_scroll_into_view: impl Fn() + Clone + 'static,
     should_align_active_to_top: impl Fn() -> bool + Clone + 'static,
     on_aligned_active_to_top: impl Fn() + Clone + 'static,
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
@@ -542,12 +543,12 @@ where
             };
 
             if let Some(active_element) = active_element_ref.get() {
-                let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
+                let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| -> Option<bool> {
                     let (Some(viewport), Some(child)) = (
                         cx.last_bounds_for_element(scroll.id),
                         cx.last_bounds_for_element(active_element),
                     ) else {
-                        return false;
+                        return None;
                     };
 
                     // Compute positions in scroll-content coordinates (stable even when we don't have
@@ -557,7 +558,7 @@ where
                     let child_bottom = Px(child_top.0 + child_h.0);
                     let viewport_h = Px(viewport.size.height.0.max(0.0));
                     if viewport_h.0 <= 0.01 {
-                        return false;
+                        return None;
                     }
 
                     let prev = handle_for_scroll.offset();
@@ -577,10 +578,10 @@ where
                     };
 
                     if (target_y.0 - prev.y.0).abs() <= 0.01 {
-                        return false;
+                        return Some(false);
                     }
                     handle_for_scroll.set_offset(Point::new(prev.x, target_y));
-                    true
+                    Some(true)
                 };
 
                 if has_scroll && !did_initial_scroll && should_align_active_to_top() {
@@ -608,8 +609,12 @@ where
                     // Match Radix Select: only keep the active option in view when the active row
                     // changes via keyboard/typeahead. Do not continuously "chase" the active row
                     // during wheel scrolling.
-                    if consume_pending_active_scroll_into_view() {
-                        let _ = scroll_active_nearest(cx);
+                    if should_scroll_active_into_view() {
+                        if scroll_active_nearest(cx).is_some() {
+                            clear_pending_active_scroll_into_view();
+                        } else {
+                            cx.request_animation_frame();
+                        }
                     }
                 }
             }
@@ -2063,6 +2068,8 @@ fn select_impl<H: UiHost>(
             item_aligned_scroll_up_visible: bool,
             pending_active_align_top_scroll: bool,
             pending_active_scroll_into_view: bool,
+            last_item_pointer_move_pos_window: Option<Point>,
+            keyboard_hover_suppressed: bool,
         }
 
         impl SelectTriggerKeyState {
@@ -2094,6 +2101,8 @@ fn select_impl<H: UiHost>(
                     item_aligned_scroll_up_visible: false,
                     pending_active_align_top_scroll: false,
                     pending_active_scroll_into_view: false,
+                    last_item_pointer_move_pos_window: None,
+                    keyboard_hover_suppressed: false,
                 }
             }
         }
@@ -2214,6 +2223,8 @@ fn select_impl<H: UiHost>(
                 state.pending_active_scroll_into_view = false;
                 state.opened_by_pointer = false;
                 state.opened_by_touch = false;
+                state.last_item_pointer_move_pos_window = None;
+                state.keyboard_hover_suppressed = false;
             }
 
             let state_for_timer = trigger_state.clone();
@@ -2272,10 +2283,12 @@ fn select_impl<H: UiHost>(
                         it.repeat,
                     );
                     let now_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
-                    if !was_open && now_open {
-                        state.opened_by_pointer = false;
-                        state.opened_by_touch = false;
-                    }
+                if !was_open && now_open {
+                    state.opened_by_pointer = false;
+                    state.opened_by_touch = false;
+                    state.last_item_pointer_move_pos_window = None;
+                    state.keyboard_hover_suppressed = false;
+                }
                     let after = host
                         .models_mut()
                         .read(&model_for_key, |v| v.clone())
@@ -2373,6 +2386,9 @@ fn select_impl<H: UiHost>(
                         down.pointer_type,
                         fret_core::PointerType::Touch | fret_core::PointerType::Pen
                     );
+                    state.last_item_pointer_move_pos_window =
+                        Some(down.position_window.unwrap_or(down.position));
+                    state.keyboard_hover_suppressed = false;
                 }
                 state.trigger.clear_typeahead(host);
 
@@ -2444,6 +2460,9 @@ fn select_impl<H: UiHost>(
                             radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_up);
                             state.opened_by_pointer = true;
                             state.opened_by_touch = true;
+                            state.last_item_pointer_move_pos_window =
+                                Some(up.position_window.unwrap_or(up.position));
+                            state.keyboard_hover_suppressed = false;
                             let has_selected_item_in_list = host
                                 .models_mut()
                                 .read(&model_for_pointer_up, |selected| {
@@ -2531,6 +2550,9 @@ fn select_impl<H: UiHost>(
 
                 let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
                 state.opened_by_pointer = false;
+                state.opened_by_touch = false;
+                state.last_item_pointer_move_pos_window = None;
+                state.keyboard_hover_suppressed = false;
                 host.request_redraw(action_cx.window);
             }));
 
@@ -3444,6 +3466,19 @@ fn select_impl<H: UiHost>(
                                                     loop_navigation_for_key,
                                                 );
                                                 let after_active = state.content.active_row();
+                                                if handled {
+                                                    state.opened_by_pointer = false;
+                                                    state.opened_by_touch = false;
+                                                    if matches!(
+                                                        it.key,
+                                                        fret_core::KeyCode::ArrowDown
+                                                            | fret_core::KeyCode::ArrowUp
+                                                            | fret_core::KeyCode::Home
+                                                            | fret_core::KeyCode::End
+                                                    ) {
+                                                        state.keyboard_hover_suppressed = true;
+                                                    }
+                                                }
                                                 if handled && before_active != after_active {
                                                     state.pending_active_scroll_into_view = true;
                                                 }
@@ -3463,7 +3498,9 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let allow_align_active_to_top =
                                             position == SelectPosition::ItemAligned;
-                                        let state_for_consume_active_scroll_into_view =
+                                        let state_for_should_active_scroll_into_view =
+                                            trigger_state_for_overlay_in_content.clone();
+                                        let state_for_clear_active_scroll_into_view =
                                             trigger_state_for_overlay_in_content.clone();
 
                                         let allow_hover_scroll_arrows = {
@@ -3504,16 +3541,18 @@ fn select_impl<H: UiHost>(
                                             viewport_id_out,
                                             active_element_id_out,
                                             move || {
-                                                let mut state =
-                                                    state_for_consume_active_scroll_into_view
+                                                let state =
+                                                    state_for_should_active_scroll_into_view
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                if state.pending_active_scroll_into_view {
-                                                    state.pending_active_scroll_into_view = false;
-                                                    true
-                                                } else {
-                                                    false
-                                                }
+                                                state.pending_active_scroll_into_view
+                                            },
+                                            move || {
+                                                let mut state =
+                                                    state_for_clear_active_scroll_into_view
+                                                        .lock()
+                                                        .unwrap_or_else(|e| e.into_inner());
+                                                state.pending_active_scroll_into_view = false;
                                             },
                                             move || {
                                                 let state = state_for_align_check
@@ -3561,6 +3600,7 @@ fn select_impl<H: UiHost>(
                                                         .unwrap_or_else(|e| e.into_inner());
                                                     if state.content.active_row().is_some() {
                                                         state.content.set_active_row(None);
+                                                        host.notify(action_cx);
                                                         host.request_redraw(action_cx.window);
                                                     }
                                                 }
@@ -3857,6 +3897,7 @@ fn select_impl<H: UiHost>(
                                                                                                         == Some(row_idx_for_timer)
                                                                                                     {
                                                                                                         state.content.set_active_row(None);
+                                                                                                        host.notify(action_cx);
                                                                                                         host.request_redraw(action_cx.window);
                                                                                                     }
                                                                                                     true
@@ -3917,11 +3958,32 @@ fn select_impl<H: UiHost>(
                                                                                                 let mut state = state_for_pointer_move
                                                                                                     .lock()
                                                                                                     .unwrap_or_else(|e| e.into_inner());
+                                                                                                let pointer_motion_still = mv
+                                                                                                    .velocity_window
+                                                                                                    .is_none_or(|v| {
+                                                                                                        v.x.0.abs() <= 0.01
+                                                                                                            && v.y.0.abs() <= 0.01
+                                                                                                    });
+                                                                                                if state.keyboard_hover_suppressed
+                                                                                                    && pointer_motion_still
+                                                                                                {
+                                                                                                    return false;
+                                                                                                }
+                                                                                                let pointer_pos = mv.position_window.unwrap_or(mv.position);
+                                                                                                if state.last_item_pointer_move_pos_window
+                                                                                                    == Some(pointer_pos)
+                                                                                                {
+                                                                                                    return false;
+                                                                                                }
+                                                                                                state.last_item_pointer_move_pos_window =
+                                                                                                    Some(pointer_pos);
+                                                                                                state.keyboard_hover_suppressed = false;
                                                                                                 if state.content.active_row()
                                                                                                     != Some(row_idx_for_pointer_move)
                                                                                                 {
                                                                                                     state.content
                                                                                                         .set_active_row(Some(row_idx_for_pointer_move));
+                                                                                                    host.notify(action_cx);
                                                                                                     host.request_redraw(action_cx.window);
                                                                                                 }
                                                                                                 false
@@ -4973,6 +5035,7 @@ mod tests {
                 &viewport_id_out,
                 &active_element_id_out,
                 || false,
+                || {},
                 || false,
                 || {},
                 |_visible| {},
@@ -5828,6 +5891,56 @@ mod tests {
         root
     }
 
+    fn render_frame_with_entries(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        entries: Vec<SelectEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
+                vec![Select::new(model, open).entries(entries).into_element(cx)]
+            });
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn dispatch_key(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        key: KeyCode,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::KeyDown {
+                key,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::KeyUp {
+                key,
+                modifiers: Modifiers::default(),
+            },
+        );
+    }
+
     fn render_frame_with_on_value_change<
         F: Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static,
     >(
@@ -6006,6 +6119,20 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn assert_select_active_descendant_label(ui: &UiTree<App>, expected: &str) {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let active = listbox
+            .active_descendant
+            .and_then(|id| snap.nodes.iter().find(|n| n.id == id))
+            .expect("active descendant node");
+        assert_eq!(active.label.as_deref(), Some(expected));
     }
 
     #[test]
@@ -6409,6 +6536,396 @@ mod tests {
             Some(beta.id),
             "expected pointer-open to not focus the selected entry"
         );
+    }
+
+    #[test]
+    fn select_pointer_open_arrow_down_moves_active_descendant() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices;
+
+        let mut items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange").disabled(true),
+            SelectItem::new("blueberry", "Blueberry"),
+        ];
+        items.extend((1..=40).map(|i| {
+            let value: Arc<str> = Arc::from(format!("item-{i:02}"));
+            let label: Arc<str> = Arc::from(format!("Item {i:02}"));
+            SelectItem::new(value, label)
+        }));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        assert_eq!(ui.focus(), Some(listbox.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Home,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Apple");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Banana");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+        assert_select_active_descendant_label(&ui, "Blueberry");
+    }
+
+    #[test]
+    fn select_grouped_pointer_open_arrow_down_moves_active_descendant() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices;
+
+        let mut more_entries: Vec<SelectEntry> = vec![SelectLabel::new("More").into()];
+        more_entries.extend((1..=40).map(|i| {
+            let value: Arc<str> = Arc::from(format!("item-{i:02}"));
+            let label: Arc<str> = Arc::from(format!("Item {i:02}"));
+            SelectItem::new(value, label).into()
+        }));
+
+        let entries = vec![
+            SelectGroup::new([
+                SelectLabel::new("Fruits").into(),
+                SelectItem::new("apple", "Apple").into(),
+                SelectItem::new("banana", "Banana").into(),
+                SelectItem::new("blueberry", "Blueberry").into(),
+                SelectItem::new("grapes", "Grapes").into(),
+                SelectItem::new("pineapple", "Pineapple").into(),
+            ])
+            .into(),
+            SelectSeparator::default().into(),
+            SelectGroup::new(more_entries).into(),
+        ];
+
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        assert_eq!(ui.focus(), Some(listbox.id));
+
+        dispatch_key(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Apple");
+
+        dispatch_key(&mut ui, &mut app, &mut services, KeyCode::Home);
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Apple");
+
+        dispatch_key(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Banana");
+
+        dispatch_key(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Blueberry");
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
+            .expect("banana option node after keyboard navigation");
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: banana_center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Banana");
+
+        dispatch_key(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+        assert_select_active_descendant_label(&ui, "Blueberry");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: banana_center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let _ = render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            entries,
+        );
+        assert_select_active_descendant_label(&ui, "Blueberry");
     }
 
     #[test]

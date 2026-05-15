@@ -22,7 +22,7 @@
     "target_hints": [
       "Starts directly on the Select page with the minimal shadcn demo section mounted.",
       "Opens the default item-aligned Select popup and verifies placed-rect ownership through trigger and listbox test-id endpoints.",
-      "Resizes the window while open to gate popup bounds stability and window containment."
+      "Resizes the window while open and verifies the Base UI-aligned item-positioned Select policy closes the popup, clears trigger controls, and leaves the trigger stable in the viewport."
     ]
   },
   "steps": [
@@ -139,14 +139,13 @@
       },
       "timeout_frames": 240
     },
-    { "type": "set_window_inner_size", "width_px": 720.0, "height_px": 420.0 },
+    { "type": "set_window_inner_size", "width_px": 960.0, "height_px": 620.0 },
     { "type": "wait_frames", "n": 10 },
     {
-      "type": "wait_overlay_placement_trace",
-      "query": {
-        "kind": "placed_rect",
-        "anchor_test_id": "ui-gallery-select-shadcn-demo-trigger",
-        "content_test_id": "ui-gallery-select-shadcn-demo-listbox"
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-shadcn-demo-listbox" }
       },
       "timeout_frames": 240
     },
@@ -154,7 +153,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-select-shadcn-demo-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-select-shadcn-demo-trigger" },
         "padding_px": 2.0,
         "eps_px": 0.5
       },
@@ -162,13 +161,25 @@
     },
     {
       "type": "wait_bounds_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-select-shadcn-demo-listbox" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-shadcn-demo-trigger" },
       "stable_frames": 4,
       "max_move_px": 1.0,
       "timeout_frames": 240
     },
-    { "type": "capture_layout_sidecar", "label": "ui-gallery-select-demo-open.layout" },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-demo-open" },
-    { "type": "capture_bundle", "label": "ui-gallery-select-demo-open" }
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-shadcn-demo-trigger"
+        },
+        "relation": "controls"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-select-demo-resize-closed.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-demo-resize-closed" },
+    { "type": "capture_bundle", "label": "ui-gallery-select-demo-resize-closed" }
   ]
 }

@@ -3,7 +3,7 @@
   "slug": "fret-mechanism-harness-v1",
   "title": "Fret Mechanism Harness v1",
   "status": "active",
-  "updated": "2026-05-15",
+  "updated": "2026-05-16",
   "scope_kind": "execution",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
@@ -134,7 +134,21 @@
       "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture",
       "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges semantics_relation_includes_can_cross_scope_roots semantics_relation_includes_can_cross_modal_barrier_to_underlay_source --no-fail-fast",
       "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-relation-edge-runtime-v8 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe",
-      "cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib select_content_test_id_stamps_listbox_without_renaming_viewport select_test_id_prefix_stamps_listbox_items_and_scroll_viewport --no-fail-fast"
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib select_content_test_id_stamps_listbox_without_renaming_viewport select_test_id_prefix_stamps_listbox_items_and_scroll_viewport --no-fail-fast",
+      "cargo test -p fret-ui-kit --lib content_arrow -- --nocapture",
+      "cargo test -p fret-ui-shadcn --lib select_grouped_pointer_open_arrow_down_moves_active_descendant -- --nocapture",
+      "cargo test -p fret-diag wheel_scroll_hit_changes -- --nocapture",
+      "cargo test -p fret-diag lint_downgrades_scrollable_active_descendant_out_of_window_to_warning -- --nocapture",
+      "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_select_scrollable_placement_boundary --no-fail-fast",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json --dir target/fret-diag-select-scrollable-placement-boundary-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
+      "target/debug/fretboard-dev.exe diag suite ui-gallery-select --dir target/fret-diag-select-suite-scrollable-placement-boundary-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
+      "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl --no-fail-fast",
+      "cargo build -p fretboard-dev -p fret-ui-gallery",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json --dir target/fret-diag-combobox-placement-ownership-scroll-rtl-v3 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
+      "target/debug/fretboard-dev.exe diag suite ui-gallery-combobox --dir target/fret-diag-combobox-suite-placement-ownership-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
+      "cargo nextest run -p fret-bootstrap --features \"ui-app-driver diagnostics\" --lib wait_until_selector_trace_reports_modal_barrier_filtering",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json --dir target/fret-diag-dialog-nested-combobox-modal-boundary-v4 --session-auto --pack --pack-schema2-only --json --exit-after-run --launch cargo run -p fret-ui-gallery",
+      "python tools/check_diag_scripts_registry.py"
     ]
   },
   "gates": [
@@ -193,6 +207,54 @@
     {
       "name": "ui-gallery-select-cross-root-relation-edge-diag",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-relation-edge-runtime-v8 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-select-active-descendant-roving-suite",
+      "command": "target/debug/fretboard-dev.exe diag suite ui-gallery-select --dir target/fret-diag-select-suite-scrollable-placement-boundary-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-kit-select-active-row-notify-focused-gate",
+      "command": "cargo test -p fret-ui-kit --lib content_arrow -- --nocapture"
+    },
+    {
+      "name": "shadcn-select-active-descendant-notify-focused-gate",
+      "command": "cargo test -p fret-ui-shadcn --lib select_grouped_pointer_open_arrow_down_moves_active_descendant -- --nocapture"
+    },
+    {
+      "name": "diag-wheel-scroll-hit-change-pre-target-classification",
+      "command": "cargo test -p fret-diag wheel_scroll_hit_changes -- --nocapture"
+    },
+    {
+      "name": "diag-active-descendant-scrollable-ancestor-lint",
+      "command": "cargo test -p fret-diag lint_downgrades_scrollable_active_descendant_out_of_window_to_warning -- --nocapture"
+    },
+    {
+      "name": "ui-gallery-select-scrollable-placement-boundary-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json --dir target/fret-diag-select-scrollable-placement-boundary-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "diag-protocol-select-scrollable-placement-boundary-script",
+      "command": "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_select_scrollable_placement_boundary --no-fail-fast"
+    },
+    {
+      "name": "ui-gallery-combobox-placement-ownership-scroll-rtl-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json --dir target/fret-diag-combobox-placement-ownership-scroll-rtl-v3 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-combobox-placement-ownership-suite",
+      "command": "target/debug/fretboard-dev.exe diag suite ui-gallery-combobox --dir target/fret-diag-combobox-suite-placement-ownership-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "diag-protocol-combobox-placement-ownership-scroll-rtl-script",
+      "command": "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl --no-fail-fast"
+    },
+    {
+      "name": "diag-bootstrap-modal-boundary-selector-trace",
+      "command": "cargo nextest run -p fret-bootstrap --features \"ui-app-driver diagnostics\" --lib wait_until_selector_trace_reports_modal_barrier_filtering"
+    },
+    {
+      "name": "ui-gallery-dialog-nested-combobox-modal-boundary-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json --dir target/fret-diag-dialog-nested-combobox-modal-boundary-v4 --session-auto --pack --pack-schema2-only --json --exit-after-run --launch cargo run -p fret-ui-gallery"
     },
     {
       "name": "shadcn-select-content-listbox-test-id-focused-gate",
@@ -801,6 +863,29 @@
     "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json",
     "tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json",
     "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json",
+    "tools/diag-scripts/ui-gallery/select/ui-gallery-select-roving-skips-disabled-orange.json",
+    "tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json",
+    "tools/diag-scripts/suites/ui-gallery-select/suite.json",
+    "apps/fret-ui-gallery/src/ui/snippets/select/scrollable.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/combobox/placement_ownership.rs",
+    "apps/fret-ui-gallery/src/ui/pages/combobox.rs",
+    "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json",
+    "tools/diag-scripts/ui-gallery-combobox-placement-ownership-scroll-rtl.json",
+    "tools/diag-scripts/suites/ui-gallery-combobox/suite.json",
+    "target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/script.result.json",
+    "target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/1778879725145/ai.packet",
+    "target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/share/1778879725145.zip",
+    "target/fret-diag-combobox-suite-placement-ownership-v1/sessions/1778879747388-60292/suite.summary.json",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/dialog/nested_combobox.rs",
+    "apps/fret-ui-gallery/src/ui/pages/dialog.rs",
+    "tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json",
+    "tools/diag-scripts/ui-gallery-dialog-nested-combobox-modal-boundary.json",
+    "tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json",
+    "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/script.result.json",
+    "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json",
+    "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip",
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json",
     "tools/diag-scripts/ui-gallery-tabs-selected-state-mutation.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json",
