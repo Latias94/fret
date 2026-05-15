@@ -1368,3 +1368,34 @@ DevTools discovery/source gates passed after the source guards were corrected to
 `cargo clippy -p fret-devtools --all-targets -- -D warnings`, `python tools/check_layering.py`, and
 `git diff --check` (with only the known CRLF normalization warning for
 `tools/diag_gate_imui_p2_devtools_first_open.py`).
+
+## DevTools MCP AI scenario doc closure - 2026-05-15 follow-up
+
+Scope: close the M7 MCP end-to-end AI scenario doc item while keeping MCP as a diagnostics
+consumer over shared CLI/GUI artifacts, not a new IMUI runtime surface.
+
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md` now records the
+  end-to-end AI path: enable inspect, pick a stable selector, choose/fork a script, run one or more
+  scripts, aggregate regression summaries when needed, pack the latest bundle, and open the offline
+  viewer.
+- The same doc names the artifact resources and freshness contract:
+  `fret-diag://first-open.md`, selected-session bundle/regression resources, resource
+  subscriptions, and resource update notifications.
+- `apps/fret-devtools-mcp/src/native.rs` already owns the matching tool/resource implementation
+  anchors: inspect, pick, scripts list, run script/file/batch, regression summarize/dashboard, pack
+  latest bundle, pack zip bytes, latest bundle dump, compare, first-open resource, and resource
+  update notifications.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` now source-checks this doc plus the MCP
+  implementation anchors through the `devtools mcp ai scenario doc` step, so the AI scenario cannot
+  silently drift away from the actual tool surface.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` marks the M7 AI scenario
+  doc parent item complete.
+
+Focused gate:
+
+```text
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed. The gate reported the new `devtools mcp ai scenario doc` step and completed the
+first-open discovery check successfully.

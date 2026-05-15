@@ -24,6 +24,7 @@ DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
+DEVTOOLS_MCP_SOURCE = "apps/fret-devtools-mcp/src/native.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
 BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
@@ -656,6 +657,84 @@ def _validate_first_open_docs(
         )
 
 
+def _validate_devtools_mcp_ai_scenario_doc(
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
+    name = "devtools mcp ai scenario doc"
+    print(f"[diag-gate-imui-p2-devtools] {name}")
+    doc_path = cwd / DEVTOOLS_MCP_DOC
+    source_path = cwd / DEVTOOLS_MCP_SOURCE
+    if progress is not None:
+        progress.record(
+            "step.start",
+            name=name,
+            doc_path=str(doc_path),
+            source_path=str(source_path),
+        )
+    try:
+        doc_source = doc_path.read_text(encoding="utf-8")
+        mcp_source = source_path.read_text(encoding="utf-8")
+    except OSError as err:
+        if progress is not None:
+            progress.record("step.fail", name=name, error=str(err))
+        raise SystemExit(f"Step failed: {name} (failed to read source/doc: {err})") from err
+
+    for marker in (
+        "## End-to-end AI scenario",
+        "Enable inspect and pick a stable selector",
+        "Choose a script and fork it into the user script library",
+        "Run one or more scripts",
+        "Aggregate regression summaries when you need a campaign view",
+        "Pack the latest bundle and open the offline viewer",
+        "fret_diag_inspect_set",
+        "fret_diag_pick",
+        "fret_diag_scripts_list",
+        "fret_diag_run_script_file",
+        "fret_diag_run",
+        "fret_diag_regression_summarize",
+        "fret_diag_regression_dashboard",
+        "fret_diag_pack_last_bundle",
+        "tools/fret-bundle-viewer",
+        "fret-diag://first-open.md",
+        "fret-diag://selected/bundle.json",
+        "fret-diag://selected/bundle.zip",
+        "resources/subscribe",
+        "notifications/resources/updated",
+    ):
+        _assert_text_contains(name, doc_source, marker)
+
+    for marker in (
+        'const DEVTOOLS_MCP_DOC: &str =',
+        'const RESOURCE_URI_FIRST_OPEN_MD: &str = "fret-diag://first-open.md"',
+        "async fn fret_diag_inspect_set(",
+        "async fn fret_diag_pick(",
+        "async fn fret_diag_scripts_list(",
+        "async fn fret_diag_run_script_file(",
+        "async fn fret_diag_run(",
+        "async fn fret_diag_regression_summarize(",
+        "async fn fret_diag_regression_dashboard(",
+        "async fn fret_diag_pack_last_bundle(",
+        "async fn fret_diag_pack_last_bundle_zip_bytes(",
+        "async fn fret_diag_bundle_dump_latest(",
+        "async fn fret_diag_compare(",
+        "regression_summary_drilldown(",
+        "regression_bundle_followup_command_lines(",
+        "ResourceUpdatedNotification",
+        "ResourceListChangedNotification",
+    ):
+        _assert_text_contains(name, mcp_source, marker)
+
+    if progress is not None:
+        progress.record(
+            "step.pass",
+            name=name,
+            doc_path=str(doc_path),
+            source_path=str(source_path),
+        )
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="target/imui-p2-devtools-first-open-smoke")
@@ -712,6 +791,7 @@ def main(argv: list[str]) -> int:
     _validate_tool_app_discovery(fretboard_exe, cwd=repo_root, progress=progress)
     _validate_devtools_gui_first_open_source(cwd=repo_root, progress=progress)
     _validate_first_open_docs(cwd=repo_root, progress=progress)
+    _validate_devtools_mcp_ai_scenario_doc(cwd=repo_root, progress=progress)
     if args.discovery_only:
         progress.record("gate.pass", mode="discovery")
         print("[diag-gate-imui-p2-devtools] discovery done")

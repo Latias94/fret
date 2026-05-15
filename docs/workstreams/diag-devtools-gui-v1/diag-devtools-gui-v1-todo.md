@@ -199,8 +199,14 @@ Conventions:
   - [x] `repro.summary.json` (when present on disk),
   - [x] `bundle.zip` (generated on read; same layout as `diag pack`).
 - [x] Support resource subscriptions + notifications for artifact updates.
-- [ ] Add an end-to-end AI scenario doc:
+- [x] Add an end-to-end AI scenario doc:
   - [x] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
+        Evidence: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md`
+        now participates in
+        `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
+        through the `devtools mcp ai scenario doc` check, which validates the scenario steps,
+        artifact resources, subscriptions, and matching `apps/fret-devtools-mcp` tool/resource
+        implementation anchors.
 
 ## Cross-cutting hygiene
 
