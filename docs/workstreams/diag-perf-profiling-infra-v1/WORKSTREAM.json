@@ -82,6 +82,10 @@
       "command": "cargo nextest run -p fret-ui paint_cache_replays_ops_when_plain_node_translates_from_boundary_entry_store paint_cache_hit_test_only_invalidation_replays_when_cache_key_matches paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch model_change_invalidates_bound_text_input --no-fail-fast"
     },
     {
+      "name": "fret-ui-window-runtime-snapshot-tests",
+      "command": "cargo nextest run -p fret-ui dispatch_event_publishes_post_dispatch_input_context_snapshot timer_dispatch_publishes_post_dispatch_input_context_snapshot focused_node_text_boundary_mode_override_is_published_in_input_context_snapshot layout_in_focus_mutation_publishes_post_layout_input_context_snapshot dispatch_command_publishes_post_dispatch_input_context_snapshot paint_all_publishes_programmatic_input_context_snapshot action_availability_snapshot_marks_unhandled_commands_unavailable publish_window_runtime_snapshots_refreshes_pending_shortcut_overlay_input_context --no-fail-fast"
+    },
+    {
       "name": "fret-bootstrap-driver-phase-check",
       "command": "cargo check -p fret-bootstrap --features ui-app-driver,diagnostics"
     },
@@ -124,6 +128,7 @@
     "crates/fret-ui/src/tree/prepaint/entry.rs",
     "crates/fret-ui/src/tree/paint/entry.rs",
     "crates/fret-ui/src/tree/paint/node.rs",
+    "crates/fret-ui/src/tree/commands.rs",
     "crates/fret-ui/src/tree/dispatch/window.rs",
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-render-wgpu/src/renderer",

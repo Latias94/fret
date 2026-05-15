@@ -184,21 +184,59 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         event: &Event,
     ) {
-        let started = self.debug_enabled.then(Instant::now);
-        let focus_is_text_input = self.focus_is_text_input(app);
-        self.set_ime_allowed(app, focus_is_text_input);
-        if let Some(started) = started {
-            self.debug_stats.window_runtime_snapshot_focus_repair_time += started.elapsed();
+        let trace_runtime_snapshot = tracing::enabled!(tracing::Level::TRACE);
+        let time_enabled = self.debug_enabled;
+        let window = self.window;
+        let frame_id = app.frame_id();
+        let pointer_move = matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
+
+        let (focus_is_text_input, focus_elapsed) = fret_perf::measure_span(
+            time_enabled,
+            trace_runtime_snapshot,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.window_runtime_snapshot.focus_repair",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    reason = "post_dispatch",
+                    pointer_move,
+                )
+            },
+            || {
+                let focus_is_text_input = self.focus_is_text_input(app);
+                self.set_ime_allowed(app, focus_is_text_input);
+                focus_is_text_input
+            },
+        );
+        if let Some(focus_elapsed) = focus_elapsed {
+            self.debug_stats.window_runtime_snapshot_focus_repair_time += focus_elapsed;
         }
 
         let (_active_layers, barrier_root) = self.active_input_layers();
-        if matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })) {
-            let started = self.debug_enabled.then(Instant::now);
-            let input_ctx =
-                self.current_window_input_context(app, barrier_root.is_some(), focus_is_text_input);
-            self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
-            if let Some(started) = started {
-                self.debug_stats.window_runtime_snapshot_input_context_time += started.elapsed();
+        if pointer_move {
+            let (_, input_context_elapsed) = fret_perf::measure_span(
+                time_enabled,
+                trace_runtime_snapshot,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.window_runtime_snapshot.input_context",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        reason = "post_dispatch_pointer_move",
+                    )
+                },
+                || {
+                    let input_ctx = self.current_window_input_context(
+                        app,
+                        barrier_root.is_some(),
+                        focus_is_text_input,
+                    );
+                    self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
+                },
+            );
+            if let Some(input_context_elapsed) = input_context_elapsed {
+                self.debug_stats.window_runtime_snapshot_input_context_time +=
+                    input_context_elapsed;
             }
         } else {
             self.publish_window_runtime_snapshots(app);
@@ -224,72 +262,127 @@ impl<H: UiHost> UiTree<H> {
     /// Call this after imperative tree mutations when later same-frame consumers must observe the
     /// new authoritative window state immediately.
     pub fn publish_window_runtime_snapshots(&mut self, app: &mut H) {
-        let started = self.debug_enabled.then(Instant::now);
-        self.pending_declarative_window_snapshot_roots
-            .retain(|pending| self.nodes.contains_key(*pending));
-        self.resolve_pending_focus_target_if_needed(app);
-        let focused_element_before_revalidate = self.window.and_then(|window| {
-            self.focus.and_then(|focused| {
-                crate::elements::with_window_state(app, window, |state| {
-                    state.element_for_node(focused)
-                })
-            })
-        });
-        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
-        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
-        let barrier_root = focus_barrier_root.or(input_barrier_root);
+        let trace_runtime_snapshot = tracing::enabled!(tracing::Level::TRACE);
+        let time_enabled = self.debug_enabled;
+        let window = self.window;
+        let frame_id = app.frame_id();
 
-        let focus_before_revalidate = self.focus;
-        self.revalidate_focus_for_dispatch_snapshot(
-            app.frame_id(),
-            active_focus_layers.as_slice(),
-            barrier_root,
-            "commands: focus missing from dispatch snapshot",
+        let (input_barrier_root, focus_elapsed) = fret_perf::measure_span(
+            time_enabled,
+            trace_runtime_snapshot,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.window_runtime_snapshot.focus_repair",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    reason = "full_publish",
+                )
+            },
+            || {
+                self.pending_declarative_window_snapshot_roots
+                    .retain(|pending| self.nodes.contains_key(*pending));
+                self.resolve_pending_focus_target_if_needed(app);
+                let focused_element_before_revalidate = self.window.and_then(|window| {
+                    self.focus.and_then(|focused| {
+                        crate::elements::with_window_state(app, window, |state| {
+                            state.element_for_node(focused)
+                        })
+                    })
+                });
+                let (_active_input_layers, input_barrier_root) = self.active_input_layers();
+                let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+                let barrier_root = focus_barrier_root.or(input_barrier_root);
+
+                let focus_before_revalidate = self.focus;
+                self.revalidate_focus_for_dispatch_snapshot(
+                    app.frame_id(),
+                    active_focus_layers.as_slice(),
+                    barrier_root,
+                    "commands: focus missing from dispatch snapshot",
+                );
+                if focus_before_revalidate.is_some()
+                    && self.focus.is_none()
+                    && let Some(window) = self.window
+                    && let Some(element) = focused_element_before_revalidate
+                    && crate::elements::element_identity_is_live_in_current_frame(
+                        app, window, element,
+                    )
+                {
+                    // Declarative overlay/content roots can attach before final layout makes them part of
+                    // the authoritative dispatch snapshot. Preserve the element identity as a deferred
+                    // target so the final-layout snapshot refine can recover focus instead of dropping it
+                    // for the rest of the frame.
+                    self.pending_focus_target = Some(element);
+                    self.request_post_layout_window_runtime_snapshot_refine();
+                }
+
+                self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
+                input_barrier_root
+            },
         );
-        if focus_before_revalidate.is_some()
-            && self.focus.is_none()
-            && let Some(window) = self.window
-            && let Some(element) = focused_element_before_revalidate
-            && crate::elements::element_identity_is_live_in_current_frame(app, window, element)
-        {
-            // Declarative overlay/content roots can attach before final layout makes them part of
-            // the authoritative dispatch snapshot. Preserve the element identity as a deferred
-            // target so the final-layout snapshot refine can recover focus instead of dropping it
-            // for the rest of the frame.
-            self.pending_focus_target = Some(element);
-            self.request_post_layout_window_runtime_snapshot_refine();
+        if let Some(focus_elapsed) = focus_elapsed {
+            self.debug_stats.window_runtime_snapshot_focus_repair_time += focus_elapsed;
         }
 
-        self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
-        if let Some(started) = started {
-            self.debug_stats.window_runtime_snapshot_focus_repair_time += started.elapsed();
-        }
+        let (input_ctx, input_context_elapsed) = fret_perf::measure_span(
+            time_enabled,
+            trace_runtime_snapshot,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.window_runtime_snapshot.input_context",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    reason = "full_publish",
+                )
+            },
+            || {
+                let focus_is_text_input = self.focus_is_text_input(app);
+                let input_ctx = self.current_window_input_context(
+                    app,
+                    input_barrier_root.is_some(),
+                    focus_is_text_input,
+                );
 
-        let started = self.debug_enabled.then(Instant::now);
-        let focus_is_text_input = self.focus_is_text_input(app);
-        let input_ctx = self.current_window_input_context(
-            app,
-            input_barrier_root.is_some(),
-            focus_is_text_input,
+                self.publish_window_input_context_snapshot(app, &input_ctx);
+                input_ctx
+            },
         );
-
-        self.publish_window_input_context_snapshot(app, &input_ctx);
-        if let Some(started) = started {
-            self.debug_stats.window_runtime_snapshot_input_context_time += started.elapsed();
+        if let Some(input_context_elapsed) = input_context_elapsed {
+            self.debug_stats.window_runtime_snapshot_input_context_time += input_context_elapsed;
         }
 
-        let started = self.debug_enabled.then(Instant::now);
-        self.publish_window_command_action_availability_snapshot(app, &input_ctx);
-        if let Some(started) = started {
+        let (_, command_availability_elapsed) = fret_perf::measure_span(
+            time_enabled,
+            trace_runtime_snapshot,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.window_runtime_snapshot.command_availability",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                )
+            },
+            || self.publish_window_command_action_availability_snapshot(app, &input_ctx),
+        );
+        if let Some(command_availability_elapsed) = command_availability_elapsed {
             self.debug_stats
-                .window_runtime_snapshot_command_availability_time += started.elapsed();
+                .window_runtime_snapshot_command_availability_time += command_availability_elapsed;
         }
 
-        let started = self.debug_enabled.then(Instant::now);
-        self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx);
-        if let Some(started) = started {
+        let (_, shortcut_overlay_elapsed) = fret_perf::measure_span(
+            time_enabled,
+            trace_runtime_snapshot,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.window_runtime_snapshot.shortcut_overlay",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                )
+            },
+            || self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx),
+        );
+        if let Some(shortcut_overlay_elapsed) = shortcut_overlay_elapsed {
             self.debug_stats
-                .window_runtime_snapshot_shortcut_overlay_time += started.elapsed();
+                .window_runtime_snapshot_shortcut_overlay_time += shortcut_overlay_elapsed;
         }
     }
 
