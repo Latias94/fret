@@ -195,6 +195,8 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
         errors.append("validation summary ok must be true")
     if summary.get("target_profile") != validate.TARGET_PROFILE:
         errors.append(f"target_profile must be {validate.TARGET_PROFILE}")
+    if not isinstance(summary.get("date_tag"), str) or not str(summary.get("date_tag")).strip():
+        errors.append("summary date_tag must be a non-empty string")
     if summary.get("with_paint_perf") is not expect_with_paint_perf:
         errors.append(f"with_paint_perf must be {expect_with_paint_perf}")
     if summary.get("stats_enabled") is not True:

@@ -105,6 +105,30 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 06:59:39 +0800 (local head `cf5679a028`)
+
+Change:
+- Tightened the post-sync verifier traceability requirement: validation and attribution `summary.json` files must
+  contain a non-empty `date_tag` before closeout can accept them as target-machine evidence.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 -m unittest discover -s tools/perf -p 'test_*.py'
+python3 tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag verifier-date-tag-check
+git diff --check
+```
+
+Results:
+- Focused editor paint contract tests PASS (22 tests).
+- Full Python perf-tool tests PASS (32 tests).
+- Validation dry-run PASS and records the requested `date_tag`.
+- Diff whitespace check PASS.
+
+Notes:
+- This closes a local verifier coverage gap only. P1.5 still requires synced Windows RTX4090 validation and attribution
+  directories plus non-dry-run closeout.
+
 ## 2026-05-16 06:57:24 +0800 (local head `d23f59af47`)
 
 Change:

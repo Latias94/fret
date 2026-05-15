@@ -125,6 +125,12 @@ def _remove_cmd_item(summary_path: Path, step_name: str, value: str) -> None:
     summary_path.write_text(json.dumps(doc), encoding="utf-8")
 
 
+def _remove_summary_field(summary_path: Path, field: str) -> None:
+    doc = json.loads(summary_path.read_text(encoding="utf-8"))
+    doc.pop(field, None)
+    summary_path.write_text(json.dumps(doc), encoding="utf-8")
+
+
 class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
     def test_validation_summary_passes_without_code_editor_paint_perf(self) -> None:
         with TemporaryDirectory() as td:
@@ -201,6 +207,17 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
 
         self.assertFalse(report["ok"])
         self.assertTrue(any("must not set FRET_CODE_EDITOR_DIAG_PAINT_PERF=1" in error for error in report["errors"]))
+
+    def test_summary_requires_date_tag_for_traceability(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=False)
+            _remove_summary_field(root / "summary.json", "date_tag")
+
+            report = verify.verify_summary_dir(root, expect_with_paint_perf=False)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("date_tag" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":
