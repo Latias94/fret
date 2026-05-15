@@ -105,6 +105,24 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:13:13 +0800 (local head `33b07f44f9`)
+
+Change:
+- Synchronized the contract audit completion table with the validation runner's fresh-output-dir guard, so the audit
+  now records that non-dry-run target-machine validation rejects existing non-empty output directories by default.
+
+Command:
+```powershell
+git diff --check
+```
+
+Results:
+- Diff whitespace check PASS.
+
+Notes:
+- This is audit sync only. The target Windows RTX4090 validation and attribution artifacts are still required before
+  closing P1.5.
+
 ## 2026-05-16 07:11:17 +0800 (local head `954dcd3ea4`)
 
 Change:
