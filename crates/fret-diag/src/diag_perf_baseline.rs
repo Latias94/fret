@@ -50,6 +50,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
     let mut measured_max_top_total_us: u64 = 0;
     let mut measured_max_top_layout_us: u64 = 0;
     let mut measured_max_top_solve_us: u64 = 0;
+    let mut pointer_move_frames_present = false;
     let mut measured_max_pointer_move_dispatch_us: u64 = 0;
     let mut measured_max_pointer_move_hit_test_us: u64 = 0;
     let mut measured_max_pointer_move_global_changes: u64 = 0;
@@ -87,9 +88,21 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         let top_renderer_encode_scene_text_ops =
             top.map(|r| r.renderer_encode_scene_text_ops).unwrap_or(0);
 
-        let pointer_move_dispatch = report.pointer_move_max_dispatch_time_us;
-        let pointer_move_hit_test = report.pointer_move_max_hit_test_time_us;
-        let pointer_move_global_changes = report.pointer_move_snapshots_with_global_changes as u64;
+        let pointer_move_dispatch = if report.pointer_move_frames_present {
+            report.pointer_move_max_dispatch_time_us
+        } else {
+            0
+        };
+        let pointer_move_hit_test = if report.pointer_move_frames_present {
+            report.pointer_move_max_hit_test_time_us
+        } else {
+            0
+        };
+        let pointer_move_global_changes = if report.pointer_move_frames_present {
+            report.pointer_move_snapshots_with_global_changes as u64
+        } else {
+            0
+        };
         let (
             run_paint_cache_hit_test_only_replay_allowed_max,
             run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
@@ -107,6 +120,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         measured_max_top_total_us = measured_max_top_total_us.max(top_total);
         measured_max_top_layout_us = measured_max_top_layout_us.max(top_layout);
         measured_max_top_solve_us = measured_max_top_solve_us.max(top_solve);
+        pointer_move_frames_present |= report.pointer_move_frames_present;
         measured_max_pointer_move_dispatch_us =
             measured_max_pointer_move_dispatch_us.max(pointer_move_dispatch);
         measured_max_pointer_move_hit_test_us =
@@ -141,6 +155,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
     }
 
     let wants_ui_thresholds = perf_baseline_threshold_surface.includes_ui();
+    let wants_pointer_move_thresholds = wants_ui_thresholds && pointer_move_frames_present;
     let wants_renderer_time_thresholds = perf_baseline_threshold_surface.includes_renderer_times();
     let wants_renderer_payload_thresholds =
         perf_baseline_threshold_surface.includes_renderer_payload();
@@ -148,9 +163,9 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         "max_top_total_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_total_us, perf_baseline_headroom_pct)),
         "max_top_layout_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_layout_us, perf_baseline_headroom_pct)),
         "max_top_solve_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_solve_us, perf_baseline_headroom_pct)),
-        "max_pointer_move_dispatch_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_dispatch_us, perf_baseline_headroom_pct)),
-        "max_pointer_move_hit_test_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_hit_test_us, perf_baseline_headroom_pct)),
-        "max_pointer_move_global_changes": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct)),
+        "max_pointer_move_dispatch_us": wants_pointer_move_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_dispatch_us, perf_baseline_headroom_pct)),
+        "max_pointer_move_hit_test_us": wants_pointer_move_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_hit_test_us, perf_baseline_headroom_pct)),
+        "max_pointer_move_global_changes": wants_pointer_move_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct)),
         "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(apply_perf_baseline_floor(measured_max_run_paint_cache_hit_test_only_replay_allowed_max, perf_baseline_headroom_pct)),
         "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max, perf_baseline_headroom_pct)),
         "max_renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_us, perf_baseline_headroom_pct)),

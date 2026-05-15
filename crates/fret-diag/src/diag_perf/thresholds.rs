@@ -289,6 +289,26 @@ pub(super) fn push_single_run_threshold_row_and_failures(
         src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
     } = input;
 
+    let (thr_pointer_move_dispatch, src_pointer_move_dispatch) = if pointer_move_frames_present {
+        (thr_pointer_move_dispatch, src_pointer_move_dispatch)
+    } else {
+        (None, None)
+    };
+    let (thr_pointer_move_hit_test, src_pointer_move_hit_test) = if pointer_move_frames_present {
+        (thr_pointer_move_hit_test, src_pointer_move_hit_test)
+    } else {
+        (None, None)
+    };
+    let (thr_pointer_move_global_changes, src_pointer_move_global_changes) =
+        if pointer_move_frames_present {
+            (
+                thr_pointer_move_global_changes,
+                src_pointer_move_global_changes,
+            )
+        } else {
+            (None, None)
+        };
+
     let (thr_renderer_encode_scene, src_renderer_encode_scene) = resolve_threshold(
         cli_thresholds.max_renderer_encode_scene_us,
         baseline_thresholds.max_renderer_encode_scene_us,
@@ -748,6 +768,26 @@ pub(super) fn push_repeat_threshold_row_and_failures(
         src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
     } = input;
 
+    let (thr_pointer_move_dispatch, src_pointer_move_dispatch) = if pointer_move_frames_present {
+        (thr_pointer_move_dispatch, src_pointer_move_dispatch)
+    } else {
+        (None, None)
+    };
+    let (thr_pointer_move_hit_test, src_pointer_move_hit_test) = if pointer_move_frames_present {
+        (thr_pointer_move_hit_test, src_pointer_move_hit_test)
+    } else {
+        (None, None)
+    };
+    let (thr_pointer_move_global_changes, src_pointer_move_global_changes) =
+        if pointer_move_frames_present {
+            (
+                thr_pointer_move_global_changes,
+                src_pointer_move_global_changes,
+            )
+        } else {
+            (None, None)
+        };
+
     let (thr_renderer_encode_scene, src_renderer_encode_scene) = resolve_threshold(
         cli_thresholds.max_renderer_encode_scene_us,
         baseline_thresholds.max_renderer_encode_scene_us,
@@ -987,6 +1027,30 @@ pub(super) fn push_repeat_threshold_row_and_failures(
 mod tests {
     use super::*;
 
+    fn perf_thresholds_with_pointer_move_limits() -> PerfThresholds {
+        PerfThresholds {
+            max_top_total_us: Some(100),
+            max_top_layout_us: None,
+            max_top_solve_us: None,
+            max_frame_p95_total_us: None,
+            max_frame_p95_layout_us: None,
+            max_frame_p95_solve_us: None,
+            max_pointer_move_dispatch_us: Some(10),
+            max_pointer_move_hit_test_us: Some(20),
+            max_pointer_move_global_changes: Some(0),
+            min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+            max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            max_renderer_encode_scene_us: None,
+            max_renderer_upload_us: None,
+            max_renderer_record_passes_us: None,
+            max_renderer_encoder_finish_us: None,
+            max_renderer_prepare_text_us: None,
+            max_renderer_prepare_svg_us: None,
+            max_renderer_instance_bytes: None,
+            max_renderer_encode_scene_text_ops: None,
+        }
+    }
+
     #[test]
     fn repeat_failure_context_uses_metric_specific_renderer_run() {
         let upload_worst = (1032, PathBuf::from("bundle-upload.json"), 2);
@@ -1092,5 +1156,214 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(20)
         );
+    }
+
+    #[test]
+    fn single_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent() {
+        let mut rows = Vec::new();
+        let mut failures = Vec::new();
+        let bundle = Path::new("target/no-pointer-move/bundle.schema2.json");
+
+        push_single_run_threshold_row_and_failures(
+            &mut rows,
+            &mut failures,
+            SingleRunThresholdInputs {
+                script_key: "tools/diag-scripts/no-pointer-move.json",
+                sort: BundleStatsSort::Time,
+                perf_threshold_agg: PerfThresholdAggregate::Max,
+                cli_thresholds: perf_thresholds_with_pointer_move_limits(),
+                baseline_thresholds: PerfThresholds::default(),
+                warmup_frames: 0,
+                top_total: 90,
+                top_layout: 0,
+                top_solve: 0,
+                top_solves: 0,
+                top_tick: 0,
+                top_frame: 0,
+                frame_p95_total_time_us: 0,
+                frame_p95_layout_time_us: 0,
+                frame_p95_layout_engine_solve_time_us: 0,
+                pointer_move_frames_present: false,
+                pointer_move_frames_considered: 0,
+                pointer_move_max_dispatch_time_us: 99,
+                pointer_move_max_hit_test_time_us: 99,
+                pointer_move_snapshots_with_global_changes: 3,
+                run_paint_cache_hit_test_only_replay_allowed_max: 0,
+                run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: 0,
+                max_renderer_encode_scene_us: 0,
+                max_renderer_upload_us: 0,
+                max_renderer_record_passes_us: 0,
+                max_renderer_encoder_finish_us: 0,
+                max_renderer_prepare_text_us: 0,
+                max_renderer_prepare_svg_us: 0,
+                max_renderer_instance_bytes: 0,
+                max_renderer_encode_scene_text_ops: 0,
+                bundle_path: bundle,
+                thr_total: Some(100),
+                src_total: Some("cli"),
+                thr_layout: None,
+                src_layout: None,
+                thr_solve: None,
+                src_solve: None,
+                thr_frame_p95_total: None,
+                src_frame_p95_total: None,
+                thr_frame_p95_layout: None,
+                src_frame_p95_layout: None,
+                thr_frame_p95_solve: None,
+                src_frame_p95_solve: None,
+                thr_pointer_move_dispatch: Some(10),
+                src_pointer_move_dispatch: Some("cli"),
+                thr_pointer_move_hit_test: Some(20),
+                src_pointer_move_hit_test: Some("cli"),
+                thr_pointer_move_global_changes: Some(0),
+                src_pointer_move_global_changes: Some("cli"),
+                thr_paint_cache_hit_test_only_replay_allowed_max: None,
+                src_paint_cache_hit_test_only_replay_allowed_max: None,
+                thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+                src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            },
+        );
+
+        assert!(failures.is_empty());
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0]["thresholds"]["max_pointer_move_dispatch_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_pointer_move_hit_test_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_pointer_move_global_changes"].is_null());
+        assert!(rows[0]["threshold_sources"]["max_pointer_move_dispatch_us"].is_null());
+        assert!(rows[0]["max"]["pointer_move_max_dispatch_time_us"].as_u64() > Some(0));
+    }
+
+    #[test]
+    fn repeat_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent() {
+        let mut rows = Vec::new();
+        let mut failures = Vec::new();
+        let runs_json = vec![serde_json::json!({
+            "run_index": 0,
+            "pointer_move_frames_present": false,
+            "bundle": "target/no-pointer-move/bundle.schema2.json",
+        })];
+        let script_worst = Some((
+            90,
+            PathBuf::from("target/no-pointer-move/bundle.schema2.json"),
+            0,
+        ));
+
+        push_repeat_threshold_row_and_failures(
+            &mut rows,
+            &mut failures,
+            RepeatThresholdInputs {
+                script_key: "tools/diag-scripts/no-pointer-move.json",
+                sort: BundleStatsSort::Time,
+                repeat: 1,
+                runs_json: &runs_json,
+                perf_threshold_agg: PerfThresholdAggregate::Max,
+                cli_thresholds: perf_thresholds_with_pointer_move_limits(),
+                baseline_thresholds: PerfThresholds::default(),
+                warmup_frames: 0,
+                renderer_evidence: RendererMetricEvidence {
+                    encode_scene: None,
+                    upload: None,
+                    record_passes: None,
+                    encoder_finish: None,
+                    prepare_text: None,
+                    prepare_svg: None,
+                    instance_bytes: None,
+                    encode_scene_text_ops: None,
+                },
+                observed_total: 90,
+                max_total: 90,
+                p95_total: 90,
+                sorted_total: &vec![90],
+                p90_total: 90,
+                observed_layout: 0,
+                max_layout: 0,
+                p95_layout: 0,
+                sorted_layout: &vec![0],
+                p90_layout: 0,
+                observed_solve: 0,
+                max_solve: 0,
+                p95_solve: 0,
+                sorted_solve: &vec![0],
+                p90_solve: 0,
+                observed_frame_p95_total: 0,
+                max_frame_p95_total: 0,
+                p95_frame_p95_total: 0,
+                sorted_frame_p95_total: &vec![0],
+                p90_frame_p95_total: 0,
+                observed_frame_p95_layout: 0,
+                max_frame_p95_layout: 0,
+                p95_frame_p95_layout: 0,
+                sorted_frame_p95_layout: &vec![0],
+                p90_frame_p95_layout: 0,
+                observed_frame_p95_solve: 0,
+                max_frame_p95_solve: 0,
+                p95_frame_p95_solve: 0,
+                sorted_frame_p95_solve: &vec![0],
+                p90_frame_p95_solve: 0,
+                pointer_move_frames_present: false,
+                max_pointer_move_dispatch: 99,
+                max_pointer_move_hit_test: 99,
+                max_pointer_move_global_changes: 3,
+                max_run_paint_cache_hit_test_only_replay_allowed_max: 0,
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: 0,
+                observed_renderer_encode_scene_us: 0,
+                max_renderer_encode_scene_us: 0,
+                p95_renderer_encode_scene_us: 0,
+                observed_renderer_upload_us: 0,
+                max_renderer_upload_us: 0,
+                p95_renderer_upload_us: 0,
+                observed_renderer_record_passes_us: 0,
+                max_renderer_record_passes_us: 0,
+                p95_renderer_record_passes_us: 0,
+                observed_renderer_encoder_finish_us: 0,
+                max_renderer_encoder_finish_us: 0,
+                p95_renderer_encoder_finish_us: 0,
+                observed_renderer_prepare_text_us: 0,
+                max_renderer_prepare_text_us: 0,
+                p95_renderer_prepare_text_us: 0,
+                observed_renderer_prepare_svg_us: 0,
+                max_renderer_prepare_svg_us: 0,
+                p95_renderer_prepare_svg_us: 0,
+                observed_renderer_instance_bytes: 0,
+                max_renderer_instance_bytes: 0,
+                p95_renderer_instance_bytes: 0,
+                observed_renderer_encode_scene_text_ops: 0,
+                max_renderer_encode_scene_text_ops: 0,
+                p95_renderer_encode_scene_text_ops: 0,
+                script_worst: &script_worst,
+                script_worst_layout: &None,
+                script_worst_solve: &None,
+                thr_total: Some(100),
+                src_total: Some("cli"),
+                thr_layout: None,
+                src_layout: None,
+                thr_solve: None,
+                src_solve: None,
+                thr_frame_p95_total: None,
+                src_frame_p95_total: None,
+                thr_frame_p95_layout: None,
+                src_frame_p95_layout: None,
+                thr_frame_p95_solve: None,
+                src_frame_p95_solve: None,
+                thr_pointer_move_dispatch: Some(10),
+                src_pointer_move_dispatch: Some("cli"),
+                thr_pointer_move_hit_test: Some(20),
+                src_pointer_move_hit_test: Some("cli"),
+                thr_pointer_move_global_changes: Some(0),
+                src_pointer_move_global_changes: Some("cli"),
+                thr_paint_cache_hit_test_only_replay_allowed_max: None,
+                src_paint_cache_hit_test_only_replay_allowed_max: None,
+                thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+                src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            },
+        );
+
+        assert!(failures.is_empty());
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0]["thresholds"]["max_pointer_move_dispatch_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_pointer_move_hit_test_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_pointer_move_global_changes"].is_null());
+        assert!(rows[0]["threshold_sources"]["max_pointer_move_dispatch_us"].is_null());
+        assert_eq!(rows[0]["max"]["pointer_move_max_dispatch_time_us"], 99);
     }
 }

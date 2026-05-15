@@ -19,21 +19,60 @@ impl TopTimesUs {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PointerMoveMetrics {
+    pub frames_present: bool,
     pub max_dispatch_time_us: u64,
     pub max_hit_test_time_us: u64,
     pub snapshots_with_global_changes: u64,
 }
 
 impl PointerMoveMetrics {
+    #[cfg(test)]
+    pub(crate) fn absent() -> Self {
+        Self {
+            frames_present: false,
+            max_dispatch_time_us: 0,
+            max_hit_test_time_us: 0,
+            snapshots_with_global_changes: 0,
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn new(
         max_dispatch_time_us: u64,
         max_hit_test_time_us: u64,
         snapshots_with_global_changes: u64,
     ) -> Self {
-        Self {
+        Self::from_presence(
+            true,
             max_dispatch_time_us,
             max_hit_test_time_us,
             snapshots_with_global_changes,
+        )
+    }
+
+    pub(crate) fn from_presence(
+        frames_present: bool,
+        max_dispatch_time_us: u64,
+        max_hit_test_time_us: u64,
+        snapshots_with_global_changes: u64,
+    ) -> Self {
+        Self {
+            frames_present,
+            max_dispatch_time_us: if frames_present {
+                max_dispatch_time_us
+            } else {
+                0
+            },
+            max_hit_test_time_us: if frames_present {
+                max_hit_test_time_us
+            } else {
+                0
+            },
+            snapshots_with_global_changes: if frames_present {
+                snapshots_with_global_changes
+            } else {
+                0
+            },
         }
     }
 }
@@ -163,6 +202,8 @@ pub(crate) fn push_perf_baseline_row_single(
     thr_renderer_payload: RendererPayloadMetrics,
 ) {
     let wants_ui_thresholds = threshold_surface.includes_ui();
+    let wants_pointer_move_thresholds =
+        wants_ui_thresholds && measured_max_pointer_move.frames_present;
     let wants_renderer_time_thresholds = threshold_surface.includes_renderer_times();
     let wants_renderer_payload_thresholds = threshold_surface.includes_renderer_payload();
     rows.push(serde_json::json!({
@@ -230,9 +271,9 @@ pub(crate) fn push_perf_baseline_row_single(
             "max_top_total_us": wants_ui_thresholds.then_some(thr_total),
             "max_top_layout_us": wants_ui_thresholds.then_some(thr_layout),
             "max_top_solve_us": wants_ui_thresholds.then_some(thr_solve),
-            "max_pointer_move_dispatch_us": wants_ui_thresholds.then_some(thr_pointer_move.max_dispatch_time_us),
-            "max_pointer_move_hit_test_us": wants_ui_thresholds.then_some(thr_pointer_move.max_hit_test_time_us),
-            "max_pointer_move_global_changes": wants_ui_thresholds.then_some(thr_pointer_move.snapshots_with_global_changes),
+            "max_pointer_move_dispatch_us": wants_pointer_move_thresholds.then_some(thr_pointer_move.max_dispatch_time_us),
+            "max_pointer_move_hit_test_us": wants_pointer_move_thresholds.then_some(thr_pointer_move.max_hit_test_time_us),
+            "max_pointer_move_global_changes": wants_pointer_move_thresholds.then_some(thr_pointer_move.snapshots_with_global_changes),
             "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(thr_min_hit_test_only_replay_allowed_max),
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(thr_max_hit_test_only_replay_rejected_key_mismatch_max),
             "max_renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(thr_renderer.encode_scene_us),
@@ -301,6 +342,8 @@ pub(crate) fn push_perf_baseline_row_repeat(
     let wants_ui_thresholds = threshold_surface.includes_ui();
     let wants_top_thresholds = wants_ui_thresholds && ui_threshold_mode.includes_top();
     let wants_frame_p95_thresholds = wants_ui_thresholds && ui_threshold_mode.includes_frame_p95();
+    let wants_pointer_move_thresholds =
+        wants_ui_thresholds && measured_max_pointer_move.frames_present;
     let wants_renderer_time_thresholds = threshold_surface.includes_renderer_times();
     let wants_renderer_payload_thresholds = threshold_surface.includes_renderer_payload();
     rows.push(serde_json::json!({
@@ -413,9 +456,9 @@ pub(crate) fn push_perf_baseline_row_repeat(
             "max_frame_p95_total_us": wants_frame_p95_thresholds.then_some(thr_frame_p95_total).flatten(),
             "max_frame_p95_layout_us": wants_frame_p95_thresholds.then_some(thr_frame_p95_layout).flatten(),
             "max_frame_p95_solve_us": wants_frame_p95_thresholds.then_some(thr_frame_p95_solve).flatten(),
-            "max_pointer_move_dispatch_us": wants_ui_thresholds.then_some(thr_pointer_move.max_dispatch_time_us),
-            "max_pointer_move_hit_test_us": wants_ui_thresholds.then_some(thr_pointer_move.max_hit_test_time_us),
-            "max_pointer_move_global_changes": wants_ui_thresholds.then_some(thr_pointer_move.snapshots_with_global_changes),
+            "max_pointer_move_dispatch_us": wants_pointer_move_thresholds.then_some(thr_pointer_move.max_dispatch_time_us),
+            "max_pointer_move_hit_test_us": wants_pointer_move_thresholds.then_some(thr_pointer_move.max_hit_test_time_us),
+            "max_pointer_move_global_changes": wants_pointer_move_thresholds.then_some(thr_pointer_move.snapshots_with_global_changes),
             "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(thr_min_hit_test_only_replay_allowed_max),
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(thr_max_hit_test_only_replay_rejected_key_mismatch_max),
             "max_renderer_encode_scene_us": wants_renderer_time_thresholds.then_some(thr_renderer.encode_scene_us),
@@ -436,6 +479,10 @@ mod tests {
 
     fn pointer(dispatch: u64, hit_test: u64, global_changes: u64) -> PointerMoveMetrics {
         PointerMoveMetrics::new(dispatch, hit_test, global_changes)
+    }
+
+    fn pointer_absent() -> PointerMoveMetrics {
+        PointerMoveMetrics::absent()
     }
 
     fn paint_cache(allowed: u64, rejected: u64) -> PaintCacheReplayMetrics {
@@ -890,5 +937,77 @@ mod tests {
         assert_eq!(rows[0]["thresholds"]["max_renderer_encode_scene_us"], 7);
         assert_eq!(rows[0]["thresholds"]["max_renderer_prepare_svg_us"], 12);
         assert_eq!(rows[0]["thresholds"]["max_renderer_instance_bytes"], 70);
+    }
+
+    #[test]
+    fn baseline_rows_omit_pointer_move_thresholds_when_frames_are_absent() {
+        let mut rows = Vec::new();
+
+        push_perf_baseline_row_repeat(
+            &mut rows,
+            "tools/diag-scripts/no-pointer-move.json",
+            PerfBaselineThresholdSurface::Ui,
+            TopTimesUs::new(100, 80, 60),
+            TopTimesUs::new(40, 30, 20),
+            pointer_absent(),
+            paint_cache(12, 13),
+            renderer(1000),
+            payload(100),
+            TopTimesUs::new(70, 50, 30),
+            TopTimesUs::new(25, 20, 15),
+            renderer(2000),
+            payload(200),
+            TopTimesUs::new(90, 70, 50),
+            TopTimesUs::new(35, 30, 25),
+            renderer(3000),
+            payload(300),
+            TopTimesUs::new(95, 75, 55),
+            TopTimesUs::new(38, 33, 28),
+            renderer(4000),
+            payload(400),
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::Max,
+            PerfBaselineSeed::P95,
+            PerfBaselineSeed::P95,
+            PerfBaselineSeed::P95,
+            100,
+            80,
+            60,
+            38,
+            33,
+            28,
+            renderer_seed(PerfBaselineSeed::Max),
+            renderer(1000),
+            payload(100),
+            PerfBaselineUiThresholdMode::Top,
+            120,
+            96,
+            72,
+            None,
+            None,
+            None,
+            pointer(12, 13, 1),
+            10,
+            16,
+            renderer(5000),
+            payload(500),
+        );
+
+        assert_eq!(
+            rows[0]["measured_max"]["pointer_move_max_dispatch_time_us"],
+            0
+        );
+        assert_eq!(
+            rows[0]["measured_max"]["pointer_move_max_hit_test_time_us"],
+            0
+        );
+        assert_eq!(
+            rows[0]["measured_max"]["pointer_move_snapshots_with_global_changes"],
+            0
+        );
+        assert!(rows[0]["thresholds"]["max_pointer_move_dispatch_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_pointer_move_hit_test_us"].is_null());
+        assert!(rows[0]["thresholds"]["max_pointer_move_global_changes"].is_null());
     }
 }
