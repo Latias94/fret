@@ -1,7 +1,6 @@
 use super::super::*;
 use super::helpers::render_plan_trace_fingerprint;
 use super::uploads::FrameUploadResources;
-use fret_core::time::Instant;
 
 impl Renderer {
     pub(super) fn render_scene_execute(
@@ -183,34 +182,50 @@ impl Renderer {
             &mut frame_perf,
         );
 
-        let upload_started = perf_enabled.then(Instant::now);
-        let uploads_span = if trace_enabled {
-            tracing::trace_span!(
-                "fret.renderer.upload",
-                frame_index,
-                passes = plan.passes.len() as u32,
-                uniforms = encoding.uniforms.len() as u32,
-                clips = encoding.clips.len() as u32,
-                masks = encoding.masks.len() as u32,
-            )
-        } else {
-            tracing::Span::none()
-        };
-        let uploads_guard = uploads_span.enter();
-
-        self.ensure_effect_pipelines_for_plan(device, format, path_samples, &plan);
-        self.upload_frame_uniforms_and_prepare_bind_groups(
-            device,
-            queue,
-            &encoding.uniforms,
-            &encoding.clips,
-            &encoding.masks,
-            &encoding.ordered_draws,
-            &encoding.uniform_mask_images,
+        let (upload_resources, upload_elapsed) = fret_perf::measure_span(
             perf_enabled,
-            &mut frame_perf,
-        );
+            trace_enabled,
+            || {
+                tracing::trace_span!(
+                    "fret.renderer.upload",
+                    frame_index,
+                    passes = plan.passes.len() as u32,
+                    uniforms = encoding.uniforms.len() as u32,
+                    clips = encoding.clips.len() as u32,
+                    masks = encoding.masks.len() as u32,
+                )
+            },
+            || {
+                self.ensure_effect_pipelines_for_plan(device, format, path_samples, &plan);
+                self.upload_frame_uniforms_and_prepare_bind_groups(
+                    device,
+                    queue,
+                    &encoding.uniforms,
+                    &encoding.clips,
+                    &encoding.masks,
+                    &encoding.ordered_draws,
+                    &encoding.uniform_mask_images,
+                    perf_enabled,
+                    &mut frame_perf,
+                );
 
+                self.upload_frame_geometry(
+                    device,
+                    queue,
+                    &plan,
+                    viewport_size,
+                    &encoding.instances,
+                    &encoding.path_paints,
+                    &encoding.text_paints,
+                    &encoding.viewport_vertices,
+                    &encoding.text_glyph_instances,
+                    &encoding.text_vertices,
+                    &encoding.path_vertices,
+                    perf_enabled,
+                    &mut frame_perf,
+                )
+            },
+        );
         let FrameUploadResources {
             quad_instance_bind_group,
             text_paint_bind_group,
@@ -220,25 +235,9 @@ impl Renderer {
             text_vertex_buffer,
             path_vertex_buffer,
             quad_vertex_bases,
-        } = self.upload_frame_geometry(
-            device,
-            queue,
-            &plan,
-            viewport_size,
-            &encoding.instances,
-            &encoding.path_paints,
-            &encoding.text_paints,
-            &encoding.viewport_vertices,
-            &encoding.text_glyph_instances,
-            &encoding.text_vertices,
-            &encoding.path_vertices,
-            perf_enabled,
-            &mut frame_perf,
-        );
-
-        drop(uploads_guard);
-        if let Some(upload_started) = upload_started {
-            frame_perf.upload += upload_started.elapsed();
+        } = upload_resources;
+        if let Some(upload_elapsed) = upload_elapsed {
+            frame_perf.upload += upload_elapsed;
         }
 
         self.upload_render_space_uniforms_for_plan(queue, &plan);

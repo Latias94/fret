@@ -43,7 +43,7 @@
     },
     {
       "name": "perf-key-registry-tests",
-      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
+      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
     },
     {
       "name": "perf-key-registry-inventory-json",
@@ -66,6 +66,10 @@
       "command": "cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups prepaint_interaction_cache_replays_for_clean_view_cache_root prepaint_output_store_is_keyed_by_cache_root_prepaint_key --no-fail-fast"
     },
     {
+      "name": "fret-ui-layout-engine-phase-tests",
+      "command": "cargo nextest run -p fret-ui multiple_roots_do_not_couple_layout_results barrier_batch_solve_stamps_multiple_roots_in_one_generation flex_wrap_patch_profile_skips_roots_without_wrap_descendants flex_wrap_patch_profile_records_intrinsic_auto_min_work --no-fail-fast"
+    },
+    {
       "name": "fret-ui-paint-entry-phase-tests",
       "command": "cargo nextest run -p fret-ui view_cache_disables_paint_cache_for_non_boundary_nodes view_cache_allows_paint_cache_for_boundary_nodes paint_publishes_window_text_input_snapshot_for_focused_text_widget snapshot_resets_when_focus_is_not_text_input --no-fail-fast"
     },
@@ -86,6 +90,14 @@
       "command": "cargo check -p fret-launch --target wasm32-unknown-unknown"
     },
     {
+      "name": "fret-render-wgpu-frame-phase-tests",
+      "command": "cargo nextest run -p fret-render-wgpu drains_pending_render_target_perf_counters_into_frame_perf record_scene_encoding_cache_frame_result_updates_perf_counters requested_and_emitted_custom_effect_counters_track_all_versions degradation_counters_track_reason_and_kind_totals --no-fail-fast"
+    },
+    {
+      "name": "fret-render-wgpu-clippy",
+      "command": "cargo clippy -p fret-render-wgpu --all-targets -- -D warnings"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
@@ -99,6 +111,7 @@
     "crates/fret-diag/src/perf_keys.rs",
     "crates/fret-diag/src/stats.rs",
     "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
+    "crates/fret-perf/src/lib.rs",
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",
@@ -109,6 +122,9 @@
     "crates/fret-ui/src/tree/dispatch/window.rs",
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-render-wgpu/src/renderer",
+    "crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs",
+    "crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs",
+    "crates/fret-render-wgpu/src/renderer/render_scene/execute.rs",
     "crates/fret-diag/src/trace.rs",
     "crates/fret-diag/src/diag_perf/thresholds.rs",
     "crates/fret-diag/src/diag_repro/launch.rs",

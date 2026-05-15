@@ -12,13 +12,14 @@
 - [ ] Define a perf key registry (name/unit/kind/scope/aggregate).
   - [x] Seed the registry for trace-exported frame keys in `crates/fret-diag/src/perf_keys.rs`.
   - [x] Expose the registered stats/gate subset from `diag stats --json` via `registered_perf_keys`.
-  - [ ] Expand the registry to all bundle/stats/gate fields before treating it as the single source of truth.
+  - [x] Expand the registry to all `diag stats`-consumed `debug.stats` frame fields before treating it as the single source of truth.
+  - [ ] Split the remaining `max_*` threshold/config keys in `crates/fret-diag/src/diag_perf/thresholds.rs` into the registry if we want gate config surfaces to be first-class too.
 - [ ] Add contract tests that ensure:
   - [x] trace-exported keys are unique and include core timeline keys
   - [x] trace-exported key units are consistent (e.g. `*_time_us` is microseconds, `*_cycles` is cycles)
   - [x] registered stats/gate subset keys stay additive and unit-consistent
-  - [ ] full registry keys are additive only (no accidental rename)
-  - [ ] full registry units are consistent
+  - [x] full frame-stats registry stays in sync with the source scan and inventory doc
+  - [x] full registry units are consistent
 - [x] Add a generated field inventory doc (or update `diag-perf-attribution-v1-field-inventory.md` from the registry).
 
 ## Tooling UX (shorten the attribution loop)
@@ -45,7 +46,12 @@
     - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
   - [ ] Migrate more layout sub-phases beyond request/build + roots:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
-    - `crates/fret-ui/src/layout/engine.rs` (solve/measure sub-spans, if we want tighter attribution)
+    - [x] Align `crates/fret-ui/src/layout/engine.rs` solve spans with `fret_perf::measure_span_with_finish`
+      for batched independent-root solves and single-root solves while preserving `elapsed_us`,
+      `measure_calls`, `measure_cache_hits`, `measure_us`, and existing solve/profile stats.
+      - Evidence: `crates/fret-perf/src/lib.rs`, `crates/fret-ui/src/layout/engine.rs`
+    - Remaining: per-widget measure hotspot timing is intentionally still a local debug profiling
+      timer until a repro needs per-measure trace events; avoid per-node span explosion by default.
   - [x] Migrate remaining paint sub-phases and hot node paths:
     - [x] Migrate `paint_all` entry-layer sub-phases to `fret_perf::measure_span`:
       input context, scroll-handle invalidation, root collection, visual-bounds flush,
@@ -69,4 +75,11 @@
       phase names:
       prepare, render, record, present, and nested render scene.
       - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
-    - `crates/fret-render-*` (prepare/record/submit/present boundaries)
+    - [x] Align WGPU renderer frame-level timers with `fret_perf::measure_span`:
+      text prepare, SVG prepare, scene encode, and upload now share stats/span boundaries.
+      - Evidence:
+        `crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs`,
+        `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`,
+        `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs`
+      - Remaining: per-family encode profiling, text glyph phase profiling, and SVG raster
+        internal timers stay local opt-in/debug timers until a repro needs span-level events.

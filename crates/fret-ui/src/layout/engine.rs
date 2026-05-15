@@ -178,6 +178,43 @@ struct LayoutMeasureKey {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LayoutSolveOutcome {
+    Ok,
+    Err,
+}
+
+impl LayoutSolveOutcome {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Ok => "ok",
+            Self::Err => "err",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutSolveTraceFields {
+    outcome: LayoutSolveOutcome,
+    measure_calls: u64,
+    measure_cache_hits: u64,
+    measure_time: Duration,
+}
+
+fn record_layout_solve_span_finish(
+    span: &tracing::Span,
+    elapsed: Option<Duration>,
+    fields: &LayoutSolveTraceFields,
+) {
+    if let Some(elapsed) = elapsed {
+        span.record("elapsed_us", elapsed.as_micros() as u64);
+    }
+    span.record("outcome", fields.outcome.as_str());
+    span.record("measure_calls", fields.measure_calls);
+    span.record("measure_cache_hits", fields.measure_cache_hits);
+    span.record("measure_us", fields.measure_time.as_micros() as u64);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct SolvedStamp {
     frame_id: FrameId,
     solve_generation: u64,
@@ -859,24 +896,7 @@ impl TaffyLayoutEngine {
         });
         self.last_solve_profile = None;
 
-        let started = Instant::now();
         self.solve_scale_factor = sf;
-
-        let span = if tracing::enabled!(tracing::Level::TRACE) {
-            tracing::trace_span!(
-                "fret.ui.layout_engine.solve",
-                root = tracing::field::Empty,
-                frame_id = self.frame_id.map(|f| f.0).unwrap_or(0),
-                scale_factor = sf,
-                elapsed_us = tracing::field::Empty,
-                measure_calls = tracing::field::Empty,
-                measure_cache_hits = tracing::field::Empty,
-                measure_us = tracing::field::Empty,
-            )
-        } else {
-            tracing::Span::none()
-        };
-        let _span_guard = span.enter();
 
         let taffy_available = taffy::geometry::Size {
             width: taffy::style::AvailableSpace::Definite(scratch_w_dp),
@@ -886,7 +906,6 @@ impl TaffyLayoutEngine {
         let mut measure_calls: u64 = 0;
         let mut measure_cache_hits: u64 = 0;
         self.measure_cache_scratch.clear();
-        let measure_cache = &mut self.measure_cache_scratch;
         let enable_profile = self.measure_profiling_enabled;
         let mut measure_time = Duration::default();
 
@@ -899,217 +918,256 @@ impl TaffyLayoutEngine {
 
         let mut by_node: Option<SecondaryMap<NodeId, MeasureNodeProfile>> =
             enable_profile.then(SecondaryMap::new);
-        let result = self.tree.compute_layout_with_measure(
-            scratch_id,
-            taffy_available,
-            |known, avail, _id, ctx, _style| {
-                let Some(ctx) = ctx else {
-                    return taffy::geometry::Size::default();
-                };
-                if !ctx.measured {
-                    return taffy::geometry::Size::default();
-                }
 
-                measure_calls = measure_calls.saturating_add(1);
-                fn quantize_size_key_bits(value: f32) -> u32 {
-                    if !value.is_finite() || value <= 0.0 {
-                        return 0;
-                    }
-                    let quantum = 64.0f32;
-                    let quantized = (value * quantum).round() / quantum;
-                    quantized.to_bits()
-                }
-                fn avail_key(
-                    avail: taffy::style::AvailableSpace,
-                    min_content_as_max: bool,
-                ) -> (u8, u32) {
-                    match avail {
-                        taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
-                        taffy::style::AvailableSpace::MinContent => {
-                            if min_content_as_max {
-                                (2, 0)
-                            } else {
-                                (1, 0)
+        let span_frame_id = self.frame_id.map(|f| f.0).unwrap_or(0);
+        let (trace_fields, solve_elapsed) = fret_perf::measure_span_with_finish(
+            true,
+            tracing::enabled!(tracing::Level::TRACE),
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout_engine.solve",
+                    root = tracing::field::Empty,
+                    frame_id = span_frame_id,
+                    scale_factor = sf,
+                    elapsed_us = tracing::field::Empty,
+                    outcome = tracing::field::Empty,
+                    measure_calls = tracing::field::Empty,
+                    measure_cache_hits = tracing::field::Empty,
+                    measure_us = tracing::field::Empty,
+                )
+            },
+            |span| {
+                let result = {
+                    let measure_cache = &mut self.measure_cache_scratch;
+                    self.tree.compute_layout_with_measure(
+                        scratch_id,
+                        taffy_available,
+                        |known, avail, _id, ctx, _style| {
+                            let Some(ctx) = ctx else {
+                                return taffy::geometry::Size::default();
+                            };
+                            if !ctx.measured {
+                                return taffy::geometry::Size::default();
                             }
-                        }
-                        taffy::style::AvailableSpace::MaxContent => (2, 0),
-                    }
-                }
 
-                let key = LayoutMeasureKey {
-                    node: ctx.node,
-                    known_w: known.width.map(quantize_size_key_bits),
-                    known_h: known.height.map(quantize_size_key_bits),
-                    avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
-                    avail_h: avail_key(avail.height, false),
-                };
-                if let Some(size) = measure_cache.get(&key) {
-                    measure_cache_hits = measure_cache_hits.saturating_add(1);
-                    if enable_profile && let Some(by_node) = by_node.as_mut() {
-                        if by_node.get(ctx.node).is_none() {
-                            by_node.insert(ctx.node, MeasureNodeProfile::default());
-                        }
-                        if let Some(profile) = by_node.get_mut(ctx.node) {
-                            profile.cache_hits = profile.cache_hits.saturating_add(1);
-                        }
-                    }
-                    return *size;
-                }
-
-                let constraints = LayoutConstraints::new(
-                    LayoutSize::new(
-                        known.width.map(|w| Px(w / sf)),
-                        known.height.map(|h| Px(h / sf)),
-                    ),
-                    LayoutSize::new(
-                        match avail.width {
-                            taffy::style::AvailableSpace::Definite(w) => {
-                                AvailableSpace::Definite(Px(w / sf))
+                            measure_calls = measure_calls.saturating_add(1);
+                            fn quantize_size_key_bits(value: f32) -> u32 {
+                                if !value.is_finite() || value <= 0.0 {
+                                    return 0;
+                                }
+                                let quantum = 64.0f32;
+                                let quantized = (value * quantum).round() / quantum;
+                                quantized.to_bits()
                             }
-                            taffy::style::AvailableSpace::MinContent => {
-                                if ctx.min_content_width_as_max {
-                                    AvailableSpace::MaxContent
-                                } else {
-                                    AvailableSpace::MinContent
+                            fn avail_key(
+                                avail: taffy::style::AvailableSpace,
+                                min_content_as_max: bool,
+                            ) -> (u8, u32) {
+                                match avail {
+                                    taffy::style::AvailableSpace::Definite(v) => {
+                                        (0, quantize_size_key_bits(v))
+                                    }
+                                    taffy::style::AvailableSpace::MinContent => {
+                                        if min_content_as_max { (2, 0) } else { (1, 0) }
+                                    }
+                                    taffy::style::AvailableSpace::MaxContent => (2, 0),
                                 }
                             }
-                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                        },
-                        match avail.height {
-                            taffy::style::AvailableSpace::Definite(h) => {
-                                AvailableSpace::Definite(Px(h / sf))
-                            }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
-                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                        },
-                    ),
-                );
 
-                let (s, elapsed) = if enable_profile {
-                    let measure_started = Instant::now();
-                    let size = measure(ctx.node, constraints);
-                    (size, measure_started.elapsed())
-                } else {
-                    (measure(ctx.node, constraints), Duration::default())
+                            let key = LayoutMeasureKey {
+                                node: ctx.node,
+                                known_w: known.width.map(quantize_size_key_bits),
+                                known_h: known.height.map(quantize_size_key_bits),
+                                avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
+                                avail_h: avail_key(avail.height, false),
+                            };
+                            if let Some(size) = measure_cache.get(&key) {
+                                measure_cache_hits = measure_cache_hits.saturating_add(1);
+                                if enable_profile && let Some(by_node) = by_node.as_mut() {
+                                    if by_node.get(ctx.node).is_none() {
+                                        by_node.insert(ctx.node, MeasureNodeProfile::default());
+                                    }
+                                    if let Some(profile) = by_node.get_mut(ctx.node) {
+                                        profile.cache_hits =
+                                            profile.cache_hits.saturating_add(1);
+                                    }
+                                }
+                                return *size;
+                            }
+
+                            let constraints = LayoutConstraints::new(
+                                LayoutSize::new(
+                                    known.width.map(|w| Px(w / sf)),
+                                    known.height.map(|h| Px(h / sf)),
+                                ),
+                                LayoutSize::new(
+                                    match avail.width {
+                                        taffy::style::AvailableSpace::Definite(w) => {
+                                            AvailableSpace::Definite(Px(w / sf))
+                                        }
+                                        taffy::style::AvailableSpace::MinContent => {
+                                            if ctx.min_content_width_as_max {
+                                                AvailableSpace::MaxContent
+                                            } else {
+                                                AvailableSpace::MinContent
+                                            }
+                                        }
+                                        taffy::style::AvailableSpace::MaxContent => {
+                                            AvailableSpace::MaxContent
+                                        }
+                                    },
+                                    match avail.height {
+                                        taffy::style::AvailableSpace::Definite(h) => {
+                                            AvailableSpace::Definite(Px(h / sf))
+                                        }
+                                        taffy::style::AvailableSpace::MinContent => {
+                                            AvailableSpace::MinContent
+                                        }
+                                        taffy::style::AvailableSpace::MaxContent => {
+                                            AvailableSpace::MaxContent
+                                        }
+                                    },
+                                ),
+                            );
+
+                            let (s, elapsed) = if enable_profile {
+                                let measure_started = Instant::now();
+                                let size = measure(ctx.node, constraints);
+                                (size, measure_started.elapsed())
+                            } else {
+                                (measure(ctx.node, constraints), Duration::default())
+                            };
+
+                            if enable_profile {
+                                measure_time += elapsed;
+                                if let Some(by_node) = by_node.as_mut() {
+                                    if by_node.get(ctx.node).is_none() {
+                                        by_node.insert(ctx.node, MeasureNodeProfile::default());
+                                    }
+                                    if let Some(profile) = by_node.get_mut(ctx.node) {
+                                        profile.total_time += elapsed;
+                                        profile.calls = profile.calls.saturating_add(1);
+                                    } else {
+                                        debug_assert!(
+                                            false,
+                                            "layout engine profiling: expected node profile to exist after insert"
+                                        );
+                                    }
+                                }
+                            }
+
+                            let out = taffy::geometry::Size {
+                                width: s.width.0 * sf,
+                                height: s.height.0 * sf,
+                            };
+                            measure_cache.insert(key, out);
+                            out
+                        },
+                    )
                 };
 
+                self.last_solve_measure_calls = measure_calls;
+                self.last_solve_measure_cache_hits = measure_cache_hits;
+                self.last_solve_measure_time = measure_time;
                 if enable_profile {
-                    measure_time += elapsed;
-                    if let Some(by_node) = by_node.as_mut() {
-                        if by_node.get(ctx.node).is_none() {
-                            by_node.insert(ctx.node, MeasureNodeProfile::default());
-                        }
-                        if let Some(profile) = by_node.get_mut(ctx.node) {
-                            profile.total_time += elapsed;
-                            profile.calls = profile.calls.saturating_add(1);
-                        } else {
-                            debug_assert!(
-                                false,
-                                "layout engine profiling: expected node profile to exist after insert"
-                            );
-                        }
-                    }
+                    const MAX_HOTSPOTS: usize = 8;
+                    let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|(node, p)| LayoutEngineMeasureHotspot {
+                            node,
+                            total_time: p.total_time,
+                            calls: p.calls,
+                            cache_hits: p.cache_hits,
+                        })
+                        .collect();
+                    hotspots.sort_by_key(|h| std::cmp::Reverse(h.total_time));
+                    hotspots.truncate(MAX_HOTSPOTS);
+                    self.last_solve_measure_hotspots = hotspots;
+                } else {
+                    self.last_solve_measure_hotspots.clear();
                 }
 
-                let out = taffy::geometry::Size {
-                    width: s.width.0 * sf,
-                    height: s.height.0 * sf,
-                };
-                measure_cache.insert(key, out);
-                out
+                if let Err(err) = result {
+                    Self::warn_taffy_error_once("compute_layout_with_measure(batch_root)", err);
+                    let _ = self.tree.set_children(scratch_id, &[]);
+                    self.last_solve_root = None;
+                    return LayoutSolveTraceFields {
+                        outcome: LayoutSolveOutcome::Err,
+                        measure_calls,
+                        measure_cache_hits,
+                        measure_time,
+                    };
+                }
+
+                self.solve_generation = self.solve_generation.saturating_add(1);
+                let stamp_root = batchable[0].0;
+                span.record("root", tracing::field::debug(stamp_root));
+                self.last_solve_root = Some(stamp_root);
+
+                let mut subtree_nodes: u32 = 0;
+                if let Some(frame_id) = self.frame_id {
+                    for &(root, _id, available) in &batchable {
+                        subtree_nodes =
+                            subtree_nodes.saturating_add(self.mark_solved_subtree(root));
+                        self.root_solve_stamp.insert(
+                            root,
+                            RootSolveStamp {
+                                frame_id,
+                                key: Self::root_solve_key(available, self.solve_scale_factor),
+                            },
+                        );
+                        self.debug_last_root_solve_key.insert(
+                            root,
+                            RootSolveDebugStamp {
+                                frame_id: self.frame_id,
+                                key: Self::root_solve_key(available, self.solve_scale_factor),
+                            },
+                        );
+                    }
+                }
+                if let Some(profile) = profile_base {
+                    self.last_solve_profile = Some(LayoutEngineSolveProfile {
+                        reason: profile.reason,
+                        available_w_kind: profile.available_w_kind,
+                        available_h_kind: profile.available_h_kind,
+                        available_w: profile.available_w,
+                        available_h: profile.available_h,
+                        previous_available_w_kind: profile.previous_available_w_kind,
+                        previous_available_h_kind: profile.previous_available_h_kind,
+                        previous_available_w: profile.previous_available_w,
+                        previous_available_h: profile.previous_available_h,
+                        available_w_delta: profile.available_w_delta,
+                        available_h_delta: profile.available_h_delta,
+                        scale_factor: profile.scale_factor,
+                        previous_scale_factor: profile.previous_scale_factor,
+                        scale_factor_delta: profile.scale_factor_delta,
+                        previous_frame_delta: profile.previous_frame_delta,
+                        batch_roots: profile.batch_roots,
+                        subtree_nodes,
+                        flex_wrap_patch: LayoutEngineFlexWrapPatchProfile::default(),
+                    });
+                }
+
+                LayoutSolveTraceFields {
+                    outcome: LayoutSolveOutcome::Ok,
+                    measure_calls,
+                    measure_cache_hits,
+                    measure_time,
+                }
+            },
+            |span, elapsed, fields| {
+                record_layout_solve_span_finish(span, elapsed, fields);
             },
         );
+        let solve_elapsed = solve_elapsed.unwrap_or_default();
 
-        self.last_solve_measure_calls = measure_calls;
-        self.last_solve_measure_cache_hits = measure_cache_hits;
-        self.last_solve_measure_time = measure_time;
-        if enable_profile {
-            const MAX_HOTSPOTS: usize = 8;
-            let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
-                .unwrap_or_default()
-                .into_iter()
-                .map(|(node, p)| LayoutEngineMeasureHotspot {
-                    node,
-                    total_time: p.total_time,
-                    calls: p.calls,
-                    cache_hits: p.cache_hits,
-                })
-                .collect();
-            hotspots.sort_by_key(|h| std::cmp::Reverse(h.total_time));
-            hotspots.truncate(MAX_HOTSPOTS);
-            self.last_solve_measure_hotspots = hotspots;
-        } else {
-            self.last_solve_measure_hotspots.clear();
-        }
-
-        if let Err(err) = result {
-            Self::warn_taffy_error_once("compute_layout_with_measure(batch_root)", err);
-            let _ = self.tree.set_children(scratch_id, &[]);
-            self.last_solve_root = None;
-            self.last_solve_elapsed = started.elapsed();
-            span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
-            span.record("measure_calls", measure_calls);
-            span.record("measure_cache_hits", measure_cache_hits);
-            span.record("measure_us", measure_time.as_micros() as u64);
-            self.last_solve_time += self.last_solve_elapsed;
+        self.last_solve_elapsed = solve_elapsed;
+        self.last_solve_time += self.last_solve_elapsed;
+        if trace_fields.outcome == LayoutSolveOutcome::Err {
             compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
-
-        self.solve_generation = self.solve_generation.saturating_add(1);
-        let stamp_root = batchable[0].0;
-        span.record("root", tracing::field::debug(stamp_root));
-        self.last_solve_root = Some(stamp_root);
-
-        let mut subtree_nodes: u32 = 0;
-        if let Some(frame_id) = self.frame_id {
-            for &(root, _id, available) in &batchable {
-                subtree_nodes = subtree_nodes.saturating_add(self.mark_solved_subtree(root));
-                self.root_solve_stamp.insert(
-                    root,
-                    RootSolveStamp {
-                        frame_id,
-                        key: Self::root_solve_key(available, self.solve_scale_factor),
-                    },
-                );
-                self.debug_last_root_solve_key.insert(
-                    root,
-                    RootSolveDebugStamp {
-                        frame_id: self.frame_id,
-                        key: Self::root_solve_key(available, self.solve_scale_factor),
-                    },
-                );
-            }
-        }
-        if let Some(profile) = profile_base {
-            self.last_solve_profile = Some(LayoutEngineSolveProfile {
-                reason: profile.reason,
-                available_w_kind: profile.available_w_kind,
-                available_h_kind: profile.available_h_kind,
-                available_w: profile.available_w,
-                available_h: profile.available_h,
-                previous_available_w_kind: profile.previous_available_w_kind,
-                previous_available_h_kind: profile.previous_available_h_kind,
-                previous_available_w: profile.previous_available_w,
-                previous_available_h: profile.previous_available_h,
-                available_w_delta: profile.available_w_delta,
-                available_h_delta: profile.available_h_delta,
-                scale_factor: profile.scale_factor,
-                previous_scale_factor: profile.previous_scale_factor,
-                scale_factor_delta: profile.scale_factor_delta,
-                previous_frame_delta: profile.previous_frame_delta,
-                batch_roots: profile.batch_roots,
-                subtree_nodes,
-                flex_wrap_patch: LayoutEngineFlexWrapPatchProfile::default(),
-            });
-        }
-
-        self.last_solve_elapsed = started.elapsed();
-        span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
-        span.record("measure_calls", measure_calls);
-        span.record("measure_cache_hits", measure_cache_hits);
-        span.record("measure_us", measure_time.as_micros() as u64);
-        self.last_solve_time += self.last_solve_elapsed;
 
         // Detach roots from the synthetic parent so they remain independent roots in the engine.
         let _ = self.tree.set_children(scratch_id, &[]);
@@ -1626,25 +1684,8 @@ impl TaffyLayoutEngine {
             }
         }
 
-        let started = Instant::now();
         let sf = Self::sanitized_scale_factor(scale_factor);
         self.solve_scale_factor = sf;
-
-        let span = if tracing::enabled!(tracing::Level::TRACE) {
-            tracing::trace_span!(
-                "fret.ui.layout_engine.solve",
-                root = tracing::field::Empty,
-                frame_id = self.frame_id.map(|f| f.0).unwrap_or(0),
-                scale_factor = sf,
-                elapsed_us = tracing::field::Empty,
-                measure_calls = tracing::field::Empty,
-                measure_cache_hits = tracing::field::Empty,
-                measure_us = tracing::field::Empty,
-            )
-        } else {
-            tracing::Span::none()
-        };
-        let _span_guard = span.enter();
 
         let root_node = self.node_for_layout_id(root);
         let profile_base =
@@ -1672,7 +1713,6 @@ impl TaffyLayoutEngine {
         let mut measure_calls: u64 = 0;
         let mut measure_cache_hits: u64 = 0;
         self.measure_cache_scratch.clear();
-        let measure_cache = &mut self.measure_cache_scratch;
         let enable_profile = self.measure_profiling_enabled;
         let mut measure_time = Duration::default();
 
@@ -1685,192 +1725,233 @@ impl TaffyLayoutEngine {
 
         let mut by_node: Option<SecondaryMap<NodeId, MeasureNodeProfile>> =
             enable_profile.then(SecondaryMap::new);
-        let result = self.tree.compute_layout_with_measure(
-            root.0,
-            taffy_available,
-            |known, avail, _id, ctx, _style| {
-                let Some(ctx) = ctx else {
-                    return taffy::geometry::Size::default();
-                };
-                if !ctx.measured {
-                    return taffy::geometry::Size::default();
-                }
 
-                measure_calls = measure_calls.saturating_add(1);
-                let key = LayoutMeasureKey {
-                    node: ctx.node,
-                    known_w: known.width.map(quantize_size_key_bits),
-                    known_h: known.height.map(quantize_size_key_bits),
-                    avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
-                    avail_h: avail_key(avail.height, false),
-                };
-                if let Some(size) = measure_cache.get(&key) {
-                    measure_cache_hits = measure_cache_hits.saturating_add(1);
-                    if enable_profile && let Some(by_node) = by_node.as_mut() {
-                        if by_node.get(ctx.node).is_none() {
-                            by_node.insert(ctx.node, MeasureNodeProfile::default());
-                        }
-                        if let Some(profile) = by_node.get_mut(ctx.node) {
-                            profile.cache_hits = profile.cache_hits.saturating_add(1);
-                        } else {
-                            debug_assert!(
-                                false,
-                                "layout engine profiling: expected node profile to exist after insert"
-                            );
-                        }
-                    }
-                    return *size;
-                }
-
-                let constraints = LayoutConstraints::new(
-                    LayoutSize::new(
-                        known.width.map(|w| Px(w / sf)),
-                        known.height.map(|h| Px(h / sf)),
-                    ),
-                    LayoutSize::new(
-                        match avail.width {
-                            taffy::style::AvailableSpace::Definite(w) => {
-                                AvailableSpace::Definite(Px(w / sf))
+        let span_frame_id = self.frame_id.map(|f| f.0).unwrap_or(0);
+        let (trace_fields, solve_elapsed) = fret_perf::measure_span_with_finish(
+            true,
+            tracing::enabled!(tracing::Level::TRACE),
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout_engine.solve",
+                    root = tracing::field::Empty,
+                    frame_id = span_frame_id,
+                    scale_factor = sf,
+                    elapsed_us = tracing::field::Empty,
+                    outcome = tracing::field::Empty,
+                    measure_calls = tracing::field::Empty,
+                    measure_cache_hits = tracing::field::Empty,
+                    measure_us = tracing::field::Empty,
+                )
+            },
+            |span| {
+                let result = {
+                    let measure_cache = &mut self.measure_cache_scratch;
+                    self.tree.compute_layout_with_measure(
+                        root.0,
+                        taffy_available,
+                        |known, avail, _id, ctx, _style| {
+                            let Some(ctx) = ctx else {
+                                return taffy::geometry::Size::default();
+                            };
+                            if !ctx.measured {
+                                return taffy::geometry::Size::default();
                             }
-                            taffy::style::AvailableSpace::MinContent => {
-                                if ctx.min_content_width_as_max {
-                                    AvailableSpace::MaxContent
-                                } else {
-                                    AvailableSpace::MinContent
+
+                            measure_calls = measure_calls.saturating_add(1);
+                            let key = LayoutMeasureKey {
+                                node: ctx.node,
+                                known_w: known.width.map(quantize_size_key_bits),
+                                known_h: known.height.map(quantize_size_key_bits),
+                                avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
+                                avail_h: avail_key(avail.height, false),
+                            };
+                            if let Some(size) = measure_cache.get(&key) {
+                                measure_cache_hits = measure_cache_hits.saturating_add(1);
+                                if enable_profile && let Some(by_node) = by_node.as_mut() {
+                                    if by_node.get(ctx.node).is_none() {
+                                        by_node.insert(ctx.node, MeasureNodeProfile::default());
+                                    }
+                                    if let Some(profile) = by_node.get_mut(ctx.node) {
+                                        profile.cache_hits =
+                                            profile.cache_hits.saturating_add(1);
+                                    } else {
+                                        debug_assert!(
+                                            false,
+                                            "layout engine profiling: expected node profile to exist after insert"
+                                        );
+                                    }
+                                }
+                                return *size;
+                            }
+
+                            let constraints = LayoutConstraints::new(
+                                LayoutSize::new(
+                                    known.width.map(|w| Px(w / sf)),
+                                    known.height.map(|h| Px(h / sf)),
+                                ),
+                                LayoutSize::new(
+                                    match avail.width {
+                                        taffy::style::AvailableSpace::Definite(w) => {
+                                            AvailableSpace::Definite(Px(w / sf))
+                                        }
+                                        taffy::style::AvailableSpace::MinContent => {
+                                            if ctx.min_content_width_as_max {
+                                                AvailableSpace::MaxContent
+                                            } else {
+                                                AvailableSpace::MinContent
+                                            }
+                                        }
+                                        taffy::style::AvailableSpace::MaxContent => {
+                                            AvailableSpace::MaxContent
+                                        }
+                                    },
+                                    match avail.height {
+                                        taffy::style::AvailableSpace::Definite(h) => {
+                                            AvailableSpace::Definite(Px(h / sf))
+                                        }
+                                        taffy::style::AvailableSpace::MinContent => {
+                                            AvailableSpace::MinContent
+                                        }
+                                        taffy::style::AvailableSpace::MaxContent => {
+                                            AvailableSpace::MaxContent
+                                        }
+                                    },
+                                ),
+                            );
+
+                            let (s, elapsed) = if enable_profile {
+                                let measure_started = Instant::now();
+                                let size = measure(ctx.node, constraints);
+                                (size, measure_started.elapsed())
+                            } else {
+                                (measure(ctx.node, constraints), Duration::default())
+                            };
+
+                            if enable_profile {
+                                measure_time += elapsed;
+                                if let Some(by_node) = by_node.as_mut() {
+                                    if by_node.get(ctx.node).is_none() {
+                                        by_node.insert(ctx.node, MeasureNodeProfile::default());
+                                    }
+                                    if let Some(profile) = by_node.get_mut(ctx.node) {
+                                        profile.total_time += elapsed;
+                                        profile.calls = profile.calls.saturating_add(1);
+                                    } else {
+                                        debug_assert!(
+                                            false,
+                                            "layout engine profiling: expected node profile to exist after insert"
+                                        );
+                                    }
                                 }
                             }
-                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                            let out = taffy::geometry::Size {
+                                width: s.width.0 * sf,
+                                height: s.height.0 * sf,
+                            };
+                            measure_cache.insert(key, out);
+                            out
                         },
-                        match avail.height {
-                            taffy::style::AvailableSpace::Definite(h) => {
-                                AvailableSpace::Definite(Px(h / sf))
-                            }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
-                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                        },
-                    ),
-                );
-
-                let (s, elapsed) = if enable_profile {
-                    let measure_started = Instant::now();
-                    let size = measure(ctx.node, constraints);
-                    (size, measure_started.elapsed())
-                } else {
-                    (measure(ctx.node, constraints), Duration::default())
+                    )
                 };
 
+                self.last_solve_measure_calls = measure_calls;
+                self.last_solve_measure_cache_hits = measure_cache_hits;
+                self.last_solve_measure_time = measure_time;
                 if enable_profile {
-                    measure_time += elapsed;
-                    if let Some(by_node) = by_node.as_mut() {
-                        if by_node.get(ctx.node).is_none() {
-                            by_node.insert(ctx.node, MeasureNodeProfile::default());
-                        }
-                        if let Some(profile) = by_node.get_mut(ctx.node) {
-                            profile.total_time += elapsed;
-                            profile.calls = profile.calls.saturating_add(1);
-                        } else {
-                            debug_assert!(
-                                false,
-                                "layout engine profiling: expected node profile to exist after insert"
-                            );
-                        }
-                    }
+                    const MAX_HOTSPOTS: usize = 8;
+                    let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|(node, p)| LayoutEngineMeasureHotspot {
+                            node,
+                            total_time: p.total_time,
+                            calls: p.calls,
+                            cache_hits: p.cache_hits,
+                        })
+                        .collect();
+                    hotspots.sort_by_key(|h| std::cmp::Reverse(h.total_time));
+                    hotspots.truncate(MAX_HOTSPOTS);
+                    self.last_solve_measure_hotspots = hotspots;
+                } else {
+                    self.last_solve_measure_hotspots.clear();
                 }
-                let out = taffy::geometry::Size {
-                    width: s.width.0 * sf,
-                    height: s.height.0 * sf,
-                };
-                measure_cache.insert(key, out);
-                out
+
+                if let Err(err) = result {
+                    Self::warn_taffy_error_once("compute_layout_with_measure", err);
+                    if let Some(root_node) = root_node {
+                        self.clear_solved_subtree(root_node);
+                        self.root_solve_stamp.remove(root_node);
+                    }
+                    self.last_solve_root = None;
+                    return LayoutSolveTraceFields {
+                        outcome: LayoutSolveOutcome::Err,
+                        measure_calls,
+                        measure_cache_hits,
+                        measure_time,
+                    };
+                }
+
+                self.solve_generation = self.solve_generation.saturating_add(1);
+                if let Some(root_node) = root_node {
+                    span.record("root", tracing::field::debug(root_node));
+                    self.last_solve_root = Some(root_node);
+                    let subtree_nodes = self.mark_solved_subtree(root_node);
+                    if let Some(frame_id) = self.frame_id {
+                        let key = Self::root_solve_key(available, self.solve_scale_factor);
+                        self.root_solve_stamp
+                            .insert(root_node, RootSolveStamp { frame_id, key });
+                        self.debug_last_root_solve_key.insert(
+                            root_node,
+                            RootSolveDebugStamp {
+                                frame_id: self.frame_id,
+                                key,
+                            },
+                        );
+                    }
+                    if let Some(profile) = profile_base {
+                        self.last_solve_profile = Some(LayoutEngineSolveProfile {
+                            reason: profile.reason,
+                            available_w_kind: profile.available_w_kind,
+                            available_h_kind: profile.available_h_kind,
+                            available_w: profile.available_w,
+                            available_h: profile.available_h,
+                            previous_available_w_kind: profile.previous_available_w_kind,
+                            previous_available_h_kind: profile.previous_available_h_kind,
+                            previous_available_w: profile.previous_available_w,
+                            previous_available_h: profile.previous_available_h,
+                            available_w_delta: profile.available_w_delta,
+                            available_h_delta: profile.available_h_delta,
+                            scale_factor: profile.scale_factor,
+                            previous_scale_factor: profile.previous_scale_factor,
+                            scale_factor_delta: profile.scale_factor_delta,
+                            previous_frame_delta: profile.previous_frame_delta,
+                            batch_roots: profile.batch_roots,
+                            subtree_nodes,
+                            flex_wrap_patch,
+                        });
+                    }
+                } else {
+                    self.last_solve_root = None;
+                }
+
+                LayoutSolveTraceFields {
+                    outcome: LayoutSolveOutcome::Ok,
+                    measure_calls,
+                    measure_cache_hits,
+                    measure_time,
+                }
+            },
+            |span, elapsed, fields| {
+                record_layout_solve_span_finish(span, elapsed, fields);
             },
         );
+        let solve_elapsed = solve_elapsed.unwrap_or_default();
 
-        self.last_solve_measure_calls = measure_calls;
-        self.last_solve_measure_cache_hits = measure_cache_hits;
-        self.last_solve_measure_time = measure_time;
-        if enable_profile {
-            const MAX_HOTSPOTS: usize = 8;
-            let mut hotspots: Vec<LayoutEngineMeasureHotspot> = by_node
-                .unwrap_or_default()
-                .into_iter()
-                .map(|(node, p)| LayoutEngineMeasureHotspot {
-                    node,
-                    total_time: p.total_time,
-                    calls: p.calls,
-                    cache_hits: p.cache_hits,
-                })
-                .collect();
-            hotspots.sort_by_key(|h| std::cmp::Reverse(h.total_time));
-            hotspots.truncate(MAX_HOTSPOTS);
-            self.last_solve_measure_hotspots = hotspots;
-        } else {
-            self.last_solve_measure_hotspots.clear();
-        }
-
-        if let Err(err) = result {
-            Self::warn_taffy_error_once("compute_layout_with_measure", err);
-            if let Some(root_node) = root_node {
-                self.clear_solved_subtree(root_node);
-                self.root_solve_stamp.remove(root_node);
-            }
-            self.last_solve_root = None;
-            self.last_solve_elapsed = started.elapsed();
-            span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
-            span.record("measure_calls", measure_calls);
-            span.record("measure_cache_hits", measure_cache_hits);
-            span.record("measure_us", measure_time.as_micros() as u64);
-            self.last_solve_time += self.last_solve_elapsed;
+        self.last_solve_elapsed = solve_elapsed;
+        self.last_solve_time += self.last_solve_elapsed;
+        if trace_fields.outcome == LayoutSolveOutcome::Err {
             return;
         }
-
-        self.solve_generation = self.solve_generation.saturating_add(1);
-        if let Some(root_node) = root_node {
-            span.record("root", tracing::field::debug(root_node));
-            self.last_solve_root = Some(root_node);
-            let subtree_nodes = self.mark_solved_subtree(root_node);
-            if let Some(frame_id) = self.frame_id {
-                let key = Self::root_solve_key(available, self.solve_scale_factor);
-                self.root_solve_stamp
-                    .insert(root_node, RootSolveStamp { frame_id, key });
-                self.debug_last_root_solve_key.insert(
-                    root_node,
-                    RootSolveDebugStamp {
-                        frame_id: self.frame_id,
-                        key,
-                    },
-                );
-            }
-            if let Some(profile) = profile_base {
-                self.last_solve_profile = Some(LayoutEngineSolveProfile {
-                    reason: profile.reason,
-                    available_w_kind: profile.available_w_kind,
-                    available_h_kind: profile.available_h_kind,
-                    available_w: profile.available_w,
-                    available_h: profile.available_h,
-                    previous_available_w_kind: profile.previous_available_w_kind,
-                    previous_available_h_kind: profile.previous_available_h_kind,
-                    previous_available_w: profile.previous_available_w,
-                    previous_available_h: profile.previous_available_h,
-                    available_w_delta: profile.available_w_delta,
-                    available_h_delta: profile.available_h_delta,
-                    scale_factor: profile.scale_factor,
-                    previous_scale_factor: profile.previous_scale_factor,
-                    scale_factor_delta: profile.scale_factor_delta,
-                    previous_frame_delta: profile.previous_frame_delta,
-                    batch_roots: profile.batch_roots,
-                    subtree_nodes,
-                    flex_wrap_patch,
-                });
-            }
-        } else {
-            self.last_solve_root = None;
-        }
-        self.last_solve_elapsed = started.elapsed();
-        span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
-        span.record("measure_calls", measure_calls);
-        span.record("measure_cache_hits", measure_cache_hits);
-        span.record("measure_us", measure_time.as_micros() as u64);
-        self.last_solve_time += self.last_solve_elapsed;
     }
 
     pub fn compute_root(
