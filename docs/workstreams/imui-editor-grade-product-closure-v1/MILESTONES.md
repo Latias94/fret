@@ -329,6 +329,8 @@ Current status:
 - 2026-05-16 DevTools selected-summary follow-up projection adds `diag trace <bundle> --json` to
   the same shared GUI/MCP runnable action set, so Chrome trace artifact generation stays in the
   diagnostics owner lane instead of becoming another GUI-private command path.
+- 2026-05-16 GUI-launched trace follow-ups now record `trace.chrome.json` in
+  `output_artifacts`, and the selected-result summary/details expose that artifact path for reuse.
 - 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
   projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
   lines in both structured JSON and the human summary.

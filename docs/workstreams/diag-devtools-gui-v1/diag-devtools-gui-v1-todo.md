@@ -140,6 +140,8 @@ Conventions:
         same shared diagnostics runner as stats, layout, memory, triage, and hotspots.
   - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
         latest result path for copying.
+  - [x] Trace follow-up result records include `output_artifacts[].path` for
+        `trace.chrome.json`, and the selected-summary summary/details blocks surface that artifact.
   - [x] GUI selected-summary inspector mirrors the latest selected-bundle follow-up result JSON
         inline for pass/fail/error/timing triage.
   - [x] GUI selected-summary inspector shows a structured selected-bundle follow-up result summary

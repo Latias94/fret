@@ -103,6 +103,8 @@ Remaining gaps / follow-ups:
   - 2026-05-16: regression-bundle follow-up projection now exposes `diag trace <bundle> --json`
     alongside stats/triage/hotspots, so DevTools GUI and MCP consumers can generate trace artifacts
     from selected failing bundle dirs without re-deriving commands.
+  - 2026-05-16: DevTools trace follow-up result records now carry `output_artifacts` for the
+    generated `trace.chrome.json`, and the GUI summary/details surface that path directly.
   - Still remaining: finer nested runtime spans and external profiler/Tracy correlation for
     concrete attribution cases.
 
@@ -238,6 +240,8 @@ timeline; low overhead).
   - Metadata report for scripts/automation: `--json`
   - Regression dashboards expose the same command as a bundle-local runnable follow-up named
     `trace`, indexed per selected bundle when a summary contains multiple failing bundle dirs.
+  - GUI-launched trace follow-up records expose `output_artifacts[].path` for the generated
+    `trace.chrome.json` artifact.
 
 Open the resulting JSON in Chrome tracing UI (or compatible viewers) to correlate phases with
 `tick_id` / `frame_id`. Use `--json` when you only need the trace artifact path, trace source, and

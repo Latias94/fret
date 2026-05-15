@@ -625,13 +625,16 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 - 2026-05-16 maintenance: the same shared projection now includes runnable selected-bundle
   `diag trace <bundle> --json` actions in GUI and MCP surfaces, keeping Chrome trace artifact
   generation in the diagnostics owner lane.
+- 2026-05-16 maintenance: GUI-launched trace follow-up result records now include
+  `output_artifacts[].path` for the generated `trace.chrome.json`, and the selected-result summary
+  and detail blocks surface that artifact path for reuse.
 - Focused source gates:
 
 ```text
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast
-cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_summary_lines_project_output_artifacts regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast
 cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
@@ -803,6 +806,9 @@ DevTools GUI perf-threshold preset closure (2026-05-16):
 - 2026-05-16 maintenance: the same selected-bundle projection now includes `diag trace <bundle>
   --json`, so failing perf-threshold bundles can produce trace artifact metadata from the same
   GUI/MCP follow-up surface as stats, triage, and hotspots.
+- 2026-05-16 maintenance: the GUI follow-up result schema now records trace output artifacts
+  explicitly, so `trace.chrome.json` becomes part of the selected-result summary/detail evidence
+  rather than a path the user has to infer from the bundle directory.
 - The shared follow-up projection now emits commands for every selected bundle root, with stable
   first-bundle command ids for GUI run buttons and indexed labels/ids for additional
   threshold-failure bundles shown to GUI/MCP consumers.

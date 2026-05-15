@@ -199,6 +199,8 @@ reopen.
       Maintenance: the DevTools GUI selected-summary inspector can now launch bundle-local
       runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
       `trace`) through the shared diagnostics engine and records in-flight/error status in the GUI.
+      Maintenance: trace follow-up results now project `trace.chrome.json` through
+      `output_artifacts`, and the selected-result summary/details show that artifact path directly.
       Maintenance: each GUI-launched follow-up now writes a lightweight
       `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
       Maintenance: the selected-summary inspector mirrors that latest selected-bundle follow-up

@@ -109,6 +109,10 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   compare commands remain manual until the user supplies a baseline.
 - Each GUI-launched follow-up now writes a result JSON under `.fret/diag/followups/` and exposes the
   latest result path for copying, so the GUI path leaves a lightweight evidence artifact.
+- Trace follow-up result JSON now includes an `output_artifacts` entry for
+  `trace.chrome.json`; the summary and details blocks render that artifact path directly, so a
+  successful trace run leaves a clickable/copyable evidence trail instead of only a pass/fail
+  status.
 - The selected-summary inspector also mirrors the latest selected-bundle follow-up result JSON
   inline, making pass/fail/error/timing metadata visible without leaving the DevTools surface.
 - The same inspector projects that selected-bundle follow-up result into a structured summary above

@@ -81,6 +81,9 @@ schema:
   - Regression selected-bundle follow-ups surface this as a runnable `trace` command with direct
     `diag_args=["trace", <bundle_dir>, "--json"]`; indexed bundle dirs use `trace-2`, `trace-3`,
     and so on.
+  - DevTools follow-up result records expose the generated trace as
+    `output_artifacts[].kind="trace.chrome.json"` plus `output_artifacts[].path`, and normalize the
+    stored path to `/` separators for stable GUI/MCP evidence.
 
 Supported real-span extension payload:
 
@@ -138,7 +141,7 @@ Evidence anchors:
 - Regression follow-up trace action gate:
   `cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast`
 - DevTools GUI/MCP trace projection gate:
-  `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args --no-fail-fast`
+  `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts --no-fail-fast`
   and `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - Runtime extension writer focused gate:
   `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`

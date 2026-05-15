@@ -439,7 +439,7 @@
     },
     {
       "name": "imui-p2-devtools-runnable-followup-actions",
-      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast"
+      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast"
     },
     {
       "name": "imui-p2-devtools-mcp-followup-actions",
