@@ -66,10 +66,15 @@
     `bundle_artifact` fields and threshold failure `evidence_bundle` paths, so DevTools can offer
     concrete stats/triage/hotspots follow-up commands for perf-threshold failures without a fresh
     run.
+  - Follow-up command projection now covers every selected bundle root instead of silently
+    collapsing to the first one; the first bundle keeps the stable command ids used by GUI run
+    buttons, and additional bundles get indexed labels/ids for display and MCP consumers.
   - Gate:
-    `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
+    `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
   - GUI bridge gate:
     `cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast`
+  - MCP bridge gate:
+    `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
   - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
 - [x] Ensure additive-only changes unless a migration plan is documented.
