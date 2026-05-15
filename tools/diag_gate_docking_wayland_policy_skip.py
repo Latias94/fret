@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 import subprocess
@@ -16,6 +17,42 @@ from typing import Any
 GATE_NAME = "diag-gate-docking-wayland-policy-skip"
 CAMPAIGN_ID = "imui-p3-wayland-real-host"
 OUT_ROOT = Path("target/fret-diag/docking-multiwindow-imgui-parity/wayland-policy-skip-local")
+
+
+@dataclass(frozen=True)
+class ProbeCase:
+    name: str
+    platform: str
+    ui: dict[str, Any]
+    reason_code: str
+
+
+PROBE_CASES = [
+    ProbeCase(
+        name="windows-platform-mismatch",
+        platform="windows",
+        ui={
+            "multi_window": True,
+            "window_tear_off": True,
+            "window_hover_detection": "platform_win32",
+            "window_set_outer_position": "best_effort",
+            "window_z_level": "reliable",
+        },
+        reason_code="environment.platform_capabilities.platform_ne",
+    ),
+    ProbeCase(
+        name="linux-x11-tear-off-mismatch",
+        platform="linux",
+        ui={
+            "multi_window": True,
+            "window_tear_off": True,
+            "window_hover_detection": "best_effort",
+            "window_set_outer_position": "best_effort",
+            "window_z_level": "best_effort",
+        },
+        reason_code="environment.platform_capabilities.ui_window_tear_off_ne",
+    ),
+]
 
 
 def _repo_root() -> Path:
@@ -43,8 +80,8 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _prepare_probe_dir(repo_root: Path) -> Path:
-    out_dir = repo_root / OUT_ROOT / str(int(time.time() * 1000))
+def _prepare_probe_dir(repo_root: Path, probe: ProbeCase) -> Path:
+    out_dir = repo_root / OUT_ROOT / f"{int(time.time() * 1000)}-{probe.name}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     _write_json(
@@ -75,14 +112,8 @@ def _prepare_probe_dir(repo_root: Path) -> Path:
         {
             "schema_version": 1,
             "source_id": "platform.capabilities",
-            "platform": "windows",
-            "ui": {
-                "multi_window": True,
-                "window_tear_off": True,
-                "window_hover_detection": "platform_win32",
-                "window_set_outer_position": "best_effort",
-                "window_z_level": "reliable",
-            },
+            "platform": probe.platform,
+            "ui": probe.ui,
         },
     )
     return out_dir
@@ -145,7 +176,7 @@ def _path_from_json(value: Any, *, field: str) -> Path:
     return Path(value)
 
 
-def _validate_check_environment(path: Path) -> None:
+def _validate_check_environment(path: Path, probe: ProbeCase) -> None:
     check = _read_json(path)
     _expect(check.get("schema_version") == 1, "check.environment.json schema_version drifted")
     _expect(check.get("status") == "failed", "check.environment.json must be failed")
@@ -159,21 +190,16 @@ def _validate_check_environment(path: Path) -> None:
     _expect(isinstance(result, dict), "environment result must be an object")
     _expect(result.get("satisfied") is False, "environment result must be unsatisfied")
     _expect(
-        result.get("reason_code") == "environment.platform_capabilities.platform_ne",
-        "expected platform mismatch reason_code",
+        result.get("reason_code") == probe.reason_code,
+        f"expected {probe.name} reason_code {probe.reason_code}",
     )
     observed = result.get("observed")
     _expect(isinstance(observed, dict), "environment result missing observed payload")
-    _expect(observed.get("platform") == "windows", "probe platform must remain windows")
+    _expect(observed.get("platform") == probe.platform, f"{probe.name} platform drifted")
     ui = observed.get("ui")
     _expect(isinstance(ui, dict), "environment result missing observed ui payload")
-    _expect(ui.get("multi_window") is True, "probe must keep ui.multi_window=true")
-    _expect(ui.get("window_tear_off") is True, "probe must simulate tear-off-capable host")
-    _expect(
-        ui.get("window_hover_detection") == "platform_win32",
-        "probe must simulate non-Wayland hover detection",
-    )
-    _expect(ui.get("window_z_level") == "reliable", "probe must simulate reliable z-level")
+    for key, expected in probe.ui.items():
+        _expect(ui.get(key) == expected, f"{probe.name} ui.{key} drifted")
 
 
 def _validate_no_script_files(run_dir: Path) -> None:
@@ -185,7 +211,7 @@ def _validate_no_script_files(run_dir: Path) -> None:
         _expect(not files, f"admission skip should not execute item files under {subdir}")
 
 
-def _validate_report(report: dict[str, Any]) -> Path:
+def _validate_report(report: dict[str, Any], probe: ProbeCase) -> Path:
     counters = report.get("counters")
     _expect(isinstance(counters, dict), "missing campaign counters")
     _expect(counters.get("campaigns_total") == 1, "expected one selected campaign")
@@ -218,7 +244,7 @@ def _validate_report(report: dict[str, Any]) -> Path:
         run.get("environment_check_path"), field="environment_check_path"
     )
     _expect(environment_check_path.is_file(), f"missing {environment_check_path}")
-    _validate_check_environment(environment_check_path)
+    _validate_check_environment(environment_check_path, probe)
 
     run_dir = _path_from_json(run.get("out_dir"), field="out_dir")
     _expect(run_dir.is_dir(), f"missing campaign out_dir {run_dir}")
@@ -249,28 +275,30 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     repo_root = _repo_root()
-    out_dir = _prepare_probe_dir(repo_root)
-    proc = subprocess.run(
-        _campaign_argv(repo_root, out_dir, reuse_built=args.reuse_built),
-        cwd=str(repo_root),
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-
-    if proc.returncode == 0:
-        sys.stdout.write(proc.stdout)
-        sys.stderr.write(proc.stderr)
-        raise SystemExit(
-            f"[{GATE_NAME}] expected non-zero campaign command exit code for policy skip, got 0"
+    for probe in PROBE_CASES:
+        out_dir = _prepare_probe_dir(repo_root, probe)
+        proc = subprocess.run(
+            _campaign_argv(repo_root, out_dir, reuse_built=args.reuse_built),
+            cwd=str(repo_root),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
         )
 
-    report = _extract_json_object(proc.stdout)
-    check_path = _validate_report(report)
+        if proc.returncode == 0:
+            sys.stdout.write(proc.stdout)
+            sys.stderr.write(proc.stderr)
+            raise SystemExit(
+                f"[{GATE_NAME}] expected non-zero campaign command exit code for policy skip, got 0"
+            )
+
+        report = _extract_json_object(proc.stdout)
+        check_path = _validate_report(report, probe)
+        print(f"[{GATE_NAME}] {probe.name} ok")
+        print(f"[{GATE_NAME}] {probe.name} policy_skip_check={check_path}")
     print(f"[{GATE_NAME}] ok")
-    print(f"[{GATE_NAME}] policy_skip_check={check_path}")
     return 0
 
 

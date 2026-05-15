@@ -338,6 +338,13 @@ Each TODO is labeled:
         `platform.capabilities` sidecar, and requires `skipped_policy`,
         `environment.requirement_unsatisfied`, `environment.platform_capabilities.platform_ne`,
         and no script item files under `script-results/` or `suite-results/`.
+    - [x] Local Wayland policy-skip matrix now covers both platform and Linux/X11 capability mismatch:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
+      - `tools/diag_gate_docking_wayland_policy_skip.py`
+      - The gate now exercises a Windows sidecar that fails on
+        `environment.platform_capabilities.platform_ne` and a Linux/X11-style sidecar that fails on
+        `environment.platform_capabilities.ui_window_tear_off_ne`, while still requiring
+        `skipped_policy` before any script item files are produced.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

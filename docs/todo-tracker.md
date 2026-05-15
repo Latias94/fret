@@ -1349,8 +1349,8 @@ It complements (but does not replace) ADRs:
   and the 2026-05-15 source-drift guard follow-up in
   `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
   now also guards the Wayland campaign/script admission contract
-  and `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
-  proves local non-Wayland sidecars stop at `skipped_policy` before script execution
+  and `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
+  proves local Windows and Linux/X11 sidecars stop at `skipped_policy` before script execution
   and the launched bounded-campaign repair is recorded in
   `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`;
   platform-specific real-host acceptance remains open.
@@ -1738,7 +1738,7 @@ It complements (but does not replace) ADRs:
     - Latest local Wayland-boundary refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
     - Latest source-drift guard: `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
       (2026-05-15 follow-up guards Wayland campaign/script admission)
-    - Latest local Wayland policy-skip gate: `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+    - Latest local Wayland policy-skip matrix: `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
     - Launched bounded-campaign repair: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
     - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`

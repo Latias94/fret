@@ -1700,6 +1700,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -1712,8 +1713,8 @@ Current source of truth for the in-tree immediate-mode stack:
     2026-05-14, the local Wayland-boundary refresh is green for source policy, capability posture,
     fallback behavior, and campaign manifests. As of 2026-05-15, the source-drift guard validates
     docking suite membership, stale standalone-note drift, and the Wayland campaign/script
-    admission contract. The latest local policy-skip gate now proves a non-Wayland
-    `platform.capabilities` sidecar stops at `skipped_policy` before script execution.
+    admission contract. The latest local policy-skip matrix now proves Windows and Linux/X11
+    `platform.capabilities` sidecars stop at `skipped_policy` before script execution.
     Platform-specific real-host acceptance, especially the Wayland compositor runbook, remains open.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
@@ -1938,7 +1939,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-15, 20 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-16, 21 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
