@@ -19,6 +19,7 @@ LABEL_AFTER_TOGGLE = "todo-after-toggle-done"
 LABEL_AFTER_REMOVE = "todo-after-remove"
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+DEVTOOLS_WORKSTREAM_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
@@ -32,6 +33,11 @@ BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
 )
 DEVTOOLS_REPRO_CONTRACT_SOURCE = "crates/fret-diag/src/cli/contracts/commands/repro.rs"
 DEVTOOLS_CUTOVER_SOURCE = "crates/fret-diag/src/cli/cutover.rs"
+BUNDLE_VIEWER_README = "tools/fret-bundle-viewer/README.md"
+BUNDLE_VIEWER_PARSER_SOURCE = "tools/fret-bundle-viewer/lib/parser.ts"
+BUNDLE_VIEWER_ZIP_SOURCE = "tools/fret-bundle-viewer/lib/zip.ts"
+FRET_UI_README = "crates/fret-ui/README.md"
+FRET_UI_SOURCE_DIR = "crates/fret-ui/src"
 MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -213,6 +219,15 @@ def _find_bundle_dir(session_root: Path, label: str) -> Path:
 def _assert_text_contains(name: str, text: str, marker: str) -> None:
     if marker not in text:
         raise SystemExit(f"Step failed: {name} (missing marker: {marker})")
+
+
+def _read_text_for_gate(name: str, path: Path, progress: ProgressRecorder | None = None) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as err:
+        if progress is not None:
+            progress.record("step.fail", name=name, path=str(path), error=str(err))
+        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
 
 
 def _validate_tool_app_discovery(
@@ -735,6 +750,137 @@ def _validate_devtools_mcp_ai_scenario_doc(
         )
 
 
+def _validate_devtools_cross_cutting_hygiene(
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
+    name = "devtools cross-cutting hygiene"
+    print(f"[diag-gate-imui-p2-devtools] {name}")
+    doc_path = cwd / DEVTOOLS_WORKSTREAM_DOC
+    viewer_readme_path = cwd / BUNDLE_VIEWER_README
+    viewer_parser_path = cwd / BUNDLE_VIEWER_PARSER_SOURCE
+    viewer_zip_path = cwd / BUNDLE_VIEWER_ZIP_SOURCE
+    fret_ui_readme_path = cwd / FRET_UI_README
+    fret_ui_source_dir = cwd / FRET_UI_SOURCE_DIR
+    devtools_source_path = cwd / DEVTOOLS_GUI_SOURCE
+    if progress is not None:
+        progress.record(
+            "step.start",
+            name=name,
+            doc_path=str(doc_path),
+            viewer_readme_path=str(viewer_readme_path),
+            viewer_parser_path=str(viewer_parser_path),
+            viewer_zip_path=str(viewer_zip_path),
+            fret_ui_readme_path=str(fret_ui_readme_path),
+            fret_ui_source_dir=str(fret_ui_source_dir),
+            devtools_source_path=str(devtools_source_path),
+        )
+
+    doc_source = _read_text_for_gate(name, doc_path, progress)
+    viewer_readme = _read_text_for_gate(name, viewer_readme_path, progress)
+    viewer_parser = _read_text_for_gate(name, viewer_parser_path, progress)
+    viewer_zip = _read_text_for_gate(name, viewer_zip_path, progress)
+    fret_ui_readme = _read_text_for_gate(name, fret_ui_readme_path, progress)
+    devtools_source = _read_text_for_gate(name, devtools_source_path, progress)
+
+    for marker in (
+        "unknown fields must be ignored by default (forward compatibility).",
+        "The GUI should treat `test_id` as the primary",
+        "stable handle",
+        "at recipe/component authoring time (`ecosystem/*`) when selectors are unstable.",
+        "without moving gate policy into `fret-ui`",
+    ):
+        _assert_text_contains(name, doc_source, marker)
+
+    for marker in (
+        "best-effort / forward-compatible (unknown fields are ignored)",
+        "`bundle.json`",
+        "`bundle.zip`",
+    ):
+        _assert_text_contains(name, viewer_readme, marker)
+
+    for marker in (
+        "// Zod schemas for best-effort parsing",
+        "const root = parsed as Record<string, unknown>",
+        "const schemaVersion = typeof root.schema_version === 'number'",
+        "const windowsRaw = root.windows ?? root.window_list ?? root.windowList",
+        "else if (root.snapshots || root.frames || root.history)",
+        "else if (root.window_id || root.windowId || root.semantics)",
+        "warnings.push({ key: 'warn.cannotFindWindowsOrSnapshots' })",
+    ):
+        _assert_text_contains(name, viewer_parser, marker)
+    if ".strict()" in viewer_parser:
+        raise SystemExit(
+            "Step failed: devtools cross-cutting hygiene "
+            "(bundle parser must not use strict zod schemas)"
+        )
+
+    for marker in (
+        "lower.endsWith('bundle.schema2.json') || lower.endsWith('bundle.json')",
+        "export async function extractBundleAndArtifactsFromZipFile",
+        "const artifacts = pickArtifacts(entries, bundlePathInZip)",
+        "const screenshots = pickScreenshots(entries, bundlePathInZip)",
+    ):
+        _assert_text_contains(name, viewer_zip, marker)
+
+    for marker in (
+        "`fret-ui` is the UI runtime contract layer",
+        "policy-heavy component library",
+        "belong in the ecosystem layer (`fret-ui-kit`, `fret-ui-shadcn`) rather than here",
+    ):
+        _assert_text_contains(name, fret_ui_readme, marker)
+    if not fret_ui_source_dir.is_dir():
+        raise SystemExit(f"Step failed: {name} (missing source dir: {fret_ui_source_dir})")
+    devtools_markers = (
+        "DevTools",
+        "devtools",
+        "fret_devtools",
+        "bundle viewer",
+        "diag gate",
+        "pick-to-fill",
+        "script authoring",
+    )
+    offenders: list[str] = []
+    for path in fret_ui_source_dir.rglob("*.rs"):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as err:
+            raise SystemExit(f"Step failed: {name} (failed to decode {path}: {err})") from err
+        for marker in devtools_markers:
+            if marker in text:
+                offenders.append(f"{path.relative_to(cwd)}:{marker}")
+                break
+    if offenders:
+        joined = ", ".join(offenders[:8])
+        suffix = "" if len(offenders) <= 8 else f", ... +{len(offenders) - 8} more"
+        raise SystemExit(
+            "Step failed: devtools cross-cutting hygiene "
+            f"(DevTools policy markers found in fret-ui source: {joined}{suffix})"
+        )
+
+    for marker in (
+        "let script_selector_kind = app.models_mut().insert(Some(Arc::<str>::from(\"test_id\")))",
+        "shadcn::SelectItem::new(\"test_id\", \"test_id\")",
+        ".unwrap_or_else(|| Arc::<str>::from(\"test_id\"))",
+        "preferred selector: {\\\"kind\\\":\\\"test_id\\\",\\\"id\\\":\\\"ui-gallery-nav-button\\\"}",
+        ".test_id(\"devtools.gate.test_id\")",
+    ):
+        _assert_text_contains(name, devtools_source, marker)
+
+    if progress is not None:
+        progress.record(
+            "step.pass",
+            name=name,
+            doc_path=str(doc_path),
+            viewer_readme_path=str(viewer_readme_path),
+            viewer_parser_path=str(viewer_parser_path),
+            viewer_zip_path=str(viewer_zip_path),
+            fret_ui_readme_path=str(fret_ui_readme_path),
+            devtools_source_path=str(devtools_source_path),
+        )
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="target/imui-p2-devtools-first-open-smoke")
@@ -792,6 +938,7 @@ def main(argv: list[str]) -> int:
     _validate_devtools_gui_first_open_source(cwd=repo_root, progress=progress)
     _validate_first_open_docs(cwd=repo_root, progress=progress)
     _validate_devtools_mcp_ai_scenario_doc(cwd=repo_root, progress=progress)
+    _validate_devtools_cross_cutting_hygiene(cwd=repo_root, progress=progress)
     if args.discovery_only:
         progress.record("gate.pass", mode="discovery")
         print("[diag-gate-imui-p2-devtools] discovery done")

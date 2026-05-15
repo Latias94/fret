@@ -210,6 +210,16 @@ Conventions:
 
 ## Cross-cutting hygiene
 
-- [ ] Keep `bundle.json` forward-compatible (unknown fields ignored by viewer).
-- [ ] Keep `fret-ui` policy-free; DevTools policy stays in `ecosystem/*` and apps/tooling.
-- [ ] Prefer authoring `test_id` in recipes to make scripts stable.
+- [x] Keep `bundle.json` forward-compatible (unknown fields ignored by viewer).
+      Evidence: `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
+      now runs the `devtools cross-cutting hygiene` check, which validates the DevTools protocol
+      forward-compatibility doc, the bundle viewer best-effort parser/zip input path, and the
+      viewer README forward-compatibility note.
+- [x] Keep `fret-ui` policy-free; DevTools policy stays in `ecosystem/*` and apps/tooling.
+      Evidence: the same `devtools cross-cutting hygiene` check validates the `fret-ui` README
+      mechanism-layer boundary and fails if DevTools-specific policy markers appear in
+      `crates/fret-ui/src`.
+- [x] Prefer authoring `test_id` in recipes to make scripts stable.
+      Evidence: the same gate validates the DevTools authoring-loop guidance, the GUI default
+      selector kind, the `test_id` selector option, the UI-gallery preferred selector, and the
+      gated `devtools.gate.test_id` input.

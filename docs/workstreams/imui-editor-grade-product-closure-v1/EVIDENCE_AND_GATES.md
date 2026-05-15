@@ -1399,3 +1399,33 @@ python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-b
 
 Result: passed. The gate reported the new `devtools mcp ai scenario doc` step and completed the
 first-open discovery check successfully.
+
+## DevTools cross-cutting hygiene closure - 2026-05-15 follow-up
+
+Scope: close the DevTools hygiene checklist items that protect architecture boundaries rather than
+add new GUI scope.
+
+- `tools/diag_gate_imui_p2_devtools_first_open.py` now runs a `devtools cross-cutting hygiene`
+  discovery check.
+- The check validates `bundle.json` forward compatibility from both sides of the contract:
+  `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md` requires unknown fields to be
+  ignored, while `tools/fret-bundle-viewer/README.md`,
+  `tools/fret-bundle-viewer/lib/parser.ts`, and `tools/fret-bundle-viewer/lib/zip.ts` keep the
+  offline viewer on best-effort parsing and `bundle.json` / `bundle.schema2.json` / zip inputs.
+- The check validates the policy boundary: `crates/fret-ui/README.md` remains the mechanism-layer
+  contract, and the gate fails if DevTools-specific policy markers are added under
+  `crates/fret-ui/src`.
+- The check validates stable selector guidance: the DevTools workstream doc, GUI default selector
+  state, `test_id` selector option, UI-gallery preferred selector, and `devtools.gate.test_id`
+  input all stay aligned.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` now marks the three
+  cross-cutting hygiene items complete with this gate as evidence.
+
+Focused gate:
+
+```text
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed. This closes the hygiene checklist only; broader DevTools GUI product maturity,
+real-host Wayland acceptance, and full perf/smoothness attribution remain outside this slice.
