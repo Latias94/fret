@@ -74,4 +74,11 @@
       phase names:
       prepare, render, record, present, and nested render scene.
       - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
-    - `crates/fret-render-*` (prepare/record/submit/present boundaries)
+    - [x] Align WGPU renderer frame-level timers with `fret_perf::measure_span`:
+      text prepare, SVG prepare, scene encode, and upload now share stats/span boundaries.
+      - Evidence:
+        `crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs`,
+        `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`,
+        `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs`
+      - Remaining: per-family encode profiling, text glyph phase profiling, and SVG raster
+        internal timers stay local opt-in/debug timers until a repro needs span-level events.

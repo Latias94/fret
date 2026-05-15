@@ -90,6 +90,14 @@
       "command": "cargo check -p fret-launch --target wasm32-unknown-unknown"
     },
     {
+      "name": "fret-render-wgpu-frame-phase-tests",
+      "command": "cargo nextest run -p fret-render-wgpu drains_pending_render_target_perf_counters_into_frame_perf record_scene_encoding_cache_frame_result_updates_perf_counters requested_and_emitted_custom_effect_counters_track_all_versions degradation_counters_track_reason_and_kind_totals --no-fail-fast"
+    },
+    {
+      "name": "fret-render-wgpu-clippy",
+      "command": "cargo clippy -p fret-render-wgpu --all-targets -- -D warnings"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
@@ -114,6 +122,9 @@
     "crates/fret-ui/src/tree/dispatch/window.rs",
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-render-wgpu/src/renderer",
+    "crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs",
+    "crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs",
+    "crates/fret-render-wgpu/src/renderer/render_scene/execute.rs",
     "crates/fret-diag/src/trace.rs",
     "crates/fret-diag/src/diag_perf/thresholds.rs",
     "crates/fret-diag/src/diag_repro/launch.rs",

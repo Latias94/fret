@@ -1,5 +1,4 @@
 use super::super::*;
-use fret_core::time::Instant;
 
 impl Renderer {
     pub(super) fn build_scene_encoding_cache_key(
@@ -61,27 +60,25 @@ impl Renderer {
         let encode_family_profile_enabled = perf_enabled
             && std::env::var_os("FRET_DIAG_RENDERER_ENCODE_FAMILY_PROFILE")
                 .is_some_and(|value| !value.is_empty());
-        let encode_start = perf_enabled.then(Instant::now);
-        {
-            let encode_span = if trace_enabled {
-                tracing::trace_span!("fret.renderer.scene.encode", frame_index)
-            } else {
-                tracing::Span::none()
-            };
-            let _guard = encode_span.enter();
-            self.encode_scene_ops_into(
-                scene,
-                scale_factor,
-                viewport_size,
-                format_is_srgb,
-                &mut encoding,
-                perf_enabled,
-                encode_family_profile_enabled,
-                frame_perf,
-            );
-        }
-        if let Some(encode_start) = encode_start {
-            frame_perf.encode_scene += encode_start.elapsed();
+        let (_, encode_elapsed) = fret_perf::measure_span(
+            perf_enabled,
+            trace_enabled,
+            || tracing::trace_span!("fret.renderer.scene.encode", frame_index),
+            || {
+                self.encode_scene_ops_into(
+                    scene,
+                    scale_factor,
+                    viewport_size,
+                    format_is_srgb,
+                    &mut encoding,
+                    perf_enabled,
+                    encode_family_profile_enabled,
+                    frame_perf,
+                );
+            },
+        );
+        if let Some(encode_elapsed) = encode_elapsed {
+            frame_perf.encode_scene += encode_elapsed;
         }
 
         self.scene_encoding_state.note_miss(key);
