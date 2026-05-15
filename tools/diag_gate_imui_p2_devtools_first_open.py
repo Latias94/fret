@@ -21,8 +21,13 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
+DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
+BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs"
+)
 DEVTOOLS_REPRO_CONTRACT_SOURCE = "crates/fret-diag/src/cli/contracts/commands/repro.rs"
 DEVTOOLS_CUTOVER_SOURCE = "crates/fret-diag/src/cli/cutover.rs"
 MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
@@ -301,8 +306,11 @@ def _validate_devtools_gui_first_open_source(
     name = "fret-devtools gui first-open source"
     print(f"[diag-gate-imui-p2-devtools] {name}")
     path = cwd / DEVTOOLS_GUI_SOURCE
+    ws_path = cwd / DEVTOOLS_GUI_WS_SOURCE
     gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
     gate_profile_path = cwd / DEVTOOLS_GATE_PROFILE_SOURCE
+    protocol_path = cwd / DEVTOOLS_PROTOCOL_SOURCE
+    bootstrap_ws_path = cwd / BOOTSTRAP_DEVTOOLS_WS_SOURCE
     repro_contract_path = cwd / DEVTOOLS_REPRO_CONTRACT_SOURCE
     cutover_path = cwd / DEVTOOLS_CUTOVER_SOURCE
     if progress is not None:
@@ -310,22 +318,38 @@ def _validate_devtools_gui_first_open_source(
             "step.start",
             name=name,
             path=str(path),
+            ws_path=str(ws_path),
             gate_run_path=str(gate_run_path),
             gate_profile_path=str(gate_profile_path),
+            protocol_path=str(protocol_path),
+            bootstrap_ws_path=str(bootstrap_ws_path),
             repro_contract_path=str(repro_contract_path),
             cutover_path=str(cutover_path),
         )
     try:
         source = path.read_text(encoding="utf-8")
+        ws_source = ws_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
+        protocol_source = protocol_path.read_text(encoding="utf-8")
+        bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
         repro_contract_source = repro_contract_path.read_text(encoding="utf-8")
         cutover_source = cutover_path.read_text(encoding="utf-8")
     except OSError as err:
         if progress is not None:
             progress.record("step.fail", name=name, error=str(err))
         raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
-    source = "\n".join([source, gate_run_source, repro_contract_source, cutover_source])
+    source = "\n".join(
+        [
+            source,
+            ws_source,
+            gate_run_source,
+            protocol_source,
+            bootstrap_ws_source,
+            repro_contract_source,
+            cutover_source,
+        ]
+    )
 
     for marker in (
         f'const DEVTOOLS_FIRST_OPEN_DOC: &str = "{FIRST_OPEN_DOC}"',
@@ -350,6 +374,12 @@ def _validate_devtools_gui_first_open_source(
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
+        "UiInspectHoverV1",
+        "UiInspectFocusV1",
+        "UiInspectOverlayHookV1",
+        "UiInspectNodeSummaryV1",
+        "UiOverlayRootHintV1",
+        "UiOverlaySummaryV1",
         "devtools_gate_profile_lines",
         "devtools_gate_profiles_v1",
         "devtools_gate_perf_threshold_command",
@@ -365,6 +395,24 @@ def _validate_devtools_gui_first_open_source(
         "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
         "Gate Commands",
         "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
+        "Live Inspect Hover Bounds",
+        "Structured hovered-node bounds projected from inspect.hover.",
+        "Live Inspect Overlay Hooks",
+        "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
+        "Raw Inspect Payloads",
+        "devtools.inspect.hover_bounds",
+        "devtools.inspect.overlay_hooks",
+        "devtools.inspect.raw_payloads",
+        "last_overlay_summary_json",
+        '"overlay.summary"',
+        "inspect_hover_bounds_lines(",
+        "inspect_overlay_hook_lines(",
+        "ws_publish_live_inspect_payloads(",
+        "ws_send_live_payload_if_changed(",
+        "inspect_node_summary_v1(",
+        "overlay_summary_v1(",
+        "hovered-node-bounds",
+        "focused-node-bounds",
         "devtools_first_open_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
@@ -513,8 +561,11 @@ def _validate_devtools_gui_first_open_source(
             "step.pass",
             name=name,
             path=str(path),
+            ws_path=str(ws_path),
             gate_run_path=str(gate_run_path),
             gate_profile_path=str(gate_profile_path),
+            protocol_path=str(protocol_path),
+            bootstrap_ws_path=str(bootstrap_ws_path),
         )
 
 
