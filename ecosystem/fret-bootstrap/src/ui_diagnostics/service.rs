@@ -433,6 +433,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::WheelBurst { target, .. }
             | UiActionStepV2::ClickStable { target, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { target, .. }
+            | UiActionStepV2::SavePointerPoint { target, .. }
             | UiActionStepV2::WaitBoundsStable { target, .. }
             | UiActionStepV2::WaitSemanticsScrollStable { target, .. }
             | UiActionStepV2::AssertSemanticsScrollIdleStable { target, .. }
@@ -1753,6 +1754,7 @@ mod service_tests {
             ime_event_trace: Vec::new(),
             last_explicit_cursor_override: None,
             last_explicit_cursor_override_pos: None,
+            saved_pointer_points: HashMap::new(),
         }
     }
 

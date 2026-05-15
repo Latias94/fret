@@ -322,6 +322,16 @@ Current runtime evidence:
   - result:
     passed; no core hit-test or ContextMenu recipe defect reproduced. The fixed defect was runtime
     coverage weakness: branch/corridor behavior was only indirectly covered by placement traces.
+  - current selector-fix rerun:
+    `target/fret-diag-context-menu-submenu-overlay-content-id-fix-v1/sessions/1778820109246-70216`
+  - selector proof:
+    the page/snippet container id `ui-gallery-context-menu-submenu-content` and the mounted overlay
+    panel id `ui-gallery-context-menu-submenu-overlay-content` each resolve to exactly one node in
+    `1778820148136-ui-gallery-context-menu-submenu-branch-corridor-routing.layout/bundle.schema2.json`.
+  - overlay/focus suite proof after the selector fix:
+    `target/fret-diag-overlay-focus-suite-after-context-menu-selector-fix-v1/sessions/1778820202372-67920/suite.summary.json`
+    has `status=passed`, `stage_counts.passed=8`, and zero ContextMenu branch/corridor lint
+    findings.
 - Context-menu pointer occlusion wheel pass-through:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
   - asserts `ui-gallery-content-viewport.scroll.y_max != 0` and `scroll.y == 0` before the wheel,
@@ -739,7 +749,18 @@ Suite membership:
 - `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+- `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`
+- `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`
 - `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+
+Current evidence:
+
+- `target/fret-diag-overlay-focus-suite-after-context-menu-selector-fix-v1/sessions/1778820202372-67920/suite.summary.json`
+  - `status=passed`
+  - `stage_counts.passed=8`
+  - `reason_code_counts={}`
+  - generated lint reports have zero errors and zero warnings for the promoted ContextMenu and
+    DropdownMenu additions.
 
 Fast local rerun after the release binary already exists:
 
@@ -900,7 +921,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`,
-  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`,
+  `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`
 - Combobox popup-trigger placement gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json`
   - asserts collision flip to top, `side_offset_px=6`, visible and stable trigger/content-shell
@@ -1486,6 +1509,27 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/1778583599421-ui-gallery-menubar-rtl-submenu-tight-left-collision.layout/layout.taffy.v1.json`
   - Screenshot:
     `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/screenshots/1778583599456-ui-gallery-menubar-rtl-submenu-tight-left-collision/window-4294967297-tick-40-frame-40.png`
+- DropdownMenu disabled-but-focusable keyboard suppression gate:
+  `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`
+  - suite membership:
+    `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+  - focused shadcn gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_disabled_focusable -- --nocapture`
+  - focused shadcn result:
+    passed, 2 tests.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-dropdown-menu-focusable-disabled-v3 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778816892364`.
+  - runtime evidence:
+    `target/fret-diag-dropdown-menu-focusable-disabled-v3/sessions/1778816884031-66372/script.result.json`
+  - focused bundle:
+    `target/fret-diag-dropdown-menu-focusable-disabled-v3/sessions/1778816884031-66372/1778816944901-ui-gallery-dropdown-menu-focusable-disabled-focused`
+  - final suppression bundle:
+    `target/fret-diag-dropdown-menu-focusable-disabled-v3/sessions/1778816884031-66372/1778816947251-ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression`
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py` passed after promotion into the overlay/focus
+    suite.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

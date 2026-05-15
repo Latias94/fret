@@ -64,8 +64,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .into(),
                     shadcn::DropdownMenuSeparator::new().into(),
                     shadcn::DropdownMenuItem::new("GitHub").into(),
-                    shadcn::DropdownMenuItem::new("Support").into(),
-                    shadcn::DropdownMenuItem::new("API").disabled(true).into(),
+                    shadcn::DropdownMenuItem::new("Support")
+                        .test_id("ui-gallery-dropdown-menu-demo-support")
+                        .into(),
+                    shadcn::DropdownMenuItem::new("API")
+                        .disabled(true)
+                        .focusable_when_disabled(true)
+                        .test_id("ui-gallery-dropdown-menu-demo-api")
+                        .into(),
                     shadcn::DropdownMenuSeparator::new().into(),
                     shadcn::DropdownMenuItem::new("Log out")
                         .shortcut("⇧⌘Q")

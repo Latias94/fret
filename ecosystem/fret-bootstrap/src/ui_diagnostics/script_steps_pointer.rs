@@ -247,6 +247,379 @@ pub(super) fn handle_click_step(
     false
 }
 
+pub(super) fn handle_save_pointer_point_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    window_bounds: Rect,
+    anchor_window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::SavePointerPoint {
+        window: target_window,
+        name,
+        target,
+    } = step
+    else {
+        return false;
+    };
+
+    if let Some(target_window) =
+        svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
+    {
+        if target_window != window {
+            *handoff_to = Some(target_window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(target_window));
+            output.request_redraw = true;
+        }
+    } else if target_window.is_some() {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-save_pointer_point-window-not-found"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("window_target_unresolved".to_string());
+        output.request_redraw = true;
+    }
+    if *stop_script {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+    } else if handoff_to.is_some() {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+    } else {
+        let Some(snapshot) = semantics_snapshot else {
+            output.request_redraw = true;
+            let label = format!("script-step-{step_index:04}-save_pointer_point-no-semantics");
+            if svc.cfg.script_auto_dump {
+                svc.dump_bundle(Some(&label));
+            }
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_failed".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some("save_pointer_point_no_semantics_snapshot".to_string()),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            svc.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Failed,
+                step_index: Some(step_index as u32),
+                reason_code: Some("semantics.missing".to_string()),
+                reason: Some("save_pointer_point_no_semantics_snapshot".to_string()),
+                evidence: script_evidence_for_active(active),
+                last_bundle_dir: svc
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&svc.cfg.out_dir, p)),
+                last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+            });
+            return true;
+        };
+
+        let Some(node) = select_semantics_node_with_trace(
+            snapshot,
+            window,
+            element_runtime,
+            &target,
+            active.scope_root_for_window(window),
+            step_index as u32,
+            svc.cfg.redact_text,
+            &mut active.selector_resolution_trace,
+        ) else {
+            output.request_redraw = true;
+            let label =
+                format!("script-step-{step_index:04}-save_pointer_point-no-semantics-match");
+            if svc.cfg.script_auto_dump {
+                svc.dump_bundle(Some(&label));
+            }
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_failed".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some("save_pointer_point_no_semantics_match".to_string()),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            svc.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Failed,
+                step_index: Some(step_index as u32),
+                reason_code: Some("selector.not_found".to_string()),
+                reason: Some("save_pointer_point_no_semantics_match".to_string()),
+                evidence: script_evidence_for_active(active),
+                last_bundle_dir: svc
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&svc.cfg.out_dir, p)),
+                last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+            });
+            return true;
+        };
+
+        let mut pointer_trace_note = String::from("save_pointer_point");
+        let position = if let Some(ui_ref) = ui.as_deref() {
+            let resolution = pointer_target_resolution_prefer_intended_hit(
+                app,
+                snapshot,
+                element_runtime,
+                ui_ref,
+                window,
+                node,
+                window_bounds,
+            );
+            pointer_trace_note =
+                pointer_target_resolution_trace_note("save_pointer_point", resolution);
+            resolution.position
+        } else {
+            center_of_rect_clamped_to_rect(
+                interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                window_bounds,
+            )
+        };
+        if let Some(ui) = ui {
+            record_hit_test_trace_for_selector(
+                &mut active.hit_test_trace,
+                ui,
+                element_runtime,
+                window,
+                Some(snapshot),
+                &target,
+                step_index as u32,
+                position,
+                Some(node),
+                Some(pointer_trace_note.as_str()),
+                svc.cfg.max_debug_string_bytes,
+            );
+        }
+
+        let source_test_id = match &target {
+            UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+            _ => node.test_id.clone(),
+        };
+        active.saved_pointer_points.insert(
+            name.clone(),
+            SavedPointerPoint {
+                window,
+                position,
+                selector: target,
+                source_test_id,
+            },
+        );
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "saved_pointer_point".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some(format!(
+                    "name={name} window={} x={:.1} y={:.1}",
+                    window.data().as_ffi(),
+                    position.x.0,
+                    position.y.0
+                )),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+    }
+
+    false
+}
+
+pub(super) fn handle_click_saved_point_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    anchor_window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::ClickSavedPoint {
+        window: target_window,
+        name,
+        pointer_kind,
+        button,
+        click_count,
+        modifiers,
+    } = step
+    else {
+        return false;
+    };
+
+    let Some(saved) = active.saved_pointer_points.get(&name).cloned() else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-click_saved_point-missing-{name}");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some(format!("click_saved_point_missing name={name}")),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("saved_pointer_point.missing".to_string()),
+            reason: Some(format!("click_saved_point_missing name={name}")),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+
+    let requested_window = if let Some(target_window) = target_window.as_ref() {
+        svc.resolve_window_target_for_active_step(window, anchor_window, Some(target_window))
+    } else {
+        Some(saved.window)
+    };
+    let Some(target_window) = requested_window else {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-click_saved_point-window-not-found"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("window_target_unresolved".to_string());
+        output.request_redraw = true;
+        return false;
+    };
+    if target_window != saved.window {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-click_saved_point-window-mismatch"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("saved_pointer_point_window_mismatch".to_string());
+        output.request_redraw = true;
+        return false;
+    }
+    if target_window != window {
+        *handoff_to = Some(target_window);
+        output
+            .effects
+            .push(Effect::RequestAnimationFrame(target_window));
+        output.request_redraw = true;
+        return false;
+    }
+
+    if let Some(ui) = ui {
+        record_hit_test_trace_for_selector(
+            &mut active.hit_test_trace,
+            ui,
+            element_runtime,
+            window,
+            semantics_snapshot,
+            &saved.selector,
+            step_index as u32,
+            saved.position,
+            None,
+            Some("click_saved_point"),
+            svc.cfg.max_debug_string_bytes,
+        );
+    }
+    record_overlay_placement_trace(
+        &mut active.overlay_placement_trace,
+        element_runtime,
+        semantics_snapshot,
+        window,
+        step_index as u32,
+        "click_saved_point",
+    );
+
+    let modifiers = core_modifiers_from_ui(modifiers);
+    let pointer_type = pointer_type_from_kind(pointer_kind);
+    output.events.extend(click_events_with_modifiers(
+        saved.position,
+        button,
+        click_count,
+        modifiers,
+        pointer_type,
+    ));
+    let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+    active.last_injected_step = Some(injected_step_index);
+    active.last_injected_pointer_source_step = Some(injected_step_index);
+    active.last_injected_pointer_source_test_id = saved.source_test_id.clone();
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    active.next_step = active.next_step.saturating_add(1);
+    output.request_redraw = true;
+    if svc.cfg.script_auto_dump {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-click_saved_point"));
+    }
+
+    false
+}
+
 pub(super) fn handle_tap_step(
     svc: &mut UiDiagnosticsService,
     app: &App,

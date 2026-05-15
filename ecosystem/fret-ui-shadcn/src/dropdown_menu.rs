@@ -15,8 +15,8 @@ use fret_ui::action::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SemanticsDecoration, SemanticsProps, SizeStyle,
+    Overflow, PositionStyle, PressableKeyActivation, PressableProps, RingStyle, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsDecoration, SemanticsProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -518,6 +518,7 @@ pub struct DropdownMenuItem {
     pub padding: Option<Edges>,
     pub estimated_height: Option<Px>,
     pub disabled: bool,
+    pub focusable_when_disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub action_payload: Option<ActionPayloadFactory>,
@@ -545,6 +546,7 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("padding", &self.padding)
             .field("estimated_height", &self.estimated_height)
             .field("disabled", &self.disabled)
+            .field("focusable_when_disabled", &self.focusable_when_disabled)
             .field("close_on_select", &self.close_on_select)
             .field("command", &self.command)
             .field("action_payload", &self.action_payload.is_some())
@@ -575,6 +577,7 @@ impl DropdownMenuItem {
             padding: None,
             estimated_height: None,
             disabled: false,
+            focusable_when_disabled: false,
             close_on_select: true,
             command: None,
             action_payload: None,
@@ -639,6 +642,15 @@ impl DropdownMenuItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Keep a disabled item in roving/composite focus while suppressing activation.
+    ///
+    /// Radix/shadcn disabled menu items remain unfocusable by default. This explicit opt-in mirrors
+    /// Base UI's disabled-but-focusable composite item policy for examples that need that outcome.
+    pub fn focusable_when_disabled(mut self, focusable: bool) -> Self {
+        self.focusable_when_disabled = focusable;
         self
     }
 
@@ -1397,6 +1409,21 @@ fn focusable_item_count(entries: &[DropdownMenuEntry]) -> usize {
     out
 }
 
+fn dropdown_menu_item_roving_disabled(item: &DropdownMenuItem) -> bool {
+    item.disabled && !item.focusable_when_disabled
+}
+
+fn dropdown_menu_item_semantics_override(
+    disabled: bool,
+    focusable_when_disabled: bool,
+) -> Option<SemanticsDecoration> {
+    (disabled && focusable_when_disabled).then(|| {
+        SemanticsDecoration::default()
+            .disabled(true)
+            .invokable(false)
+    })
+}
+
 fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
     for entry in entries {
         match entry {
@@ -1444,7 +1471,7 @@ fn collect_roving_labels_and_disabled(
         match entry {
             DropdownMenuEntry::Item(item) => {
                 labels.push(item.label.clone());
-                disabled.push(item.disabled);
+                disabled.push(dropdown_menu_item_roving_disabled(item));
             }
             DropdownMenuEntry::CheckboxItem(item) => {
                 labels.push(item.label.clone());
@@ -1979,6 +2006,8 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                         &gating,
                         command.as_ref(),
                     );
+                let focusable_when_disabled = item.focusable_when_disabled;
+                let item_focusable = !disabled || focusable_when_disabled;
                 let leading = item.leading;
                 let leading_icon = item.leading_icon;
                 let shortcut = item.shortcut;
@@ -2007,14 +2036,16 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                 let item_style = style.clone();
 
                 rows.push(cx.keyed(value.clone(), move |cx| {
-                    cx.pressable_with_id_props(move |cx, st, item_id| {
-                        let is_open_submenu = if has_submenu {
-                            menu::sub::focus_first_available_on_open(
-                                cx,
-                                &current_models_for_item,
-                                item_id,
-                                disabled,
-                            );
+                    let semantics_override =
+                        dropdown_menu_item_semantics_override(disabled, focusable_when_disabled);
+                    let mut item_el = cx.pressable_with_id_props(move |cx, st, item_id| {
+                            let is_open_submenu = if has_submenu {
+                                menu::sub::focus_first_available_on_open(
+                                    cx,
+                                    &current_models_for_item,
+                                    item_id,
+                                    !item_focusable,
+                                );
                             let current_models_for_close =
                                 current_models_for_item.clone();
                             let child_models_for_close =
@@ -2121,7 +2152,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                             menu::sub_content::wire_item(
                                 cx,
                                 item_id,
-                                disabled,
+                                !item_focusable,
                                 &current_models_for_item,
                             );
                             false
@@ -2171,9 +2202,14 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                                 }
                                 layout
                             },
-                            enabled: !disabled,
-                            focusable: !disabled,
+                            enabled: item_focusable,
+                            focusable: item_focusable,
                             focus_ring: Some(item_style.ring),
+                            key_activation: if disabled && focusable_when_disabled {
+                                PressableKeyActivation::None
+                            } else {
+                                PressableKeyActivation::default()
+                            },
                             a11y: a11y.with_collection_position(
                                 collection_index,
                                 item_count,
@@ -2411,7 +2447,11 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                         }
 
                         (props, vec![chrome])
-                    })
+                    });
+                    if let Some(decoration) = semantics_override {
+                        item_el = item_el.attach_semantics(decoration);
+                    }
+                    item_el
                 }));
             }
         }
@@ -4497,6 +4537,10 @@ impl DropdownMenu {
                                                             .clone()
                                                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                         let disabled = item.disabled;
+                                                        let focusable_when_disabled =
+                                                            item.focusable_when_disabled;
+                                                        let item_focusable =
+                                                            !disabled || focusable_when_disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let action_payload = item.action_payload;
@@ -4542,7 +4586,12 @@ impl DropdownMenu {
                                                          out.push(cx.keyed(value.clone(), move |cx| {
                                                              let scroll_id = scroll_id_for_item;
                                                              let scroll_handle = scroll_handle_for_item.clone();
-                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                             let semantics_override =
+                                                                 dropdown_menu_item_semantics_override(
+                                                                     disabled,
+                                                                     focusable_when_disabled,
+                                                                 );
+                                                             let mut item_el = cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                  let geometry_hint = has_submenu.then(|| {
                                                                      let outer = overlay::outer_bounds_with_window_margin_for_environment(
                                                                          cx,
@@ -4582,7 +4631,7 @@ impl DropdownMenu {
                                                              .unwrap_or(false);
 
                                                          if has_submenu
-                                                             && !disabled
+                                                             && item_focusable
                                                              && (is_open_submenu
                                                                  || st.hovered_raw
                                                                  || st.focused)
@@ -4607,7 +4656,7 @@ impl DropdownMenu {
                                                                   );
                                                               }
 
-                                                         if !disabled {
+                                                         if item_focusable {
                                                              if first_item_focus_id_for_items.get().is_none() {
                                                                  first_item_focus_id_for_items.set(Some(item_id));
                                                              }
@@ -4666,9 +4715,16 @@ impl DropdownMenu {
                                                                         }
                                                                         layout
                                                                     },
-                                                                    enabled: !disabled,
-                                                                    focusable: !disabled,
+                                                                    enabled: item_focusable,
+                                                                    focusable: item_focusable,
                                                                     focus_ring: Some(ring),
+                                                                    key_activation: if disabled
+                                                                        && focusable_when_disabled
+                                                                    {
+                                                                        PressableKeyActivation::None
+                                                                    } else {
+                                                                        PressableKeyActivation::default()
+                                                                    },
                                                                     a11y: a11y.with_collection_position(
                                                                         collection_index,
                                                                         item_count,
@@ -4914,9 +4970,16 @@ impl DropdownMenu {
                                                                  let children = vec![chrome];
 
                                                                  (props, children)
-                                                             })
-                                                         }));
-                                                            }
+                                                             });
+                                                             if let Some(decoration) =
+                                                                 semantics_override
+                                                             {
+                                                                 item_el =
+                                                                     item_el.attach_semantics(decoration);
+                                                             }
+                                                             item_el
+                 }));
+             }
                                                         }
                                                     }
 
@@ -7448,6 +7511,104 @@ mod tests {
             .expect("Beta menu item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    #[test]
+    fn dropdown_menu_disabled_focusable_items_remain_roving_candidates() {
+        let mut labels = Vec::new();
+        let mut disabled = Vec::new();
+        collect_roving_labels_and_disabled(
+            &[
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha").disabled(true)),
+                DropdownMenuEntry::Item(
+                    DropdownMenuItem::new("Beta")
+                        .disabled(true)
+                        .focusable_when_disabled(true),
+                ),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+            ],
+            &mut labels,
+            &mut disabled,
+        );
+
+        assert_eq!(
+            labels
+                .iter()
+                .map(|label| label.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["Alpha", "Beta", "Gamma"]
+        );
+        assert_eq!(disabled, vec![true, false, false]);
+    }
+
+    #[test]
+    fn dropdown_menu_disabled_focusable_item_semantics_are_focusable_not_invokable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_entries = || {
+            vec![
+                DropdownMenuEntry::Item(
+                    DropdownMenuItem::new("Alpha")
+                        .disabled(true)
+                        .test_id("disabled-default"),
+                ),
+                DropdownMenuEntry::Item(
+                    DropdownMenuItem::new("Beta")
+                        .disabled(true)
+                        .focusable_when_disabled(true)
+                        .test_id("disabled-focusable"),
+                ),
+            ]
+        };
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let default_disabled = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-default"))
+            .expect("default disabled item");
+        assert!(default_disabled.flags.disabled);
+        assert!(!default_disabled.actions.focus);
+        assert!(!default_disabled.actions.invoke);
+
+        let focusable_disabled = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-focusable"))
+            .expect("focusable disabled item");
+        assert!(focusable_disabled.flags.disabled);
+        assert!(focusable_disabled.actions.focus);
+        assert!(!focusable_disabled.actions.invoke);
     }
 
     #[test]

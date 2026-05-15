@@ -1284,6 +1284,38 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Save the current pointer injection point for a selector under a stable name.
+    ///
+    /// This is intended for modal/barrier diagnostics where the target is intentionally removed
+    /// from the interactive semantics tree after an overlay opens, but the test still needs to
+    /// inject a later pointer event at the previously proven underlay geometry.
+    SavePointerPoint {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        name: String,
+        target: UiSelectorV1,
+    },
+    /// Click a point captured by `save_pointer_point`.
+    ///
+    /// Unlike selector-driven `click`, this step does not require the original selector to remain
+    /// present in the active semantics tree. It still emits the same pointer move/down/up sequence,
+    /// so hit-test/barrier routing is exercised normally.
+    ClickSavedPoint {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     /// Diagnostics-only incoming-open injection (best-effort).
     ///
     /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.
@@ -4090,6 +4122,65 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiActionStepV2::InjectRunnerAccessibilityActivation
+        ));
+    }
+
+    #[test]
+    fn saved_pointer_point_steps_serialize_minimally() {
+        let selector = UiSelectorV1::TestId {
+            id: "underlay".to_string(),
+            root_z_index: None,
+        };
+        let value = serde_json::to_value(UiActionStepV2::SavePointerPoint {
+            window: None,
+            name: "underlay-center".to_string(),
+            target: selector,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "type": "save_pointer_point",
+                "name": "underlay-center",
+                "target": { "kind": "test_id", "id": "underlay" }
+            })
+        );
+
+        let roundtrip: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiActionStepV2::SavePointerPoint { window: None, .. }
+        ));
+
+        let value = serde_json::to_value(UiActionStepV2::ClickSavedPoint {
+            window: None,
+            name: "underlay-center".to_string(),
+            pointer_kind: None,
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "type": "click_saved_point",
+                "name": "underlay-center",
+                "button": "left"
+            })
+        );
+
+        let roundtrip: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiActionStepV2::ClickSavedPoint {
+                window: None,
+                pointer_kind: None,
+                click_count: 1,
+                ..
+            }
         ));
     }
 

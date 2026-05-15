@@ -837,3 +837,47 @@ Status: complete
 - Remaining follow-up: add renderer-level glyph/ellipsis evidence for Button Group long text, or
   move back to the second recipe-family disabled-but-focusable gate if focus/action suppression is
   the higher-risk next slice.
+
+## M55: DropdownMenu Disabled-But-Focusable Runtime Gate
+
+Status: complete
+
+- Added `DropdownMenuItem::focusable_when_disabled(true)` as an explicit Base UI-style opt-in while
+  preserving Radix/shadcn's default `disabled(true)` outcome as non-focusable and non-invokable.
+- The recipe now separates three facts for regular items: focusability, disabled semantics, and
+  activation. Opt-in disabled items remain roving candidates and focusable, but they stamp
+  `disabled=true`, suppress `invoke`, and use `PressableKeyActivation::None` to reject Enter/Space.
+- The implementation audit found a duplicated regular-item render path and a root-menu focus
+  candidate path that still used raw `disabled`; the fix now routes focus-candidate ownership
+  through `item_focusable` while keeping submenu trigger activation disabled.
+- Added stable UI Gallery `Support` and `API` anchors and promoted
+  `ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json` into
+  `fret-mechanism-harness-overlay-focus`.
+- The first diagnostics drafts exposed harness-quality issues rather than component defects:
+  direct `focus` inside an overlay was not the right proof of roving focus, scripts are not indexed
+  until promoted into a suite manifest, and the status oracle needed the current
+  `last action: ready` baseline.
+- Focused shadcn lib tests, the `fretboard-dev`/UI Gallery build, the promoted registry check, and
+  the runtime diagnostics gate all passed.
+- Remaining follow-up: add a command/listbox-style disabled-but-focusable runtime gate so the next
+  proof exercises active-descendant/list semantics rather than only menu roving focus.
+
+## M56: Overlay/Focus Selector Uniqueness Hardening
+
+Status: complete
+
+- The full `fret-mechanism-harness-overlay-focus` suite proactively found a promoted-script
+  selector defect: `ui-gallery-context-menu-submenu-content` named both the Gallery page/snippet
+  content node and the mounted ContextMenu overlay content node.
+- The failure came from the suite lint layer (`semantics.duplicate_test_id`), not from the
+  ContextMenu branch/corridor interaction assertions. This proved the suite can catch automation
+  ambiguity before it hides or misattributes an overlay routing defect.
+- Fixed the owning Gallery diagnostics surface by renaming the mounted overlay selector to
+  `ui-gallery-context-menu-submenu-overlay-content` and updating the ContextMenu submenu routing
+  and safe-corridor scripts.
+- The focused ContextMenu script rerun passed, bounded `diag query test-id` checks proved both the
+  page-content and overlay-content selectors are unique, and the full overlay/focus suite passed
+  with 8 scripts and zero lint findings.
+- Remaining follow-up: document/use the selector convention for future promoted overlay fixtures:
+  page/snippet containers own `*-content`; mounted overlay panels use `*-overlay-content` or an
+  equivalent panel-specific suffix.

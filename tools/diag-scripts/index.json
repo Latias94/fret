@@ -7878,6 +7878,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus"
+      ],
+      "tags": [
+        "a11y",
+        "action_state",
+        "dropdown_menu",
+        "focus",
+        "keyboard",
+        "regression_pack",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves an explicit Base UI-style disabled-but-focusable DropdownMenu item remains reachable by composite focus.",
+        "Gates the shared pressable mechanism: focus stays enabled, invoke is suppressed, and Enter/Space do not dispatch or close the menu."
+      ]
+    },
+    {
       "id": "ui-gallery-dropdown-menu-item-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
       "required_capabilities": [

@@ -14,8 +14,8 @@ use fret_runtime::WindowCommandGatingSnapshot;
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
-    SemanticsDecoration, SizeStyle, TextInputProps,
+    PressableA11y, PressableKeyActivation, PressableProps, RovingFlexProps, RovingFocusProps,
+    RowProps, SemanticsDecoration, SizeStyle, TextInputProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
@@ -829,6 +829,7 @@ pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
     disabled: bool,
+    focusable_when_disabled: bool,
     force_mount: bool,
     keywords: Vec<Arc<str>>,
     checked: bool,
@@ -848,6 +849,7 @@ impl std::fmt::Debug for CommandItem {
             .field("label", &self.label.as_ref())
             .field("value", &self.value.as_ref())
             .field("disabled", &self.disabled)
+            .field("focusable_when_disabled", &self.focusable_when_disabled)
             .field("force_mount", &self.force_mount)
             .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
@@ -870,6 +872,7 @@ impl CommandItem {
             label: label.clone(),
             value: cmdk_trimmed_arc(label.clone()),
             disabled: false,
+            focusable_when_disabled: false,
             force_mount: false,
             keywords: Vec::new(),
             checked: false,
@@ -912,6 +915,16 @@ impl CommandItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Keep a disabled item in cmdk active-descendant navigation while suppressing activation.
+    ///
+    /// Default shadcn/cmdk disabled items are skipped by keyboard navigation. This explicit opt-in
+    /// mirrors Base UI's disabled-but-focusable composite item policy for examples that need a row
+    /// to remain discoverable without allowing `Enter` or pointer activation.
+    pub fn focusable_when_disabled(mut self, focusable: bool) -> Self {
+        self.focusable_when_disabled = focusable;
         self
     }
 
@@ -2533,7 +2546,9 @@ impl CommandPalette {
             command: Option<CommandId>,
             on_select: Option<fret_ui::action::OnActivate>,
             on_select_value: Option<OnSelectValueAction>,
-            disabled: bool,
+            activation_disabled: bool,
+            navigation_disabled: bool,
+            semantics_disabled: bool,
         }
 
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2599,7 +2614,7 @@ impl CommandPalette {
                 .iter()
                 .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
-            let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
+            let (entries, navigation_disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|item| {
                     let Some(item) = item.as_ref() else {
@@ -2609,28 +2624,38 @@ impl CommandPalette {
                                 command: None,
                                 on_select: None,
                                 on_select_value: None,
-                                disabled: true,
+                                activation_disabled: true,
+                                navigation_disabled: true,
+                                semantics_disabled: true,
                             },
                             true,
                         );
                     };
-                    let disabled = disabled
-                        || item.disabled
-                        || (item.command.is_none()
-                            && item.on_select.is_none()
-                            && item.on_select_value.is_none());
+                    let has_activation = item.command.is_some()
+                        || item.on_select.is_some()
+                        || item.on_select_value.is_some();
+                    let activation_disabled = disabled || item.disabled || !has_activation;
+                    let navigation_disabled =
+                        disabled || (item.disabled && !item.focusable_when_disabled);
+                    let semantics_disabled = disabled || item.disabled;
                     (
                         PaletteEntry {
                             value: item.value.clone(),
                             command: item.command.clone(),
                             on_select: item.on_select.clone(),
                             on_select_value: item.on_select_value.clone(),
-                            disabled,
+                            activation_disabled,
+                            navigation_disabled,
+                            semantics_disabled,
                         },
-                        disabled,
+                        navigation_disabled,
                     )
                 })
                 .unzip();
+            let activation_disabled_flags: Vec<bool> =
+                entries.iter().map(|entry| entry.activation_disabled).collect();
+            let semantics_disabled_flags: Vec<bool> =
+                entries.iter().map(|entry| entry.semantics_disabled).collect();
             let entries_arc: Arc<[PaletteEntry]> = Arc::from(entries.into_boxed_slice());
 
             let default_value_for_hook = default_value.clone();
@@ -2650,7 +2675,7 @@ impl CommandPalette {
                             .iter()
                             .enumerate()
                             .find(|(idx, e)| {
-                                disabled_flags.get(*idx).copied() == Some(false)
+                                navigation_disabled_flags.get(*idx).copied() == Some(false)
                                     && e.value.as_ref() == v.as_ref()
                             })
                             .map(|(_, e)| e.value.clone())
@@ -2659,7 +2684,9 @@ impl CommandPalette {
                         entries_arc
                             .iter()
                             .enumerate()
-                            .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
+                            .find(|(idx, _)| {
+                                navigation_disabled_flags.get(*idx).copied() == Some(false)
+                            })
                             .map(|(_, e)| e.value.clone())
                     })
             } else {
@@ -2668,7 +2695,7 @@ impl CommandPalette {
                         .iter()
                         .enumerate()
                         .find(|(idx, e)| {
-                            disabled_flags.get(*idx).copied() == Some(false)
+                            navigation_disabled_flags.get(*idx).copied() == Some(false)
                                 && e.value.as_ref() == v.as_ref()
                         })
                         .map(|(_, e)| e.value.clone())
@@ -2717,11 +2744,11 @@ impl CommandPalette {
 
             let active_idx = next_active.as_ref().and_then(|active_value| {
                 items.iter().enumerate().find_map(|(idx, item)| {
-                    let enabled = disabled_flags.get(idx).copied() == Some(false);
+                    let navigable = navigation_disabled_flags.get(idx).copied() == Some(false);
                     let Some(item) = item.as_ref() else {
                         return None;
                     };
-                    if enabled && item.value.as_ref() == active_value.as_ref() {
+                    if navigable && item.value.as_ref() == active_value.as_ref() {
                         Some(idx)
                     } else {
                         None
@@ -2844,7 +2871,12 @@ impl CommandPalette {
                         let active_for_row = active.clone();
                         let pending_dispatch_for_row = pending_dispatch.clone();
                         cx.keyed((base, occ), |cx| {
-                            let enabled = disabled_flags.get(idx).copied() == Some(false);
+                            let enabled =
+                                activation_disabled_flags.get(idx).copied() == Some(false);
+                            let navigable =
+                                navigation_disabled_flags.get(idx).copied() == Some(false);
+                            let semantics_disabled =
+                                semantics_disabled_flags.get(idx).copied().unwrap_or(true);
                             let active_row = active_idx.is_some_and(|i| i == idx);
 
                             let label = item.label.clone();
@@ -2893,9 +2925,14 @@ impl CommandPalette {
                             let mut row = cx.pressable(
                                 PressableProps {
                                     layout: item_layout,
-                                    enabled,
+                                    enabled: navigable,
                                     focusable: false,
                                     focus_ring: None,
+                                    key_activation: if !enabled && navigable {
+                                        PressableKeyActivation::None
+                                    } else {
+                                        PressableKeyActivation::default()
+                                    },
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
@@ -2924,10 +2961,12 @@ impl CommandPalette {
                                                 host.request_redraw(action_cx.window);
                                             }
                                         }));
-                                    } else {
+                                    } else if enabled {
                                         cx.pressable_dispatch_command_if_enabled_opt(command);
                                     }
-                                    if on_select.is_some() || on_select_value.is_some() {
+                                    if enabled
+                                        && (on_select.is_some() || on_select_value.is_some())
+                                    {
                                         let on_select = on_select.clone();
                                         let on_select_value = on_select_value.clone();
                                         let value = value.clone();
@@ -2949,7 +2988,7 @@ impl CommandPalette {
                                             },
                                         ));
                                     }
-                                    if enabled && !disable_pointer_selection {
+                                    if navigable && !disable_pointer_selection {
                                         let active = active_for_row.clone();
                                         cx.pressable_on_hover_change(Arc::new(
                                             move |host, action_cx, hovered| {
@@ -2975,7 +3014,7 @@ impl CommandPalette {
                                     let pressed = st.pressed;
                                     let bg = if active_row {
                                         Some(bg_selected)
-                                    } else if hovered || pressed {
+                                    } else if enabled && (hovered || pressed) {
                                         Some(bg_hover)
                                     } else {
                                         None
@@ -3003,20 +3042,23 @@ impl CommandPalette {
                                     };
 
                                     let child = cx.container(props, move |cx| {
-                                        let text_fg = if enabled {
+                                        let text_fg = if !semantics_disabled {
                                             if active_row { fg_selected } else { fg }
                                         } else {
                                             fg_disabled
                                         };
-                                        let nonmatch_text_fg = if !enabled {
+                                        let nonmatch_text_fg = if semantics_disabled {
                                             muted_fg_disabled
                                         } else if active_row {
                                             text_fg
                                         } else {
                                             muted_fg
                                         };
-                                        let icon_fg =
-                                            if enabled { muted_fg } else { muted_fg_disabled };
+                                        let icon_fg = if !semantics_disabled {
+                                            muted_fg
+                                        } else {
+                                            muted_fg_disabled
+                                        };
                                         current_color::scope_children(
                                             cx,
                                             ColorRef::Color(text_fg),
@@ -3183,10 +3225,14 @@ impl CommandPalette {
                                 },
                             );
 
+                            row = row.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .disabled(semantics_disabled)
+                                    .invokable(enabled),
+                            );
                             if let Some(test_id) = test_id_for_row {
-                                row = row.attach_semantics(
-                                    SemanticsDecoration::default().test_id(test_id),
-                                );
+                                row =
+                                    row.attach_semantics(SemanticsDecoration::default().test_id(test_id));
                             }
 
                             row_ids.push(row.id);
@@ -3323,8 +3369,10 @@ impl CommandPalette {
                             }
 
                             let entries = entries_read.borrow();
-                            let disabled_flags: Vec<bool> =
-                                entries.iter().map(|e| e.disabled).collect();
+                            let navigation_disabled_flags: Vec<bool> =
+                                entries.iter().map(|e| e.navigation_disabled).collect();
+                            let activation_disabled_flags: Vec<bool> =
+                                entries.iter().map(|e| e.activation_disabled).collect();
                             let groups = item_groups_read.borrow();
 
                             let current_value =
@@ -3348,7 +3396,7 @@ impl CommandPalette {
                                 Option<usize>,
                             )| {
                                 let next_idx = cmdk_selection::next_active_index(
-                                    &disabled_flags,
+                                    &navigation_disabled_flags,
                                     current_idx,
                                     forward,
                                     wrap_read.get(),
@@ -3361,9 +3409,9 @@ impl CommandPalette {
                                 Option<usize>,
                             )| {
                                 let next_idx = if forward {
-                                    cmdk_selection::last_enabled(&disabled_flags)
+                                    cmdk_selection::last_enabled(&navigation_disabled_flags)
                                 } else {
-                                    cmdk_selection::first_enabled(&disabled_flags)
+                                    cmdk_selection::first_enabled(&navigation_disabled_flags)
                                 };
                                 set_active_by_idx(next_idx);
                             };
@@ -3405,9 +3453,10 @@ impl CommandPalette {
                                 for group_id in candidates {
                                     let next_idx =
                                         groups.iter().enumerate().find_map(|(idx, g)| {
-                                            (disabled_flags.get(idx).copied() == Some(false)
+                                            (navigation_disabled_flags.get(idx).copied()
+                                                == Some(false)
                                                 && *g == Some(group_id))
-                                            .then_some(idx)
+                                                .then_some(idx)
                                         });
                                     if next_idx.is_some() {
                                         set_active_by_idx(next_idx);
@@ -3446,19 +3495,21 @@ impl CommandPalette {
                                     true
                                 }
                                 KeyCode::Home => {
-                                    let next_idx = cmdk_selection::first_enabled(&disabled_flags);
+                                    let next_idx =
+                                        cmdk_selection::first_enabled(&navigation_disabled_flags);
                                     set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::End => {
-                                    let next_idx = cmdk_selection::last_enabled(&disabled_flags);
+                                    let next_idx =
+                                        cmdk_selection::last_enabled(&navigation_disabled_flags);
                                     set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::PageDown | KeyCode::PageUp => {
                                     let forward = down.key == KeyCode::PageDown;
                                     let next_idx = cmdk_selection::advance_active_index(
-                                        &disabled_flags,
+                                        &navigation_disabled_flags,
                                         current_idx,
                                         forward,
                                         wrap_read.get(),
@@ -3469,11 +3520,15 @@ impl CommandPalette {
                                 }
                                 KeyCode::Enter | KeyCode::NumpadEnter => {
                                     let Some(idx) = cmdk_selection::clamp_active_index(
-                                        &disabled_flags,
+                                        &navigation_disabled_flags,
                                         current_idx,
                                     ) else {
                                         return false;
                                     };
+
+                                    if activation_disabled_flags.get(idx).copied() != Some(false) {
+                                        return false;
+                                    }
 
                                     let Some(entry) = entries.get(idx) else {
                                         return false;

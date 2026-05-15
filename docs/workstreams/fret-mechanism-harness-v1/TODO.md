@@ -233,6 +233,13 @@ date: 2026-05-12
   - Result: `ui-gallery-context-menu-submenu-branch-corridor-routing.json` proves moving into the
     submenu and back to the parent trigger keeps the submenu open, while moving to another parent
     item or away from the trigger closes the nested submenu without closing the root menu.
+- [x] Harden the ContextMenu submenu routing gate against page-content versus overlay-content
+  selector collisions.
+  - Result: the overlay/focus suite caught `ui-gallery-context-menu-submenu-content` as a duplicate
+    id shared by the Gallery snippet content container and the mounted overlay menu. The overlay
+    panel selector is now `ui-gallery-context-menu-submenu-overlay-content`, the submenu routing and
+    safe-corridor scripts target that id, and the full overlay/focus suite passes with 8 scripts and
+    zero lint findings.
 - [x] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
   bridge once a stable public gallery path is selected.
 - [x] Add a companion RTL submenu tight-left collision fixture that intentionally keeps the
@@ -340,9 +347,19 @@ date: 2026-05-12
     `pressable_key_activation_v1.json` proving Enter+Space, Enter-only, no-keyboard-activation,
     focusable-disabled semantics, and fully disabled Pressable outcomes. Accordion's aria-disabled
     helper now consumes this mechanism instead of relying only on non-collapsible no-op policy.
-- [ ] Add a second recipe family runtime gate, such as menu/listbox/command-style
+- [x] Add a second recipe family runtime gate, such as menu/listbox/command-style
   disabled-but-focusable items, to prove the focus/invoke/key separation is not only covered through
   Accordion's non-collapsible policy.
+  - Result: DropdownMenu now exposes an explicit `focusable_when_disabled(true)` opt-in for regular
+    items. The UI Gallery gate
+    `ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json` proves real ArrowDown
+    roving focus reaches a disabled `API` item, semantics reports `disabled=true`,
+    `focus=true`, `invoke=false`, and Enter/Space do not dispatch or close the menu. The first
+    script drafts exposed harness gaps: direct focus inside overlays was the wrong proof path, the
+    status text oracle was stale, and the new script needed suite promotion before the registry
+    would index it.
+- [ ] Add a command/listbox-style disabled-but-focusable runtime gate so the next proof exercises
+  active-descendant/list semantics instead of menu roving focus.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

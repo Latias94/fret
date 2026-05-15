@@ -48,6 +48,7 @@ pub(super) struct ActiveScript {
     pub(super) ime_event_trace: Vec<UiImeEventTraceEntryV1>,
     pub(super) last_explicit_cursor_override: Option<CursorOverrideTarget>,
     pub(super) last_explicit_cursor_override_pos: Option<ExplicitCursorOverridePos>,
+    pub(super) saved_pointer_points: HashMap<String, SavedPointerPoint>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,6 +63,14 @@ pub(super) struct ExplicitCursorOverridePos {
     pub(super) target: CursorOverrideTarget,
     pub(super) x_px: f32,
     pub(super) y_px: f32,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct SavedPointerPoint {
+    pub(super) window: AppWindowId,
+    pub(super) position: Point,
+    pub(super) selector: UiSelectorV1,
+    pub(super) source_test_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]
