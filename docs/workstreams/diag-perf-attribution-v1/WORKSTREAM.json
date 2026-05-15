@@ -47,7 +47,7 @@
     },
     {
       "name": "perf-trace-runtime-extension-writer",
-      "command": "cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast"
+      "command": "cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast"
     },
     {
       "name": "perf-trace-real-spans-cli",

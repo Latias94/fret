@@ -1984,7 +1984,7 @@ impl UiDriverPerfSpanCapture {
     fn new_if_enabled() -> Option<Self> {
         diag_real_perf_spans_enabled().then(|| Self {
             frame_start: Instant::now(),
-            spans: Vec::with_capacity(4),
+            spans: Vec::with_capacity(5),
         })
     }
 
@@ -2409,140 +2409,146 @@ fn ui_app_render<S>(
 
     #[cfg(feature = "diagnostics")]
     {
-        let _ = measure_ui_driver_phase(UiDriverPhase::DiagnosticsDriveScript, false, || {
-            // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
-            // have their realized item subtrees available for hit-testing.
-            //
-            // The injected events will typically affect the *next* frame; the diagnostics recorder
-            // below captures the current frame state.
-            let semantics_snapshot = state.ui.semantics_snapshot_arc();
-            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.drive_script_for_window(
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    scale_factor,
-                    Some(&mut state.ui),
-                    semantics_snapshot.as_deref(),
-                )
-            });
-            for effect in drive.effects {
-                app.push_effect(effect);
-            }
-            if drive.request_redraw {
-                app.request_redraw(window);
-                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-                // scene is otherwise idle. Requesting an animation frame ensures the runner
-                // schedules another render tick.
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-
-            let mut injected_any = false;
-            UiDiagnosticsService::with_script_injection_scope(|| {
-                for event in drive.events {
-                    injected_any = true;
-                    ui_app_handle_event(
-                        driver,
-                        WinitEventContext {
+        let _ = measure_ui_driver_phase_for_frame(
+            &mut perf_span_capture,
+            UiDriverPhase::DiagnosticsDriveScript,
+            false,
+            || {
+                // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
+                // have their realized item subtrees available for hit-testing.
+                //
+                // The injected events will typically affect the *next* frame; the diagnostics recorder
+                // below captures the current frame state.
+                let semantics_snapshot = state.ui.semantics_snapshot_arc();
+                let drive =
+                    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                        svc.drive_script_for_window(
                             app,
                             services,
                             window,
-                            state,
-                        },
-                        &event,
-                    );
+                            bounds,
+                            scale_factor,
+                            Some(&mut state.ui),
+                            semantics_snapshot.as_deref(),
+                        )
+                    });
+                for effect in drive.effects {
+                    app.push_effect(effect);
                 }
-            });
+                if drive.request_redraw {
+                    app.request_redraw(window);
+                    // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+                    // scene is otherwise idle. Requesting an animation frame ensures the runner
+                    // schedules another render tick.
+                    app.push_effect(Effect::RequestAnimationFrame(window));
+                }
 
-            // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
-            // effects eagerly so:
-            // - UI tree handlers run in the same render tick as the injected input, and
-            // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
-            //   without depending on runner-level effect timing.
-            if injected_any {
+                let mut injected_any = false;
                 UiDiagnosticsService::with_script_injection_scope(|| {
-                    const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
-                    let mut deferred_effects: Vec<Effect> = Vec::new();
-                    for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
-                        let effects = app.flush_effects();
-                        if effects.is_empty() {
-                            break;
-                        }
+                    for event in drive.events {
+                        injected_any = true;
+                        ui_app_handle_event(
+                            driver,
+                            WinitEventContext {
+                                app,
+                                services,
+                                window,
+                                state,
+                            },
+                            &event,
+                        );
+                    }
+                });
 
-                        let mut applied_any_command = false;
-                        for effect in effects {
-                            match effect {
-                                Effect::Command { window: w, command } => {
-                                    if w.is_none() || w == Some(window) {
-                                        applied_any_command = true;
-                                        ui_app_handle_command(
-                                            driver,
-                                            WinitCommandContext {
-                                                app,
-                                                services,
-                                                window,
-                                                state,
-                                            },
-                                            command,
-                                        );
-                                    } else {
-                                        deferred_effects
-                                            .push(Effect::Command { window: w, command });
+                // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
+                // effects eagerly so:
+                // - UI tree handlers run in the same render tick as the injected input, and
+                // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
+                //   without depending on runner-level effect timing.
+                if injected_any {
+                    UiDiagnosticsService::with_script_injection_scope(|| {
+                        const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
+                        let mut deferred_effects: Vec<Effect> = Vec::new();
+                        for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
+                            let effects = app.flush_effects();
+                            if effects.is_empty() {
+                                break;
+                            }
+
+                            let mut applied_any_command = false;
+                            for effect in effects {
+                                match effect {
+                                    Effect::Command { window: w, command } => {
+                                        if w.is_none() || w == Some(window) {
+                                            applied_any_command = true;
+                                            ui_app_handle_command(
+                                                driver,
+                                                WinitCommandContext {
+                                                    app,
+                                                    services,
+                                                    window,
+                                                    state,
+                                                },
+                                                command,
+                                            );
+                                        } else {
+                                            deferred_effects
+                                                .push(Effect::Command { window: w, command });
+                                        }
                                     }
+                                    other => deferred_effects.push(other),
                                 }
-                                other => deferred_effects.push(other),
+                            }
+
+                            if !applied_any_command {
+                                break;
                             }
                         }
 
-                        if !applied_any_command {
-                            break;
+                        for effect in deferred_effects {
+                            app.push_effect(effect);
                         }
-                    }
+                    });
+                }
+            },
+        );
 
-                    for effect in deferred_effects {
-                        app.push_effect(effect);
-                    }
-                });
+        let mut real_perf_spans = perf_span_capture
+            .as_mut()
+            .map(UiDriverPerfSpanCapture::take_spans)
+            .unwrap_or_default();
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_perf_spans_v1(window, std::mem::take(&mut real_perf_spans));
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &mut state.ui,
+                element_runtime,
+                scene,
+            );
+            let defer_dump_until_renderer_perf =
+                std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+            if !defer_dump_until_renderer_perf {
+                if let Some(dir) = svc.maybe_dump_if_triggered() {
+                    #[cfg(feature = "tracing")]
+                    tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+                }
             }
-
-            let mut real_perf_spans = perf_span_capture
-                .as_mut()
-                .map(UiDriverPerfSpanCapture::take_spans)
-                .unwrap_or_default();
-            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.record_perf_spans_v1(window, std::mem::take(&mut real_perf_spans));
-                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.record_snapshot(
-                    app,
-                    window,
-                    bounds,
-                    scale_factor,
-                    &mut state.ui,
-                    element_runtime,
-                    scene,
-                );
-                let defer_dump_until_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
-                    .is_some_and(|v| !v.is_empty());
-                if !defer_dump_until_renderer_perf {
-                    if let Some(dir) = svc.maybe_dump_if_triggered() {
-                        #[cfg(feature = "tracing")]
-                        tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
-                    }
+            if svc.poll_exit_trigger() {
+                app.push_effect(Effect::QuitApp);
+            } else if svc.is_enabled() {
+                // Diagnostics are driven per-window after paint, but multi-window scripts may
+                // need a non-active window to continue ticking (e.g. tear-off creates a new
+                // window and focus shifts). Keep all known windows in the RAF set so scripted
+                // playback and timeouts remain deterministic.
+                for w in svc.known_windows().iter().copied() {
+                    app.request_redraw(w);
+                    app.push_effect(Effect::RequestAnimationFrame(w));
                 }
-                if svc.poll_exit_trigger() {
-                    app.push_effect(Effect::QuitApp);
-                } else if svc.is_enabled() {
-                    // Diagnostics are driven per-window after paint, but multi-window scripts may
-                    // need a non-active window to continue ticking (e.g. tear-off creates a new
-                    // window and focus shifts). Keep all known windows in the RAF set so scripted
-                    // playback and timeouts remain deterministic.
-                    for w in svc.known_windows().iter().copied() {
-                        app.request_redraw(w);
-                        app.push_effect(Effect::RequestAnimationFrame(w));
-                    }
-                }
-            });
+            }
         });
     }
 
@@ -3075,6 +3081,36 @@ mod tests {
                 .and_then(|args| args.get("phase"))
                 .and_then(|v| v.as_str()),
             Some("view")
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_records_diagnostics_drive_script_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(
+            UiDriverPhase::DiagnosticsDriveScript,
+            56,
+            Duration::from_micros(78),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.diagnostics.drive_script");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 56);
+        assert_eq!(spans[0].dur_us, 78);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("diagnostics_drive_script")
         );
     }
 }

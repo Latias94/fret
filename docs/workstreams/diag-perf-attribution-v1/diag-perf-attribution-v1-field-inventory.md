@@ -99,6 +99,8 @@ Current writer:
 
 - Set `FRET_DIAG_REAL_SPANS=1` for `fret-bootstrap` `ui_app_driver` apps to write
   `fret.perf.spans.v1` for the View, Overlay, Layout, and Paint driver phases.
+- Diagnostics-enabled `ui_app_driver` frames also record `fret.ui.diagnostics.drive_script` so
+  scripted-input overhead is visible without folding it into View/Layout/Paint.
 - Prefer `fretboard-dev diag perf ... --trace-real-spans --launch -- <app command>` when the tool
   launches the app; this also requests a Chrome trace artifact and injects
   `FRET_DIAG_REAL_SPANS=1` into the launched process unless the caller already set the variable
@@ -131,7 +133,7 @@ Evidence anchors:
 - Trace JSON report focused gate:
   `cargo nextest run -p fret-diag trace_command_report_json_projects_real_span_metadata trace_contract_captures_trace_out migrated_trace_builds_a_real_context contract_help_mentions_the_migrated_command_surfaces chrome_trace_merges_real_span_extension_events --no-fail-fast`
 - Runtime extension writer focused gate:
-  `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast`
+  `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
 - CLI opt-in focused gate:
   `cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast`
 

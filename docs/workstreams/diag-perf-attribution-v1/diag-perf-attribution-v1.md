@@ -93,6 +93,8 @@ Remaining gaps / follow-ups:
     `real_spans_included=true` when such spans are present.
   - 2026-05-16: `fret-bootstrap` `ui_app_driver` apps can emit initial top-level app-loop spans
     with `FRET_DIAG_REAL_SPANS=1` (View, Overlay, Layout, Paint).
+  - 2026-05-16: diagnostics drive-script overhead is split into its own real span
+    (`fret.ui.diagnostics.drive_script`) instead of being folded into the snapshot/driver block.
   - 2026-05-16: `diag perf --trace-real-spans --launch -- <app command>` requests a Chrome trace
     artifact and injects that opt-in flag for launched perf runs while preserving explicit caller
     overrides.
