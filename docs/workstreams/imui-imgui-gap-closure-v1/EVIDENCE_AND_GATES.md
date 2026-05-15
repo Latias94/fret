@@ -85,6 +85,7 @@ Last updated: 2026-05-16
   - `apps/fret-cookbook/examples/imui_debug_draw_basics.rs`
   - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
   - `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`
+  - `apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs`
   - `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - `tools/gate_imui_editor_collection_source.py`
   - `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`
@@ -662,3 +663,12 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Passing focused crate tests proves current helper behavior did not regress. It does not justify
   widening public APIs.
 - Public helper widening still needs a separate follow-on, two proof surfaces, and a focused gate.
+
+## Latest Focused Results
+
+2026-05-16 teaching-comment cleanup:
+
+- `python tools/gate_imui_facade_teaching_source.py` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-examples-imui` passed.
+- `git diff --check` passed.

@@ -32,6 +32,9 @@ Exit criteria:
   The third code slice routes `imui_editor_proof_demo` and its `collection.rs` module through the
   app-facing `fret::imui` facade for IMUI option/state types while keeping recipe-layer imports
   explicit. `fret-ui-editor::imui` was audited and remains a thin declarative-control adapter.
+  2026-05-16 teaching-comment cleanup: `imui_interaction_showcase_demo` now names the root
+  `fret::imui` lane instead of stale direct-`fret_imui` control-flow wording, with a source-gate
+  marker preventing that drift from returning.
 
 ## M2 - First Cleanup/Refactor Slice
 

@@ -225,6 +225,7 @@ def main() -> None:
             required=[
                 "Showcase surface for immediate-mode interaction affordances.",
                 "Current proof/contract surface stays in `imui_response_signals_demo`.",
+                "This file intentionally uses the root `fret::imui` lane with shadcn shell chrome",
                 "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
                 "use fret_ui_shadcn::facade as shadcn;",
                 "imui(cx, move |ui| {",
@@ -281,6 +282,7 @@ def main() -> None:
             ],
             forbidden=[
                 "fret_imui::imui(cx, move |ui| {",
+                "This file intentionally mixes `fret_imui` control flow",
                 "UiWriterImUiFacadeExt as _",
                 "UiWriterUiKitExt as _",
                 "fret_ui_kit::imui::ChildRegionOptions",

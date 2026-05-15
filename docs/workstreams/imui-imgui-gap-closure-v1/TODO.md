@@ -30,6 +30,9 @@ Last updated: 2026-05-16
       Third slice landed: `apps/fret-examples/src/imui_editor_proof_demo.rs` and its
       `collection.rs` module now route golden-proof IMUI option/state types through `fret::imui`,
       while recipe-layer imports stay explicit.
+      2026-05-16 cleanup: `imui_interaction_showcase_demo` now describes its current root
+      `fret::imui` teaching surface instead of the historical direct `fret_imui` control-flow
+      wording, and the facade teaching source gate rejects that stale wording from returning.
 - [x] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
       Audit result: historical duplicate aliases are already deleted from active source,
       `imui::adapters` is contract-only, and `*_with_options(...)` helpers are canonical explicit
