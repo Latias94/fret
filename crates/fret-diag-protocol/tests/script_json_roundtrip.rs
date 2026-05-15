@@ -213,6 +213,20 @@ fn script_v2_roundtrip_ui_gallery_shadcn_parity_seed_layout() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_separator_decorative_hidden_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_accordion_usage_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_incoming_open_inject_smoke() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-incoming-open-inject-smoke.json"
@@ -237,6 +251,69 @@ fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
 fn script_v2_roundtrip_ui_gallery_combobox_long_text_geometry() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_auto_highlight_disabled_none_on_open() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_auto_highlight_first_match() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-auto-highlight-first-match.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_arrowdown() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-palette-controlled-selection-arrowdown.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_value() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-palette-controlled-selection-value.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-default-pagination-collection-metadata.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_bounce() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-tree-retained-hierarchy-semantics-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_sonner_live_region_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json"
     ));
 }
 
@@ -391,6 +468,20 @@ fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_select_and_row_actions()
 fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_checkbox_only_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-guide-demo-checkbox-only-selection.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_select_commit_and_label_update() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json"
     ));
 }
 
@@ -845,6 +936,18 @@ fn script_v2_roundtrip_dock_drag_active_is_predicate() {
   "schema_version": 2,
   "steps": [
     { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_viewport_capture_active_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_viewport_capture_active_is", "active": false } }
   ]
 }"#,
     );

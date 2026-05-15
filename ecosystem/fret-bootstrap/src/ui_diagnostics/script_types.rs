@@ -27,7 +27,7 @@ pub(super) struct ActiveScript {
     pub(super) wait_overlay_placement_trace: Option<WaitOverlayPlacementTraceState>,
     pub(super) screenshot_wait: Option<ScreenshotWaitState>,
     pub(super) v2_step_state: Option<V2StepState>,
-    pub(super) pointer_session: Option<V2PointerSessionState>,
+    pub(super) pointer_sessions: HashMap<PointerId, V2PointerSessionState>,
     pub(super) pending_cancel_cross_window_drag: Option<PendingCancelCrossWindowDrag>,
     pub(super) last_reported_step: Option<usize>,
     pub(super) last_reported_unix_ms: u64,
@@ -82,6 +82,40 @@ impl ActiveScript {
         self.base_ref
             .filter(|r| r.window == window)
             .map(|r| r.scope_root)
+    }
+
+    pub(super) fn has_pointer_session(&self) -> bool {
+        !self.pointer_sessions.is_empty()
+    }
+
+    pub(super) fn pointer_session(&self, pointer_id: PointerId) -> Option<&V2PointerSessionState> {
+        self.pointer_sessions.get(&pointer_id)
+    }
+
+    pub(super) fn insert_pointer_session(
+        &mut self,
+        pointer_id: PointerId,
+        session: V2PointerSessionState,
+    ) {
+        self.pointer_sessions.insert(pointer_id, session);
+    }
+
+    pub(super) fn remove_pointer_session(
+        &mut self,
+        pointer_id: PointerId,
+    ) -> Option<V2PointerSessionState> {
+        self.pointer_sessions.remove(&pointer_id)
+    }
+
+    pub(super) fn sole_pointer_session(&self) -> Option<(PointerId, &V2PointerSessionState)> {
+        if self.pointer_sessions.len() == 1 {
+            self.pointer_sessions
+                .iter()
+                .next()
+                .map(|(id, session)| (*id, session))
+        } else {
+            None
+        }
     }
 }
 
@@ -195,6 +229,7 @@ pub(super) struct V2PointerSessionState {
 #[derive(Debug, Clone)]
 pub(super) struct V2PointerMoveState {
     pub(super) step_index: usize,
+    pub(super) pointer_id: PointerId,
     pub(super) steps: u32,
     pub(super) start: Point,
     pub(super) end: Point,

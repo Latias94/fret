@@ -101,14 +101,30 @@ impl DebugDrawInteractionOptions {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DebugDrawResponse {
-    pub response: ResponseExt,
-    pub list_summary: DebugDrawListSummary,
-    pub command_summaries: Arc<[DebugDrawCommandSummary]>,
+    response: ResponseExt,
+    list_summary: DebugDrawListSummary,
+    command_summaries: Arc<[DebugDrawCommandSummary]>,
 }
 
 impl DebugDrawResponse {
+    pub(crate) fn new(
+        response: ResponseExt,
+        list_summary: DebugDrawListSummary,
+        command_summaries: Arc<[DebugDrawCommandSummary]>,
+    ) -> Self {
+        Self {
+            response,
+            list_summary,
+            command_summaries,
+        }
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.response
+    }
+
     pub fn command_summaries(&self) -> &[DebugDrawCommandSummary] {
         &self.command_summaries
     }
@@ -126,7 +142,7 @@ impl DebugDrawResponse {
     }
 
     pub fn rect(&self) -> Option<Rect> {
-        self.response.core.rect
+        self.response.rect()
     }
 }
 
@@ -661,12 +677,12 @@ impl ImUiDebugDrawList {
 
     /// Return aggregate source-level metadata for recorded debug draw commands.
     pub fn list_summary(&self) -> DebugDrawListSummary {
-        let mut summary = DebugDrawListSummary::default();
+        let mut summary = DebugDrawListSummary::new();
         let mut clip_stack = Vec::new();
         self.for_each_command_with_channel(|channel, command| {
             summary.include(command.summary_with_clip_state(channel, &mut clip_stack));
         });
-        summary.final_clip_depth = clip_stack.len();
+        summary.set_final_clip_depth(clip_stack.len());
         summary
     }
 
@@ -1265,11 +1281,7 @@ where
         })
     });
     ui.add(element);
-    DebugDrawResponse {
-        response,
-        list_summary,
-        command_summaries,
-    }
+    DebugDrawResponse::new(response, list_summary, command_summaries)
 }
 
 fn debug_draw_element<H: UiHost>(

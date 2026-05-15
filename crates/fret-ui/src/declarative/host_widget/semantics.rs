@@ -87,6 +87,7 @@ impl ElementHostWidget {
                 cx.set_numeric_jump(props.numeric_value_jump);
                 cx.set_scroll_x(props.scroll_x, props.scroll_x_min, props.scroll_x_max);
                 cx.set_scroll_y(props.scroll_y, props.scroll_y_min, props.scroll_y_max);
+                cx.set_collection_position(props.pos_in_set, props.set_size);
                 if props.focusable && !props.disabled {
                     cx.set_focusable(true);
                 }
@@ -563,6 +564,9 @@ impl ElementHostWidget {
                     decoration.scroll_y_min,
                     decoration.scroll_y_max,
                 );
+            }
+            if decoration.pos_in_set.is_some() || decoration.set_size.is_some() {
+                cx.set_collection_position(decoration.pos_in_set, decoration.set_size);
             }
             if let Some(element) = decoration.active_descendant_element
                 && let Some(node) = cx.resolve_declarative_element(element)

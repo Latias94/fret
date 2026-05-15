@@ -102,6 +102,31 @@ Conventions:
 ### M6: Quality gates + “real-time inspect” polish
 
 - [ ] First-class UI for gates:
+  - [x] First-open `Gate Commands` block for existing stale paint/scene, pixels-changed,
+        perf-threshold, and resource-footprint diagnostics command templates.
+  - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
+        stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
+  - [x] Structured follow-up command projection separates bundle-local runnable commands from
+        baseline-required manual compare commands for GUI and MCP consumers.
+  - [x] GUI selected-summary inspector can launch bundle-local runnable follow-ups and records
+        in-flight/error status without treating baseline-required compare commands as runnable.
+  - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
+        latest result path for copying.
+  - [x] GUI selected-summary inspector mirrors the latest selected-bundle follow-up result JSON
+        inline for pass/fail/error/timing triage.
+  - [x] GUI selected-summary inspector shows a structured selected-bundle follow-up result summary
+        above raw JSON for status, command, duration, and error preview.
+  - [x] GUI selected-summary inspector keeps a bounded follow-up result history filtered to the
+        selected bundle, preventing stale global-last results from masquerading as current evidence.
+  - [x] GUI selected-summary inspector renders selected-bundle follow-up history as selectable
+        result entries that switch the summary/raw JSON/copy target.
+  - [x] GUI selected-summary inspector shows selected follow-up result details and can copy the
+        exact command that produced the selected artifact.
+  - [x] GUI selected-summary inspector can open the selected follow-up JSON artifact through the
+        platform URL handler.
+  - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
+        the global last result artifact.
+  - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.
   - [ ] stale paint/scene,
   - [ ] pixels changed,
   - [ ] perf thresholds,

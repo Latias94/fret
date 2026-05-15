@@ -15,8 +15,58 @@ use super::{ResponseExt, SelectableOptions, UiWriterImUiFacadeExt};
 /// - `anchor` stores the range-selection anchor used for shift-click expansion.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImUiMultiSelectState<K> {
-    pub selected: Vec<K>,
-    pub anchor: Option<K>,
+    selected: Vec<K>,
+    anchor: Option<K>,
+}
+
+impl<K> ImUiMultiSelectState<K> {
+    pub fn new(selected: Vec<K>, anchor: Option<K>) -> Self {
+        Self { selected, anchor }
+    }
+
+    pub fn selected(&self) -> &[K] {
+        &self.selected
+    }
+
+    pub fn selected_count(&self) -> usize {
+        self.selected.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.selected.is_empty()
+    }
+
+    pub fn anchor(&self) -> Option<&K> {
+        self.anchor.as_ref()
+    }
+
+    pub fn first_selected(&self) -> Option<&K> {
+        self.selected.first()
+    }
+
+    pub fn clear(&mut self) {
+        self.selected.clear();
+        self.anchor = None;
+    }
+}
+
+impl<K: Clone> ImUiMultiSelectState<K> {
+    pub fn single(key: K) -> Self {
+        Self {
+            selected: vec![key.clone()],
+            anchor: Some(key),
+        }
+    }
+}
+
+impl<K: Clone + PartialEq> ImUiMultiSelectState<K> {
+    pub fn from_ordered_selection(all_keys: &[K], selected: Vec<K>, anchor: Option<K>) -> Self {
+        let selected = normalize_selection_order(all_keys, selected);
+        let anchor = anchor
+            .filter(|anchor| selected.iter().any(|item| item == anchor))
+            .or_else(|| selected.first().cloned());
+        Self { selected, anchor }
+    }
 }
 
 impl<K: PartialEq> ImUiMultiSelectState<K> {
@@ -71,7 +121,7 @@ pub(super) fn multi_selectable_with_options<
                 changed = apply_click(state, all_keys, &key, modifiers);
             })
         });
-        response.core.changed = changed;
+        response.set_core_changed(changed);
     }
 
     response
@@ -134,8 +184,7 @@ fn apply_toggle_click<K: Clone + PartialEq>(
     } else {
         selected.push(key.clone());
     }
-    state.selected = normalize_selection_order(all_keys, selected);
-    state.anchor = Some(key.clone());
+    *state = ImUiMultiSelectState::from_ordered_selection(all_keys, selected, Some(key.clone()));
 }
 
 fn normalize_selection_order<K: Clone + PartialEq>(all_keys: &[K], selected: Vec<K>) -> Vec<K> {
@@ -176,25 +225,25 @@ mod tests {
     #[test]
     fn plain_click_replaces_selection_and_resets_anchor() {
         let keys = keys();
-        let mut state = ImUiMultiSelectState {
-            selected: vec![keys[0].clone(), keys[2].clone()],
-            anchor: Some(keys[2].clone()),
-        };
+        let mut state = ImUiMultiSelectState::new(
+            vec![keys[0].clone(), keys[2].clone()],
+            Some(keys[2].clone()),
+        );
 
         let changed = apply_click(&mut state, &keys, &keys[1], Modifiers::default());
 
         assert!(changed);
-        assert_eq!(state.selected, vec![keys[1].clone()]);
-        assert_eq!(state.anchor, Some(keys[1].clone()));
+        assert_eq!(state.selected(), [keys[1].clone()]);
+        assert_eq!(state.anchor(), Some(&keys[1]));
     }
 
     #[test]
     fn primary_modifier_click_toggles_membership_in_collection_order() {
         let keys = keys();
-        let mut state = ImUiMultiSelectState {
-            selected: vec![keys[0].clone(), keys[2].clone()],
-            anchor: Some(keys[2].clone()),
-        };
+        let mut state = ImUiMultiSelectState::new(
+            vec![keys[0].clone(), keys[2].clone()],
+            Some(keys[2].clone()),
+        );
 
         let changed = apply_click(
             &mut state,
@@ -208,19 +257,50 @@ mod tests {
 
         assert!(changed);
         assert_eq!(
-            state.selected,
-            vec![keys[0].clone(), keys[1].clone(), keys[2].clone()]
+            state.selected(),
+            [keys[0].clone(), keys[1].clone(), keys[2].clone()]
         );
-        assert_eq!(state.anchor, Some(keys[1].clone()));
+        assert_eq!(state.anchor(), Some(&keys[1]));
+    }
+
+    #[test]
+    fn ordered_selection_normalizes_to_collection_order_and_deduplicates() {
+        let keys = keys();
+        let state = ImUiMultiSelectState::from_ordered_selection(
+            &keys,
+            vec![
+                keys[2].clone(),
+                keys[0].clone(),
+                keys[2].clone(),
+                Arc::from("external"),
+            ],
+            Some(keys[2].clone()),
+        );
+
+        assert_eq!(
+            state.selected(),
+            [keys[0].clone(), keys[2].clone(), Arc::from("external")]
+        );
+        assert_eq!(state.anchor(), Some(&keys[2]));
+    }
+
+    #[test]
+    fn ordered_selection_repairs_missing_anchor_to_first_selected_key() {
+        let keys = keys();
+        let state = ImUiMultiSelectState::from_ordered_selection(
+            &keys,
+            vec![keys[3].clone(), keys[1].clone()],
+            Some(Arc::from("missing")),
+        );
+
+        assert_eq!(state.selected(), [keys[1].clone(), keys[3].clone()]);
+        assert_eq!(state.anchor(), Some(&keys[1]));
     }
 
     #[test]
     fn shift_click_selects_range_from_anchor_without_moving_anchor() {
         let keys = keys();
-        let mut state = ImUiMultiSelectState {
-            selected: vec![keys[1].clone()],
-            anchor: Some(keys[1].clone()),
-        };
+        let mut state = ImUiMultiSelectState::single(keys[1].clone());
 
         let changed = apply_click(
             &mut state,
@@ -234,10 +314,10 @@ mod tests {
 
         assert!(changed);
         assert_eq!(
-            state.selected,
-            vec![keys[1].clone(), keys[2].clone(), keys[3].clone()]
+            state.selected(),
+            [keys[1].clone(), keys[2].clone(), keys[3].clone()]
         );
-        assert_eq!(state.anchor, Some(keys[1].clone()));
+        assert_eq!(state.anchor(), Some(&keys[1]));
     }
 
     #[test]
@@ -256,7 +336,7 @@ mod tests {
         );
 
         assert!(changed);
-        assert_eq!(state.selected, vec![keys[2].clone()]);
-        assert_eq!(state.anchor, Some(keys[2].clone()));
+        assert_eq!(state.selected(), [keys[2].clone()]);
+        assert_eq!(state.anchor(), Some(&keys[2]));
     }
 }

@@ -120,6 +120,23 @@ fn rebuild_entries(
     (entries, index_by_id)
 }
 
+fn file_tree_item_a11y(
+    entry: &TreeEntry,
+    is_selected: bool,
+    is_expanded: bool,
+    test_id: Option<Arc<str>>,
+) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::TreeItem),
+        label: Some(entry.label.clone()),
+        level: u32::try_from(entry.depth.saturating_add(1)).ok(),
+        selected: is_selected,
+        expanded: entry.has_children.then_some(is_expanded),
+        test_id,
+        ..Default::default()
+    }
+}
+
 #[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -205,7 +222,6 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
 
         let is_selected = selected_for_row == Some(entry.id);
         let is_expanded = entry.has_children && expanded_for_row.contains(&entry.id);
-        let a11y_level = u32::try_from(entry.depth.saturating_add(1)).ok();
 
         let debug_test_id: Option<Arc<str>> = row_test_id_prefix
             .as_ref()
@@ -218,14 +234,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
         cx.pressable(
             PressableProps {
                 enabled,
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::TreeItem),
-                    label: Some(entry.label.clone()),
-                    level: a11y_level,
-                    selected: is_selected,
-                    test_id: debug_test_id,
-                    ..Default::default()
-                },
+                a11y: file_tree_item_a11y(&entry, is_selected, is_expanded, debug_test_id),
                 ..Default::default()
             },
             move |cx, st| {
@@ -327,4 +336,39 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |_cx| vec![list],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(has_children: bool, depth: usize) -> TreeEntry {
+        TreeEntry {
+            id: 7,
+            label: Arc::from("Folder"),
+            depth,
+            parent: None,
+            has_children,
+            disabled: false,
+        }
+    }
+
+    #[test]
+    fn file_tree_item_a11y_sets_level_and_expanded_for_parent_rows() {
+        let a11y = file_tree_item_a11y(&entry(true, 0), true, true, Some(Arc::from("file-row")));
+
+        assert_eq!(a11y.role, Some(SemanticsRole::TreeItem));
+        assert_eq!(a11y.level, Some(1));
+        assert!(a11y.selected);
+        assert_eq!(a11y.expanded, Some(true));
+        assert_eq!(a11y.test_id.as_deref(), Some("file-row"));
+    }
+
+    #[test]
+    fn file_tree_item_a11y_omits_expanded_for_leaf_rows() {
+        let a11y = file_tree_item_a11y(&entry(false, 2), false, false, None);
+
+        assert_eq!(a11y.level, Some(3));
+        assert_eq!(a11y.expanded, None);
+    }
 }

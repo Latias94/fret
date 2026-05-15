@@ -149,6 +149,7 @@ For this lane:
 - keep `cargo run -p fretboard-dev -- list tool-apps` as the discoverable tool-app index for the
   DevTools GUI and MCP entrypoints,
 - keep `cargo run -p fretboard-dev -- list tool-apps --json` as the machine-readable form for the
-  same `fretboard_tool_apps` schema,
+  same `fretboard_tool_apps` schema, including the `product_workflows` map that points DevTools-style
+  consumers at the `imui-product-chain` gate and its docking perf evidence artifacts,
 - and treat future discoverability edits as branch clarity work rather than as permission to
   recreate another competing "start here" page.

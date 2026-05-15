@@ -1,5 +1,14 @@
 # Docking multi-window + ImGui alignment (v1)
 
+Status: Active reference (partially superseded by `docs/workstreams/docking-multiwindow-imgui-parity/`)
+Last updated: 2026-05-14
+
+Status note (2026-05-14): current execution state lives in `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
+and the latest source-drift guard is
+`docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`.
+This behavior-first note remains useful for gesture vocabulary and ImGui comparison, but current
+gate membership and platform acceptance state should be read from the dedicated lane.
+
 Scope: Fret’s multi-window docking “tear-off” UX and diagnostics gates, aligned against Dear ImGui’s docking + multi-viewport behavior and terminology.
 
 This document is intentionally **behavior-first**: it records what we want users to feel and what we currently gate, then links to the relevant mechanism code and upstream reference points.
@@ -242,7 +251,16 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 
 ### C. Docking UI ergonomics (tab bars)
 
-- Tab overflow + scrolling: ensure overflow behavior is predictable and stable under resize (and ideally gate it).
+- Tab overflow + scrolling: delivered for the current docking arbitration tab-bar scope via promoted
+  script gates. The suite anchors are:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-edge-autoscroll.json`
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json`
+  - full suite split: `tools/diag-scripts/suites/docking-arbitration/common/suite.json`
+  - small smoke suite: `tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`
+  - source guard: `python tools/gate_docking_multiwindow_workstream_source.py`
+  Remaining editor UX parity here is broader tab-strip policy, not the basic docking overflow gate.
 - Tab reordering within a tab strip (and across tab strips) to match common ImGui editor workflows.
   - Delivered (2026-03-03): reordering within a single tab strip is gated:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json`
@@ -272,5 +290,9 @@ P0 (editor-grade hand feel blockers):
 
 P1 (coverage and regression hardening):
 
-- Promote more multi-window gates into `tools/diag-scripts/suites/docking-arbitration/suite.json` as they stabilize (keep `diag-hardening-smoke-docking` small).
+- Keep the docking suite split honest: promote stable cross-platform gates into
+  `tools/diag-scripts/suites/docking-arbitration/common/suite.json`, platform-only gates into
+  `tools/diag-scripts/suites/docking-arbitration/windows/suite.json`, and keep
+  `diag-hardening-smoke-docking` small. The source guard
+  `python tools/gate_docking_multiwindow_workstream_source.py` now validates the current split.
 - Add a macOS-focused “release outside windows still commits drop” gate (mirrors the Windows poll-up gate), and document the capability/degradation expectation when it is not possible.

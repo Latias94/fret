@@ -2,6 +2,48 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Maintenance gate refresh - 2026-05-15
+
+DevTools full clippy is now a current maintenance gate for the P2 diagnostics/devtools surface:
+
+- Gate restored:
+  - `cargo clippy -p fret-devtools --all-targets -- -D warnings`
+- Evidence anchors:
+  - `crates/fret-launch/src/runner/windows_mf_video.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/mod.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/window.rs`
+  - `crates/fret-ui/src/text/input/widget.rs`
+  - `crates/fret-ui/src/tree/commands.rs`
+  - `crates/fret-ui/src/tree/debug/virtual_list.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_index.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_thread_cpu_time.rs`
+  - `crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs`
+- Structural notes:
+  - Windows MF native-external importer now matches the AVFoundation runner-local ownership shape
+    (`Rc<RefCell<_>>`) instead of using `Arc<Mutex<_>>` without a Send/Sync contract.
+  - DevTools clippy blockers in dependent `fret-ui`, `fret-launch`, and `fret-bootstrap` code are
+    fixed without adding `allow` attributes.
+  - The prepaint fixture harness now reads current view-boundary dirty state
+    (`dirty_boundaries` + `boundary_layout_dirty_reason`) instead of stale `dirty_cache_*` fields.
+- Guardrails run:
+  - `cargo clippy -p fret-devtools --all-targets -- -D warnings` - passed.
+  - `cargo nextest run -p fret-ui mechanism_harness_prepaint_virtual_list_window_update_matches_oracles --no-fail-fast` - passed.
+  - `cargo nextest run -p fret-ui -p fret-launch -p fret-bootstrap --no-fail-fast` - ran 1059 tests:
+    1054 passed, 5 failed.
+  - `python tools/check_layering.py` - passed.
+  - `python tools/report_largest_files.py --top 30 --min-lines 800` - passed; this slice did not
+    expand the reported large-file set.
+  - `git diff --check` - passed.
+- Residual full-nextest failures to keep as a follow-on input:
+  - `declarative::tests::core::layout_refines_focus_traversal_availability_after_structural_fallback`
+  - `declarative::tests::layout::scroll::scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative`
+  - `declarative::tests::layout::scroll::scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge`
+  - `declarative::tests::layout::viewport_roots::viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill`
+  - `declarative::tests::virtual_list::caching::virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached`
+
 ## Evidence anchors (current)
 
 - `docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
@@ -14,6 +56,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md`
@@ -136,6 +179,9 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/diagnostics-first-open.md`
@@ -442,6 +488,9 @@ Run evidence:
 - `cargo nextest run -p fret-diag identity_browser_html --no-fail-fast`
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
 - `python tools/diag_gate_imui_product_chain.py`
+- `python tools/diag_gate_imui_product_chain.py --only discovery`
+- `cargo run -p fretboard-dev -- --help`
+- `cargo run -p fretboard-dev -- list --help`
 - `cargo build -p fret-devtools`
 - `cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
@@ -471,6 +520,12 @@ This package currently proves:
   repo-maintainer discovery surface,
 - `fretboard-dev list tool-apps --json` exposes the same `fretboard_tool_apps` schema for
   automation and source-gate checks,
+- the default product-chain discovery gate validates that top-level help points to
+  `fretboard-dev list tool-apps` and `fretboard-dev list tool-apps --json`, and that `list --help`
+  names `tool-apps` as the repo-maintainer tool-app index,
+- the default product-chain discovery gate now validates that JSON shape, including `kind`,
+  `schema_version`, canonical first-open/GUI docs, repo preflight commands, and GUI/MCP
+  command/docs/gate/best-for fields, rather than checking only a few human-text markers,
 - and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
 - captured immediate/runtime identity warnings now have a bounded first-open path through
   `diag query identity-warnings --browser --json`,
@@ -490,11 +545,144 @@ Latest DevTools GUI first-open source projection proof (2026-05-14):
 - Campaign root:
   `target/imui-p2-devtools-first-open-gui-source-2026-05-14/1778733748418/campaign/campaigns/devtools-first-open-smoke/1778733762096`.
 
+DevTools GUI product-workflow projection follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now projects the shared `imui-product-chain` route in the
+  GUI first-open evidence panel: default command, focused discovery command, launched
+  `perf-docking` command, `perf-docking-arbitration-steady` suite, product-closure docs, and
+  `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`.
+- The default product-chain discovery gate now source-checks that GUI projection, so
+  `fretboard-dev list tool-apps`, `fretboard-dev list tool-apps --json`, and the DevTools GUI
+  first-open panel cannot silently diverge on the product workflow route.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
+DevTools GUI demo/metrics/debug route follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now surfaces a persistent `demo-metrics-debug` route in the
+  GUI shell, separate from runtime/API work in `fret-imui`.
+- The route names the current editor demos (`imui_editor_proof_demo`, `editor_notes_demo`, and
+  `editor_notes_device_shell_demo`) plus existing diagnostics metrics/debug entrypoints:
+  `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, and
+  `diag hotspots`.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
+DevTools GUI first-class gate command follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now surfaces a `Gate Commands` block in the first-open GUI
+  shell for stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics
+  entrypoints.
+- The selected-summary inspector now also consumes the shared `fret-diag` regression-bundle
+  follow-up projection, generating concrete commands from the selected `bundle_dir`: `diag stats`,
+  `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, `diag hotspots`, visual
+  compare, and footprint compare.
+- That projection is now structured: direct bundle-local commands carry concrete `diag_args`, while
+  visual/footprint compare commands are marked as baseline-required manual follow-ups. GUI and MCP
+  consumers can therefore separate runnable actions from placeholder compare templates.
+- `apps/fret-devtools/src/followup.rs` now launches the runnable subset through
+  `fret_diag::diag_cmd` on a background job and records in-flight/error status back into the GUI.
+  The baseline-required compare commands are rejected by the focused unit gate instead of being
+  treated as runnable.
+- Each launched follow-up writes a lightweight `.fret/diag/followups/*.json` result record with
+  schema/kind, command metadata, `diag_args`, pass/fail status, optional error, and timing fields.
+  The GUI exposes the latest result path so the evidence can be copied without hunting through logs.
+- The selected-summary inspector mirrors the latest selected-bundle result JSON inline in a
+  `Follow-up Result JSON` section, keeping the quick pass/fail/error/timing read inside the
+  DevTools surface.
+- The inspector also projects the latest selected-bundle result JSON into a
+  `Follow-up Result Summary` section above the raw payload, keeping status, command, duration, and
+  error preview scannable in the GUI.
+- A bounded `Follow-up Result History` section filters recent GUI-launched follow-up results to the
+  selected bundle, preventing a previous bundle's global-last result from being read as current
+  selected-summary evidence.
+- The history section now renders selectable result entries; selecting an older matching entry
+  changes the summary/raw JSON/copy target while preserving newest-first fallback.
+- A `Follow-up Result Details` block surfaces the selected result's status, path, command, bundle,
+  and error preview, and a copy action exposes the exact command that produced that artifact.
+- The selected follow-up JSON artifact can be opened through the platform URL handler via an
+  escaped file URL projection, keeping native artifact inspection one click away where supported and
+  preserving paths containing spaces, fragments, or non-ASCII bytes.
+- The follow-up result copy action resolves the selected bundle's latest history path and refuses
+  when no selected-bundle result exists, rather than copying the global last artifact.
+- The same inspector can copy the selected bundle's follow-up JSON payload directly, so issue
+  reports and AI-assisted triage can use the exact payload shown in the panel.
+- This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
+  commands visible without moving gate policy into `fret-ui` or `fret-imui`.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
+cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
+DevTools GUI perf-evidence drill-down follow-up (2026-05-15):
+
+- `apps/fret-devtools/src/native.rs` now extracts selected regression summary perf evidence into a
+  dedicated `Perf Evidence` section above raw JSON.
+- The shared projection owner is now `crates/fret-diag/src/regression_summary.rs`
+  (`regression_summary_drilldown`); the GUI only reads the summary JSON and renders the shared
+  drill-down fields.
+- The drill-down surfaces `perf_summary_json`, `compare_json`, curated metrics such as
+  `top_total_time_us`, `top_renderer_encode_scene_us`, `top_renderer_instance_bytes`, and
+  `threshold_failures` counts/JSON for selected summaries.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence --no-fail-fast
+cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+DevTools MCP product-workflow projection follow-up (2026-05-15):
+
+- `apps/fret-devtools-mcp/src/native.rs` now exposes `fret-diag://first-open.md` as a sessionless
+  text resource and points MCP server instructions at that resource.
+- The MCP first-open resource mirrors the shared `imui-product-chain` route: default command,
+  focused discovery command, launched `perf-docking` command, `perf-docking-arbitration-steady`
+  suite, product-closure docs, and `perf-docking/regression.summary.json` plus
+  `perf-docking/check.perf_thresholds.json`.
+- `fret_diag_regression_dashboard` now consumes the shared `fret-diag` regression drill-down and
+  follow-up command projection, returning bundle dirs, capability provenance, perf evidence, and
+  follow-up command lines instead of maintaining a MCP-private regression evidence parser.
+- The MCP dashboard result also exposes `runnable_followup_command_lines` and
+  `manual_followup_command_lines`, mirroring the GUI's separation between direct bundle-local
+  follow-ups and baseline-required compare follow-ups.
+- The default product-chain discovery gate now source-checks the MCP projection alongside the GUI
+  first-open panel, so `fretboard-dev list tool-apps`, the GUI shell, and the MCP adapter cannot
+  silently diverge on the product workflow route.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
+cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
 ### Multi-window hand-feel gates
 
 - `python tools/gate_imui_workstream_source.py`
 - `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`
 - `cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release`
 - `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics no_frame_pointer_move --no-fail-fast`
 - Local refresh evidence: `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
 - Launched campaign repair evidence: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
@@ -511,8 +699,103 @@ This package currently proves:
   no-frame pointer-move repair in `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
 - the focused `no_frame_pointer_move` unit gate locks the fallback to active cross-window dock-panel
   or dock-tabs drags with an active pointer session,
+- the product-chain perf entrypoint now runs `diag perf perf-docking-arbitration-steady` against
+  `docking_arbitration_demo` and verifies `regression.summary.json` records two passing
+  `perf_case` items with readable bundle artifacts and a readable shared `layout.perf.summary.v1.json`
+  artifact, a readable shared `check.perf_thresholds.json` artifact, empty threshold failures, and
+  curated `evidence.extra.metrics` rather than trusting process exit alone,
 - and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
   IMUI lane's new umbrella package.
+
+The first product-chain docking perf run on 2026-05-14 exposed a diagnostics tooling contract bug:
+`diag perf` printed human `PERF ...` rows, but its `regression.summary.json` synthesized
+`tooling.diag_perf.no_rows` unless `--json` was used. The fix is in `crates/fret-diag/src/diag_perf.rs`:
+row evidence is now recorded for summaries regardless of stdout mode, while `--json` only controls
+stdout formatting. The follow-up artifact projection repair keeps single-run `bundle` rows visible
+as `bundle_artifact` evidence in the regression summary, and the metrics projection keeps
+`top_*`, pointer-move, and renderer fields available to DevTools/GUI/MCP first-open summary readers
+without opening the large bundle. The focused source gates are:
+
+```text
+cargo nextest run -p fret-diag perf_regression_summary_uses_rows_when_stdout_is_human --no-fail-fast
+cargo nextest run -p fret-diag perf_row_to_regression_item_uses_single_run_bundle_artifact --no-fail-fast
+cargo nextest run -p fret-diag perf_row_to_regression_item_projects_single_run_metrics perf_row_to_regression_item_projects_repeat_stats_metrics --no-fail-fast
+```
+
+Latest local docking perf entrypoint evidence (2026-05-14):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-metrics-gate-2026-05-14`
+- `target/imui-product-chain-perf-docking-metrics-gate-2026-05-14/1778775354481/perf-docking/regression.summary.json` reports
+  `items_total=2`, `passed=2`, and `failed_tooling=0`.
+- The two items are `perf_case` rows for
+  `docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json` and
+  `docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json`.
+- The product-chain gate now checks the item scripts against
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, requires each item to
+  expose a readable `bundle_artifact`, and requires the shared `layout.perf.summary.v1.json` artifact
+  to parse as a `layout_perf_summary` for one of the recorded bundles. It also requires curated
+  `evidence.extra.metrics` fields such as `top_total_time_us`, pointer-move dispatch/hit-test, and
+  renderer encode/instance metrics (`top_renderer_encode_scene_us`,
+  `top_renderer_instance_bytes`).
+
+Latest local docking perf threshold evidence (2026-05-15):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-threshold-gate-2026-05-15`
+- `target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/regression.summary.json`
+  reports `items_total=2`, `passed=2`, `failed_tooling=0`, and `wants_perf_thresholds=true`.
+- `target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/check.perf_thresholds.json`
+  reports `kind=perf_thresholds`, `observed_aggregate=max`, and `failures=[]`.
+- The product-chain gate now launches `diag perf` with conservative CPU/layout/pointer thresholds:
+  `--max-top-total-us 20000`, `--max-top-layout-us 10000`, `--max-top-solve-us 10000`,
+  `--max-pointer-move-dispatch-us 5000`, `--max-pointer-move-hit-test-us 5000`, and
+  `--max-pointer-move-global-changes 0`.
+- The gate validates that each regression item exposes readable `compare_json` evidence, that both
+  rows in `check.perf_thresholds.json` match
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, and that all row
+  threshold sources are `cli`. This turns the previous readable metric projection into a conservative
+  product-chain perf threshold gate.
+
+Renderer threshold follow-up evidence (2026-05-15):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15`
+- `target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/regression.summary.json`
+  reports `items_total=2`, `passed=2`, `failed_tooling=0`, and empty item `threshold_failures`.
+- `target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/check.perf_thresholds.json`
+  reports `failures=[]` and `threshold_sources` of `cli` for renderer metrics including
+  `max_renderer_encode_scene_us`, `max_renderer_upload_us`, `max_renderer_record_passes_us`,
+  `max_renderer_encoder_finish_us`, `max_renderer_prepare_text_us`, `max_renderer_prepare_svg_us`,
+  `max_renderer_instance_bytes`, and `max_renderer_encode_scene_text_ops`.
+- `diag perf` now exposes renderer threshold CLI flags, including
+  `--max-renderer-encode-scene-us`, `--max-renderer-upload-us`,
+  `--max-renderer-record-passes-us`, `--max-renderer-encoder-finish-us`,
+  `--max-renderer-prepare-text-us`, `--max-renderer-prepare-svg-us`,
+  `--max-renderer-instance-bytes`, and `--max-renderer-encode-scene-text-ops`.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-diag contract_help_mentions_the_migrated_command_surfaces migrated_perf_subset_builds_a_real_perf_context perf_thresholds_json_projects_renderer_thresholds --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15
+```
+
+DevTools/product workflow discovery follow-up (2026-05-15): `fretboard-dev list tool-apps` now
+prints a `workflow: imui-product-chain` row, and `fretboard-dev list tool-apps --json` exposes the
+same route under `product_workflows`. The default discovery gate validates the default
+`python tools/diag_gate_imui_product_chain.py` command, the focused
+`python tools/diag_gate_imui_product_chain.py --only discovery` command, the launched
+`python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release`
+command, `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, and the expected
+`perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json` artifacts so
+DevTools-style consumers can surface the product-chain evidence path without hard-coding GUI-only
+knowledge.
+
+Goal completion audit refresh (2026-05-15):
+`GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and explicitly not
+complete. The strict blockers remain real-host Wayland compositor acceptance for `DW-P1-linux-003`,
+DevTools GUI productization / always-available demo-metrics-debug discoverability, and broader perf
+attribution/smoothness outside the bounded `perf-docking` entrypoint.
 
 The 2026-05-13 launched bounded campaign result is `campaign: ok` at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778655473217`, with a post-documentation
@@ -524,6 +807,7 @@ real-host hand-feel risk.
 ### Lane hygiene gates
 
 - `python tools/gate_imui_workstream_source.py`
+- `python tools/diag_gate_docking_wayland_policy_skip.py`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
@@ -598,9 +882,11 @@ python tools/diag_gate_imui_product_chain.py --launched --only generic-action --
 
 Status: landed as a lightweight maintainer gate.
 
-The default product-chain gate validates discovery plus promoted script/suite inputs across
+The default product-chain gate validates discovery plus promoted script/suite/campaign inputs across
 `imui_action_basics`, `imui_editor_controls_basics`, `imui_editor_proof_demo`,
 `editor_notes_demo`, `editor_notes_device_shell_demo`, `workspace_shell_demo`,
+`docking_arbitration_demo` through the `imui-p3-multiwindow-parity` campaign manifest,
+`perf-docking-arbitration-steady` as the docking perf entrypoint,
 DevTools/diagnostics first-open, and the IMUI source gates. It does not
 replace the individual launched gates; it keeps the cross-app product chain discoverable and
 validated without forcing a single `diag campaign` launch target onto unrelated apps.
@@ -611,11 +897,37 @@ Focused command:
 python tools/diag_gate_imui_product_chain.py
 ```
 
+Latest local default product-chain evidence (2026-05-14):
+
+- Command: `python tools/diag_gate_imui_product_chain.py`
+- Result: passed.
+- Added coverage: the default gate now runs
+  `diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`, so the
+  discovered docking proof surface has a manifest-shape check in the same maintainer command as the
+  cookbook, editor proof, editor notes, workspace shell, DevTools discovery, and IMUI source gates.
+- Added coverage: the discovery step now also validates
+  `fretboard-dev list tool-apps --json` as the stable first-open DevTools GUI/MCP machine-readable
+  map, including repo preflight and per-tool command/docs/gate/best-for fields.
+- Added coverage: the same JSON now exposes a `product_workflows` entry for
+  `imui-product-chain`, including the default product-chain command, the focused discovery-only
+  command, the launched `perf-docking` command, the promoted
+  `perf-docking-arbitration-steady` suite, and the expected
+  `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`
+  evidence artifacts.
+- Added coverage: the same discovery step now validates `fretboard-dev --help` and
+  `fretboard-dev list --help`, so the tool-app index itself stays discoverable from the first CLI
+  help screens.
+- Added coverage: the default lightweight gate now validates the
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` scripts, while the
+  explicit launched `perf-docking` product-chain slice verifies the perf regression summary shape,
+  item bundle artifacts, shared layout perf summary artifact, shared `check.perf_thresholds.json`
+  artifact, conservative CLI thresholds, empty threshold failures, and lightweight summary metrics.
+
 Use `--launched` when the local machine should also execute the existing launched proof commands
 sequentially across the cookbook, editor proof, editor notes, and workspace shell surfaces:
 
 ```text
-python tools/diag_gate_imui_product_chain.py --launched --only generic-action,editor-controls,editor-proof,editor-notes,editor-notes-device-shell,workspace-shell
+python tools/diag_gate_imui_product_chain.py --launched --only generic-action,editor-controls,editor-proof,editor-notes,editor-notes-device-shell,workspace-shell,perf-docking
 ```
 
 For the editor-notes product slice alone:
@@ -690,3 +1002,44 @@ another parallel P3 gate entry.
 - `cargo nextest run -p fret-selector --features ui deps_builder_model_rev_includes_model_identity_before_revision --no-fail-fast`
 - This locks the real `ElementContext` + `ModelStore` path so same-revision model switches still
   invalidate selector memoization correctly.
+
+## Maintenance gate refresh - 2026-05-15 follow-up
+
+Scope: close the `fret-ui` layout/view-cache regressions left by the previous affected gate without
+changing the IMUI layer split. The fixes stay in `crates/fret-ui` mechanism code:
+
+- `crates/fret-ui/src/tree/commands.rs` refreshes window command action availability after
+  post-layout runtime snapshot refinement by clearing the cached availability signature before
+  publishing snapshots.
+- `crates/fret-ui/src/tree/dispatch/window.rs` treats the post-wheel scroll-handle invalidation pass
+  as the final baseline consumer, so non-retained virtual lists schedule their one-shot view-cache
+  rerender immediately after a wheel-driven visible-window escape.
+- `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` keeps scroll deep-scan validation
+  from trusting a synthetic content-bounds barrier root as the authoritative extent when descendants
+  provide the real frontier.
+- `crates/fret-ui/src/layout/engine/flow.rs` carries definite parent flex-axis information into
+  wrapper fill promotion, so viewport-root auto wrappers can promote to fill under a definite
+  cross-axis without globally stretching shrink-wrapped wrappers.
+
+Focused repro gates:
+
+```text
+cargo nextest run -p fret-ui layout_refines_focus_traversal_availability_after_structural_fallback scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached --no-fail-fast
+```
+
+Result: passed, `5 tests run: 5 passed`.
+
+Affected/full maintenance gates:
+
+```text
+cargo fmt -p fret-ui
+cargo nextest run -p fret-ui -p fret-launch -p fret-bootstrap --no-fail-fast
+cargo clippy -p fret-devtools --all-targets -- -D warnings
+python tools/check_layering.py
+python tools/report_largest_files.py --top 30 --min-lines 800
+git diff --check
+```
+
+Result: passed. The affected nextest gate reported `1059 tests run: 1059 passed`. The largest-file
+report remains a drift watchlist only for this slice; no new large-file expansion was introduced
+outside the touched `fret-ui` mechanism files.

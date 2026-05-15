@@ -141,6 +141,83 @@ fn perf_row_status_and_reason(
     (RegressionStatusV1::Passed, None, None)
 }
 
+fn copy_perf_metric_if_present(
+    row: &serde_json::Value,
+    out: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+) {
+    if let Some(value) = row.get(key)
+        && (value.is_number() || value.is_boolean())
+    {
+        out.insert(key.to_string(), value.clone());
+    }
+}
+
+fn perf_row_summary_metrics(row: &serde_json::Value) -> serde_json::Value {
+    let mut metrics = serde_json::Map::new();
+    for key in [
+        "repeat",
+        "top_total_time_us",
+        "top_layout_time_us",
+        "top_layout_engine_solve_time_us",
+        "top_prepaint_time_us",
+        "top_paint_time_us",
+        "top_dispatch_time_us",
+        "top_hit_test_time_us",
+        "top_tick_id",
+        "top_frame_id",
+        "pointer_move_frames_present",
+        "pointer_move_frames_considered",
+        "pointer_move_max_dispatch_time_us",
+        "pointer_move_max_hit_test_time_us",
+        "pointer_move_snapshots_with_global_changes",
+        "top_renderer_encode_scene_us",
+        "top_renderer_prepare_text_us",
+        "top_renderer_draw_calls",
+        "top_renderer_instance_bytes",
+        "top_renderer_encode_scene_text_ops",
+    ] {
+        copy_perf_metric_if_present(row, &mut metrics, key);
+    }
+
+    if let Some(stats) = row.get("stats").and_then(|v| v.as_object()) {
+        let mut summary_stats = serde_json::Map::new();
+        for key in [
+            "total_time_us",
+            "layout_time_us",
+            "layout_engine_solve_time_us",
+            "prepaint_time_us",
+            "paint_time_us",
+            "dispatch_time_us",
+            "hit_test_time_us",
+            "pointer_move_max_dispatch_time_us",
+            "pointer_move_max_hit_test_time_us",
+            "pointer_move_snapshots_with_global_changes",
+            "top_renderer_encode_scene_us",
+            "top_renderer_prepare_text_us",
+            "top_renderer_draw_calls",
+            "top_renderer_instance_bytes",
+            "top_renderer_encode_scene_text_ops",
+        ] {
+            if let Some(value) = stats.get(key) {
+                summary_stats.insert(key.to_string(), value.clone());
+            }
+        }
+        if !summary_stats.is_empty() {
+            metrics.insert(
+                "stats".to_string(),
+                serde_json::Value::Object(summary_stats),
+            );
+        }
+    }
+
+    if let Some(worst_run) = row.get("worst_run") {
+        metrics.insert("worst_run".to_string(), worst_run.clone());
+    }
+
+    serde_json::Value::Object(metrics)
+}
+
 fn perf_row_to_regression_item(
     workspace_root: &Path,
     row: &serde_json::Value,
@@ -162,6 +239,7 @@ fn perf_row_to_regression_item(
         .as_ref()
         .and_then(|v| v.get("bundle"))
         .and_then(|v| v.as_str())
+        .or_else(|| row.get("bundle").and_then(|v| v.as_str()))
         .map(|v| v.to_string());
     let (status, reason_code, source_reason_code) =
         perf_row_status_and_reason(row, threshold_failures, hint_failures);
@@ -211,6 +289,8 @@ fn perf_row_to_regression_item(
                 "sort": sort,
                 "repeat": repeat,
                 "stats": row.get("stats").cloned(),
+                "bundle": row.get("bundle").cloned(),
+                "metrics": perf_row_summary_metrics(row),
                 "worst_run": worst_run,
                 "row_error": row.get("error").cloned(),
                 "threshold_failures": threshold_failures,
@@ -460,6 +540,14 @@ pub(crate) struct PerfCmdContext {
     pub max_pointer_move_global_changes: Option<u64>,
     pub max_pointer_move_hit_test_us: Option<u64>,
     pub max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64>,
+    pub max_renderer_encode_scene_text_ops: Option<u64>,
+    pub max_renderer_encode_scene_us: Option<u64>,
+    pub max_renderer_encoder_finish_us: Option<u64>,
+    pub max_renderer_instance_bytes: Option<u64>,
+    pub max_renderer_prepare_svg_us: Option<u64>,
+    pub max_renderer_prepare_text_us: Option<u64>,
+    pub max_renderer_record_passes_us: Option<u64>,
+    pub max_renderer_upload_us: Option<u64>,
     pub max_top_layout_us: Option<u64>,
     pub max_top_solve_us: Option<u64>,
     pub max_top_total_us: Option<u64>,
@@ -520,6 +608,14 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         max_pointer_move_global_changes,
         max_pointer_move_hit_test_us,
         max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+        max_renderer_encode_scene_text_ops,
+        max_renderer_encode_scene_us,
+        max_renderer_encoder_finish_us,
+        max_renderer_instance_bytes,
+        max_renderer_prepare_svg_us,
+        max_renderer_prepare_text_us,
+        max_renderer_record_passes_us,
+        max_renderer_upload_us,
         max_top_layout_us,
         max_top_solve_us,
         max_top_total_us,
@@ -653,14 +749,14 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         max_pointer_move_global_changes,
         min_run_paint_cache_hit_test_only_replay_allowed_max,
         max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-        max_renderer_encode_scene_us: None,
-        max_renderer_upload_us: None,
-        max_renderer_record_passes_us: None,
-        max_renderer_encoder_finish_us: None,
-        max_renderer_prepare_text_us: None,
-        max_renderer_prepare_svg_us: None,
-        max_renderer_instance_bytes: None,
-        max_renderer_encode_scene_text_ops: None,
+        max_renderer_encode_scene_us,
+        max_renderer_upload_us,
+        max_renderer_record_passes_us,
+        max_renderer_encoder_finish_us,
+        max_renderer_prepare_text_us,
+        max_renderer_prepare_svg_us,
+        max_renderer_instance_bytes,
+        max_renderer_encode_scene_text_ops,
     };
     let perf_baseline = perf_baseline_path
         .clone()
@@ -1130,15 +1226,14 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     &bundle_path,
                     report_warmup_frames,
                 )?;
-                if stats_json {
-                    stats_rows::push_perf_json_row(
-                        &mut perf_json_rows,
-                        script_key.as_str(),
-                        sort,
-                        &report,
-                        &bundle_path,
-                    );
-                } else {
+                stats_rows::push_perf_json_row(
+                    &mut perf_json_rows,
+                    script_key.as_str(),
+                    sort,
+                    &report,
+                    &bundle_path,
+                );
+                if !stats_json {
                     println!(
                         "PERF {} sort={} top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
                         src.display(),
@@ -1523,15 +1618,16 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     Some((prev_us, _, _)) if *prev_us >= top_total => {}
                     _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
                 }
-            } else if stats_json {
+            } else {
                 reporting::push_perf_json_no_last_bundle_dir(
                     &mut perf_json_rows,
                     script_key.clone(),
                     sort,
                     None,
                 );
-            } else {
-                reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, None);
+                if !stats_json {
+                    reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, None);
+                }
             }
 
             if !reuse_process {
@@ -1675,14 +1771,13 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             )?;
 
             let Some(bundle_path) = bundle_path else {
-                if stats_json {
-                    reporting::push_perf_json_no_last_bundle_dir(
-                        &mut perf_json_rows,
-                        src.display().to_string(),
-                        sort,
-                        Some(repeat),
-                    );
-                } else {
+                reporting::push_perf_json_no_last_bundle_dir(
+                    &mut perf_json_rows,
+                    src.display().to_string(),
+                    sort,
+                    Some(repeat),
+                );
+                if !stats_json {
                     reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, Some(repeat));
                 }
                 if !reuse_process {
@@ -1938,26 +2033,25 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         }
 
         if runs_total.len() == repeat {
-            if stats_json {
-                reporting::push_perf_json_repeat_summary_row(
-                    &mut perf_json_rows,
-                    src.as_path(),
-                    sort,
-                    repeat,
-                    &runs_json,
-                    &runs_total,
-                    &runs_layout,
-                    &runs_solve,
-                    &runs_prepaint,
-                    &runs_paint,
-                    &runs_dispatch,
-                    &runs_hit_test,
-                    &runs_pointer_move_dispatch,
-                    &runs_pointer_move_hit_test,
-                    &runs_pointer_move_global_changes,
-                    script_worst.as_ref(),
-                );
-            } else {
+            reporting::push_perf_json_repeat_summary_row(
+                &mut perf_json_rows,
+                src.as_path(),
+                sort,
+                repeat,
+                &runs_json,
+                &runs_total,
+                &runs_layout,
+                &runs_solve,
+                &runs_prepaint,
+                &runs_paint,
+                &runs_dispatch,
+                &runs_hit_test,
+                &runs_pointer_move_dispatch,
+                &runs_pointer_move_hit_test,
+                &runs_pointer_move_global_changes,
+                script_worst.as_ref(),
+            );
+            if !stats_json {
                 let total = summarize_times_us(&runs_total);
                 let layout = summarize_times_us(&runs_layout);
                 let solve = summarize_times_us(&runs_solve);
@@ -3080,6 +3174,72 @@ mod tests {
     }
 
     #[test]
+    fn perf_thresholds_json_projects_renderer_thresholds() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-thresholds-renderer-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).expect("create temp threshold dir");
+
+        let thresholds = PerfThresholds {
+            max_top_total_us: Some(20_000),
+            max_top_layout_us: None,
+            max_top_solve_us: None,
+            max_frame_p95_total_us: None,
+            max_frame_p95_layout_us: None,
+            max_frame_p95_solve_us: None,
+            max_pointer_move_dispatch_us: None,
+            max_pointer_move_hit_test_us: None,
+            max_pointer_move_global_changes: None,
+            min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+            max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            max_renderer_encode_scene_us: Some(5_000),
+            max_renderer_upload_us: Some(5_000),
+            max_renderer_record_passes_us: Some(2_000),
+            max_renderer_encoder_finish_us: Some(2_000),
+            max_renderer_prepare_text_us: Some(5_000),
+            max_renderer_prepare_svg_us: Some(2_000),
+            max_renderer_instance_bytes: Some(500_000),
+            max_renderer_encode_scene_text_ops: Some(10_000),
+        };
+
+        let out_path = outputs::write_perf_thresholds_json(
+            &out_dir,
+            5,
+            PerfThresholdAggregate::Max,
+            &[],
+            &[],
+            false,
+            &thresholds,
+            None,
+            None,
+            None,
+            &[],
+            &[],
+        );
+        let payload: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&out_path).expect("threshold JSON should exist"))
+                .expect("threshold JSON should parse");
+
+        assert_eq!(
+            payload.pointer("/thresholds/max_renderer_encode_scene_us"),
+            Some(&serde_json::json!(5_000))
+        );
+        assert_eq!(
+            payload.pointer("/thresholds/max_renderer_instance_bytes"),
+            Some(&serde_json::json!(500_000))
+        );
+        assert_eq!(
+            payload.pointer("/thresholds/max_renderer_encode_scene_text_ops"),
+            Some(&serde_json::json!(10_000))
+        );
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
     fn perf_row_to_regression_item_marks_row_errors_as_tooling() {
         let workspace_root = Path::new("F:/repo");
         let row = serde_json::json!({
@@ -3101,5 +3261,176 @@ mod tests {
             Some("no_last_bundle_dir")
         );
         assert_eq!(item.name, "apps/demo.perf.json");
+    }
+
+    #[test]
+    fn perf_regression_summary_uses_rows_when_stdout_is_human() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-summary-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).expect("create temp summary dir");
+        let rows = vec![serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "repeat": 1,
+            "stats": { "total_time_us": { "max": 0 } },
+            "worst_run": {
+                "bundle": "F:/repo/.fret/bundle.schema2.json",
+                "run_index": 0,
+                "top_total_time_us": 0
+            }
+        })];
+
+        write_regression_summary_for_perf(
+            Path::new("F:/repo"),
+            &out_dir,
+            42,
+            BundleStatsSort::Time,
+            1,
+            &rows,
+            None,
+            &[],
+            &[],
+            None,
+            None,
+            None,
+            false,
+            false,
+        );
+
+        let summary_path = out_dir.join("regression.summary.json");
+        let summary: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&summary_path).expect("read regression summary"),
+        )
+        .expect("parse regression summary");
+        assert_eq!(summary["totals"]["passed"], 1);
+        assert_eq!(summary["totals"]["failed_tooling"], 0);
+        assert_eq!(
+            summary["items"][0]["reason_code"].as_str(),
+            None,
+            "summary should not synthesize tooling.diag_perf.no_rows when rows exist"
+        );
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_uses_single_run_bundle_artifact() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "bundle": "F:/repo/.fret/single-run/bundle.schema2.json",
+            "top_total_time_us": 0
+        });
+
+        let item = perf_row_to_regression_item(
+            workspace_root,
+            &row,
+            &[],
+            &[],
+            Some(Path::new("F:/repo/out/layout.perf.summary.v1.json")),
+            None,
+            None,
+        );
+
+        let evidence = item.evidence.expect("perf item should carry evidence");
+        assert_eq!(
+            evidence.bundle_artifact.as_deref(),
+            Some("F:/repo/.fret/single-run/bundle.schema2.json")
+        );
+        assert_eq!(
+            evidence
+                .extra
+                .as_ref()
+                .and_then(|v| v.get("bundle"))
+                .and_then(|v| v.as_str()),
+            Some("F:/repo/.fret/single-run/bundle.schema2.json")
+        );
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_projects_single_run_metrics() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "bundle": "F:/repo/.fret/single-run/bundle.schema2.json",
+            "top_total_time_us": 123,
+            "top_layout_time_us": 45,
+            "top_layout_engine_solve_time_us": 6,
+            "pointer_move_frames_present": true,
+            "pointer_move_frames_considered": 8,
+            "pointer_move_max_dispatch_time_us": 7,
+            "pointer_move_max_hit_test_time_us": 9,
+            "top_renderer_encode_scene_us": 11,
+            "top_renderer_instance_bytes": 2048,
+            "top_renderer_encode_scene_text_ops": 12
+        });
+
+        let item = perf_row_to_regression_item(workspace_root, &row, &[], &[], None, None, None);
+        let metrics = item
+            .evidence
+            .as_ref()
+            .and_then(|e| e.extra.as_ref())
+            .and_then(|extra| extra.get("metrics"))
+            .expect("perf item should expose summary metrics");
+
+        assert_eq!(metrics["top_total_time_us"], 123);
+        assert_eq!(metrics["top_layout_time_us"], 45);
+        assert_eq!(metrics["top_layout_engine_solve_time_us"], 6);
+        assert_eq!(metrics["pointer_move_frames_present"], true);
+        assert_eq!(metrics["pointer_move_frames_considered"], 8);
+        assert_eq!(metrics["pointer_move_max_dispatch_time_us"], 7);
+        assert_eq!(metrics["pointer_move_max_hit_test_time_us"], 9);
+        assert_eq!(metrics["top_renderer_encode_scene_us"], 11);
+        assert_eq!(metrics["top_renderer_instance_bytes"], 2048);
+        assert_eq!(metrics["top_renderer_encode_scene_text_ops"], 12);
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_projects_repeat_stats_metrics() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "time",
+            "repeat": 3,
+            "stats": {
+                "total_time_us": { "max": 123, "p95": 120 },
+                "layout_time_us": { "max": 45 },
+                "pointer_move_max_dispatch_time_us": { "max": 7 },
+                "top_renderer_encode_scene_us": { "max": 11 },
+                "top_renderer_instance_bytes": { "max": 2048 }
+            },
+            "worst_run": {
+                "bundle": "F:/repo/.fret/repeat/bundle.schema2.json",
+                "run_index": 2,
+                "top_total_time_us": 123
+            }
+        });
+
+        let item = perf_row_to_regression_item(workspace_root, &row, &[], &[], None, None, None);
+        let metrics = item
+            .evidence
+            .as_ref()
+            .and_then(|e| e.extra.as_ref())
+            .and_then(|extra| extra.get("metrics"))
+            .expect("perf item should expose summary metrics");
+
+        assert_eq!(metrics["repeat"], 3);
+        assert_eq!(metrics["stats"]["total_time_us"]["max"], 123);
+        assert_eq!(metrics["stats"]["total_time_us"]["p95"], 120);
+        assert_eq!(metrics["stats"]["layout_time_us"]["max"], 45);
+        assert_eq!(
+            metrics["stats"]["pointer_move_max_dispatch_time_us"]["max"],
+            7
+        );
+        assert_eq!(metrics["stats"]["top_renderer_encode_scene_us"]["max"], 11);
+        assert_eq!(metrics["stats"]["top_renderer_instance_bytes"]["max"], 2048);
+        assert_eq!(metrics["worst_run"]["run_index"], 2);
+        assert_eq!(metrics["worst_run"]["top_total_time_us"], 123);
     }
 }

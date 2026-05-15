@@ -2794,6 +2794,7 @@ mod tests {
         assert!(perf_help.contains("Usage: fretboard-dev diag perf"));
         assert!(perf_help.contains("--prewarm-script"));
         assert!(perf_help.contains("--perf-threshold-agg"));
+        assert!(perf_help.contains("--max-renderer-encode-scene-us"));
         assert!(perf_help.contains("--reuse-launch"));
 
         assert!(campaign_run_help.contains("Usage: fretboard-dev diag campaign run"));

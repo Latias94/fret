@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## P0 - Source Baseline
 
@@ -125,8 +125,40 @@ Readiness order for the next locally testable review slices:
    assemblers use crate-local setters, while disabled sanitization only clears nav highlight.
    2026-05-14 enabled follow-up: `ResponseExt.enabled` storage is private too. Public/demo/test
    callers use `enabled()`, while disabled sanitization and text controls use crate-local
-   `set_enabled(...)`. `ResponseExt.core` and `ResponseExt.id` remain explicit follow-up candidates
-   because they are broader shared-response and routing-identity surfaces.
+   `set_enabled(...)`. `ResponseExt.id` is now sealed as a routing-identity surface too: public
+   callers use `id()`, while response assemblers use crate-local `set_id(...)`. `ResponseExt.core`
+   is now accessor-only as well: public code can still round-trip the shared
+   `fret_authoring::Response` through `core()` / `from_core(...)`, while runtime assembly writes
+   through crate-local core setters. The adapter signal record is now read-only too: adapter seam
+   inputs keep builder-friendly public options, but emitted `AdapterSignalRecord` /
+   `AdapterSignalMetadata` values expose identity, response, and metadata through accessors.
+   2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
+   storage private and no longer exposes external default construction. `DragValueCore` still owns
+   response construction, while editor controls read visual state through `dragging()`, `hovered()`,
+   `pressed()`, and `focused()`.
+   2026-05-14 debug-draw follow-up: `DebugDrawResponse` now keeps response and summary storage
+   private, removes external default construction, and exposes the underlying interaction response
+   through `response()`.
+   2026-05-14 debug-draw summary follow-up: `DebugDrawCommandSummary` and
+   `DebugDrawListSummary` now keep diagnostic storage private as well. Public callers read command
+   kind/channel/clip/count metrics through explicit accessors instead of copying fields.
+   2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
+   opaque-output-struct check for sealed response/context/summary records, so public output fields
+   cannot return by simply changing field names.
+   2026-05-14 editor axis-outcome follow-up: `VecEditAxisOutcome` and
+   `TransformEditAxisOutcome` now keep section/axis/outcome storage private. Public proof code reads
+   axis edit events through explicit accessors.
+   2026-05-14 output-catalog gate follow-up: the IMUI workstream source gate now scans the
+   `fret-imui`, `fret-ui-editor`, and `fret-ui-kit::imui` source roots for new public
+   `*Response`/`*Outcome`/`*Summary`/`*Signal`/`*Record`/`*Context` structs and fails unless they
+   are explicitly covered by the opaque-output-struct check.
+   2026-05-14 editor color-event follow-up: `ColorEditPaletteSlotDrop`,
+   `ColorEditEyedropperRequest`, and `ColorEditDragDropPayload` now follow the same accessor-first
+   rule. The opaque-output catalog now covers `*Request`, `*Payload`, and `*Drop` records in the
+   IMUI/editor scan roots.
+   2026-05-14 state-catalog gate follow-up: the source gate now treats public `*State` structs as
+   opaque IMUI structs too and registers `ImUiMultiSelectState`, so future shared state helpers
+   cannot expose mutable storage by bypassing the one-off multi-select field checks.
 2. Component surface catalog: keep the widget/component gap read source-backed before opening
    implementation follow-ons.
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
@@ -163,12 +195,29 @@ Readiness order for the next locally testable review slices:
    `ImUiMultiSelectState`, sortable row recipes, and drag-preview recipes. `fret-node` is useful
    comparison evidence but not a second IMUI collection proof because it owns graph-specific
    node/edge/group semantics.
+   2026-05-14 multi-select storage follow-up: `ImUiMultiSelectState` now keeps selection and anchor
+   storage private behind explicit accessors/constructors. The collection proof remains app-owned,
+   but it can no longer bypass the shared selection-storage API by mutating public fields.
+   2026-05-14 ordered-selection follow-up: collection order normalization moved from the proof app
+   into `ImUiMultiSelectState::from_ordered_selection(...)`, keeping the Dear ImGui-style storage
+   helper in `fret-ui-kit::imui` while avoiding a monolithic `fret-imui` multi-select runtime.
+   2026-05-14 request-vocabulary audit: `P3_COLLECTION_HELPER_READINESS_2026-05-06.md` now records
+   that this storage extraction is not enough evidence to add `BeginMultiSelect`/`EndMultiSelect`
+   or an `ImUiMultiSelectIO` runtime surface.
+   2026-05-14 state-catalog gate follow-up: `ImUiMultiSelectState` is now covered by the reusable
+   opaque-struct catalog because shared collection state is part of the public policy-layer
+   contract, not a freely mutable data bag.
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
    collection behavior. The next credible follow-on is behavior-specific, with `ResizeY` first if a
    proof needs it; do not open a generic `BeginChild()` flag-mirror lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
+9. Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes and
+   product-chain perf gates, not in a broad widget/API backlog.
+   Current review: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`. The useful comparison axis is
+   Zed-style attribution and reuse discipline plus egui-style integration/repaint clarity; do not
+   treat egui's full-layout-every-frame model as an IMUI architecture target.
 
 These slices should stay Windows/Web-verifiable first; Linux-specific validation is not a gate for
 opening the slice.

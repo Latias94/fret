@@ -178,7 +178,7 @@ impl View for ImUiResponseSignalsView {
 
             let drag_delta = drag.drag_delta();
             let drag_total = drag.drag_total();
-            let drag_rect: Option<Rect> = drag.core.rect;
+            let drag_rect: Option<Rect> = drag.rect();
             let drag_details = fret_ui_kit::ui::text(format!(
                 "drag delta=({:.1},{:.1}) total=({:.1},{:.1}) rect={}",
                 drag_delta.x.0,
@@ -330,11 +330,11 @@ impl View for ImUiResponseSignalsView {
                     );
                 },
             );
-            if combo_resp.trigger.activated() {
+            if combo_resp.response().activated() {
                 let _ = lifecycle_combo_activations
                     .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
             }
-            if combo_resp.trigger.deactivated() {
+            if combo_resp.response().deactivated() {
                 let _ = lifecycle_combo_deactivations
                     .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
             }

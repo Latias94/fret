@@ -109,13 +109,14 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`
   - Scope: current source-backed Dear ImGui gap audit and cleanup/prioritization lane. Use this when
-    deciding which IMUI gaps are still real, which old parity claims are stale, and which cleanup or
-    follow-on should be split next.
+    deciding which IMUI gaps are still real, which old parity claims are stale, and which cleanup,
+    perf-discipline, or follow-on should be split next.
 
 - Closed kit private owner split follow-on:
   - `docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json`
@@ -277,6 +278,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
@@ -292,9 +294,11 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - Scope: keep the phase ordering and cross-phase status for the remaining maturity gap after the
     stack-reset closeouts without reopening runtime widening or generic helper-growth by default;
-    future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
-    review, and implementation-heavy work should stay in narrower follow-ons or the active docking
-    parity lane.
+    the 2026-05-15 audit keeps the goal explicitly not complete until real-host Wayland hand-feel,
+    DevTools GUI productization, and broader perf attribution/smoothness close in their owner
+    lanes; future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget
+    before review, and implementation-heavy work should stay in narrower follow-ons or the active
+    docking parity lane.
 
 - Closed narrow P1 text input policy depth follow-on:
   - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
@@ -1678,6 +1682,9 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -1685,10 +1692,14 @@ Current source of truth for the in-tree immediate-mode stack:
     keeping the v1 window-style opacity capability explicit, and continuing with the remaining
     platform-specific acceptance slices rather than reopening the umbrella lane. As of 2026-04-29,
     non-Linux local continuation is limited to source-policy gates, campaign validation, diagnostics
-    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-13, the latest
-    local non-interactive gate refresh is green and the launched bounded P3 campaign is green after
-    the diagnostics runner no-frame pointer-move repair. Platform-specific real-host acceptance,
-    especially the Wayland compositor runbook, remains open.
+    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-13, the launched
+    bounded P3 campaign is green after the diagnostics runner no-frame pointer-move repair. As of
+    2026-05-14, the local Wayland-boundary refresh is green for source policy, capability posture,
+    fallback behavior, and campaign manifests. As of 2026-05-15, the source-drift guard validates
+    docking suite membership, stale standalone-note drift, and the Wayland campaign/script
+    admission contract. The latest local policy-skip gate now proves a non-Wayland
+    `platform.capabilities` sidecar stops at `skipped_policy` before script execution.
+    Platform-specific real-host acceptance, especially the Wayland compositor runbook, remains open.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
   - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
@@ -1908,7 +1919,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-13, 17 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-15, 20 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
@@ -2075,7 +2086,7 @@ Rule:
 - `docs/workstreams/imui-identity-browser-html-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for offline HTML identity warning browsing)
 - `docs/workstreams/imui-identity-browser-visual-gate-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for offline HTML identity browser smoke gates)
 - `docs/workstreams/imui-identity-browser-fixture-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for committed identity browser sample bundles)
-- `docs/workstreams/imui-imgui-gap-closure-v1/` — first 2026-05-06, latest 2026-05-06, 5 markdown docs (active source-audit lane for rebaselining the Dear ImGui gap against current Fret sources and `repo-ref/imgui` before further fearless cleanup or helper widening)
+- `docs/workstreams/imui-imgui-gap-closure-v1/` — first 2026-05-06, latest 2026-05-15, 16 markdown docs (active source-audit lane for rebaselining the Dear ImGui gap against current Fret sources and `repo-ref/imgui` before further fearless cleanup, perf-discipline work, or helper widening)
 - `docs/workstreams/imui-kit-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 10 markdown docs (closed narrow follow-on for private `fret-ui-kit::imui` owner splits and proven duplication deletion without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-disclosure-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for disclosure facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for checkbox/radio/switch facade wrapper owner split without public API or runtime contract widening)
@@ -2084,7 +2095,7 @@ Rule:
 - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for structural container facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/` — first 2026-05-14, latest 2026-05-14, 7 markdown docs (closed narrow follow-on for floating/popup trait-default owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-debug-draw-owner-split-v1/` — first 2026-05-06, latest 2026-05-06, 10 markdown docs (closed narrow follow-on for splitting IMUI debug draw private owners without public API or behavior changes; includes a closeout audit and private test owner)
-- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-13, 22 markdown docs
+- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-15, 23 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private active-trigger behavior follow-on for deleting switch/menu/tab trigger response and lifecycle duplication without widening `fret-imui` or runtime contracts by default)

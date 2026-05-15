@@ -20,7 +20,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::selectable_with_options(self, label, options);
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 
@@ -53,7 +53,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::multi_selectable_with_options(
             self, label, model, all_keys, key, options,
         );
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## Evidence Anchors
 
@@ -19,6 +19,7 @@ Last updated: 2026-05-14
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
 - Current Fret IMUI source:
@@ -59,6 +60,9 @@ Last updated: 2026-05-14
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
   - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
+  - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+  - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
 - Current proof surfaces:
@@ -180,9 +184,69 @@ Run evidence:
   keep working.
 - 2026-05-14: made `ResponseExt.enabled` storage private too. Public/demo/test callers use
   `enabled()`, while disabled sanitization and text controls use crate-local `set_enabled(...)`.
-  `ResponseExt.core` and `ResponseExt.id` intentionally remain public in this slice because current
-  source evidence shows they are broader shared-response and routing-identity surfaces that need a
-  separate contract audit.
+- 2026-05-14: made `ResponseExt.id` storage private too. Public/demo/test callers use `id()`, while
+  pressable, disclosure, and text-control response assemblers use crate-local `set_id(...)`.
+  Routing consumers in combo, menu/popup, tooltip, drag/drop, tab focus, text-picker, facade
+  focusable recording, and the editor proof now consume identity through accessors. `ResponseExt.core`
+  intentionally remains public in this slice because it is the broader shared
+  `fret_authoring::Response` compatibility surface and needs a separate contract audit before
+  accessor-only migration. The same compile sweep also migrated stale `apps/fret-examples-imui`
+  demo reads for previously sealed floating/disclosure/combo/table response fields back onto their
+  accessor APIs.
+- 2026-05-14: made `ResponseExt.core` storage private too after the separate contract audit. Public
+  callers keep the shared authoring-response bridge through `core()` and `from_core(...)`, plus
+  focused signal accessors such as `rect()`, `focused()`, `hovered()`, and `pressed()`. Runtime
+  pressable/disclosure/text/disabled/combo/multi-select/text-picker assembly writes through
+  crate-local core setters and merge helpers, and `tools/gate_imui_workstream_source.py` rejects
+  public `core` field access or direct `.core` reads/writes from returning in the covered IMUI
+  surfaces.
+- 2026-05-14: made emitted adapter seam records read-only as well. `AdapterSignalRecord` and
+  `AdapterSignalMetadata` now expose constructor/accessor APIs while `report_adapter_signal(...)`
+  remains the canonical emission path. `AdapterSeamOptions` stays as a public-field input options
+  bag because callers need to provide a reporter and focus-restore target ergonomically.
+- 2026-05-14: made `DragValueCoreResponse` accessor-first in `fret-ui-editor`. Scrub response
+  storage for `dragging`, `hovered`, `pressed`, and `focused` is now private, `DragValueCore`
+  constructs the response internally, and `DragValue` / `AxisDragValue` consume those signals
+  through read-only accessors. The response no longer exposes external default construction. The
+  source gate rejects public fields, stale direct field reads, and public default construction.
+  Focused gates passed locally: `cargo check -p fret-ui-editor --tests`,
+  `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`,
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`, `python tools/gate_imui_workstream_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+- 2026-05-14: made `DebugDrawResponse` accessor-first in `fret-ui-kit`. Response and summary
+  storage are private, external default construction is gone, and public callers use
+  `response()`, `list_summary()`, and `command_summaries()`. Cookbook and smoke tests now read the
+  response through accessors, and the source gate rejects the old public-field shape.
+- 2026-05-14: made `DebugDrawCommandSummary` and `DebugDrawListSummary` accessor-first as well.
+  Command kind/channel/clip metadata and aggregate list counters remain readable through explicit
+  accessors, but storage, default construction, and final-clip-depth mutation stay internal to
+  `debug_draw_controls`. Cookbook, smoke tests, and debug-draw owner tests now use accessor reads,
+  and the source gate rejects public summary fields or external default construction from returning.
+- 2026-05-14: hardened `tools/gate_imui_workstream_source.py` with an opaque-output-struct check
+  for the sealed IMUI response/context/summary records. The gate now parses each listed public
+  output struct body and fails on any externally public field, so new response-surface cleanup does
+  not depend only on per-field string markers.
+- 2026-05-14: made `VecEditAxisOutcome` and `TransformEditAxisOutcome` accessor-first in
+  `fret-ui-editor`. Axis edit events still carry the same section/axis/session-close values, but
+  storage and construction are internal to the editor controls. The editor proof reads them through
+  `section()`, `axis()`, and `outcome()`, and the source gate covers the records with the reusable
+  opaque-output-struct check.
+- 2026-05-14: hardened the opaque-output gate again so it scans the `fret-imui`,
+  `fret-ui-editor`, and `fret-ui-kit::imui` source roots for public output-style structs by suffix.
+  New public `*Response`/`*Outcome`/`*Summary`/`*Signal`/`*Record`/`*Context` records must now be
+  explicitly registered in `tools/gate_imui_workstream_source.py` before the field-opacity check
+  can pass.
+- 2026-05-14: made editor `ColorEdit` event/request/payload records accessor-first too.
+  `ColorEditPaletteSlotDrop`, `ColorEditEyedropperRequest`, and `ColorEditDragDropPayload` now keep
+  storage private while exposing callback reads through explicit accessors. The opaque-output gate
+  suffix scan now includes `*Request`, `*Payload`, and `*Drop` records in the IMUI/editor source
+  roots. Focused gates passed locally: `cargo nextest run -p fret-ui-editor color_edit
+  --no-fail-fast`, `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke
+  --test imui_surface_policy --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-14: extended the opaque public-struct gate from output records to shared public state
+  helpers by scanning `*State` names and registering `ImUiMultiSelectState`. This keeps future
+  IMUI/editor state helpers accessor-first by default while leaving explicit options/input bags
+  outside the catalog.
 
 ## P3 Design Surface Readiness Gates
 
@@ -266,6 +330,29 @@ python tools/gate_imui_editor_collection_source.py
 cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast
 ```
 
+- 2026-05-14: `ImUiMultiSelectState` now exposes explicit storage operations instead of public
+  `selected`/`anchor` fields. The proof collection uses `selected()`, `anchor()`,
+  `first_selected()`, `selected_count()`, `is_empty()`, `clear()`, `new(...)`, and `single(...)`;
+  `tools/gate_imui_workstream_source.py` rejects the public-field shape and direct proof-side field
+  mutation from returning.
+- 2026-05-14: moved visible-order selection repair into
+  `ImUiMultiSelectState::from_ordered_selection(...)`. This keeps the storage helper aligned with
+  Dear ImGui's `ImGuiSelectionBasicStorage` direction without copying `BeginMultiSelect` /
+  `EndMultiSelect` runtime ownership into `fret-imui`; the proof collection no longer carries a
+  local `proof_collection_normalize_selection(...)`.
+- 2026-05-14: refreshed `P3_COLLECTION_HELPER_READINESS_2026-05-06.md` to keep multi-select
+  request/IO vocabulary candidate-only. `tools/gate_imui_workstream_source.py` now rejects
+  `BeginMultiSelect`/`EndMultiSelect`-style runtime names from the current `fret-ui-kit::imui`
+  storage helper.
+- 2026-05-14: the reusable opaque public-struct gate now includes `*State` and covers
+  `ImUiMultiSelectState`, so the collection helper storage contract cannot regress to public
+  `selected` / `anchor` fields by slipping outside the previous output-record catalog. Focused
+  gates passed locally: `python tools/gate_imui_workstream_source.py`,
+  `python tools/check_workstream_catalog.py`, `cargo nextest run -p fret-imui interaction_drag
+  --no-fail-fast`, `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast`, and
+  `git diff --check`.
+
 ## P3 Execution Priority Review Gates
 
 Use these when changing the P3 execution-priority read:
@@ -281,6 +368,27 @@ python tools/gate_imui_facade_teaching_source.py
 python tools/check_workstream_catalog.py
 git diff --check
 ```
+
+## P4 Performance Alignment Review Gates
+
+Use these when changing the Dear ImGui / Zed / egui performance interpretation:
+
+```powershell
+rg -n "FrameArenaScratch|bounds-tree|diag perf|diag stats|renderer churn|Zed|egui" docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Run evidence:
+
+- 2026-05-15: registered `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md` in
+  `WORKSTREAM.json`, `TODO.md`, `MILESTONES.md`, and this evidence file so performance discipline
+  remains part of the active Dear ImGui gap read.
+- The review keeps perf work in `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the
+  product-chain docking perf gate. It explicitly rejects turning egui's full-layout-every-frame
+  model or Dear ImGui's widget breadth into a `fret-imui` runtime/API widening target.
 
 ## P3 Product Chain Gate
 
@@ -462,6 +570,12 @@ Run evidence:
   locally. The gate now validates `fretboard-dev list tool-apps` human and JSON output, the
   `docs/diagnostics-first-open.md` first-open anchor, the DevTools GUI and MCP launch/docs/gate
   entries, and `fretboard-dev diag doctor campaigns --json` with `ok=true`.
+- 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
+  maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
+  checklist, while preserving the distinction between `capability_source` and
+  `capabilities_check_path`. Focused gates passed locally:
+  `python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
 - 2026-05-14: a full launched rerun with
   `python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke-2026-05-14-discovery-gate --timeout-ms 240000`
   exceeded the local 10 minute command timeout before returning a result. A later short diagnostic

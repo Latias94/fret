@@ -5,13 +5,12 @@ use fret_core::{Point, Rect, Size};
 use fret_ui_kit::imui::ResponseExt;
 
 fn to_shared_response(response: ResponseExt) -> Response {
-    response.core
+    response.core()
 }
 
 #[test]
 fn shared_and_facade_response_boundary_compiles() {
-    let mut response = ResponseExt::default();
-    response.core = Response {
+    let response = ResponseExt::from_core(Response {
         hovered: true,
         pressed: false,
         focused: false,
@@ -21,7 +20,7 @@ fn shared_and_facade_response_boundary_compiles() {
             Point::new(0.0.into(), 0.0.into()),
             Size::new(8.0.into(), 4.0.into()),
         )),
-    };
+    });
 
     let shared = to_shared_response(response);
     assert!(shared.clicked());

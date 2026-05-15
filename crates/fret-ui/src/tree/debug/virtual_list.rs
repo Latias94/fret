@@ -170,12 +170,9 @@ pub(crate) fn classify_virtual_list_window_shift(
         UiDebugVirtualListWindowShiftReason::InputsChange
     } else if input.items_revision != input.prev_items_revision {
         UiDebugVirtualListWindowShiftReason::ItemsRevision
-    } else if (input.offset.0 - input.prev_offset.0).abs() > 0.01 {
-        UiDebugVirtualListWindowShiftReason::ScrollOffset
-    } else if rendered_window_no_longer_covers_visible(
-        input.render_window_range,
-        input.visible_range,
-    ) {
+    } else if (input.offset.0 - input.prev_offset.0).abs() > 0.01
+        || rendered_window_no_longer_covers_visible(input.render_window_range, input.visible_range)
+    {
         UiDebugVirtualListWindowShiftReason::ScrollOffset
     } else if virtual_range_inputs_changed(input.prev_window_range, input.window_range) {
         UiDebugVirtualListWindowShiftReason::InputsChange

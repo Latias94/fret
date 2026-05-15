@@ -52,6 +52,10 @@ The main rule for future growth is stricter than the current Rust visibility:
 - `ecosystem/fret-ui-editor/src/imui.rs` is a thin adapter layer. Every public function accepts a
   declarative editor control/composite and calls its `into_element(...)`; it must not become a
   parallel widget implementation.
+- Editor `ColorEdit` callback records are part of the public editor surface but are not open
+  options bags. `ColorEditPaletteSlotDrop`, `ColorEditEyedropperRequest`, and
+  `ColorEditDragDropPayload` expose event/request/payload reads through accessors while keeping
+  construction and mutation on canonical helpers.
 - `ecosystem/fret/src/lib.rs` exposes `fret::imui` only behind the `imui` feature. The root module
   re-exports the minimal entrypoints and places policy-heavy lanes behind `kit`, `editor`, and
   `docking` submodules.

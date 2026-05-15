@@ -183,14 +183,6 @@ fn eval_selector_scoped(
             {
                 note = Some("fallback_chrome_suffix");
             }
-            if matches.is_empty() {
-                // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
-                note = Some("fallback_hidden_nodes");
-                matches.extend(snapshot.nodes.iter().filter(|n| {
-                    let node_id = n.id.data().as_ffi();
-                    in_scope(node_id) && matches_root_z(node_id) && n.test_id.as_deref() == Some(id)
-                }));
-            }
         }
         UiSelectorV1::GlobalElementId { element, .. } => {
             let Some(node) = element_runtime.and_then(|runtime| {
@@ -386,6 +378,7 @@ pub(in super::super) fn inspect_selector_candidates_report(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui_diagnostics::select_semantics_node_scoped;
     use fret_core::{
         NodeId, Point, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRoot,
         SemanticsSnapshot, Size,
@@ -581,8 +574,7 @@ mod tests {
             root_z_index: Some(0),
         };
         let picked =
-            super::super::select_semantics_node_scoped(&snapshot, window, None, &selector, None)
-                .unwrap();
+            select_semantics_node_scoped(&snapshot, window, None, &selector, None).unwrap();
         assert_eq!(picked.id, node_id(2));
 
         let selector = UiSelectorV1::TestId {
@@ -590,8 +582,94 @@ mod tests {
             root_z_index: Some(10),
         };
         let picked =
-            super::super::select_semantics_node_scoped(&snapshot, window, None, &selector, None)
-                .unwrap();
+            select_semantics_node_scoped(&snapshot, window, None, &selector, None).unwrap();
         assert_eq!(picked.id, node_id(3));
+    }
+
+    #[test]
+    fn default_selectors_exclude_semantics_hidden_subtrees() {
+        let window = window_id(1);
+        let mut hidden_parent = semantics_node(
+            2,
+            Some(1),
+            SemanticsRole::Group,
+            rect(0.0, 20.0, 80.0, 40.0),
+            "Hidden parent",
+            Some("hidden-parent"),
+        );
+        hidden_parent.flags.hidden = true;
+        let hidden_child = semantics_node(
+            3,
+            Some(2),
+            SemanticsRole::Button,
+            rect(0.0, 20.0, 80.0, 20.0),
+            "Hidden child",
+            Some("hidden-child"),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Window,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                    None,
+                ),
+                hidden_parent,
+                hidden_child,
+            ],
+        };
+        let index = SemanticsIndex::new(&snapshot);
+        let hidden_parent_id = snapshot.nodes[1].id.data().as_ffi();
+        let hidden_child_id = snapshot.nodes[2].id.data().as_ffi();
+
+        assert_eq!(
+            index.nearest_semantics_hidden_ancestor_or_self(hidden_parent_id),
+            Some(hidden_parent_id)
+        );
+        assert_eq!(
+            index.nearest_semantics_hidden_ancestor_or_self(hidden_child_id),
+            Some(hidden_parent_id)
+        );
+        assert!(
+            select_semantics_node_scoped(
+                &snapshot,
+                window,
+                None,
+                &UiSelectorV1::TestId {
+                    id: "hidden-parent".to_string(),
+                    root_z_index: None,
+                },
+                None,
+            )
+            .is_none()
+        );
+        assert!(
+            select_semantics_node_scoped(
+                &snapshot,
+                window,
+                None,
+                &UiSelectorV1::TestId {
+                    id: "hidden-child".to_string(),
+                    root_z_index: None,
+                },
+                None,
+            )
+            .is_none()
+        );
     }
 }

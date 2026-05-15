@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-05-14",
+  "updated": "2026-05-15",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
@@ -51,6 +51,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md"
     },
     {
       "role": "status",
@@ -241,6 +245,18 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md"
     },
     {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -322,6 +338,10 @@
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
     {
+      "name": "imui-product-chain-devtools-discovery-entrypoints",
+      "command": "python tools/diag_gate_imui_product_chain.py --only discovery"
+    },
+    {
       "name": "imui-product-chain-editor-notes-launched-gate",
       "command": "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only editor-notes,editor-notes-device-shell"
     },
@@ -386,8 +406,56 @@
       "command": "cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"
     },
     {
+      "name": "imui-p3-docking-perf-entrypoint",
+      "command": "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+    },
+    {
+      "name": "imui-p3-wayland-policy-skip-gate",
+      "command": "python tools/diag_gate_docking_wayland_policy_skip.py"
+    },
+    {
       "name": "imui-p2-devtools-first-open-smoke",
       "command": "python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
+    },
+    {
+      "name": "imui-p2-devtools-product-workflow-source",
+      "command": "cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-devtools-demo-metrics-debug-source",
+      "command": "cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-shared-regression-followup-commands",
+      "command": "cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-shared-regression-followup-command-classification",
+      "command": "cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-devtools-runnable-followup-actions",
+      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-devtools-gate-command-source",
+      "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-devtools-perf-evidence-drilldown",
+      "command": "cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-shared-regression-drilldown-projection",
+      "command": "cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-devtools-mcp-product-workflow-source",
+      "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
+    },
+    {
+      "name": "imui-p2-devtools-mcp-regression-dashboard-drilldown",
+      "command": "cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast"
     },
     {
       "name": "devtools-build",
@@ -434,6 +502,7 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md",
     "docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md",
     "docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md",
@@ -553,10 +622,15 @@
     "docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md",
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
+    "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md",
+    "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
@@ -625,9 +699,12 @@
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/src/editor_notes_device_shell_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "crates/fret-diag/src/regression_summary.rs",
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools/src/native.rs",
+    "apps/fret-devtools/src/followup.rs",
     "apps/fret-devtools-mcp/src/main.rs",
+    "apps/fret-devtools-mcp/src/native.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
     "tools/diag-campaigns/devtools-first-open-smoke.json",
     "docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md",
@@ -646,6 +723,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md` as the latest local non-interactive docking refresh, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and treat `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, and `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md` as local source/admission/policy-skip evidence only. The 2026-05-15 goal audit remains not complete until real-host Wayland hand-feel, DevTools GUI productization, and broader perf attribution/smoothness close in their owner lanes; start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }

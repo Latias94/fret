@@ -200,8 +200,8 @@ fn vec_edit_axis_label(axis: VecEditAxis) -> &'static str {
 fn vec_edit_axis_outcome_label(outcome: VecEditAxisOutcome) -> String {
     format!(
         "{} {}",
-        vec_edit_axis_label(outcome.axis),
-        edit_session_outcome_label(outcome.outcome)
+        vec_edit_axis_label(outcome.axis()),
+        edit_session_outcome_label(outcome.outcome())
     )
 }
 
@@ -216,9 +216,9 @@ fn transform_edit_section_label(section: TransformEditSection) -> &'static str {
 fn transform_edit_axis_outcome_label(outcome: TransformEditAxisOutcome) -> String {
     format!(
         "{}.{} {}",
-        transform_edit_section_label(outcome.section),
-        vec_edit_axis_label(outcome.axis),
-        edit_session_outcome_label(outcome.outcome)
+        transform_edit_section_label(outcome.section()),
+        vec_edit_axis_label(outcome.axis()),
+        edit_session_outcome_label(outcome.outcome())
     )
 }
 
@@ -3233,7 +3233,7 @@ fn render_authoring_parity_imui_group(
                         id: item.id.clone(),
                         label: item.label.clone(),
                     };
-                    let sortable = sortable_row(ui, row.trigger, payload);
+                    let sortable = sortable_row(ui, row.response(), payload);
                     let ghost_id = format!(
                         "imui-editor-proof.authoring.imui.outliner.reorder.row.{}.ghost",
                         item.id

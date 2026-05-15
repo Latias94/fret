@@ -8,8 +8,9 @@ use std::time::Duration;
 use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
-    RegressionSummaryV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
+    regression_bundle_followup_command_lines, regression_bundle_followup_commands,
+    regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -40,11 +41,37 @@ use tokio::sync::oneshot;
 static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1000);
 
 const RESOURCE_SCHEME: &str = "fret-diag://";
+const RESOURCE_URI_FIRST_OPEN_MD: &str = "fret-diag://first-open.md";
+const RESOURCE_KIND_FIRST_OPEN_MD: &str = "first-open.md";
 const RESOURCE_KIND_BUNDLE_JSON: &str = "bundle.json";
 const RESOURCE_KIND_BUNDLE_ZIP: &str = "bundle.zip";
 const RESOURCE_KIND_REPRO_SUMMARY_JSON: &str = "repro.summary.json";
 const RESOURCE_KIND_REGRESSION_SUMMARY_JSON: &str = DIAG_REGRESSION_SUMMARY_FILENAME_V1;
 const RESOURCE_KIND_REGRESSION_INDEX_JSON: &str = DIAG_REGRESSION_INDEX_FILENAME_V1;
+const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
+const DEVTOOLS_GUI_BRANCH_DOC: &str =
+    "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md";
+const DEVTOOLS_MCP_DOC: &str =
+    "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md";
+const DEVTOOLS_REPO_PREFLIGHT_COMMAND: &str = "cargo run -p fretboard-dev -- diag doctor campaigns";
+const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag doctor campaigns --json";
+const DEVTOOLS_TOOL_APP_INDEX_COMMAND: &str = "cargo run -p fretboard-dev -- list tool-apps";
+const DEVTOOLS_TOOL_APP_INDEX_JSON_COMMAND: &str =
+    "cargo run -p fretboard-dev -- list tool-apps --json";
+const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
+const IMUI_PRODUCT_WORKFLOW_DOC: &str =
+    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
+const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =
+    "python tools/diag_gate_imui_product_chain.py --only discovery";
+const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
+const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
+    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
+const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
+    "perf-docking/regression.summary.json",
+    "perf-docking/check.perf_thresholds.json",
+];
 
 #[derive(Clone)]
 struct WsState {
@@ -1134,10 +1161,7 @@ impl FretDevtoolsMcp {
 impl ServerHandler for FretDevtoolsMcp {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            instructions: Some(
-                "Fret diagnostics DevTools MCP adapter. Starts a local WS hub and exposes tools to drive inspect/pick/scripts/bundles."
-                    .into(),
-            ),
+            instructions: Some(mcp_server_instructions().into()),
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
                 .enable_resources_with(ResourcesCapability {
@@ -1190,6 +1214,14 @@ impl ServerHandler for FretDevtoolsMcp {
             let inbox = self.inbox.lock().await;
 
             let mut resources: Vec<Resource> = Vec::new();
+            let mut first_open = RawResource::new(RESOURCE_URI_FIRST_OPEN_MD, "first-open.md");
+            first_open.mime_type = Some("text/markdown".to_string());
+            first_open.description = Some(
+                "Canonical DevTools MCP first-open diagnostics path, including the shared IMUI product-chain evidence workflow."
+                    .to_string(),
+            );
+            resources.push(first_open.no_annotation());
+
             for s in sessions {
                 let Some(_payload) = inbox.iter().rev().find(|m| {
                     m.r#type == "bundle.dumped"
@@ -1297,6 +1329,12 @@ impl ServerHandler for FretDevtoolsMcp {
 
             Ok(ListResourceTemplatesResult::with_all_items(vec![
                 mk(
+                    "fret-diag://first-open.md",
+                    "first-open.md",
+                    "text/markdown",
+                    "Canonical DevTools MCP first-open diagnostics path and shared IMUI product workflow.",
+                ),
+                mk(
                     "fret-diag://sessions/{session_id}/bundle.json",
                     "bundle.json",
                     "application/json",
@@ -1339,6 +1377,17 @@ impl ServerHandler for FretDevtoolsMcp {
             let uri = request.uri.trim();
             let parsed = parse_resource_uri(uri)
                 .ok_or_else(|| McpError::resource_not_found("unknown resource uri", None))?;
+
+            if parsed.kind == RESOURCE_KIND_FIRST_OPEN_MD {
+                return Ok(ReadResourceResult {
+                    contents: vec![ResourceContents::TextResourceContents {
+                        uri: uri.to_string(),
+                        mime_type: Some("text/markdown".to_string()),
+                        text: mcp_first_open_resource_text(),
+                        meta: None,
+                    }],
+                });
+            }
 
             let session_id = self
                 .resolve_session_id(parsed.session_id.clone())
@@ -1612,9 +1661,19 @@ struct DashboardFailingSummaryEntryV1 {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 struct RegressionDashboardEvidenceV1 {
     #[serde(default)]
+    bundle_dirs: Vec<String>,
+    #[serde(default)]
     capability_sources: Vec<String>,
     #[serde(default)]
     capabilities_check_paths: Vec<String>,
+    #[serde(default)]
+    perf_evidence_lines: Vec<String>,
+    #[serde(default)]
+    followup_command_lines: Vec<String>,
+    #[serde(default)]
+    runnable_followup_command_lines: Vec<String>,
+    #[serde(default)]
+    manual_followup_command_lines: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1634,9 +1693,19 @@ struct RegressionDashboardResultV1 {
     top_reason_codes: Vec<DashboardReasonCodeEntryV1>,
     failing_summaries: Vec<DashboardFailingSummaryEntryV1>,
     #[serde(default)]
+    bundle_dirs: Vec<String>,
+    #[serde(default)]
     capability_sources: Vec<String>,
     #[serde(default)]
     capabilities_check_paths: Vec<String>,
+    #[serde(default)]
+    perf_evidence_lines: Vec<String>,
+    #[serde(default)]
+    followup_command_lines: Vec<String>,
+    #[serde(default)]
+    runnable_followup_command_lines: Vec<String>,
+    #[serde(default)]
+    manual_followup_command_lines: Vec<String>,
     human_summary: String,
     #[serde(default)]
     index_json: Option<String>,
@@ -2193,30 +2262,6 @@ fn session_resource_uris(
     uris
 }
 
-fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
-    if let Some(path) = value.get("path").and_then(|value| value.as_str())
-        && !path.trim().is_empty()
-    {
-        return Some(path.to_string());
-    }
-    if let Some(label) = value.get("label").and_then(|value| value.as_str())
-        && !label.trim().is_empty()
-    {
-        return Some(label.to_string());
-    }
-    let transport = value.get("transport").and_then(|value| value.as_str());
-    let session_id = value.get("session_id").and_then(|value| value.as_str());
-    match (transport, session_id) {
-        (Some(transport), Some(session_id))
-            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
-        {
-            Some(format!("{transport}:{session_id}"))
-        }
-        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
-        _ => None,
-    }
-}
-
 fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashboardEvidenceV1 {
     let Ok(summary_json) = std::fs::read_to_string(summary_path) else {
         return RegressionDashboardEvidenceV1::default();
@@ -2224,58 +2269,30 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
     let Ok(summary) = serde_json::from_str::<RegressionSummaryV1>(&summary_json) else {
         return RegressionDashboardEvidenceV1::default();
     };
-    let mut evidence = RegressionDashboardEvidenceV1::default();
-    for item in summary.items {
-        if item.status == RegressionStatusV1::Passed {
-            continue;
-        }
-        let capability_source = item
-            .evidence
-            .as_ref()
-            .and_then(|evidence| evidence.extra.as_ref())
-            .and_then(|extra| extra.get("capability_source"))
-            .and_then(capability_source_display_from_value)
-            .or_else(|| {
-                item.source
-                    .as_ref()
-                    .and_then(|source| source.metadata.as_ref())
-                    .and_then(|metadata| metadata.get("capability_source"))
-                    .and_then(capability_source_display_from_value)
-            })
-            .or_else(|| {
-                item.evidence
-                    .as_ref()
-                    .and_then(|evidence| evidence.extra.as_ref())
-                    .and_then(|extra| extra.get("capabilities_source_path"))
-                    .and_then(|value| value.as_str())
-                    .filter(|value| !value.trim().is_empty())
-                    .map(ToString::to_string)
-            });
-        if let Some(source) = capability_source
-            && !evidence
-                .capability_sources
-                .iter()
-                .any(|existing| existing == &source)
-        {
-            evidence.capability_sources.push(source);
-        }
-        if let Some(check_path) = item
-            .evidence
-            .as_ref()
-            .and_then(|evidence| evidence.extra.as_ref())
-            .and_then(|extra| extra.get("capabilities_check_path"))
-            .and_then(|value| value.as_str())
-            .filter(|value| !value.trim().is_empty())
-            .map(ToString::to_string)
-            && !evidence
-                .capabilities_check_paths
-                .iter()
-                .any(|existing| existing == &check_path)
-        {
-            evidence.capabilities_check_paths.push(check_path);
-        }
+    let drilldown = regression_summary_drilldown(&summary);
+    let followup_commands =
+        regression_bundle_followup_commands(drilldown.bundle_dirs.iter().map(String::as_str));
+    let followup_command_lines =
+        regression_bundle_followup_command_lines(drilldown.bundle_dirs.iter().map(String::as_str));
+    let runnable_followup_command_lines = followup_commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect();
+    let manual_followup_command_lines = followup_commands
+        .iter()
+        .filter(|command| command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect();
+    RegressionDashboardEvidenceV1 {
+        bundle_dirs: drilldown.bundle_dirs,
+        capability_sources: drilldown.capability_sources,
+        capabilities_check_paths: drilldown.capabilities_check_paths,
+        perf_evidence_lines: drilldown.perf_evidence_lines,
+        followup_command_lines,
+        runnable_followup_command_lines,
+        manual_followup_command_lines,
     }
-    evidence
 }
 
 fn build_regression_dashboard_result(
@@ -2290,6 +2307,10 @@ fn build_regression_dashboard_result(
     let summary_path = index_path.with_file_name(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     let evidence = collect_regression_dashboard_evidence(&summary_path);
     let mut human_lines = dashboard_human_lines_from_projection(index_path, &projection);
+    if !evidence.bundle_dirs.is_empty() {
+        human_lines.push("bundle dirs:".to_string());
+        human_lines.extend(evidence.bundle_dirs.iter().map(|dir| format!("  - {dir}")));
+    }
     if !evidence.capability_sources.is_empty() {
         human_lines.push("capability sources:".to_string());
         human_lines.extend(
@@ -2306,6 +2327,42 @@ fn build_regression_dashboard_result(
                 .capabilities_check_paths
                 .iter()
                 .map(|path| format!("  - {path}")),
+        );
+    }
+    if !evidence.perf_evidence_lines.is_empty() {
+        human_lines.push("perf evidence:".to_string());
+        human_lines.extend(
+            evidence
+                .perf_evidence_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.followup_command_lines.is_empty() {
+        human_lines.push("follow-up commands:".to_string());
+        human_lines.extend(
+            evidence
+                .followup_command_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.runnable_followup_command_lines.is_empty() {
+        human_lines.push("runnable follow-up commands:".to_string());
+        human_lines.extend(
+            evidence
+                .runnable_followup_command_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.manual_followup_command_lines.is_empty() {
+        human_lines.push("manual compare follow-up commands:".to_string());
+        human_lines.extend(
+            evidence
+                .manual_followup_command_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
         );
     }
     let human_summary = human_lines.join("\n");
@@ -2343,11 +2400,61 @@ fn build_regression_dashboard_result(
             .into_iter()
             .map(Into::into)
             .collect(),
+        bundle_dirs: evidence.bundle_dirs,
         capability_sources: evidence.capability_sources,
         capabilities_check_paths: evidence.capabilities_check_paths,
+        perf_evidence_lines: evidence.perf_evidence_lines,
+        followup_command_lines: evidence.followup_command_lines,
+        runnable_followup_command_lines: evidence.runnable_followup_command_lines,
+        manual_followup_command_lines: evidence.manual_followup_command_lines,
         human_summary,
         index_json: if include_json { index_json } else { None },
     }
+}
+
+fn mcp_server_instructions() -> String {
+    format!(
+        "Fret diagnostics DevTools MCP adapter. Starts a local WS hub and exposes tools to drive inspect/pick/scripts/bundles. Read {RESOURCE_URI_FIRST_OPEN_MD} for the first-open evidence path. Product workflow: {IMUI_PRODUCT_WORKFLOW_ID}; default: {IMUI_PRODUCT_WORKFLOW_COMMAND}; focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}; launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}."
+    )
+}
+
+fn mcp_first_open_lines() -> Vec<String> {
+    vec![
+        format!("mcp first-open: {DEVTOOLS_FIRST_OPEN_DOC}"),
+        format!("mcp workflow: {DEVTOOLS_MCP_DOC}"),
+        format!("gui branch: {DEVTOOLS_GUI_BRANCH_DOC}"),
+        format!("repo preflight: {DEVTOOLS_REPO_PREFLIGHT_COMMAND}"),
+        format!("repo preflight json: {DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND}"),
+        format!("tool-app index: {DEVTOOLS_TOOL_APP_INDEX_COMMAND}"),
+        format!("tool-app index json: {DEVTOOLS_TOOL_APP_INDEX_JSON_COMMAND}"),
+        format!("resource: {RESOURCE_URI_FIRST_OPEN_MD}"),
+        format!("product workflow: {IMUI_PRODUCT_WORKFLOW_ID}"),
+        format!("product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}"),
+        format!("product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
+        format!("product workflow launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}"),
+        format!("product workflow suite: {IMUI_PRODUCT_WORKFLOW_SUITE}"),
+        format!("product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}"),
+        format!(
+            "product workflow artifacts: {}",
+            IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(", ")
+        ),
+    ]
+}
+
+fn mcp_first_open_resource_text() -> String {
+    let mut lines = vec![
+        "# Fret DevTools MCP First-open".to_string(),
+        String::new(),
+        "This resource mirrors the repo-maintainer first-open index without adding a MCP-private workflow schema."
+            .to_string(),
+        String::new(),
+    ];
+    lines.extend(
+        mcp_first_open_lines()
+            .into_iter()
+            .map(|line| format!("- {line}")),
+    );
+    lines.join("\n")
 }
 
 fn repo_root_from_manifest_dir() -> Option<PathBuf> {
@@ -2631,6 +2738,12 @@ fn parse_resource_uri(uri: &str) -> Option<ParsedResourceUri> {
         return None;
     }
     let rest = uri.strip_prefix(RESOURCE_SCHEME)?;
+    if rest == RESOURCE_KIND_FIRST_OPEN_MD {
+        return Some(ParsedResourceUri {
+            session_id: None,
+            kind: RESOURCE_KIND_FIRST_OPEN_MD.to_string(),
+        });
+    }
     let mut parts = rest.split('/').filter(|p| !p.trim().is_empty());
     let head = parts.next()?;
     match head {
@@ -2811,6 +2924,67 @@ mod tests {
     }
 
     #[test]
+    fn parse_resource_uri_accepts_first_open_resource() {
+        let parsed = parse_resource_uri("fret-diag://first-open.md")
+            .expect("first-open resource uri should parse");
+        assert_eq!(parsed.session_id, None);
+        assert_eq!(parsed.kind, RESOURCE_KIND_FIRST_OPEN_MD);
+    }
+
+    #[test]
+    fn mcp_first_open_resource_text_surfaces_imui_product_chain() {
+        let text = mcp_first_open_resource_text();
+        assert!(text.contains("mcp first-open: docs/diagnostics-first-open.md"));
+        assert!(text.contains(
+            "mcp workflow: docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+        ));
+        assert!(text.contains(
+            "gui branch: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        ));
+        assert!(
+            text.contains("repo preflight: cargo run -p fretboard-dev -- diag doctor campaigns")
+        );
+        assert!(text.contains(
+            "repo preflight json: cargo run -p fretboard-dev -- diag doctor campaigns --json"
+        ));
+        assert!(text.contains("tool-app index: cargo run -p fretboard-dev -- list tool-apps"));
+        assert!(
+            text.contains(
+                "tool-app index json: cargo run -p fretboard-dev -- list tool-apps --json"
+            )
+        );
+        assert!(text.contains("resource: fret-diag://first-open.md"));
+        assert!(text.contains("product workflow: imui-product-chain"));
+        assert!(
+            text.contains("product workflow command: python tools/diag_gate_imui_product_chain.py")
+        );
+        assert!(text.contains(
+            "product workflow focused: python tools/diag_gate_imui_product_chain.py --only discovery"
+        ));
+        assert!(text.contains(
+            "product workflow launched: python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+        ));
+        assert!(text.contains(
+            "product workflow suite: tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
+        ));
+        assert!(text.contains(
+            "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
+        ));
+        assert!(text.contains(
+            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+        ));
+    }
+
+    #[test]
+    fn mcp_server_instructions_point_to_first_open_resource() {
+        let text = mcp_server_instructions();
+        assert!(text.contains("fret-diag://first-open.md"));
+        assert!(text.contains("Product workflow: imui-product-chain"));
+        assert!(text.contains("python tools/diag_gate_imui_product_chain.py --only discovery"));
+        assert!(text.contains("--only perf-docking"));
+    }
+
+    #[test]
     fn artifact_path_from_bundle_dumped_payload_resolves_regression_files() {
         let repo_root = Path::new("F:/repo");
         let payload = serde_json::json!({
@@ -2884,6 +3058,9 @@ mod tests {
                     "lane": "smoke",
                     "reason_code": "capability.missing",
                     "evidence": {
+                        "bundle_dir": "target/fret-diag/campaigns/ui-gallery/run-a",
+                        "perf_summary_json": "target/fret-diag/campaigns/ui-gallery/layout.perf.summary.v1.json",
+                        "compare_json": "target/fret-diag/campaigns/ui-gallery/check.perf_thresholds.json",
                         "extra": {
                             "capability_source": {
                                 "kind": "filesystem",
@@ -2929,6 +3106,10 @@ mod tests {
         assert!(result.human_summary.contains("top reason codes:"));
         assert!(result.human_summary.contains("pixel_diff: 4"));
         assert_eq!(
+            result.bundle_dirs,
+            vec!["target/fret-diag/campaigns/ui-gallery/run-a".to_string()]
+        );
+        assert_eq!(
             result.capability_sources,
             vec!["target/fret-diag/capabilities.json".to_string()]
         );
@@ -2936,8 +3117,37 @@ mod tests {
             result.capabilities_check_paths,
             vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
         );
+        assert!(result.perf_evidence_lines.iter().any(|line| line.contains(
+            "capability-check [skipped_policy] perf_summary_json: target/fret-diag/campaigns/ui-gallery/layout.perf.summary.v1.json"
+        )));
+        assert!(result.followup_command_lines.iter().any(|line| line.contains(
+            "diag stats: cargo run -p fretboard-dev -- diag stats target/fret-diag/campaigns/ui-gallery/run-a --json"
+        )));
+        assert!(
+            result
+                .runnable_followup_command_lines
+                .iter()
+                .any(|line| line.contains("diag stats: cargo run -p fretboard-dev -- diag stats"))
+        );
+        assert!(result
+            .manual_followup_command_lines
+            .iter()
+            .any(|line| line.contains("visual compare: cargo run -p fretboard-dev -- diag compare <baseline-bundle-or-dir>")));
+        assert!(result.human_summary.contains("bundle dirs:"));
         assert!(result.human_summary.contains("capability sources:"));
         assert!(result.human_summary.contains("capability checks:"));
+        assert!(result.human_summary.contains("perf evidence:"));
+        assert!(result.human_summary.contains("follow-up commands:"));
+        assert!(
+            result
+                .human_summary
+                .contains("runnable follow-up commands:")
+        );
+        assert!(
+            result
+                .human_summary
+                .contains("manual compare follow-up commands:")
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

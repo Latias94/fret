@@ -20,7 +20,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::checkbox_model_with_options(
             self, label, model, options,
         );
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 
@@ -38,7 +38,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::radio_with_options(self, label, selected, options);
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 
@@ -61,7 +61,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::switch_model_with_options(
             self, label, model, options,
         );
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 }

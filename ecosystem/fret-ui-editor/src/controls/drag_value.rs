@@ -302,9 +302,9 @@ where
                             scrub_chrome,
                             EditorFrameState {
                                 enabled: true,
-                                hovered: resp.hovered,
-                                pressed: resp.dragging || resp.pressed,
-                                focused: resp.focused || cx.is_focused_element(scrub_id),
+                                hovered: resp.hovered(),
+                                pressed: resp.dragging() || resp.pressed(),
+                                focused: resp.focused() || cx.is_focused_element(scrub_id),
                                 open: false,
                                 semantic: EditorFrameSemanticState::default(),
                             },

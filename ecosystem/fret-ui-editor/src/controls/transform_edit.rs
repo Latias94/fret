@@ -48,9 +48,35 @@ pub enum TransformEditSection {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TransformEditAxisOutcome {
-    pub section: TransformEditSection,
-    pub axis: VecEditAxis,
-    pub outcome: AxisDragValueOutcome,
+    section: TransformEditSection,
+    axis: VecEditAxis,
+    outcome: AxisDragValueOutcome,
+}
+
+impl TransformEditAxisOutcome {
+    pub(crate) fn new(
+        section: TransformEditSection,
+        axis: VecEditAxis,
+        outcome: AxisDragValueOutcome,
+    ) -> Self {
+        Self {
+            section,
+            axis,
+            outcome,
+        }
+    }
+
+    pub fn section(self) -> TransformEditSection {
+        self.section
+    }
+
+    pub fn axis(self) -> VecEditAxis {
+        self.axis
+    }
+
+    pub fn outcome(self) -> AxisDragValueOutcome {
+        self.outcome
+    }
 }
 
 pub type OnTransformEditAxisOutcome =
@@ -340,11 +366,11 @@ impl TransformEdit {
                         on_axis_outcome(
                             host,
                             action_cx,
-                            TransformEditAxisOutcome {
-                                section: TransformEditSection::Position,
-                                axis: outcome.axis,
-                                outcome: outcome.outcome,
-                            },
+                            TransformEditAxisOutcome::new(
+                                TransformEditSection::Position,
+                                outcome.axis(),
+                                outcome.outcome(),
+                            ),
                         );
                     },
                 );
@@ -371,11 +397,11 @@ impl TransformEdit {
                         on_axis_outcome(
                             host,
                             action_cx,
-                            TransformEditAxisOutcome {
-                                section: TransformEditSection::Rotation,
-                                axis: outcome.axis,
-                                outcome: outcome.outcome,
-                            },
+                            TransformEditAxisOutcome::new(
+                                TransformEditSection::Rotation,
+                                outcome.axis(),
+                                outcome.outcome(),
+                            ),
                         );
                     },
                 );
@@ -401,11 +427,11 @@ impl TransformEdit {
                     on_axis_outcome(
                         host,
                         action_cx,
-                        TransformEditAxisOutcome {
-                            section: TransformEditSection::Scale,
-                            axis: outcome.axis,
-                            outcome: outcome.outcome,
-                        },
+                        TransformEditAxisOutcome::new(
+                            TransformEditSection::Scale,
+                            outcome.axis(),
+                            outcome.outcome(),
+                        ),
                     );
                 },
             );
@@ -933,8 +959,11 @@ fn uniform_scale_sync<H: UiHost>(
 
 #[cfg(test)]
 mod tests {
-    use super::{TransformEdit, TransformEditPresentations};
-    use crate::primitives::NumericPresentation;
+    use super::{
+        TransformEdit, TransformEditAxisOutcome, TransformEditPresentations, TransformEditSection,
+    };
+    use crate::controls::VecEditAxis;
+    use crate::primitives::{EditSessionOutcome, NumericPresentation};
     use fret_app::App;
     use std::sync::Arc;
 
@@ -971,5 +1000,18 @@ mod tests {
         assert_eq!(edit.options.position_suffix, Some(Arc::from("m")));
         assert!(edit.options.rotation_suffix.is_none());
         assert!(edit.options.scale_suffix.is_none());
+    }
+
+    #[test]
+    fn transform_edit_axis_outcome_exposes_read_only_signals() {
+        let outcome = TransformEditAxisOutcome::new(
+            TransformEditSection::Scale,
+            VecEditAxis::Y,
+            EditSessionOutcome::Canceled,
+        );
+
+        assert_eq!(outcome.section(), TransformEditSection::Scale);
+        assert_eq!(outcome.axis(), VecEditAxis::Y);
+        assert_eq!(outcome.outcome(), EditSessionOutcome::Canceled);
     }
 }

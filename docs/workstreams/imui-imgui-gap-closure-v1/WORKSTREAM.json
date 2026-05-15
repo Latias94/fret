@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-14",
+  "updated": "2026-05-15",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -55,6 +55,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md"
     },
     {
       "role": "execution",
@@ -202,6 +206,10 @@
       "command": "python tools/diag_gate_imui_product_chain.py"
     },
     {
+      "name": "imui performance alignment source guard",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
       "name": "fret-imui composition ownership tests",
       "command": "cargo nextest run -p fret-imui composition --no-fail-fast"
     },
@@ -270,6 +278,7 @@
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "ecosystem/fret-imui/Cargo.toml",
@@ -286,8 +295,19 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
+    "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
+    "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests.rs",
+    "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
+    "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs",
     "ecosystem/fret/src/lib.rs",
     "apps/fret-cookbook/src/lib.rs",
     "apps/fret-cookbook/README.md",
@@ -347,6 +367,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue here while the work is source-audit, prioritization, and first-slice coordination. Split implementation-heavy fixes into narrower follow-ons once a specific owner, repro, and gate is named."
+    "notes": "Continue here while the work is source-audit, prioritization, and first-slice coordination. `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md` is part of this lane's active evidence: performance work should stay in the dedicated perf attribution/smoothness lanes and product-chain perf gates, not become a widget/API backlog. Split implementation-heavy fixes into narrower follow-ons once a specific owner, repro, and gate is named."
   }
 }

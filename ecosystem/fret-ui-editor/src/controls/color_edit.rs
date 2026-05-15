@@ -95,10 +95,10 @@ pub fn default_color_edit_palette() -> Arc<[ColorEditPaletteEntry]> {
 /// `ColorEdit` popup palette entry.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColorEditPaletteSlotDrop {
-    pub index: usize,
-    pub previous: ColorEditPaletteEntry,
-    pub payload: ColorEditDragDropPayload,
-    pub next: ColorEditPaletteEntry,
+    index: usize,
+    previous: ColorEditPaletteEntry,
+    payload: ColorEditDragDropPayload,
+    next: ColorEditPaletteEntry,
 }
 
 impl ColorEditPaletteSlotDrop {
@@ -114,6 +114,22 @@ impl ColorEditPaletteSlotDrop {
             payload,
         }
     }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn previous(&self) -> &ColorEditPaletteEntry {
+        &self.previous
+    }
+
+    pub fn payload(&self) -> ColorEditDragDropPayload {
+        self.payload
+    }
+
+    pub fn next(&self) -> &ColorEditPaletteEntry {
+        &self.next
+    }
 }
 
 pub type OnColorEditPaletteSlotDrop =
@@ -126,8 +142,8 @@ pub type OnColorEditPaletteSlotDrop =
 /// an implicit runtime or renderer readback dependency.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ColorEditEyedropperRequest {
-    pub current: Color,
-    pub show_alpha: bool,
+    current: Color,
+    show_alpha: bool,
 }
 
 impl ColorEditEyedropperRequest {
@@ -136,6 +152,14 @@ impl ColorEditEyedropperRequest {
             current,
             show_alpha,
         }
+    }
+
+    pub fn current(self) -> Color {
+        self.current
+    }
+
+    pub fn show_alpha(self) -> bool {
+        self.show_alpha
     }
 
     pub fn apply_sample(self, sampled: Color) -> Color {
@@ -200,8 +224,8 @@ pub enum ColorEditDragDropComponents {
 /// Typed color payload published and accepted by editor `ColorEdit` swatches.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ColorEditDragDropPayload {
-    pub color: Color,
-    pub components: ColorEditDragDropComponents,
+    color: Color,
+    components: ColorEditDragDropComponents,
 }
 
 impl ColorEditDragDropPayload {
@@ -214,6 +238,14 @@ impl ColorEditDragDropPayload {
                 ColorEditDragDropComponents::Rgb
             },
         }
+    }
+
+    pub fn color(self) -> Color {
+        self.color
+    }
+
+    pub fn components(self) -> ColorEditDragDropComponents {
+        self.components
     }
 }
 

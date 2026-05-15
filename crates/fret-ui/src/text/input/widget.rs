@@ -919,7 +919,6 @@ impl<H: UiHost> Widget<H> for TextInput {
                             if self.read_only =>
                         {
                             cx.stop_propagation();
-                            return;
                         }
                         fret_core::KeyCode::Backspace => {
                             self.reset_caret_blink(cx);

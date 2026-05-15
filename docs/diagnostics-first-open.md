@@ -144,6 +144,16 @@ This is the shared aggregate contract used by CLI, DevTools GUI, and MCP:
 - `regression.summary.json`
 - `regression.index.json`
 
+If an aggregate or dashboard reports `skipped_policy`, treat it as a non-executed policy outcome,
+not as a deterministic failure. Keep these two fields distinct when reading or presenting evidence:
+
+- `capability_source`: provenance for the available/missing capability view.
+- `capabilities_check_path`: the campaign-local check artifact that explains the skip.
+
+For the short maintainer interpretation checklist, open:
+
+- `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+
 ## Consumer branches after the default loop
 
 Once the artifacts root exists, branch by consumer surface only as needed.
@@ -194,6 +204,11 @@ cargo run -p fretboard-dev -- list tool-apps --json
 cargo run -p fretboard-dev -- diag doctor campaigns --json
 ```
 
+The `fretboard_tool_apps` JSON includes `product_workflows`; today that names the IMUI
+product-chain gate, its focused discovery-only form, the launched docking perf form, and the
+expected `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`
+artifacts that DevTools-style consumers should surface first.
+
 Open:
 
 - `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`
@@ -210,11 +225,18 @@ Launch the GUI directly with:
 cargo run -p fret-devtools
 ```
 
+The GUI shell keeps both the `First-open Evidence Path` and the `demo-metrics-debug` route visible:
+editor proof demos, current metrics commands, and debug drill-down commands stay discoverable from
+the same top-level workspace.
+
 Launch the MCP adapter directly with:
 
 ```bash
 cargo run -p fret-devtools-mcp
 ```
+
+The MCP adapter also exposes `fret-diag://first-open.md` as a text resource for the same shared
+first-open evidence path, including the IMUI product-chain route.
 
 ### Maintainer/workstream branch
 

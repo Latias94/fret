@@ -1,0 +1,399 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from _gate_lib import WORKSPACE_ROOT, fail, ok
+
+
+GATE_NAME = "docking multiwindow workstream source"
+
+
+COMMON_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/common/suite.json")
+WINDOWS_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/windows/suite.json")
+ROOT_SUITE = Path("tools/diag-scripts/suites/docking-arbitration/suite.json")
+SMOKE_SUITE = Path("tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json")
+WAYLAND_CAMPAIGN = Path("tools/diag-campaigns/imui-p3-wayland-real-host.json")
+WAYLAND_SCRIPT = Path(
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json"
+)
+WAYLAND_POLICY_SKIP_GATE = Path("tools/diag_gate_docking_wayland_policy_skip.py")
+
+REQUIRED_COMMON_SCRIPTS = [
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json",
+    "tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json",
+    "tools/diag-scripts/docking-arbitration-demo-tab-bar-edge-autoscroll.json",
+]
+
+REQUIRED_WINDOWS_SCRIPTS = [
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json",
+]
+
+REQUIRED_SMOKE_SCRIPTS = [
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json",
+]
+
+EXISTENCE_ONLY_SCRIPTS = [
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-button-is-not-drop-surface.json",
+]
+
+
+def _read_text(path: Path, failures: list[str]) -> str:
+    try:
+        return (WORKSPACE_ROOT / path).read_text(encoding="utf-8")
+    except OSError as exc:
+        failures.append(f"{path.as_posix()}: failed to read: {exc}")
+        return ""
+
+
+def _read_json(path: Path, failures: list[str]) -> Any:
+    source = _read_text(path, failures)
+    if not source:
+        return None
+    try:
+        return json.loads(source)
+    except json.JSONDecodeError as exc:
+        failures.append(f"{path.as_posix()}: invalid JSON: {exc}")
+        return None
+
+
+def _suite_scripts(path: Path, failures: list[str]) -> list[str]:
+    payload = _read_json(path, failures)
+    if not isinstance(payload, dict):
+        return []
+    if payload.get("kind") != "diag_script_suite_manifest":
+        failures.append(f"{path.as_posix()}: expected diag_script_suite_manifest")
+    scripts = payload.get("scripts")
+    if not isinstance(scripts, list) or not all(isinstance(item, str) for item in scripts):
+        failures.append(f"{path.as_posix()}: expected string scripts list")
+        return []
+    return scripts
+
+
+def _require_markers(
+    path: Path,
+    *,
+    required: list[str],
+    forbidden: list[str] | None = None,
+    failures: list[str],
+) -> None:
+    source = _read_text(path, failures)
+    for marker in required:
+        if marker not in source:
+            failures.append(f"{path.as_posix()}: missing marker {marker}")
+    for marker in forbidden or []:
+        if marker in source:
+            failures.append(f"{path.as_posix()}: forbidden stale marker {marker}")
+
+
+def _require_suite_members(
+    path: Path,
+    *,
+    required: list[str],
+    failures: list[str],
+    max_len: int | None = None,
+) -> list[str]:
+    scripts = _suite_scripts(path, failures)
+    script_set = set(scripts)
+    for script in required:
+        if script not in script_set:
+            failures.append(f"{path.as_posix()}: missing suite script {script}")
+    if max_len is not None and len(scripts) > max_len:
+        failures.append(f"{path.as_posix()}: expected at most {max_len} scripts, found {len(scripts)}")
+    return scripts
+
+
+def _require_script_paths(scripts: list[str], failures: list[str]) -> None:
+    for script in scripts:
+        path = Path(script)
+        absolute = WORKSPACE_ROOT / path
+        if not absolute.exists():
+            failures.append(f"{script}: script path does not exist")
+            continue
+        payload = _read_json(path, failures)
+        if isinstance(payload, dict) and set(payload.keys()) == {"to"}:
+            target = payload.get("to")
+            if not isinstance(target, str):
+                failures.append(f"{script}: redirect target must be a string")
+                continue
+            if not (WORKSPACE_ROOT / target).exists():
+                failures.append(f"{script}: redirect target does not exist: {target}")
+
+
+def _check_docs(failures: list[str]) -> None:
+    _require_markers(
+        Path("docs/workstreams/standalone/docking-multi-window-imgui-alignment-v1.md"),
+        required=[
+            "Status: Active reference (partially superseded by `docs/workstreams/docking-multiwindow-imgui-parity/`)",
+            "Status note (2026-05-14): current execution state lives in `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`",
+            "Tab overflow + scrolling: delivered for the current docking arbitration tab-bar scope",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-edge-autoscroll.json`",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json`",
+            "`tools/diag-scripts/suites/docking-arbitration/common/suite.json`",
+            "`tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`",
+            "Keep the docking suite split honest",
+        ],
+        forbidden=[
+            "Tab overflow + scrolling: ensure overflow behavior is predictable and stable under resize (and ideally gate it).",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md"),
+        required=[
+            "Status: source drift guard; no behavior change.",
+            "python tools/gate_docking_multiwindow_workstream_source.py",
+            "The standalone behavior-first note no longer teaches tab overflow as an ungated gap.",
+            "`tools/diag-scripts/suites/docking-arbitration/common/suite.json`",
+            "`tools/diag-scripts/suites/docking-arbitration/windows/suite.json`",
+            "`tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`",
+            "2026-05-15",
+            "`tools/diag-campaigns/imui-p3-wayland-real-host.json`",
+            "`tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`",
+            "`imui-p3-wayland-real-host` stays a manual, host-admitted campaign",
+            "The canonical Wayland degradation script still waits for hover detection `none`",
+            "asserts `known_window_count_is(n=1)`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md"),
+        required=[
+            "Status: local policy-skip gate; no Wayland acceptance claim.",
+            "python tools/diag_gate_docking_wayland_policy_skip.py",
+            "`capabilities.json` with `diag.script_v2`",
+            "`environment.requirement_unsatisfied`",
+            "`environment.platform_capabilities.platform_ne`",
+            "script item files are not",
+            "produced under `script-results/` or `suite-results/`",
+            "does not close `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
+        required=[
+            "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
+            "python tools/gate_docking_multiwindow_workstream_source.py",
+            "python tools/diag_gate_docking_wayland_policy_skip.py",
+            "tools/gate_docking_multiwindow_workstream_source.py",
+            "tools/diag_gate_docking_wayland_policy_skip.py",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md"),
+        required=[
+            "Latest source-drift guard:",
+            "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "Latest local Wayland policy-skip gate:",
+            "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"),
+        required=[
+            "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
+            "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
+            "source drift guard now validates docking suite membership",
+            "Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        WAYLAND_POLICY_SKIP_GATE,
+        required=[
+            "CAMPAIGN_ID = \"imui-p3-wayland-real-host\"",
+            "\"capabilities\": [\"diag.script_v2\"]",
+            "\"platform\": \"windows\"",
+            "\"availability\": \"launch_time\"",
+            "\"environment.requirement_unsatisfied\"",
+            "\"environment.platform_capabilities.platform_ne\"",
+            "\"existing_filesystem\"",
+            "\"script-results\"",
+            "\"suite-results\"",
+        ],
+        failures=failures,
+    )
+
+
+def _check_suites(failures: list[str]) -> None:
+    common = _require_suite_members(
+        COMMON_SUITE,
+        required=REQUIRED_COMMON_SCRIPTS,
+        failures=failures,
+    )
+    windows = _require_suite_members(
+        WINDOWS_SUITE,
+        required=REQUIRED_WINDOWS_SCRIPTS,
+        failures=failures,
+    )
+    root = _require_suite_members(
+        ROOT_SUITE,
+        required=REQUIRED_COMMON_SCRIPTS + REQUIRED_WINDOWS_SCRIPTS,
+        failures=failures,
+    )
+    _require_suite_members(
+        SMOKE_SUITE,
+        required=REQUIRED_SMOKE_SCRIPTS,
+        failures=failures,
+        max_len=12,
+    )
+    if root and common and windows and root != common + windows:
+        failures.append(
+            f"{ROOT_SUITE.as_posix()}: expected root scripts to equal common + windows suite scripts"
+        )
+    _require_script_paths(
+        REQUIRED_COMMON_SCRIPTS
+        + REQUIRED_WINDOWS_SCRIPTS
+        + REQUIRED_SMOKE_SCRIPTS
+        + EXISTENCE_ONLY_SCRIPTS,
+        failures,
+    )
+
+
+def _step_predicate(step: Any) -> dict[str, Any]:
+    if not isinstance(step, dict):
+        return {}
+    predicate = step.get("predicate")
+    return predicate if isinstance(predicate, dict) else {}
+
+
+def _check_wayland_admission(failures: list[str]) -> None:
+    campaign = _read_json(WAYLAND_CAMPAIGN, failures)
+    if not isinstance(campaign, dict):
+        return
+    if campaign.get("kind") != "diag_campaign_manifest":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected diag_campaign_manifest")
+    if campaign.get("id") != "imui-p3-wayland-real-host":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected id imui-p3-wayland-real-host")
+    if campaign.get("tier") != "manual":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected manual tier")
+    if campaign.get("expected_duration_ms") != 180000:
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected 180000ms duration")
+
+    items = campaign.get("items")
+    if not isinstance(items, list) or not any(
+        isinstance(item, dict)
+        and item.get("kind") == "script"
+        and item.get("value") == WAYLAND_SCRIPT.as_posix()
+        for item in items
+    ):
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: missing canonical Wayland script item")
+
+    requires_environment = campaign.get("requires_environment")
+    if not isinstance(requires_environment, list) or len(requires_environment) != 1:
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected one environment admission rule")
+        return
+
+    requirement = requires_environment[0]
+    if not isinstance(requirement, dict):
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: environment rule must be an object")
+        return
+    if requirement.get("source_id") != "platform.capabilities":
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: expected platform.capabilities source")
+
+    predicate = requirement.get("predicate")
+    if not isinstance(predicate, dict):
+        failures.append(f"{WAYLAND_CAMPAIGN.as_posix()}: missing platform predicate")
+        return
+    expected_predicate = {
+        "kind": "platform_capabilities",
+        "platform_is": "linux",
+        "ui_multi_window_is": True,
+        "ui_window_tear_off_is": False,
+        "ui_window_hover_detection_is": "none",
+        "ui_window_z_level_is": "none",
+    }
+    for key, expected in expected_predicate.items():
+        if predicate.get(key) != expected:
+            failures.append(
+                f"{WAYLAND_CAMPAIGN.as_posix()}: expected predicate {key}={expected!r}"
+            )
+
+    script = _read_json(WAYLAND_SCRIPT, failures)
+    if not isinstance(script, dict):
+        return
+    if script.get("schema_version") != 2:
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: expected schema_version=2")
+    meta = script.get("meta")
+    env_defaults = meta.get("env_defaults") if isinstance(meta, dict) else None
+    if (
+        not isinstance(env_defaults, dict)
+        or env_defaults.get("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF") != "1"
+    ):
+        failures.append(
+            f"{WAYLAND_SCRIPT.as_posix()}: expected FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1"
+        )
+
+    steps = script.get("steps")
+    if not isinstance(steps, list):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: expected steps list")
+        return
+
+    if not any(
+        step.get("type") == "wait_until"
+        and _step_predicate(step).get("kind") == "platform_ui_window_hover_detection_is"
+        and _step_predicate(step).get("quality") == "none"
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing hover-detection-none wait")
+
+    if not any(
+        step.get("type") == "drag_pointer"
+        and isinstance(step.get("target"), dict)
+        and step["target"].get("id") == "dock-arb-tab-drag-anchor-right"
+        and isinstance(step.get("delta_x"), (int, float))
+        and step["delta_x"] >= 2000.0
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing long tear-off drag gesture")
+
+    if not any(
+        step.get("type") == "assert"
+        and _step_predicate(step).get("kind") == "known_window_count_is"
+        and _step_predicate(step).get("n") == 1
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing one-window fallback assertion")
+
+    if not any(
+        step.get("type") == "capture_bundle"
+        and step.get("label") == "docking-arbitration-demo-wayland-degrade-no-os-tearoff"
+        for step in steps
+        if isinstance(step, dict)
+    ):
+        failures.append(f"{WAYLAND_SCRIPT.as_posix()}: missing canonical evidence bundle")
+
+
+def collect_failures() -> list[str]:
+    failures: list[str] = []
+    _check_docs(failures)
+    _check_suites(failures)
+    _check_wayland_admission(failures)
+    return failures
+
+
+def main() -> None:
+    failures = collect_failures()
+    if failures:
+        fail(GATE_NAME, f"{len(failures)} source marker problem(s):\n  - " + "\n  - ".join(failures))
+    ok(GATE_NAME)
+
+
+if __name__ == "__main__":
+    main()

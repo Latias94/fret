@@ -85,7 +85,7 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
     options: TooltipOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> bool {
-    let Some(trigger_id) = trigger.id else {
+    let Some(trigger_id) = trigger.id() else {
         return false;
     };
 
@@ -118,12 +118,12 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
             let gates = radix_tooltip::tooltip_trigger_update_gates(
                 cx,
                 trigger.pointer_hovered_raw(),
-                trigger.core.focused,
+                trigger.focused(),
                 &event_models,
             );
 
             let anchor_bounds =
-                overlay::anchor_bounds_for_element(cx, trigger_id).or(trigger.core.rect);
+                overlay::anchor_bounds_for_element(cx, trigger_id).or(trigger.rect());
             let panel_size = cx
                 .watch_model(&panel_id)
                 .layout()
@@ -184,7 +184,7 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
 
             let overlay_children = cx.with_root_name(root_name.as_str(), |cx| {
                 let Some(anchor) =
-                    overlay::anchor_bounds_for_element(cx, trigger_id).or(trigger.core.rect)
+                    overlay::anchor_bounds_for_element(cx, trigger_id).or(trigger.rect())
                 else {
                     return Vec::new();
                 };

@@ -733,8 +733,9 @@ fn apply_inspector_width_delta(
     let Some(header) = table_response.header(column_id) else {
         return;
     };
-    let delta_x = header.resize.drag_delta_x();
-    if !header.resize.dragging() || !delta_x.is_finite() || delta_x.abs() < f32::EPSILON {
+    let resize = header.resize();
+    let delta_x = resize.drag_delta_x();
+    if !resize.dragging() || !delta_x.is_finite() || delta_x.abs() < f32::EPSILON {
         return;
     }
 

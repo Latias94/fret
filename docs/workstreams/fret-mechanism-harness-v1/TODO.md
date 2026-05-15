@@ -117,8 +117,17 @@ date: 2026-05-12
     `input_pointer_capture_active_is active=true` immediately after scrollbar `pointer_down`, keeps
     it true during drag, and asserts `active=false` after `pointer_up`, while preserving the
     existing scroll progress oracle.
-- [ ] Add a UI Gallery captured-pointer owner/underlay/cancel companion once a stable demo exposes
-  pointer-capture owner ids and underlay probes.
+- [x] Add a UI Gallery captured-pointer owner/cancel companion once a stable demo exposes
+  pointer-capture owner ids.
+  - Result: `captured_is` now proves the scrollbar owns capture during drag and clears after
+    `pointer_up`/`pointer_cancel`. The first runtime owner gate exposed a real mechanism defect:
+    semantics snapshots did not refresh when live pointer-capture owner state changed without a
+    layout/semantics dirty bit.
+- [x] Add captured-pointer underlay blocking and multi-pointer/cross-window runtime probes once a
+  stable public demo exposes underlay activation/status selectors.
+  - Result: UI Gallery now covers captured-underlay ScrollArea touch probing, and docking
+    arbitration now covers a cross-window dock drag where pointer 1 touches the under-moving
+    main-window viewport while `dock_viewport_capture_active_is` stays false.
 - [x] Add active-descendant interaction fixture coverage for combobox query-driven active descendant
   selection.
 - [x] Add nested focus scope fixture coverage for inner/outer trapped scope traversal and pointer
@@ -129,6 +138,24 @@ date: 2026-05-12
 - [x] Extend recipe-level typeahead parity beyond the current mechanism matrices.
 - [x] Add semantics fixtures for value/editing metadata, collection metadata, actions, live regions,
   and hidden-subtree policy.
+- [x] Add a UI Gallery semantics/accessibility gate for filtered default selectors versus raw
+  diagnostics visibility on a stable recipe page.
+  - Result: `ui-gallery-separator-decorative-hidden-semantics.json` proves a shadcn decorative
+    Separator divider is absent from default `test_id` selectors while `raw_semantics_hidden_is`
+    observes it as effectively hidden.
+- [x] Add dynamic expanded-state semantics mutation runtime coverage on a stable UI Gallery recipe.
+  - Result: `ui-gallery-accordion-usage-toggle.json` now asserts `expanded_is` true -> false ->
+    true on the Accordion Usage trigger while preserving panel mount/unmount checks.
+- [x] Add dynamic active-descendant or selected-state mutation runtime coverage on stable UI
+  Gallery composite recipe pages.
+  - Result: Combobox auto-highlight disabled/first-match scripts and Command controlled-selection
+    value/ArrowDown scripts now assert active-descendant mutation and are promoted into durable
+    component/conformance suites.
+- [x] Add dynamic live-region update runtime coverage once a stable status/live-region page exposes
+  selectors and deterministic text/state changes.
+  - Result: `ui-gallery-sonner-live-region-mutation.json` asserts Sonner's `Notifications`
+    viewport appears with `semantics_live_is=polite` and `semantics_live_atomic_is=false` while a
+    toast is mounted, then disappears after dismissal.
 - [x] Add initial UI Gallery overlay/focus diagnostics for stable default pages.
 - [x] Add modal-barrier root lifecycle runtime coverage on a default-compatible page.
 - [x] Add default-compatible Drawer modal underlay block/focus-restore activation-status coverage.
@@ -198,6 +225,10 @@ date: 2026-05-12
   observable from UI Gallery diagnostics.
 - [x] Add ContextMenu submenu safe-corridor runtime placement traces and repair stale/offscreen
   script selectors.
+- [x] Add ContextMenu submenu branch/corridor runtime routing coverage.
+  - Result: `ui-gallery-context-menu-submenu-branch-corridor-routing.json` proves moving into the
+    submenu and back to the parent trigger keeps the submenu open, while moving to another parent
+    item or away from the trigger closes the nested submenu without closing the root menu.
 - [x] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
   bridge once a stable public gallery path is selected.
 - [x] Add a companion RTL submenu tight-left collision fixture that intentionally keeps the
@@ -215,3 +246,85 @@ date: 2026-05-12
   visual bounds under ancestor `render_transform`.
 - [x] Add a focused `Anchored` scroll-transformed-anchor gate and fix scroll geometry invalidation so
   layout-driven anchored overlays recompute after scroll offset changes.
+- [x] Add runtime diagnostics support for explicit pointer ids on pointer-session steps and gate a
+  UI Gallery multi-pointer captured-underlay probe.
+- [x] Add a cross-window docking/tear-out multi-pointer probe now that runtime scripts can hold one
+  captured pointer while another pointer targets the underlay/window-under-moving surface.
+  - Result:
+    `docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json` proves pointer
+    0's dock drag remains active while pointer 1 touches/releases the main-window viewport, and the
+    new `dock_viewport_capture_active_is` predicate proves no competing viewport capture starts.
+- [x] Add a selected-state mutation runtime gate for Select commit/reopen semantics.
+  - Result:
+    `ui-gallery-select-commit-and-label-update.json` now waits for overlay placement/bounds,
+    commits Banana, reopens the popup, and asserts Banana is selected while Apple is not. The first
+    promoted run exposed an early overlay-click harness defect before passing after the stability
+    fix.
+- [x] Add a second selected-state mutation companion for Tabs or DataTable faceted filters if a
+  stable selected semantics surface is available.
+  - Result:
+    `ui-gallery-tabs-selected-state-mutation.json` proves Account and Password tab triggers swap
+    selected flags after activation, covering inline selected semantics in addition to Select's
+    overlay-backed selected item.
+- [x] Add a collection metadata mutation gate for `pos_in_set_is`/`set_size_is` across filtering,
+  pagination, or virtual-list window changes.
+  - Result: `ui-gallery-command-scrollable-collection-metadata-mutation.json` opens the shadcn
+    Command scrollable dialog, proves `Code Editor` starts as item 23/23, filters to
+    `code editor`, then proves it becomes item 1/1 while unrelated items disappear. The gate
+    passed; no Command recipe or semantics mechanism defect was reproduced. The fixed gap was
+    harness durability: collection metadata predicates existed, but there was no promoted shadcn
+    runtime mutation gate for filtered collections.
+- [x] Add collection metadata mutation coverage for pagination or virtual-list window changes so
+  the next slice can test retained/windowed node reuse, not only filtered list rebuilding.
+  - Result: `ui-gallery-data-table-default-pagination-collection-metadata.json` exposes
+    diagnostics-only default DataTable row anchors, proves page 1 rows are 1/2 and 2/2, page 2 rows
+    are 1/2 and 2/2, and the last page row is 1/1. The first runtime pass found a harness script
+    defect: `Next` was partially outside the window, so the click had `no_hit`. The passing script
+    now scrolls the button into view and gates bounds before clicking.
+- [x] Add retained/windowed collection metadata mutation coverage for virtual-list scroll or bounce
+  reuse, where stale row semantics are more likely than in paginated rebuilds.
+  - Result: `ui-gallery-virtual-list-retained-collection-metadata-bounce.json` proves retained
+    Virtual List Torture row metadata across top, boundary-scroll, detach, and bounce-back states.
+    The slice found a mechanism observability gap: `SemanticsDecoration` and `SemanticsProps`
+    could not stamp collection metadata, so non-pressable retained rows were not queryable without
+    policy-layer workarounds.
+- [x] Add a retained/windowed non-list semantics mutation gate, such as tree hierarchy
+  `level`/expanded metadata on FileTree/Tree torture or row action-state mutation on retained
+  DataTable rows.
+  - Result: `level_is` is now part of the diagnostics/mechanism predicate vocabulary, Tree/FileTree
+    rows publish hierarchy `level` and parent-row `expanded`, and
+    `ui-gallery-tree-retained-hierarchy-semantics-toggle.json` gates retained Tree row metadata
+    across collapse/expand reuse. The runtime gate found a real `fret-ui-kit` Tree policy defect:
+    row toggle buttons dispatched `tree.toggle.<id>` commands that had no handler, so expanded
+    state never changed. Tree now updates its owned `TreeState` model directly and the retained
+    Tree diagnostics suite passes.
+- [x] Add a first non-list action-state mutation runtime gate for `disabled` and semantics action
+  state.
+  - Result: `disabled_is` and `semantics_action_is` are now protocol/runtime/mechanism predicates,
+    diagnostics bundles export the full core semantics action set, and
+    `ui-gallery-data-table-default-pagination-collection-metadata.json` proves DataTable Prev/Next
+    disabled plus `invoke` action-state mutation across first and final pagination states. The
+    gate passed after rebuilding `fretboard-dev`; no DataTable component defect was reproduced.
+- [x] Add retained/windowed action-state mutation coverage where reused DataTable/FileTree/Tree
+  rows can change `selected` or `invoke` without a full node rebuild.
+  - Result: `ui-gallery-tree-retained-hierarchy-semantics-toggle.json` now checks retained Tree
+    row `selected_is`, `disabled_is=false`, and `semantics_action_is(invoke)=true`. It selects row
+    `1000000`, collapses root so the selected row detaches, re-expands root so the row reattaches
+    still selected, then selects row `2000000` and proves selected state moves away from the old
+    row. The single runtime gate and full retained Tree suite passed; no retained Tree stale
+    selected/invoke defect was reproduced.
+- [x] Add retained/windowed disabled action-state mutation coverage where reused rows can change
+  `disabled` and `invoke` availability dynamically, not just remain enabled.
+  - Result: Tree Torture now exposes diagnostics-only control
+    `ui-gallery-tree-toggle-target-disabled`, and
+    `ui-gallery-tree-retained-hierarchy-semantics-toggle.json` proves retained row `2000000`
+    flips `disabled_is` and `semantics_action_is(invoke)` in both directions. Disabled-row pointer
+    clicks do not move selection; re-enabled clicks select the row again. The single runtime gate
+    and full retained Tree suite passed; no retained Tree stale disabled/invoke defect was
+    reproduced.
+- [ ] Add keyboard/action activation suppression coverage on a focusable-disabled recipe/primitive
+  surface, such as menu, listbox, or command-style items. Retained Tree disabled rows correctly lose
+  focus/invoke action, so they are not a valid Enter/Space disabled activation target.
+- [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
+  stability slice that proves whether the miss is click synthesis, command dispatch, or state
+  publication.

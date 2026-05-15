@@ -545,11 +545,11 @@ pub(super) fn begin_popup_context_menu_with_options<
         let anchor = trigger
             .context_menu_anchor()
             .map(|p| Rect::new(p, Size::new(Px(1.0), Px(1.0))))
-            .or(trigger.core.rect);
+            .or(trigger.rect());
         if let Some(anchor) = anchor {
             open_popup_at(ui, id, anchor);
         }
     }
 
-    begin_popup_menu_with_options(ui, id, trigger.id, options, false, f)
+    begin_popup_menu_with_options(ui, id, trigger.id(), options, false, f)
 }

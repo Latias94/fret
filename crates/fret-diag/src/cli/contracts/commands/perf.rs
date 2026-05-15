@@ -118,6 +118,30 @@ pub(crate) struct PerfCommandArgs {
     #[arg(long = "max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max")]
     pub max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64>,
 
+    #[arg(long = "max-renderer-encode-scene-us")]
+    pub max_renderer_encode_scene_us: Option<u64>,
+
+    #[arg(long = "max-renderer-upload-us")]
+    pub max_renderer_upload_us: Option<u64>,
+
+    #[arg(long = "max-renderer-record-passes-us")]
+    pub max_renderer_record_passes_us: Option<u64>,
+
+    #[arg(long = "max-renderer-encoder-finish-us")]
+    pub max_renderer_encoder_finish_us: Option<u64>,
+
+    #[arg(long = "max-renderer-prepare-text-us")]
+    pub max_renderer_prepare_text_us: Option<u64>,
+
+    #[arg(long = "max-renderer-prepare-svg-us")]
+    pub max_renderer_prepare_svg_us: Option<u64>,
+
+    #[arg(long = "max-renderer-instance-bytes")]
+    pub max_renderer_instance_bytes: Option<u64>,
+
+    #[arg(long = "max-renderer-encode-scene-text-ops")]
+    pub max_renderer_encode_scene_text_ops: Option<u64>,
+
     #[arg(long = "perf-baseline", value_name = "PATH")]
     pub perf_baseline_path: Option<PathBuf>,
 

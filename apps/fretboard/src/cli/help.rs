@@ -36,6 +36,9 @@ const ROOT_EXAMPLES: &str = r#"  fretboard-dev assets manifest write --dir asset
   fretboard-dev diag doctor campaigns
   fretboard-dev list tool-apps
   fretboard-dev list tool-apps --json
+  python tools/diag_gate_imui_product_chain.py
+  python tools/diag_gate_imui_product_chain.py --only discovery
+  python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release
   cargo run -p fret-devtools              # DevTools GUI over shared diagnostics artifacts
   cargo run -p fret-devtools-mcp          # MCP adapter over the same diagnostics operations
   fretboard-dev dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
@@ -72,6 +75,11 @@ mod tests {
         assert!(help.contains("fretboard-dev diag doctor campaigns"));
         assert!(help.contains("fretboard-dev list tool-apps"));
         assert!(help.contains("fretboard-dev list tool-apps --json"));
+        assert!(help.contains("python tools/diag_gate_imui_product_chain.py"));
+        assert!(help.contains("python tools/diag_gate_imui_product_chain.py --only discovery"));
+        assert!(help.contains(
+            "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+        ));
         assert!(help.contains("cargo run -p fret-devtools"));
         assert!(help.contains("cargo run -p fret-devtools-mcp"));
     }

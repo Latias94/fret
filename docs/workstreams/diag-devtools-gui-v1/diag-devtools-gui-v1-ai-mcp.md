@@ -81,6 +81,10 @@ Batch run:
 - tool: `fret_diag_regression_dashboard`
   - reads `regression.index.json` from the same shared artifacts root,
   - returns a structured first-open dashboard view plus a human-readable summary string,
+  - includes the shared `fret-diag` regression drill-down projection for bundle dirs, capability
+    provenance, perf evidence, and concrete follow-up commands,
+  - separates bundle-local runnable follow-up commands from manual compare commands that still need
+    a baseline input,
   - can optionally include the raw index JSON inline.
 
 ### Step 4: Pack the latest bundle and open the offline viewer
@@ -94,7 +98,16 @@ The MCP server exposes key artifacts as resources. These are derived from the mo
 `bundle.dumped` event observed for a given session. If resources are missing or stale, trigger a
 fresh dump with `fret_diag_bundle_dump` first.
 
+The server also exposes `fret-diag://first-open.md`, a sessionless text resource that mirrors the
+shared first-open diagnostics path and points at the same IMUI product-chain route used by the GUI
+and CLI discoverability maps.
+
 ### Resource URIs
+
+Global:
+
+- `fret-diag://first-open.md`
+  - Markdown text for the shared first-open diagnostics path and IMUI product-chain route
 
 For a session `<session_id>`:
 

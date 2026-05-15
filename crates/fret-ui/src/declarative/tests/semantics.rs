@@ -1035,6 +1035,74 @@ fn declarative_attach_semantics_can_override_state_and_relations() {
 }
 
 #[test]
+fn declarative_attach_semantics_can_stamp_collection_metadata() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-attach-semantics-collection",
+        |cx| {
+            vec![
+                cx.text("Row 26").attach_semantics(
+                    crate::element::SemanticsDecoration::default()
+                        .test_id("decorated-row")
+                        .role(fret_core::SemanticsRole::ListItem)
+                        .collection_position(26, 10_000),
+                ),
+                cx.semantics(
+                    crate::element::SemanticsProps {
+                        role: fret_core::SemanticsRole::ListItem,
+                        test_id: Some(Arc::from("wrapped-row")),
+                        pos_in_set: Some(27),
+                        set_size: Some(10_000),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("Row 27")],
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let row = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("decorated-row"))
+        .expect("decorated row semantics node");
+
+    assert_eq!(row.role, fret_core::SemanticsRole::ListItem);
+    assert_eq!(row.pos_in_set, Some(26));
+    assert_eq!(row.set_size, Some(10_000));
+
+    let wrapped = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("wrapped-row"))
+        .expect("wrapped row semantics node");
+
+    assert_eq!(wrapped.role, fret_core::SemanticsRole::ListItem);
+    assert_eq!(wrapped.pos_in_set, Some(27));
+    assert_eq!(wrapped.set_size, Some(10_000));
+}
+
+#[test]
 fn declarative_text_input_sets_semantics_label() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

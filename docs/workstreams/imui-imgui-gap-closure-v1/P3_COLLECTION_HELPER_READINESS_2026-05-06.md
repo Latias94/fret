@@ -59,6 +59,26 @@ The relevant Dear ImGui collection surface is broader than one helper:
   The current collection proof is scrollable and grid-like, but it is not yet a clipped virtual-grid
   conformance surface.
 
+## 2026-05-14 Storage Refresh
+
+The storage/helper boundary is now narrower and more explicit:
+
+- `ImUiMultiSelectState` keeps selection and range-anchor storage private behind accessors and
+  constructors.
+- `ImUiMultiSelectState::from_ordered_selection(...)` owns visible-order selection repair and
+  missing-anchor fallback.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` no longer carries a local
+  `proof_collection_normalize_selection(...)`.
+
+This is the correct extraction level for the current proof set. It follows Dear ImGui's
+`ImGuiSelectionBasicStorage` axis, where a storage helper is optional and the app still owns actual
+selection data. It does **not** justify copying Dear ImGui's `BeginMultiSelect()` /
+`EndMultiSelect()` runtime shape into `fret-imui`.
+
+Do not add an `ImUiMultiSelectIO`, `ImUiSelectionRequest`, or `BeginMultiSelect`/`EndMultiSelect`
+facade until another first-party IMUI table/tree/list/collection proof needs the same request
+vocabulary. The likely owner for that future API is still `fret-ui-kit::imui`, not `fret-imui`.
+
 ## Follow-On Threshold
 
 Open a narrow collection follow-on only when one of these targets has two first-party proof

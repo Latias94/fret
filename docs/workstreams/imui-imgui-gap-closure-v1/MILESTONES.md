@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## M0 - Current Source Baseline
 
@@ -105,8 +105,45 @@ Exit criteria:
   and nav-highlight storage is private too; pressable/disclosure assembly uses crate-local setters
   and tests read through accessors.
   2026-05-14 enabled follow-up result: `ResponseExt.enabled` storage is private too; public readers
-  use `enabled()` and runtime/text-control assembly uses crate-local `set_enabled(...)`. `core` and
-  `id` stay out of this slice pending a separate contract audit.
+  use `enabled()` and runtime/text-control assembly uses crate-local `set_enabled(...)`. `core`
+  stayed out of that slice pending a separate contract audit.
+  2026-05-14 identity follow-up result: `ResponseExt.id` storage is private too; public readers use
+  `id()` and response assembly uses crate-local `set_id(...)`.
+  2026-05-14 shared-response follow-up result: `ResponseExt.core` storage is private too; public
+  readers use `core()`, `from_core(...)`, and the small signal accessors (`rect()`, `focused()`,
+  `hovered()`, `pressed()`, `clicked()`, `changed()`), while response assembly uses crate-local core
+  setters. This preserves the shared `fret_authoring::Response` compatibility surface without
+  keeping public field mutation.
+  2026-05-14 adapter-seam follow-up result: emitted adapter signal records are read-only now.
+  `AdapterSignalRecord` and `AdapterSignalMetadata` are constructed by the seam and expose
+  `identity()`, `response()`, `metadata()`, `rect()`, and `focus_restore_target()` accessors, while
+  `AdapterSeamOptions` remains a public-field input options bag.
+  2026-05-14 editor drag-value follow-up result: `DragValueCoreResponse` storage is private too and
+  external default construction is gone. `DragValueCore` owns construction through a crate-local
+  constructor, and editor controls consume scrub visual state through read-only accessors instead of
+  copying response fields.
+  2026-05-14 debug-draw follow-up result: `DebugDrawResponse` now follows the same accessor-first
+  rule. Interaction and summary storage are private, helper construction is internal, and public
+  callers use `response()`, `list_summary()`, and `command_summaries()`.
+  2026-05-14 debug-draw summary follow-up result: `DebugDrawCommandSummary` and
+  `DebugDrawListSummary` are accessor-first too. Debug-draw diagnostic metrics remain public to
+  read, but construction and mutation stay internal to the list/response pipeline.
+  2026-05-14 source-gate hardening result: `tools/gate_imui_workstream_source.py` now has a
+  reusable opaque-output-struct check for the sealed IMUI response/context/summary records instead
+  of relying only on one-off public-field marker strings.
+  2026-05-14 editor axis-outcome follow-up result: vector and transform axis edit outcome records
+  are accessor-first too, so proof/app code can observe edit events without constructing or
+  mutating invalid section/axis/outcome triples.
+  2026-05-14 output-catalog gate result: the source gate now auto-discovers new public IMUI/editor
+  output-style structs by suffix and requires every match to be registered in the opaque-output
+  catalog before field-opacity checks run.
+  2026-05-14 editor color-event result: color-edit event/request/payload records are accessor-first
+  too. `ColorEditPaletteSlotDrop`, `ColorEditEyedropperRequest`, and
+  `ColorEditDragDropPayload` keep storage private while preserving callback/event reads through
+  explicit methods.
+  2026-05-14 state-catalog gate result: the opaque public-struct catalog now scans `*State` names
+  and registers `ImUiMultiSelectState`, so shared state helpers cannot reintroduce public storage
+  outside the accessor/constructor contract.
   Current component-surface audit result: do not open a broad widget-backlog lane. The current
   `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
   disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
@@ -136,7 +173,21 @@ Exit criteria:
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
+  2026-05-14 multi-select storage result: `ImUiMultiSelectState` is still the shared policy-layer
+  storage helper, but callers now use `new`/`single` plus read-only selection and anchor accessors
+  instead of constructing or clearing public fields directly.
+  2026-05-14 ordered-selection result: visible-order selection repair is now a
+  `fret-ui-kit::imui` storage operation instead of duplicated proof-app logic.
+  2026-05-14 request-vocabulary audit result: keep request/IO multi-select API candidate-only until
+  another first-party proof repeats the same selection request shape.
+  2026-05-14 state-catalog gate result: `ImUiMultiSelectState` is now guarded by the reusable
+  opaque-struct check, not only by narrow string markers.
   Current execution-priority review result: treat the P3 catalog notes as readiness maps, not an
   implementation queue. Product/golden workflow coherence, runner/backend multi-window hand-feel,
   and diagnostics/DevTools discoverability remain higher-value Dear ImGui-grade closure work than
   blind widget/API mirroring.
+  Current performance-alignment review result: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
+  belongs in the active gap lane's evidence set. Keep runtime smoothness work in
+  `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;
+  do not use Dear ImGui/egui performance pressure as a reason to widen `fret-imui` or start a
+  broad widget/API backlog.

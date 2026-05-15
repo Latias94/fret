@@ -135,6 +135,79 @@ reopen.
       path directly in the DevTools GUI shell, and
       `tools/diag_gate_imui_p2_devtools_first_open.py` checks the GUI source projection so the
       CLI index does not remain the only discoverability anchor.
+      Maintenance: `tools/diag_gate_imui_product_chain.py` now also validates
+      `fretboard-dev list tool-apps --json` as the stable DevTools GUI/MCP first-open map, so the
+      umbrella product-chain gate catches drift in the machine-readable entrypoint contract. The
+      same gate validates `fretboard-dev --help` and `fretboard-dev list --help`, so the tool-apps
+      index itself remains discoverable from the first CLI help screens.
+      Maintenance: the same `fretboard_tool_apps` JSON now carries a `product_workflows` entry for
+      `imui-product-chain`, including the focused discovery command, the launched `perf-docking`
+      command, and the expected perf summary/threshold artifacts, so DevTools-style consumers can
+      discover the current product-chain evidence path without owning a GUI-private schema.
+      Maintenance: `apps/fret-devtools/src/native.rs` now mirrors that
+      `imui-product-chain` route in the GUI first-open evidence panel, including the default
+      command, focused discovery command, launched `perf-docking` command, suite, docs, and expected
+      perf artifacts. This keeps GUI discoverability aligned with `fretboard-dev list tool-apps`
+      instead of making the GUI a second source of truth. The default product-chain discovery gate
+      now also source-checks that GUI projection.
+      Maintenance: `apps/fret-devtools/src/native.rs` now also surfaces a persistent
+      `demo-metrics-debug` route in the GUI shell, naming the editor proof/editor notes/device shell
+      demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
+      and `diag hotspots` entrypoints. This improves Dear ImGui-style demo/metrics/debug
+      discoverability without widening `fret-imui`.
+      Maintenance: the same GUI shell now surfaces a `Gate Commands` block for stale paint/scene,
+      pixels-changed, perf-threshold, and resource-footprint diagnostics command templates. This is
+      tracked in `docs/workstreams/diag-devtools-gui-v1/`, keeping gate UX in the diagnostics owner
+      lane rather than the IMUI runtime.
+      Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
+      commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
+      compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding
+      GUI-private diagnostics semantics.
+      Maintenance: MCP `fret_diag_regression_dashboard` now consumes that same shared regression
+      drill-down/follow-up projection, so AI-driven diagnostics receives the same bundle dirs,
+      capability provenance, perf evidence, and concrete next-command hints as the GUI.
+      Maintenance: the shared follow-up projection now carries structured command metadata and
+      separates bundle-local runnable commands from baseline-required manual compare commands, so
+      GUI and MCP consumers do not present placeholder compare commands as ready-to-run actions.
+      Maintenance: the DevTools GUI selected-summary inspector can now launch bundle-local
+      runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`)
+      through the shared diagnostics engine and records in-flight/error status in the GUI.
+      Maintenance: each GUI-launched follow-up now writes a lightweight
+      `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
+      Maintenance: the selected-summary inspector mirrors that latest selected-bundle follow-up
+      result JSON inline, so pass/fail/error/timing metadata is visible without opening the artifact
+      manually.
+      Maintenance: the selected-summary inspector now adds a structured selected-bundle follow-up
+      result summary above the raw JSON, keeping status, command, duration, and error preview
+      readable in the GUI.
+      Maintenance: follow-up results are retained as a bounded in-memory history filtered to the
+      selected bundle, so the GUI no longer implies that a previous bundle's last result belongs to
+      the current selected-summary evidence.
+      Maintenance: that selected-bundle follow-up history now renders as selectable result entries,
+      allowing authors to switch the summary/raw JSON/copy target between recent artifacts.
+      Maintenance: the selected follow-up result now has a details block with status, path, command,
+      bundle, and error preview, and the exact producing command can be copied from the inspector.
+      Maintenance: the selected follow-up JSON artifact can also be opened through the platform URL
+      handler via an escaped `file://` URL, keeping artifact inspection one click away where native
+      file URLs are supported.
+      Maintenance: the follow-up result copy action now uses the selected bundle's latest history
+      entry instead of the global last result artifact, keeping copied evidence paths aligned with
+      the current selection.
+      Maintenance: the selected-bundle follow-up JSON can now be copied directly from the same
+      inspector, keeping the exact payload one click away for issue reports and AI triage.
+      Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
+      `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
+      curated metrics, and threshold failure evidence from regression summaries.
+      Maintenance: the selected-summary drill-down projection now lives in
+      `crates/fret-diag/src/regression_summary.rs` as shared diagnostics contract code, while
+      `apps/fret-devtools/src/native.rs` only loads the JSON and renders the shared projection.
+      This prevents GUI, MCP, and future CLI consumers from growing parallel regression-summary
+      parsing rules.
+      Maintenance: `apps/fret-devtools-mcp/src/native.rs` now exposes a sessionless
+      `fret-diag://first-open.md` resource and mirrors the same shared IMUI product-chain route in
+      its server instructions/resource text, so the MCP adapter does not invent a parallel
+      first-open schema. The default product-chain discovery gate now also source-checks that MCP
+      projection.
 
 ## P3 - Multi-window hand-feel closure
 
@@ -153,9 +226,29 @@ reopen.
       Result: `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` and
       `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md` now make the source-policy rejection
       explicit and tie the remaining proof surface to runner/backend-owned diagnostics.
+- [x] Add a product-chain perf entrypoint before claiming smoothness maturity.
+      Result: `tools/diag_gate_imui_product_chain.py` now validates
+      `perf-docking-arbitration-steady` in the lightweight source/script pass and can launch the
+      `perf-docking` slice explicitly. The slice also repaired `diag perf` summary evidence so
+      human stdout mode still writes `perf_case` rows into `regression.summary.json`, and the
+      product-chain gate now requires readable item bundle artifacts plus a readable shared layout
+      perf summary artifact and lightweight summary metrics. The 2026-05-15 follow-up turns those
+      metrics into a conservative threshold gate by requiring shared `check.perf_thresholds.json`
+      evidence, empty `threshold_failures`, and CLI-sourced `--max-top-total-us` /
+      `--max-pointer-move-dispatch-us` / `--max-pointer-move-global-changes` thresholds.
+      A second 2026-05-15 follow-up exposes renderer threshold CLI flags and gates
+      `--max-renderer-encode-scene-us` / `--max-renderer-instance-bytes` / related renderer
+      thresholds in the same `perf-docking` product-chain slice, so renderer metrics are no longer
+      read-only evidence.
 
 ## Closeout / follow-on management
 
+- [x] Refresh the goal-completion audit after the latest product-chain discovery, Wayland
+      admission/policy-skip, and perf-threshold slices.
+      Result: `GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and
+      explicitly not complete. Real-host Wayland compositor acceptance, DevTools GUI
+      productization, and broader perf attribution/smoothness remain owner-lane work, not
+      `fret-imui` or runtime widening.
 - [x] Keep pure teaching-surface cleanup out of this umbrella unless it becomes the dominant
       remaining P0 pressure.
       Result: the remaining P0 backlog no longer reads as teaching-surface cleanup first, so no

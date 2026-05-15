@@ -96,7 +96,7 @@ pub fn vertical_insertion_side<T: 'static>(
     trigger: ResponseExt,
     drop: &DropTargetResponse<T>,
 ) -> Option<SortableInsertionSide> {
-    let rect = trigger.core.rect?;
+    let rect = trigger.rect()?;
     let position = drop
         .delivered_position()
         .or_else(|| drop.preview_position())?;

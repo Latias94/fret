@@ -9,9 +9,10 @@ use fret_render::{
     RenderTargetColorEncoding, RenderTargetColorPrimaries, RenderTargetColorRange,
     RenderTargetMatrixCoefficients, RenderTargetTransferFunction,
 };
+use std::cell::RefCell;
 use std::ffi::OsStr;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 use thiserror::Error;
 use windows::Win32::Graphics::Direct3D11::{
     D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
@@ -945,18 +946,19 @@ impl Dx12Interop {
                 .VideoProcessorSetOutputTargetRect(vp, true, Some(&rect));
         }
 
-        let mut stream = D3D11_VIDEO_PROCESSOR_STREAM::default();
-        stream.Enable = BOOL(1);
-        stream.OutputIndex = 0;
-        stream.InputFrameOrField = 0;
-        stream.PastFrames = 0;
-        stream.FutureFrames = 0;
-        stream.ppPastSurfaces = std::ptr::null_mut();
-        stream.pInputSurface = std::mem::ManuallyDrop::new(Some(input_view));
-        stream.ppFutureSurfaces = std::ptr::null_mut();
-        stream.ppPastSurfacesRight = std::ptr::null_mut();
-        stream.pInputSurfaceRight = std::mem::ManuallyDrop::new(None);
-        stream.ppFutureSurfacesRight = std::ptr::null_mut();
+        let stream = D3D11_VIDEO_PROCESSOR_STREAM {
+            Enable: BOOL(1),
+            OutputIndex: 0,
+            InputFrameOrField: 0,
+            PastFrames: 0,
+            FutureFrames: 0,
+            ppPastSurfaces: std::ptr::null_mut(),
+            pInputSurface: std::mem::ManuallyDrop::new(Some(input_view)),
+            ppFutureSurfaces: std::ptr::null_mut(),
+            ppPastSurfacesRight: std::ptr::null_mut(),
+            pInputSurfaceRight: std::mem::ManuallyDrop::new(None),
+            ppFutureSurfacesRight: std::ptr::null_mut(),
+        };
 
         unsafe {
             self.video_context
@@ -1039,7 +1041,7 @@ impl Dx12GpuCopySession {
 
 #[derive(Clone)]
 pub struct MfVideoNativeExternalImporter {
-    inner: Arc<Mutex<MfVideoNativeExternalState>>,
+    inner: Rc<RefCell<MfVideoNativeExternalState>>,
 }
 
 struct MfVideoNativeExternalState {
@@ -1052,17 +1054,17 @@ struct MfVideoNativeExternalState {
 }
 
 struct MfVideoNativeExternalFrame {
-    inner: Arc<Mutex<MfVideoNativeExternalState>>,
+    inner: Rc<RefCell<MfVideoNativeExternalState>>,
 }
 
 struct MfVideoNativeExternalKeepalive {
-    _inner: Arc<Mutex<MfVideoNativeExternalState>>,
+    _inner: Rc<RefCell<MfVideoNativeExternalState>>,
 }
 
 impl MfVideoNativeExternalImporter {
     pub fn new(path: impl Into<String>, prefer_dx12_gpu_copy: bool) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(MfVideoNativeExternalState {
+            inner: Rc::new(RefCell::new(MfVideoNativeExternalState {
                 path: path.into(),
                 prefer_dx12_gpu_copy,
                 cpu_reader: None,
@@ -1075,7 +1077,7 @@ impl MfVideoNativeExternalImporter {
 
     pub fn path(&self) -> String {
         self.inner
-            .lock()
+            .try_borrow()
             .ok()
             .map(|v| v.path.clone())
             .unwrap_or_default()
@@ -1083,14 +1085,14 @@ impl MfVideoNativeExternalImporter {
 
     pub fn prefer_dx12_gpu_copy(&self) -> bool {
         self.inner
-            .lock()
+            .try_borrow()
             .ok()
             .map(|v| v.prefer_dx12_gpu_copy)
             .unwrap_or(false)
     }
 
     pub fn last_size(&self) -> Option<(u32, u32)> {
-        self.inner.lock().ok().and_then(|v| {
+        self.inner.try_borrow().ok().and_then(|v| {
             if v.texture.is_some() && v.texture_size.0 > 0 && v.texture_size.1 > 0 {
                 Some(v.texture_size)
             } else {
@@ -1146,12 +1148,12 @@ impl NativeExternalTextureFrame for MfVideoNativeExternalFrame {
             _inner: self.inner.clone(),
         });
 
-        let mut guard = self
-            .inner
-            .lock()
-            .map_err(|_| NativeExternalImportError::Failed {
-                reason: "mf_native_external_state_lock_poisoned",
-            })?;
+        let mut guard =
+            self.inner
+                .try_borrow_mut()
+                .map_err(|_| NativeExternalImportError::Failed {
+                    reason: "mf_native_external_state_borrow_failed",
+                })?;
 
         let path = guard.path.trim().to_string();
         if path.is_empty() {
@@ -1160,8 +1162,10 @@ impl NativeExternalTextureFrame for MfVideoNativeExternalFrame {
             });
         }
 
-        let mut metadata = RenderTargetMetadata::default();
-        metadata.requested_ingest_strategy = RenderTargetIngestStrategy::ExternalZeroCopy;
+        let mut metadata = RenderTargetMetadata {
+            requested_ingest_strategy: RenderTargetIngestStrategy::ExternalZeroCopy,
+            ..Default::default()
+        };
 
         if guard.prefer_dx12_gpu_copy {
             if guard.texture.is_none() {

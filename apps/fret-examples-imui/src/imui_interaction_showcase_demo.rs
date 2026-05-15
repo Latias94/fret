@@ -1299,7 +1299,7 @@ fn render_shell_showcase_card(
                                     vec![
                                         inspector_flag("opened", true, "menu edge"),
                                         inspector_flag("closed", false, "not this frame"),
-                                        inspector_flag("activated", file_menu.trigger.activated(), "trigger lifecycle"),
+                                        inspector_flag("activated", file_menu.response().activated(), "trigger lifecycle"),
                                     ],
                                 );
                             }

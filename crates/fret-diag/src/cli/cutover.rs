@@ -2691,6 +2691,14 @@ fn parse_perf_command(
             max_pointer_move_hit_test_us: args.max_pointer_move_hit_test_us,
             max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: args
                 .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            max_renderer_encode_scene_text_ops: args.max_renderer_encode_scene_text_ops,
+            max_renderer_encode_scene_us: args.max_renderer_encode_scene_us,
+            max_renderer_encoder_finish_us: args.max_renderer_encoder_finish_us,
+            max_renderer_instance_bytes: args.max_renderer_instance_bytes,
+            max_renderer_prepare_svg_us: args.max_renderer_prepare_svg_us,
+            max_renderer_prepare_text_us: args.max_renderer_prepare_text_us,
+            max_renderer_record_passes_us: args.max_renderer_record_passes_us,
+            max_renderer_upload_us: args.max_renderer_upload_us,
             max_top_layout_us: args.max_top_layout_us,
             max_top_solve_us: args.max_top_solve_us,
             max_top_total_us: args.max_top_total_us,
@@ -5431,6 +5439,10 @@ mod tests {
             "p95".to_string(),
             "--max-frame-p95-total-us".to_string(),
             "18000".to_string(),
+            "--max-renderer-encode-scene-us".to_string(),
+            "5000".to_string(),
+            "--max-renderer-instance-bytes".to_string(),
+            "500000".to_string(),
             "--check-perf-hints".to_string(),
             "--check-perf-hints-min-severity".to_string(),
             "error".to_string(),
@@ -5471,6 +5483,8 @@ mod tests {
         );
         assert_eq!(ctx.perf_threshold_agg, crate::PerfThresholdAggregate::P95);
         assert_eq!(ctx.max_frame_p95_total_us, Some(18_000));
+        assert_eq!(ctx.max_renderer_encode_scene_us, Some(5_000));
+        assert_eq!(ctx.max_renderer_instance_bytes, Some(500_000));
         assert!(ctx.check_perf_hints);
         assert_eq!(ctx.check_perf_hints_min_severity.as_deref(), Some("error"));
         assert_eq!(

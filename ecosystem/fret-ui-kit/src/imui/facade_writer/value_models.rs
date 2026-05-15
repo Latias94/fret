@@ -20,7 +20,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::slider_f32_model_with_options(
             self, label, model, options,
         );
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 
@@ -47,7 +47,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::combo_model_with_options(
             self, id, label, model, items, options,
         );
-        self.record_focusable(resp.id, focusable);
+        self.record_focusable(resp.id(), focusable);
         resp
     }
 }

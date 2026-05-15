@@ -124,6 +124,17 @@
       }
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "captured_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+        },
+        "captured": true
+      }
+    },
+    {
       "type": "pointer_move",
       "delta_x": 0.0,
       "delta_y": 40.0,
@@ -134,6 +145,17 @@
       "predicate": {
         "kind": "input_pointer_capture_active_is",
         "active": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "captured_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+        },
+        "captured": true
       }
     },
     {
@@ -164,11 +186,23 @@
       }
     },
     { "type": "pointer_up" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "assert",
       "predicate": {
         "kind": "input_pointer_capture_active_is",
         "active": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "captured_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+        },
+        "captured": false
       }
     },
     { "type": "capture_bundle", "label": "scrollbar-drag-baseline-content-growth" }

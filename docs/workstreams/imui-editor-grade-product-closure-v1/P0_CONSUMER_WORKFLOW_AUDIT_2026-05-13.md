@@ -108,6 +108,31 @@ The product-chain gate also supports `--reuse-built` for launched `fret-demo` su
 editor/workbench diagnostics can run against existing binaries without turning build-lock timing
 into product-chain signal.
 
+Follow-up source-gate refresh on 2026-05-14: `tools/diag_gate_imui_product_chain.py` now treats
+`docking_arbitration_demo` as a campaign-backed product surface and runs
+`diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json` in the default
+lightweight maintainer gate. This keeps the product chain honest about the discovered docking
+surface without running the launched multi-window campaign by default.
+
+Follow-up DevTools discoverability refresh on 2026-05-14: the same product-chain gate now validates
+`fretboard-dev list tool-apps --json` as a stable machine-readable first-open map. The check covers
+the `fretboard_tool_apps` kind, schema version, canonical diagnostics first-open doc, GUI branch
+doc, repo preflight command/JSON command/purpose, and the DevTools GUI/MCP command/docs/gate/best-for
+fields. This is still a gate/productization improvement, not API widening and not a reason to widen
+`fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui`.
+
+Follow-up CLI entrypoint refresh on 2026-05-14: the product-chain discovery gate also validates
+`fretboard-dev --help` and `fretboard-dev list --help`, so the `tool-apps` index remains
+discoverable before a maintainer already knows the exact `list tool-apps` subcommand.
+
+Follow-up product workflow discovery refresh on 2026-05-15: `fretboard-dev list tool-apps` now
+prints a `workflow: imui-product-chain` row, and `fretboard-dev list tool-apps --json` exposes that
+same route as `product_workflows`. The default product-chain discovery gate validates the default
+gate command, the focused discovery command, the launched `perf-docking` command, the promoted
+`perf-docking-arbitration-steady` suite, and the expected `perf-docking/regression.summary.json` /
+`perf-docking/check.perf_thresholds.json` artifacts. This is still a tooling/discoverability
+refresh, not a reason to widen `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui`.
+
 Local verification on 2026-05-14 passed with run root
 `target/imui-product-chain-editor-notes-launched-2026-05-14-reuse/1778729721045`: the
 `editor-notes-demo` suite passed 2/2 scripts, and the `editor-notes-device-shell-demo` suite passed
@@ -129,3 +154,41 @@ while keeping pointer dismissal working. Local verification on 2026-05-14 passed
 `target/imui-product-chain-editor-notes-device-shell-a11y-2026-05-14/1778731960670`; the
 `editor-notes-device-shell-demo` suite passed 1/1 script and its lint output reported
 `warning_issues: 0` and `findings: []`.
+
+Follow-up perf entrypoint refresh on 2026-05-14: the product-chain gate now treats
+`tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` as the current docking perf
+entrypoint and adds a launched `perf-docking` slice. The first local run exposed a diagnostics
+tooling bug rather than an app bug: `diag perf` printed human `PERF ...` rows but wrote a failed
+`regression.summary.json` unless `--json` was used. The repair keeps row evidence internal for both
+stdout modes in `crates/fret-diag/src/diag_perf.rs`, with the focused test
+`perf_regression_summary_uses_rows_when_stdout_is_human`. The follow-up artifact projection test
+`perf_row_to_regression_item_uses_single_run_bundle_artifact` keeps single-run bundle paths visible
+as `bundle_artifact` evidence, and
+`perf_row_to_regression_item_projects_single_run_metrics` /
+`perf_row_to_regression_item_projects_repeat_stats_metrics` keep curated perf metrics visible in
+`evidence.extra.metrics`. The repaired local run at
+`target/imui-product-chain-perf-docking-metrics-gate-2026-05-14/1778775354481/perf-docking/regression.summary.json`
+reports two passing `perf_case` rows and `failed_tooling=0`.
+
+Follow-up docking perf threshold refresh on 2026-05-15: the product-chain `perf-docking` slice now
+passes conservative `diag perf` thresholds before accepting the IMUI docking smoothness entrypoint.
+The gate launches with `--max-top-total-us 20000`, `--max-top-layout-us 10000`,
+`--max-top-solve-us 10000`, `--max-pointer-move-dispatch-us 5000`,
+`--max-pointer-move-hit-test-us 5000`, and `--max-pointer-move-global-changes 0`; it then verifies
+that each `perf_case` item exposes readable `compare_json` evidence and empty
+`threshold_failures`. The local threshold artifact at
+`target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/check.perf_thresholds.json`
+reports `kind=perf_thresholds`, `observed_aggregate=max`, and `failures=[]`, while
+`target/imui-product-chain-perf-docking-threshold-gate-2026-05-15/1778776635280/perf-docking/regression.summary.json`
+reports two passing rows with `wants_perf_thresholds=true`.
+
+Follow-up renderer threshold refresh on 2026-05-15: the previous diagnostics model already measured
+renderer encode/upload/record/finish/text/SVG/payload fields, but `diag perf` did not expose CLI
+thresholds for them. The repair adds renderer threshold flags such as
+`--max-renderer-encode-scene-us`, `--max-renderer-upload-us`, and
+`--max-renderer-instance-bytes`, projects them into `check.perf_thresholds.json`, and wires them
+into the same launched `perf-docking` product-chain slice. The local run at
+`target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/regression.summary.json`
+reports two passing `perf_case` rows; the paired
+`target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15/1778778141759/perf-docking/check.perf_thresholds.json`
+reports `failures=[]` and CLI-sourced renderer threshold rows.

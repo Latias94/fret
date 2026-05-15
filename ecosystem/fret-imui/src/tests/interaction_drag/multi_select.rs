@@ -52,8 +52,8 @@ fn multi_selectable_supports_plain_toggle_and_range_clicks() {
                 .models()
                 .get_cloned(&selection_model)
                 .unwrap_or_default();
-            selected_out.replace(state.selected.clone());
-            anchor_out.replace(state.anchor.clone());
+            selected_out.replace(state.selected().to_vec());
+            anchor_out.replace(state.anchor().cloned());
         })
     };
 

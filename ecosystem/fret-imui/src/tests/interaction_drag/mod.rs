@@ -87,7 +87,7 @@ fn selected_test_collection_assets<'a>(
     selection: &ImUiMultiSelectState<Arc<str>>,
 ) -> Vec<&'a TestCollectionAsset> {
     selection
-        .selected
+        .selected()
         .iter()
         .filter_map(|id| assets.iter().find(|asset| asset.id == *id))
         .collect()

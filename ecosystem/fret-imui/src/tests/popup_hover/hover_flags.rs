@@ -160,7 +160,7 @@ fn disabled_scope_blocks_underlay_and_suppresses_hover_and_click() {
                             },
                         );
                         over_clicked.set(over.clicked());
-                        over_hovered.set(over.core.hovered);
+                        over_hovered.set(over.hovered());
                         over_hovered_like_imgui.set(over.hovered_like_imgui());
                     });
                 })

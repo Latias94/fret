@@ -137,14 +137,6 @@ fn select_semantics_node_with_trace<'a>(
                 ) {
                     note = Some("fallback_chrome_suffix".to_string());
                 }
-            if matches.is_empty() {
-                // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
-                note = Some("fallback_hidden_nodes".to_string());
-                matches.extend(snapshot.nodes.iter().filter(|n| {
-                    let node_id = n.id.data().as_ffi();
-                    in_scope(node_id) && matches_root_z(node_id) && n.test_id.as_deref() == Some(id)
-                }));
-            }
         }
         UiSelectorV1::GlobalElementId { element, .. } => {
             let Some(node) = element_runtime.and_then(|runtime| {

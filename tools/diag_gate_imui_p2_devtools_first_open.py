@@ -21,6 +21,7 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
 
@@ -312,17 +313,126 @@ def _validate_devtools_gui_first_open_source(
         "const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =",
         "const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =",
         f'const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "{CAMPAIGN_ID}"',
+        'const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain"',
+        'const IMUI_PRODUCT_WORKFLOW_DOC: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py"',
+        'const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
+        'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
+        "const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[",
+        'const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
+        'const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =',
+        'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
+        'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
+        'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
+        'const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =',
+        'const DEVTOOLS_GATE_STALE_COMMAND: &str =',
+        'const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
+        'const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
+        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =',
+        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
         "First-open Evidence Path",
-        "Canonical docs, repo preflight, artifact roots, and smoke gate stay visible in the GUI shell.",
+        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
+        "Demo / Metrics / Debug Routes",
+        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        "Gate Commands",
+        "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
         "devtools_first_open_lines(st.cfg.fs_out_dir.as_ref())",
+        "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
+        "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
         "fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String>",
+        "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
+        "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
         "direct loop: diag run -> diag latest -> diag compare",
         "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard",
+        "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
+        "gate route: first-class-gates",
+        "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
+        "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
+        "stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}",
+        "pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}",
+        "perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}",
+        "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}",
+        "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}",
+        "check.pixels_changed.json",
+        "check.perf_thresholds.json",
+        "resource.footprint.json",
+        "regression_selected_perf_evidence",
+        "regression_summary_drilldown(&summary)",
+        "regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()))",
+        "Copy follow-up commands",
+        "Follow-up Commands",
+        "Perf Evidence",
+        "perf_summary_json",
+        "compare_json",
+        "threshold_failures",
+        "load_regression_summary_drilldown_collects_perf_evidence",
+        "product workflow: {IMUI_PRODUCT_WORKFLOW_ID}",
+        "product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}",
+        "product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}",
+        "product workflow launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}",
+        "product workflow suite: {IMUI_PRODUCT_WORKFLOW_SUITE}",
+        "product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}",
+        "product workflow artifacts: {}",
+        "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
         "devtools_first_open_lines_surface_canonical_paths",
+        "devtools_demo_metrics_debug_lines_surface_canonical_routes",
+        "devtools_gate_command_lines_surface_first_class_gates",
     ):
         _assert_text_contains(name, source, marker)
     if progress is not None:
         progress.record("step.pass", name=name, path=str(path))
+
+
+def _validate_first_open_docs(
+    *,
+    cwd: Path,
+    progress: ProgressRecorder | None = None,
+) -> None:
+    name = "diagnostics first-open policy-skip docs"
+    print(f"[diag-gate-imui-p2-devtools] {name}")
+    first_open_path = cwd / FIRST_OPEN_DOC
+    checklist_path = cwd / MAINTAINER_CHECKLIST_DOC
+    if progress is not None:
+        progress.record(
+            "step.start",
+            name=name,
+            first_open_path=str(first_open_path),
+            checklist_path=str(checklist_path),
+        )
+    try:
+        first_open_source = first_open_path.read_text(encoding="utf-8")
+        checklist_source = checklist_path.read_text(encoding="utf-8")
+    except OSError as err:
+        if progress is not None:
+            progress.record("step.fail", name=name, error=str(err))
+        raise SystemExit(f"Step failed: {name} (failed to read docs: {err})") from err
+
+    for marker in (
+        "If an aggregate or dashboard reports `skipped_policy`",
+        "`capability_source`: provenance for the available/missing capability view.",
+        "`capabilities_check_path`: the campaign-local check artifact that explains the skip.",
+        MAINTAINER_CHECKLIST_DOC,
+    ):
+        _assert_text_contains(name, first_open_source, marker)
+    for marker in (
+        "Treat these fields as one contract slice:",
+        "`status = skipped_policy`",
+        "`reason_code = capability.missing`",
+        "`capability_source`",
+        "`capabilities_check_path`",
+        "Do not collapse those two concepts into one field",
+        "Consumer rule:",
+        "GUI, MCP, CLI, and maintainer docs should all preserve this distinction.",
+    ):
+        _assert_text_contains(name, checklist_source, marker)
+    if progress is not None:
+        progress.record(
+            "step.pass",
+            name=name,
+            first_open_path=str(first_open_path),
+            checklist_path=str(checklist_path),
+        )
 
 
 def main(argv: list[str]) -> int:
@@ -380,6 +490,7 @@ def main(argv: list[str]) -> int:
 
     _validate_tool_app_discovery(fretboard_exe, cwd=repo_root, progress=progress)
     _validate_devtools_gui_first_open_source(cwd=repo_root, progress=progress)
+    _validate_first_open_docs(cwd=repo_root, progress=progress)
     if args.discovery_only:
         progress.record("gate.pass", mode="discovery")
         print("[diag-gate-imui-p2-devtools] discovery done")

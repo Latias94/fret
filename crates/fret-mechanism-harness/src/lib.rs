@@ -31,8 +31,8 @@ pub use runner::{
 mod tests {
     use fret_core::{Point, Px, Rect, Size};
     use fret_diag_protocol::{
-        UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsNumericFieldV1,
-        UiSemanticsScrollFieldV1,
+        UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsActionV1,
+        UiSemanticsLiveV1, UiSemanticsNumericFieldV1, UiSemanticsScrollFieldV1,
     };
     use serde::Deserialize;
 
@@ -353,6 +353,60 @@ mod tests {
     }
 
     #[test]
+    fn captured_is_oracle_tracks_current_capture_owner() {
+        let mut tree = ObservedTree::new(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ));
+
+        let mut scrollbar = ObservedNode::new(
+            "scrollbar",
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(12.0), Px(80.0))),
+        );
+        scrollbar.node_id = Some(1);
+
+        let mut viewport = ObservedNode::new(
+            "viewport",
+            Rect::new(Point::new(Px(12.0), Px(0.0)), Size::new(Px(88.0), Px(80.0))),
+        );
+        viewport.node_id = Some(2);
+
+        tree.push_node(scrollbar);
+        tree.push_node(viewport);
+        tree.captured_node_id = Some(1);
+
+        let scrollbar_selector = UiSelectorV1::TestId {
+            id: "scrollbar".to_string(),
+            root_z_index: None,
+        };
+        let viewport_selector = UiSelectorV1::TestId {
+            id: "viewport".to_string(),
+            root_z_index: None,
+        };
+
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::CapturedIs {
+                    target: scrollbar_selector,
+                    captured: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::CapturedIs {
+                    target: viewport_selector,
+                    captured: false,
+                },
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
     fn semantics_relation_oracles_resolve_targets_across_barrier_roots() {
         let mut tree = ObservedTree::new(Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -424,6 +478,7 @@ mod tests {
         input.role = Some("text_field".to_string());
         input.label = Some("Editor".to_string());
         input.value = Some("hello".to_string());
+        input.disabled = Some(true);
         input.text_selection = Some(ObservedTextSelection {
             anchor: 2,
             focus: 2,
@@ -445,6 +500,8 @@ mod tests {
         option.node_id = Some(2);
         option.selected = Some(true);
         option.checked = Some(true);
+        option.expanded = Some(true);
+        option.level = Some(2);
         option.pos_in_set = Some(2);
         option.set_size = Some(5);
         option.actions.invoke = true;
@@ -512,6 +569,16 @@ mod tests {
         .unwrap();
         evaluate_predicate(
             &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::DisabledIs {
+                    target: editor.clone(),
+                    disabled: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
             &MechanismPredicate::SemanticsTextSelectionIs {
                 target: editor.clone(),
                 expected: Some(ObservedTextSelection {
@@ -553,6 +620,26 @@ mod tests {
         evaluate_predicate(
             &tree,
             &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::ExpandedIs {
+                    target: option_selector.clone(),
+                    expanded: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::LevelIs {
+                    target: option_selector.clone(),
+                    level: 2,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
                 predicate: UiPredicateV1::PosInSetIs {
                     target: option_selector.clone(),
                     pos_in_set: 2,
@@ -563,9 +650,20 @@ mod tests {
         evaluate_predicate(
             &tree,
             &MechanismPredicate::SemanticsActionIs {
-                target: option_selector,
+                target: option_selector.clone(),
                 action: ObservedSemanticsAction::Invoke,
                 expected: true,
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::SemanticsActionIs {
+                    target: option_selector,
+                    action: UiSemanticsActionV1::Invoke,
+                    enabled: true,
+                },
             },
         )
         .unwrap();
@@ -574,6 +672,26 @@ mod tests {
             &MechanismPredicate::SemanticsLiveIs {
                 target: status_selector.clone(),
                 live: Some(ObservedSemanticsLive::Polite),
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::SemanticsLiveIs {
+                    target: status_selector.clone(),
+                    live: Some(UiSemanticsLiveV1::Polite),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::SemanticsLiveAtomicIs {
+                    target: status_selector.clone(),
+                    live_atomic: true,
+                },
             },
         )
         .unwrap();

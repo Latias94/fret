@@ -140,6 +140,11 @@ Each TODO is labeled:
   - Notes:
     - Scripted input isolation ignores external pointer events, but does not freeze the OS cursor. Avoid moving the
       physical mouse during multi-window docking diag runs to prevent OS-level hover routing from diverging.
+  - Progress:
+    - [x] The source drift guard now validates docking suite membership and the standalone
+      behavior-first note:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+      - `tools/gate_docking_multiwindow_workstream_source.py`
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
@@ -316,6 +321,23 @@ Each TODO is labeled:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
       - Campaign manifest validation and source-policy tests are the local gates; real Wayland
         compositor acceptance remains the only closure path for this item.
+    - [x] Latest local Wayland-boundary refresh is recorded:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+      - Source policy, Wayland/X11 capability posture, docking fallback behavior, and all four
+        multi-window campaign manifests validated locally.
+    - [x] Wayland admission source drift is now guarded:
+      - `tools/gate_docking_multiwindow_workstream_source.py` parses
+        `tools/diag-campaigns/imui-p3-wayland-real-host.json` and the canonical
+        `docking-arbitration-demo-wayland-degrade-no-os-tearoff` script, requiring
+        `platform.capabilities` admission, Linux/Wayland-safe capability predicates, a long
+        tear-off gesture, `known_window_count_is(n=1)`, and the canonical evidence bundle label.
+    - [x] Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+      - `tools/diag_gate_docking_wayland_policy_skip.py`
+      - The gate writes `capabilities.json` with `diag.script_v2`, simulates a non-Wayland
+        `platform.capabilities` sidecar, and requires `skipped_policy`,
+        `environment.requirement_unsatisfied`, `environment.platform_capabilities.platform_ne`,
+        and no script item files under `script-results/` or `suite-results/`.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

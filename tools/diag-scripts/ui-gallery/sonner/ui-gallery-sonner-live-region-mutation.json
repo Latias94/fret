@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-sonner-live-region-mutation",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "sonner", "toast", "live_region", "semantics"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "sonner"
+    }
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-sonner" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "role_and_name", "role": "viewport", "name": "Notifications" }
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "toast-entry-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_live_is",
+        "target": { "kind": "role_and_name", "role": "viewport", "name": "Notifications" },
+        "live": "polite"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_live_atomic_is",
+        "target": { "kind": "role_and_name", "role": "viewport", "name": "Notifications" },
+        "live_atomic": false
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-sonner-live-region-open"
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "toast-entry-1" },
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "toast-entry-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "role_and_name", "role": "viewport", "name": "Notifications" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-sonner-live-region-closed"
+    }
+  ]
+}

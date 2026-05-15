@@ -131,7 +131,7 @@ def main() -> None:
                 "imui_editor_proof_demo.model.authoring_parity.collection_keyboard",
                 "cx.key_on_key_down_for(scope_id, Arc::new(move |host, acx, down| {",
                 "host.request_focus(acx.target);",
-                "state.active_id = next_selection.selected.first().cloned();",
+                "state.active_id = next_selection.first_selected().cloned();",
                 "state.active_id = None;",
                 "\"Active tile: none. Click background to focus the collection scope, then use Arrow/Home/End to drive selection app-locally.\"",
                 "\"Active tile: {}. Shift+Arrow/Home/End extends from the current anchor; Escape clears the selection without widening shared IMUI helper ownership.\"",
@@ -142,6 +142,7 @@ def main() -> None:
                 "pub fn set_next_collection_shortcut",
                 "SetNextItemShortcut",
                 "SetItemKeyOwner",
+                "state.active_id = next_selection.selected.first().cloned();",
             ],
         ),
         SourceCheck(
@@ -234,6 +235,7 @@ def main() -> None:
                 "struct ProofCollectionBoxSelectState {",
                 "fn proof_collection_box_select_selection(",
                 "fn proof_collection_box_select_active_rect(",
+                "ImUiMultiSelectState::from_ordered_selection(",
                 "imui_editor_proof_demo.model.authoring_parity.collection_box_select",
                 "props.capture_phase_pointer_moves = true;",
                 "cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {",
@@ -248,6 +250,7 @@ def main() -> None:
                 "fret_ui_kit::imui::collection_box_select",
                 "pub fn collection_box_select",
                 "struct ImUiCollectionBoxSelect",
+                "fn proof_collection_normalize_selection(",
             ],
         ),
         SourceCheck(

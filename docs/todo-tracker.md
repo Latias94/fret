@@ -99,13 +99,14 @@ It complements (but does not replace) ADRs:
 - Current gap-closure source audit and prioritization lane:
   - `docs/workstreams/imui-imgui-gap-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`
-  - Scope: rebase the Dear ImGui gap read from current source before any next fearless cleanup or
-    helper widening. Treat the old v2 parity audit as historical evidence unless this lane
-    revalidates it.
+  - Scope: rebase the Dear ImGui gap read from current source before any next fearless cleanup,
+    perf-discipline work, or helper widening. Treat the old v2 parity audit as historical evidence
+    unless this lane revalidates it.
 - Closed kit owner-split follow-on:
   - `docs/workstreams/imui-kit-owner-split-v1/DESIGN.md`
   - `docs/workstreams/imui-kit-owner-split-v1/M0_BASELINE_AUDIT_2026-05-13.md`
@@ -207,11 +208,14 @@ It complements (but does not replace) ADRs:
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+  - Current status: not complete; keep execution in narrow owner lanes for real-host Wayland
+    hand-feel, DevTools GUI productization, and broader perf attribution/smoothness.
 - Closed narrow follow-on for IMUI text input policy depth (read-only, select-all-on-focus, and
   multiline AllowTabInput policy):
   - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
@@ -1340,8 +1344,13 @@ It complements (but does not replace) ADRs:
   `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`,
   and local non-Linux continuation is bounded by
   `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`;
-  the latest 2026-05-13 local non-interactive refresh is recorded in
-  `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+  the latest 2026-05-14 local Wayland-boundary refresh is recorded in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+  and the 2026-05-15 source-drift guard follow-up in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+  now also guards the Wayland campaign/script admission contract
+  and `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+  proves local non-Wayland sidecars stop at `skipped_policy` before script execution
   and the launched bounded-campaign repair is recorded in
   `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`;
   platform-specific real-host acceptance remains open.
@@ -1726,7 +1735,10 @@ It complements (but does not replace) ADRs:
     - Mixed-DPI accepted run: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
     - Window-style opacity capability: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
     - Local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
-    - Latest local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M13_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-13.md`
+    - Latest local Wayland-boundary refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
+    - Latest source-drift guard: `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
+      (2026-05-15 follow-up guards Wayland campaign/script admission)
+    - Latest local Wayland policy-skip gate: `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
     - Launched bounded-campaign repair: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
     - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`

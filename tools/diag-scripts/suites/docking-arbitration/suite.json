@@ -26,6 +26,7 @@
     "tools/diag-scripts/docking-arbitration-demo-tab-bar-edge-autoscroll.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json"
   ]
 }

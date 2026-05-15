@@ -103,29 +103,29 @@ impl View for ImUiDebugDrawBasicsView {
                     let list_summary = response.list_summary();
                     let image_meshes = command_summaries
                         .iter()
-                        .filter(|summary| summary.kind == DebugDrawCommandKind::ImageTriangleMesh)
+                        .filter(|summary| summary.kind() == DebugDrawCommandKind::ImageTriangleMesh)
                         .count();
                     let max_channel = command_summaries
                         .iter()
-                        .filter_map(|summary| summary.channel)
+                        .filter_map(|summary| summary.channel())
                         .max()
                         .unwrap_or(0);
                     let list_summary_text = format!(
                         "List: commands={}, triangles={}, max_clip_depth={}, final_clip_depth={}",
-                        list_summary.command_count,
-                        list_summary.triangle_count,
-                        list_summary.max_clip_depth,
-                        list_summary.final_clip_depth
+                        list_summary.command_count(),
+                        list_summary.triangle_count(),
+                        list_summary.max_clip_depth(),
+                        list_summary.final_clip_depth()
                     );
                     let command_summary_text = format!(
                         "Commands: image_meshes={}, max_channel={}, first={:?}",
                         image_meshes,
                         max_channel,
-                        command_summaries.first().map(|summary| summary.kind)
+                        command_summaries.first().map(|summary| summary.kind())
                     );
                     let response_summary_text = format!(
                         "Response: enabled={}, hovered={}, clicked={}, rect_ready={}",
-                        response.response.enabled(),
+                        response.response().enabled(),
                         response.hovered_like_imgui(),
                         response.clicked(),
                         response.rect().is_some()

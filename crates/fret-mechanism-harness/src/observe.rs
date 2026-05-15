@@ -158,6 +158,7 @@ impl ObservedTree {
                     .pressed_state
                     .map(ObservedSemanticsPressedState::from),
                 value: node.value.clone(),
+                level: node.extra.level,
                 pos_in_set: node.pos_in_set,
                 set_size: node.set_size,
                 text_selection: node
@@ -549,6 +550,8 @@ pub struct ObservedNode {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pos_in_set: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub set_size: Option<u32>,
@@ -596,6 +599,7 @@ impl ObservedNode {
             checked_state: None,
             pressed_state: None,
             value: None,
+            level: None,
             pos_in_set: None,
             set_size: None,
             text_selection: None,

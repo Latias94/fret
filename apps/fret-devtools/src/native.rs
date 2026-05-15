@@ -9,8 +9,9 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
-    RegressionSummaryV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
+    regression_bundle_followup_command_lines, regression_bundle_followup_commands,
+    regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -35,6 +36,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
 mod pack;
+mod followup;
 mod script_studio;
 mod semantics;
 mod summarize;
@@ -60,6 +62,17 @@ const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
 const CMD_REGRESSION_REFRESH: &str = "fret.devtools.regression.refresh";
 const CMD_REGRESSION_SUMMARIZE: &str = "fret.devtools.regression.summarize";
 const CMD_REGRESSION_PACK_SELECTED_BUNDLE: &str = "fret.devtools.regression.pack_selected_bundle";
+const CMD_REGRESSION_RUN_FOLLOWUP_STATS: &str = "fret.devtools.regression.followup.stats";
+const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =
+    "fret.devtools.regression.followup.layout_perf";
+const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.followup.memory";
+const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
+const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
+const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
+const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.copy_result_json";
+const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
+    "fret.devtools.regression.followup.copy_result_command";
+const CMD_OPEN_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.open_result_json";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -71,6 +84,47 @@ const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
 const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =
     "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke";
 const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "devtools-first-open-smoke";
+const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
+const IMUI_PRODUCT_WORKFLOW_DOC: &str =
+    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
+const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =
+    "python tools/diag_gate_imui_product_chain.py --only discovery";
+const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =
+    "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
+const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
+    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
+const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
+    "perf-docking/regression.summary.json",
+    "perf-docking/check.perf_thresholds.json",
+];
+const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =
+    "cargo run -p fret-demo --bin imui_editor_proof_demo";
+const DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND: &str =
+    "cargo run -p fret-demo --bin editor_notes_demo";
+const DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND: &str =
+    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
+const DEVTOOLS_METRICS_STATS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
+const DEVTOOLS_METRICS_MEMORY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json";
+const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
+const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
+const DEVTOOLS_GATE_STALE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json";
+const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json";
+const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json";
+const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>";
+const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -140,6 +194,13 @@ struct State {
     pack_last_error: Model<Option<Arc<str>>>,
     summarize_in_flight: Model<bool>,
     summarize_last_error: Model<Option<Arc<str>>>,
+    followup_in_flight: Model<bool>,
+    followup_last_command_line: Model<Option<Arc<str>>>,
+    followup_last_result_path: Model<Option<Arc<str>>>,
+    followup_last_result_json: Model<String>,
+    followup_result_history: Model<Vec<followup::FollowupResultHistoryEntry>>,
+    followup_selected_result_path: Model<Option<Arc<str>>>,
+    followup_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
@@ -158,6 +219,7 @@ struct State {
     regression_selected_bundle_dirs: Model<Vec<Arc<str>>>,
     regression_selected_capability_sources: Model<Vec<Arc<str>>>,
     regression_selected_capabilities_checks: Model<Vec<Arc<str>>>,
+    regression_selected_perf_evidence: Model<Vec<Arc<str>>>,
     regression_selected_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
 
@@ -190,6 +252,8 @@ struct State {
     pack_rx: std::sync::mpsc::Receiver<pack::PackJobResult>,
     summarize_tx: std::sync::mpsc::Sender<summarize::SummarizeJobResult>,
     summarize_rx: std::sync::mpsc::Receiver<summarize::SummarizeJobResult>,
+    followup_tx: std::sync::mpsc::Sender<followup::FollowupJobResult>,
+    followup_rx: std::sync::mpsc::Receiver<followup::FollowupJobResult>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -310,6 +374,15 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let pack_last_error = app.models_mut().insert(None::<Arc<str>>);
     let summarize_in_flight = app.models_mut().insert(false);
     let summarize_last_error = app.models_mut().insert(None::<Arc<str>>);
+    let followup_in_flight = app.models_mut().insert(false);
+    let followup_last_command_line = app.models_mut().insert(None::<Arc<str>>);
+    let followup_last_result_path = app.models_mut().insert(None::<Arc<str>>);
+    let followup_last_result_json = app.models_mut().insert(String::new());
+    let followup_result_history = app
+        .models_mut()
+        .insert(Vec::<followup::FollowupResultHistoryEntry>::new());
+    let followup_selected_result_path = app.models_mut().insert(None::<Arc<str>>);
+    let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
@@ -327,6 +400,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let regression_selected_bundle_dirs = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_capability_sources = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_capabilities_checks = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_perf_evidence = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
         DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
@@ -382,6 +456,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 
     let (pack_tx, pack_rx) = pack::new_pack_channel();
     let (summarize_tx, summarize_rx) = summarize::new_summarize_channel();
+    let (followup_tx, followup_rx) = followup::new_followup_channel();
 
     let mut st = State {
         cfg,
@@ -438,6 +513,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         pack_last_error,
         summarize_in_flight,
         summarize_last_error,
+        followup_in_flight,
+        followup_last_command_line,
+        followup_last_result_path,
+        followup_last_result_json,
+        followup_result_history,
+        followup_selected_result_path,
+        followup_last_error,
         viewer_url,
         last_pick_json,
         last_inspect_hover_json,
@@ -455,6 +537,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         regression_selected_bundle_dirs,
         regression_selected_capability_sources,
         regression_selected_capabilities_checks,
+        regression_selected_perf_evidence,
         regression_selected_error,
         log_lines,
         semantics_cache,
@@ -483,6 +566,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         pack_rx,
         summarize_tx,
         summarize_rx,
+        followup_tx,
+        followup_rx,
     };
 
     refresh_script_library(app, &mut st);
@@ -493,6 +578,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     pack::poll_pack_jobs(cx.app, st);
     summarize::poll_summarize_jobs(cx.app, st);
+    followup::poll_followup_jobs(cx.app, st);
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
@@ -578,6 +664,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.pack_last_error, Invalidation::Paint);
     cx.observe_model(&st.summarize_in_flight, Invalidation::Paint);
     cx.observe_model(&st.summarize_last_error, Invalidation::Paint);
+    cx.observe_model(&st.followup_in_flight, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_command_line, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_result_path, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_result_json, Invalidation::Paint);
+    cx.observe_model(&st.followup_result_history, Invalidation::Paint);
+    cx.observe_model(&st.followup_selected_result_path, Invalidation::Paint);
+    cx.observe_model(&st.followup_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_hover_json, Invalidation::Paint);
@@ -601,6 +694,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         &st.regression_selected_capabilities_checks,
         Invalidation::Paint,
     );
+    cx.observe_model(&st.regression_selected_perf_evidence, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_error, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
     cx.observe_model(&st.semantics_cache, Invalidation::Paint);
@@ -772,8 +866,28 @@ fn header_bar(
     let first_open_panel = diag_section(
         cx,
         "First-open Evidence Path",
-        "Canonical docs, repo preflight, artifact roots, and smoke gate stay visible in the GUI shell.",
+        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         first_open_rows,
+    );
+    let mut demo_metrics_debug_rows = Vec::new();
+    for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
+        demo_metrics_debug_rows.push(cx.text(line));
+    }
+    let demo_metrics_debug_panel = diag_section(
+        cx,
+        "Demo / Metrics / Debug Routes",
+        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        demo_metrics_debug_rows,
+    );
+    let mut gate_command_rows = Vec::new();
+    for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
+        gate_command_rows.push(cx.text(line));
+    }
+    let gate_commands_panel = diag_section(
+        cx,
+        "Gate Commands",
+        "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
+        gate_command_rows,
     );
 
     let connection_actions = ui::h_row(|cx| {
@@ -847,6 +961,8 @@ fn header_bar(
             endpoint_line,
             workspace_line,
             first_open_panel,
+            demo_metrics_debug_panel,
+            gate_commands_panel,
             connection_actions,
             quick_actions,
         ])
@@ -2374,6 +2490,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.regression_selected_capabilities_checks, |v| v.clone())
         .unwrap_or_default();
+    let selected_perf_evidence = cx
+        .app
+        .models()
+        .read(&st.regression_selected_perf_evidence, |v| v.clone())
+        .unwrap_or_default();
     let selected_error = cx
         .app
         .models()
@@ -2402,12 +2523,73 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .read(&st.summarize_last_error, |v| v.clone())
         .ok()
         .flatten();
+    let followup_in_flight = cx
+        .app
+        .models()
+        .read(&st.followup_in_flight, |v| *v)
+        .unwrap_or(false);
+    let followup_last_command_line = cx
+        .app
+        .models()
+        .read(&st.followup_last_command_line, |v| v.clone())
+        .ok()
+        .flatten();
+    let followup_last_result_path = cx
+        .app
+        .models()
+        .read(&st.followup_last_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let followup_result_history = cx
+        .app
+        .models()
+        .read(&st.followup_result_history, |v| v.clone())
+        .unwrap_or_default();
+    let followup_selected_result_path = cx
+        .app
+        .models()
+        .read(&st.followup_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let followup_last_error = cx
+        .app
+        .models()
+        .read(&st.followup_last_error, |v| v.clone())
+        .ok()
+        .flatten();
     let repo_root = repo_root_from_script_paths(&st.script_paths);
+    let selected_followup_history_filter_dirs =
+        selected_followup_history_filter_dirs_from_bundle_dirs(
+            &st.script_paths,
+            &selected_bundle_dirs,
+        );
+    let selected_followup_history_entries =
+        followup::followup_result_history_entries_for_selected_bundle(
+            &followup_result_history,
+            selected_followup_history_filter_dirs
+                .iter()
+                .map(|value| value.as_str()),
+        );
+    let selected_followup_result_entry = followup::followup_result_history_selected_or_latest_entry(
+        &followup_result_history,
+        selected_followup_history_filter_dirs
+            .iter()
+            .map(|value| value.as_str()),
+        followup_selected_result_path.as_deref(),
+    );
+    let selected_followup_result_path = selected_followup_result_entry
+        .as_ref()
+        .map(|entry| entry.result_path.clone());
+    let selected_followup_result_json = selected_followup_result_entry
+        .as_ref()
+        .map(|entry| entry.result_json.clone())
+        .unwrap_or_default();
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
     let selected_capability_source_count = selected_capability_sources.len();
     let selected_capabilities_check_count = selected_capabilities_checks.len();
+    let selected_perf_evidence_count = selected_perf_evidence.len();
     let summarize_status_line = {
         let err = summarize_last_error
             .as_deref()
@@ -2416,6 +2598,24 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         format!(
             "summarize_in_flight={} summarize_last_error={err}",
             if summarize_in_flight { "true" } else { "false" }
+        )
+    };
+    let followup_status_line = {
+        let command = followup_last_command_line
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let result = followup_last_result_path
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let err = followup_last_error
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        format!(
+            "followup_in_flight={} last_followup_command={command} last_followup_result={result} followup_last_error={err}",
+            if followup_in_flight { "true" } else { "false" }
         )
     };
     let loaded_dir_line = loaded_dir
@@ -2491,6 +2691,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 st.regression_selected_capability_sources.clone();
             let selected_capabilities_checks_model =
                 st.regression_selected_capabilities_checks.clone();
+            let selected_perf_evidence_model = st.regression_selected_perf_evidence.clone();
             let selected_error_model = st.regression_selected_error.clone();
             let log_lines_model = st.log_lines.clone();
             let copy_path = resolved_summary_path_str.clone();
@@ -2528,6 +2729,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                                         .collect();
                                 },
                             );
+                            let _ = host.models_mut().update(&selected_perf_evidence_model, |v| {
+                                *v = data
+                                    .perf_evidence_lines
+                                    .into_iter()
+                                    .map(Arc::<str>::from)
+                                    .collect();
+                            });
                             let _ = host
                                 .models_mut()
                                 .update(&selected_error_model, |v| *v = None);
@@ -2548,6 +2756,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                             let _ = host
                                 .models_mut()
                                 .update(&selected_capabilities_checks_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_perf_evidence_model, |v| v.clear());
                             let _ = host.models_mut().update(&selected_error_model, |v| {
                                 *v = Some(Arc::<str>::from(format!(
                                     "failed to load selected regression summary {}: {err}",
@@ -2669,6 +2880,48 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
         .join("\r\n");
+    let selected_perf_evidence_text = selected_perf_evidence
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
+    let selected_followup_commands =
+        regression_bundle_followup_commands(selected_bundle_dirs.iter().map(|v| v.as_ref()));
+    let selected_runnable_followup_command_lines = selected_followup_commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect::<Vec<_>>();
+    let selected_manual_followup_command_lines = selected_followup_commands
+        .iter()
+        .filter(|command| command.requires_baseline)
+        .map(|command| command.display_line())
+        .collect::<Vec<_>>();
+    let selected_runnable_followup_count = selected_runnable_followup_command_lines.len();
+    let selected_manual_followup_count = selected_manual_followup_command_lines.len();
+    let selected_followup_command_lines =
+        regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()));
+    let selected_followup_commands_text = selected_followup_command_lines.join("\r\n");
+    let selected_followup_commands_display = if selected_followup_command_lines.is_empty() {
+        "Select a non-passing summary with bundle_dir evidence to generate concrete follow-up commands.".to_string()
+    } else {
+        selected_followup_commands_text.clone()
+    };
+    let selected_runnable_followup_commands_text =
+        selected_runnable_followup_command_lines.join("\r\n");
+    let selected_runnable_followup_commands_display =
+        if selected_runnable_followup_command_lines.is_empty() {
+            "No bundle-local follow-up command is runnable from this selection yet.".to_string()
+        } else {
+            selected_runnable_followup_commands_text.clone()
+        };
+    let selected_manual_followup_commands_text = selected_manual_followup_command_lines.join("\r\n");
+    let selected_manual_followup_commands_display =
+        if selected_manual_followup_command_lines.is_empty() {
+            "No baseline-required compare follow-up command for this selection.".to_string()
+        } else {
+            selected_manual_followup_commands_text.clone()
+        };
     let selected_summary_overview = {
         let mut parts: Vec<String> = Vec::new();
         match selected_summary_path.as_deref() {
@@ -2691,6 +2944,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if let Some(first) = selected_capabilities_checks.first() {
             parts.push(format!("First capability check: {}", first.as_ref()));
         }
+        parts.push(format!(
+            "Selected perf evidence lines: {selected_perf_evidence_count}"
+        ));
+        if let Some(first) = selected_perf_evidence.first() {
+            parts.push(format!("First perf evidence: {}", first.as_ref()));
+        }
+        parts.push(format!(
+            "Runnable follow-up commands: {selected_runnable_followup_count}"
+        ));
+        parts.push(format!(
+            "Manual compare follow-up commands: {selected_manual_followup_count}"
+        ));
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("Selected error: {err}"));
         }
@@ -2713,6 +2978,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             parts.push("capabilities_check_paths:".to_string());
             parts.push(selected_capabilities_checks_text.clone());
         }
+        if !selected_perf_evidence_text.trim().is_empty() {
+            parts.push("perf_evidence:".to_string());
+            parts.push(selected_perf_evidence_text.clone());
+        }
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("error: {err}"));
         }
@@ -2730,7 +2999,6 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             )
         }
     };
-
     let selected_actions = ui::h_row(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
         if let Some(path) = selected_summary_path.as_ref().map(|v| v.to_string()) {
@@ -2748,6 +3016,125 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_copy)
+                .into_element(cx),
+            );
+        }
+        if !selected_followup_commands_text.trim().is_empty() {
+            let followup_commands = selected_followup_commands_text.clone();
+            let on_copy: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let token = host.next_clipboard_token();
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token,
+                        text: followup_commands.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            out.push(
+                shadcn::Button::new("Copy follow-up commands")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "stats")
+        {
+            out.push(
+                shadcn::Button::new("Run stats")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_STATS)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "layout-perf-summary")
+        {
+            out.push(
+                shadcn::Button::new("Run layout perf")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "memory-summary")
+        {
+            out.push(
+                shadcn::Button::new("Run memory")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_MEMORY)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "triage")
+        {
+            out.push(
+                shadcn::Button::new("Run triage")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "hotspots")
+        {
+            out.push(
+                shadcn::Button::new("Run hotspots")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_result_path.is_some() {
+            out.push(
+                shadcn::Button::new("Copy selected follow-up result")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_RESULT_PATH)
+                    .into_element(cx),
+            );
+            out.push(
+                shadcn::Button::new("Open selected follow-up JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_OPEN_FOLLOWUP_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_result_entry.is_some() {
+            out.push(
+                shadcn::Button::new("Copy selected follow-up command")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_RESULT_COMMAND)
+                    .into_element(cx),
+            );
+        }
+        if !selected_followup_result_json.trim().is_empty() {
+            out.push(
+                shadcn::Button::new("Copy selected follow-up JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_RESULT_JSON)
                     .into_element(cx),
             );
         }
@@ -2874,6 +3261,25 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_copy)
+                .into_element(cx),
+            );
+        }
+        if !selected_perf_evidence_text.trim().is_empty() {
+            let perf_evidence = selected_perf_evidence_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
+                    text: perf_evidence.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy perf evidence")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
                     .into_element(cx),
             );
         }
@@ -2920,6 +3326,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 shadcn::BadgeVariant::Outline
             })
             .into_element(cx),
+            shadcn::Badge::new(format!("perf evidence {selected_perf_evidence_count}"))
+                .variant(if selected_perf_evidence_count > 0 {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
             shadcn::Badge::new(if selected_error.is_some() {
                 "Selection error"
             } else {
@@ -3046,12 +3459,60 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     );
 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
+    let selected_followup_status_text = cx.text(followup_status_line);
+    let selected_followup_result_detail_blob = text_blob_sized(
+        cx,
+        followup::followup_result_history_entry_detail_lines(
+            selected_followup_result_entry.as_ref(),
+        )
+        .join("\r\n"),
+        Px(120.0),
+    );
+    let selected_followup_result_summary_blob = text_blob_sized(
+        cx,
+        followup::followup_result_summary_lines(&selected_followup_result_json).join("\r\n"),
+        Px(96.0),
+    );
+    let selected_followup_result_history_blob = text_blob_sized(
+        cx,
+        followup::followup_result_history_summary_lines(
+            &followup_result_history,
+            selected_followup_history_filter_dirs
+                .iter()
+                .map(|value| value.as_str()),
+        )
+        .join("\r\n"),
+        Px(120.0),
+    );
+    let selected_followup_result_history_list = followup_history_list(
+        cx,
+        &st.followup_selected_result_path,
+        &selected_followup_history_entries,
+        selected_followup_result_path.as_deref(),
+    );
+    let selected_followup_result_json_blob = text_blob_sized(
+        cx,
+        if selected_followup_result_json.trim().is_empty() {
+            "<no selected-bundle follow-up result yet>".to_string()
+        } else {
+            selected_followup_result_json
+        },
+        Px(140.0),
+    );
     let selected_bundle_dirs_blob =
         text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
     let selected_capability_sources_blob =
         text_blob_sized(cx, selected_capability_sources_text.clone(), Px(96.0));
     let selected_capabilities_blob =
         text_blob_sized(cx, selected_capabilities_checks_text.clone(), Px(96.0));
+    let selected_perf_evidence_blob =
+        text_blob_sized(cx, selected_perf_evidence_text.clone(), Px(120.0));
+    let selected_followup_commands_blob =
+        text_blob_sized(cx, selected_followup_commands_display, Px(116.0));
+    let selected_runnable_followup_commands_blob =
+        text_blob_sized(cx, selected_runnable_followup_commands_display, Px(96.0));
+    let selected_manual_followup_commands_blob =
+        text_blob_sized(cx, selected_manual_followup_commands_display, Px(96.0));
     let selected_raw_summary_blob = text_blob_sized(cx, selected_detail_content, Px(220.0));
     let selected_overview_section = diag_section(
         cx,
@@ -3064,6 +3525,57 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Evidence Actions",
         "Copy paths or pack the currently selected evidence without leaving this inspector.",
         vec![selected_actions],
+    );
+    let selected_followup_run_status_section = diag_section(
+        cx,
+        "Follow-up Run Status",
+        "Runnable follow-up commands execute through the shared diagnostics engine and report status here.",
+        vec![selected_followup_status_text],
+    );
+    let selected_followup_result_detail_section = diag_section(
+        cx,
+        "Follow-up Result Details",
+        "Selected result status, path, command, bundle, and error preview for reproduction.",
+        vec![selected_followup_result_detail_blob],
+    );
+    let selected_followup_result_summary_section = diag_section(
+        cx,
+        "Follow-up Result Summary",
+        "Status, command, duration, and error preview from the latest selected-bundle follow-up result.",
+        vec![selected_followup_result_summary_blob],
+    );
+    let selected_followup_result_history_section = diag_section(
+        cx,
+        "Follow-up Result History",
+        "Select a GUI-launched follow-up result for the selected bundle, newest first.",
+        vec![
+            selected_followup_result_history_blob,
+            selected_followup_result_history_list,
+        ],
+    );
+    let selected_followup_result_json_section = diag_section(
+        cx,
+        "Follow-up Result JSON",
+        "The latest selected-bundle follow-up result artifact is mirrored here for quick triage.",
+        vec![selected_followup_result_json_blob],
+    );
+    let selected_followup_commands_section = diag_section(
+        cx,
+        "Follow-up Commands",
+        "Concrete stats, triage, hotspot, visual-compare, and footprint commands are generated from the selected bundle directory.",
+        vec![selected_followup_commands_blob],
+    );
+    let selected_runnable_followup_commands_section = diag_section(
+        cx,
+        "Runnable Follow-ups",
+        "Bundle-local commands have concrete diag args and do not require a baseline selection.",
+        vec![selected_runnable_followup_commands_blob],
+    );
+    let selected_manual_followup_commands_section = diag_section(
+        cx,
+        "Manual Compare Follow-ups",
+        "Compare commands stay visible but are separated because they still require a baseline input.",
+        vec![selected_manual_followup_commands_blob],
     );
     let selected_bundle_dirs_section = diag_section(
         cx,
@@ -3083,6 +3595,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Policy-skipped summaries can point at campaign capability check artifacts even when no bundle dir exists.",
         vec![selected_capabilities_blob],
     );
+    let selected_perf_evidence_section = diag_section(
+        cx,
+        "Perf Evidence",
+        "Perf summary paths, threshold artifacts, curated metrics, and threshold failures stay above the raw JSON.",
+        vec![selected_perf_evidence_blob],
+    );
     let selected_raw_summary_section = diag_section(
         cx,
         "Raw Selected Summary",
@@ -3097,9 +3615,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         vec![
             selected_overview_section,
             selected_actions_section,
+            selected_followup_run_status_section,
+            selected_followup_result_detail_section,
+            selected_followup_result_summary_section,
+            selected_followup_result_history_section,
+            selected_followup_result_json_section,
+            selected_followup_commands_section,
+            selected_runnable_followup_commands_section,
+            selected_manual_followup_commands_section,
             selected_bundle_dirs_section,
             selected_capability_sources_section,
             selected_capabilities_section,
+            selected_perf_evidence_section,
             selected_raw_summary_section,
         ],
     );
@@ -3197,6 +3724,107 @@ fn text_blob_sized(cx: &mut ElementContext<'_, App>, text: String, min_h: Px) ->
                 .min_h(min_h),
         )
         .into_element(cx)
+}
+
+fn followup_history_list(
+    cx: &mut ElementContext<'_, App>,
+    selected_result_path_model: &Model<Option<Arc<str>>>,
+    entries: &[followup::FollowupResultHistoryEntry],
+    active_result_path: Option<&str>,
+) -> AnyElement {
+    if entries.is_empty() {
+        return text_blob_sized(
+            cx,
+            "follow-up history entries: <none for selected bundle>".to_string(),
+            Px(84.0),
+        );
+    }
+
+    let mut rows: Vec<AnyElement> = Vec::new();
+    for entry in entries.iter().take(8) {
+        let is_selected = active_result_path.is_some_and(|path| path == entry.result_path);
+        let result_path = entry.result_path.clone();
+        let selected_result_path_model = selected_result_path_model.clone();
+        let label = format!(
+            "{} | {} | {}",
+            entry.status,
+            entry.id,
+            short_followup_result_path(&entry.result_path)
+        );
+        let on_activate: fret_ui::action::OnActivate =
+            Arc::new(move |host, action_cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&selected_result_path_model, |value| {
+                        *value = Some(Arc::<str>::from(result_path.clone()))
+                    });
+                host.request_redraw(action_cx.window);
+            });
+        rows.push(
+            shadcn::Button::new(label)
+                .variant(if is_selected {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Ghost
+                })
+                .size(shadcn::ButtonSize::Sm)
+                .on_activate(on_activate)
+                .into_element(cx),
+        );
+    }
+
+    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
+            .w_full()
+            .min_h(Px(116.0)),
+    )
+    .into_element(cx)
+}
+
+fn short_followup_result_path(path: &str) -> String {
+    Path::new(path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(path)
+        .to_string()
+}
+
+fn file_url_from_path(path: &str) -> String {
+    let normalized = path.trim().replace('\\', "/");
+    let encoded = percent_encode_file_url_path(&normalized);
+    if encoded.starts_with('/') {
+        format!("file://{encoded}")
+    } else {
+        format!("file:///{encoded}")
+    }
+}
+
+fn percent_encode_file_url_path(path: &str) -> String {
+    use std::fmt::Write as _;
+
+    let mut out = String::with_capacity(path.len());
+    for byte in path.bytes() {
+        match byte {
+            b'A'..=b'Z'
+            | b'a'..=b'z'
+            | b'0'..=b'9'
+            | b'-'
+            | b'.'
+            | b'_'
+            | b'~'
+            | b'/'
+            | b':' => out.push(byte as char),
+            _ => {
+                let _ = write!(&mut out, "%{byte:02X}");
+            }
+        }
+    }
+    out
 }
 
 fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
@@ -3466,6 +4094,104 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .into_element(cx)
 }
 
+fn selected_followup_history_filter_dirs_from_bundle_dirs(
+    script_paths: &script_studio::ScriptPaths,
+    selected_bundle_dirs: &[Arc<str>],
+) -> Vec<String> {
+    let repo_root = repo_root_from_script_paths(script_paths);
+    let mut dirs: Vec<String> = Vec::new();
+    for dir in selected_bundle_dirs.iter() {
+        let dir = dir.trim();
+        if dir.is_empty() {
+            continue;
+        }
+        dirs.push(dir.to_string());
+        if !is_abs_path(dir) {
+            dirs.push(repo_root.join(dir).to_string_lossy().to_string());
+        }
+    }
+    dirs
+}
+
+fn selected_followup_history_filter_dirs_from_state(app: &App, st: &State) -> Vec<String> {
+    let selected_bundle_dirs = app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.clone())
+        .unwrap_or_default();
+    selected_followup_history_filter_dirs_from_bundle_dirs(&st.script_paths, &selected_bundle_dirs)
+}
+
+fn followup_result_history_from_state(
+    app: &App,
+    st: &State,
+) -> Vec<followup::FollowupResultHistoryEntry> {
+    app.models()
+        .read(&st.followup_result_history, |v| v.clone())
+        .unwrap_or_default()
+}
+
+fn selected_followup_result_entry_from_state(
+    app: &App,
+    st: &State,
+) -> Option<followup::FollowupResultHistoryEntry> {
+    let selected_followup_history_filter_dirs =
+        selected_followup_history_filter_dirs_from_state(app, st);
+    let followup_result_history = followup_result_history_from_state(app, st);
+    let followup_selected_result_path = app
+        .models()
+        .read(&st.followup_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    followup::followup_result_history_selected_or_latest_entry(
+        &followup_result_history,
+        selected_followup_history_filter_dirs
+            .iter()
+            .map(|value| value.as_str()),
+        followup_selected_result_path.as_deref(),
+    )
+}
+
+fn selected_followup_result_path_from_state(app: &App, st: &State) -> Option<String> {
+    selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_path)
+}
+
+fn selected_followup_result_command_from_state(app: &App, st: &State) -> Option<String> {
+    selected_followup_result_entry_from_state(app, st).map(|entry| entry.command_line)
+}
+
+fn selected_followup_result_json_from_state(app: &App, st: &State) -> Option<String> {
+    selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_json)
+}
+
+fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
+    let selected_bundle_dirs = app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.clone())
+        .unwrap_or_default();
+    let Some(mut command) =
+        regression_bundle_followup_commands(selected_bundle_dirs.iter().map(|v| v.as_ref()))
+            .into_iter()
+            .find(|command| command.id == command_id)
+    else {
+        push_log(
+            app,
+            &st.log_lines,
+            &format!("follow-up refused (no selected command {command_id})"),
+        );
+        return;
+    };
+    if let Some(bundle_arg) = command.diag_args.get_mut(1)
+        && !is_abs_path(bundle_arg)
+    {
+        let repo_root = repo_root_from_script_paths(&st.script_paths);
+        *bundle_arg = repo_root.join(&bundle_arg).to_string_lossy().to_string();
+    }
+
+    if let Err(err) = followup::start_regression_followup_command(app, st, command) {
+        push_log(app, &st.log_lines, &format!("follow-up refused: {err}"));
+    }
+}
+
 fn on_command(
     app: &mut App,
     _services: &mut dyn UiServices,
@@ -3587,6 +4313,89 @@ fn on_command(
                 );
             }
             app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_STATS => {
+            run_selected_regression_followup(app, st, "stats");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF => {
+            run_selected_regression_followup(app, st, "layout-perf-summary");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_MEMORY => {
+            run_selected_regression_followup(app, st, "memory-summary");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE => {
+            run_selected_regression_followup(app, st, "triage");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS => {
+            run_selected_regression_followup(app, st, "hotspots");
+            app.request_redraw(window);
+        }
+        CMD_COPY_FOLLOWUP_RESULT_PATH => {
+            let Some(path) = selected_followup_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected follow-up result refused (no selected-bundle result artifact yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: path,
+            });
+        }
+        CMD_COPY_FOLLOWUP_RESULT_COMMAND => {
+            let Some(command_line) = selected_followup_result_command_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected follow-up command refused (no selected-bundle result command yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: command_line,
+            });
+        }
+        CMD_OPEN_FOLLOWUP_RESULT_JSON => {
+            let Some(path) = selected_followup_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "open selected follow-up JSON refused (no selected-bundle result artifact yet)",
+                );
+                return;
+            };
+            app.push_effect(Effect::OpenUrl {
+                url: file_url_from_path(&path),
+                target: None,
+                rel: None,
+            });
+        }
+        CMD_COPY_FOLLOWUP_RESULT_JSON => {
+            let Some(result_json) = selected_followup_result_json_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected follow-up JSON refused (no selected-bundle result JSON yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: result_json,
+            });
         }
         CMD_SCRIPT_FORK => {
             fork_loaded_script(app, window, st);
@@ -4807,6 +5616,9 @@ pub(crate) fn clear_regression_selection(app: &mut App, st: &State) {
         .update(&st.regression_selected_capabilities_checks, |v| v.clear());
     let _ = app
         .models_mut()
+        .update(&st.regression_selected_perf_evidence, |v| v.clear());
+    let _ = app
+        .models_mut()
         .update(&st.regression_selected_error, |v| *v = None);
 }
 
@@ -4894,56 +5706,7 @@ struct RegressionSummaryDrilldownData {
     bundle_dirs: Vec<String>,
     capability_sources: Vec<String>,
     capabilities_check_paths: Vec<String>,
-}
-
-fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
-    if let Some(path) = value.get("path").and_then(|value| value.as_str())
-        && !path.trim().is_empty()
-    {
-        return Some(path.to_string());
-    }
-    if let Some(label) = value.get("label").and_then(|value| value.as_str())
-        && !label.trim().is_empty()
-    {
-        return Some(label.to_string());
-    }
-    let transport = value.get("transport").and_then(|value| value.as_str());
-    let session_id = value.get("session_id").and_then(|value| value.as_str());
-    match (transport, session_id) {
-        (Some(transport), Some(session_id))
-            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
-        {
-            Some(format!("{transport}:{session_id}"))
-        }
-        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
-        _ => None,
-    }
-}
-
-fn regression_item_capability_source_display(
-    item: &fret_diag::regression_summary::RegressionItemSummaryV1,
-) -> Option<String> {
-    item.evidence
-        .as_ref()
-        .and_then(|evidence| evidence.extra.as_ref())
-        .and_then(|extra| extra.get("capability_source"))
-        .and_then(capability_source_display_from_value)
-        .or_else(|| {
-            item.source
-                .as_ref()
-                .and_then(|source| source.metadata.as_ref())
-                .and_then(|metadata| metadata.get("capability_source"))
-                .and_then(capability_source_display_from_value)
-        })
-        .or_else(|| {
-            item.evidence
-                .as_ref()
-                .and_then(|evidence| evidence.extra.as_ref())
-                .and_then(|extra| extra.get("capabilities_source_path"))
-                .and_then(|value| value.as_str())
-                .filter(|value| !value.trim().is_empty())
-                .map(ToString::to_string)
-        })
+    perf_evidence_lines: Vec<String>,
 }
 
 fn regression_failing_summary_rows(
@@ -4971,46 +5734,13 @@ fn load_regression_summary_drilldown(
     let summary_json = std::fs::read_to_string(summary_path).map_err(|e| e.to_string())?;
     let summary: RegressionSummaryV1 =
         serde_json::from_str(&summary_json).map_err(|e| e.to_string())?;
-    let mut bundle_dirs: Vec<String> = Vec::new();
-    let mut capability_sources: Vec<String> = Vec::new();
-    let mut capabilities_check_paths: Vec<String> = Vec::new();
-    for item in summary.items {
-        if item.status == RegressionStatusV1::Passed {
-            continue;
-        }
-        if let Some(source) = regression_item_capability_source_display(&item)
-            && !capability_sources
-                .iter()
-                .any(|existing| existing == &source)
-        {
-            capability_sources.push(source);
-        }
-        if let Some(evidence) = item.evidence {
-            if let Some(dir) = evidence.bundle_dir
-                && !dir.trim().is_empty()
-                && !bundle_dirs.iter().any(|existing| existing == &dir)
-            {
-                bundle_dirs.push(dir);
-            }
-            if let Some(path) = evidence
-                .extra
-                .as_ref()
-                .and_then(|extra| extra.get("capabilities_check_path"))
-                .and_then(|value| value.as_str())
-                && !path.trim().is_empty()
-                && !capabilities_check_paths
-                    .iter()
-                    .any(|existing| existing == path)
-            {
-                capabilities_check_paths.push(path.to_string());
-            }
-        }
-    }
+    let drilldown = regression_summary_drilldown(&summary);
     Ok(RegressionSummaryDrilldownData {
         summary_json,
-        bundle_dirs,
-        capability_sources,
-        capabilities_check_paths,
+        bundle_dirs: drilldown.bundle_dirs,
+        capability_sources: drilldown.capability_sources,
+        capabilities_check_paths: drilldown.capabilities_check_paths,
+        perf_evidence_lines: drilldown.perf_evidence_lines,
     })
 }
 
@@ -5055,6 +5785,15 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
                 });
             let _ = app
                 .models_mut()
+                .update(&st.regression_selected_perf_evidence, |v| {
+                    *v = data
+                        .perf_evidence_lines
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
                 .update(&st.regression_selected_error, |v| *v = None);
         }
         Err(err) => {
@@ -5070,6 +5809,9 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
             let _ = app
                 .models_mut()
                 .update(&st.regression_selected_capabilities_checks, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_perf_evidence, |v| v.clear());
             let _ = app.models_mut().update(&st.regression_selected_error, |v| {
                 *v = Some(Arc::<str>::from(format!(
                     "failed to load selected regression summary {}: {err}",
@@ -5107,6 +5849,60 @@ fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
             "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard"
         ),
         format!("gate: {DEVTOOLS_FIRST_OPEN_GATE_COMMAND}"),
+        format!("product workflow: {IMUI_PRODUCT_WORKFLOW_ID}"),
+        format!("product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}"),
+        format!("product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
+        format!("product workflow launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}"),
+        format!("product workflow suite: {IMUI_PRODUCT_WORKFLOW_SUITE}"),
+        format!("product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}"),
+        format!(
+            "product workflow artifacts: {}",
+            IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(", ")
+        ),
+    ]
+}
+
+fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        format!("route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}"),
+        format!("artifacts root: {artifacts_root}"),
+        format!("demo editor proof: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
+        format!("demo editor notes: {DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND}"),
+        format!("demo device shell: {DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND}"),
+        format!("metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}"),
+        format!("metrics layout perf: {DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND}"),
+        format!("metrics memory: {DEVTOOLS_METRICS_MEMORY_COMMAND}"),
+        format!("debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}"),
+        format!("debug hotspots: {DEVTOOLS_DEBUG_HOTSPOTS_COMMAND}"),
+    ]
+}
+
+fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        "gate route: first-class-gates".to_string(),
+        format!("artifacts root: {artifacts_root}"),
+        format!("stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}"),
+        format!("pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}"),
+        format!("perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}"),
+        format!(
+            "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}"
+        ),
+        format!(
+            "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}"
+        ),
+        "gate evidence files: check.pixels_changed.json, check.perf_thresholds.json, resource.footprint.json".to_string(),
     ]
 }
 
@@ -5185,6 +5981,26 @@ mod tests {
     }
 
     #[test]
+    fn file_url_from_path_projects_native_artifact_paths() {
+        assert_eq!(
+            file_url_from_path("F:\\repo\\.fret\\diag\\followups\\10-stats.json"),
+            "file:///F:/repo/.fret/diag/followups/10-stats.json"
+        );
+        assert_eq!(
+            file_url_from_path("/tmp/fret/diag/followups/10-stats.json"),
+            "file:///tmp/fret/diag/followups/10-stats.json"
+        );
+        assert_eq!(
+            file_url_from_path("F:\\repo\\.fret\\diag\\followups\\10 stats#failed.json"),
+            "file:///F:/repo/.fret/diag/followups/10%20stats%23failed.json"
+        );
+        assert_eq!(
+            file_url_from_path("/tmp/fret/diag/followups/结果.json"),
+            "file:///tmp/fret/diag/followups/%E7%BB%93%E6%9E%9C.json"
+        );
+    }
+
+    #[test]
     fn devtools_first_open_lines_surface_canonical_paths() {
         let lines = devtools_first_open_lines("target/fret-diag");
         let text = lines.join("\n");
@@ -5202,6 +6018,77 @@ mod tests {
             "campaign loop: diag campaign run devtools-first-open-smoke -> diag summarize -> diag dashboard"
         ));
         assert!(text.contains("gate: python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"));
+        assert!(text.contains("product workflow: imui-product-chain"));
+        assert!(text.contains("product workflow command: python tools/diag_gate_imui_product_chain.py"));
+        assert!(text.contains(
+            "product workflow focused: python tools/diag_gate_imui_product_chain.py --only discovery"
+        ));
+        assert!(text.contains(
+            "product workflow launched: python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+        ));
+        assert!(text.contains(
+            "product workflow suite: tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
+        ));
+        assert!(text.contains(
+            "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
+        ));
+        assert!(text.contains(
+            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+        ));
+    }
+
+    #[test]
+    fn devtools_demo_metrics_debug_lines_surface_canonical_routes() {
+        let lines = devtools_demo_metrics_debug_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("route: demo-metrics-debug"));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains("demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo"));
+        assert!(text.contains("demo editor notes: cargo run -p fret-demo --bin editor_notes_demo"));
+        assert!(text.contains(
+            "demo device shell: cargo run -p fret-demo --bin editor_notes_device_shell_demo"
+        ));
+        assert!(
+            text.contains("metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json")
+        );
+        assert!(text.contains(
+            "metrics layout perf: cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json"
+        ));
+        assert!(
+            text.contains("metrics memory: cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json")
+        );
+        assert!(
+            text.contains("debug triage: cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json")
+        );
+        assert!(
+            text.contains("debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json")
+        );
+    }
+
+    #[test]
+    fn devtools_gate_command_lines_surface_first_class_gates() {
+        let lines = devtools_gate_command_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("gate route: first-class-gates"));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains(
+            "stale paint/scene: cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json"
+        ));
+        assert!(text.contains(
+            "pixels changed: cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json"
+        ));
+        assert!(text.contains(
+            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json"
+        ));
+        assert!(text.contains(
+            "resource footprint capture: cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>"
+        ));
+        assert!(text.contains(
+            "resource footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json"
+        ));
+        assert!(text.contains("check.pixels_changed.json"));
+        assert!(text.contains("check.perf_thresholds.json"));
+        assert!(text.contains("resource.footprint.json"));
     }
 
     #[test]
@@ -5356,6 +6243,84 @@ mod tests {
             data.capabilities_check_paths,
             vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_regression_summary_drilldown_collects_perf_evidence() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-regression-drilldown-perf-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("regression.summary.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "perf-docking", "lane": "perf" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "fretboard-dev diag perf" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 1, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 0, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "perf-case",
+                    "kind": "perf_case",
+                    "name": "docking steady drag",
+                    "status": "failed_deterministic",
+                    "lane": "perf",
+                    "evidence": {
+                        "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "perf_summary_json": "target/fret-diag/perf-docking/layout.perf.summary.v1.json",
+                        "compare_json": "target/fret-diag/perf-docking/check.perf_thresholds.json",
+                        "extra": {
+                            "metrics": {
+                                "top_total_time_us": 24000,
+                                "top_renderer_encode_scene_us": 6000,
+                                "top_renderer_instance_bytes": 700000,
+                                "stats": {
+                                    "total_time_us": 24000,
+                                    "top_renderer_encode_scene_us": 6000
+                                }
+                            },
+                            "threshold_failures": [
+                                {
+                                    "metric": "top_total_time_us",
+                                    "observed": 24000,
+                                    "threshold": 20000
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
+
+        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
+        assert_eq!(
+            data.bundle_dirs,
+            vec!["target/fret-diag/perf-docking/run-a".to_string()]
+        );
+        let text = data.perf_evidence_lines.join("\n");
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] perf_summary_json: target/fret-diag/perf-docking/layout.perf.summary.v1.json"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] compare_json: target/fret-diag/perf-docking/check.perf_thresholds.json"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_total_time_us: 24000"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_renderer_encode_scene_us: 6000"
+        ));
+        assert!(text.contains(
+            "docking steady drag [failed_deterministic] metric top_renderer_instance_bytes: 700000"
+        ));
+        assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
+        assert!(text.contains("threshold_failures_json"));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

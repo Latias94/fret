@@ -1,7 +1,7 @@
 use super::*;
 
-fn dock_drag_active(app: &App) -> bool {
-    app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+fn dock_drag_active(app: &App, pointer_id: PointerId) -> bool {
+    app.drag(pointer_id).is_some_and(|d| {
         (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
             || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
             && d.dragging
@@ -18,6 +18,65 @@ fn seed_pointer_session_position_from_explicit_cursor_override(
             Some(Point::new(Px(last.x_px), Px(last.y_px)))
         }
         _ => None,
+    }
+}
+
+fn should_sync_mouse_override(pointer_id: PointerId, pointer_type: PointerType) -> bool {
+    pointer_id == PointerId(0) && pointer_type == PointerType::Mouse
+}
+
+fn mouse_button_override_values(
+    button: UiMouseButtonV1,
+    pressed: bool,
+) -> (Option<bool>, Option<bool>, Option<bool>) {
+    (
+        matches!(button, UiMouseButtonV1::Left).then_some(pressed),
+        matches!(button, UiMouseButtonV1::Right).then_some(pressed),
+        matches!(button, UiMouseButtonV1::Middle).then_some(pressed),
+    )
+}
+
+fn write_cursor_override_for_pointer(
+    out_dir: &std::path::Path,
+    pointer_id: PointerId,
+    pointer_type: PointerType,
+    window: AppWindowId,
+    position: Point,
+) {
+    if should_sync_mouse_override(pointer_id, pointer_type) {
+        let _ = write_cursor_override_window_client_logical(
+            out_dir,
+            window,
+            position.x.0,
+            position.y.0,
+        );
+    }
+}
+
+fn write_mouse_buttons_override_window_for_pointer(
+    out_dir: &std::path::Path,
+    pointer_id: PointerId,
+    pointer_type: PointerType,
+    window: AppWindowId,
+    button: UiMouseButtonV1,
+    pressed: bool,
+) {
+    if should_sync_mouse_override(pointer_id, pointer_type) {
+        let (left, right, middle) = mouse_button_override_values(button, pressed);
+        let _ = write_mouse_buttons_override_window_v1(out_dir, window, left, right, middle);
+    }
+}
+
+fn write_mouse_buttons_override_all_windows_for_pointer(
+    out_dir: &std::path::Path,
+    pointer_id: PointerId,
+    pointer_type: PointerType,
+    button: UiMouseButtonV1,
+    pressed: bool,
+) {
+    if should_sync_mouse_override(pointer_id, pointer_type) {
+        let (left, right, middle) = mouse_button_override_values(button, pressed);
+        let _ = write_mouse_buttons_override_all_windows_v1(out_dir, left, right, middle);
     }
 }
 
@@ -41,6 +100,7 @@ pub(super) fn handle_pointer_down_step(
 ) -> bool {
     let UiActionStepV2::PointerDown {
         window: target_window,
+        pointer_id,
         pointer_kind,
         target,
         button: button_ui,
@@ -54,7 +114,9 @@ pub(super) fn handle_pointer_down_step(
     active.screenshot_wait = None;
     output.request_redraw = true;
 
-    if active.pointer_session.is_some() {
+    let pointer_id = PointerId(pointer_id);
+
+    if active.pointer_session(pointer_id).is_some() {
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-pointer_down-pointer-session-already-active"
         ));
@@ -141,7 +203,6 @@ pub(super) fn handle_pointer_down_step(
             }
 
             let modifiers = core_modifiers_from_ui(modifiers);
-            let pointer_id = PointerId(0);
             let pointer_type = pointer_type_from_kind(pointer_kind);
             let button = match button_ui {
                 UiMouseButtonV1::Left => MouseButton::Left,
@@ -164,36 +225,32 @@ pub(super) fn handle_pointer_down_step(
                 click_count: 1,
                 pointer_type,
             }));
-            let _ = write_cursor_override_window_client_logical(
+            write_cursor_override_for_pointer(
                 &svc.cfg.out_dir,
+                pointer_id,
+                pointer_type,
                 window,
-                pos.x.0,
-                pos.y.0,
+                pos,
             );
-            let _ = write_mouse_buttons_override_window_v1(
+            write_mouse_buttons_override_window_for_pointer(
                 &svc.cfg.out_dir,
+                pointer_id,
+                pointer_type,
                 window,
-                match button_ui {
-                    UiMouseButtonV1::Left => Some(true),
-                    _ => None,
-                },
-                match button_ui {
-                    UiMouseButtonV1::Right => Some(true),
-                    _ => None,
-                },
-                match button_ui {
-                    UiMouseButtonV1::Middle => Some(true),
-                    _ => None,
-                },
+                button_ui,
+                true,
             );
 
-            active.pointer_session = Some(V2PointerSessionState {
-                window,
-                button: button_ui,
-                pointer_type,
-                modifiers,
-                position: pos,
-            });
+            active.insert_pointer_session(
+                pointer_id,
+                V2PointerSessionState {
+                    window,
+                    button: button_ui,
+                    pointer_type,
+                    modifiers,
+                    position: pos,
+                },
+            );
             active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;
@@ -237,6 +294,7 @@ pub(super) fn handle_pointer_move_step(
 ) -> bool {
     let UiActionStepV2::PointerMove {
         window: target_window_spec,
+        pointer_id,
         pointer_kind,
         delta_x,
         delta_y,
@@ -250,8 +308,10 @@ pub(super) fn handle_pointer_move_step(
     active.screenshot_wait = None;
     output.request_redraw = true;
 
-    if let Some(mut session) = active.pointer_session.clone() {
-        let allow_cross_window_migration = dock_drag_active(app);
+    let pointer_id = PointerId(pointer_id);
+
+    if let Some(mut session) = active.pointer_session(pointer_id).cloned() {
+        let allow_cross_window_migration = dock_drag_active(app, pointer_id);
         let resolved_target_window = target_window_spec.as_ref().and_then(|target| {
             svc.resolve_window_target_for_active_step(window, anchor_window, Some(target))
         });
@@ -314,7 +374,7 @@ pub(super) fn handle_pointer_move_step(
                         {
                             session.window = window;
                             session.position = seed;
-                            active.pointer_session = Some(session.clone());
+                            active.insert_pointer_session(pointer_id, session.clone());
                         } else {
                             *force_dump_label = Some(format!(
                                 "script-step-{step_index:04}-pointer_move-missing-cursor-seed"
@@ -355,7 +415,11 @@ pub(super) fn handle_pointer_move_step(
             active.v2_step_state = None;
         } else {
             let mut state = match active.v2_step_state.take() {
-                Some(V2StepState::PointerMove(state)) if state.step_index == step_index => state,
+                Some(V2StepState::PointerMove(state))
+                    if state.step_index == step_index && state.pointer_id == pointer_id =>
+                {
+                    state
+                }
                 _ => {
                     let steps = steps.max(1);
                     let start = session.position;
@@ -365,6 +429,7 @@ pub(super) fn handle_pointer_move_step(
                     );
                     V2PointerMoveState {
                         step_index,
+                        pointer_id,
                         steps,
                         start,
                         end,
@@ -402,7 +467,6 @@ pub(super) fn handle_pointer_move_step(
                 }
             }
 
-            let pointer_id = PointerId(0);
             let pointer_type = session.pointer_type;
 
             if state.frame == 0 {
@@ -451,7 +515,7 @@ pub(super) fn handle_pointer_move_step(
                 }
 
                 session.position = position;
-                active.pointer_session = Some(session);
+                active.insert_pointer_session(pointer_id, session);
                 let preserve_explicit_cursor_override = active
                     .last_explicit_cursor_override
                     .is_some_and(|t| match t {
@@ -460,11 +524,12 @@ pub(super) fn handle_pointer_move_step(
                         | CursorOverrideTarget::WindowClientLogical(w) => w != delivery_window,
                     });
                 if !preserve_explicit_cursor_override {
-                    let _ = write_cursor_override_window_client_logical(
+                    write_cursor_override_for_pointer(
                         &svc.cfg.out_dir,
+                        pointer_id,
+                        pointer_type,
                         delivery_window,
-                        position.x.0,
-                        position.y.0,
+                        position,
                     );
                 }
 
@@ -512,6 +577,7 @@ pub(super) fn handle_pointer_up_step(
 ) -> bool {
     let UiActionStepV2::PointerUp {
         window: target_window_spec,
+        pointer_id,
         pointer_kind,
         button: want_button,
     } = step
@@ -523,8 +589,9 @@ pub(super) fn handle_pointer_up_step(
     active.screenshot_wait = None;
     output.request_redraw = true;
 
-    if let Some(mut session) = active.pointer_session.clone() {
-        let pointer_id = PointerId(0);
+    let pointer_id = PointerId(pointer_id);
+
+    if let Some(mut session) = active.pointer_session(pointer_id).cloned() {
         let cross_window_dock_drag_active = app.drag(pointer_id).is_some_and(|d| {
             (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                 || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
@@ -532,7 +599,7 @@ pub(super) fn handle_pointer_up_step(
                 && d.cross_window_hover
         });
 
-        let allow_cross_window_migration = dock_drag_active(app);
+        let allow_cross_window_migration = dock_drag_active(app, pointer_id);
         let resolved_target_window = svc.resolve_window_target_for_active_step(
             window,
             anchor_window,
@@ -590,27 +657,20 @@ pub(super) fn handle_pointer_up_step(
             // pointer-session position and cause the runner-routed cross-window drop to land in the
             // wrong place.
             if active.last_explicit_cursor_override.is_none() {
-                let _ = write_cursor_override_window_client_logical(
+                write_cursor_override_for_pointer(
                     &svc.cfg.out_dir,
+                    pointer_id,
+                    session.pointer_type,
                     window,
-                    session.position.x.0,
-                    session.position.y.0,
+                    session.position,
                 );
             }
-            let _ = write_mouse_buttons_override_all_windows_v1(
+            write_mouse_buttons_override_all_windows_for_pointer(
                 &svc.cfg.out_dir,
-                match session.button {
-                    UiMouseButtonV1::Left => Some(false),
-                    _ => None,
-                },
-                match session.button {
-                    UiMouseButtonV1::Right => Some(false),
-                    _ => None,
-                },
-                match session.button {
-                    UiMouseButtonV1::Middle => Some(false),
-                    _ => None,
-                },
+                pointer_id,
+                session.pointer_type,
+                session.button,
+                false,
             );
             active.pending_cancel_cross_window_drag =
                 Some(PendingCancelCrossWindowDrag::new(pointer_id));
@@ -630,7 +690,7 @@ pub(super) fn handle_pointer_up_step(
                 },
             );
 
-            active.pointer_session = None;
+            active.remove_pointer_session(pointer_id);
             active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;
@@ -675,7 +735,7 @@ pub(super) fn handle_pointer_up_step(
                         {
                             session.window = window;
                             session.position = seed;
-                            active.pointer_session = Some(session.clone());
+                            active.insert_pointer_session(pointer_id, session.clone());
                         } else {
                             *force_dump_label = Some(format!(
                                 "script-step-{step_index:04}-pointer_up-missing-cursor-seed"
@@ -749,27 +809,20 @@ pub(super) fn handle_pointer_up_step(
                 // "snap back" to a stale pointer-session position and cause the runner-routed
                 // cross-window drop to land in the wrong place.
                 if active.last_explicit_cursor_override.is_none() {
-                    let _ = write_cursor_override_window_client_logical(
+                    write_cursor_override_for_pointer(
                         &svc.cfg.out_dir,
+                        pointer_id,
+                        session.pointer_type,
                         window,
-                        session.position.x.0,
-                        session.position.y.0,
+                        session.position,
                     );
                 }
-                let _ = write_mouse_buttons_override_all_windows_v1(
+                write_mouse_buttons_override_all_windows_for_pointer(
                     &svc.cfg.out_dir,
-                    match session.button {
-                        UiMouseButtonV1::Left => Some(false),
-                        _ => None,
-                    },
-                    match session.button {
-                        UiMouseButtonV1::Right => Some(false),
-                        _ => None,
-                    },
-                    match session.button {
-                        UiMouseButtonV1::Middle => Some(false),
-                        _ => None,
-                    },
+                    pointer_id,
+                    session.pointer_type,
+                    session.button,
+                    false,
                 );
                 active.pending_cancel_cross_window_drag =
                     Some(PendingCancelCrossWindowDrag::new(pointer_id));
@@ -789,7 +842,7 @@ pub(super) fn handle_pointer_up_step(
                     },
                 );
 
-                active.pointer_session = None;
+                active.remove_pointer_session(pointer_id);
                 active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
@@ -833,27 +886,20 @@ pub(super) fn handle_pointer_up_step(
                     | CursorOverrideTarget::WindowClientLogical(w) => w != window,
                 });
             if !preserve_explicit_cursor_override {
-                let _ = write_cursor_override_window_client_logical(
+                write_cursor_override_for_pointer(
                     &svc.cfg.out_dir,
+                    pointer_id,
+                    pointer_type,
                     window,
-                    session.position.x.0,
-                    session.position.y.0,
+                    session.position,
                 );
             }
-            let _ = write_mouse_buttons_override_all_windows_v1(
+            write_mouse_buttons_override_all_windows_for_pointer(
                 &svc.cfg.out_dir,
-                match session.button {
-                    UiMouseButtonV1::Left => Some(false),
-                    _ => None,
-                },
-                match session.button {
-                    UiMouseButtonV1::Right => Some(false),
-                    _ => None,
-                },
-                match session.button {
-                    UiMouseButtonV1::Middle => Some(false),
-                    _ => None,
-                },
+                pointer_id,
+                pointer_type,
+                session.button,
+                false,
             );
             active.pending_cancel_cross_window_drag =
                 Some(PendingCancelCrossWindowDrag::new(pointer_id));
@@ -873,7 +919,7 @@ pub(super) fn handle_pointer_up_step(
                 },
             );
 
-            active.pointer_session = None;
+            active.remove_pointer_session(pointer_id);
             active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;
@@ -889,7 +935,6 @@ pub(super) fn handle_pointer_up_step(
         // In that state, allow a best-effort pointer release that does not inject an
         // `InternalDrag::Drop` into the current window. The runner owns cross-window drop routing
         // based on the current cursor override.
-        let pointer_id = PointerId(0);
         let cross_window_dock_drag_active = app.drag(pointer_id).is_some_and(|d| {
             (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                 || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
@@ -898,12 +943,15 @@ pub(super) fn handle_pointer_up_step(
         });
 
         if cross_window_dock_drag_active {
-            let _ = write_mouse_buttons_override_all_windows_v1(
-                &svc.cfg.out_dir,
-                Some(false),
-                Some(false),
-                Some(false),
-            );
+            let pointer_type = pointer_type_from_kind(pointer_kind);
+            if should_sync_mouse_override(pointer_id, pointer_type) {
+                let _ = write_mouse_buttons_override_all_windows_v1(
+                    &svc.cfg.out_dir,
+                    Some(false),
+                    Some(false),
+                    Some(false),
+                );
+            }
             active.pending_cancel_cross_window_drag =
                 Some(PendingCancelCrossWindowDrag::new(pointer_id));
             active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
@@ -941,6 +989,7 @@ pub(super) fn handle_pointer_cancel_step(
 ) -> bool {
     let UiActionStepV2::PointerCancel {
         window: target_window,
+        pointer_id,
         pointer_kind,
     } = step
     else {
@@ -951,7 +1000,9 @@ pub(super) fn handle_pointer_cancel_step(
     active.screenshot_wait = None;
     output.request_redraw = true;
 
-    if let Some(session) = active.pointer_session.clone() {
+    let pointer_id = PointerId(pointer_id);
+
+    if let Some(session) = active.pointer_session(pointer_id).cloned() {
         if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
             if target_window != window {
                 if target_window == session.window {
@@ -1000,7 +1051,6 @@ pub(super) fn handle_pointer_cancel_step(
             output.request_redraw = true;
             active.v2_step_state = None;
         } else {
-            let pointer_id = PointerId(0);
             let pointer_type = session.pointer_type;
             let buttons = MouseButtons {
                 left: matches!(session.button, UiMouseButtonV1::Left),
@@ -1026,26 +1076,19 @@ pub(super) fn handle_pointer_cancel_step(
                     kind: fret_core::InternalDragKind::Cancel,
                     modifiers: session.modifiers,
                 }));
-            let _ = write_cursor_override_window_client_logical(
+            write_cursor_override_for_pointer(
                 &svc.cfg.out_dir,
+                pointer_id,
+                pointer_type,
                 window,
-                session.position.x.0,
-                session.position.y.0,
+                session.position,
             );
-            let _ = write_mouse_buttons_override_all_windows_v1(
+            write_mouse_buttons_override_all_windows_for_pointer(
                 &svc.cfg.out_dir,
-                match session.button {
-                    UiMouseButtonV1::Left => Some(false),
-                    _ => None,
-                },
-                match session.button {
-                    UiMouseButtonV1::Right => Some(false),
-                    _ => None,
-                },
-                match session.button {
-                    UiMouseButtonV1::Middle => Some(false),
-                    _ => None,
-                },
+                pointer_id,
+                pointer_type,
+                session.button,
+                false,
             );
             active.pending_cancel_cross_window_drag =
                 Some(PendingCancelCrossWindowDrag::new(pointer_id));
@@ -1065,7 +1108,7 @@ pub(super) fn handle_pointer_cancel_step(
                 },
             );
 
-            active.pointer_session = None;
+            active.remove_pointer_session(pointer_id);
             active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;

@@ -199,7 +199,7 @@ fn observe_virtual_list_prepaint_case(
     );
     observed.set_metric(
         "cache_root.dirty_cache_root",
-        bool_metric(ui.test_view_boundary_layout_dirty(cache_root)),
+        bool_metric(ui.boundary_layout_dirty(cache_root)),
     );
 
     let last = ui

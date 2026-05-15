@@ -3,7 +3,7 @@
   "slug": "fret-mechanism-harness-v1",
   "title": "Fret Mechanism Harness v1",
   "status": "active",
-  "updated": "2026-05-14",
+  "updated": "2026-05-15",
   "scope_kind": "execution",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
@@ -38,10 +38,14 @@
     {
       "role": "audit",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-14.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-15.md"
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, focus barrier routing fixtures, semantics relation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, and the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -68,6 +72,56 @@
       "cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary --dir target/fret-diag-vlist-window-boundary-after-reason-fix --session-auto --launch -- cargo run -p fret-ui-gallery --features gallery-dev",
       "cargo run -p fretboard-dev -- diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-bounce-script-final --session-auto --launch -- target/debug/fret-ui-gallery.exe",
       "$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-filter-shrink-inputs-change-after-layout-prev-input-fix --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe",
+      "cargo nextest run -p fret-diag-protocol predicate_captured_is_serializes --no-fail-fast",
+      "cargo nextest run -p fret-diag-protocol pointer_session_step_pointer_id_defaults_and_round_trips --no-fail-fast",
+      "cargo nextest run -p fret-mechanism-harness captured_is_oracle_tracks_current_capture_owner --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics ui_diagnostics::predicate_tests::captured_is_matches_semantics_capture_owner --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics no_frame_pointer_move --no-fail-fast",
+      "cargo nextest run -p fret-ui semantics_snapshot_dirty_gate_tracks_pointer_capture_owner --no-fail-fast",
+      "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_dock_viewport_capture_active_is_predicate --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics dock_viewport_capture_active_matches_docking_snapshot --no-fail-fast",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-owner-content-growth-v3 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json --dir target/fret-diag-scrollbar-drag-cancel-release-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-baseline-content-growth-after-probe-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json --dir target/fret-diag-scrollbar-drag-multipointer-underlay-touch-v5 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json --dir target/fret-diag-docking-multiwindow-dock-drag-suppresses-viewport-touch-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/docking_arbitration_demo.exe",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json --dir target/fret-diag-context-menu-submenu-branch-corridor-routing-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe",
+      "cargo nextest run -p fret-diag-protocol predicate_raw_semantics_hidden_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_separator_decorative_hidden_semantics --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics default_predicates_exclude_semantics_hidden_subtrees_but_flags_remain_observable --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json --dir target/fret-diag-separator-decorative-hidden-semantics-v3 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run -p fret-diag-protocol predicate_expanded_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_accordion_usage_toggle --no-fail-fast",
+      "cargo nextest run -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics expanded_is_matches_semantics_expanded_flag --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json --dir target/fret-diag-accordion-expanded-semantics-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json --dir target/fret-diag-combobox-active-descendant-disabled-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-first-match.json --dir target/fret-diag-combobox-active-descendant-first-match-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-arrowdown.json --dir target/fret-diag-command-active-descendant-arrowdown-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-value.json --dir target/fret-diag-command-active-descendant-value-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run -p fret-diag-protocol predicate_semantics_live_is_serializes_and_deserializes predicate_semantics_live_atomic_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_sonner_live_region_mutation --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics semantics_live_predicates_match_semantics_live_flags --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json --dir target/fret-diag-sonner-live-region-mutation-v2 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run -p fret-diag-protocol predicate_selected_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_select_commit_and_label_update --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-selected-state-mutation-v2 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json --dir target/fret-diag-tabs-selected-state-mutation-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run -p fret-diag-protocol predicate_collection_position_serializes_and_deserializes script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics collection_metadata_predicates_match_semantics_position_fields --no-fail-fast",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json --dir target/fret-diag-command-collection-metadata-mutation-v1 --launch -- cargo run -p fret-ui-gallery",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_disabled_is_serializes_and_deserializes predicate_semantics_action_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics disabled_is_matches_semantics_disabled_flag semantics_action_is_matches_all_exported_action_flags semantics_node_exports_all_action_flags --no-fail-fast",
+      "cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev",
+      "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json --dir target/fret-diag-data-table-default-pagination-collection-metadata-v2 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui declarative_attach_semantics_can_stamp_collection_metadata --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_bounce --no-fail-fast",
+      "target/debug/fretboard-dev.exe diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-after-collection-metadata-v2 --session-auto --launch -- target/debug/fret-ui-gallery.exe",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_level_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics level_is_matches_semantics_hierarchy_level --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit tree_item_a11y select_tree_item toggle_tree_item file_tree_item_a11y --no-fail-fast",
+      "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json --dir target/fret-diag-tree-retained-disabled-focus-action-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tree-retained --dir target/fret-diag-tree-retained-suite-after-disabled-focus-action-v1 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe",
       "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture"
     ]
@@ -192,6 +246,98 @@
     {
       "name": "pointer-move-capture-focused-gates",
       "command": "cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture"
+    },
+    {
+      "name": "diag-protocol-captured-is-predicate",
+      "command": "cargo nextest run -p fret-diag-protocol predicate_captured_is_serializes --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-pointer-session-pointer-id",
+      "command": "cargo nextest run -p fret-diag-protocol pointer_session_step_pointer_id_defaults_and_round_trips --no-fail-fast"
+    },
+    {
+      "name": "mechanism-harness-captured-is-oracle",
+      "command": "cargo nextest run -p fret-mechanism-harness captured_is_oracle_tracks_current_capture_owner --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-captured-is-runtime-predicate",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics ui_diagnostics::predicate_tests::captured_is_matches_semantics_capture_owner --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-multipointer-no-frame-move",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics no_frame_pointer_move --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-dock-viewport-capture-predicate",
+      "command": "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_dock_viewport_capture_active_is_predicate --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-dock-viewport-capture-runtime-predicate",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics dock_viewport_capture_active_matches_docking_snapshot --no-fail-fast"
+    },
+    {
+      "name": "semantics-pointer-capture-owner-dirty-gate",
+      "command": "cargo nextest run -p fret-ui semantics_snapshot_dirty_gate_tracks_pointer_capture_owner --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-raw-semantics-hidden-predicate",
+      "command": "cargo nextest run -p fret-diag-protocol predicate_raw_semantics_hidden_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_separator_decorative_hidden_semantics --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-expanded-is-predicate",
+      "command": "cargo nextest run -p fret-diag-protocol predicate_expanded_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_accordion_usage_toggle --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-hidden-semantics-runtime-predicate",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics default_predicates_exclude_semantics_hidden_subtrees_but_flags_remain_observable --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-expanded-is-runtime-predicate",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics expanded_is_matches_semantics_expanded_flag --no-fail-fast"
+    },
+    {
+      "name": "mechanism-harness-expanded-is-oracle",
+      "command": "cargo nextest run -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-active-descendant-script-roundtrip",
+      "command": "cargo nextest run -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-semantics-live-predicate",
+      "command": "cargo nextest run -p fret-diag-protocol predicate_semantics_live_is_serializes_and_deserializes predicate_semantics_live_atomic_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_sonner_live_region_mutation --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-semantics-live-runtime-predicate",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics semantics_live_predicates_match_semantics_live_flags --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-selected-is-predicate-and-select-script",
+      "command": "cargo nextest run -p fret-diag-protocol predicate_selected_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_select_commit_and_label_update --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-tabs-selected-state-script",
+      "command": "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-collection-position-predicate-and-command-script",
+      "command": "cargo nextest run -p fret-diag-protocol predicate_collection_position_serializes_and_deserializes script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-collection-metadata-runtime-predicate",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics collection_metadata_predicates_match_semantics_position_fields --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-data-table-pagination-collection-metadata-script",
+      "command": "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata --no-fail-fast"
+    },
+    {
+      "name": "semantics-decoration-collection-metadata-focused-gate",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui declarative_attach_semantics_can_stamp_collection_metadata --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-virtual-list-retained-collection-metadata-script",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_bounce --no-fail-fast"
     },
     {
       "name": "focus-barrier-focused-gates",
@@ -330,6 +476,114 @@
       "command": "$env:FRET_UI_GALLERY_VIEW_CACHE='1'; target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-view-cache-filter-shrink-inputs-change --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-scrollbar-drag-owner-content-growth-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-owner-content-growth-v3 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-scrollbar-drag-pointer-cancel-release-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json --dir target/fret-diag-scrollbar-drag-cancel-release-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-scrollbar-drag-baseline-after-probe-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-baseline-content-growth-after-probe-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-scrollbar-drag-multipointer-underlay-touch-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json --dir target/fret-diag-scrollbar-drag-multipointer-underlay-touch-v5 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "docking-multiwindow-dock-drag-suppresses-viewport-touch-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json --dir target/fret-diag-docking-multiwindow-dock-drag-suppresses-viewport-touch-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/docking_arbitration_demo.exe"
+    },
+    {
+      "name": "ui-gallery-context-menu-submenu-branch-corridor-routing-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json --dir target/fret-diag-context-menu-submenu-branch-corridor-routing-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-separator-decorative-hidden-semantics-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json --dir target/fret-diag-separator-decorative-hidden-semantics-v3 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-accordion-expanded-semantics-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json --dir target/fret-diag-accordion-expanded-semantics-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-combobox-active-descendant-disabled-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json --dir target/fret-diag-combobox-active-descendant-disabled-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-combobox-active-descendant-first-match-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-first-match.json --dir target/fret-diag-combobox-active-descendant-first-match-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-command-active-descendant-arrowdown-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-arrowdown.json --dir target/fret-diag-command-active-descendant-arrowdown-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-command-active-descendant-value-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-value.json --dir target/fret-diag-command-active-descendant-value-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-sonner-live-region-mutation-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json --dir target/fret-diag-sonner-live-region-mutation-v2 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-select-selected-state-mutation-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-selected-state-mutation-v2 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-tabs-selected-state-mutation-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json --dir target/fret-diag-tabs-selected-state-mutation-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-command-collection-metadata-mutation-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json --dir target/fret-diag-command-collection-metadata-mutation-v1 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "ui-gallery-data-table-pagination-collection-metadata-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json --dir target/fret-diag-data-table-default-pagination-collection-metadata-v2 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "diag-protocol-disabled-action-and-data-table-pagination-script",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_disabled_is_serializes_and_deserializes predicate_semantics_action_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-disabled-action-runtime-predicates-and-export",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics disabled_is_matches_semantics_disabled_flag semantics_action_is_matches_all_exported_action_flags semantics_node_exports_all_action_flags --no-fail-fast"
+    },
+    {
+      "name": "ui-gallery-virtual-list-retained-collection-metadata-suite",
+      "command": "target/debug/fretboard-dev.exe diag suite ui-gallery-vlist-window-boundary-retained --dir target/fret-diag-vlist-window-boundary-retained-after-collection-metadata-v2 --session-auto --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
+      "name": "diag-protocol-level-is-and-retained-tree-script",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_level_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle --no-fail-fast"
+    },
+    {
+      "name": "diag-bootstrap-level-is-predicate",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics level_is_matches_semantics_hierarchy_level --no-fail-fast"
+    },
+    {
+      "name": "mechanism-harness-structured-semantics-metadata",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-tree-hierarchy-policy-focused-gates",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit tree_item_a11y select_tree_item toggle_tree_item file_tree_item_a11y --no-fail-fast"
+    },
+    {
+      "name": "ui-gallery-tree-retained-hierarchy-semantics-suite",
+      "command": "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tree-retained --dir target/fret-diag-tree-retained-suite-after-disabled-focus-action-v1 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-tree-retained-selected-action-state-diag",
+      "command": "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json --dir target/fret-diag-tree-retained-action-state-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-tree-retained-dynamic-disabled-focus-action-state-diag",
+      "command": "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json --dir target/fret-diag-tree-retained-disabled-focus-action-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
       "name": "ui-gallery-checkbox-rtl-scroll-idle-stability-diag",
       "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
     },
@@ -406,6 +660,8 @@
     "crates/fret-ui/src/declarative/frame.rs",
     "crates/fret-ui/src/tree/tests/pointer_occlusion.rs",
     "crates/fret-ui/src/tree/tests/pointer_move_layers.rs",
+    "crates/fret-ui/src/tree/tests/semantics_focus_shortcuts.rs",
+    "crates/fret-ui/src/tree/ui_tree_semantics.rs",
     "crates/fret-ui/src/tree/tests/focus_barrier_transition.rs",
     "crates/fret-ui/src/tree/tests/focus_scope.rs",
     "crates/fret-ui/src/tree/tests/focus_scope_layered.rs",
@@ -445,9 +701,12 @@
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-11.md",
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-12.md",
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-14.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-15.md",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+    "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
+    "tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
     "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
@@ -467,7 +726,55 @@
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
     "crates/fret-ui/src/tree/debug/virtual_list.rs",
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
-    "crates/fret-diag-protocol/src/lib.rs"
+    "crates/fret-diag-protocol/src/lib.rs",
+    "crates/fret-diag-protocol/src/builder.rs",
+    "crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
+    "apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/drag_baseline.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer_session.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json",
+    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json",
+    "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json",
+    "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json",
+    "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json",
+    "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-first-match.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-arrowdown.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-value.json",
+    "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json",
+    "tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json",
+    "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json",
+    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json",
+    "tools/diag-scripts/ui-gallery-tabs-selected-state-mutation.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json",
+    "tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json",
+    "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json",
+    "tools/diag-scripts/ui-gallery-data-table-default-pagination-collection-metadata.json",
+    "crates/fret-ui/src/element.rs",
+    "crates/fret-ui/src/declarative/host_widget/semantics.rs",
+    "crates/fret-ui/src/declarative/tests/semantics.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
+    "ecosystem/fret-ui-kit/src/declarative/tree.rs",
+    "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/semantics.rs",
+    "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json",
+    "tools/diag-scripts/ui-gallery-tree-retained-hierarchy-semantics-toggle.json",
+    "tools/diag-scripts/suites/ui-gallery-tree-retained/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-command/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-sonner-docs/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json",
+    "tools/diag-scripts/suites/docking-arbitration/common/suite.json",
+    "tools/diag-scripts/suites/docking-arbitration/suite.json",
+    "docs/ui-diagnostics-and-scripted-tests.md",
+    "tools/diag-scripts/index.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

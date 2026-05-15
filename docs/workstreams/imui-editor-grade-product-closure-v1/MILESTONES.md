@@ -272,6 +272,81 @@ Current status:
   `apps/fret-devtools/src/native.rs` now renders a first-open evidence panel with the canonical
   diagnostics doc, GUI branch doc, repo preflight, artifacts root, direct run/latest/compare loop,
   campaign summarize/dashboard loop, and the bounded P2 smoke gate.
+- 2026-05-14 product-chain maintenance also validates `fretboard-dev list tool-apps --json` as the
+  stable DevTools GUI/MCP first-open map from `tools/diag_gate_imui_product_chain.py`, so the
+  default IMUI product-chain gate catches drift in repo preflight and per-tool command/docs/gate
+  fields. The same discovery gate now covers `fretboard-dev --help` and
+  `fretboard-dev list --help`, so the tool-apps index is reachable from the first CLI help screens.
+- 2026-05-15 product workflow discovery refresh extends that same map with
+  `product_workflows.imui-product-chain`, including the default product-chain command, the
+  discovery-only command, the launched `perf-docking` command, the promoted
+  `perf-docking-arbitration-steady` suite, and the expected `regression.summary.json` /
+  `check.perf_thresholds.json` perf artifacts. This keeps DevTools-style consumers pointed at the
+  shared evidence chain instead of inventing GUI-only product workflow metadata.
+- 2026-05-15 DevTools GUI product-workflow projection mirrors that same route in
+  `apps/fret-devtools/src/native.rs`, so the first-open evidence panel now surfaces the
+  `imui-product-chain` command, focused discovery command, launched `perf-docking` command, suite,
+  docs, and expected perf artifacts from the shared product-chain vocabulary. The default
+  product-chain discovery gate now source-checks that GUI projection.
+- 2026-05-15 DevTools GUI demo/metrics/debug route projection adds a persistent
+  `demo-metrics-debug` route in `apps/fret-devtools/src/native.rs`, naming the editor proof/editor
+  notes/device shell demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`,
+  `diag triage`, and `diag hotspots` entrypoints. This is a productization step for
+  always-available demo/metrics/debug discoverability, not a `fret-imui` API expansion.
+- 2026-05-15 DevTools GUI gate-command projection adds a first-open `Gate Commands` block for
+  stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints.
+  The owner remains `docs/workstreams/diag-devtools-gui-v1/`; this umbrella records the evidence
+  only to keep the broader Dear ImGui-class product goal honest.
+- 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
+  projection that converts the selected `bundle_dir` into concrete `diag stats`,
+  `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and
+  footprint-compare commands. This keeps the failing-summary-to-next-command loop productized
+  without moving diagnostics policy into `fret-imui` or leaving command composition as GUI-private
+  logic.
+- 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
+  projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
+  lines in both structured JSON and the human summary.
+- 2026-05-15 shared regression follow-up commands are now structured in
+  `crates/fret-diag/src/regression_summary.rs`, with GUI/MCP consumers separating bundle-local
+  runnable commands from baseline-required manual compare commands.
+- 2026-05-15 DevTools GUI selected-summary runnable follow-ups can now be launched in-app for
+  `stats`, `layout-perf-summary`, `memory-summary`, `triage`, and `hotspots`; the GUI records
+  in-flight/error status while leaving baseline-required compare commands manual.
+- 2026-05-15 GUI-launched regression follow-ups now write
+  `.fret/diag/followups/*.json` result records with command/status/error/timing metadata and expose
+  the latest result path for copying.
+- 2026-05-15 the DevTools GUI selected-summary inspector now mirrors the latest selected-bundle
+  follow-up result JSON inline, so authors can inspect pass/fail/error/timing metadata without
+  leaving the panel.
+- 2026-05-15 the same inspector now projects the latest selected-bundle follow-up result into a
+  structured summary above raw JSON, keeping status, command, duration, and error preview
+  immediately scannable.
+- 2026-05-15 follow-up results are retained as a bounded in-memory history filtered to the selected
+  bundle, so selected-summary triage can distinguish current evidence from a previous bundle's last
+  launched follow-up.
+- 2026-05-15 selected-bundle follow-up history now renders as selectable result entries, allowing
+  authors to switch the summary/raw JSON/copy target between recent artifacts.
+- 2026-05-15 selected follow-up results now have a details block with status, path, command,
+  bundle, and error preview, and the exact producing command can be copied from the inspector.
+- 2026-05-15 the selected follow-up JSON artifact can now be opened through the platform URL
+  handler via an escaped `file://` URL, keeping native artifact inspection one click away when file
+  URLs are supported.
+- 2026-05-15 the follow-up result copy action now resolves the selected bundle's latest history
+  path instead of the global last result artifact, keeping copied evidence aligned with selection.
+- 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping
+  the exact payload one click away for issue reports and AI triage.
+- 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
+  evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
+  `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.
+- 2026-05-15 shared regression drill-down projection moves that selected-summary parsing into
+  `crates/fret-diag/src/regression_summary.rs`; `apps/fret-devtools/src/native.rs` now consumes
+  `regression_summary_drilldown(&summary)` instead of owning GUI-private perf/capability parsing.
+  The source gate now checks the shared projection and the GUI call site together.
+- 2026-05-15 DevTools MCP product-workflow projection adds a sessionless
+  `fret-diag://first-open.md` resource in `apps/fret-devtools-mcp/src/native.rs` and points the MCP
+  server instructions at it. That resource mirrors the same `imui-product-chain` command/focused
+  command/launched perf command/suite/docs/artifacts route, while the product-chain discovery gate
+  source-checks the MCP projection alongside the GUI projection.
 - 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
   `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
   JSON, `--html-out` writes a self-contained offline review artifact,
@@ -320,6 +395,25 @@ Current status:
   `tools/diag-campaigns/imui-p3-multiwindow-parity.json` now binds four repo-owned scripts into one
   lane-owned package over `docking_arbitration_demo`, and keeps `diag-hardening-smoke-docking`
   small instead of overloading it with all P3 stress coverage.
+- 2026-05-14 perf entrypoint refresh:
+  `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json` is now wired into the
+  product-chain gate as the docking perf/smoothness entrypoint, with a launched `perf-docking`
+  slice that verifies `diag perf` writes passing `perf_case` rows, readable item bundle artifacts,
+  a readable shared `layout.perf.summary.v1.json` artifact, and lightweight summary metrics to the
+  regression evidence chain.
+- 2026-05-15 perf threshold refresh:
+  the same launched `perf-docking` product-chain slice now passes conservative `diag perf`
+  thresholds (`--max-top-total-us`, `--max-top-layout-us`, `--max-top-solve-us`,
+  `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, and
+  `--max-pointer-move-global-changes`) and verifies the shared `check.perf_thresholds.json`
+  artifact before accepting the summary.
+- 2026-05-15 renderer threshold refresh:
+  `diag perf` now exposes renderer threshold CLI flags, and the `perf-docking` product-chain slice
+  gates the renderer telemetry that was previously only projected as summary metrics
+  (`--max-renderer-encode-scene-us`, `--max-renderer-upload-us`,
+  `--max-renderer-record-passes-us`, `--max-renderer-encoder-finish-us`,
+  `--max-renderer-prepare-text-us`, `--max-renderer-prepare-svg-us`,
+  `--max-renderer-instance-bytes`, and `--max-renderer-encode-scene-text-ops`).
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.
@@ -346,6 +440,9 @@ Primary evidence:
 
 Current status:
 
-- Not started.
-- The lane should close only after the remaining M1/M4 status is resolved or explicitly handed off
-  to new narrow follow-ons with the umbrella state refreshed again.
+- In progress as a maintenance/status umbrella.
+- The 2026-05-15 goal-completion audit keeps the lane explicitly not complete after the latest
+  product-chain discovery, Wayland source/admission/policy-skip, and perf-threshold refreshes.
+- The lane should close only after real-host Wayland hand-feel, DevTools GUI productization, and
+  broader perf attribution/smoothness are resolved or explicitly handed off with fresh owner-lane
+  closeout evidence.

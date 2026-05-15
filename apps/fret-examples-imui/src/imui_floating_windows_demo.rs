@@ -223,12 +223,12 @@ impl View for ImUiFloatingWindowsView {
                 );
 
                 let _ = (
-                    resp.area.id,
-                    resp.area.position,
-                    resp.area.rect,
-                    resp.size,
-                    resp.resizing,
-                    resp.collapsed,
+                    resp.id(),
+                    resp.position(),
+                    resp.rect(),
+                    resp.size(),
+                    resp.resizing(),
+                    resp.collapsed(),
                 );
             });
 

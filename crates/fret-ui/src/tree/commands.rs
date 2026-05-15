@@ -943,10 +943,13 @@ impl<H: UiHost> UiTree<H> {
             self.pending_declarative_window_snapshot_roots.remove(&root);
         }
 
-        if !std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine)
-            && !had_attached_pending
-        {
+        let had_pending_refine =
+            std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine);
+        if !had_pending_refine && !had_attached_pending {
             return;
+        }
+        if had_pending_refine || had_attached_pending {
+            self.last_window_command_action_availability_snapshot_signature = None;
         }
         self.publish_window_runtime_snapshots(app);
     }
@@ -1200,15 +1203,17 @@ impl<H: UiHost> UiTree<H> {
             handled_by_node = handled_by_node.or(handled_by_node2);
         }
 
-        if !handled && !stopped && barrier_root.is_none() {
-            if let Some(route_node) = descendant_fallback_route {
-                used_default_root_fallback = true;
-                let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(route_node);
-                handled = handled || handled2;
-                needs_redraw = needs_redraw || needs_redraw2;
-                stopped = stopped || stopped2;
-                handled_by_node = handled_by_node.or(handled_by_node2);
-            }
+        if !handled
+            && !stopped
+            && barrier_root.is_none()
+            && let Some(route_node) = descendant_fallback_route
+        {
+            used_default_root_fallback = true;
+            let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(route_node);
+            handled = handled || handled2;
+            needs_redraw = needs_redraw || needs_redraw2;
+            stopped = stopped || stopped2;
+            handled_by_node = handled_by_node.or(handled_by_node2);
         }
 
         if !handled && !stopped && is_focus_traversal_command {

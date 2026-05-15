@@ -312,7 +312,7 @@ pub(super) fn handle_drag_pointer_until_step(
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-    mut ui: Option<&mut UiTree<App>>,
+    ui: Option<&mut UiTree<App>>,
     text_font_stack_key_stable_frames: u32,
     font_catalog_populated: bool,
     system_font_rescan_idle: bool,
@@ -699,13 +699,16 @@ pub(super) fn handle_drag_pointer_until_step(
                     }
 
                     if !state.release_on_success {
-                        active.pointer_session = Some(V2PointerSessionState {
-                            window: state.playback.window,
-                            button: state.playback.button,
-                            pointer_type,
-                            modifiers: Modifiers::default(),
-                            position: release_pos,
-                        });
+                        active.insert_pointer_session(
+                            PointerId(0),
+                            V2PointerSessionState {
+                                window: state.playback.window,
+                                button: state.playback.button,
+                                pointer_type,
+                                modifiers: Modifiers::default(),
+                                position: release_pos,
+                            },
+                        );
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -794,7 +797,7 @@ pub(super) fn handle_drag_pointer_until_step(
                         svc.cfg.redact_text,
                         &mut active.selector_resolution_trace,
                     ) {
-                        let start = if let Some(ui) = ui.as_deref_mut() {
+                        let start = if let Some(ui) = ui {
                             let start = pointer_position_prefer_intended_hit_routing(
                                 app,
                                 snapshot,
