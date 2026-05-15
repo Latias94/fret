@@ -93,6 +93,10 @@
       "command": "python tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag workstream-gate"
     },
     {
+      "name": "editor-paint-contract-artifacts-verify",
+      "command": "python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib"
+    },
+    {
       "name": "workstream-json-valid",
       "command": "python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
     },
@@ -135,6 +139,8 @@
     "tools/perf/test_diag_editor_paint_contract_preflight.py",
     "tools/perf/diag_editor_paint_contract_validate.py",
     "tools/perf/test_diag_editor_paint_contract_validate.py",
+    "tools/perf/diag_editor_paint_contract_verify_artifacts.py",
+    "tools/perf/test_diag_editor_paint_contract_verify_artifacts.py",
     "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
     "tools/diag-scripts/ui-editor/imui/imui-hello-demo-semantic-smoke.json",
     "tools/diag-scripts/suites/imui-hello-semantic-smoke/suite.json",

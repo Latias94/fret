@@ -66,6 +66,19 @@ After each validation probe, the runner collects the worst bundle and writes `di
 contains paint-widget and renderer text/encode/upload fields; `--with-paint-perf` additionally requires
 `code_editor_paint_perf`. It also treats any non-empty `check.perf_thresholds.json.failures` as a validation failure.
 
+After copying the two target-machine output directories back into the workspace, verify the synced artifacts without
+rerunning the probes:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py `
+  target/fret-diag/editor-paint-contract-validate-<date> `
+  --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib
+```
+
+This verifier checks that the baseline-validation pass used the expected repeat/warmup shape, that every probe has
+`check.perf_thresholds.json` with `failures=[]`, that `diag stats --json` output exists for every worst bundle, and
+that the attribution pass includes `code_editor_paint_perf` coverage.
+
 ## Validate Current Contracts First
 
 Resize:
@@ -163,6 +176,7 @@ Before closing P1.5:
 
 ```powershell
 python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib
 python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json
 ```
 
