@@ -665,10 +665,10 @@ Conventions:
           optimize by invalidating row replay semantics or weakening renderer payload thresholds.
         - Follow-up evidence: `fret-diag` now reports
           `windowed_surface_paint_callback_minus_row_paint_per_row_ns` and
-          `windowed_surface_row_callback_gap_per_row_ns`. On
-          `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`
-          the p95 values are `65ns/row` and `79ns/row`, which keeps the remaining gap in aggregate
-          loop overhead territory rather than a separate row hot loop.
+          `windowed_surface_row_callback_gap_per_row_ns`. On the overlay-disabled typical autoscroll,
+          complex wheel, and resize jitter bundles, the p95 values are `65/62/62ns` per row and
+          `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
+          territory rather than a separate row hot loop.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

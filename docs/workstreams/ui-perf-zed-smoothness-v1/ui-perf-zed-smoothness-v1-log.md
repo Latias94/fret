@@ -14472,15 +14472,23 @@ Validation:
 ```bash
 cargo fmt -p fret-diag --check
 cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
-cargo run -p fretboard-dev --release -- diag stats \
+target/release/fretboard-dev diag stats \
   target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json \
+  --json | rg -n 'windowed_surface_paint_callback_minus_row_paint_per_row_ns|windowed_surface_row_callback_gap_per_row_ns|rows_with_rect'
+target/release/fretboard-dev diag stats \
+  target/fret-diag/editor-paint-overlay-disabled-20260516-complex-wheel-r3/1778878778260/bundle.schema2.json \
+  --json | rg -n 'windowed_surface_paint_callback_minus_row_paint_per_row_ns|windowed_surface_row_callback_gap_per_row_ns|rows_with_rect'
+target/release/fretboard-dev diag stats \
+  target/fret-diag/editor-paint-overlay-disabled-20260516-resize-jitter-r3/1778878807245/bundle.schema2.json \
   --json | rg -n 'windowed_surface_paint_callback_minus_row_paint_per_row_ns|windowed_surface_row_callback_gap_per_row_ns|rows_with_rect'
 ```
 
 Evidence:
-- The bundle above now reports `rows_with_rect=289`,
-  `windowed_surface_paint_callback_minus_row_paint_per_row_ns=65`, and
-  `windowed_surface_row_callback_gap_per_row_ns=79`.
+| probe | bundle | rows_with_rect p95 | callback-minus-row-paint p95 per row | row-callback-gap p95 per row |
+| --- | --- | ---: | ---: | ---: |
+| typical autoscroll | `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json` | `289` | `65ns` | `79ns` |
+| complex wheel | `target/fret-diag/editor-paint-overlay-disabled-20260516-complex-wheel-r3/1778878778260/bundle.schema2.json` | `289` | `62ns` | `48ns` |
+| resize jitter | `target/fret-diag/editor-paint-overlay-disabled-20260516-resize-jitter-r3/1778878807245/bundle.schema2.json` | `289` | `62ns` | `72ns` |
 
 Decision:
 - The remaining surface gap is still real, but it is small enough per row to treat as aggregate loop
