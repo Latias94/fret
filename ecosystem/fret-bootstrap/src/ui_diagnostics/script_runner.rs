@@ -88,6 +88,7 @@ impl UiDiagnosticsService {
             ime_event_trace: Vec::new(),
             last_explicit_cursor_override: None,
             last_explicit_cursor_override_pos: None,
+            saved_pointer_points: HashMap::new(),
         };
 
         // Avoid leaking clipboard responses across runs. Script steps that assert clipboard state

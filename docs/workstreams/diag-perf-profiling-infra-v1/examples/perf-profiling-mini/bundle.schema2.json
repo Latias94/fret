@@ -1,0 +1,132 @@
+{
+  "schema_version": 2,
+  "kind": "ui_diagnostics_bundle",
+  "note": "Small synthetic perf bundle for diagnostics tooling examples. It is not a hardware baseline.",
+  "windows": [
+    {
+      "window": 1,
+      "snapshots": [
+        {
+          "tick_id": 1,
+          "frame_id": 1,
+          "window": 1,
+          "timestamp_unix_ms": 1778832000001,
+          "frame_clock": {
+            "now_monotonic_ms": 1000,
+            "delta_ms": 16
+          },
+          "changed_models": [],
+          "changed_globals": [],
+          "debug": {
+            "stats": {
+              "layout_time_us": 700,
+              "layout_engine_solve_time_us": 160,
+              "layout_request_build_roots_time_us": 120,
+              "layout_roots_time_us": 420,
+              "prepaint_time_us": 100,
+              "paint_time_us": 300,
+              "paint_widget_time_us": 120,
+              "paint_text_prepare_time_us": 60,
+              "dispatch_time_us": 80,
+              "hit_test_time_us": 30,
+              "ui_thread_cpu_time_us": 1040,
+              "ui_thread_cpu_cycle_time_delta_cycles": 1800000,
+              "ui_thread_cpu_cycle_time_total_cycles": 1800000
+            }
+          }
+        },
+        {
+          "tick_id": 2,
+          "frame_id": 2,
+          "window": 1,
+          "timestamp_unix_ms": 1778832000017,
+          "frame_clock": {
+            "now_monotonic_ms": 1016,
+            "delta_ms": 16
+          },
+          "changed_models": [
+            "editor.document"
+          ],
+          "changed_globals": [],
+          "debug": {
+            "stats": {
+              "layout_time_us": 3200,
+              "layout_engine_solve_time_us": 1800,
+              "layout_request_build_roots_time_us": 500,
+              "layout_roots_time_us": 780,
+              "prepaint_time_us": 200,
+              "paint_time_us": 700,
+              "paint_widget_time_us": 220,
+              "paint_text_prepare_time_us": 180,
+              "dispatch_time_us": 100,
+              "hit_test_time_us": 35,
+              "ui_thread_cpu_time_us": 3600,
+              "ui_thread_cpu_cycle_time_delta_cycles": 7000000,
+              "ui_thread_cpu_cycle_time_total_cycles": 8800000
+            }
+          }
+        },
+        {
+          "tick_id": 3,
+          "frame_id": 3,
+          "window": 1,
+          "timestamp_unix_ms": 1778832000033,
+          "frame_clock": {
+            "now_monotonic_ms": 1032,
+            "delta_ms": 16
+          },
+          "changed_models": [],
+          "changed_globals": [
+            "theme"
+          ],
+          "debug": {
+            "stats": {
+              "layout_time_us": 800,
+              "layout_engine_solve_time_us": 220,
+              "layout_request_build_roots_time_us": 140,
+              "layout_roots_time_us": 520,
+              "prepaint_time_us": 100,
+              "paint_time_us": 2400,
+              "paint_widget_time_us": 600,
+              "paint_text_prepare_time_us": 1500,
+              "dispatch_time_us": 90,
+              "hit_test_time_us": 32,
+              "ui_thread_cpu_time_us": 3000,
+              "ui_thread_cpu_cycle_time_delta_cycles": 5000000,
+              "ui_thread_cpu_cycle_time_total_cycles": 13800000
+            }
+          }
+        },
+        {
+          "tick_id": 4,
+          "frame_id": 4,
+          "window": 1,
+          "timestamp_unix_ms": 1778832000066,
+          "frame_clock": {
+            "now_monotonic_ms": 1065,
+            "delta_ms": 33
+          },
+          "changed_models": [],
+          "changed_globals": [],
+          "debug": {
+            "stats": {
+              "layout_time_us": 200,
+              "layout_engine_solve_time_us": 40,
+              "layout_request_build_roots_time_us": 30,
+              "layout_roots_time_us": 120,
+              "prepaint_time_us": 50,
+              "paint_time_us": 100,
+              "paint_widget_time_us": 40,
+              "paint_text_prepare_time_us": 20,
+              "dispatch_time_us": 20,
+              "hit_test_time_us": 10,
+              "ui_thread_cpu_time_us": 50,
+              "ui_thread_cpu_cycle_time_delta_cycles": 100000,
+              "ui_thread_cpu_cycle_time_total_cycles": 13900000
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1068,6 +1068,7 @@ fn parse_stats_command(
             stats_top: args.top,
             stats_json: args.json,
             stats_lite_checks_json: args.stats_lite_checks_json,
+            stats_perf_keys_json: args.perf_keys_json,
             stats_verbose: args.verbose,
             warmup_frames: args.warmup.warmup_frames,
             check_stale_paint_test_id: checks.common.check_stale_paint,

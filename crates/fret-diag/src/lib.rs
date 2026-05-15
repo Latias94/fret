@@ -75,6 +75,8 @@ mod math;
 mod pack_zip;
 mod paths;
 mod perf_hint_gate;
+mod perf_keys;
+mod perf_schema;
 mod perf_seed_policy;
 mod post_run_checks;
 mod promoted_registry_builder;

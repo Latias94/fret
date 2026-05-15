@@ -46,6 +46,7 @@ pub mod composable_shell;
 pub mod docs_demo;
 pub mod groups;
 pub mod loading;
+pub mod retained_active_descendant;
 pub mod rtl;
 pub mod scrollable;
 pub mod shortcuts;

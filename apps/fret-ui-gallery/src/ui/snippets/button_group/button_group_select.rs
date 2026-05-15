@@ -31,6 +31,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ];
 
         shadcn::Select::new(currency_value.clone(), currency_open.clone())
+            .a11y_label("Currency")
             .trigger_test_id("ui-gallery-button-group-select-currency-trigger")
             .trigger(
                 shadcn::SelectTrigger::new()

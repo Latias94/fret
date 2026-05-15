@@ -189,6 +189,23 @@
       }
     },
     {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-group-force-item-giraffe"
+      },
+      "delta_x": 0.0,
+      "delta_y": -160.0,
+      "padding_px": 4.0,
+      "require_fully_within_window": true,
+      "timeout_frames": 600,
+      "require_fully_within_container": true
+    },
+    {
       "type": "capture_bundle",
       "label": "ui-gallery-command-palette-group-force-mount-heading-visible"
     }

@@ -1141,6 +1141,7 @@ impl SelectScrollDownButton {
 /// shadcn/ui v4 `SelectContent` (configuration wrapper for Fret's `Select` recipe).
 #[derive(Debug, Clone)]
 pub struct SelectContent {
+    test_id: Option<Arc<str>>,
     align: SelectAlign,
     side: SelectSide,
     align_offset: Px,
@@ -1157,6 +1158,7 @@ pub struct SelectContent {
 impl Default for SelectContent {
     fn default() -> Self {
         Self {
+            test_id: None,
             align: SelectAlign::default(),
             side: SelectSide::default(),
             align_offset: Px(0.0),
@@ -1175,6 +1177,11 @@ impl Default for SelectContent {
 impl SelectContent {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     /// Wraps this content configuration with nested entries, matching the upstream v4 call-site
@@ -1288,6 +1295,7 @@ pub struct Select {
     control_id: Option<ControlId>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
     required: bool,
@@ -1334,6 +1342,7 @@ impl Select {
             control_id: None,
             test_id_prefix: None,
             trigger_test_id: None,
+            content_test_id: None,
             a11y_label: None,
             aria_invalid: false,
             required: false,
@@ -1447,6 +1456,7 @@ impl Select {
     /// Applies a shadcn/ui v4-style `SelectContent` configuration.
     pub fn content(mut self, content: SelectContent) -> Self {
         self.align = content.align;
+        self.content_test_id = content.test_id;
         self.side = content.side;
         self.align_offset = content.align_offset;
         self.side_offset_override = content.side_offset;
@@ -1743,6 +1753,7 @@ impl Select {
             self.control_id,
             self.test_id_prefix,
             self.trigger_test_id,
+            self.content_test_id,
             self.a11y_label,
             self.aria_invalid,
             self.required,
@@ -1792,6 +1803,7 @@ fn select_impl<H: UiHost>(
     control_id: Option<ControlId>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
     required: bool,
@@ -3090,16 +3102,6 @@ fn select_impl<H: UiHost>(
                         wrapper_insets
                     };
 
-                    cx.diagnostics_record_overlay_placement_placed_rect(
-                        Some(overlay_root_name.as_str()),
-                        Some(trigger_id),
-                        None,
-                        outer,
-                        anchor,
-                        placed,
-                        Some(motion_side),
-                    );
-
                     if std::env::var("FRET_DEBUG_SELECT_PLACED")
                         .ok()
                         .is_some_and(|v| v == "1")
@@ -3161,6 +3163,7 @@ fn select_impl<H: UiHost>(
                     let on_value_change_for_overlay_children = on_value_change.clone();
                     let model_for_overlay = model.clone();
 
+                    let overlay_root_name_for_diagnostics = overlay_root_name.clone();
                     let overlay_children = portal_inherited::with_root_name_inheriting(
                         cx,
                         &overlay_root_name,
@@ -3376,6 +3379,7 @@ fn select_impl<H: UiHost>(
                         let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
                         let mouse_open_guard_for_content = mouse_open_guard_for_barrier_children.clone();
                         let test_id_prefix_for_panel = test_id_prefix.clone();
+                        let content_test_id_for_panel = content_test_id.clone();
                         let content = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
                                 let arrow_el = popper_layout_for_children.as_ref().and_then(|layout| {
                                     popper_arrow::diamond_arrow_element(
@@ -4410,9 +4414,11 @@ fn select_impl<H: UiHost>(
                                                 focus_ring: None,
                                                 a11y: PressableA11y {
                                                     role: Some(SemanticsRole::ListBox),
-                                                    test_id: test_id_prefix_for_panel
-                                                        .as_ref()
-                                                        .map(|prefix| Arc::<str>::from(format!("{prefix}-listbox"))),
+                                                    test_id: content_test_id_for_panel.clone().or_else(|| {
+                                                        test_id_prefix_for_panel
+                                                            .as_ref()
+                                                            .map(|prefix| Arc::<str>::from(format!("{prefix}-listbox")))
+                                                    }),
                                                     labelled_by_element: Some(trigger_id.0),
                                                     ..Default::default()
                                                 },
@@ -4443,9 +4449,6 @@ fn select_impl<H: UiHost>(
                                 }
                             });
 
-                        let animated =
-                            overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
-
                         {
                             let mut state = trigger_state_for_overlay
                                 .lock()
@@ -4464,6 +4467,19 @@ fn select_impl<H: UiHost>(
                                         .unwrap_or(false);
                             }
                         }
+
+                        cx.diagnostics_record_overlay_placement_placed_rect(
+                            Some(overlay_root_name_for_diagnostics.as_str()),
+                            Some(trigger_id),
+                            content_panel_id_out.get(),
+                            outer,
+                            anchor,
+                            placed,
+                            Some(motion_side),
+                        );
+
+                        let animated =
+                            overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
                         radix_select::select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler(
                             cx,
@@ -5439,6 +5455,72 @@ mod tests {
         assert!(ids.iter().copied().any(|id| id == "sel-listbox"));
         assert!(ids.iter().copied().any(|id| id == "sel-item-apple"));
         assert!(ids.iter().copied().any(|id| id == "sel-scroll-viewport"));
+    }
+
+    #[test]
+    fn select_content_test_id_stamps_listbox_without_renaming_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        for _ in 0..3 {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "select-content-test-id",
+                |cx| {
+                    vec![
+                        Select::new(model.clone(), open.clone())
+                            .content(SelectContent::new().test_id("custom-listbox"))
+                            .items([SelectItem::new("apple", "Apple")])
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snapshot
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+
+        assert!(ids.iter().copied().any(|id| id == "custom-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "select-scroll-viewport"));
     }
 
     #[test]

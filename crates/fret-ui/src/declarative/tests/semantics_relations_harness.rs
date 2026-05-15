@@ -1,8 +1,10 @@
 use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_mechanism_harness::{
-    MechanismCase, MechanismHarness, MechanismSuite, ObservedTree, ScenarioObserveError,
+    MechanismCase, MechanismHarness, MechanismSuite, ObservedSemanticsRelation, ObservedTree,
+    ScenarioObserveError,
 };
 use serde::Deserialize;
 
@@ -25,6 +27,7 @@ enum SemanticsRelationScenario {
     SemanticsWrapperLiveAndStructuredMetadata,
     SemanticsWrapperHierarchyMetadata,
     HiddenSubtreePolicy,
+    RelationTargetsDetachReattach,
 }
 
 #[test]
@@ -42,6 +45,13 @@ fn mechanism_harness_semantics_relations_match_oracles() {
 fn observe_case(
     case: &MechanismCase<SemanticsRelationScenario>,
 ) -> Result<ObservedTree, ScenarioObserveError> {
+    if matches!(
+        &case.scenario,
+        SemanticsRelationScenario::RelationTargetsDetachReattach
+    ) {
+        return observe_relation_targets_detach_reattach();
+    }
+
     let window = AppWindowId::default();
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -375,5 +385,285 @@ fn build_scenario(
 
             vec![visible, hidden]
         }
+        SemanticsRelationScenario::RelationTargetsDetachReattach => {
+            unreachable!("relation target mutation uses a multi-frame observer")
+        }
     }
+}
+
+fn observe_relation_targets_detach_reattach() -> Result<ObservedTree, ScenarioObserveError> {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(260.0), Px(160.0)),
+    );
+    let mut services = FakeTextService::default();
+    let label_element: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let description_element: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let controlled_element: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+
+    render_relation_targets_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        label_element.clone(),
+        description_element.clone(),
+        controlled_element.clone(),
+    );
+    let initial_snapshot = capture_semantics_snapshot(&mut ui, &mut app, &mut services, bounds)?;
+
+    render_relation_targets_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        label_element.clone(),
+        description_element.clone(),
+        controlled_element.clone(),
+    );
+    let detached_snapshot = capture_semantics_snapshot(&mut ui, &mut app, &mut services, bounds)?;
+
+    render_relation_targets_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        label_element,
+        description_element,
+        controlled_element,
+    );
+    let final_snapshot = capture_semantics_snapshot(&mut ui, &mut app, &mut services, bounds)?;
+
+    let mut observed = ObservedTree::from_semantics_snapshot(&final_snapshot, bounds);
+    observed.set_metric(
+        "relation_targets.initial.labelled_by",
+        bool_metric(snapshot_relation_includes(
+            &initial_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::LabelledBy,
+            "relation-label",
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.initial.described_by",
+        bool_metric(snapshot_relation_includes(
+            &initial_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::DescribedBy,
+            "relation-description",
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.initial.controls",
+        bool_metric(snapshot_relation_includes(
+            &initial_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::Controls,
+            "relation-controlled",
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.detached.label_absent",
+        bool_metric(snapshot_node_by_test_id(&detached_snapshot, "relation-label").is_none()),
+    );
+    observed.set_metric(
+        "relation_targets.detached.description_absent",
+        bool_metric(snapshot_node_by_test_id(&detached_snapshot, "relation-description").is_none()),
+    );
+    observed.set_metric(
+        "relation_targets.detached.controlled_absent",
+        bool_metric(snapshot_node_by_test_id(&detached_snapshot, "relation-controlled").is_none()),
+    );
+    observed.set_metric(
+        "relation_targets.detached.labelled_by_empty",
+        bool_metric(snapshot_relation_empty(
+            &detached_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::LabelledBy,
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.detached.described_by_empty",
+        bool_metric(snapshot_relation_empty(
+            &detached_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::DescribedBy,
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.detached.controls_empty",
+        bool_metric(snapshot_relation_empty(
+            &detached_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::Controls,
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.final.labelled_by",
+        bool_metric(snapshot_relation_includes(
+            &final_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::LabelledBy,
+            "relation-label",
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.final.described_by",
+        bool_metric(snapshot_relation_includes(
+            &final_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::DescribedBy,
+            "relation-description",
+        )),
+    );
+    observed.set_metric(
+        "relation_targets.final.controls",
+        bool_metric(snapshot_relation_includes(
+            &final_snapshot,
+            "relation-source",
+            ObservedSemanticsRelation::Controls,
+            "relation-controlled",
+        )),
+    );
+    Ok(observed)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_relation_targets_frame(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    bounds: Rect,
+    targets_present: bool,
+    label_element: Rc<Cell<Option<crate::elements::GlobalElementId>>>,
+    description_element: Rc<Cell<Option<crate::elements::GlobalElementId>>>,
+    controlled_element: Rc<Cell<Option<crate::elements::GlobalElementId>>>,
+) {
+    render_root_for_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-harness-semantics-relation-targets",
+        |cx| {
+            let mut children = Vec::new();
+            if targets_present {
+                let label = cx.text("Relation Label").test_id("relation-label");
+                label_element.set(Some(label.id));
+                children.push(label);
+
+                let description = cx
+                    .text("Relation Description")
+                    .test_id("relation-description");
+                description_element.set(Some(description.id));
+                children.push(description);
+
+                let controlled = cx.semantics_with_id(
+                    crate::element::SemanticsProps {
+                        role: fret_core::SemanticsRole::Panel,
+                        label: Some(Arc::from("Relation Controlled")),
+                        test_id: Some(Arc::from("relation-controlled")),
+                        ..Default::default()
+                    },
+                    |_cx, _id| Vec::new(),
+                );
+                controlled_element.set(Some(controlled.id));
+                children.push(controlled);
+            }
+
+            let source = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::ComboBox,
+                    label: Some(Arc::from("Relation Source")),
+                    test_id: Some(Arc::from("relation-source")),
+                    labelled_by_element: label_element.get().map(|id| id.0),
+                    described_by_element: description_element.get().map(|id| id.0),
+                    controls_element: controlled_element.get().map(|id| id.0),
+                    ..Default::default()
+                },
+                |_cx, _id| Vec::new(),
+            );
+            children.push(source);
+            children
+        },
+    );
+    ui.layout_all(app, services, bounds, 1.0);
+    app.advance_frame();
+}
+
+fn capture_semantics_snapshot(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    bounds: Rect,
+) -> Result<fret_core::SemanticsSnapshot, ScenarioObserveError> {
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds, 1.0);
+    ui.semantics_snapshot()
+        .cloned()
+        .ok_or_else(|| ScenarioObserveError::new("missing semantics snapshot"))
+}
+
+fn snapshot_node_by_test_id<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    test_id: &str,
+) -> Option<&'a fret_core::SemanticsNode> {
+    snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(test_id))
+}
+
+fn snapshot_relation_includes(
+    snapshot: &fret_core::SemanticsSnapshot,
+    source_test_id: &str,
+    relation: ObservedSemanticsRelation,
+    target_test_id: &str,
+) -> bool {
+    let Some(source) = snapshot_node_by_test_id(snapshot, source_test_id) else {
+        return false;
+    };
+    let Some(target) = snapshot_node_by_test_id(snapshot, target_test_id) else {
+        return false;
+    };
+    match relation {
+        ObservedSemanticsRelation::ActiveDescendant => source.active_descendant == Some(target.id),
+        ObservedSemanticsRelation::LabelledBy => source.labelled_by.contains(&target.id),
+        ObservedSemanticsRelation::DescribedBy => source.described_by.contains(&target.id),
+        ObservedSemanticsRelation::Controls => source.controls.contains(&target.id),
+    }
+}
+
+fn snapshot_relation_empty(
+    snapshot: &fret_core::SemanticsSnapshot,
+    source_test_id: &str,
+    relation: ObservedSemanticsRelation,
+) -> bool {
+    snapshot_node_by_test_id(snapshot, source_test_id).is_some_and(|source| match relation {
+        ObservedSemanticsRelation::ActiveDescendant => source.active_descendant.is_none(),
+        ObservedSemanticsRelation::LabelledBy => source.labelled_by.is_empty(),
+        ObservedSemanticsRelation::DescribedBy => source.described_by.is_empty(),
+        ObservedSemanticsRelation::Controls => source.controls.is_empty(),
+    })
+}
+
+fn bool_metric(value: bool) -> f32 {
+    if value { 1.0 } else { 0.0 }
 }

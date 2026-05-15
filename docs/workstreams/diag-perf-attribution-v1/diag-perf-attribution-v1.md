@@ -77,13 +77,17 @@ Shipped in this workstream (commit-addressable, additive changes):
 4. **M3**: explainability + optional gate
    - `triage.json` includes rule-based hints and unit-cost estimates.
    - `fretboard-dev diag perf ... --check-perf-hints` can turn selected hints into an explicit CI-style gate (`check.perf_hints.json`).
+5. **Schema + field inventory hardening**
+   - Stats, stats diff, triage, perf threshold, perf hint, and Chrome trace artifacts now emit `kind`,
+     `schema_version`, and `schema_policy.compatibility=additive_only`.
+   - Chrome trace artifacts explicitly identify themselves as bundle-derived synthetic phase timelines
+     (`trace_source=bundle_synthetic_phases`, `real_spans_included=false`), so tooling does not confuse them with
+     live `tracing` / Tracy spans.
+   - The field inventory is the current reviewer entrypoint for perf artifact keys and measurement ownership.
 
 Remaining gaps / follow-ups:
 
-- Perf schema versioning for perf stats outputs (bundle + triage + perf checks).
 - Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
-- A field inventory doc (keys + meaning + where measured) to reduce tribal knowledge:
-  - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
 
 ## Proposed architecture (v1)
 
@@ -102,8 +106,9 @@ Define a stable schema for per-frame perf stats, conceptually:
 Rules:
 
 - Prefer `*_time_us` and `*_calls` / `*_items` pairs when meaningful.
-- Add `schema_version` (integer) to bundles / triage output.
-- Keep changes additive; avoid renaming keys without a compatibility window.
+- Add `schema_version` (integer) plus `kind` to stats / stats diff / triage / perf gate outputs.
+- Emit `schema_policy.compatibility=additive_only`; avoid renaming keys without a compatibility
+  window or a schema version bump.
 
 ### 2) “Always-on” vs “opt-in” profiling
 

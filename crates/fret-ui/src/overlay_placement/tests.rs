@@ -396,17 +396,12 @@ fn sticky_partial_limits_shift_to_keep_anchor_touching() {
     assert_eq!(layout.rect.origin.x, Px(140.0));
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum PlacementSolverVariant {
+    #[default]
     Unsized,
     Sized,
-}
-
-impl Default for PlacementSolverVariant {
-    fn default() -> Self {
-        Self::Unsized
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -461,17 +456,12 @@ impl From<AlignFixture> for Align {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum LayoutDirectionFixture {
+    #[default]
     Ltr,
     Rtl,
-}
-
-impl Default for LayoutDirectionFixture {
-    fn default() -> Self {
-        Self::Ltr
-    }
 }
 
 impl From<LayoutDirectionFixture> for LayoutDirection {
@@ -483,17 +473,12 @@ impl From<LayoutDirectionFixture> for LayoutDirection {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum StickyModeFixture {
+    #[default]
     Always,
     Partial,
-}
-
-impl Default for StickyModeFixture {
-    fn default() -> Self {
-        Self::Always
-    }
 }
 
 impl From<StickyModeFixture> for StickyMode {

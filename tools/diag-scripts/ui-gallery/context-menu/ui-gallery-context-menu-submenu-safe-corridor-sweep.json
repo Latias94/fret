@@ -75,7 +75,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-overlay-content" }
       },
       "timeout_frames": 240
     },

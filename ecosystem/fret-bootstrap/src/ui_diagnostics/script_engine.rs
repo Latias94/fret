@@ -117,6 +117,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::Focus { .. }
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
+        | UiActionStepV2::SavePointerPoint { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
         | UiActionStepV2::WaitSemanticsScrollStable { .. }
         | UiActionStepV2::AssertSemanticsScrollIdleStable { .. }
@@ -154,6 +155,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::CaptureLayoutSidecar { .. }
+        | UiActionStepV2::ClickSavedPoint { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowStyle { .. }
         | UiActionStepV2::SetWindowInsets { .. }
@@ -189,6 +191,8 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Activate { .. } => "activate",
         UiActionStepV2::Focus { .. } => "focus",
         UiActionStepV2::ClickStable { .. } => "click_stable",
+        UiActionStepV2::SavePointerPoint { .. } => "save_pointer_point",
+        UiActionStepV2::ClickSavedPoint { .. } => "click_saved_point",
         UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
         UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
@@ -684,6 +688,51 @@ pub(super) fn dispatch_drive_script_step(
                 app,
                 window,
                 window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::SavePointerPoint { .. } => {
+            let should_return = script_steps_pointer::handle_save_pointer_point_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::ClickSavedPoint { .. } => {
+            let should_return = script_steps_pointer::handle_click_saved_point_step(
+                service,
+                app,
+                window,
                 anchor_window,
                 step_index,
                 step,
@@ -1869,6 +1918,7 @@ pub(super) fn overlay_placement_trace_entry_matches_query(
     }
 }
 
+#[cfg(test)]
 pub(super) fn overlay_placement_trace_entry_matches_query_any_step(
     entry: &UiOverlayPlacementTraceEntryV1,
     query: &UiOverlayPlacementTraceQueryV1,
@@ -2812,6 +2862,7 @@ mod tests {
             ime_event_trace: Vec::new(),
             last_explicit_cursor_override: None,
             last_explicit_cursor_override_pos: None,
+            saved_pointer_points: HashMap::new(),
         }
     }
 

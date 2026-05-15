@@ -7,7 +7,11 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let noop: fret_ui::action::OnActivate = Arc::new(|_host, _action_cx, _reason| {});
+    let last_action = super::last_action_model(cx);
+    let last_action_value = cx
+        .get_model_cloned(&last_action, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let on_select = super::on_select_for_last_action(last_action.clone());
     let behavior_query = cx.local_model_keyed("behavior_query", String::new);
     let behavior_disable_pointer_selection =
         cx.local_model_keyed("behavior_disable_pointer_selection", || false);
@@ -49,22 +53,33 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::CommandItem::new("Open Project")
                 .shortcut("Cmd+O")
                 .keywords(["workspace", "folder"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.behavior.open-project")))
+                .into(),
+            shadcn::CommandItem::new("Legacy Export")
+                .disabled(true)
+                .keywords(["disabled", "skip"])
+                .on_select_action(on_select(Arc::from("command.behavior.legacy-export")))
+                .into(),
+            shadcn::CommandItem::new("Deploy API")
+                .disabled(true)
+                .focusable_when_disabled(true)
+                .keywords(["disabled", "focusable", "deploy"])
+                .on_select_action(on_select(Arc::from("command.behavior.deploy-api")))
                 .into(),
             shadcn::CommandItem::new("Toggle Sidebar")
                 .shortcut("Cmd+B")
                 .keywords(["panel", "layout"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.behavior.toggle-sidebar")))
                 .into(),
             shadcn::CommandItem::new("Go to File")
                 .shortcut("Cmd+P")
                 .keywords(["quick open", "jump"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.behavior.go-to-file")))
                 .into(),
             shadcn::CommandItem::new("Toggle Terminal")
                 .shortcut("Cmd+J")
                 .keywords(["console", "output"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.behavior.toggle-terminal")))
                 .into(),
         ];
 
@@ -84,13 +99,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::CommandGroup::new([
                 shadcn::CommandItem::new("Calendar")
                     .leading_icon(icon_id("lucide.calendar"))
-                    .on_select_action(noop.clone()),
+                    .on_select_action(on_select(Arc::from("command.behavior.groups.calendar"))),
                 shadcn::CommandItem::new("Search Emoji")
                     .leading_icon(icon_id("lucide.smile"))
-                    .on_select_action(noop.clone()),
+                    .on_select_action(on_select(Arc::from(
+                        "command.behavior.groups.search-emoji",
+                    ))),
                 shadcn::CommandItem::new("Calculator")
                     .leading_icon(icon_id("lucide.calculator"))
-                    .on_select_action(noop.clone()),
+                    .on_select_action(on_select(Arc::from("command.behavior.groups.calculator"))),
             ])
             .heading("Suggestions")
             .into(),
@@ -99,15 +116,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::CommandItem::new("Profile")
                     .leading_icon(icon_id("lucide.user"))
                     .shortcut("⌘P")
-                    .on_select_action(noop.clone()),
+                    .on_select_action(on_select(Arc::from("command.behavior.groups.profile"))),
                 shadcn::CommandItem::new("Billing")
                     .leading_icon(icon_id("lucide.credit-card"))
                     .shortcut("⌘B")
-                    .on_select_action(noop.clone()),
+                    .on_select_action(on_select(Arc::from("command.behavior.groups.billing"))),
                 shadcn::CommandItem::new("Settings")
                     .leading_icon(icon_id("lucide.settings"))
                     .shortcut("⌘S")
-                    .on_select_action(noop.clone()),
+                    .on_select_action(on_select(Arc::from("command.behavior.groups.settings"))),
             ])
             .heading("Settings")
             .into(),
@@ -184,17 +201,17 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::CommandItem::new("Calendar")
                 .shortcut("Cmd+C")
                 .keywords(["events", "schedule"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.demo.calendar")))
                 .into(),
             shadcn::CommandItem::new("Search Emoji")
                 .shortcut("Cmd+E")
                 .keywords(["emoji", "insert"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.demo.search-emoji")))
                 .into(),
             shadcn::CommandItem::new("Calculator")
                 .shortcut("Cmd+K")
                 .keywords(["math", "calc"])
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.demo.calculator")))
                 .into(),
             shadcn::CommandSeparator::new()
                 .always_render(true)
@@ -203,7 +220,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::CommandItem::new("Force mounted row (cmdk forceMount)")
                 .value("force-mounted")
                 .force_mount(true)
-                .on_select_action(noop.clone())
+                .on_select_action(on_select(Arc::from("command.demo.force-mounted")))
                 .into(),
         ];
 
@@ -221,15 +238,17 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         let group_force_entries = vec![
             shadcn::CommandGroup::new([
-                shadcn::CommandItem::new("Alpha").on_select_action(noop.clone()),
-                shadcn::CommandItem::new("Beta").on_select_action(noop.clone()),
+                shadcn::CommandItem::new("Alpha")
+                    .on_select_action(on_select(Arc::from("command.group-force.alpha"))),
+                shadcn::CommandItem::new("Beta")
+                    .on_select_action(on_select(Arc::from("command.group-force.beta"))),
             ])
             .heading("Letters")
             .force_mount(true)
             .into(),
             shadcn::CommandSeparator::new().into(),
             shadcn::CommandGroup::new([shadcn::CommandItem::new("Giraffe")
-                .on_select_action(noop.clone())])
+                .on_select_action(on_select(Arc::from("command.group-force.giraffe")))])
             .heading("Animals")
             .into(),
         ];
@@ -269,6 +288,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         vec![
             cx.text("disablePointerSelection + vim/home/end navigation"),
+            cx.text(format!("Last action: {last_action_value}"))
+                .test_id("ui-gallery-command-behavior-last-action"),
             behavior_toggle_row,
             behavior_palette,
             cx.text("Grouped keyboard navigation"),

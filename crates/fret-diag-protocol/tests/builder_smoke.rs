@@ -1,6 +1,10 @@
-use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
+use fret_diag_protocol::builder::{
+    ScriptV2Builder, role_and_name, semantics_relation_includes, semantics_relation_is_empty,
+    test_id, text_composition_is,
+};
 use fret_diag_protocol::{
-    UiActionScriptV2, UiOverlayPlacementTraceQueryV1, UiShortcutRoutingTraceQueryV1,
+    UiActionScriptV2, UiOverlayPlacementTraceQueryV1, UiSemanticsRelationV1,
+    UiShortcutRoutingTraceQueryV1,
 };
 
 #[test]
@@ -46,4 +50,46 @@ fn builder_v2_roundtrip_smoke() {
     let value_2 = serde_json::to_value(&script_2).expect("script must serialize again");
 
     assert_eq!(value_1, value_2);
+}
+
+#[test]
+fn builder_v2_semantics_relation_predicates_serialize() {
+    let script = ScriptV2Builder::new()
+        .assert(semantics_relation_includes(
+            test_id("relation-source"),
+            UiSemanticsRelationV1::LabelledBy,
+            test_id("relation-label"),
+        ))
+        .assert(semantics_relation_is_empty(
+            test_id("relation-source"),
+            UiSemanticsRelationV1::Controls,
+        ))
+        .build();
+
+    let value = serde_json::to_value(&script).expect("script must serialize");
+    assert_eq!(
+        value,
+        serde_json::json!({
+            "schema_version": 2,
+            "steps": [
+                {
+                    "type": "assert",
+                    "predicate": {
+                        "kind": "semantics_relation_includes",
+                        "source": { "kind": "test_id", "id": "relation-source" },
+                        "relation": "labelled_by",
+                        "target": { "kind": "test_id", "id": "relation-label" }
+                    }
+                },
+                {
+                    "type": "assert",
+                    "predicate": {
+                        "kind": "semantics_relation_is_empty",
+                        "source": { "kind": "test_id", "id": "relation-source" },
+                        "relation": "controls"
+                    }
+                }
+            ]
+        })
+    );
 }

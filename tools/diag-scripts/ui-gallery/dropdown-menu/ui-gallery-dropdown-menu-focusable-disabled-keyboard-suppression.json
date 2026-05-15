@@ -1,0 +1,160 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "dropdown_menu",
+      "keyboard",
+      "focus",
+      "semantics",
+      "a11y",
+      "action_state",
+      "regression_pack"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "dropdown_menu",
+      "FRET_UI_GALLERY_STATUS_BAR": "1"
+    },
+    "target_hints": [
+      "Proves an explicit Base UI-style disabled-but-focusable DropdownMenu item remains reachable by composite focus.",
+      "Gates the shared pressable mechanism: focus stays enabled, invoke is suppressed, and Enter/Space do not dispatch or close the menu."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-dropdown-menu" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "arrow_down"
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-support" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "last action: ready"
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dropdown-menu-focusable-disabled-focused"
+    },
+    { "type": "press_key", "key": "enter" },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "last action: ready"
+      }
+    },
+    { "type": "press_key", "key": "space" },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-api" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "last action: ready"
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression"
+    }
+  ]
+}

@@ -322,6 +322,16 @@ Current runtime evidence:
   - result:
     passed; no core hit-test or ContextMenu recipe defect reproduced. The fixed defect was runtime
     coverage weakness: branch/corridor behavior was only indirectly covered by placement traces.
+  - current selector-fix rerun:
+    `target/fret-diag-context-menu-submenu-overlay-content-id-fix-v1/sessions/1778820109246-70216`
+  - selector proof:
+    the page/snippet container id `ui-gallery-context-menu-submenu-content` and the mounted overlay
+    panel id `ui-gallery-context-menu-submenu-overlay-content` each resolve to exactly one node in
+    `1778820148136-ui-gallery-context-menu-submenu-branch-corridor-routing.layout/bundle.schema2.json`.
+  - overlay/focus suite proof after the selector fix:
+    `target/fret-diag-overlay-focus-suite-after-context-menu-selector-fix-v1/sessions/1778820202372-67920/suite.summary.json`
+    has `status=passed`, `stage_counts.passed=8`, and zero ContextMenu branch/corridor lint
+    findings.
 - Context-menu pointer occlusion wheel pass-through:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
   - asserts `ui-gallery-content-viewport.scroll.y_max != 0` and `scroll.y == 0` before the wheel,
@@ -570,6 +580,8 @@ Current evidence anchors:
 ## Shadcn Button Group Layout Gates
 
 ```powershell
+target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-family-suite-v3 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe
+cargo nextest run --cargo-profile dev-fast -p fret-diag lint_treats_labelled_by_relation_as_accessible_name_source --no-fail-fast
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json --dir target/fret-diag-button-group-size --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json --dir target/fret-diag-control-chrome-button-group-text --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json --dir target/fret-diag-button-group-input-group-geometry --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
@@ -589,6 +601,19 @@ target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/input-group/ui
 
 Current evidence anchors:
 
+- Button Group family suite:
+  `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`
+  - runs docs, demo, icon, size, ButtonGroupText, Input Group, long-text, RTL addon, input fill,
+    separator, accessibility, and Select screenshot/geometry/lint coverage through one durable
+    family entry point.
+  - current result:
+    `target/fret-diag-button-group-family-suite-v3/sessions/1778810828217-59768/suite.summary.json`
+  - outcome: `status=passed`, `stage_counts.passed=13`, `reason_code_counts={}`, and all generated
+    lint reports have `warning_issues=0`.
+- Diagnostics lint labelled-by accessible-name gate:
+  `crates/fret-diag/src/lint.rs`
+  - test: `lint_treats_labelled_by_relation_as_accessible_name_source`
+  - run id: `d3b80633-a713-4d44-8b88-5fb8af5405a6`.
 - Size gate evidence:
   `target/fret-diag-button-group-size/...`
 - Size layout sidecar:
@@ -724,7 +749,18 @@ Suite membership:
 - `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`
 - `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+- `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`
+- `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`
 - `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+
+Current evidence:
+
+- `target/fret-diag-overlay-focus-suite-after-context-menu-selector-fix-v1/sessions/1778820202372-67920/suite.summary.json`
+  - `status=passed`
+  - `stage_counts.passed=8`
+  - `reason_code_counts={}`
+  - generated lint reports have zero errors and zero warnings for the promoted ContextMenu and
+    DropdownMenu additions.
 
 Fast local rerun after the release binary already exists:
 
@@ -885,7 +921,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json`,
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-dismiss-outside-press.json`,
-  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-escape-focus-restore.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`,
+  `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`
 - Combobox popup-trigger placement gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json`
   - asserts collision flip to top, `side_offset_px=6`, visible and stable trigger/content-shell
@@ -1330,6 +1368,69 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     passed; no retained Tree stale disabled/focus/invoke defect was reproduced. The next uncovered
     route is keyboard/action activation suppression on a focusable-disabled recipe/primitive
     surface rather than Tree disabled rows.
+- Accordion focusable-disabled keyboard/action suppression gate:
+  `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json`
+  - proves the Radix-style open non-collapsible trigger outcome: `disabled_is=true`,
+    `expanded_is=true`, `semantics_action_is(focus)=true`,
+    `semantics_action_is(invoke)=false`, direct focus succeeds, and Enter/Space do not collapse the
+    item
+  - UI Gallery snippet:
+    `apps/fret-ui-gallery/src/ui/snippets/accordion/focusable_disabled.rs`
+  - recipe fix:
+    `ecosystem/fret-ui-shadcn/src/accordion.rs`
+  - focused recipe gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib accordion_trigger_open_non_collapsible_is_aria_disabled --no-fail-fast`
+  - focused recipe result:
+    passed; Nextest run id `8bcfd907-e08a-4c65-a183-4ed6c8c4ca5f`
+  - first failed runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - first failed evidence:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v1/sessions/1778801842689-150456/1778801848335/script.result.json`
+  - failure slice:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v1/sessions/1778801842689-150456/1778801848335/slice.ui-gallery-accordion-focusable-disabled-trigger.json`
+    (`actions.focus=true`, `flags.disabled=true`, `flags.expanded=true`, `bounds.w=0.0`)
+  - runtime command after fix:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2/sessions/1778804970965-48396/1778804975621/script.result.json`
+  - current AI packet:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2/sessions/1778804970965-48396/1778804975621/ai.packet`
+  - current share pack:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2/sessions/1778804970965-48396/share/1778804975621.zip`
+  - result:
+    fixed and promoted. The runtime harness found a real shadcn Accordion recipe layout defect
+    before passing after the wrapper width fix.
+- Pressable focusable-disabled key-activation mechanism fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/pressable_key_activation_v1.json`
+  - covers Enter+Space, Enter-only, `PressableKeyActivation::None`, focusable-disabled semantics
+    with `disabled=true`/`focus=true`/`invoke=false`, and fully disabled Pressable semantics/action
+    outcomes
+  - thin harness:
+    `crates/fret-ui/src/declarative/tests/pressable_key_activation_harness.rs`
+  - mechanism change:
+    `crates/fret-ui/src/element.rs` (`PressableKeyActivation::None`)
+  - policy consumer:
+    `ecosystem/fret-ui-kit/src/primitives/accordion.rs`
+    (`apply_accordion_trigger_aria_disabled`)
+  - focused mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib mechanism_harness_pressable_key_activation_matches_oracles --no-fail-fast`
+  - focused mechanism result:
+    passed; Nextest run id `3e2def17-044d-4583-9796-f625ee4367af`
+  - focused primitive gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit --lib apply_accordion_trigger_aria_disabled_suppresses_keyboard_activation_on_pressable --no-fail-fast`
+  - focused primitive result:
+    passed; Nextest run id `47d0e780-77bf-4b90-9d0e-9ec1bc481506`
+  - post-mechanism runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3/sessions/1778806281798-4932/1778806286335/script.result.json`
+  - current AI packet:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3/sessions/1778806281798-4932/1778806286335/ai.packet`
+  - current share pack:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3/sessions/1778806281798-4932/share/1778806286335.zip`
+  - result:
+    fixed and promoted. The focusable-disabled keyboard suppression axis is now available at the
+    core Pressable mechanism layer and consumed by Accordion.
 - Input Basic + File long-text visible-text gate:
   `tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json`
   - asserts a plain Input and the file-composition Input both expose direct editable text-field
@@ -1408,6 +1509,153 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/1778583599421-ui-gallery-menubar-rtl-submenu-tight-left-collision.layout/layout.taffy.v1.json`
   - Screenshot:
     `target/fret-diag-menubar-rtl-tight-left/sessions/1778583596413-81824/screenshots/1778583599456-ui-gallery-menubar-rtl-submenu-tight-left-collision/window-4294967297-tick-40-frame-40.png`
+- DropdownMenu disabled-but-focusable keyboard suppression gate:
+  `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`
+  - suite membership:
+    `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`
+  - focused shadcn gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_disabled_focusable -- --nocapture`
+  - focused shadcn result:
+    passed, 2 tests.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-dropdown-menu-focusable-disabled-v3 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778816892364`.
+  - runtime evidence:
+    `target/fret-diag-dropdown-menu-focusable-disabled-v3/sessions/1778816884031-66372/script.result.json`
+  - focused bundle:
+    `target/fret-diag-dropdown-menu-focusable-disabled-v3/sessions/1778816884031-66372/1778816944901-ui-gallery-dropdown-menu-focusable-disabled-focused`
+  - final suppression bundle:
+    `target/fret-diag-dropdown-menu-focusable-disabled-v3/sessions/1778816884031-66372/1778816947251-ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression`
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py` passed after promotion into the overlay/focus
+    suite.
+- Command disabled-but-focusable active-descendant keyboard suppression gate:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - focused shadcn gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib disabled_item -- --nocapture`
+  - focused shadcn result:
+    passed, 2 tests.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json --dir target/fret-diag-command-disabled-focusable-keyboard-suppression-v2 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778824893798`.
+  - runtime evidence:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-v2/sessions/1778824882684-64832/script.result.json`
+  - active-descendant bundle:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-v2/sessions/1778824882684-64832/1778824950725-ui-gallery-command-palette-disabled-focusable-active-descendant`
+  - keyboard-suppression bundle:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-v2/sessions/1778824882684-64832/1778824952379-ui-gallery-command-palette-disabled-focusable-keyboard-suppression`
+  - full Command suite:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-disabled-focusable-v7 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed; 17 scripts, zero lint errors, zero reason codes.
+  - suite evidence:
+    `target/fret-diag-command-suite-disabled-focusable-v7/sessions/1778825524424-52724/suite.summary.json`
+- Retained/windowed active-descendant action-state mutation gate:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`
+  - synthetic mechanism gate:
+    `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture`
+  - synthetic result:
+    passed, 1 test.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json --dir target/fret-diag-command-retained-active-descendant-action-state-v3 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778832051741`.
+  - runtime evidence:
+    `target/fret-diag-command-retained-active-descendant-action-state-v3/sessions/1778832029259-77072/script.result.json`
+  - detached bundle:
+    `target/fret-diag-command-retained-active-descendant-action-state-v3/sessions/1778832029259-77072/1778832142314-ui-gallery-command-retained-active-descendant-detached`
+  - final action-state bundle:
+    `target/fret-diag-command-retained-active-descendant-action-state-v3/sessions/1778832029259-77072/1778832143417-ui-gallery-command-retained-active-descendant-action-state`
+  - bundle lint:
+    both captured bundles passed `target/dev-fast/fretboard-dev.exe diag lint ... --json` with
+    `error_issues=0` and `warning_issues=0`.
+  - full Command suite:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-retained-active-descendant-v2 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed; 18 scripts, zero reason codes.
+  - suite evidence:
+    `target/fret-diag-command-suite-retained-active-descendant-v2/sessions/1778831271030-63304/suite.summary.json`
+- Semantics relation-edge detach/reattach fixture and diagnostics predicates:
+  `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
+  - fixture case:
+    `relation-targets-detach-reattach-clear-stale-edges`
+  - mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles`
+  - mechanism result:
+    passed, 1 test.
+  - protocol serialization gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_relation_serializes_and_deserializes`
+  - protocol serialization result:
+    passed, 1 test.
+  - script roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v1_roundtrip_semantics_relation_predicates`
+  - script roundtrip result:
+    passed, 1 test.
+  - builder helper gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol builder_v2_semantics_relation_predicates_serialize`
+  - builder helper result:
+    passed, 1 test.
+  - bootstrap predicate evaluator gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges`
+  - bootstrap predicate result:
+    passed, 1 test.
+  - implementation anchors:
+    `crates/fret-diag-protocol/src/lib.rs`,
+    `crates/fret-diag-protocol/src/builder.rs`,
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+    `crates/fret-diag-protocol/tests/builder_smoke.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+- Cross-root Select relation runtime gate:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json`
+  - runtime assertions:
+    trigger `controls` listbox after open, listbox `labelled_by` trigger after open, trigger
+    `controls` empty after commit/close, and trigger `controls` restored after reopen.
+  - focused bootstrap relation endpoint gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges semantics_relation_includes_can_cross_scope_roots semantics_relation_includes_can_cross_modal_barrier_to_underlay_source`
+  - focused bootstrap result:
+    passed, 3 tests.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-relation-edge-runtime-v8 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778839948330`.
+  - runtime evidence:
+    `target/fret-diag-select-relation-edge-runtime-v8/sessions/1778839940868-81380/script.result.json`
+  - AI packet:
+    `target/fret-diag-select-relation-edge-runtime-v8/sessions/1778839940868-81380/1778839948330/ai.packet`
+  - packed evidence:
+    `target/fret-diag-select-relation-edge-runtime-v8/sessions/1778839940868-81380/share/1778839948330.zip`
+  - protocol companion gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_relation_serializes_and_deserializes script_v1_roundtrip_semantics_relation_predicates builder_v2_semantics_relation_predicates_serialize --no-fail-fast`
+  - protocol companion result:
+    passed, 3 tests.
+  - Select content selector gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib select_content_test_id_stamps_listbox_without_renaming_viewport select_test_id_prefix_stamps_listbox_items_and_scroll_viewport`
+  - Select content selector result:
+    passed, 2 tests.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `ecosystem/fret-ui-shadcn/src/select.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs`,
+    `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

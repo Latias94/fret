@@ -131,6 +131,21 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   bounds, barrier roots, blocking roots, and topmost interactive root hints; `fret-devtools`
   projects them into `Live Inspect Hover Bounds`, `Live Inspect Overlay Hooks`, and raw payload
   panels.
+- The GUI first-open shell now includes a `Dogfood Workflow` block for the concrete
+  `ui-gallery-button-dogfood` loop: open `fret-ui-gallery`, pick a Button-page selector, generate
+  or apply the selector into a script, run with `diag run --pack`, optionally pack a selected
+  bundle, and open `tools/fret-bundle-viewer`. The block references
+  `tools/diag-scripts/ui-gallery-lite-smoke.json` and
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json` so the
+  visible GUI path stays tied to existing script artifacts instead of a GUI-only workflow model.
+- The Semantics tree scalability slice is now locked by code-level gates. The left tree continues
+  to render through `VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16)`, while
+  `semantics::compute_rows` uses an explicit stack so a 50k-deep expanded tree cannot overflow the
+  Rust call stack. Focused tests cover 50k flat rows, 50k deep rows, and large-tree search.
+- Low-traffic live selected-node details are also source-gated: `ws::maybe_request_semantics_node_details`
+  still sends only on-demand `semantics.node.get` and `hit_test.explain` requests, and the extracted
+  `live_semantics_request_decision` test proves unchanged selections are throttled to 1Hz while
+  selection changes and manual refreshes bypass the throttle.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.
@@ -172,6 +187,10 @@ These are v1 defaults we should treat as “sticky”:
 - **Default left-panel tree is the Semantics tree** (`SemanticsSnapshot`).
   - Rationale: stable selectors (`test_id`) and alignment with inspect/pick/scripts.
   - Layout/element trees can exist as secondary views, but scripts should not depend on them.
+  - 2026-05-15 status: `apps/fret-devtools` exposes secondary `Layout` and `Elements` tabs derived
+    from the same semantics cache. `Layout` shows bounds/parent/test-id rows for layout debugging;
+    `Elements` shows semantics-node identity and authoring relationships. These are not full native
+    layout-engine or declarative element snapshots.
 - **Default real-time transport is WebSocket** (bidirectional, low-latency, web-runner friendly).
   - Session routing uses `session_id` to support multiple app targets concurrently.
 - **Minimize live traffic**:
@@ -514,6 +533,7 @@ They can evolve, but treat them as sticky unless we have strong evidence.
    - hover/focus updates are lossy under load (drop intermediate hover events).
 7. **Tree strategy (live)**:
    - default left panel: semantics tree,
+   - secondary left-panel views: semantics-derived layout bounds and element identity,
    - start with JSON messages, add “operations” patches later if needed.
 8. **Artifact storage (web runner)**:
    - in-memory store + “download zip” export in v1,

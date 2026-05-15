@@ -777,3 +777,195 @@ Status: complete
 - No retained Tree stale disabled/focus/invoke mechanism or component policy defect was reproduced.
 - Remaining follow-up: find a focusable-disabled recipe/primitive surface, such as menu, listbox,
   or command-style items, for true Enter/Space activation suppression coverage.
+
+## M52: Accordion Focusable-Disabled Keyboard Suppression Runtime Gate
+
+Status: complete
+
+- Added a UI Gallery Accordion focusable-disabled snippet that starts an uncontrolled single
+  Accordion open and non-collapsible, matching the Radix outcome where the open trigger is
+  aria-disabled but remains focusable.
+- Added `ui-gallery-accordion-focusable-disabled-keyboard-suppression.json` and promoted it into
+  the shadcn runtime evidence and conformance suites.
+- The first runtime gate found a real shadcn Accordion recipe defect: the focusable disabled
+  trigger exported the right semantics but had zero-width bounds, causing focus repair to clear the
+  route before `focus_is` could pass.
+- Accordion item wrapper columns now fill width with `min_width=0`, so the recipe keeps
+  shrink-safe layout without collapsing trigger/content width under the UI Gallery docs shell.
+- Focused Accordion tests now prove focus remains enabled, invoke remains suppressed, bounds are
+  non-empty, and focus repair preserves the trigger.
+- The post-fix runtime gate passed and proved Enter/Space remain suppressed while the open
+  non-collapsible item stays expanded.
+- Remaining follow-up: add a synthetic focusable-disabled keyboard activation fixture and a second
+  recipe-family runtime gate so the invariant is not only covered through Accordion policy.
+
+## M53: Pressable Key Activation Fixture for Focusable-Disabled Suppression
+
+Status: complete
+
+- Added `PressableKeyActivation::None` so `crates/fret-ui` can model a focusable node that rejects
+  all keyboard activation keys without turning off focus routing.
+- Added `pressable_key_activation_v1.json` and a thin `fret-ui` harness covering Enter+Space,
+  Enter-only, no-keyboard-activation, focusable-disabled semantics, and fully disabled Pressable
+  semantics/action outcomes.
+- Updated `fret-ui-kit` Accordion's aria-disabled helper so the open non-collapsible trigger now
+  uses both semantics suppression (`disabled=true`, `invokable=false`) and the new keyboard
+  suppression mechanism.
+- The first fixture run clarified a harness boundary: direct `UiTree::set_focus` is an internal
+  force-set route, so disabled reachability should be judged through traversal, semantics actions,
+  and input activation rather than direct focus mutation alone.
+- Focused `fret-ui`, `fret-ui-kit`, and shadcn Accordion gates passed, and the UI Gallery Accordion
+  runtime gate passed again after the new mechanism was wired into the recipe path.
+- Remaining follow-up: add a second recipe-family runtime gate for disabled-but-focusable items in
+  menu/listbox/command-style surfaces.
+
+## M54: Button Group Family Suite and Accessible-Name Lint Cleanup
+
+Status: complete
+
+- Promoted Button Group from scattered conformance entries into a dedicated
+  `ui-gallery-button-group` diagnostics suite covering docs, demo, icon, size, ButtonGroupText,
+  Input Group, long-text, RTL addon, input fill, separator, accessibility, and Select scenarios.
+- The first family-suite run found two actionable accessibility issues: the Button Group Select
+  currency trigger and UI Gallery shell Theme/Motion preset triggers had no explicit accessible
+  names, and `fret-diag` lint treated `labelled_by` relations as missing labels.
+- Fixed the teaching surface by adding `a11y_label(...)` where the Selects are unlabeled by visible
+  FieldLabel content, and fixed the diagnostics harness so `labelled_by` counts as an accessible
+  name source.
+- Focused lint regression passed, the Button Group Select rerun produced zero lint findings, and
+  the full `ui-gallery-button-group` suite passed with 13 scripts and zero lint warnings.
+- Remaining follow-up: add renderer-level glyph/ellipsis evidence for Button Group long text, or
+  move back to the second recipe-family disabled-but-focusable gate if focus/action suppression is
+  the higher-risk next slice.
+
+## M55: DropdownMenu Disabled-But-Focusable Runtime Gate
+
+Status: complete
+
+- Added `DropdownMenuItem::focusable_when_disabled(true)` as an explicit Base UI-style opt-in while
+  preserving Radix/shadcn's default `disabled(true)` outcome as non-focusable and non-invokable.
+- The recipe now separates three facts for regular items: focusability, disabled semantics, and
+  activation. Opt-in disabled items remain roving candidates and focusable, but they stamp
+  `disabled=true`, suppress `invoke`, and use `PressableKeyActivation::None` to reject Enter/Space.
+- The implementation audit found a duplicated regular-item render path and a root-menu focus
+  candidate path that still used raw `disabled`; the fix now routes focus-candidate ownership
+  through `item_focusable` while keeping submenu trigger activation disabled.
+- Added stable UI Gallery `Support` and `API` anchors and promoted
+  `ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json` into
+  `fret-mechanism-harness-overlay-focus`.
+- The first diagnostics drafts exposed harness-quality issues rather than component defects:
+  direct `focus` inside an overlay was not the right proof of roving focus, scripts are not indexed
+  until promoted into a suite manifest, and the status oracle needed the current
+  `last action: ready` baseline.
+- Focused shadcn lib tests, the `fretboard-dev`/UI Gallery build, the promoted registry check, and
+  the runtime diagnostics gate all passed.
+- Remaining follow-up: add a command/listbox-style disabled-but-focusable runtime gate so the next
+  proof exercises active-descendant/list semantics rather than only menu roving focus.
+
+## M56: Overlay/Focus Selector Uniqueness Hardening
+
+Status: complete
+
+- The full `fret-mechanism-harness-overlay-focus` suite proactively found a promoted-script
+  selector defect: `ui-gallery-context-menu-submenu-content` named both the Gallery page/snippet
+  content node and the mounted ContextMenu overlay content node.
+- The failure came from the suite lint layer (`semantics.duplicate_test_id`), not from the
+  ContextMenu branch/corridor interaction assertions. This proved the suite can catch automation
+  ambiguity before it hides or misattributes an overlay routing defect.
+- Fixed the owning Gallery diagnostics surface by renaming the mounted overlay selector to
+  `ui-gallery-context-menu-submenu-overlay-content` and updating the ContextMenu submenu routing
+  and safe-corridor scripts.
+- The focused ContextMenu script rerun passed, bounded `diag query test-id` checks proved both the
+  page-content and overlay-content selectors are unique, and the full overlay/focus suite passed
+  with 8 scripts and zero lint findings.
+- Remaining follow-up: document/use the selector convention for future promoted overlay fixtures:
+  page/snippet containers own `*-content`; mounted overlay panels use `*-overlay-content` or an
+  equivalent panel-specific suffix.
+
+## M57: Command Disabled-But-Focusable Active-Descendant Runtime Gate
+
+Status: complete
+
+- Added Command behavior rows for a default disabled item (`Legacy Export`) and an opt-in
+  disabled-but-focusable item (`Deploy API`), plus a stable last-action label so the runtime gate
+  can prove Enter does not dispatch a disabled active row.
+- Added focused Command tests proving default disabled rows are skipped by active-descendant
+  navigation, while opt-in disabled-focusable rows can become active descendants but expose
+  `disabled=true`, suppress `invoke`, and reject Enter activation.
+- Added and promoted
+  `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json` into both
+  `ui-gallery-command` and `ui-gallery-shadcn-conformance`.
+- The first full Command suite runs found harness-quality defects rather than a Command recipe
+  defect: `Ctrl+P` in the old keybindings script collided with the app-level command palette
+  shortcut, and several Command scripts captured bundles after only the input/control was visible
+  while the selected active row was outside the window.
+- Hardened the affected Command scripts so keybinding proof avoids the global shortcut collision
+  and every active-descendant capture first scrolls the selected row into view.
+- Focused tests, the single runtime gate, and the full `ui-gallery-command` suite passed with 17
+  scripts and zero lint findings.
+- Remaining follow-up: add retained/windowed active-descendant action-state mutation coverage where
+  a disabled or invokable row detaches, reattaches, or changes availability under filtering or
+  virtualization.
+
+## M58: Retained Active-Descendant Relation Normalization Gate
+
+Status: complete
+
+- Added a fixture-driven retained virtual-list active-descendant action-state case to
+  `combobox_active_descendant_interaction_v1.json`.
+- The first synthetic run found a real `fret-ui` mechanism defect: when the active retained row
+  scrolled out of the current semantics traversal, the input still published an `active_descendant`
+  edge to the detached row's old node.
+- Fixed `UiTree::refresh_semantics_snapshot` so relation edges are snapshot-local before reverse
+  relation normalization: detached `active_descendant` edges are cleared, and `labelled_by`,
+  `described_by`, and `controls` drop targets absent from the current snapshot.
+- Added the Command page runtime demo and promoted
+  `ui-gallery-command-retained-active-descendant-action-state.json` into the Command family,
+  shadcn conformance, and runtime-evidence suites.
+- The runtime gate found one harness-quality issue after suite promotion: the demo combobox input
+  had no accessible label. The demo and synthetic fixture now stamp `a11y_label`, and rerun bundles
+  lint with zero warnings.
+- Focused synthetic test, UI Gallery build, single runtime gate, lint checks, registry check, and
+  workstream catalog check passed. The full `ui-gallery-command` suite passed with 18 scripts.
+- Remaining follow-up: add synthetic/runtime relation-edge mutation coverage for `labelled_by`,
+  `described_by`, and `controls`, especially when the target detaches or crosses overlay/root
+  boundaries.
+
+## M59: Semantics Relation-Edge Detach/Reattach Harness Gate
+
+Status: complete
+
+- Added `relation-targets-detach-reattach-clear-stale-edges` to the semantics relation fixture
+  suite, with a multi-frame observer for `labelled_by`, `described_by`, and `controls`.
+- The fixture proved the F98 snapshot-local relation filtering already clears those edges while
+  targets are detached and resolves them again after reattach; no additional `fret-ui` mechanism
+  defect was reproduced.
+- Added diagnostics protocol predicates `semantics_relation_includes` and
+  `semantics_relation_is_empty` so runtime scripts can directly prove raw relation edges and
+  empty-state invariants.
+- Added typed diagnostics builder helpers for the same predicates.
+- Added bootstrap predicate evaluator support and focused tests covering `active_descendant`,
+  `labelled_by`, `described_by`, and `controls`.
+- Focused nextest gates passed for `fret-ui`, `fret-diag-protocol`, and `fret-bootstrap`.
+- Remaining follow-up: connect these new predicates to a UI Gallery runtime relation-edge gate for
+  cross overlay/root-boundary source-target ownership.
+
+## M60: Cross-root Select Relation Runtime Gate
+
+Status: complete
+
+- Extended the promoted Select commit/reopen runtime script with raw relation-edge predicates:
+  trigger `controls` listbox after open, listbox `labelled_by` trigger after open, trigger
+  `controls` empty after commit/close, and trigger `controls` restored after reopen.
+- Added `SelectContent::test_id(...)` so the UI Gallery gate can name the mounted listbox panel
+  without reusing `test_id_prefix` and renaming the long-lived `select-scroll-viewport` selector.
+- The first runtime gate found a real diagnostics harness defect: relation predicate endpoint
+  resolution reused ordinary modal-barrier-scoped selectors, so the underlay Select trigger could
+  not be selected while the popup barrier was active even though the semantics edge was present.
+- Added relation-endpoint selector resolution for diagnostics predicates. Ordinary selectors still
+  respect modal barrier scoping, while relation predicates can inspect visible, non-hidden source
+  and target endpoints across the barrier/root boundary.
+- Focused bootstrap tests, the Select runtime gate, the semantics relation fixture gate, protocol
+  predicate gates, and Select test-id focused gates passed.
+- Remaining follow-up: use the same runtime path to stress overlay/listbox placement ownership
+  under scroll-container clipping, RTL, and viewport resize rather than only relation correctness.

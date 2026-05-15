@@ -33,6 +33,7 @@ fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-fonts-cjk = { version = "0.1.0", path = "../fret-fonts-cjk", optional = true }
 fret-fonts-emoji = { version = "0.1.0", path = "../fret-fonts-emoji", optional = true }
+fret-perf = { version = "0.1.0", path = "../fret-perf" }
 fret-render = { version = "0.1.0", path = "../fret-render" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 bytemuck.workspace = true

@@ -11,8 +11,9 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, LayoutStyle, PressableA11y, PressableProps, PressableState, RovingFlexProps,
-    RovingFocusProps, SemanticsDecoration, SemanticsProps, StackProps,
+    AnyElement, ElementKind, LayoutStyle, PressableA11y, PressableKeyActivation, PressableProps,
+    PressableState, RovingFlexProps, RovingFocusProps, SemanticsDecoration, SemanticsProps,
+    StackProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -72,6 +73,10 @@ pub fn apply_accordion_trigger_aria_disabled(
 ) -> AnyElement {
     if !aria_disabled {
         return trigger;
+    }
+    let mut trigger = trigger;
+    if let ElementKind::Pressable(props) = &mut trigger.kind {
+        props.key_activation = PressableKeyActivation::None;
     }
     trigger.attach_semantics(
         SemanticsDecoration::default()
@@ -307,7 +312,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::{ElementKind, PressableProps};
+    use fret_ui::element::{ElementKind, PressableKeyActivation, PressableProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -380,6 +385,46 @@ mod tests {
                 panic!("expected pressable");
             };
             assert_eq!(a11y.controls_element, Some(content.0));
+        });
+    }
+
+    #[test]
+    fn apply_accordion_trigger_aria_disabled_suppresses_keyboard_activation_on_pressable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    key_activation: PressableKeyActivation::EnterAndSpace,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let trigger = apply_accordion_trigger_aria_disabled(trigger, true);
+            let ElementKind::Pressable(PressableProps { key_activation, .. }) = &trigger.kind
+            else {
+                panic!("expected pressable");
+            };
+            assert_eq!(*key_activation, PressableKeyActivation::None);
+            assert_eq!(
+                trigger
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.disabled),
+                Some(true)
+            );
+            assert_eq!(
+                trigger
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.invokable),
+                Some(false)
+            );
         });
     }
 

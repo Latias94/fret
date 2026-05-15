@@ -172,8 +172,12 @@ date: 2026-05-12
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
-- [ ] Promote the Button Group family into an explicit fixture-style matrix for text/icon
+- [x] Promote the Button Group family into an explicit fixture-style matrix for text/icon
   alignment, truncation, and theme/viewport variants.
+  - Result: `ui-gallery-button-group` now runs the family matrix as a durable suite. The first run
+    exposed accessibility lint noise and a real Button Group Select teaching-surface gap:
+    unlabeled Select triggers were fixed in UI Gallery, and `fret-diag` lint now treats
+    `labelled_by` relations as valid accessible-name sources.
 - [x] Add ButtonGroupText prefix/suffix internal label anchors and vertical-centering geometry
   predicates against the middle input.
 - [x] Add Button Group Input Group trailing button icon-centering and input/trailing-control
@@ -229,6 +233,13 @@ date: 2026-05-12
   - Result: `ui-gallery-context-menu-submenu-branch-corridor-routing.json` proves moving into the
     submenu and back to the parent trigger keeps the submenu open, while moving to another parent
     item or away from the trigger closes the nested submenu without closing the root menu.
+- [x] Harden the ContextMenu submenu routing gate against page-content versus overlay-content
+  selector collisions.
+  - Result: the overlay/focus suite caught `ui-gallery-context-menu-submenu-content` as a duplicate
+    id shared by the Gallery snippet content container and the mounted overlay menu. The overlay
+    panel selector is now `ui-gallery-context-menu-submenu-overlay-content`, the submenu routing and
+    safe-corridor scripts target that id, and the full overlay/focus suite passes with 8 scripts and
+    zero lint findings.
 - [x] Extend submenu runtime placement traces to Menubar, reusing the shared submenu diagnostics
   bridge once a stable public gallery path is selected.
 - [x] Add a companion RTL submenu tight-left collision fixture that intentionally keeps the
@@ -322,9 +333,68 @@ date: 2026-05-12
     clicks do not move selection; re-enabled clicks select the row again. The single runtime gate
     and full retained Tree suite passed; no retained Tree stale disabled/invoke defect was
     reproduced.
-- [ ] Add keyboard/action activation suppression coverage on a focusable-disabled recipe/primitive
-  surface, such as menu, listbox, or command-style items. Retained Tree disabled rows correctly lose
-  focus/invoke action, so they are not a valid Enter/Space disabled activation target.
+- [x] Add keyboard/action activation suppression coverage on a focusable-disabled recipe/primitive
+  surface.
+  - Result: `ui-gallery-accordion-focusable-disabled-keyboard-suppression.json` now covers the
+    Radix-style Accordion route where the open non-collapsible trigger is disabled for assistive
+    technology, remains focusable, and suppresses invoke plus Enter/Space activation. The first
+    runtime run found a real shadcn Accordion layout defect: the trigger exported focusable
+    disabled semantics but had zero-width bounds, so focus repair cleared the route. Accordion item
+    wrapper columns now fill width with `min_width=0`, focused recipe tests lock non-empty bounds
+    plus focus repair, and the runtime gate passes.
+- [x] Add a synthetic mechanism-level focusable-disabled activation fixture.
+  - Result: `PressableKeyActivation::None` is now a core mechanism, with
+    `pressable_key_activation_v1.json` proving Enter+Space, Enter-only, no-keyboard-activation,
+    focusable-disabled semantics, and fully disabled Pressable outcomes. Accordion's aria-disabled
+    helper now consumes this mechanism instead of relying only on non-collapsible no-op policy.
+- [x] Add a second recipe family runtime gate, such as menu/listbox/command-style
+  disabled-but-focusable items, to prove the focus/invoke/key separation is not only covered through
+  Accordion's non-collapsible policy.
+  - Result: DropdownMenu now exposes an explicit `focusable_when_disabled(true)` opt-in for regular
+    items. The UI Gallery gate
+    `ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json` proves real ArrowDown
+    roving focus reaches a disabled `API` item, semantics reports `disabled=true`,
+    `focus=true`, `invoke=false`, and Enter/Space do not dispatch or close the menu. The first
+    script drafts exposed harness gaps: direct focus inside overlays was the wrong proof path, the
+    status text oracle was stale, and the new script needed suite promotion before the registry
+    would index it.
+- [x] Add a command/listbox-style disabled-but-focusable runtime gate so the next proof exercises
+  active-descendant/list semantics instead of menu roving focus.
+- [x] Add retained/windowed active-descendant action-state mutation coverage where a disabled or
+  invokable row detaches, reattaches, or changes availability under filtering/virtualization.
+  - Result: `combobox_active_descendant_interaction_v1.json` now includes a retained virtual-list
+    case where row 2 is the active descendant, scrolls out of the rendered semantics window, then
+    reattaches after its disabled/invoke state changes. The synthetic harness found a real
+    `fret-ui` mechanism defect: the row disappeared from the snapshot while the input still
+    resolved `active_descendant` to its old node. `UiTree::refresh_semantics_snapshot` now filters
+    `active_descendant`, `labelled_by`, `described_by`, and `controls` relations to nodes present in
+    the current snapshot. `ui-gallery-command-retained-active-descendant-action-state.json` gates
+    the same flow through the Command page, and the rerun bundles lint cleanly after adding an
+    accessible label to the demo input.
+- [x] Add relation-edge normalization coverage for `labelled_by`, `described_by`, and `controls`
+  targets that detach, reattach, or cross overlay/root boundaries, so the active-descendant fix is
+  not the only snapshot-local relation proof.
+  - Result: `semantics_relations_v1.json` now includes
+    `relation-targets-detach-reattach-clear-stale-edges`, a multi-frame fixture where the source
+    keeps last-known declarative element ids while label, description, and controlled targets
+    detach and reattach. The fixture proves detached targets are absent, relation arrays are empty
+    while detached, and all three relations resolve again after reattach. No new mechanism defect
+    was reproduced because the F98 snapshot-local relation filtering already covers these edges.
+    The fixed gap was diagnostics/harness capability: scripts now have
+    `semantics_relation_includes` and `semantics_relation_is_empty` predicates for raw relation
+    edges, plus typed builder helpers for script generation.
+- [x] Add a UI Gallery runtime relation-edge gate for cross overlay/root-boundary source-target
+  ownership, using the new `semantics_relation_includes`/`semantics_relation_is_empty` predicates.
+  - Result: `ui-gallery-select-commit-and-label-update.json` now proves Select trigger
+    `controls` the mounted listbox, the listbox is `labelled_by` the trigger, the trigger controls
+    relation clears after commit/close, and the relation returns after reopen. The runtime gate
+    found a diagnostics harness defect: relation predicates reused ordinary modal-barrier-scoped
+    selectors, so the underlay trigger was clipped out while the popup barrier was active even
+    though the semantics edge existed. Relation predicates now use endpoint-specific selector
+    resolution, while ordinary selectors still respect modal barrier scoping.
+- [ ] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
+  exercises scroll-container clipping, modal boundary choice, RTL direction, and viewport resize
+  with placement/layout sidecar evidence.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

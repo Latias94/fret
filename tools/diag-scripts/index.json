@@ -2966,6 +2966,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-focusable-disabled-keyboard-suppression",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "a11y",
+        "accordion",
+        "action_state",
+        "focus",
+        "keyboard",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the open non-collapsible Accordion trigger remains focusable while aria-disabled.",
+        "Gates the Radix-style action surface: focus stays enabled, invoke is suppressed, and Enter/Space do not collapse the open item."
+      ]
+    },
+    {
       "id": "ui-gallery-accordion-multiple-compact-layout",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-multiple-compact-layout.json",
       "required_capabilities": [
@@ -3854,6 +3880,96 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-accessibility-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-accessibility-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "accessibility",
+        "button-group",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page via the left nav search.",
+        "Captures a bundle + screenshots for the Accessibility section (Preview + Code)."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button",
+        "button-group",
+        "icons",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light then zinc/dark.",
+        "Navigates to Button Group page and captures the Demo preview.",
+        "Gates primary (default) button icon contrast via screenshots."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-demo-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page via the left nav search.",
+        "Captures a bundle + screenshots for the Demo section (Preview + Code)."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "docs",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-button-group-input-group-geometry",
       "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
       "required_capabilities": [
@@ -3862,6 +3978,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -3886,6 +4003,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -3902,6 +4020,81 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-select-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "select",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page via the left nav search.",
+        "Captures a bundle + screenshots for the Select section (Preview + Code)."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-separator-text-screenshots-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-separator-text-screenshots-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "separator",
+        "shadcn",
+        "text",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the Button Group page.",
+        "Captures screenshots for the Separator + Text sections."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-separator-text-screenshots-zinc-light",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-separator-text-screenshots-zinc-light.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "separator",
+        "shadcn",
+        "text",
+        "ui-gallery",
+        "zinc-light"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light.",
+        "Navigates to the Button Group page.",
+        "Captures screenshots for the Separator + Text sections."
+      ]
+    },
+    {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [
@@ -3910,6 +4103,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -6485,6 +6679,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-palette-disabled-focusable-keyboard-suppression",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "a11y",
+        "action_state",
+        "active_descendant",
+        "command",
+        "keyboard",
+        "regression_pack",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves a CommandPalette disabled-but-focusable item remains reachable through active-descendant navigation.",
+        "Gates that disabled CommandPalette rows expose disabled=true and invoke=false while Enter does not dispatch the item's action."
+      ]
+    },
+    {
       "id": "ui-gallery-command-palette-force-mount-item-visible",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
       "required_capabilities": [
@@ -6548,6 +6769,34 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-retained-active-descendant-action-state",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "a11y",
+        "action_state",
+        "active_descendant",
+        "command",
+        "regression_pack",
+        "retained",
+        "semantics",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Proves a retained/windowed active-descendant row clears while detached.",
+        "Proves the reattached active row exposes updated disabled/invoke action state."
+      ]
     },
     {
       "id": "ui-gallery-command-rtl-screenshot",
@@ -6786,6 +7035,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -7683,6 +7933,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus"
+      ],
+      "tags": [
+        "a11y",
+        "action_state",
+        "dropdown_menu",
+        "focus",
+        "keyboard",
+        "regression_pack",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves an explicit Base UI-style disabled-but-focusable DropdownMenu item remains reachable by composite focus.",
+        "Gates the shared pressable mechanism: focus stays enabled, invoke is suppressed, and Enter/Space do not dispatch or close the menu."
+      ]
+    },
+    {
       "id": "ui-gallery-dropdown-menu-item-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-item-chrome-fill.json",
       "required_capabilities": [
@@ -8148,6 +8424,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -8217,6 +8494,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -9664,6 +9942,32 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-demo-open-layout",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [
+        "desktop",
+        "layout",
+        "overlay",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Select page with the minimal shadcn demo section mounted.",
+        "Opens the default item-aligned Select popup and verifies placed-rect ownership through trigger and listbox test-id endpoints.",
+        "Resizes the window while open to gate popup bounds stability and window containment."
+      ]
     },
     {
       "id": "ui-gallery-select-disabled-item-no-commit",

@@ -14,6 +14,7 @@ pub(super) fn preview_command_palette(cx: &mut AppComponentCx<'_>) -> Vec<AnyEle
     let behavior_demos = snippets::behavior_demos::render(cx);
     let groups_palette = snippets::groups::render(cx);
     let scrollable_palette = snippets::scrollable::render(cx);
+    let retained_active_descendant = snippets::retained_active_descendant::render(cx);
     let rtl = snippets::rtl::render(cx);
     let loading_palette = snippets::loading::render(cx);
     let about = doc_layout::notes_block([
@@ -86,6 +87,17 @@ pub(super) fn preview_command_palette(cx: &mut AppComponentCx<'_>) -> Vec<AnyEle
     let scrollable = DocSection::build(cx, "Scrollable", scrollable_palette)
         .test_id_prefix("ui-gallery-command-scrollable")
         .code_rust_from_file_region(snippets::scrollable::SOURCE, "example");
+    let retained_active_descendant =
+        DocSection::build(cx, "Retained Active Descendant", retained_active_descendant)
+            .test_id_prefix("ui-gallery-command-retained-active-descendant")
+            .descriptions([
+                "Retained virtual-list rows can detach, reattach, and change disabled/invoke state while the input keeps its active-descendant contract.",
+                "This is the runtime gate for the retained/windowed active-descendant action-state mutation slice in the mechanism harness lane.",
+            ])
+            .code_rust_from_file_region(
+                snippets::retained_active_descendant::SOURCE,
+                "example",
+            );
     let rtl = DocSection::build(cx, "RTL", rtl)
         .test_id_prefix("ui-gallery-command-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
@@ -126,6 +138,7 @@ pub(super) fn preview_command_palette(cx: &mut AppComponentCx<'_>) -> Vec<AnyEle
             shortcuts,
             groups,
             scrollable,
+            retained_active_descendant,
             rtl,
             api_reference,
             composable_shell,

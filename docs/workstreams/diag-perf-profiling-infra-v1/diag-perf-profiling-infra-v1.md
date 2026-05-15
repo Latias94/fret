@@ -1,6 +1,6 @@
 # Diagnostics perf profiling infra v1
 
-Status: Draft (proposal)
+Status: Active (infrastructure tracker)
 
 ## Goal
 
@@ -139,6 +139,24 @@ Tail-spike triage:
 - If wall time is high but CPU looks low, re-run with:
   - `--sort cpu_cycles` (Windows) or `--sort cpu_time` (fallback)
 
+Example bundle:
+
+- Sample:
+  `docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini/bundle.schema2.json`
+- Run:
+  `cargo run -p fretboard-dev -- diag stats docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini --sort time --top 5 --json`
+- Registry inventory:
+  `cargo run -p fretboard-dev -- diag stats --perf-keys-json`
+  generates the same content checked into
+  `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`.
+- Interpretation:
+  - `registered_perf_keys` describes the current frame-stats registry with unit, kind, scope, and suggested
+    aggregate metadata.
+  - Frame 2 is layout-heavy (`layout_engine_solve_time_us` dominates the phase sum).
+  - Frame 3 is paint/text-heavy (`paint_text_prepare_time_us` dominates paint).
+  - Frame 4 has a long frame-clock delta but low phase and CPU values, so it is a schedule-noise-shaped
+    example rather than a proof of app work. Treat this file as a tooling specimen, not a hardware baseline.
+
 ## Comparative notes (how other stacks succeed)
 
 - Chromium/Perfetto: trace event names are stable and treated as a contract; tooling builds on it.
@@ -152,6 +170,53 @@ Tail-spike triage:
 ## Evidence anchors (current code)
 
 - Bundle exporter and per-frame stats snapshot: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`
+- Perf key registry for trace-exported keys and the current stats/gate subset:
+  `crates/fret-diag/src/perf_keys.rs`
+- Generated registry inventory:
+  `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`
+- Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`,
+  `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
 - Chrome trace exporter: `crates/fret-diag/src/trace.rs`
-- Layout phase timing sources: `crates/fret-ui/src/tree/layout.rs`
+- Layout phase timing sources: `crates/fret-ui/src/tree/layout/entrypoints.rs`,
+  `crates/fret-ui/src/tree/layout/node.rs`, `crates/fret-ui/src/layout/engine.rs`
+
+## Current coverage audit
+
+- Latest phase timeline audit:
+  `docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md`
+- Result: frame, high-level UI phases, layout, prepaint, paint, dispatch, hit-test, and renderer trace names have
+  concrete source anchors. Chrome trace artifacts are currently bundle-derived synthetic phase timelines; real
+  `tracing` / Tracy span export remains a separate gap.
+- `layout_all` final tail phases now share `run_layout_post_layout_phases`, so regular frames,
+  layout fast-path frames, and skipped-engine stable frames keep prepaint/focus/semantics/deferred-cleanup
+  timings and `fret_perf::measure_span` wrappers aligned.
+- `layout_engine.solve` spans now use the shared `fret_perf::measure_span_with_finish` helper for
+  both batched independent-root solves and single-root solves. The existing solve stats remain
+  unchanged (`elapsed_us`, `measure_calls`, `measure_cache_hits`, `measure_us`), and the span now
+  records an additive `outcome` field for solve errors without widening fallback timing semantics.
+- `paint_all` entry-layer sub-phases now use `fret_perf::measure_span` for input context,
+  scroll-handle invalidation, root collection, visual-bounds flushing, text-input snapshot publishing,
+  and paint-observation collapse.
+- `paint_node` hot-path timers now also use `fret_perf::measure_span` for visual-bounds record,
+  cache key, cache hit check, cache bounds translate, widget paint, and observation record while
+  preserving the existing debug stats buckets.
+- `ui_app_render` driver phases now use the shared `fret_perf` helper so the frame-hitch timers
+  and tracing spans have one instrumentation boundary for view, overlay, layout, paint, and
+  diagnostics script drive. Existing hitch log field names are unchanged.
+- Native redraw runner phases now use the same helper for prepare, render, record, present, and
+  nested render-scene spans. Existing redraw-hitch log field names are unchanged.
+- Web runner frame phases now use the same runner phase names for prepare, render, record, present,
+  and nested render-scene spans, keeping native/wasm timeline vocabulary aligned.
+- WGPU renderer frame-level timers now route through `fret_perf::measure_span` for text prepare,
+  SVG prepare, scene encode, and upload, keeping `RenderPerfStats` buckets aligned with stable
+  `fret.renderer.*` span names. Fine-grained SVG raster/text glyph/encode-family timers remain
+  local opt-in profiling hooks until a specific repro needs span-level events.
+- Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
+  so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
+  subset, while `diag stats --json` exposes the frame-stats registry via `registered_perf_keys`.
+  `diag stats --perf-keys-json` emits the reviewable inventory artifact. The remaining open question is whether
+  threshold/config `max_*` gate keys should join the same registry or stay a separate contract surface.
+- Perf threshold failure rows now attach per-metric evidence via `evidence_bundle`, `evidence_run`,
+  `evidence_artifacts`, and optional `evidence_trace_chrome` when a sibling `trace.chrome.json` exists.
+- `diag stats --diff` now reports p95 deltas alongside max deltas and exposes a `typical_tail` highlight set in
+  both human and JSON output.

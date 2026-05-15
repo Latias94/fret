@@ -147,6 +147,9 @@ pub(super) fn bundle_stats_from_json_with_options(
     let mut out = BundleStatsReport {
         sort,
         warmup_frames: opts.warmup_frames,
+        source_bundle_schema_version: crate::compat::bundle::bundle_schema_version_from_value(
+            bundle,
+        ),
         windows: windows.len().min(u32::MAX as usize) as u32,
         ..Default::default()
     };

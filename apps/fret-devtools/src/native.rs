@@ -98,6 +98,20 @@ const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
 const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =
     "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke";
 const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "devtools-first-open-smoke";
+const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood";
+const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release";
+const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json";
+const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json";
+const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json";
+const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json";
+const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release";
+const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only";
+const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev";
 const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
 const IMUI_PRODUCT_WORKFLOW_DOC: &str =
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
@@ -994,6 +1008,16 @@ fn header_bar(
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         first_open_rows,
     );
+    let mut dogfood_workflow_rows = Vec::new();
+    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
+        dogfood_workflow_rows.push(cx.text(line));
+    }
+    let dogfood_workflow_panel = diag_section(
+        cx,
+        "Dogfood Workflow",
+        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
+        dogfood_workflow_rows,
+    );
     let mut demo_metrics_debug_rows = Vec::new();
     for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
         demo_metrics_debug_rows.push(cx.text(line));
@@ -1088,6 +1112,7 @@ fn header_bar(
             endpoint_line,
             workspace_line,
             first_open_panel,
+            dogfood_workflow_panel,
             demo_metrics_debug_panel,
             gate_commands_panel,
             connection_actions,
@@ -1282,7 +1307,28 @@ fn left_panel(
     _theme: fret_ui::ThemeSnapshot,
     st: &State,
 ) -> AnyElement {
-    let semantics = semantics_panel(cx, st);
+    let active_left_tab = cx
+        .app
+        .models()
+        .read(&st.left_tab, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("semantics"));
+    let semantics = if active_left_tab.as_ref() == "semantics" {
+        semantics_panel(cx, st)
+    } else {
+        cx.text("")
+    };
+    let layout_tree = if active_left_tab.as_ref() == "layout" {
+        layout_tree_panel(cx, st)
+    } else {
+        cx.text("")
+    };
+    let element_tree = if active_left_tab.as_ref() == "elements" {
+        element_tree_panel(cx, st)
+    } else {
+        cx.text("")
+    };
     let lines = cx
         .app
         .models()
@@ -1305,6 +1351,8 @@ fn left_panel(
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items([
             shadcn::TabsItem::new("semantics", "Semantics", [semantics]),
+            shadcn::TabsItem::new("layout", "Layout", [layout_tree]),
+            shadcn::TabsItem::new("elements", "Elements", [element_tree]),
             shadcn::TabsItem::new("events", "Events", [list]),
         ])
         .into_element(cx);
@@ -1313,7 +1361,7 @@ fn left_panel(
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Inspect Workspace").into_element(cx),
             shadcn::CardDescription::new(
-                "Semantics navigation, live selection, and recent diagnostics events.",
+                "Semantics navigation, layout bounds, element identity, and recent diagnostics events.",
             )
             .into_element(cx),
         ])
@@ -1323,7 +1371,84 @@ fn left_panel(
     .into_element(cx)
 }
 
+#[derive(Debug, Clone, Copy)]
+enum InspectTreeMode {
+    Semantics,
+    Layout,
+    Elements,
+}
+
+impl InspectTreeMode {
+    fn search_label(self) -> &'static str {
+        match self {
+            Self::Semantics => "Semantics search",
+            Self::Layout => "Layout tree search",
+            Self::Elements => "Element tree search",
+        }
+    }
+
+    fn search_placeholder(self) -> &'static str {
+        match self {
+            Self::Semantics => "Search role/test_id/label/value...",
+            Self::Layout => "Search role/test_id/bounds/parent...",
+            Self::Elements => "Search role/test_id/id/relationships...",
+        }
+    }
+
+    fn empty_text(self) -> &'static str {
+        match self {
+            Self::Semantics => "No semantics yet. Use 'Dump Bundle' or run a script that dumps a bundle.",
+            Self::Layout => {
+                "No layout-bounds tree yet. Use 'Dump Bundle' or run a script that dumps semantics bounds."
+            }
+            Self::Elements => {
+                "No element-identity tree yet. Use 'Dump Bundle' or run a script that dumps semantics identity."
+            }
+        }
+    }
+
+    fn error_prefix(self) -> &'static str {
+        match self {
+            Self::Semantics => "semantics error",
+            Self::Layout => "layout tree error",
+            Self::Elements => "element tree error",
+        }
+    }
+
+    fn stats_prefix(self) -> &'static str {
+        match self {
+            Self::Semantics => "semantics",
+            Self::Layout => "layout-derived",
+            Self::Elements => "element-derived",
+        }
+    }
+
+    fn cache_discriminant(self) -> u8 {
+        match self {
+            Self::Semantics => 0,
+            Self::Layout => 1,
+            Self::Elements => 2,
+        }
+    }
+}
+
 fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    diagnostics_tree_panel(cx, st, InspectTreeMode::Semantics)
+}
+
+fn layout_tree_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    diagnostics_tree_panel(cx, st, InspectTreeMode::Layout)
+}
+
+fn element_tree_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    diagnostics_tree_panel(cx, st, InspectTreeMode::Elements)
+}
+
+fn diagnostics_tree_panel(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+    mode: InspectTreeMode,
+) -> AnyElement {
     let index = cx
         .app
         .models()
@@ -1361,8 +1486,8 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .unwrap_or(0);
 
     let search_input = shadcn::Input::new(st.semantics_search.clone())
-        .a11y_label("Semantics search")
-        .placeholder("Search role/test_id/label/value...")
+        .a11y_label(mode.search_label())
+        .placeholder(mode.search_placeholder())
         .into_element(cx);
 
     let header = ui::h_row(|_cx| [search_input])
@@ -1371,10 +1496,8 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .into_element(cx);
 
     let content: AnyElement = match (index, error) {
-        (_index, Some(err)) => cx.text(format!("semantics error: {err}")),
-        (None, None) => {
-            cx.text("No semantics yet. Use 'Dump Bundle' or run a script that dumps a bundle.")
-        }
+        (_index, Some(err)) => cx.text(format!("{}: {err}", mode.error_prefix())),
+        (None, None) => cx.text(mode.empty_text()),
         (Some(index), None) => {
             #[derive(Debug, Default)]
             struct RowsCache {
@@ -1390,6 +1513,7 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             let rows_key = {
                 use std::hash::{Hash, Hasher};
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                mode.cache_discriminant().hash(&mut hasher);
                 source_hash.hash(&mut hasher);
                 search.trim().to_lowercase().hash(&mut hasher);
                 let mut expanded_sorted: Vec<u64> = expanded.iter().copied().collect();
@@ -1436,7 +1560,8 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             options.items_revision = rows_key;
 
             let stats = cx.text(format!(
-                "window={} roots={} nodes={} rows={}",
+                "{} window={} roots={} nodes={} rows={}",
+                mode.stats_prefix(),
                 index.window,
                 index.roots.len(),
                 index.nodes_by_id.len(),
@@ -1494,7 +1619,11 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
 
                     let label = index_for_list
                         .node(id)
-                        .map(semantics::node_label)
+                        .map(|node| match mode {
+                            InspectTreeMode::Semantics => semantics::node_label(node),
+                            InspectTreeMode::Layout => semantics::layout_node_label(node),
+                            InspectTreeMode::Elements => semantics::element_node_label(node),
+                        })
                         .unwrap_or_else(|| format!("<missing semantics node id={id}>"));
 
                     let selected_id_model = st.semantics_selected_id.clone();
@@ -6455,6 +6584,32 @@ fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
     ]
 }
 
+fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        format!("dogfood workflow: {DEVTOOLS_DOGFOOD_WORKFLOW_ID}"),
+        format!("dogfood docs: {DEVTOOLS_GUI_BRANCH_DOC}"),
+        format!("artifacts root: {artifacts_root}"),
+        format!("open ui gallery: {DEVTOOLS_DOGFOOD_TARGET_COMMAND}"),
+        "pick target: enable inspect -> Pick -> click a Button page control".to_string(),
+        "preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}".to_string(),
+        format!("base script: {DEVTOOLS_DOGFOOD_BASE_SCRIPT}"),
+        format!("button script: {DEVTOOLS_DOGFOOD_BUTTON_SCRIPT}"),
+        format!("generate script from pick: {DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND}"),
+        format!("apply pick to script: {DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND}"),
+        format!("run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}"),
+        format!("pack selected bundle: {DEVTOOLS_DOGFOOD_PACK_COMMAND}"),
+        format!("open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}"),
+        "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
+            .to_string(),
+    ]
+}
+
 fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -7130,6 +7285,38 @@ mod tests {
         ));
         assert!(text.contains(
             "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+        ));
+    }
+
+    #[test]
+    fn devtools_dogfood_workflow_lines_surface_ui_gallery_loop() {
+        let lines = devtools_dogfood_workflow_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("dogfood workflow: ui-gallery-button-dogfood"));
+        assert!(text.contains(
+            "dogfood docs: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        ));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains("open ui gallery: cargo run -p fret-ui-gallery --release"));
+        assert!(
+            text.contains("pick target: enable inspect -> Pick -> click a Button page control")
+        );
+        assert!(
+            text.contains("preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}")
+        );
+        assert!(text.contains("base script: tools/diag-scripts/ui-gallery-lite-smoke.json"));
+        assert!(text.contains(
+            "button script: tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json"
+        ));
+        assert!(text.contains("generate script from pick: cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json"));
+        assert!(text.contains("apply pick to script: cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json"));
+        assert!(text.contains("run and pack: cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release"));
+        assert!(text.contains(
+            "pack selected bundle: cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only"
+        ));
+        assert!(text.contains("open viewer: pnpm -C tools/fret-bundle-viewer dev"));
+        assert!(text.contains(
+            "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
         ));
     }
 

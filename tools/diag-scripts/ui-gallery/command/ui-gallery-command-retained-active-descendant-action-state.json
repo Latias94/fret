@@ -1,0 +1,174 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-command-retained-active-descendant-action-state",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui_gallery",
+      "command",
+      "active_descendant",
+      "semantics",
+      "a11y",
+      "action_state",
+      "retained",
+      "virtual_list",
+      "regression_pack"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "command",
+      "FRET_UI_GALLERY_STATUS_BAR": "1"
+    },
+    "target_hints": [
+      "Proves a retained/windowed active-descendant row clears while detached.",
+      "Proves the reattached active row exposes updated disabled/invoke action state."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-command" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-root" },
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "padding_px": 8.0,
+      "require_fully_within_window": true,
+      "timeout_frames": 600,
+      "require_fully_within_container": true
+    },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-reset.chrome" },
+      "padding_px": 4.0,
+      "within_window": true,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-reset.chrome" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-retained-active-input" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" },
+        "disabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-scroll-away.chrome" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "active_item_is_none",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-retained-active-input" }
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-command-retained-active-descendant-detached"
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-disable.chrome" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-scroll-back.chrome" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-retained-active-input" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-row-2" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-retained-active-status" },
+        "text": "Active row disabled"
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-command-retained-active-descendant-action-state"
+    }
+  ]
+}

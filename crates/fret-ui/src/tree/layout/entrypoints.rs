@@ -5,6 +5,91 @@ use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
 use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
+#[derive(Default)]
+struct LayoutAllProfileTimings {
+    invalidate_scroll_handle_bindings: Option<Duration>,
+    expand_view_cache_invalidations: Option<Duration>,
+    request_build_roots: Option<Duration>,
+    layout_roots: Option<Duration>,
+    pending_barriers: Option<Duration>,
+    repair_view_cache_bounds: Option<Duration>,
+    layout_contained_view_cache_roots: Option<Duration>,
+    collapse_layout_observations: Option<Duration>,
+    refresh_semantics: Option<Duration>,
+    prepaint_after_layout: Option<Duration>,
+    focus_repair: Option<Duration>,
+    flush_deferred_cleanup: Option<Duration>,
+}
+
+#[derive(Clone, Copy)]
+enum LayoutPrepaintPhase {
+    StableFrame,
+    AfterLayout { scale_factor: f32 },
+}
+
+#[derive(Clone, Copy)]
+struct LayoutPostLayoutPhaseOptions {
+    prepaint: Option<LayoutPrepaintPhase>,
+    repair_focus: bool,
+    resolve_pending_focus_target: bool,
+    time_enabled: bool,
+    trace_enabled: bool,
+    window: Option<AppWindowId>,
+    frame_id: FrameId,
+    pass_kind: LayoutPassKind,
+}
+
+#[derive(Default)]
+struct LayoutPostLayoutPhaseTimings {
+    prepaint_after_layout: Option<Duration>,
+    focus_repair: Option<Duration>,
+    refresh_semantics: Option<Duration>,
+    flush_deferred_cleanup: Option<Duration>,
+}
+
+impl LayoutAllProfileTimings {
+    fn record_post_layout(&mut self, enabled: bool, timings: LayoutPostLayoutPhaseTimings) {
+        if !enabled {
+            return;
+        }
+
+        self.prepaint_after_layout = timings.prepaint_after_layout;
+        self.focus_repair = timings.focus_repair;
+        self.refresh_semantics = timings.refresh_semantics;
+        self.flush_deferred_cleanup = timings.flush_deferred_cleanup;
+    }
+
+    fn emit<H: UiHost>(&self, tree: &UiTree<H>, started: Option<Instant>) {
+        let Some(started) = started else {
+            return;
+        };
+
+        let total = started.elapsed();
+        tracing::info!(
+            window = ?tree.window,
+            total_ms = total.as_millis(),
+            invalidate_scroll_handle_bindings_ms =
+                self.invalidate_scroll_handle_bindings.map(|d| d.as_millis()),
+            expand_view_cache_invalidations_ms =
+                self.expand_view_cache_invalidations.map(|d| d.as_millis()),
+            request_build_roots_ms = self.request_build_roots.map(|d| d.as_millis()),
+            layout_roots_ms = self.layout_roots.map(|d| d.as_millis()),
+            pending_barriers_ms = self.pending_barriers.map(|d| d.as_millis()),
+            repair_view_cache_bounds_ms = self.repair_view_cache_bounds.map(|d| d.as_millis()),
+            layout_contained_view_cache_roots_ms =
+                self.layout_contained_view_cache_roots.map(|d| d.as_millis()),
+            collapse_layout_observations_ms =
+                self.collapse_layout_observations.map(|d| d.as_millis()),
+            refresh_semantics_ms = self.refresh_semantics.map(|d| d.as_millis()),
+            prepaint_after_layout_ms = self.prepaint_after_layout.map(|d| d.as_millis()),
+            focus_repair_ms = self.focus_repair.map(|d| d.as_millis()),
+            flush_deferred_cleanup_ms = self.flush_deferred_cleanup.map(|d| d.as_millis()),
+            layout_nodes_performed = tree.debug_stats.layout_nodes_performed,
+            "layout_all profile"
+        );
+    }
+}
+
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
         &mut self,
@@ -38,17 +123,7 @@ impl<H: UiHost> UiTree<H> {
         let profile_layout_all = crate::runtime_config::ui_runtime_config().layout_all_profile
             && pass_kind == LayoutPassKind::Final;
         let profile_started = profile_layout_all.then(Instant::now);
-        let mut t_invalidate_scroll_handle_bindings: Option<Duration> = None;
-        let mut t_expand_view_cache_invalidations: Option<Duration> = None;
-        let mut t_request_build_roots: Option<Duration> = None;
-        let mut t_layout_roots: Option<Duration> = None;
-        let mut t_pending_barriers: Option<Duration> = None;
-        let mut t_repair_view_cache_bounds: Option<Duration> = None;
-        let mut t_layout_contained_view_cache_roots: Option<Duration> = None;
-        let mut t_collapse_layout_observations: Option<Duration> = None;
-        let mut t_refresh_semantics: Option<Duration> = None;
-        let mut t_prepaint_after_layout: Option<Duration> = None;
-        let mut t_flush_deferred_cleanup: Option<Duration> = None;
+        let mut profile_timings = LayoutAllProfileTimings::default();
 
         if pass_kind == LayoutPassKind::Final {
             self.layout_node_profile = LayoutNodeProfileConfig::from_env()
@@ -137,7 +212,7 @@ impl<H: UiHost> UiTree<H> {
             },
         );
         if profile_layout_all {
-            t_invalidate_scroll_handle_bindings = invalidate_elapsed;
+            profile_timings.invalidate_scroll_handle_bindings = invalidate_elapsed;
         }
         if self.debug_enabled
             && let Some(invalidate_elapsed) = invalidate_elapsed
@@ -180,34 +255,22 @@ impl<H: UiHost> UiTree<H> {
                     .get(root)
                     .is_some_and(|node| node.invalidation.layout)
             });
-            let prepaint_started = self.debug_enabled.then(Instant::now);
-            self.prepaint_after_layout_stable_frame(app);
-            if let Some(prepaint_started) = prepaint_started {
-                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
-            }
             self.debug_stats.layout_skipped_engine_frame = true;
-
-            let focus_started = self.debug_enabled.then(Instant::now);
-            self.resolve_pending_focus_target_if_needed(app);
-            self.repair_focus_node_from_focused_element_if_needed(app);
-            if let Some(focus_started) = focus_started {
-                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
-            }
-
-            if self.semantics_requested {
-                let semantics_started = self.debug_enabled.then(Instant::now);
-                self.semantics_requested = false;
-                self.refresh_semantics_snapshot(app);
-                if let Some(semantics_started) = semantics_started {
-                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
-                }
-            }
-
-            let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
-            self.flush_deferred_cleanup(services);
-            if let Some(deferred_cleanup_started) = deferred_cleanup_started {
-                self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
-            }
+            let post_layout_timings = self.run_layout_post_layout_phases(
+                app,
+                services,
+                LayoutPostLayoutPhaseOptions {
+                    prepaint: Some(LayoutPrepaintPhase::StableFrame),
+                    repair_focus: true,
+                    resolve_pending_focus_target: true,
+                    time_enabled: layout_phase_time_enabled,
+                    trace_enabled: trace_layout,
+                    window,
+                    frame_id,
+                    pass_kind,
+                },
+            );
+            profile_timings.record_post_layout(profile_layout_all, post_layout_timings);
             self.last_layout_frame_id = Some(app.frame_id());
             if let Some(started) = started {
                 self.debug_stats.layout_time = started
@@ -215,6 +278,8 @@ impl<H: UiHost> UiTree<H> {
                     .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
             }
             self.refine_pending_window_runtime_snapshots_after_layout(app);
+            profile_timings.emit(self, profile_started);
+            self.emit_final_layout_profiles_if_needed(app, pass_kind);
             return;
         }
 
@@ -233,7 +298,7 @@ impl<H: UiHost> UiTree<H> {
                 || self.expand_view_cache_layout_invalidations_if_needed(),
             );
             if profile_layout_all {
-                t_expand_view_cache_invalidations = expand_elapsed;
+                profile_timings.expand_view_cache_invalidations = expand_elapsed;
             }
             if self.debug_enabled
                 && let Some(expand_elapsed) = expand_elapsed
@@ -253,31 +318,21 @@ impl<H: UiHost> UiTree<H> {
             && !force_post_resize_rebuild
         {
             self.debug_stats.layout_fast_path_taken = true;
-            let prepaint_started = self.debug_enabled.then(Instant::now);
-            self.prepaint_after_layout(app, services, scale_factor);
-            if let Some(prepaint_started) = prepaint_started {
-                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
-            }
-
-            let focus_started = self.debug_enabled.then(Instant::now);
-            self.repair_focus_node_from_focused_element_if_needed(app);
-            if let Some(focus_started) = focus_started {
-                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
-            }
-
-            if self.semantics_requested {
-                let semantics_started = self.debug_enabled.then(Instant::now);
-                self.semantics_requested = false;
-                self.refresh_semantics_snapshot(app);
-                if let Some(semantics_started) = semantics_started {
-                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
-                }
-            }
-            let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
-            self.flush_deferred_cleanup(services);
-            if let Some(deferred_cleanup_started) = deferred_cleanup_started {
-                self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
-            }
+            let post_layout_timings = self.run_layout_post_layout_phases(
+                app,
+                services,
+                LayoutPostLayoutPhaseOptions {
+                    prepaint: Some(LayoutPrepaintPhase::AfterLayout { scale_factor }),
+                    repair_focus: true,
+                    resolve_pending_focus_target: false,
+                    time_enabled: layout_phase_time_enabled,
+                    trace_enabled: trace_layout,
+                    window,
+                    frame_id,
+                    pass_kind,
+                },
+            );
+            profile_timings.record_post_layout(profile_layout_all, post_layout_timings);
             self.last_layout_frame_id = Some(app.frame_id());
 
             self.last_layout_bounds = Some(bounds);
@@ -289,6 +344,8 @@ impl<H: UiHost> UiTree<H> {
                     .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
             }
             self.refine_pending_window_runtime_snapshots_after_layout(app);
+            profile_timings.emit(self, profile_started);
+            self.emit_final_layout_profiles_if_needed(app, pass_kind);
             return;
         }
 
@@ -328,7 +385,7 @@ impl<H: UiHost> UiTree<H> {
             },
         );
         if profile_layout_all {
-            t_request_build_roots = request_build_elapsed;
+            profile_timings.request_build_roots = request_build_elapsed;
         }
         if self.debug_enabled
             && let Some(request_build_elapsed) = request_build_elapsed
@@ -371,7 +428,7 @@ impl<H: UiHost> UiTree<H> {
             },
         );
         if profile_layout_all {
-            t_layout_roots = roots_elapsed;
+            profile_timings.layout_roots = roots_elapsed;
         }
         if self.debug_enabled
             && let Some(roots_elapsed) = roots_elapsed
@@ -402,7 +459,7 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
             if profile_layout_all {
-                t_pending_barriers = barrier_elapsed;
+                profile_timings.pending_barriers = barrier_elapsed;
             }
             if self.debug_enabled
                 && let Some(barrier_elapsed) = barrier_elapsed
@@ -439,7 +496,7 @@ impl<H: UiHost> UiTree<H> {
                         || self.repair_view_cache_root_bounds_from_engine_if_needed(app),
                     );
                     if profile_layout_all {
-                        t_repair_view_cache_bounds = repair_elapsed;
+                        profile_timings.repair_view_cache_bounds = repair_elapsed;
                     }
                     if self.debug_enabled
                         && let Some(repair_elapsed) = repair_elapsed
@@ -469,7 +526,7 @@ impl<H: UiHost> UiTree<H> {
                         },
                     );
                     if profile_layout_all {
-                        t_layout_contained_view_cache_roots = contained_elapsed;
+                        profile_timings.layout_contained_view_cache_roots = contained_elapsed;
                     }
                     if self.debug_enabled
                         && let Some(contained_elapsed) = contained_elapsed
@@ -492,7 +549,7 @@ impl<H: UiHost> UiTree<H> {
                         || self.collapse_layout_observations_to_view_cache_roots_if_needed(),
                     );
                     if profile_layout_all {
-                        t_collapse_layout_observations = collapse_elapsed;
+                        profile_timings.collapse_layout_observations = collapse_elapsed;
                     }
                     if self.debug_enabled
                         && let Some(collapse_elapsed) = collapse_elapsed
@@ -509,99 +566,25 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if pass_kind == LayoutPassKind::Final {
+        let final_pass = pass_kind == LayoutPassKind::Final;
+        if final_pass {
             self.flush_layout_bounds_records_if_needed(app);
-            let (_, prepaint_elapsed) = fret_perf::measure_span(
-                layout_phase_time_enabled,
-                trace_layout,
-                || {
-                    tracing::trace_span!(
-                        "fret.ui.layout.prepaint_after_layout",
-                        window = ?window,
-                        frame_id = frame_id.0,
-                        pass_kind = ?pass_kind,
-                    )
-                },
-                || self.prepaint_after_layout(app, services, scale_factor),
-            );
-            if profile_layout_all {
-                t_prepaint_after_layout = prepaint_elapsed;
-            }
-            if self.debug_enabled
-                && let Some(prepaint_elapsed) = prepaint_elapsed
-            {
-                self.debug_stats.layout_prepaint_after_layout_time += prepaint_elapsed;
-            }
         }
-        if pass_kind == LayoutPassKind::Final {
-            let (_, focus_elapsed) = fret_perf::measure_span(
-                self.debug_enabled,
-                trace_layout,
-                || {
-                    tracing::trace_span!(
-                        "fret.ui.layout.focus_repair",
-                        window = ?window,
-                        frame_id = frame_id.0,
-                        pass_kind = ?pass_kind,
-                    )
-                },
-                || {
-                    self.resolve_pending_focus_target_if_needed(app);
-                    self.repair_focus_node_from_focused_element_if_needed(app)
-                },
-            );
-            if let Some(focus_elapsed) = focus_elapsed {
-                self.debug_stats.layout_focus_repair_time += focus_elapsed;
-            }
-        }
-
-        if self.semantics_requested {
-            let (_, semantics_elapsed) = fret_perf::measure_span(
-                layout_phase_time_enabled,
-                trace_layout,
-                || {
-                    tracing::trace_span!(
-                        "fret.ui.layout.refresh_semantics",
-                        window = ?window,
-                        frame_id = frame_id.0,
-                        pass_kind = ?pass_kind,
-                    )
-                },
-                || {
-                    self.semantics_requested = false;
-                    self.refresh_semantics_snapshot(app);
-                },
-            );
-            if profile_layout_all {
-                t_refresh_semantics = semantics_elapsed;
-            }
-            if self.debug_enabled
-                && let Some(semantics_elapsed) = semantics_elapsed
-            {
-                self.debug_stats.layout_semantics_refresh_time += semantics_elapsed;
-            }
-        }
-        let (_, deferred_cleanup_elapsed) = fret_perf::measure_span(
-            layout_phase_time_enabled,
-            trace_layout,
-            || {
-                tracing::trace_span!(
-                    "fret.ui.layout.flush_deferred_cleanup",
-                    window = ?window,
-                    frame_id = frame_id.0,
-                    pass_kind = ?pass_kind,
-                )
+        let post_layout_timings = self.run_layout_post_layout_phases(
+            app,
+            services,
+            LayoutPostLayoutPhaseOptions {
+                prepaint: final_pass.then_some(LayoutPrepaintPhase::AfterLayout { scale_factor }),
+                repair_focus: final_pass,
+                resolve_pending_focus_target: final_pass,
+                time_enabled: layout_phase_time_enabled,
+                trace_enabled: trace_layout,
+                window,
+                frame_id,
+                pass_kind,
             },
-            || self.flush_deferred_cleanup(services),
         );
-        if profile_layout_all {
-            t_flush_deferred_cleanup = deferred_cleanup_elapsed;
-        }
-        if self.debug_enabled
-            && let Some(deferred_cleanup_elapsed) = deferred_cleanup_elapsed
-        {
-            self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_elapsed;
-        }
+        profile_timings.record_post_layout(profile_layout_all, post_layout_timings);
 
         // layout_time is computed below, and should exclude prepaint_after_layout time (since that
         // work is accounted separately and runs even on "layout fast path" frames).
@@ -632,31 +615,133 @@ impl<H: UiHost> UiTree<H> {
                 .saturating_sub(layout_engine_solve_time_start);
         }
 
-        if let Some(started) = profile_started {
-            let total = started.elapsed();
-            tracing::info!(
-                window = ?self.window,
-                total_ms = total.as_millis(),
-                invalidate_scroll_handle_bindings_ms =
-                    t_invalidate_scroll_handle_bindings.map(|d| d.as_millis()),
-                expand_view_cache_invalidations_ms =
-                    t_expand_view_cache_invalidations.map(|d| d.as_millis()),
-                request_build_roots_ms = t_request_build_roots.map(|d| d.as_millis()),
-                layout_roots_ms = t_layout_roots.map(|d| d.as_millis()),
-                pending_barriers_ms = t_pending_barriers.map(|d| d.as_millis()),
-                repair_view_cache_bounds_ms = t_repair_view_cache_bounds.map(|d| d.as_millis()),
-                layout_contained_view_cache_roots_ms =
-                    t_layout_contained_view_cache_roots.map(|d| d.as_millis()),
-                collapse_layout_observations_ms =
-                    t_collapse_layout_observations.map(|d| d.as_millis()),
-                refresh_semantics_ms = t_refresh_semantics.map(|d| d.as_millis()),
-                prepaint_after_layout_ms = t_prepaint_after_layout.map(|d| d.as_millis()),
-                flush_deferred_cleanup_ms = t_flush_deferred_cleanup.map(|d| d.as_millis()),
-                layout_nodes_performed = self.debug_stats.layout_nodes_performed,
-                "layout_all profile"
-            );
+        profile_timings.emit(self, profile_started);
+        self.emit_final_layout_profiles_if_needed(app, pass_kind);
+    }
+
+    fn run_layout_post_layout_phases(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        options: LayoutPostLayoutPhaseOptions,
+    ) -> LayoutPostLayoutPhaseTimings {
+        let mut timings = LayoutPostLayoutPhaseTimings::default();
+
+        if let Some(prepaint) = options.prepaint {
+            let (_, elapsed) = match prepaint {
+                LayoutPrepaintPhase::StableFrame => fret_perf::measure_span(
+                    options.time_enabled,
+                    options.trace_enabled,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.layout.prepaint_after_layout_stable_frame",
+                            window = ?options.window,
+                            frame_id = options.frame_id.0,
+                            pass_kind = ?options.pass_kind,
+                        )
+                    },
+                    || self.prepaint_after_layout_stable_frame(app),
+                ),
+                LayoutPrepaintPhase::AfterLayout { scale_factor } => fret_perf::measure_span(
+                    options.time_enabled,
+                    options.trace_enabled,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.layout.prepaint_after_layout",
+                            window = ?options.window,
+                            frame_id = options.frame_id.0,
+                            pass_kind = ?options.pass_kind,
+                            scale_factor,
+                        )
+                    },
+                    || self.prepaint_after_layout(app, services, scale_factor),
+                ),
+            };
+            timings.prepaint_after_layout = elapsed;
+            if self.debug_enabled
+                && let Some(elapsed) = elapsed
+            {
+                self.debug_stats.layout_prepaint_after_layout_time += elapsed;
+            }
         }
 
+        if options.repair_focus {
+            let (_, elapsed) = fret_perf::measure_span(
+                options.time_enabled,
+                options.trace_enabled,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.focus_repair",
+                        window = ?options.window,
+                        frame_id = options.frame_id.0,
+                        pass_kind = ?options.pass_kind,
+                        resolve_pending_focus_target = options.resolve_pending_focus_target,
+                    )
+                },
+                || {
+                    if options.resolve_pending_focus_target {
+                        self.resolve_pending_focus_target_if_needed(app);
+                    }
+                    self.repair_focus_node_from_focused_element_if_needed(app)
+                },
+            );
+            timings.focus_repair = elapsed;
+            if self.debug_enabled
+                && let Some(elapsed) = elapsed
+            {
+                self.debug_stats.layout_focus_repair_time += elapsed;
+            }
+        }
+
+        if self.semantics_requested {
+            let (_, elapsed) = fret_perf::measure_span(
+                options.time_enabled,
+                options.trace_enabled,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.refresh_semantics",
+                        window = ?options.window,
+                        frame_id = options.frame_id.0,
+                        pass_kind = ?options.pass_kind,
+                    )
+                },
+                || {
+                    self.semantics_requested = false;
+                    self.refresh_semantics_snapshot(app);
+                },
+            );
+            timings.refresh_semantics = elapsed;
+            if self.debug_enabled
+                && let Some(elapsed) = elapsed
+            {
+                self.debug_stats.layout_semantics_refresh_time += elapsed;
+            }
+        }
+
+        let (_, elapsed) = fret_perf::measure_span(
+            options.time_enabled,
+            options.trace_enabled,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout.flush_deferred_cleanup",
+                    window = ?options.window,
+                    frame_id = options.frame_id.0,
+                    pass_kind = ?options.pass_kind,
+                )
+            },
+            || self.flush_deferred_cleanup(services),
+        );
+        timings.flush_deferred_cleanup = elapsed;
+        if self.debug_enabled
+            && let Some(elapsed) = elapsed
+        {
+            self.debug_stats.layout_deferred_cleanup_time += elapsed;
+        }
+
+        timings
+    }
+
+    fn emit_final_layout_profiles_if_needed(&mut self, app: &mut H, pass_kind: LayoutPassKind) {
         if pass_kind == LayoutPassKind::Final {
             self.emit_layout_node_profile(app);
             self.emit_measure_node_profile(app);

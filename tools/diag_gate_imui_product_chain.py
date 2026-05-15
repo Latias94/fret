@@ -51,6 +51,7 @@ DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGF
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
+DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
@@ -349,6 +350,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     name = "devtools gui product workflow source"
     path = repo_root / DEVTOOLS_GUI_SOURCE
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
+    semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
     gate_profile_path = repo_root / DEVTOOLS_GATE_PROFILE_SOURCE
     protocol_path = repo_root / DEVTOOLS_PROTOCOL_SOURCE
@@ -359,6 +361,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     try:
         source = path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
+        semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
         protocol_source = protocol_path.read_text(encoding="utf-8")
@@ -371,6 +374,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         [
             source,
             ws_source,
+            semantics_source,
             gate_run_source,
             protocol_source,
             bootstrap_ws_source,
@@ -387,6 +391,15 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
         'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
         'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
+        'const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood"',
+        'const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release"',
+        'const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json"',
+        'const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =',
+        'const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =',
+        'const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev"',
         'const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
         'const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =',
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
@@ -439,6 +452,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "fn file_url_from_path(",
         "fn percent_encode_file_url_path(",
         "10%20stats%23failed.json",
+        "Dogfood Workflow",
+        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
+        "devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref())",
         "Demo / Metrics / Debug Routes",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "Gate Commands",
@@ -447,6 +463,12 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "Live Inspect Overlay Hooks",
         "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
         "Raw Inspect Payloads",
+        "VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16)",
+        "options.items_revision = rows_key",
+        "let mut stack = Vec::with_capacity(index.roots.len().max(1));",
+        "for child in children.iter().rev()",
+        "live_semantics_request_decision(",
+        "now_unix_ms.saturating_sub(prev) >= 1000",
         "devtools.inspect.hover_bounds",
         "devtools.inspect.overlay_hooks",
         "devtools.inspect.raw_payloads",
@@ -522,15 +544,28 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "fn script_target_gate_inputs(",
         "fn perf_threshold_gate_inputs(",
         "fn resource_footprint_threshold_gate_inputs(",
+        "fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_profile_command_builder(",
         "fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>",
+        "dogfood workflow: {DEVTOOLS_DOGFOOD_WORKFLOW_ID}",
+        "open ui gallery: {DEVTOOLS_DOGFOOD_TARGET_COMMAND}",
+        'preferred selector: {\\"kind\\":\\"test_id\\",\\"id\\":\\"ui-gallery-nav-button\\"}',
+        "apply pick to script: {DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND}",
+        "run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}",
+        "open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
         "devtools_demo_metrics_debug_lines_surface_canonical_routes",
+        "devtools_dogfood_workflow_lines_surface_ui_gallery_loop",
         "devtools_gate_command_lines_surface_first_class_gates",
+        "compute_rows_handles_50k_flat_semantics_nodes",
+        "compute_rows_handles_50k_deep_semantics_tree_without_recursion",
+        "compute_rows_search_forces_visible_ancestor_path_on_large_tree",
+        "live_semantics_request_decision_throttles_unchanged_selection_to_one_hz",
+        "live_semantics_request_decision_allows_selection_change_and_manual_refresh",
         "file_url_from_path_projects_native_artifact_paths",
         "regression_selected_perf_evidence",
         "regression_summary_drilldown(&summary)",

@@ -108,6 +108,14 @@
       "timeout_frames": 600
     },
     {
+      "type": "save_pointer_point",
+      "name": "underlay-probe-pre-modal-center",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-drawer-outside-press-underlay-probe"
+      }
+    },
+    {
       "type": "click_stable",
       "target": {
         "kind": "test_id",
@@ -127,24 +135,8 @@
     },
     { "type": "wait_frames", "n": 8 },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "bounds_within_window",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-drawer-outside-press-underlay-probe"
-        },
-        "padding_px": 8.0,
-        "eps_px": 1.0
-      },
-      "timeout_frames": 600
-    },
-    {
-      "type": "click",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-drawer-outside-press-underlay-probe"
-      }
+      "type": "click_saved_point",
+      "name": "underlay-probe-pre-modal-center"
     },
     {
       "type": "wait_until",

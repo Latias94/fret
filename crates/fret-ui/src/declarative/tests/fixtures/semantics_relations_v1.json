@@ -415,6 +415,108 @@
       }
     },
     {
+      "id": "relation-targets-detach-reattach-clear-stale-edges",
+      "scenario": { "kind": "relation_targets_detach_reattach" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.initial.labelled_by",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.initial.described_by",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.initial.controls",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.detached.label_absent",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.detached.description_absent",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.detached.controlled_absent",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.detached.labelled_by_empty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.detached.described_by_empty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.detached.controls_empty",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.final.labelled_by",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.final.described_by",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "relation_targets.final.controls",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "relation-source" },
+            "relation": "labelled_by",
+            "target": { "kind": "test_id", "id": "relation-label" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "relation-source" },
+            "relation": "described_by",
+            "target": { "kind": "test_id", "id": "relation-description" }
+          },
+          {
+            "kind": "semantics_relation_includes",
+            "source": { "kind": "test_id", "id": "relation-source" },
+            "relation": "controls",
+            "target": { "kind": "test_id", "id": "relation-controlled" }
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA relation edges must only point to nodes in the exported accessibility tree snapshot",
+        "note": "The source keeps the last-known declarative element ids while label, description, and controlled targets detach. The snapshot must clear those edges while targets are absent, then resolve them again after reattach."
+      }
+    },
+    {
       "id": "hidden-subtree-policy-excludes-default-selectors-but-keeps-diagnostics",
       "scenario": { "kind": "hidden_subtree_policy" },
       "oracle": {

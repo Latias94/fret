@@ -123,6 +123,35 @@ fn script_v1_roundtrip_active_item_is_none_predicate() {
 }
 
 #[test]
+fn script_v1_roundtrip_semantics_relation_predicates() {
+    assert_script_v1_roundtrip(
+        r#"{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "relation-source" },
+        "relation": "labelled_by",
+        "target": { "kind": "test_id", "id": "relation-label" }
+      },
+      "timeout_frames": 1
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "relation-source" },
+        "relation": "controls"
+      }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v1_roundtrip_window_style_effective_hit_test() {
     assert_script_v1_roundtrip(
         r#"{
@@ -223,6 +252,13 @@ fn script_v2_roundtrip_ui_gallery_separator_decorative_hidden_semantics() {
 fn script_v2_roundtrip_ui_gallery_accordion_usage_toggle() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_accordion_focusable_disabled_keyboard_suppression() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json"
     ));
 }
 
@@ -475,6 +511,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_checkbox_only_selection(
 fn script_v2_roundtrip_ui_gallery_select_commit_and_label_update() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json"
     ));
 }
 

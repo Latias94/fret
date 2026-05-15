@@ -85,8 +85,7 @@ use pick::{pick_best_match, pick_semantics_node_at};
 mod script_engine;
 use script_engine::{
     command_dispatch_trace_entry_matches_query, overlay_placement_trace_entry_matches_query,
-    overlay_placement_trace_entry_matches_query_any_step, push_click_stable_trace,
-    push_command_dispatch_trace, push_focus_trace, push_ime_event_trace,
+    push_click_stable_trace, push_command_dispatch_trace, push_focus_trace, push_ime_event_trace,
     push_overlay_placement_trace, push_script_event_log, push_shortcut_routing_trace,
     push_web_ime_trace, script_evidence_for_active, script_step_kind_name,
     shortcut_routing_trace_entry_matches_query,
@@ -118,8 +117,8 @@ pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, best_selector_for_node_validated, format_inspect_path,
     inspect_selector_candidates_report, parent_node_id, parse_semantics_role,
-    select_raw_semantics_node_scoped, select_semantics_node_scoped, suggest_selectors,
-    truncate_debug_value,
+    select_raw_semantics_node_scoped, select_semantics_node_scoped,
+    select_semantics_relation_endpoint_scoped, suggest_selectors, truncate_debug_value,
 };
 
 mod trace_helpers;

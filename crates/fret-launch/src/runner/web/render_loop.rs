@@ -18,8 +18,8 @@ use winit::window::Window;
 use crate::runner::common::slot_restore::{self, SlotPairOwner, with_slot_pair_restored};
 
 use super::super::{
-    EngineFrameUpdate, RenderTargetUpdate, WinitEventContext, WinitRenderContext,
-    WinitWindowContext,
+    EngineFrameKeepalive, EngineFrameUpdate, RenderTargetUpdate, WinitEventContext,
+    WinitRenderContext, WinitWindowContext,
 };
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
@@ -30,6 +30,46 @@ struct WebEnvironmentPreferenceSnapshot {
     forced_colors_mode: Option<ForcedColorsMode>,
     prefers_reduced_motion: Option<bool>,
     prefers_reduced_transparency: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum WebFramePhase {
+    Prepare,
+    Render { bounds: Rect, scale_factor: f32 },
+    Record { scene_ops: usize },
+    Present,
+    RenderScene,
+}
+
+impl WebFramePhase {
+    fn make_span(self) -> tracing::Span {
+        match self {
+            Self::Prepare => tracing::info_span!("fret.runner.prepare"),
+            Self::Render {
+                bounds,
+                scale_factor,
+            } => tracing::info_span!(
+                "fret.runner.render",
+                bounds = ?bounds,
+                scale_factor = scale_factor,
+            ),
+            Self::Record { scene_ops } => {
+                tracing::info_span!("fret.runner.record", scene_ops = scene_ops,)
+            }
+            Self::Present => tracing::info_span!("fret.runner.present"),
+            Self::RenderScene => tracing::info_span!("fret.runner.render_scene"),
+        }
+    }
+}
+
+fn enter_web_frame_phase<T>(phase: WebFramePhase, f: impl FnOnce() -> T) -> T {
+    fret_perf::measure_span(
+        false,
+        tracing::enabled!(tracing::Level::INFO),
+        || phase.make_span(),
+        f,
+    )
+    .0
 }
 
 pub(super) struct WebEnvironmentMediaQueries {
@@ -451,14 +491,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.drain_turns(event_loop, window, gfx, state);
 
         let scale_factor = scale as f32;
-        self.driver.gpu_frame_prepare(
-            &mut self.app,
-            self.app_window,
-            state,
-            &gfx.ctx,
-            &mut gfx.renderer,
-            scale_factor,
-        );
+        enter_web_frame_phase(WebFramePhase::Prepare, || {
+            self.driver.gpu_frame_prepare(
+                &mut self.app,
+                self.app_window,
+                state,
+                &gfx.ctx,
+                &mut gfx.renderer,
+                scale_factor,
+            );
+        });
 
         self.scene.clear();
         let render_text_debug_enabled =
@@ -466,28 +508,43 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
             .is_some_and(|v| !v.is_empty())
             || render_text_debug_enabled;
-        if render_text_diag_enabled {
-            gfx.renderer.begin_text_diagnostics_frame();
-        }
-        self.driver.render(WinitRenderContext {
-            app: &mut self.app,
-            services: &mut gfx.renderer,
-            window: self.app_window,
-            state,
-            bounds,
-            scale_factor,
-            scene: &mut self.scene,
-        });
+        enter_web_frame_phase(
+            WebFramePhase::Render {
+                bounds,
+                scale_factor,
+            },
+            || {
+                if render_text_diag_enabled {
+                    gfx.renderer.begin_text_diagnostics_frame();
+                }
+                self.driver.render(WinitRenderContext {
+                    app: &mut self.app,
+                    services: &mut gfx.renderer,
+                    window: self.app_window,
+                    state,
+                    bounds,
+                    scale_factor,
+                    scene: &mut self.scene,
+                });
+            },
+        );
 
-        let engine = self.driver.record_engine_frame(
-            &mut self.app,
-            self.app_window,
-            state,
-            &gfx.ctx,
-            &mut gfx.renderer,
-            scale_factor,
-            self.tick_id,
-            self.frame_id,
+        let engine = enter_web_frame_phase(
+            WebFramePhase::Record {
+                scene_ops: self.scene.ops_len(),
+            },
+            || {
+                self.driver.record_engine_frame(
+                    &mut self.app,
+                    self.app_window,
+                    state,
+                    &gfx.ctx,
+                    &mut gfx.renderer,
+                    scale_factor,
+                    self.tick_id,
+                    self.frame_id,
+                )
+            },
         );
         let EngineFrameUpdate {
             target_updates,
@@ -505,6 +562,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
+        enter_web_frame_phase(WebFramePhase::Present, || {
+            self.present_frame(
+                event_loop,
+                window,
+                gfx,
+                state,
+                scale_factor,
+                render_text_debug_enabled,
+                render_text_diag_enabled,
+                command_buffers,
+                keepalive,
+            );
+        });
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn present_frame(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window: &dyn Window,
+        gfx: &mut GfxState,
+        state: &mut D::WindowState,
+        scale_factor: f32,
+        render_text_debug_enabled: bool,
+        render_text_diag_enabled: bool,
+        command_buffers: Vec<wgpu::CommandBuffer>,
+        keepalive: Vec<EngineFrameKeepalive>,
+    ) {
         let (frame, view) = match gfx.surface_state.get_current_frame_view() {
             Ok(v) => v,
             Err(err) => {
@@ -532,18 +617,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         };
 
-        let cmd = gfx.renderer.render_scene(
-            &gfx.ctx.device,
-            &gfx.ctx.queue,
-            RenderSceneParams {
-                format: gfx.surface_state.format(),
-                target_view: &view,
-                scene: &self.scene,
-                clear: self.config.clear_color,
-                scale_factor,
-                viewport_size: gfx.surface_state.size(),
-            },
-        );
+        let cmd = enter_web_frame_phase(WebFramePhase::RenderScene, || {
+            gfx.renderer.render_scene(
+                &gfx.ctx.device,
+                &gfx.ctx.queue,
+                RenderSceneParams {
+                    format: gfx.surface_state.format(),
+                    target_view: &view,
+                    scene: &self.scene,
+                    clear: self.config.clear_color,
+                    scale_factor,
+                    viewport_size: gfx.surface_state.size(),
+                },
+            )
+        });
         crate::runner::font_catalog::publish_renderer_svg_text_bridge_diagnostics(
             &mut self.app,
             &gfx.renderer,

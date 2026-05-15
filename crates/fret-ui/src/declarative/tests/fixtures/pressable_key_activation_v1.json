@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.pressable-key-activation.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["keyboard", "focus", "semantics", "action_state"],
+  "cases": [
+    {
+      "id": "enter-and-space-enter-activates",
+      "pressable": {
+        "enabled": true,
+        "focusable": true,
+        "key_activation": "enter_and_space",
+        "semantic_disabled": null,
+        "semantic_invokable": null
+      },
+      "key": "enter",
+      "expected": {
+        "focus_traversable": true,
+        "focus_preserved_after_layout": true,
+        "semantics_disabled": false,
+        "semantics_focus": true,
+        "semantics_invoke": true,
+        "activated": true
+      }
+    },
+    {
+      "id": "enter-and-space-space-activates",
+      "pressable": {
+        "enabled": true,
+        "focusable": true,
+        "key_activation": "enter_and_space",
+        "semantic_disabled": null,
+        "semantic_invokable": null
+      },
+      "key": "space",
+      "expected": {
+        "focus_traversable": true,
+        "focus_preserved_after_layout": true,
+        "semantics_disabled": false,
+        "semantics_focus": true,
+        "semantics_invoke": true,
+        "activated": true
+      }
+    },
+    {
+      "id": "enter-only-space-does-not-activate",
+      "pressable": {
+        "enabled": true,
+        "focusable": true,
+        "key_activation": "enter_only",
+        "semantic_disabled": null,
+        "semantic_invokable": null
+      },
+      "key": "space",
+      "expected": {
+        "focus_traversable": true,
+        "focus_preserved_after_layout": true,
+        "semantics_disabled": false,
+        "semantics_focus": true,
+        "semantics_invoke": true,
+        "activated": false
+      }
+    },
+    {
+      "id": "keyboard-none-enter-does-not-activate",
+      "pressable": {
+        "enabled": true,
+        "focusable": true,
+        "key_activation": "none",
+        "semantic_disabled": null,
+        "semantic_invokable": null
+      },
+      "key": "enter",
+      "expected": {
+        "focus_traversable": true,
+        "focus_preserved_after_layout": true,
+        "semantics_disabled": false,
+        "semantics_focus": true,
+        "semantics_invoke": true,
+        "activated": false
+      }
+    },
+    {
+      "id": "focusable-disabled-enter-does-not-activate",
+      "pressable": {
+        "enabled": true,
+        "focusable": true,
+        "key_activation": "none",
+        "semantic_disabled": true,
+        "semantic_invokable": false
+      },
+      "key": "enter",
+      "expected": {
+        "focus_traversable": true,
+        "focus_preserved_after_layout": true,
+        "semantics_disabled": true,
+        "semantics_focus": true,
+        "semantics_invoke": false,
+        "activated": false
+      }
+    },
+    {
+      "id": "disabled-pressable-is-not-focus-traversable-or-invokable",
+      "pressable": {
+        "enabled": false,
+        "focusable": true,
+        "key_activation": "enter_and_space",
+        "semantic_disabled": null,
+        "semantic_invokable": null
+      },
+      "key": "enter",
+      "expected": {
+        "focus_traversable": false,
+        "focus_preserved_after_layout": true,
+        "semantics_disabled": true,
+        "semantics_focus": false,
+        "semantics_invoke": false,
+        "activated": false
+      }
+    }
+  ]
+}

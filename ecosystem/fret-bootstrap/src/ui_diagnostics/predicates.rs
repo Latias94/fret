@@ -83,6 +83,39 @@ fn semantics_action_value(
     }
 }
 
+fn semantics_relation_includes(
+    source: &fret_core::SemanticsNode,
+    relation: fret_diag_protocol::UiSemanticsRelationV1,
+    target: fret_core::NodeId,
+) -> bool {
+    match relation {
+        fret_diag_protocol::UiSemanticsRelationV1::ActiveDescendant => {
+            source.active_descendant == Some(target)
+        }
+        fret_diag_protocol::UiSemanticsRelationV1::LabelledBy => {
+            source.labelled_by.contains(&target)
+        }
+        fret_diag_protocol::UiSemanticsRelationV1::DescribedBy => {
+            source.described_by.contains(&target)
+        }
+        fret_diag_protocol::UiSemanticsRelationV1::Controls => source.controls.contains(&target),
+    }
+}
+
+fn semantics_relation_is_empty(
+    source: &fret_core::SemanticsNode,
+    relation: fret_diag_protocol::UiSemanticsRelationV1,
+) -> bool {
+    match relation {
+        fret_diag_protocol::UiSemanticsRelationV1::ActiveDescendant => {
+            source.active_descendant.is_none()
+        }
+        fret_diag_protocol::UiSemanticsRelationV1::LabelledBy => source.labelled_by.is_empty(),
+        fret_diag_protocol::UiSemanticsRelationV1::DescribedBy => source.described_by.is_empty(),
+        fret_diag_protocol::UiSemanticsRelationV1::Controls => source.controls.is_empty(),
+    }
+}
+
 fn app_snapshot_field_equals(
     app_snapshot: Option<&serde_json::Value>,
     pointer: &str,
@@ -179,7 +212,9 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::AppSnapshotFieldEquals { pointer, value } => {
             app_snapshot_field_equals(app_snapshot, pointer, value)
         }
-        UiPredicateV1::RawSemanticsHiddenIs { .. } => None,
+        UiPredicateV1::RawSemanticsHiddenIs { .. }
+        | UiPredicateV1::SemanticsRelationIncludes { .. }
+        | UiPredicateV1::SemanticsRelationIsEmpty { .. } => None,
         UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
         UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
@@ -651,6 +686,21 @@ fn eval_predicate(
     let select_node = |target: &UiSelectorV1| {
         select_semantics_node_scoped(snapshot, window, element_runtime, target, scope_root)
     };
+    let select_relation_source = |target: &UiSelectorV1| {
+        select_semantics_relation_endpoint_scoped(
+            snapshot,
+            window,
+            element_runtime,
+            target,
+            scope_root,
+        )
+        .or_else(|| {
+            select_semantics_relation_endpoint_scoped(snapshot, window, element_runtime, target, None)
+        })
+    };
+    let select_relation_target = |target: &UiSelectorV1| {
+        select_semantics_relation_endpoint_scoped(snapshot, window, element_runtime, target, None)
+    };
     let select_raw_node = |target: &UiSelectorV1| {
         select_raw_semantics_node_scoped(snapshot, window, element_runtime, target, scope_root)
     };
@@ -1069,6 +1119,25 @@ fn eval_predicate(
             };
 
             focus_node.role != SemanticsRole::ListBoxOption
+        }
+        UiPredicateV1::SemanticsRelationIncludes {
+            source,
+            relation,
+            target,
+        } => {
+            let Some(source_node) = select_relation_source(source) else {
+                return false;
+            };
+            let Some(target_node) = select_relation_target(target) else {
+                return false;
+            };
+            semantics_relation_includes(source_node, *relation, target_node.id)
+        }
+        UiPredicateV1::SemanticsRelationIsEmpty { source, relation } => {
+            let Some(source_node) = select_relation_source(source) else {
+                return false;
+            };
+            semantics_relation_is_empty(source_node, *relation)
         }
         UiPredicateV1::BarrierRoots {
             barrier_root,
@@ -1860,6 +1929,7 @@ mod predicate_tests {
         NodeId, Point, PointerId, Px, Rect, RenderTargetId, SemanticsActions, SemanticsFlags,
         SemanticsLive, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
     };
+    use fret_diag_protocol::UiSemanticsRelationV1;
     use slotmap::KeyData;
 
     fn node_id(id: u64) -> NodeId {
@@ -2231,6 +2301,375 @@ mod predicate_tests {
             &UiPredicateV1::SetSizeIs {
                 target,
                 set_size: 23,
+            },
+        ));
+    }
+
+    #[test]
+    fn semantics_relation_predicates_match_semantics_edges() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut source = semantics_node(2, "relation-source", false);
+        source.parent = Some(root.id);
+        source.role = SemanticsRole::ComboBox;
+        let mut label = semantics_node(3, "relation-label", false);
+        label.parent = Some(root.id);
+        let mut description = semantics_node(4, "relation-description", false);
+        description.parent = Some(root.id);
+        let mut controlled = semantics_node(5, "relation-controlled", false);
+        controlled.parent = Some(root.id);
+        let mut active = semantics_node(6, "relation-active", false);
+        active.parent = Some(root.id);
+        active.role = SemanticsRole::ListBoxOption;
+        source.active_descendant = Some(active.id);
+        source.labelled_by.push(label.id);
+        source.described_by.push(description.id);
+        source.controls.push(controlled.id);
+
+        let present_snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                root.clone(),
+                source.clone(),
+                label,
+                description,
+                controlled,
+                active,
+            ],
+        };
+        let source_selector = UiSelectorV1::TestId {
+            id: "relation-source".to_string(),
+            root_z_index: None,
+        };
+        let eval = |snapshot: &SemanticsSnapshot, predicate: &UiPredicateV1| {
+            eval_predicate(
+                snapshot,
+                rect(0.0, 0.0, 100.0, 100.0),
+                window,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                &[],
+                1,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                0,
+                false,
+                true,
+                predicate,
+            )
+        };
+
+        assert!(eval(
+            &present_snapshot,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::ActiveDescendant,
+                target: UiSelectorV1::TestId {
+                    id: "relation-active".to_string(),
+                    root_z_index: None,
+                },
+            },
+        ));
+        assert!(eval(
+            &present_snapshot,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::LabelledBy,
+                target: UiSelectorV1::TestId {
+                    id: "relation-label".to_string(),
+                    root_z_index: None,
+                },
+            },
+        ));
+        assert!(eval(
+            &present_snapshot,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::DescribedBy,
+                target: UiSelectorV1::TestId {
+                    id: "relation-description".to_string(),
+                    root_z_index: None,
+                },
+            },
+        ));
+        assert!(eval(
+            &present_snapshot,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::Controls,
+                target: UiSelectorV1::TestId {
+                    id: "relation-controlled".to_string(),
+                    root_z_index: None,
+                },
+            },
+        ));
+
+        source.active_descendant = None;
+        source.labelled_by.clear();
+        source.described_by.clear();
+        source.controls.clear();
+        let detached_snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, source],
+        };
+
+        assert!(eval(
+            &detached_snapshot,
+            &UiPredicateV1::SemanticsRelationIsEmpty {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::ActiveDescendant,
+            },
+        ));
+        assert!(eval(
+            &detached_snapshot,
+            &UiPredicateV1::SemanticsRelationIsEmpty {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::LabelledBy,
+            },
+        ));
+        assert!(eval(
+            &detached_snapshot,
+            &UiPredicateV1::SemanticsRelationIsEmpty {
+                source: source_selector.clone(),
+                relation: UiSemanticsRelationV1::DescribedBy,
+            },
+        ));
+        assert!(eval(
+            &detached_snapshot,
+            &UiPredicateV1::SemanticsRelationIsEmpty {
+                source: source_selector,
+                relation: UiSemanticsRelationV1::Controls,
+            },
+        ));
+    }
+
+    #[test]
+    fn semantics_relation_includes_can_cross_scope_roots() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut page_root = semantics_node(2, "page-root", false);
+        page_root.parent = Some(root.id);
+        let mut overlay_root = semantics_node(3, "overlay-root", false);
+        overlay_root.parent = Some(root.id);
+        let mut source = semantics_node(4, "relation-source", false);
+        source.parent = Some(page_root.id);
+        source.role = SemanticsRole::ComboBox;
+        let mut target = semantics_node(5, "relation-target", false);
+        target.parent = Some(overlay_root.id);
+        target.role = SemanticsRole::ListBox;
+        source.controls.push(target.id);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: root.id,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, page_root.clone(), overlay_root, source, target],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            Some(page_root.id.data().as_ffi()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: UiSelectorV1::TestId {
+                    id: "relation-source".to_string(),
+                    root_z_index: None,
+                },
+                relation: UiSemanticsRelationV1::Controls,
+                target: UiSelectorV1::TestId {
+                    id: "relation-target".to_string(),
+                    root_z_index: None,
+                },
+            },
+        ));
+    }
+
+    #[test]
+    fn semantics_relation_includes_can_cross_modal_barrier_to_underlay_source() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut underlay_root = semantics_node(2, "underlay-root", false);
+        underlay_root.parent = Some(root.id);
+        let mut barrier_root = semantics_node(3, "barrier-root", false);
+        barrier_root.parent = Some(root.id);
+        let mut trigger = semantics_node(4, "select-trigger", false);
+        trigger.parent = Some(underlay_root.id);
+        trigger.role = SemanticsRole::ComboBox;
+        let mut listbox = semantics_node(5, "select-listbox", false);
+        listbox.parent = Some(barrier_root.id);
+        listbox.role = SemanticsRole::ListBox;
+        trigger.controls.push(listbox.id);
+        listbox.labelled_by.push(trigger.id);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: root.id,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(barrier_root.id),
+            focus_barrier_root: Some(barrier_root.id),
+            focus: Some(listbox.id),
+            captured: None,
+            nodes: vec![root, underlay_root, barrier_root.clone(), trigger, listbox],
+        };
+
+        let trigger_selector = UiSelectorV1::TestId {
+            id: "select-trigger".to_string(),
+            root_z_index: None,
+        };
+        let listbox_selector = UiSelectorV1::TestId {
+            id: "select-listbox".to_string(),
+            root_z_index: None,
+        };
+
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                rect(0.0, 0.0, 100.0, 100.0),
+                window,
+                Some(barrier_root.id.data().as_ffi()),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                &[],
+                1,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                0,
+                false,
+                true,
+                &UiPredicateV1::Exists {
+                    target: trigger_selector.clone(),
+                },
+            ),
+            "ordinary selectors should still respect the modal barrier scope"
+        );
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            Some(barrier_root.id.data().as_ffi()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: trigger_selector.clone(),
+                relation: UiSemanticsRelationV1::Controls,
+                target: listbox_selector.clone(),
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            Some(barrier_root.id.data().as_ffi()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::SemanticsRelationIncludes {
+                source: listbox_selector,
+                relation: UiSemanticsRelationV1::LabelledBy,
+                target: trigger_selector,
             },
         ));
     }

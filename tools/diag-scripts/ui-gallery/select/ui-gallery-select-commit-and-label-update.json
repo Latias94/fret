@@ -124,7 +124,7 @@
           "kind": "test_id"
         }
       },
-      "timeout_frames": 240,
+      "timeout_frames": 600,
       "type": "wait_until"
     },
     {
@@ -139,7 +139,50 @@
           "id": "ui-gallery-select-item-banana"
         }
       },
-      "timeout_frames": 240,
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-select-diag-surface-listbox",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": {
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
+        },
+        "relation": "controls",
+        "target": {
+          "id": "ui-gallery-select-diag-surface-listbox",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": {
+          "id": "ui-gallery-select-diag-surface-listbox",
+          "kind": "test_id"
+        },
+        "relation": "labelled_by",
+        "target": {
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
       "type": "wait_until"
     },
     {
@@ -183,6 +226,18 @@
     },
     {
       "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": {
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
+        },
+        "relation": "controls"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
         "kind": "label_contains",
         "target": {
           "kind": "test_id",
@@ -215,11 +270,38 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "select-scroll-viewport",
+          "id": "ui-gallery-select-diag-surface-listbox",
           "kind": "test_id"
         }
       },
-      "timeout_frames": 240,
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-select-diag-surface-listbox",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": {
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
+        },
+        "relation": "controls",
+        "target": {
+          "id": "ui-gallery-select-diag-surface-listbox",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
       "type": "wait_until"
     },
     {

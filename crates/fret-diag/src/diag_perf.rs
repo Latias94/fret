@@ -1432,7 +1432,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
                         baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
                         baseline_rows::TopTimesUs::new(p95_total, p95_layout, p95_solve),
-                        baseline_rows::PointerMoveMetrics::new(
+                        baseline_rows::PointerMoveMetrics::from_presence(
+                            pointer_move_frames_present,
                             pointer_move_max_dispatch_time_us,
                             pointer_move_max_hit_test_time_us,
                             pointer_move_snapshots_with_global_changes,
@@ -1476,7 +1477,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         thr_total,
                         thr_layout,
                         thr_solve,
-                        baseline_rows::PointerMoveMetrics::new(
+                        baseline_rows::PointerMoveMetrics::from_presence(
+                            pointer_move_frames_present,
                             thr_pointer_move_dispatch,
                             thr_pointer_move_hit_test,
                             thr_pointer_move_global_changes,
@@ -1880,10 +1882,21 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             runs_frame_p95_total.push(report.p95_total_time_us);
             runs_frame_p95_layout.push(report.p95_layout_time_us);
             runs_frame_p95_solve.push(report.p95_layout_engine_solve_time_us);
-            let pointer_move_max_dispatch_time_us = report.pointer_move_max_dispatch_time_us;
-            let pointer_move_max_hit_test_time_us = report.pointer_move_max_hit_test_time_us;
-            let pointer_move_snapshots_with_global_changes =
-                report.pointer_move_snapshots_with_global_changes as u64;
+            let pointer_move_max_dispatch_time_us = if report.pointer_move_frames_present {
+                report.pointer_move_max_dispatch_time_us
+            } else {
+                0
+            };
+            let pointer_move_max_hit_test_time_us = if report.pointer_move_frames_present {
+                report.pointer_move_max_hit_test_time_us
+            } else {
+                0
+            };
+            let pointer_move_snapshots_with_global_changes = if report.pointer_move_frames_present {
+                report.pointer_move_snapshots_with_global_changes as u64
+            } else {
+                0
+            };
             let (
                 run_paint_cache_hit_test_only_replay_allowed_max,
                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
@@ -2494,7 +2507,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         max_frame_p95_layout,
                         max_frame_p95_solve,
                     ),
-                    baseline_rows::PointerMoveMetrics::new(
+                    baseline_rows::PointerMoveMetrics::from_presence(
+                        pointer_move_frames_present,
                         max_pointer_move_dispatch,
                         max_pointer_move_hit_test,
                         max_pointer_move_global_changes,
@@ -2593,7 +2607,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     thr_frame_p95_total,
                     thr_frame_p95_layout,
                     thr_frame_p95_solve,
-                    baseline_rows::PointerMoveMetrics::new(
+                    baseline_rows::PointerMoveMetrics::from_presence(
+                        pointer_move_frames_present,
                         thr_pointer_move_dispatch,
                         thr_pointer_move_hit_test,
                         thr_pointer_move_global_changes,
@@ -3224,6 +3239,20 @@ mod tests {
                 .expect("threshold JSON should parse");
 
         assert_eq!(
+            payload.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_THRESHOLDS_KIND)
+        );
+        assert_eq!(
+            payload.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_GATE_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            payload
+                .pointer("/schema_policy/compatibility")
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
+        assert_eq!(
             payload.pointer("/thresholds/max_renderer_encode_scene_us"),
             Some(&serde_json::json!(5_000))
         );
@@ -3234,6 +3263,54 @@ mod tests {
         assert_eq!(
             payload.pointer("/thresholds/max_renderer_encode_scene_text_ops"),
             Some(&serde_json::json!(10_000))
+        );
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn perf_hints_json_is_versioned_and_additive_only() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let out_dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-hints-schema-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).expect("create temp hints dir");
+
+        let deny_specs = vec!["layout.solve_heavy".to_string()];
+        let opts = parse_perf_hint_gate_options(true, &deny_specs, Some("error"))
+            .expect("parse hint gate opts");
+        let out_path = outputs::write_perf_hints_json(&out_dir, 5, &opts, None, None, &[], &[]);
+        let payload: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&out_path).expect("hints JSON should exist"))
+                .expect("hints JSON should parse");
+
+        assert_eq!(
+            payload.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_HINTS_KIND)
+        );
+        assert_eq!(
+            payload.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_GATE_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            payload
+                .pointer("/schema_policy/compatibility")
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
+        assert_eq!(
+            payload.get("min_severity").and_then(|v| v.as_str()),
+            Some("error")
+        );
+        assert_eq!(
+            payload
+                .get("deny")
+                .and_then(|v| v.as_array())
+                .and_then(|v| v.first())
+                .and_then(|v| v.as_str()),
+            Some("layout.solve_heavy")
         );
 
         let _ = std::fs::remove_dir_all(&out_dir);
