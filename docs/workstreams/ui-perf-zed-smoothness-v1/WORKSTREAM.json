@@ -32,6 +32,10 @@
       "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-execution-plan.md"
     },
     {
+      "role": "execution",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/editor-paint-contract-stabilization-runbook.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/standalone/ui-perf-gpui-gap-v1.md"
     },
@@ -95,6 +99,7 @@
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/editor-paint-contract-stabilization-runbook.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
     "docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md",
