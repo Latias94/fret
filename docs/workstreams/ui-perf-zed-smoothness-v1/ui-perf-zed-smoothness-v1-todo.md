@@ -485,6 +485,38 @@ Conventions:
       - Target: split the gap between `WindowedRowsSurface` frame/row-loop overhead, per-row closure
         dispatch/state access, Canvas host wrapper work, and any generic ElementHostWidget paint
         bookkeeping before proposing a broader Canvas or display-list refactor.
+      - [x] Add machine-readable `WindowedRowsSurface` paint diagnostics to support that split.
+        - Fields now include `us_windowed_surface_paint_callback`, `us_windowed_surface_hook`,
+          `us_windowed_surface_row_loop`, `us_windowed_surface_row_paint`,
+          `us_windowed_surface_non_row`, and `us_windowed_surface_row_callback_gap` in
+          `code_editor.paint_perf`.
+        - Evidence: perf log entry `2026-05-16 01:30:00 +08:00`
+          (`windowed surface paint attribution fields`).
+      - [x] Re-run the formal repeat=3 Editor Canvas replay probes with these new fields before
+        deciding whether the next reversible optimization belongs to generic Canvas wrapper work,
+        code-editor row callback overhead, or another renderer slice.
+        - Evidence: perf log entry `2026-05-16 01:45:00 +08:00`
+          (`editor canvas wrapper attribution formal evidence`).
+        - Result:
+          - typical autoscroll worst bundle `target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3/1778865865185/bundle.schema2.json`:
+            total p50/p95/max `765/862/1022us`, `paint.widget` p50/p95 `393/431us`,
+            `code_editor.paint_perf` p50/p95 `93/106us`, surface callback p50/p95 `238/268us`,
+            surface non-row p50/p95 `127/145us`, row callback gap p50/p95 `18/21us`, row replay
+            hit rate `100%`, stores `0`.
+          - complex wheel worst bundle `target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3/1778865994148/bundle.schema2.json`:
+            total p50/p95/max `881/1156/1170us`, `paint.widget` p50/p95 `553/653us`,
+            `code_editor.paint_perf` p50/p95 `253/321us`, surface callback p50/p95 `405/489us`,
+            surface non-row p50/p95 `138/154us`, row callback gap p50/p95 `12/14us`, row replay
+            hit rate `99.65%`, stored p95 `3`.
+          - resize jitter worst bundle `target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3/1778866025069/bundle.schema2.json`:
+            total p50/p95/max `842/1287/1287us`, `paint.widget` p50/p95 `421/465us`,
+            `code_editor.paint_perf` p50/p95 `111/133us`, surface callback p50/p95 `258/288us`,
+            surface non-row p50/p95 `131/137us`, row callback gap p50/p95 `20/23us`, row replay
+            hit rate `100%`, stores `0`.
+        - Decision: the new fields split the inner surface cost cleanly, but the remaining outer
+          `paint.widget - surface_callback` gap is still about `155..177us` p95. The next owner
+          surface is generic Canvas / `ElementHostWidget` paint bookkeeping, not a broad
+          `WindowedRowsSurface` display-list rewrite.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

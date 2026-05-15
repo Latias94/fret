@@ -42,8 +42,8 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::windowed_rows_surface::{
     OnWindowedRowsPaintFrame, OnWindowedRowsPointerCancel, OnWindowedRowsPointerDown,
     OnWindowedRowsPointerMove, OnWindowedRowsPointerUp, OnWindowedRowsPrepaintFrame,
-    WindowedRowsPaintFrame, WindowedRowsSurfacePointerHandlers, WindowedRowsSurfaceProps,
-    windowed_rows_surface_with_pointer_region,
+    WindowedRowsPaintDiagnostics, WindowedRowsPaintFrame, WindowedRowsSurfacePointerHandlers,
+    WindowedRowsSurfaceProps, windowed_rows_surface_with_pointer_region,
 };
 use fret_undo::{CoalesceKey, InvertibleTransaction, UndoHistory, UndoRecord};
 
@@ -1344,6 +1344,14 @@ impl CodeEditor {
                 }
             };
             surface_props.on_paint_frame = torture_hook;
+            if paint_perf_enabled_from_env() {
+                let editor_state = editor_state.clone();
+                surface_props.on_paint_diagnostics = Some(Arc::new(move |diagnostics| {
+                    editor_state
+                        .borrow_mut()
+                        .record_windowed_rows_paint_diagnostics(diagnostics);
+                }));
+            }
 
             cx.text_input_region(region_props, |cx| {
                 // `TextInputRegion` creates its own element id scope. All focus/key/command hooks

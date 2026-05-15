@@ -675,6 +675,38 @@ impl CodeEditorState {
         }
     }
 
+    pub(super) fn record_windowed_rows_paint_diagnostics(
+        &mut self,
+        diagnostics: WindowedRowsPaintDiagnostics,
+    ) {
+        if !self.paint_perf_enabled {
+            return;
+        }
+
+        self.paint_perf_frame.surface_rows_iterated = diagnostics.rows_iterated;
+        self.paint_perf_frame.surface_rows_with_rect = diagnostics.rows_with_rect;
+        self.paint_perf_frame.us_windowed_surface_paint_callback = diagnostics.us_paint_callback;
+        self.paint_perf_frame.us_windowed_surface_frame_lookup = diagnostics.us_frame_lookup;
+        self.paint_perf_frame.us_windowed_surface_hook = diagnostics.us_on_paint_frame;
+        self.paint_perf_frame.us_windowed_surface_row_loop = diagnostics.us_row_loop;
+        self.paint_perf_frame.us_windowed_surface_row_rect = diagnostics.us_row_rect;
+        self.paint_perf_frame.us_windowed_surface_row_paint = diagnostics.us_row_paint;
+        self.paint_perf_frame.us_windowed_surface_non_row = diagnostics.us_non_row;
+        self.paint_perf_frame.us_windowed_surface_row_callback_gap = diagnostics
+            .us_row_paint
+            .saturating_sub(self.paint_perf_frame.us_total);
+        self.paint_perf_frame.ns_windowed_surface_paint_callback = diagnostics.ns_paint_callback;
+        self.paint_perf_frame.ns_windowed_surface_frame_lookup = diagnostics.ns_frame_lookup;
+        self.paint_perf_frame.ns_windowed_surface_hook = diagnostics.ns_on_paint_frame;
+        self.paint_perf_frame.ns_windowed_surface_row_loop = diagnostics.ns_row_loop;
+        self.paint_perf_frame.ns_windowed_surface_row_rect = diagnostics.ns_row_rect;
+        self.paint_perf_frame.ns_windowed_surface_row_paint = diagnostics.ns_row_paint;
+        self.paint_perf_frame.ns_windowed_surface_non_row = diagnostics.ns_non_row;
+        self.paint_perf_frame.ns_windowed_surface_row_callback_gap = diagnostics
+            .ns_row_paint
+            .saturating_sub(self.paint_perf_frame.ns_total);
+    }
+
     pub(super) fn set_preedit(&mut self, preedit: Option<PreeditState>) {
         let same = self.preedit == preedit;
         let mut cleared = false;

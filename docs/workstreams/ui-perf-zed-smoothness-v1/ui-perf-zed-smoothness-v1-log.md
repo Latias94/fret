@@ -13850,3 +13850,128 @@ Decision:
   passes, and no threshold re-seed is justified by repeat=3 macOS evidence alone.
 - The remaining P1.5 owner gap is generic Canvas/paint-widget overhead: `paint.widget` still exceeds
   `code_editor.paint_perf` by roughly `290..315us` on the representative editor probes.
+
+## 2026-05-16 01:30:00 +08:00 (windowed surface paint attribution fields)
+
+Question:
+- Can the remaining `paint.widget` / code-editor paint gap be split without starting a broad
+  Canvas or display-list refactor?
+
+Change:
+- Added an opt-in `WindowedRowsSurface` paint diagnostics hook that records the full Canvas paint
+  callback, frame lookup, `on_paint_frame` hook, row loop, row-rect computation, row paint callback,
+  and non-row surface overhead.
+- Wired code editor paint perf snapshots to copy those counters when
+  `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, including a derived row-callback gap between the generic
+  surface row paint callback and `CodeEditorPaintPerfFrame.us_total`.
+- Surfaced the new fields through UI Gallery app snapshots, `fretboard diag stats --json`, text
+  stats output, and `diag perf --json` top-row summaries.
+
+Validation:
+- `cargo fmt -p fret-ui-kit -p fret-code-editor -p fret-ui-gallery -p fret-diag`
+- `cargo nextest run -p fret-ui-kit on_prepaint_frame_runs_before_on_paint_frame_for_windowed_rows_surface --no-fail-fast`
+- `cargo nextest run -p fret-code-editor begin_paint_frame_sets_cache_floor_from_actual_visible_rows paint_perf_records_windowed_surface_diagnostics --features syntax-rust --no-fail-fast`
+- `cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot perf_json_row_exports_top_code_editor_row_scene_fields perf_repeat_run_json_row_exports_top_code_editor_row_scene_fields --no-fail-fast`
+- `cargo check -p fret-ui-gallery --features gallery-dev`
+- `git diff --check`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`,
+  `ecosystem/fret-code-editor/src/editor/diagnostics.rs`,
+  `ecosystem/fret-code-editor/src/editor/state.rs`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+  and `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`.
+- New fields:
+  `code_editor.paint_perf.us_windowed_surface_paint_callback`,
+  `us_windowed_surface_hook`, `us_windowed_surface_row_loop`,
+  `us_windowed_surface_row_paint`, `us_windowed_surface_non_row`, and
+  `us_windowed_surface_row_callback_gap`.
+
+Decision:
+- Treat this as an attribution-enabling slice, not an optimization. It closes the diagnostics gap
+  that blocked the Canvas owner decision, but it does not by itself prove that generic Canvas wrapper
+  work is the final bottleneck.
+- Next: rebuild the release diag tools and re-run the three Editor Canvas replay probes with the
+  same repeat/warmup policy so the surface counters can split `paint.widget` into row callback,
+  surface non-row, and remaining generic Canvas/ElementHostWidget work.
+
+## 2026-05-16 01:45:00 +08:00 (editor canvas wrapper attribution formal evidence)
+
+Question:
+- With `WindowedRowsSurface` paint diagnostics enabled, does the remaining editor `paint.widget`
+  gap belong to row callback work, surface non-row overhead, generic Canvas wrapper bookkeeping, or
+  another renderer slice?
+
+Commands:
+```bash
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Evidence:
+
+| probe | worst bundle | total p50/p95/max | `paint.widget` p50/p95 | surface callback p50/p95 | code-editor paint p50/p95 | surface non-row p50/p95 | row callback gap p50/p95 | row replay / stores |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3/1778865865185/bundle.schema2.json` | `765/862/1022us` | `393/431us` | `238/268us` | `93/106us` | `127/145us` | `18/21us` | `100% / 0` |
+| complex wheel | `target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3/1778865994148/bundle.schema2.json` | `881/1156/1170us` | `553/653us` | `405/489us` | `253/321us` | `138/154us` | `12/14us` | `99.65% / p95 3` |
+| resize jitter | `target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3/1778866025069/bundle.schema2.json` | `842/1287/1287us` | `421/465us` | `258/288us` | `111/133us` | `131/137us` | `20/23us` | `100% / 0` |
+
+Additional renderer checks on the same worst bundles:
+- Renderer text prepare p95/max: typical `371/389us`, complex wheel `385/386us`, resize jitter `374/374us`.
+- Renderer encode scene p95/max: typical `152/723us`, complex wheel `149/159us`, resize jitter `168/168us`.
+- Renderer upload p95/max: typical `83/108us`, complex wheel `82/87us`, resize jitter `105/105us`.
+- Text atlas upload/eviction remains `0` on these sampled worst bundles.
+
+Decision:
+- The new fields split the inner surface cost: `surface_non_row + row_callback_gap` accounts for roughly
+  the `surface_callback - code_editor.paint_perf` gap, while row replay/cache remains healthy.
+- The remaining outer `paint.widget - surface_callback` gap is still about `155..177us` p95 across the
+  three probes. This points at generic Canvas / `ElementHostWidget` paint bookkeeping as the next owner.
+- Do not start a broad `WindowedRowsSurface` display-list rewrite from this evidence. The next reversible
+  slice should instrument and reduce Canvas host-wrapper paint overhead, then re-run the same three probes.

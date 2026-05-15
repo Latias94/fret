@@ -126,6 +126,40 @@ fn snapshot_code_editor_paint_perf(
             "us_frame_overlay_prepare",
             "ns_frame_overlay_prepare"
         ),
+        surface_rows_iterated: u64_field!("surface_rows_iterated"),
+        surface_rows_with_rect: u64_field!("surface_rows_with_rect"),
+        us_windowed_surface_paint_callback: us_field!(
+            "us_windowed_surface_paint_callback",
+            "ns_windowed_surface_paint_callback"
+        ),
+        us_windowed_surface_frame_lookup: us_field!(
+            "us_windowed_surface_frame_lookup",
+            "ns_windowed_surface_frame_lookup"
+        ),
+        us_windowed_surface_hook: us_field!(
+            "us_windowed_surface_hook",
+            "ns_windowed_surface_hook"
+        ),
+        us_windowed_surface_row_loop: us_field!(
+            "us_windowed_surface_row_loop",
+            "ns_windowed_surface_row_loop"
+        ),
+        us_windowed_surface_row_rect: us_field!(
+            "us_windowed_surface_row_rect",
+            "ns_windowed_surface_row_rect"
+        ),
+        us_windowed_surface_row_paint: us_field!(
+            "us_windowed_surface_row_paint",
+            "ns_windowed_surface_row_paint"
+        ),
+        us_windowed_surface_non_row: us_field!(
+            "us_windowed_surface_non_row",
+            "ns_windowed_surface_non_row"
+        ),
+        us_windowed_surface_row_callback_gap: us_field!(
+            "us_windowed_surface_row_callback_gap",
+            "ns_windowed_surface_row_callback_gap"
+        ),
     })
 }
 
@@ -2323,6 +2357,18 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_geom_resolve: metric!(us_row_geom_resolve),
             us_row_overlay: metric!(us_row_overlay),
             us_frame_overlay_prepare: metric!(us_frame_overlay_prepare),
+            surface_rows_iterated: metric!(surface_rows_iterated),
+            surface_rows_with_rect: metric!(surface_rows_with_rect),
+            us_windowed_surface_paint_callback: metric!(us_windowed_surface_paint_callback),
+            us_windowed_surface_frame_lookup: metric!(us_windowed_surface_frame_lookup),
+            us_windowed_surface_hook: metric!(us_windowed_surface_hook),
+            us_windowed_surface_row_loop: metric!(us_windowed_surface_row_loop),
+            us_windowed_surface_row_rect: metric!(us_windowed_surface_row_rect),
+            us_windowed_surface_row_paint: metric!(us_windowed_surface_row_paint),
+            us_windowed_surface_non_row: metric!(us_windowed_surface_non_row),
+            us_windowed_surface_row_callback_gap: metric!(
+                us_windowed_surface_row_callback_gap
+            ),
         }
     }
 

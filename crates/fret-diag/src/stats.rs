@@ -1246,7 +1246,18 @@ mod tests {
                                     "us_syntax_slice": 6,
                                     "us_syntax_highlight": 50,
                                     "us_syntax_distribute": 4,
-                                    "us_syntax_store": 10
+                                    "us_syntax_store": 10,
+                                    "surface_rows_iterated": 10,
+                                    "surface_rows_with_rect": 10,
+                                    "us_windowed_surface_paint_callback": 620,
+                                    "ns_windowed_surface_paint_callback": 621500,
+                                    "us_windowed_surface_frame_lookup": 2,
+                                    "us_windowed_surface_hook": 30,
+                                    "us_windowed_surface_row_loop": 560,
+                                    "us_windowed_surface_row_rect": 4,
+                                    "us_windowed_surface_row_paint": 530,
+                                    "us_windowed_surface_non_row": 90,
+                                    "us_windowed_surface_row_callback_gap": 30
                                 }
                             }
                         }
@@ -1300,6 +1311,13 @@ mod tests {
         assert_eq!(perf.us_row_scene_fast_key_compare, 2);
         assert_eq!(perf.us_text_draw, 120);
         assert_eq!(perf.us_rich_materialize, 30);
+        assert_eq!(perf.surface_rows_iterated, 10);
+        assert_eq!(perf.surface_rows_with_rect, 10);
+        assert_eq!(perf.us_windowed_surface_paint_callback, 621);
+        assert_eq!(perf.us_windowed_surface_row_loop, 560);
+        assert_eq!(perf.us_windowed_surface_row_paint, 530);
+        assert_eq!(perf.us_windowed_surface_non_row, 90);
+        assert_eq!(perf.us_windowed_surface_row_callback_gap, 30);
 
         let json = report.to_json();
         assert_eq!(
@@ -1348,6 +1366,16 @@ mod tests {
             Some(14)
         );
         assert_eq!(
+            json.pointer("/code_editor_paint_perf/p95/us_windowed_surface_paint_callback")
+                .and_then(|v| v.as_u64()),
+            Some(621)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/p95/us_windowed_surface_row_callback_gap")
+                .and_then(|v| v.as_u64()),
+            Some(30)
+        );
+        assert_eq!(
             json.pointer("/top/0/code_editor_paint_perf/rows_scene_replayed")
                 .and_then(|v| v.as_u64()),
             Some(8)
@@ -1361,6 +1389,11 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/row_scene_ops_stored")
                 .and_then(|v| v.as_u64()),
             Some(19)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_windowed_surface_row_paint")
+                .and_then(|v| v.as_u64()),
+            Some(530)
         );
     }
 }

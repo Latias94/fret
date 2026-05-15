@@ -194,6 +194,9 @@ pub(crate) fn push_perf_json_row(
         "top_code_editor_rows_scene_stored": top_code_editor.rows_scene_stored,
         "top_code_editor_row_scene_ops_stored": top_code_editor.row_scene_ops_stored,
         "top_code_editor_row_scene_replay_hit_rate_pct": top_code_editor.row_scene_replay_hit_rate_pct,
+        "top_code_editor_windowed_surface_paint_callback_us": top_code_editor.windowed_surface_paint_callback_us,
+        "top_code_editor_windowed_surface_non_row_us": top_code_editor.windowed_surface_non_row_us,
+        "top_code_editor_windowed_surface_row_callback_gap_us": top_code_editor.windowed_surface_row_callback_gap_us,
         "pointer_move_frames_present": pointer_move_frames_present,
         "pointer_move_frames_considered": pointer_move_frames_considered,
         "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
@@ -292,6 +295,9 @@ mod tests {
                 rows_scene_replayed: 15,
                 rows_scene_stored: 5,
                 row_scene_ops_stored: 64,
+                us_windowed_surface_paint_callback: 200,
+                us_windowed_surface_non_row: 40,
+                us_windowed_surface_row_callback_gap: 9,
                 ..Default::default()
             }),
             ..Default::default()
@@ -310,5 +316,14 @@ mod tests {
         assert_eq!(rows[0]["top_code_editor_rows_scene_stored"], 5);
         assert_eq!(rows[0]["top_code_editor_row_scene_ops_stored"], 64);
         assert_eq!(rows[0]["top_code_editor_row_scene_replay_hit_rate_pct"], 75);
+        assert_eq!(
+            rows[0]["top_code_editor_windowed_surface_paint_callback_us"],
+            200
+        );
+        assert_eq!(rows[0]["top_code_editor_windowed_surface_non_row_us"], 40);
+        assert_eq!(
+            rows[0]["top_code_editor_windowed_surface_row_callback_gap_us"],
+            9
+        );
     }
 }

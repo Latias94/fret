@@ -577,6 +577,16 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_row_geom_resolve: u64,
     pub(super) us_row_overlay: u64,
     pub(super) us_frame_overlay_prepare: u64,
+    pub(super) surface_rows_iterated: u64,
+    pub(super) surface_rows_with_rect: u64,
+    pub(super) us_windowed_surface_paint_callback: u64,
+    pub(super) us_windowed_surface_frame_lookup: u64,
+    pub(super) us_windowed_surface_hook: u64,
+    pub(super) us_windowed_surface_row_loop: u64,
+    pub(super) us_windowed_surface_row_rect: u64,
+    pub(super) us_windowed_surface_row_paint: u64,
+    pub(super) us_windowed_surface_non_row: u64,
+    pub(super) us_windowed_surface_row_callback_gap: u64,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -648,6 +658,16 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     us_row_geom_resolve: u64,
     us_row_overlay: u64,
     us_frame_overlay_prepare: u64,
+    surface_rows_iterated: u64,
+    surface_rows_with_rect: u64,
+    us_windowed_surface_paint_callback: u64,
+    us_windowed_surface_frame_lookup: u64,
+    us_windowed_surface_hook: u64,
+    us_windowed_surface_row_loop: u64,
+    us_windowed_surface_row_rect: u64,
+    us_windowed_surface_row_paint: u64,
+    us_windowed_surface_non_row: u64,
+    us_windowed_surface_row_callback_gap: u64,
 }
 
 impl BundleStatsCodeEditorPaintPerfTotals {
@@ -792,6 +812,36 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_frame_overlay_prepare = self
             .us_frame_overlay_prepare
             .saturating_add(p.us_frame_overlay_prepare);
+        self.surface_rows_iterated = self
+            .surface_rows_iterated
+            .saturating_add(p.surface_rows_iterated);
+        self.surface_rows_with_rect = self
+            .surface_rows_with_rect
+            .saturating_add(p.surface_rows_with_rect);
+        self.us_windowed_surface_paint_callback = self
+            .us_windowed_surface_paint_callback
+            .saturating_add(p.us_windowed_surface_paint_callback);
+        self.us_windowed_surface_frame_lookup = self
+            .us_windowed_surface_frame_lookup
+            .saturating_add(p.us_windowed_surface_frame_lookup);
+        self.us_windowed_surface_hook = self
+            .us_windowed_surface_hook
+            .saturating_add(p.us_windowed_surface_hook);
+        self.us_windowed_surface_row_loop = self
+            .us_windowed_surface_row_loop
+            .saturating_add(p.us_windowed_surface_row_loop);
+        self.us_windowed_surface_row_rect = self
+            .us_windowed_surface_row_rect
+            .saturating_add(p.us_windowed_surface_row_rect);
+        self.us_windowed_surface_row_paint = self
+            .us_windowed_surface_row_paint
+            .saturating_add(p.us_windowed_surface_row_paint);
+        self.us_windowed_surface_non_row = self
+            .us_windowed_surface_non_row
+            .saturating_add(p.us_windowed_surface_non_row);
+        self.us_windowed_surface_row_callback_gap = self
+            .us_windowed_surface_row_callback_gap
+            .saturating_add(p.us_windowed_surface_row_callback_gap);
     }
 
     fn max_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
@@ -907,6 +957,32 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_frame_overlay_prepare = self
             .us_frame_overlay_prepare
             .max(p.us_frame_overlay_prepare);
+        self.surface_rows_iterated = self.surface_rows_iterated.max(p.surface_rows_iterated);
+        self.surface_rows_with_rect = self.surface_rows_with_rect.max(p.surface_rows_with_rect);
+        self.us_windowed_surface_paint_callback = self
+            .us_windowed_surface_paint_callback
+            .max(p.us_windowed_surface_paint_callback);
+        self.us_windowed_surface_frame_lookup = self
+            .us_windowed_surface_frame_lookup
+            .max(p.us_windowed_surface_frame_lookup);
+        self.us_windowed_surface_hook = self
+            .us_windowed_surface_hook
+            .max(p.us_windowed_surface_hook);
+        self.us_windowed_surface_row_loop = self
+            .us_windowed_surface_row_loop
+            .max(p.us_windowed_surface_row_loop);
+        self.us_windowed_surface_row_rect = self
+            .us_windowed_surface_row_rect
+            .max(p.us_windowed_surface_row_rect);
+        self.us_windowed_surface_row_paint = self
+            .us_windowed_surface_row_paint
+            .max(p.us_windowed_surface_row_paint);
+        self.us_windowed_surface_non_row = self
+            .us_windowed_surface_non_row
+            .max(p.us_windowed_surface_non_row);
+        self.us_windowed_surface_row_callback_gap = self
+            .us_windowed_surface_row_callback_gap
+            .max(p.us_windowed_surface_row_callback_gap);
     }
 
     fn to_json(&self) -> serde_json::Value {
@@ -969,6 +1045,16 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "us_row_geom_resolve": self.us_row_geom_resolve,
             "us_row_overlay": self.us_row_overlay,
             "us_frame_overlay_prepare": self.us_frame_overlay_prepare,
+            "surface_rows_iterated": self.surface_rows_iterated,
+            "surface_rows_with_rect": self.surface_rows_with_rect,
+            "us_windowed_surface_paint_callback": self.us_windowed_surface_paint_callback,
+            "us_windowed_surface_frame_lookup": self.us_windowed_surface_frame_lookup,
+            "us_windowed_surface_hook": self.us_windowed_surface_hook,
+            "us_windowed_surface_row_loop": self.us_windowed_surface_row_loop,
+            "us_windowed_surface_row_rect": self.us_windowed_surface_row_rect,
+            "us_windowed_surface_row_paint": self.us_windowed_surface_row_paint,
+            "us_windowed_surface_non_row": self.us_windowed_surface_non_row,
+            "us_windowed_surface_row_callback_gap": self.us_windowed_surface_row_callback_gap,
         })
     }
 }
@@ -1059,6 +1145,16 @@ impl BundleStatsCodeEditorPaintPerf {
             "us_row_geom_resolve": self.us_row_geom_resolve,
             "us_row_overlay": self.us_row_overlay,
             "us_frame_overlay_prepare": self.us_frame_overlay_prepare,
+            "surface_rows_iterated": self.surface_rows_iterated,
+            "surface_rows_with_rect": self.surface_rows_with_rect,
+            "us_windowed_surface_paint_callback": self.us_windowed_surface_paint_callback,
+            "us_windowed_surface_frame_lookup": self.us_windowed_surface_frame_lookup,
+            "us_windowed_surface_hook": self.us_windowed_surface_hook,
+            "us_windowed_surface_row_loop": self.us_windowed_surface_row_loop,
+            "us_windowed_surface_row_rect": self.us_windowed_surface_row_rect,
+            "us_windowed_surface_row_paint": self.us_windowed_surface_row_paint,
+            "us_windowed_surface_non_row": self.us_windowed_surface_non_row,
+            "us_windowed_surface_row_callback_gap": self.us_windowed_surface_row_callback_gap,
         })
     }
 }
@@ -1644,6 +1740,19 @@ impl BundleStatsReport {
             p.sum.us_frame_overlay_prepare,
         );
         println!(
+            "code_editor.paint_perf sum.surface(rows_iterated/rows_with_rect)={}/{} sum.us(surface_total/frame_lookup/hook/row_loop/row_rect/row_paint/non_row/row_callback_gap)={}/{}/{}/{}/{}/{}/{}/{}",
+            p.sum.surface_rows_iterated,
+            p.sum.surface_rows_with_rect,
+            p.sum.us_windowed_surface_paint_callback,
+            p.sum.us_windowed_surface_frame_lookup,
+            p.sum.us_windowed_surface_hook,
+            p.sum.us_windowed_surface_row_loop,
+            p.sum.us_windowed_surface_row_rect,
+            p.sum.us_windowed_surface_row_paint,
+            p.sum.us_windowed_surface_non_row,
+            p.sum.us_windowed_surface_row_callback_gap,
+        );
+        println!(
             "code_editor.paint_perf sum.rows(scene_store_start/end,prepaint_candidates/no_cache/unsupported/preedit/syntax_empty/key_mismatch,fast_miss_no_entry/key_mismatch,full_miss_no_entry/key_mismatch)={}/{}, {}/{}/{}/{}/{}/{}, {}/{}, {}/{}",
             p.sum.rows_scene_stored_at_visible_start,
             p.sum.rows_scene_stored_at_visible_end,
@@ -1659,7 +1768,7 @@ impl BundleStatsReport {
             p.sum.rows_scene_full_miss_key_mismatch,
         );
         println!(
-            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
             p.p50.us_total,
             p.p95.us_total,
             p.p50.us_row_scene_prepaint_plan,
@@ -1680,6 +1789,12 @@ impl BundleStatsReport {
             p.p95.us_text_draw,
             p.p50.us_row_scene_fast_path,
             p.p95.us_row_scene_fast_path,
+            p.p50.us_windowed_surface_paint_callback,
+            p.p95.us_windowed_surface_paint_callback,
+            p.p50.us_windowed_surface_non_row,
+            p.p95.us_windowed_surface_non_row,
+            p.p50.us_windowed_surface_row_callback_gap,
+            p.p95.us_windowed_surface_row_callback_gap,
         );
     }
 
@@ -1737,6 +1852,19 @@ impl BundleStatsReport {
             p.us_row_geom_resolve,
             p.us_row_overlay,
             p.us_frame_overlay_prepare,
+        );
+        println!(
+            "    code_editor.paint_perf.surface rows(iterated/with_rect)={}/{} us(total/frame_lookup/hook/row_loop/row_rect/row_paint/non_row/row_callback_gap)={}/{}/{}/{}/{}/{}/{}/{}",
+            p.surface_rows_iterated,
+            p.surface_rows_with_rect,
+            p.us_windowed_surface_paint_callback,
+            p.us_windowed_surface_frame_lookup,
+            p.us_windowed_surface_hook,
+            p.us_windowed_surface_row_loop,
+            p.us_windowed_surface_row_rect,
+            p.us_windowed_surface_row_paint,
+            p.us_windowed_surface_non_row,
+            p.us_windowed_surface_row_callback_gap,
         );
     }
 

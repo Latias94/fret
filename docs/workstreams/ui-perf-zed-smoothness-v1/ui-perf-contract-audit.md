@@ -370,6 +370,29 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `379/379us`, versus the formal pre-change `392/422us`, `412/435us`, and `419/419us`.
   - Contract decision: no baseline was updated or loosened from the macOS repeat=3 evidence. Existing payload-aware
     contracts remain the stabilization surface until a deliberate re-seed is justified.
+- Windowed surface paint attribution fields:
+  - `WindowedRowsSurface` now has an opt-in paint diagnostics hook, and code editor paint snapshots record surface
+    callback, hook, row-loop, row-paint, non-row, and row-callback-gap counters when
+    `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+  - Code anchors:
+    `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`,
+    `ecosystem/fret-code-editor/src/editor/diagnostics.rs`,
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`, and
+    `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`.
+  - Validation: focused `fret-ui-kit`, `fret-code-editor`, and `fret-diag` nextest slices passed; `cargo check -p
+    fret-ui-gallery --features gallery-dev` passed. See perf log entry `2026-05-16 01:30:00 +08:00`.
+  - Formal attribution evidence: the 2026-05-16 repeat=3/warmup=5 editor replay pass with these fields covers
+    typical autoscroll, complex wheel, and resize jitter. Worst bundles:
+    `target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3/1778865865185/bundle.schema2.json`,
+    `target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3/1778865994148/bundle.schema2.json`,
+    and
+    `target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3/1778866025069/bundle.schema2.json`.
+  - Attribution result: p95 `paint.widget` / surface callback / code-editor paint are `431/268/106us`
+    typical, `653/489/321us` complex wheel, and `465/288/133us` resize jitter. Surface non-row p95 is
+    `145/154/137us`, and row callback gap p95 is `21/14/23us`.
+  - Contract decision: the inner `WindowedRowsSurface` attribution is now measurable and does not justify a broad
+    display-list rewrite. The remaining outer `paint.widget - surface_callback` gap is still about `155..177us`
+    p95, so the next optimization owner should be generic Canvas / `ElementHostWidget` paint bookkeeping.
 
 ## Open Gaps
 
@@ -381,10 +404,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    shows healthy row-scene replay/cache. Keep the `WindowedRowsSurface` display-list rewrite gated on a future
    near-threshold or failing stressor where row op replay/capture is the measured limiter, not on these passing
    baselines alone.
-3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization. The remaining
-   high-leverage owner is generic Canvas `paint.widget` overhead: after the renderer slice, `paint.widget` p95 is still
-   `414us` typical, `633us` complex wheel, and `421us` resize jitter while `code_editor.paint_perf` p95 is
-   `123us`, `318us`, and `119us`.
+3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization, and the missing
+   `WindowedRowsSurface` attribution fields are now wired through app snapshots and `fretboard diag stats`. The
+   remaining high-leverage owner is still unresolved until the formal probes are re-run with those fields:
+   post-renderer `paint.widget` p95 is `414us` typical, `633us` complex wheel, and `421us` resize jitter while
+   `code_editor.paint_perf` p95 is `123us`, `318us`, and `119us`.
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
@@ -398,6 +422,8 @@ typical, and complex wheel contracts now have payload-aware baselines with expli
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
 v1 contracts. The hit-test torture pointer-move path now also has a formal repeat=7 dispatch/hit-test threshold gate
 for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas replay evidence has now closed one
-renderer-side owner slice without loosening baselines; the immediate next work should split the remaining Canvas
-wrapper / `paint.widget` gap before any `WindowedRowsSurface` display-list rewrite. Keep non-Windows machine profiles
-explicit rather than inferring them from the Windows RTX 4090 contract set.
+renderer-side owner slice without loosening baselines, and the missing `WindowedRowsSurface` paint attribution fields
+are wired for the next evidence pass. The immediate next work is to re-run the formal editor replay probes with those
+fields and only then choose the next reversible Canvas/renderer optimization before any `WindowedRowsSurface`
+display-list rewrite. Keep non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090
+contract set.
