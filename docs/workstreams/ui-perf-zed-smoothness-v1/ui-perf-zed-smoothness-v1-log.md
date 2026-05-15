@@ -105,6 +105,29 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 06:50:50 (local head `c63ecb47c0`)
+
+Change:
+- Hardened the target-machine editor paint closeout toolchain after the initial verifier landed:
+  - `diag_resize_probes_gate.py` can use a prebuilt `fretboard-dev` binary, and the editor paint validation runner now
+    passes `target/release/fretboard-dev.exe` for resize-jitter.
+  - Validation summaries and dry-run plans now record `date_tag`; verifier and closeout summaries surface the
+    validation/attribution date tags.
+  - The closeout gate now requires the attribution directory for non-dry-run execution, so P1.5 cannot close without
+    the `--with-paint-perf` pass.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_*.py'
+```
+
+Results:
+- Python perf-tool tests PASS (29 tests).
+
+Notes:
+- The local closeout path is now stricter and more traceable, but this is still tooling evidence only. Windows RTX4090
+  validation and attribution artifacts are still required before P1.5 can close.
+
 ## 2026-05-16 06:22:30 (commit `35a399169f`)
 
 Change:
