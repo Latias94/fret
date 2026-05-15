@@ -35,7 +35,11 @@ Status: Active
 - [x] Prototype a narrower dirty-frontier scroll relayout path instead of a broad
   `widget.layout` skip.
 - [x] Keep the proof bounded to one repro, one gate, and one evidence bundle.
-- [ ] Profile the remaining direct-child-invalidated / resize-measure path separately; do not fold
+- [x] Lock mixed direct-child / descendant-only post-layout shrink observation so synthetic scroll
+  content roots cannot keep stale pinned extents authoritative after child frontier contraction.
+- [x] Keep non-retained `VirtualList` visible-range escapes authoritative for view-cache rerender
+  while preserving retained-list reconcile semantics.
+- [x] Profile the remaining direct-child-invalidated / resize-measure path separately; do not fold
   it into the contained view-cache dirty-frontier proof.
 - [x] Repair or replace the stale prewarm command form for local resize-stress samples so future
   p95 comparisons use the same normalization surface.

@@ -145,6 +145,79 @@ Implemented dirty-frontier slice (2026-05-08):
     passed once `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` and the view-cache envs were explicit launch
     overrides.
 
+Implemented post-layout observation / virtual-list rerender correctness slice (2026-05-15):
+
+- Change: scroll overflow post-layout observation now distinguishes an observed root whose bounds
+  are the synthetic scroll content box from a real child-supported non-leaf extent. When that
+  synthetic root is pinned to the previous content extent, validation trusts the child frontier
+  instead of allowing the stale synthetic content box to keep a contracted extent authoritative.
+- Change: non-retained `VirtualList` wheel-scroll visible-range escapes now notify the view-cache
+  root for rerender after marking self invalidated. Retained virtual lists keep using the retained
+  reconcile marker and do not notify the cache root.
+- Mechanism evidence:
+  - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+    (`ScrollOverflowObservedNode::synthetic_content_extent_*`,
+    `trust_scroll_overflow_nonleaf_axis(...)`)
+  - `crates/fret-ui/src/declarative/host_widget/event/scroll.rs`
+    (`handle_virtual_list(...)`)
+  - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+    (`scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative`,
+    `scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge`)
+  - `crates/fret-ui/src/declarative/tests/virtual_list/caching.rs`
+    (`virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached`)
+  - `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
+    (`retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache`)
+- Verified gates:
+  - `cargo nextest run -p fret-ui scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache --no-fail-fast`
+    - Result: passed (`4` tests; includes the at-edge shrink variant).
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: passed (`151` tests).
+- Interpretation: this slice is a correctness prerequisite for the next perf attribution loop. It
+  does not close the broader resize-measure objective by itself; the remaining work is still to
+  run normalized `ui-resize-probes` / resize-stress attribution and decide whether another
+  direct-child-invalidated / resize-measure narrowing is justified.
+
+Normalized resize attribution sample (2026-05-15):
+
+- Command:
+  `target/release/fretboard-dev diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/scroll-optimization-v1-ui-resize-probes-20260515 --launch -- target/release/fret-ui-gallery`
+- Result: passed.
+- Artifacts:
+  - Worst bundle:
+    `target/fret-diag/scroll-optimization-v1-ui-resize-probes-20260515/1778819328814/bundle.schema2.json`
+  - Layout attribution summary:
+    `target/fret-diag/scroll-optimization-v1-ui-resize-probes-20260515/layout.perf.summary.v1.json`
+  - Regression summary:
+    `target/fret-diag/scroll-optimization-v1-ui-resize-probes-20260515/regression.summary.json`
+- Suite scripts:
+  - `ui-gallery-window-resize-drag-jitter-steady`: total p50/p95/max `989/1002/1002us`,
+    layout `599/616/616us`, paint `343/347/347us`, layout engine solve `329/344/344us`;
+    barrier relayouts `0`, contained relayouts `0`, reused cache roots `2`, and visible-range
+    refresh p95 `1`.
+  - `ui-gallery-window-resize-stress-steady`: total p50/p95/max `2041/2220/2220us`,
+    layout `732/812/812us`, paint `1210/1270/1270us`, layout engine solve `330/377/377us`;
+    barrier relayouts `0`, contained relayouts `0`, reused cache roots `2`, and visible-range
+    refresh p95 `0`.
+- Worst-bundle `diag stats --sort time --top 15`:
+  - considered frames: `10`
+  - time p50/p95 total: `236/2220us`
+  - time p50/p95 layout: `91/812us`
+  - time p50/p95 paint: `107/1270us`
+  - hot p50/p95: `layout.engine_solve=0/377us`, `paint.widget=27/649us`,
+    `paint.text_prepare=0/0us`
+  - top frames: `inv.calls=0`, `barrier(set_children/scheduled/performed)=0/0/0`,
+    `contained_relayouts=0`, `cache.reused=2`
+- Layout attribution summary for the worst frame:
+  - `layout_time_us=812`, `layout_engine_solve_time_us=377`, `layout_engine_solves=2`
+  - top solves are `new_frame_key_changed` on bounded subtrees (`subtree_nodes=100` at `273us`,
+    and `subtree_nodes=107` at `103us`), with `measure_time_us=0`.
+- Interpretation: the normalized steady-frame sample no longer supports another
+  direct-child-invalidated / resize-measure narrowing as the next high-value change. The current
+  proof surface is paint-dominant at the tail, with layout solve bounded under 0.4ms and no
+  invalidation-walk breadth in the considered frames. Any further resize optimization should either
+  switch to a hotter proof surface or target paint/cache replay rather than widening the scroll
+  apply-skip surface.
+
 ## Follow-on slice — Contained relayout dirty vs rerender semantics
 
 This follow-on slice locks the contract that:

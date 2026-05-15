@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-05-08",
+  "updated": "2026-05-15",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -22,6 +22,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/scroll-optimization-v1/M5_DIRTY_FRONTIER_RESIZE_MEASURE_AUDIT_2026-05-15.md"
     }
   ],
   "repro": {
@@ -61,6 +65,14 @@
     {
       "name": "scroll-contained-view-cache-dirty-frontier",
       "command": "cargo nextest run -p fret-ui scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation"
+    },
+    {
+      "name": "scroll-post-layout-mixed-child-synthetic-content-shrink",
+      "command": "cargo nextest run -p fret-ui scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative"
+    },
+    {
+      "name": "virtual-list-view-cache-visible-range-rerender",
+      "command": "cargo nextest run -p fret-ui virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache"
     },
     {
       "name": "scroll-layout-suite",
@@ -135,9 +147,12 @@
     "docs/workstreams/scroll-optimization-v1/DESIGN.md",
     "docs/workstreams/scroll-optimization-v1/TODO.md",
     "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/scroll-optimization-v1/M5_DIRTY_FRONTIER_RESIZE_MEASURE_AUDIT_2026-05-15.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
+    "crates/fret-ui/src/declarative/host_widget/event/scroll.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
+    "crates/fret-ui/src/declarative/tests/virtual_list/caching.rs",
     "crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs",
     "crates/fret-ui/src/declarative/mount.rs",
     "crates/fret-ui/src/declarative/tests/identity.rs",
