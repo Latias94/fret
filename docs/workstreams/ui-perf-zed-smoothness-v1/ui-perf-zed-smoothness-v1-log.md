@@ -13617,3 +13617,35 @@ Decision:
   a no-op, stale entries for the same window are pruned, and runtime graph mutations can still use
   explicit `clear_viewport_layout_for_window(...)` invalidation. Keep viewport tool registration out
   of the render-safe setter contract until tools have stable identities/revisions.
+
+## 2026-05-15 22:05:00 +08:00 (code-editor render-time view setter guards)
+
+Question:
+- Are the `CodeEditor::render`-time view setters guarded against equal-value re-application, and
+  do we have tests that prevent future refactors from reintroducing per-frame cache resets?
+
+Change:
+- Audited the render path that calls `CodeEditorHandle::set_soft_wrap_cols(...)`,
+  `set_code_font_feature_policy(...)`, and `set_interaction(...)`.
+- Confirmed each setter already returns early for equal values.
+- Added regression tests proving repeated soft-wrap publication does not rebuild the display map or
+  reset row scene/geometry caches, and repeated font-feature policy publication does not bump the
+  policy revision or reset row text/scene caches.
+
+Validation:
+- `cargo fmt -p fret-code-editor`
+- `cargo nextest run -p fret-code-editor set_soft_wrap_cols_is_idempotent_for_same_value code_font_feature_policy_is_idempotent_for_same_value --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-code-editor/src/editor/handle/view.rs`,
+  `ecosystem/fret-code-editor/src/editor/state.rs`,
+  `ecosystem/fret-code-editor/src/editor/tests/row_geom_cache.rs`, and
+  `ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs`.
+- Focused nextest result: both new tests passed. The crate still emits the existing
+  `render_code_editor_frame` dead-code warning from `editor/tests/support.rs`.
+
+Decision:
+- Treat `set_soft_wrap_cols(...)`, `set_code_font_feature_policy(...)`, and `set_interaction(...)`
+  as audited render-safe configuration setters. This is a contract-locking slice rather than a
+  runtime behavior change.

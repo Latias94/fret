@@ -296,3 +296,41 @@ fn code_wrap_policy_change_invalidates_row_text_cache() {
         );
     }
 }
+
+#[test]
+fn code_font_feature_policy_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+    let policy = CodeFontFeaturePolicy::default();
+    handle.set_code_font_feature_policy(policy.clone());
+
+    let (_range, cached_text, policy_rev_before, stats_before) = {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        (range, text, st.code_font_feature_policy_rev, st.cache_stats)
+    };
+
+    handle.set_code_font_feature_policy(policy);
+
+    let (_range_after, cached_text_after, policy_rev_after, stats_after) = {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 64);
+        (range, text, st.code_font_feature_policy_rev, st.cache_stats)
+    };
+
+    assert_eq!(
+        policy_rev_after, policy_rev_before,
+        "idempotent set_code_font_feature_policy must not bump the policy revision"
+    );
+    assert_eq!(
+        stats_after.row_text_resets, stats_before.row_text_resets,
+        "idempotent set_code_font_feature_policy must not reset row text caches"
+    );
+    assert_eq!(
+        stats_after.row_scene_resets, stats_before.row_scene_resets,
+        "idempotent set_code_font_feature_policy must not reset row scene caches"
+    );
+    assert!(
+        Arc::ptr_eq(&cached_text, &cached_text_after),
+        "idempotent set_code_font_feature_policy must preserve cached row text"
+    );
+}
