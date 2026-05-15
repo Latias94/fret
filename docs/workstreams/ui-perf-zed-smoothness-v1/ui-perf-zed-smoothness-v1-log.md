@@ -105,6 +105,23 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:20:00 +0800 (local head `a039e42085`)
+
+Question:
+- Does the P1.5 closeout checklist accidentally require `selection-summary.json` for ordinary target-machine
+  validation, even though the checked-in validation runner only emits that artifact for a deliberate re-seed flow?
+
+Change:
+- Clarified the contract audit and TODO wording:
+  - ordinary Windows RTX4090 validation requires `check.perf_thresholds.json` with `failures=[]` plus worst-bundle
+    `diag stats` summaries for paint/widget, code-editor paint perf, and renderer text/encode/upload;
+  - `selection-summary.json` is required only when a threshold re-seed is deliberately chosen, together with
+    no-threshold-loosening evidence or an explicit policy note.
+
+Validation:
+- Documentation-only alignment. This does not replace the still-missing Windows RTX4090 validation and attribution
+  artifact directories.
+
 ## 2026-05-16 07:13:13 +0800 (local head `33b07f44f9`)
 
 Change:

@@ -694,9 +694,11 @@ Conventions:
           - the baseline-validation directory must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
           - the attribution directory must include paint-perf coverage and the verifier must reject missing
             `code_editor_paint_perf`.
-        - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
-          `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
-          renderer text/encode/upload, and no threshold loosening unless intentionally justified.
+        - Required evidence: ordinary validation must provide `check.perf_thresholds.json` with
+          `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf, and
+          renderer text/encode/upload. A deliberate re-seed path must additionally provide
+          `selection-summary.json` plus no-threshold-loosening evidence unless a policy note intentionally
+          justifies the reset.
         - Guardrail: do not update checked-in baselines from macOS M4 evidence and do not mark P1.5
           closed until the contract matrix and this TODO point at the target-machine artifacts.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
