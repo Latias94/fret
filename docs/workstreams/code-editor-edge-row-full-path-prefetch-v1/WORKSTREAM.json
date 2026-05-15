@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "slug": "code-editor-edge-row-full-path-prefetch-v1",
+  "title": "Code Editor Edge Row Full Path Prefetch v1",
+  "status": "active",
+  "updated": "2026-05-15",
+  "scope_kind": "execution",
+  "follow_on_of": "code-editor-row-content-snapshot-cache-v1",
+  "problem": "After row content snapshots made replay-hit rows cheap, resize worst frames can still come from newly exposed viewport edge rows that miss the prepaint replay plan and walk the row content, rich text, geometry, and row scene path during paint.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M1_PLAIN_CACHED_REPLAY_2026-05-15.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/code-editor-row-content-snapshot-cache-v1/CLOSEOUT_AUDIT_2026-05-15.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the code editor resize probes with paint attribution enabled and compare worst-bundle code_editor_paint_perf fields against the row-content snapshot closeout bundle.",
+    "commands": [
+      "target/release/fretboard-dev diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    ]
+  },
+  "gates": [
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "focused-replay-plan",
+      "command": "cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan --features syntax-rust --no-fail-fast"
+    },
+    {
+      "name": "fret-code-editor-package",
+      "command": "cargo nextest run -p fret-code-editor --features syntax-rust --no-fail-fast"
+    },
+    {
+      "name": "fret-code-editor-check",
+      "command": "cargo check -p fret-code-editor --features syntax-rust --all-targets"
+    },
+    {
+      "name": "format",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "resize-perf",
+      "command": "target/release/fretboard-dev diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json --dir <run-dir> --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/DESIGN.md",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M1_PLAIN_CACHED_REPLAY_2026-05-15.md",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/EVIDENCE_AND_GATES.md",
+    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515/1778830062977/bundle.schema2.json",
+    "target/fret-diag/code-editor-row-content-snapshot-cache-v1-after-m2-20260515/1778827921081/bundle.schema2.json",
+    "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue only while the evidence points at code-editor-owned row content, geometry, rich text, or row scene replay work. Start a separate lane for global fret-ui layout, view-cache, Scroll, or VirtualList semantics if future evidence clearly points there."
+  }
+}

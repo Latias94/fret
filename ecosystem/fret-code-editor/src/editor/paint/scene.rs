@@ -123,9 +123,12 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         let Some((cached, _)) = st.row_scene_cache.get(&row) else {
             continue;
         };
-        if cached.syntax_replay_key.is_none() {
+        let has_syntax_replay_key = cached.syntax_replay_key.is_some();
+        let is_plain_replay_key = matches!(cached.key.paint_key, RowScenePaintKey::Plain { .. });
+        if !has_syntax_replay_key && !is_plain_replay_key {
             continue;
         }
+        let cached_row_geom_key = cached.key.row_geom_key.clone();
         st.cache_stats.row_scene_fast_get_calls =
             st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
 
@@ -134,34 +137,51 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             continue;
         }
 
-        let line_idx = st.display_map.display_row_line(row);
-        let syntax_spans = match lookup_row_syntax_spans(st, line_idx, max_entries) {
-            SyntaxRowCacheLookup::Hit(spans) => spans,
-            SyntaxRowCacheLookup::Miss { tick } => {
-                populate_row_syntax_spans_after_miss(st, line_idx, max_entries, tick)
+        let syntax_spans = if has_syntax_replay_key {
+            let line_idx = st.display_map.display_row_line(row);
+            let spans = match lookup_row_syntax_spans(st, line_idx, max_entries) {
+                SyntaxRowCacheLookup::Hit(spans) => spans,
+                SyntaxRowCacheLookup::Miss { tick } => {
+                    populate_row_syntax_spans_after_miss(st, line_idx, max_entries, tick)
+                }
+            };
+            if spans.is_empty() {
+                continue;
             }
+            Some(spans)
+        } else {
+            None
         };
-        if syntax_spans.is_empty() {
-            continue;
-        }
+
+        let expected_plain_key = if syntax_spans.is_none() {
+            Some(RowSceneKey::plain(cached_row_geom_key, fg))
+        } else {
+            None
+        };
 
         let Some((cached, last_used)) = st.row_scene_cache.get_mut(&row) else {
             continue;
         };
-        let matches = row_scene_cached_entry_matches_syntax(
-            cached,
-            &content.range,
-            &content.text,
-            &content.row_spans,
-            &syntax_spans,
-            text_style,
-            constraints,
-            font_stack_key,
-            scale_factor,
-            theme_revision,
-            code_font_feature_policy_rev,
-            fg,
-        );
+        let matches = if let Some(syntax_spans) = syntax_spans.as_ref() {
+            row_scene_cached_entry_matches_syntax(
+                cached,
+                &content.range,
+                &content.text,
+                &content.row_spans,
+                syntax_spans,
+                text_style,
+                constraints,
+                font_stack_key,
+                scale_factor,
+                theme_revision,
+                code_font_feature_policy_rev,
+                fg,
+            )
+        } else {
+            expected_plain_key
+                .as_ref()
+                .is_some_and(|expected| &cached.key == expected)
+        };
         if !matches {
             st.cache_stats.row_scene_fast_misses =
                 st.cache_stats.row_scene_fast_misses.saturating_add(1);

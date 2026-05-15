@@ -1,0 +1,111 @@
+# Evidence And Gates
+
+Date: 2026-05-15
+
+## Focused Gate
+
+```bash
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan --features syntax-rust --no-fail-fast
+```
+
+Result on 2026-05-15: passed (`2` tests).
+
+## Package Gate
+
+```bash
+cargo nextest run -p fret-code-editor --features syntax-rust --no-fail-fast
+```
+
+Result on 2026-05-15: passed (`130` tests).
+
+## Check Gate
+
+```bash
+cargo check -p fret-code-editor --features syntax-rust --all-targets
+```
+
+Result on 2026-05-15: passed.
+
+## Format And Diff Gates
+
+```bash
+cargo fmt --check
+git diff --check
+```
+
+Result on 2026-05-15: both passed.
+
+## Perf Repro
+
+```bash
+target/release/fretboard-dev diag perf ui-code-editor-resize-probes \
+  --repeat 3 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --sort time \
+  --top 15 \
+  --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json \
+  --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515 \
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
+```
+
+Result on 2026-05-15: passed.
+
+Worst bundle:
+
+- `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515/1778830062977/bundle.schema2.json`
+
+Aggregate p95 from the perf run:
+
+- total: `1442us`
+- paint: `747us`
+- prepaint: `328us`
+- layout: `376us`
+
+Worst-bundle p95:
+
+- total: `1442us`
+- paint: `873us`
+- paint.widget: `669us`
+- prepaint: `328us`
+- layout: `376us`
+
+Worst-bundle `code_editor_paint_perf.p95` after M1:
+
+- `us_total`: `371us`
+- `us_row_content_resolve`: `281us`
+- `us_row_scene_prepaint_plan`: `111us`
+- `us_row_scene_replay_ops`: `31us`
+- `us_row_scene_replay_touch`: `39us`
+- `us_row_text`: `6us`
+- `us_row_rich_cache_compare`: `20us`
+- `us_row_geom_key`: `53us`
+- `rows_scene_prepaint_planned`: `289`
+- `rows_scene_prepaint_plan_used`: `289`
+- `rows_scene_replayed`: `289`
+
+Comparison against previous row-content snapshot worst bundle:
+
+- previous bundle:
+  `target/fret-diag/code-editor-row-content-snapshot-cache-v1-after-m2-20260515/1778827921081/bundle.schema2.json`
+- `code_editor_paint_perf.p95.us_total`: `394us` -> `371us`
+- `us_row_content_resolve`: `305us` -> `281us`
+- `us_row_text`: `12us` -> `6us`
+- `us_row_rich_cache_compare`: `23us` -> `20us`
+- `us_row_geom_key`: `55us` -> `53us`
+- `us_row_scene_prepaint_plan`: `70us` -> `111us`
+- worst-bundle paint p95: `912us` -> `873us`
+- worst-bundle prepaint p95: `347us` -> `328us`
+- worst-bundle total p95: `1418us` -> `1442us`
+
+Interpretation: M1 improves the code-editor-owned paint path and increases replay-plan coverage,
+but it is not a full edge-row payload prebuild. The next slice should make candidate planning
+cheaper and more edge-aware before adding broader prebuild mechanics.

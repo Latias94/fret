@@ -244,6 +244,89 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     );
 }
 
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_handles_plain_cached_rows() {
+    let handle = CodeEditorHandle::new("    \n".repeat(256));
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = editor_ui_bounds();
+    let mut services = FakeServices::default();
+
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+
+    let plain_seed_entries = {
+        let st = handle.state.borrow();
+        st.row_scene_cache
+            .values()
+            .filter(|(entry, _)| {
+                entry.syntax_replay_key.is_none()
+                    && matches!(entry.key.paint_key, RowScenePaintKey::Plain { .. })
+            })
+            .count()
+    };
+    assert!(
+        plain_seed_entries > 0,
+        "expected first frame to seed plain row scene cache entries"
+    );
+
+    let before = handle.cache_stats();
+    let resized_bounds = Rect::new(bounds.origin, Size::new(Px(704.0), bounds.size.height));
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        resized_bounds,
+    );
+    let after = handle.cache_stats();
+
+    let row_text_delta = after
+        .row_text_get_calls
+        .saturating_sub(before.row_text_get_calls);
+    let scene_hits_delta = after
+        .row_scene_hits
+        .saturating_sub(before.row_scene_hits)
+        .saturating_add(
+            after
+                .row_scene_fast_hits
+                .saturating_sub(before.row_scene_fast_hits),
+        );
+    let perf = handle
+        .paint_perf_frame()
+        .expect("paint perf frame should be enabled in tests that set the env");
+
+    assert!(
+        perf.rows_scene_prepaint_planned > 0,
+        "expected prepaint to plan cached plain row scene entries"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
+        "paint should consume each planned plain row scene entry"
+    );
+    assert_eq!(
+        row_text_delta, 0,
+        "prepaint planning should reuse cached plain row content snapshots"
+    );
+    assert!(
+        scene_hits_delta >= perf.rows_scene_prepaint_planned,
+        "prepaint planning should account for plain row scene cache hits"
+    );
+}
+
 #[test]
 fn row_text_cache_stats_tracks_hits_and_misses() {
     let handle = CodeEditorHandle::new("hello\nworld");
