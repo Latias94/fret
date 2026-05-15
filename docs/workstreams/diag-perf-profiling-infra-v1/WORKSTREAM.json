@@ -43,7 +43,7 @@
     },
     {
       "name": "perf-key-registry-tests",
-      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
+      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
     },
     {
       "name": "perf-key-registry-inventory-json",

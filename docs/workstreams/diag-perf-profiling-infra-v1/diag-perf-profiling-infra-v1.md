@@ -150,8 +150,8 @@ Example bundle:
   generates the same content checked into
   `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`.
 - Interpretation:
-  - `registered_perf_keys` describes the currently registered frame/stats/gate perf key subset with unit, kind,
-    scope, and suggested aggregate metadata.
+  - `registered_perf_keys` describes the current frame-stats registry with unit, kind, scope, and suggested
+    aggregate metadata.
   - Frame 2 is layout-heavy (`layout_engine_solve_time_us` dominates the phase sum).
   - Frame 3 is paint/text-heavy (`paint_text_prepare_time_us` dominates paint).
   - Frame 4 has a long frame-clock delta but low phase and CPU values, so it is a schedule-noise-shaped
@@ -213,9 +213,9 @@ Example bundle:
   local opt-in profiling hooks until a specific repro needs span-level events.
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
-  subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.
-  `diag stats --perf-keys-json` emits the reviewable inventory artifact. Full bundle/stats/gate key coverage is
-  still open before this can be treated as the sole source of truth.
+  subset, while `diag stats --json` exposes the frame-stats registry via `registered_perf_keys`.
+  `diag stats --perf-keys-json` emits the reviewable inventory artifact. The remaining open question is whether
+  threshold/config `max_*` gate keys should join the same registry or stay a separate contract surface.
 - Perf threshold failure rows now attach per-metric evidence via `evidence_bundle`, `evidence_run`,
   `evidence_artifacts`, and optional `evidence_trace_chrome` when a sibling `trace.chrome.json` exists.
 - `diag stats --diff` now reports p95 deltas alongside max deltas and exposes a `typical_tail` highlight set in

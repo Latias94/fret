@@ -9,6 +9,9 @@ pub(crate) enum PerfKeyUnit {
     Cycles,
     Count,
     Bytes,
+    Pixels,
+    Boolean,
+    Id,
 }
 
 impl PerfKeyUnit {
@@ -18,6 +21,9 @@ impl PerfKeyUnit {
             Self::Cycles => "cycles",
             Self::Count => "count",
             Self::Bytes => "bytes",
+            Self::Pixels => "px",
+            Self::Boolean => "bool",
+            Self::Id => "id",
         }
     }
 }
@@ -26,6 +32,8 @@ impl PerfKeyUnit {
 pub(crate) enum PerfKeyKind {
     Timing,
     Counter,
+    Flag,
+    Identifier,
 }
 
 impl PerfKeyKind {
@@ -33,6 +41,8 @@ impl PerfKeyKind {
         match self {
             Self::Timing => "timing",
             Self::Counter => "counter",
+            Self::Flag => "flag",
+            Self::Identifier => "identifier",
         }
     }
 }
@@ -58,6 +68,8 @@ impl PerfKeyScope {
 pub(crate) enum PerfKeyAggregate {
     Max,
     P95,
+    Any,
+    None,
 }
 
 impl PerfKeyAggregate {
@@ -65,6 +77,8 @@ impl PerfKeyAggregate {
         match self {
             Self::Max => "max",
             Self::P95 => "p95",
+            Self::Any => "any",
+            Self::None => "none",
         }
     }
 }
@@ -787,6 +801,418 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     RENDERER_ENCODE_SCENE_PATH_OPS,
     RENDERER_ENCODE_SCENE_VIEWPORT_OPS,
     RENDERER_ENCODE_SCENE_FLUSHES,
+    count_key("barrier_relayouts_performed", PerfKeyAggregate::Max),
+    count_key("barrier_relayouts_scheduled", PerfKeyAggregate::Max),
+    id_key("dispatch_timer_slowest_token"),
+    flag_key("dispatch_timer_slowest_was_broadcast"),
+    count_key(
+        "element_children_vec_pool_grow_events",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("element_children_vec_pool_misses", PerfKeyAggregate::Max),
+    count_key("element_children_vec_pool_reuses", PerfKeyAggregate::Max),
+    byte_key("frame_arena_capacity_estimate_bytes", PerfKeyAggregate::Max),
+    count_key("frame_arena_grow_events", PerfKeyAggregate::Max),
+    count_key("global_change_globals", PerfKeyAggregate::Max),
+    count_key("global_change_invalidation_roots", PerfKeyAggregate::Max),
+    count_key("global_change_observation_edges", PerfKeyAggregate::Max),
+    count_key("global_change_unobserved_globals", PerfKeyAggregate::Max),
+    count_key(
+        "hover_declarative_hit_test_invalidations",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("hover_declarative_instance_changes", PerfKeyAggregate::Max),
+    count_key(
+        "hover_declarative_layout_invalidations",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "hover_declarative_paint_invalidations",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("hover_hover_region_target_changes", PerfKeyAggregate::Max),
+    count_key("hover_pressable_target_changes", PerfKeyAggregate::Max),
+    count_key("invalidation_walk_calls", PerfKeyAggregate::Max),
+    count_key("invalidation_walk_calls_focus", PerfKeyAggregate::Max),
+    count_key(
+        "invalidation_walk_calls_global_change",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("invalidation_walk_calls_hover", PerfKeyAggregate::Max),
+    count_key(
+        "invalidation_walk_calls_model_change",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("invalidation_walk_calls_other", PerfKeyAggregate::Max),
+    count_key("invalidation_walk_nodes", PerfKeyAggregate::Max),
+    count_key("invalidation_walk_nodes_focus", PerfKeyAggregate::Max),
+    count_key(
+        "invalidation_walk_nodes_global_change",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("invalidation_walk_nodes_hover", PerfKeyAggregate::Max),
+    count_key(
+        "invalidation_walk_nodes_model_change",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("invalidation_walk_nodes_other", PerfKeyAggregate::Max),
+    flag_key("layout_fast_path_taken"),
+    flag_key("layout_skipped_engine_frame"),
+    count_key("model_change_invalidation_roots", PerfKeyAggregate::Max),
+    count_key("model_change_models", PerfKeyAggregate::Max),
+    count_key("model_change_observation_edges", PerfKeyAggregate::Max),
+    count_key("model_change_unobserved_models", PerfKeyAggregate::Max),
+    count_key(
+        "paint_text_prepare_reason_blob_missing",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_font_stack_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_overflow_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_rich_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_scale_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_style_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_text_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_width_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "paint_text_prepare_reason_wrap_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_applied_raw",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_pyramid_applied_levels_ge2",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_pyramid_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_raw_degraded_budget_insufficient",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_raw_degraded_budget_zero",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_raw_degraded_target_exhausted",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_backdrop_source_groups_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_bind_group_switches", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_custom_effect_v1_passes_emitted",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v1_steps_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v2_passes_emitted",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v2_steps_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v2_user_image_incompatible_fallbacks",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_passes_emitted",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_pyramid_cache_hits",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_pyramid_cache_misses",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_sources_pyramid_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_sources_raw_aliased_to_src",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_sources_raw_distinct",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_sources_raw_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_steps_requested",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_user0_image_incompatible_fallbacks",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_custom_effect_v3_user1_image_incompatible_fallbacks",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_draw_calls", PerfKeyAggregate::Max),
+    id_key("renderer_frame_id"),
+    byte_key("renderer_image_upload_bytes", PerfKeyAggregate::Max),
+    byte_key("renderer_intermediate_budget_bytes", PerfKeyAggregate::Max),
+    byte_key(
+        "renderer_intermediate_full_target_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key("renderer_intermediate_in_use_bytes", PerfKeyAggregate::Max),
+    byte_key(
+        "renderer_intermediate_peak_in_use_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_intermediate_pool_allocations",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_intermediate_pool_evictions",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_intermediate_pool_free_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_intermediate_pool_free_textures",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_intermediate_pool_releases", PerfKeyAggregate::Max),
+    count_key("renderer_intermediate_pool_reuses", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_intermediate_release_targets",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_material_degraded_due_to_budget",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_material_distinct", PerfKeyAggregate::Max),
+    count_key("renderer_material_quad_ops", PerfKeyAggregate::Max),
+    count_key("renderer_material_sampled_quad_ops", PerfKeyAggregate::Max),
+    count_key("renderer_material_unknown_ids", PerfKeyAggregate::Max),
+    count_key("renderer_pipeline_switches", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_render_plan_custom_effect_chain_base_required_full_targets_max",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_base_required_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_plan_custom_effect_chain_budget_samples",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_effective_budget_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_effective_budget_min_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_optional_required_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_custom_effect_chain_other_live_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_plan_effect_chain_budget_samples",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_effect_chain_effective_budget_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_effect_chain_effective_budget_min_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_render_plan_effect_chain_other_live_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_ingest_cpu_upload",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_ingest_external_zero_copy",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_ingest_fallbacks",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_ingest_gpu_copy",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_ingest_owned",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_ingest_unknown",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_requested_ingest_cpu_upload",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_requested_ingest_external_zero_copy",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_requested_ingest_gpu_copy",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_requested_ingest_owned",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_target_updates_requested_ingest_unknown",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_misses",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_scissor_sets", PerfKeyAggregate::Max),
+    byte_key("renderer_svg_mask_atlas_bytes_live", PerfKeyAggregate::Max),
+    pixel_key("renderer_svg_mask_atlas_capacity_px", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_svg_mask_atlas_entries_evicted",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_svg_mask_atlas_page_evictions",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_svg_mask_atlas_pages_live", PerfKeyAggregate::Max),
+    pixel_key("renderer_svg_mask_atlas_used_px", PerfKeyAggregate::Max),
+    byte_key("renderer_svg_raster_budget_bytes", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_svg_raster_budget_evictions",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_svg_raster_cache_hits", PerfKeyAggregate::Max),
+    count_key("renderer_svg_raster_cache_misses", PerfKeyAggregate::Max),
+    count_key("renderer_svg_rasters_live", PerfKeyAggregate::Max),
+    byte_key("renderer_svg_standalone_bytes_live", PerfKeyAggregate::Max),
+    byte_key("renderer_svg_upload_bytes", PerfKeyAggregate::Max),
+    count_key("renderer_text_atlas_evicted_pages", PerfKeyAggregate::Max),
+    byte_key("renderer_text_atlas_upload_bytes", PerfKeyAggregate::Max),
+    id_key("renderer_tick_id"),
+    count_key("renderer_viewport_draw_calls", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_viewport_draw_calls_ingest_cpu_upload",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_viewport_draw_calls_ingest_external_zero_copy",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_viewport_draw_calls_ingest_gpu_copy",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_viewport_draw_calls_ingest_owned",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_viewport_draw_calls_ingest_unknown",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("set_children_barrier_writes", PerfKeyAggregate::Max),
+    count_key("view_cache_contained_relayouts", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_cache_key_mismatch", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_first_mount", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_layout_invalidated", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_manual", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_needs_rerender", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_node_recreated", PerfKeyAggregate::Max),
+    count_key(
+        "view_cache_roots_not_marked_reuse_root",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("view_cache_roots_reused", PerfKeyAggregate::Max),
+    count_key("view_cache_roots_total", PerfKeyAggregate::Max),
+    count_key("virtual_list_visible_range_checks", PerfKeyAggregate::Max),
+    count_key(
+        "virtual_list_visible_range_refreshes",
+        PerfKeyAggregate::Max,
+    ),
     POINTER_MOVE_MAX_DISPATCH_TIME_US,
     POINTER_MOVE_MAX_HIT_TEST_TIME_US,
     POINTER_MOVE_SNAPSHOTS_WITH_GLOBAL_CHANGES,
@@ -812,9 +1238,9 @@ pub(crate) fn registered_frame_stats_inventory_json() -> Value {
         "schema_version": PERF_KEY_REGISTRY_SCHEMA_VERSION,
         "kind": PERF_KEY_REGISTRY_KIND,
         "scope": "frame_stats",
-        "coverage": "registered_subset",
-        "complete": false,
-        "note": "Registered frame/stats/gate perf key subset. Full bundle/stats/gate coverage is still tracked by diag-perf-profiling-infra-v1.",
+        "coverage": "debug_stats_consumed_by_diag_stats",
+        "complete": true,
+        "note": "Complete registry for debug.stats frame fields consumed by diag stats and perf gates. Derived report-only fields and app_snapshot-specific payloads remain outside this frame-stats inventory.",
         "schema_policy": crate::perf_schema::schema_policy_json(),
         "keys": registered_frame_stats_keys_json(),
     })
@@ -924,6 +1350,39 @@ const fn byte_key(key: &'static str, suggested_aggregate: PerfKeyAggregate) -> P
     }
 }
 
+const fn pixel_key(key: &'static str, suggested_aggregate: PerfKeyAggregate) -> PerfKey {
+    PerfKey {
+        key,
+        unit: PerfKeyUnit::Pixels,
+        kind: PerfKeyKind::Counter,
+        scope: PerfKeyScope::Frame,
+        suggested_aggregate,
+        trace: None,
+    }
+}
+
+const fn flag_key(key: &'static str) -> PerfKey {
+    PerfKey {
+        key,
+        unit: PerfKeyUnit::Boolean,
+        kind: PerfKeyKind::Flag,
+        scope: PerfKeyScope::Frame,
+        suggested_aggregate: PerfKeyAggregate::Any,
+        trace: None,
+    }
+}
+
+const fn id_key(key: &'static str) -> PerfKey {
+    PerfKey {
+        key,
+        unit: PerfKeyUnit::Id,
+        kind: PerfKeyKind::Identifier,
+        scope: PerfKeyScope::Frame,
+        suggested_aggregate: PerfKeyAggregate::None,
+        trace: None,
+    }
+}
+
 const fn pointer_move_timing_key(
     key: &'static str,
     suggested_aggregate: PerfKeyAggregate,
@@ -964,6 +1423,34 @@ mod tests {
         assert_eq!(keys.len(), original_len);
     }
 
+    fn key_set(keys: &[PerfKey]) -> std::collections::BTreeSet<&'static str> {
+        keys.iter().map(|key| key.key).collect()
+    }
+
+    fn consumed_debug_stats_keys_from_bundle_stats_compute_source()
+    -> std::collections::BTreeSet<&'static str> {
+        let mut keys = std::collections::BTreeSet::new();
+        let mut source = include_str!("stats/bundle_stats_compute.inc.rs");
+        while let Some(start) = source.find("m.get(\"") {
+            if start > 0
+                && source
+                    .as_bytes()
+                    .get(start - 1)
+                    .is_some_and(u8::is_ascii_alphanumeric)
+            {
+                source = &source[start + "m.get(\"".len()..];
+                continue;
+            }
+            source = &source[start + "m.get(\"".len()..];
+            let Some(end) = source.find('"') else {
+                break;
+            };
+            keys.insert(&source[..end]);
+            source = &source[end + 1..];
+        }
+        keys
+    }
+
     fn assert_units_match_names(keys: &[PerfKey]) {
         for key in keys {
             if key.key.ends_with("_time_us") || key.key.ends_with("_us") {
@@ -972,8 +1459,31 @@ mod tests {
             if key.key.ends_with("_cycles") {
                 assert_eq!(key.unit, PerfKeyUnit::Cycles, "{}", key.key);
             }
-            if key.key.ends_with("_bytes") {
+            if key.key.ends_with("_bytes") || key.key.contains("_bytes_") {
                 assert_eq!(key.unit, PerfKeyUnit::Bytes, "{}", key.key);
+            }
+            if key.key.ends_with("_px") {
+                assert_eq!(key.unit, PerfKeyUnit::Pixels, "{}", key.key);
+            }
+            if key.key.ends_with("_id") || key.key.ends_with("_token") {
+                assert_eq!(key.unit, PerfKeyUnit::Id, "{}", key.key);
+            }
+            if matches!(key.kind, PerfKeyKind::Flag) {
+                assert_eq!(key.unit, PerfKeyUnit::Boolean, "{}", key.key);
+                assert_eq!(
+                    key.suggested_aggregate,
+                    PerfKeyAggregate::Any,
+                    "{}",
+                    key.key
+                );
+            }
+            if matches!(key.kind, PerfKeyKind::Identifier) {
+                assert_eq!(
+                    key.suggested_aggregate,
+                    PerfKeyAggregate::None,
+                    "{}",
+                    key.key
+                );
             }
             assert!(!key.unit.as_str().is_empty());
         }
@@ -1036,21 +1546,25 @@ mod tests {
 
     #[test]
     fn registered_perf_key_contract_keeps_stats_and_gate_keys_additive() {
-        let keys: std::collections::BTreeSet<&str> = REGISTERED_FRAME_STATS_KEYS
-            .iter()
-            .map(|key| key.key)
-            .collect();
+        let keys = key_set(REGISTERED_FRAME_STATS_KEYS);
         for expected in [
             "total_time_us",
             "layout_time_us",
+            "frame_arena_capacity_estimate_bytes",
+            "element_children_vec_pool_grow_events",
             "layout_pending_barrier_relayouts_time_us",
             "layout_repair_view_cache_bounds_time_us",
             "layout_contained_view_cache_roots_time_us",
             "layout_engine_child_rect_time_us",
+            "layout_fast_path_taken",
+            "view_cache_roots_cache_key_mismatch",
+            "invalidation_walk_nodes_hover",
             "paint_input_context_time_us",
             "paint_publish_text_input_snapshot_time_us",
+            "paint_text_prepare_reason_font_stack_changed",
             "dispatch_accounted_time_us",
             "dispatch_pointer_move_layer_observers_time_us",
+            "dispatch_timer_slowest_token",
             "window_runtime_snapshot_command_availability_eval_time_us",
             "hit_test_bounds_tree_query_time_us",
             "renderer_encode_scene_us",
@@ -1061,11 +1575,26 @@ mod tests {
             "renderer_prepare_svg_us",
             "renderer_instance_bytes",
             "renderer_encode_scene_text_ops",
+            "renderer_render_target_updates_ingest_gpu_copy",
+            "renderer_svg_mask_atlas_capacity_px",
+            "renderer_custom_effect_v3_pyramid_cache_hits",
+            "renderer_intermediate_peak_in_use_bytes",
             "pointer_move.max_dispatch_time_us",
             "pointer_move.max_hit_test_time_us",
         ] {
             assert!(keys.contains(expected), "missing perf key: {expected}");
         }
+    }
+
+    #[test]
+    fn full_registered_perf_key_registry_covers_consumed_debug_stats_fields() {
+        let registered = key_set(REGISTERED_FRAME_STATS_KEYS);
+        let consumed = consumed_debug_stats_keys_from_bundle_stats_compute_source();
+        let missing: Vec<&str> = consumed.difference(&registered).copied().collect();
+        assert!(
+            missing.is_empty(),
+            "debug.stats fields consumed by diag stats are missing from perf key registry: {missing:?}"
+        );
     }
 
     #[test]
