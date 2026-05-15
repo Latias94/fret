@@ -74,10 +74,12 @@ Preferred evidence loop (commit-addressable):
 | `CodeEditorHandle` | `set_line_folds`, `set_line_inlays` | Done | `perf(fret-code-editor): make fold/inlay setters idempotent` (commit `007006b28`) + perf log entry `2026-02-09 13:46:46` |
 | `CodeEditorHandle` | `set_text` | Done | `perf(fret-code-editor): make set_text idempotent for identical text` + perf log entry `2026-05-15 21:34:00` |
 | `TextArea` | `set_text` | Done | `perf(fret-ui): make TextArea::set_text idempotent` (commit `fcd1ada2d`) |
+| `DockManager` / `DockSpace` | viewport layout publication | Done | `DockManager::sync_viewport_layouts_for_window(...)` reconciles per-window viewport layouts and returns `false` for identical render-frame layout sets; perf log entry `2026-05-15 21:45:00` |
+| `ViewportToolArbitrator` | `set_tools` | Audited: not render-safe by design | `set_tools(...)` is a replacement/cancellation command for boxed tools, not an idempotent render setter; regression test locks hot/active clearing so callers must use it only when the logical tool set changes |
 
 ## Next
 
-- Extend this audit to other handle-style surfaces that are configured from render in the UI gallery
-  (docking, viewport tooling, etc.).
+- Extend this audit to markdown/editor preview surfaces that are configured from render in the UI
+  gallery.
 - Consider adding a short "render-time setter safety" guideline in the main perf workstream doc once
   we have 2–3 surfaces audited.

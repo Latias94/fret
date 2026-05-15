@@ -13583,3 +13583,37 @@ Decision:
 - Treat `set_text(...)` as the declarative render-safe path for publishing app-owned text and
   `replace_buffer(...)` as the explicit imperative document replacement path. This closes another
   high-risk P0.6 setter-idempotency footgun without changing the public handle surface.
+
+## 2026-05-15 21:45:00 +08:00 (docking viewport layout publication idempotency)
+
+Question:
+- Can docking avoid clearing and reinserting identical viewport layout cache entries during
+  render-frame publication, while keeping graph/runtime mutations explicit?
+
+Change:
+- Added `DockManager::sync_viewport_layouts_for_window(...)`, which reconciles the live viewport
+  layouts for one window and returns `false` when the incoming layout set is identical.
+- Changed `DockSpace` to collect viewport layouts from the current layout pass and synchronize them
+  instead of calling `clear_viewport_layout_for_window(...)` before every paint.
+- Audited `ViewportToolArbitrator::set_tools(...)` and documented it as a replacement/cancellation
+  command, not a render-time idempotent setter. A regression test now locks that reapplying tools
+  clears hot/active interaction state.
+
+Validation:
+- `cargo fmt -p fret-docking -p fret-ui-kit`
+- `cargo nextest run -p fret-docking sync_viewport_layouts_for_window_is_unchanged_for_identical_layouts sync_viewport_layouts_for_window_removes_stale_entries_for_that_window_only --no-fail-fast`
+- `cargo nextest run -p fret-ui-kit set_tools_replaces_tools_and_clears_interaction_state --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-docking/src/dock/manager.rs`,
+  `ecosystem/fret-docking/src/dock/space.rs`, and
+  `ecosystem/fret-ui-kit/src/viewport_tooling.rs`.
+- Setter contract ledger:
+  `docs/workstreams/standalone/ui-perf-setter-idempotency-v1.md`.
+
+Decision:
+- Treat docking viewport layout publication as a render-frame reconciliation API: same layout set is
+  a no-op, stale entries for the same window are pruned, and runtime graph mutations can still use
+  explicit `clear_viewport_layout_for_window(...)` invalidation. Keep viewport tool registration out
+  of the render-safe setter contract until tools have stable identities/revisions.
