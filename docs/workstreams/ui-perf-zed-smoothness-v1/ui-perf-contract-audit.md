@@ -443,6 +443,19 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Contract decision: do not update baselines from this macOS M4 evidence. It restores the formal evidence path and
     confirms the next owner remains generic `ElementHostWidget` paint aggregate overhead.
 
+## Editor Canvas Replay Goal Completion Audit (2026-05-16)
+
+Goal under audit: close the Editor Canvas paint/cache replay to renderer-payload evidence loop, land reversible
+optimizations only where attribution points, and stabilize the result as a durable perf contract.
+
+| Requirement | Concrete evidence | Status |
+| --- | --- | --- |
+| Formal evidence pass covers typical autoscroll, complex wheel, and resize jitter with repeat/warmup and no repeat=1-only conclusions. | Perf log entries `2026-05-16 01:03:00 +08:00`, `2026-05-16 02:31:15 +08:00`, `2026-05-16 03:51:42 +08:00`, `2026-05-16 04:54:35 +08:00`, and `2026-05-16 05:14:52 +08:00`; overlay-disabled worst bundles under `target/fret-diag/editor-paint-overlay-disabled-20260516-*`. | Covered for macOS M4 evidence. Not sufficient for Windows baseline promotion. |
+| Attribution identifies whether the remaining cost belongs to editor row replay/cache, generic Canvas/paint traversal, or renderer text/encode/upload. | Row replay/cache remains healthy; renderer text prepare got one reversible owner slice; `WindowedRowsSurface` attribution, paint-widget hotspot summary, host-widget subphase summary, and per-row gap fields are now in `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`. | Covered enough to reject broad row/display-list rewrites. Remaining owner is outer paint traversal / host-widget aggregate unless target evidence changes. |
+| At least one reversible optimization is landed and verified without weakening renderer payload thresholds. | Renderer glyph pin-key bucket sizing, host-widget record lookup slimming, and observed-deps empty fast path were validated with focused checks; baselines stayed unchanged from local macOS evidence. | Covered locally; keep all slices rollbackable and baseline-neutral until target re-seed. |
+| Contract stabilization promotes or validates the final thresholds on the target machine profile. | Current checked-in Windows contracts exist for resize, editor resize, autoscroll steady, autoscroll typical, and complex wheel; `audit_perf_baselines.py --strict` passes for the matrix. | Not complete. Needs deliberate Windows RTX4090 overlay-disabled re-seed/validation with `selection-summary.json`, `check.perf_thresholds.json` `failures=[]`, and no silent threshold loosening. |
+| P1.5 Editor Canvas paint replay can be closed. | Current audit and TODO now identify the remaining missing artifact. | Not complete until the target-machine re-seed/validation is recorded and the matrix/TODO are updated. |
+
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its

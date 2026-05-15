@@ -669,6 +669,14 @@ Conventions:
           complex wheel, and resize jitter bundles, the p95 values are `65/62/62ns` per row and
           `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
           territory rather than a separate row hot loop.
+      - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
+        - Required artifact: Windows RTX4090 overlay-disabled validation/re-seed for typical autoscroll,
+          complex wheel, and code-editor resize jitter.
+        - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
+          `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
+          renderer text/encode/upload, and no threshold loosening unless intentionally justified.
+        - Guardrail: do not update checked-in baselines from macOS M4 evidence and do not mark P1.5
+          closed until the contract matrix and this TODO point at the target-machine artifacts.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and
