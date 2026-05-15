@@ -3102,16 +3102,6 @@ fn select_impl<H: UiHost>(
                         wrapper_insets
                     };
 
-                    cx.diagnostics_record_overlay_placement_placed_rect(
-                        Some(overlay_root_name.as_str()),
-                        Some(trigger_id),
-                        None,
-                        outer,
-                        anchor,
-                        placed,
-                        Some(motion_side),
-                    );
-
                     if std::env::var("FRET_DEBUG_SELECT_PLACED")
                         .ok()
                         .is_some_and(|v| v == "1")
@@ -3173,6 +3163,7 @@ fn select_impl<H: UiHost>(
                     let on_value_change_for_overlay_children = on_value_change.clone();
                     let model_for_overlay = model.clone();
 
+                    let overlay_root_name_for_diagnostics = overlay_root_name.clone();
                     let overlay_children = portal_inherited::with_root_name_inheriting(
                         cx,
                         &overlay_root_name,
@@ -4458,9 +4449,6 @@ fn select_impl<H: UiHost>(
                                 }
                             });
 
-                        let animated =
-                            overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
-
                         {
                             let mut state = trigger_state_for_overlay
                                 .lock()
@@ -4479,6 +4467,19 @@ fn select_impl<H: UiHost>(
                                         .unwrap_or(false);
                             }
                         }
+
+                        cx.diagnostics_record_overlay_placement_placed_rect(
+                            Some(overlay_root_name_for_diagnostics.as_str()),
+                            Some(trigger_id),
+                            content_panel_id_out.get(),
+                            outer,
+                            anchor,
+                            placed,
+                            Some(motion_side),
+                        );
+
+                        let animated =
+                            overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
                         radix_select::select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler(
                             cx,

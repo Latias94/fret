@@ -515,6 +515,13 @@ fn script_v2_roundtrip_ui_gallery_select_commit_and_label_update() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json"

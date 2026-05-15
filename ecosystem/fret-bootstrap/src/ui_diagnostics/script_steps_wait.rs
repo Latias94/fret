@@ -1108,10 +1108,10 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
     };
 
     let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
-    let found = active.overlay_placement_trace.iter().any(|entry| {
-        overlay_placement_trace_entry_matches_query(entry, step_index_u32, &query)
-            || overlay_placement_trace_entry_matches_query_any_step(entry, &query)
-    });
+    let found = active
+        .overlay_placement_trace
+        .iter()
+        .any(|entry| overlay_placement_trace_entry_matches_query(entry, step_index_u32, &query));
 
     if found {
         active.wait_overlay_placement_trace = None;
@@ -1421,6 +1421,7 @@ fn overlay_rect_summary(rect: &UiRectV1) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui_diagnostics::script_engine::overlay_placement_trace_entry_matches_query_any_step;
 
     fn key_modifiers() -> UiKeyModifiersV1 {
         UiKeyModifiersV1 {
@@ -1504,6 +1505,32 @@ mod tests {
             final_rect: placed,
             arrow: None,
         }
+    }
+
+    #[test]
+    fn wait_overlay_trace_matching_is_step_scoped() {
+        let query = UiOverlayPlacementTraceQueryV1 {
+            kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+            anchor_test_id: Some("trigger".to_string()),
+            content_test_id: Some("content".to_string()),
+            ..Default::default()
+        };
+        let trace = anchored_trace(
+            "trigger",
+            "content",
+            UiOverlaySideV1::Bottom,
+            UiOverlaySideV1::Bottom,
+        );
+
+        assert!(overlay_placement_trace_entry_matches_query_any_step(
+            &trace, &query
+        ));
+        assert!(!overlay_placement_trace_entry_matches_query(
+            &trace, 19, &query
+        ));
+        assert!(overlay_placement_trace_entry_matches_query(
+            &trace, 18, &query
+        ));
     }
 
     #[test]

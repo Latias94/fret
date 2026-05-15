@@ -1918,6 +1918,7 @@ pub(super) fn overlay_placement_trace_entry_matches_query(
     }
 }
 
+#[cfg(test)]
 pub(super) fn overlay_placement_trace_entry_matches_query_any_step(
     entry: &UiOverlayPlacementTraceEntryV1,
     query: &UiOverlayPlacementTraceQueryV1,

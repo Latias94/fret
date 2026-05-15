@@ -20,7 +20,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
         .trigger(shadcn::SelectTrigger::new())
         .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
-        .content(shadcn::SelectContent::new())
+        .content(shadcn::SelectContent::new().test_id("ui-gallery-select-shadcn-demo-listbox"))
         .entries([shadcn::SelectGroup::new([
             shadcn::SelectLabel::new("Fruits").into(),
             shadcn::SelectItem::new("apple", "Apple").into(),

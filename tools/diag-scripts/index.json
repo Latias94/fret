@@ -9944,6 +9944,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-select-demo-open-layout",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [
+        "desktop",
+        "layout",
+        "overlay",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Select page with the minimal shadcn demo section mounted.",
+        "Opens the default item-aligned Select popup and verifies placed-rect ownership through trigger and listbox test-id endpoints.",
+        "Resizes the window while open to gate popup bounds stability and window containment."
+      ]
+    },
+    {
       "id": "ui-gallery-select-disabled-item-no-commit",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-disabled-item-no-commit.json",
       "required_capabilities": [
