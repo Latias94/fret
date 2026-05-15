@@ -312,6 +312,36 @@ def artifact_summary_for_step(step_out_dir: Path) -> dict[str, Any]:
     }
 
 
+def _has_metric(doc: dict[str, Any], metric: str) -> bool:
+    for group in ["p95", "max", "sum"]:
+        values = doc.get(group)
+        if isinstance(values, dict) and metric in values:
+            return True
+    return False
+
+
+def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
+    if not isinstance(doc, dict):
+        return {
+            "paint_widget": False,
+            "renderer_text_encode_upload": False,
+            "code_editor_paint_perf": False,
+        }
+    code_editor = doc.get("code_editor_paint_perf")
+    return {
+        "paint_widget": _has_metric(doc, "paint_widget_time_us"),
+        "renderer_text_encode_upload": all(
+            _has_metric(doc, metric)
+            for metric in [
+                "renderer_prepare_text_us",
+                "renderer_encode_scene_us",
+                "renderer_upload_us",
+            ]
+        ),
+        "code_editor_paint_perf": isinstance(code_editor, dict) and isinstance(code_editor.get("p95"), dict),
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Run the Windows RTX4090 editor paint contract validation plan.",
@@ -454,7 +484,18 @@ def main() -> int:
                 _write_json(step_dir / "stats.cmd.json", {"cmd": stats_cmd})
                 stats_started = time.time()
                 stats_rc = _run_step(stats_cmd, workspace_root, stats_stdout, stats_stderr)
-                stats_ok = stats_rc == 0
+                coverage: dict[str, bool] | None = None
+                missing_coverage: list[str] = []
+                if stats_rc == 0:
+                    try:
+                        coverage = stats_coverage_for_doc(_read_json(stats_stdout))
+                    except Exception:
+                        coverage = stats_coverage_for_doc(None)
+                    required_coverage = ["paint_widget", "renderer_text_encode_upload"]
+                    if bool(args.with_paint_perf):
+                        required_coverage.append("code_editor_paint_perf")
+                    missing_coverage = [name for name in required_coverage if not bool(coverage.get(name))]
+                stats_ok = stats_rc == 0 and not missing_coverage
                 pass_all = pass_all and stats_ok
                 stats_result = {
                     "ok": stats_ok,
@@ -463,6 +504,8 @@ def main() -> int:
                     "cmd": stats_cmd,
                     "stdout": str(stats_stdout),
                     "stderr": str(stats_stderr),
+                    "coverage": coverage,
+                    "missing_coverage": missing_coverage,
                 }
             else:
                 pass_all = False

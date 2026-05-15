@@ -61,7 +61,9 @@ Use `--dry-run` on non-target hosts to inspect the exact command plan without pr
 Use `--with-paint-perf` for a target-machine attribution pass after the baseline validation pass; do not use its output
 to loosen checked-in thresholds without the re-seed policy below.
 After each validation probe, the runner collects the worst bundle and writes `diag stats --sort cpu_cycles --top 15
---json` output under that probe's `runner-logs/<probe>/stats.stdout.json`.
+--json` output under that probe's `runner-logs/<probe>/stats.stdout.json`. The runner also checks that the stats JSON
+contains paint-widget and renderer text/encode/upload fields; `--with-paint-perf` additionally requires
+`code_editor_paint_perf`.
 
 ## Validate Current Contracts First
 

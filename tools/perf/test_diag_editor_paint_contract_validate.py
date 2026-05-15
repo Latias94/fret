@@ -99,6 +99,39 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertIsNone(summary["check_perf_thresholds_failures"])
         self.assertEqual("target/fret-diag/run/from-regression/bundle.schema2.json", summary["worst_bundle"])
 
+    def test_stats_coverage_tracks_closeout_field_groups(self) -> None:
+        coverage = validate.stats_coverage_for_doc(
+            {
+                "p95": {
+                    "paint_widget_time_us": 10,
+                    "renderer_prepare_text_us": 11,
+                    "renderer_encode_scene_us": 12,
+                    "renderer_upload_us": 13,
+                },
+                "code_editor_paint_perf": {
+                    "p95": {
+                        "us_total": 14,
+                    }
+                },
+            }
+        )
+
+        self.assertEqual(
+            {
+                "paint_widget": True,
+                "renderer_text_encode_upload": True,
+                "code_editor_paint_perf": True,
+            },
+            coverage,
+        )
+
+    def test_stats_coverage_reports_missing_groups(self) -> None:
+        coverage = validate.stats_coverage_for_doc({"p95": {"paint_widget_time_us": 10}})
+
+        self.assertTrue(coverage["paint_widget"])
+        self.assertFalse(coverage["renderer_text_encode_upload"])
+        self.assertFalse(coverage["code_editor_paint_perf"])
+
 
 if __name__ == "__main__":
     unittest.main()

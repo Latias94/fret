@@ -676,7 +676,8 @@ Conventions:
           `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`.
           Use `--dry-run` on non-target hosts to inspect the command plan, and use `--with-paint-perf`
           only for the follow-up attribution pass after baseline validation. The runner collects the
-          worst-bundle `diag stats --sort cpu_cycles --top 15 --json` output for each validation probe.
+          worst-bundle `diag stats --sort cpu_cycles --top 15 --json` output for each validation probe and
+          checks that the required paint-widget, renderer, and paint-perf field groups are present.
         - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
           renderer text/encode/upload, and no threshold loosening unless intentionally justified.
