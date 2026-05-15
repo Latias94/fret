@@ -1449,6 +1449,13 @@ Perf acceptance:
   - Gate: `cargo nextest run -p fret-diag baseline_rows_omit_pointer_move_thresholds_when_frames_are_absent single_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent repeat_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent perf_threshold_scan_passes_when_under_limits perf_threshold_scan_reports_each_exceeded_metric --no-fail-fast`.
   - Evidence: perf log entry `2026-05-15` in
     `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.
-- [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
-  - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.
-  - Prefer `FRET_DIAG_SCRIPT_AUTO_DUMP=0` for perf probes and clean old run directories periodically.
+- [x] Keep diagnostics artifacts bounded for tool-launched perf runs (especially `target/fret-diag*` and
+  `target/fret-diag-perf`).
+  - `diag perf --launch` now writes a small-by-default tool-launched `diag.config.json`:
+    `write_bundle_json=false`, `write_bundle_schema2=true`, `script_dump_max_snapshots=10`,
+    `script_auto_dump=false`, and `pick_auto_dump=false`.
+  - Manual attach / no-`--launch` runs remain caller-configured. Keep using explicit env/config such as
+    `FRET_DIAG_SCRIPT_AUTO_DUMP=0` for those sessions, and clean old run directories periodically.
+  - Gate: `cargo nextest run -p fret-diag tool_launch_config_defaults_are_small_by_default --no-fail-fast`.
+  - Evidence: `crates/fret-diag/src/compare.rs` (`tool_launched_diag_config` and
+    `validate_tool_launched_diag_config`); `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
