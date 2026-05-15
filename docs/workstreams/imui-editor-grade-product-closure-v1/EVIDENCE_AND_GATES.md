@@ -1306,3 +1306,34 @@ Note: the full bootstrap test-target clippy command
 currently also hits pre-existing `items_after_test_module` warnings in diagnostics script-step test
 modules; this slice uses the lib clippy gate for the changed runtime path and leaves that broader
 test-target lint debt as a separate cleanup input.
+
+## DevTools UI gallery dogfood workflow closure - 2026-05-15 follow-up
+
+Scope: close the M6 DevTools dogfood workflow gap with one concrete authoring loop that stays on
+shared diagnostics contracts instead of adding a GUI-only campaign model.
+
+- `apps/fret-devtools/src/native.rs` now renders a `Dogfood Workflow` block in the first-open
+  shell. The block names the `ui-gallery-button-dogfood` path: open `fret-ui-gallery`, pick a
+  Button-page selector, generate or apply the selector into a script, run with `diag run --pack`,
+  pack a selected bundle, and open `tools/fret-bundle-viewer`.
+- The visible path references existing script evidence:
+  `tools/diag-scripts/ui-gallery-lite-smoke.json` and
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json`.
+- `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md` now records the
+  same concrete loop, and
+  `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` marks the M6 dogfood item
+  complete.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check the GUI surface and canonical command
+  markers so future edits do not silently hide the dogfood route.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_dogfood_workflow_lines_surface_ui_gallery_loop --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+```
+
+Result: passed. The `fret-devtools` focused nextest gate reported `1 test run: 1 passed`; both
+DevTools discovery/source gates completed successfully.

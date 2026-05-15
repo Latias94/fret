@@ -98,6 +98,20 @@ const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
 const DEVTOOLS_FIRST_OPEN_GATE_COMMAND: &str =
     "python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke";
 const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "devtools-first-open-smoke";
+const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood";
+const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release";
+const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json";
+const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json";
+const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json";
+const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json";
+const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release";
+const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only";
+const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev";
 const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
 const IMUI_PRODUCT_WORKFLOW_DOC: &str =
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
@@ -994,6 +1008,16 @@ fn header_bar(
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         first_open_rows,
     );
+    let mut dogfood_workflow_rows = Vec::new();
+    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
+        dogfood_workflow_rows.push(cx.text(line));
+    }
+    let dogfood_workflow_panel = diag_section(
+        cx,
+        "Dogfood Workflow",
+        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
+        dogfood_workflow_rows,
+    );
     let mut demo_metrics_debug_rows = Vec::new();
     for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
         demo_metrics_debug_rows.push(cx.text(line));
@@ -1088,6 +1112,7 @@ fn header_bar(
             endpoint_line,
             workspace_line,
             first_open_panel,
+            dogfood_workflow_panel,
             demo_metrics_debug_panel,
             gate_commands_panel,
             connection_actions,
@@ -6455,6 +6480,32 @@ fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
     ]
 }
 
+fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    vec![
+        format!("dogfood workflow: {DEVTOOLS_DOGFOOD_WORKFLOW_ID}"),
+        format!("dogfood docs: {DEVTOOLS_GUI_BRANCH_DOC}"),
+        format!("artifacts root: {artifacts_root}"),
+        format!("open ui gallery: {DEVTOOLS_DOGFOOD_TARGET_COMMAND}"),
+        "pick target: enable inspect -> Pick -> click a Button page control".to_string(),
+        "preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}".to_string(),
+        format!("base script: {DEVTOOLS_DOGFOOD_BASE_SCRIPT}"),
+        format!("button script: {DEVTOOLS_DOGFOOD_BUTTON_SCRIPT}"),
+        format!("generate script from pick: {DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND}"),
+        format!("apply pick to script: {DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND}"),
+        format!("run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}"),
+        format!("pack selected bundle: {DEVTOOLS_DOGFOOD_PACK_COMMAND}"),
+        format!("open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}"),
+        "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
+            .to_string(),
+    ]
+}
+
 fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -7130,6 +7181,38 @@ mod tests {
         ));
         assert!(text.contains(
             "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+        ));
+    }
+
+    #[test]
+    fn devtools_dogfood_workflow_lines_surface_ui_gallery_loop() {
+        let lines = devtools_dogfood_workflow_lines("target/fret-diag");
+        let text = lines.join("\n");
+        assert!(text.contains("dogfood workflow: ui-gallery-button-dogfood"));
+        assert!(text.contains(
+            "dogfood docs: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+        ));
+        assert!(text.contains("artifacts root: target/fret-diag"));
+        assert!(text.contains("open ui gallery: cargo run -p fret-ui-gallery --release"));
+        assert!(
+            text.contains("pick target: enable inspect -> Pick -> click a Button page control")
+        );
+        assert!(
+            text.contains("preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}")
+        );
+        assert!(text.contains("base script: tools/diag-scripts/ui-gallery-lite-smoke.json"));
+        assert!(text.contains(
+            "button script: tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json"
+        ));
+        assert!(text.contains("generate script from pick: cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json"));
+        assert!(text.contains("apply pick to script: cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json"));
+        assert!(text.contains("run and pack: cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release"));
+        assert!(text.contains(
+            "pack selected bundle: cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only"
+        ));
+        assert!(text.contains("open viewer: pnpm -C tools/fret-bundle-viewer dev"));
+        assert!(text.contains(
+            "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
         ));
     }
 

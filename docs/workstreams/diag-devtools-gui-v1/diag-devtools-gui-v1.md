@@ -131,6 +131,13 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   bounds, barrier roots, blocking roots, and topmost interactive root hints; `fret-devtools`
   projects them into `Live Inspect Hover Bounds`, `Live Inspect Overlay Hooks`, and raw payload
   panels.
+- The GUI first-open shell now includes a `Dogfood Workflow` block for the concrete
+  `ui-gallery-button-dogfood` loop: open `fret-ui-gallery`, pick a Button-page selector, generate
+  or apply the selector into a script, run with `diag run --pack`, optionally pack a selected
+  bundle, and open `tools/fret-bundle-viewer`. The block references
+  `tools/diag-scripts/ui-gallery-lite-smoke.json` and
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json` so the
+  visible GUI path stays tied to existing script artifacts instead of a GUI-only workflow model.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.
