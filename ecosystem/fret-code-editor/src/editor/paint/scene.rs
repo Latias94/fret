@@ -120,12 +120,30 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     let end = frame.visible_end.min(row_count.saturating_sub(1));
     let mut planned = 0u64;
     for row in frame.visible_start..=end {
+        if st.paint_perf_enabled {
+            st.paint_perf_frame.rows_scene_prepaint_candidates = st
+                .paint_perf_frame
+                .rows_scene_prepaint_candidates
+                .saturating_add(1);
+        }
         let Some((cached, _)) = st.row_scene_cache.get(&row) else {
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_skip_no_cache = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_skip_no_cache
+                    .saturating_add(1);
+            }
             continue;
         };
         let has_syntax_replay_key = cached.syntax_replay_key.is_some();
         let is_plain_replay_key = matches!(cached.key.paint_key, RowScenePaintKey::Plain { .. });
         if !has_syntax_replay_key && !is_plain_replay_key {
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_skip_unsupported_key = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_skip_unsupported_key
+                    .saturating_add(1);
+            }
             continue;
         }
         let cached_row_geom_key = cached.key.row_geom_key.clone();
@@ -134,6 +152,12 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
 
         let content = cached.content.clone();
         if content.preedit_range.is_some() {
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_skip_preedit = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_skip_preedit
+                    .saturating_add(1);
+            }
             continue;
         }
 
@@ -146,6 +170,12 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                 }
             };
             if spans.is_empty() {
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_prepaint_skip_syntax_empty = st
+                        .paint_perf_frame
+                        .rows_scene_prepaint_skip_syntax_empty
+                        .saturating_add(1);
+                }
                 continue;
             }
             Some(spans)
@@ -183,6 +213,12 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                 .is_some_and(|expected| &cached.key == expected)
         };
         if !matches {
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_skip_key_mismatch
+                    .saturating_add(1);
+            }
             st.cache_stats.row_scene_fast_misses =
                 st.cache_stats.row_scene_fast_misses.saturating_add(1);
             continue;
@@ -388,6 +424,12 @@ pub(super) fn try_replay_row_scene_cache_fast_syntax(
                     }
                     Some((cached.geom.clone(), cached.is_rich))
                 } else {
+                    if st.paint_perf_enabled {
+                        st.paint_perf_frame.rows_scene_fast_miss_key_mismatch = st
+                            .paint_perf_frame
+                            .rows_scene_fast_miss_key_mismatch
+                            .saturating_add(1);
+                    }
                     if let Some(started) = probe_started.take() {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_fast_probe,
@@ -399,6 +441,12 @@ pub(super) fn try_replay_row_scene_cache_fast_syntax(
                 }
             }
             None => {
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_fast_miss_no_entry = st
+                        .paint_perf_frame
+                        .rows_scene_fast_miss_no_entry
+                        .saturating_add(1);
+                }
                 if let Some(started) = probe_started.take() {
                     add_paint_perf_elapsed(
                         &mut st.paint_perf_frame.us_row_scene_fast_probe,
@@ -503,6 +551,12 @@ pub(super) fn try_replay_row_scene_cache(
                     }
                     Some((cached.geom.clone(), cached.is_rich))
                 } else {
+                    if st.paint_perf_enabled {
+                        st.paint_perf_frame.rows_scene_full_miss_key_mismatch = st
+                            .paint_perf_frame
+                            .rows_scene_full_miss_key_mismatch
+                            .saturating_add(1);
+                    }
                     if let Some(started) = probe_started.take() {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_full_probe,
@@ -514,6 +568,12 @@ pub(super) fn try_replay_row_scene_cache(
                 }
             }
             None => {
+                if st.paint_perf_enabled {
+                    st.paint_perf_frame.rows_scene_full_miss_no_entry = st
+                        .paint_perf_frame
+                        .rows_scene_full_miss_no_entry
+                        .saturating_add(1);
+                }
                 if let Some(started) = probe_started.take() {
                     add_paint_perf_elapsed(
                         &mut st.paint_perf_frame.us_row_scene_full_probe,
@@ -632,6 +692,18 @@ pub(super) fn store_row_scene_cache(
     if st.paint_perf_enabled {
         st.paint_perf_frame.rows_scene_stored =
             st.paint_perf_frame.rows_scene_stored.saturating_add(1);
+        if row == st.paint_perf_frame.visible_start as usize {
+            st.paint_perf_frame.rows_scene_stored_at_visible_start = st
+                .paint_perf_frame
+                .rows_scene_stored_at_visible_start
+                .saturating_add(1);
+        }
+        if row == st.paint_perf_frame.visible_end as usize {
+            st.paint_perf_frame.rows_scene_stored_at_visible_end = st
+                .paint_perf_frame
+                .rows_scene_stored_at_visible_end
+                .saturating_add(1);
+        }
         st.paint_perf_frame.row_scene_ops_stored = st
             .paint_perf_frame
             .row_scene_ops_stored
@@ -720,6 +792,18 @@ pub(super) fn store_row_scene_cache(
     if st.paint_perf_enabled {
         st.paint_perf_frame.rows_scene_stored =
             st.paint_perf_frame.rows_scene_stored.saturating_add(1);
+        if row == st.paint_perf_frame.visible_start as usize {
+            st.paint_perf_frame.rows_scene_stored_at_visible_start = st
+                .paint_perf_frame
+                .rows_scene_stored_at_visible_start
+                .saturating_add(1);
+        }
+        if row == st.paint_perf_frame.visible_end as usize {
+            st.paint_perf_frame.rows_scene_stored_at_visible_end = st
+                .paint_perf_frame
+                .rows_scene_stored_at_visible_end
+                .saturating_add(1);
+        }
         st.paint_perf_frame.row_scene_ops_stored = st
             .paint_perf_frame
             .row_scene_ops_stored

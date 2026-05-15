@@ -524,7 +524,19 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) rows_scene_prepaint_planned: u64,
     pub(super) rows_scene_prepaint_plan_used: u64,
     pub(super) rows_scene_stored: u64,
+    pub(super) rows_scene_stored_at_visible_start: u64,
+    pub(super) rows_scene_stored_at_visible_end: u64,
     pub(super) row_scene_ops_stored: u64,
+    pub(super) rows_scene_prepaint_candidates: u64,
+    pub(super) rows_scene_prepaint_skip_no_cache: u64,
+    pub(super) rows_scene_prepaint_skip_unsupported_key: u64,
+    pub(super) rows_scene_prepaint_skip_preedit: u64,
+    pub(super) rows_scene_prepaint_skip_syntax_empty: u64,
+    pub(super) rows_scene_prepaint_skip_key_mismatch: u64,
+    pub(super) rows_scene_fast_miss_no_entry: u64,
+    pub(super) rows_scene_fast_miss_key_mismatch: u64,
+    pub(super) rows_scene_full_miss_no_entry: u64,
+    pub(super) rows_scene_full_miss_key_mismatch: u64,
     pub(super) quads_selection: u64,
     pub(super) quads_caret: u64,
     pub(super) syntax_rows_stored: u64,
@@ -580,7 +592,19 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     rows_scene_prepaint_planned: u64,
     rows_scene_prepaint_plan_used: u64,
     rows_scene_stored: u64,
+    rows_scene_stored_at_visible_start: u64,
+    rows_scene_stored_at_visible_end: u64,
     row_scene_ops_stored: u64,
+    rows_scene_prepaint_candidates: u64,
+    rows_scene_prepaint_skip_no_cache: u64,
+    rows_scene_prepaint_skip_unsupported_key: u64,
+    rows_scene_prepaint_skip_preedit: u64,
+    rows_scene_prepaint_skip_syntax_empty: u64,
+    rows_scene_prepaint_skip_key_mismatch: u64,
+    rows_scene_fast_miss_no_entry: u64,
+    rows_scene_fast_miss_key_mismatch: u64,
+    rows_scene_full_miss_no_entry: u64,
+    rows_scene_full_miss_key_mismatch: u64,
     quads_selection: u64,
     quads_caret: u64,
     syntax_rows_stored: u64,
@@ -633,9 +657,45 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             .rows_scene_prepaint_plan_used
             .saturating_add(p.rows_scene_prepaint_plan_used);
         self.rows_scene_stored = self.rows_scene_stored.saturating_add(p.rows_scene_stored);
+        self.rows_scene_stored_at_visible_start = self
+            .rows_scene_stored_at_visible_start
+            .saturating_add(p.rows_scene_stored_at_visible_start);
+        self.rows_scene_stored_at_visible_end = self
+            .rows_scene_stored_at_visible_end
+            .saturating_add(p.rows_scene_stored_at_visible_end);
         self.row_scene_ops_stored = self
             .row_scene_ops_stored
             .saturating_add(p.row_scene_ops_stored);
+        self.rows_scene_prepaint_candidates = self
+            .rows_scene_prepaint_candidates
+            .saturating_add(p.rows_scene_prepaint_candidates);
+        self.rows_scene_prepaint_skip_no_cache = self
+            .rows_scene_prepaint_skip_no_cache
+            .saturating_add(p.rows_scene_prepaint_skip_no_cache);
+        self.rows_scene_prepaint_skip_unsupported_key = self
+            .rows_scene_prepaint_skip_unsupported_key
+            .saturating_add(p.rows_scene_prepaint_skip_unsupported_key);
+        self.rows_scene_prepaint_skip_preedit = self
+            .rows_scene_prepaint_skip_preedit
+            .saturating_add(p.rows_scene_prepaint_skip_preedit);
+        self.rows_scene_prepaint_skip_syntax_empty = self
+            .rows_scene_prepaint_skip_syntax_empty
+            .saturating_add(p.rows_scene_prepaint_skip_syntax_empty);
+        self.rows_scene_prepaint_skip_key_mismatch = self
+            .rows_scene_prepaint_skip_key_mismatch
+            .saturating_add(p.rows_scene_prepaint_skip_key_mismatch);
+        self.rows_scene_fast_miss_no_entry = self
+            .rows_scene_fast_miss_no_entry
+            .saturating_add(p.rows_scene_fast_miss_no_entry);
+        self.rows_scene_fast_miss_key_mismatch = self
+            .rows_scene_fast_miss_key_mismatch
+            .saturating_add(p.rows_scene_fast_miss_key_mismatch);
+        self.rows_scene_full_miss_no_entry = self
+            .rows_scene_full_miss_no_entry
+            .saturating_add(p.rows_scene_full_miss_no_entry);
+        self.rows_scene_full_miss_key_mismatch = self
+            .rows_scene_full_miss_key_mismatch
+            .saturating_add(p.rows_scene_full_miss_key_mismatch);
         self.quads_selection = self.quads_selection.saturating_add(p.quads_selection);
         self.quads_caret = self.quads_caret.saturating_add(p.quads_caret);
         self.syntax_rows_stored = self
@@ -729,7 +789,43 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             .rows_scene_prepaint_plan_used
             .max(p.rows_scene_prepaint_plan_used);
         self.rows_scene_stored = self.rows_scene_stored.max(p.rows_scene_stored);
+        self.rows_scene_stored_at_visible_start = self
+            .rows_scene_stored_at_visible_start
+            .max(p.rows_scene_stored_at_visible_start);
+        self.rows_scene_stored_at_visible_end = self
+            .rows_scene_stored_at_visible_end
+            .max(p.rows_scene_stored_at_visible_end);
         self.row_scene_ops_stored = self.row_scene_ops_stored.max(p.row_scene_ops_stored);
+        self.rows_scene_prepaint_candidates = self
+            .rows_scene_prepaint_candidates
+            .max(p.rows_scene_prepaint_candidates);
+        self.rows_scene_prepaint_skip_no_cache = self
+            .rows_scene_prepaint_skip_no_cache
+            .max(p.rows_scene_prepaint_skip_no_cache);
+        self.rows_scene_prepaint_skip_unsupported_key = self
+            .rows_scene_prepaint_skip_unsupported_key
+            .max(p.rows_scene_prepaint_skip_unsupported_key);
+        self.rows_scene_prepaint_skip_preedit = self
+            .rows_scene_prepaint_skip_preedit
+            .max(p.rows_scene_prepaint_skip_preedit);
+        self.rows_scene_prepaint_skip_syntax_empty = self
+            .rows_scene_prepaint_skip_syntax_empty
+            .max(p.rows_scene_prepaint_skip_syntax_empty);
+        self.rows_scene_prepaint_skip_key_mismatch = self
+            .rows_scene_prepaint_skip_key_mismatch
+            .max(p.rows_scene_prepaint_skip_key_mismatch);
+        self.rows_scene_fast_miss_no_entry = self
+            .rows_scene_fast_miss_no_entry
+            .max(p.rows_scene_fast_miss_no_entry);
+        self.rows_scene_fast_miss_key_mismatch = self
+            .rows_scene_fast_miss_key_mismatch
+            .max(p.rows_scene_fast_miss_key_mismatch);
+        self.rows_scene_full_miss_no_entry = self
+            .rows_scene_full_miss_no_entry
+            .max(p.rows_scene_full_miss_no_entry);
+        self.rows_scene_full_miss_key_mismatch = self
+            .rows_scene_full_miss_key_mismatch
+            .max(p.rows_scene_full_miss_key_mismatch);
         self.quads_selection = self.quads_selection.max(p.quads_selection);
         self.quads_caret = self.quads_caret.max(p.quads_caret);
         self.syntax_rows_stored = self.syntax_rows_stored.max(p.syntax_rows_stored);
@@ -796,7 +892,19 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "rows_scene_prepaint_planned": self.rows_scene_prepaint_planned,
             "rows_scene_prepaint_plan_used": self.rows_scene_prepaint_plan_used,
             "rows_scene_stored": self.rows_scene_stored,
+            "rows_scene_stored_at_visible_start": self.rows_scene_stored_at_visible_start,
+            "rows_scene_stored_at_visible_end": self.rows_scene_stored_at_visible_end,
             "row_scene_ops_stored": self.row_scene_ops_stored,
+            "rows_scene_prepaint_candidates": self.rows_scene_prepaint_candidates,
+            "rows_scene_prepaint_skip_no_cache": self.rows_scene_prepaint_skip_no_cache,
+            "rows_scene_prepaint_skip_unsupported_key": self.rows_scene_prepaint_skip_unsupported_key,
+            "rows_scene_prepaint_skip_preedit": self.rows_scene_prepaint_skip_preedit,
+            "rows_scene_prepaint_skip_syntax_empty": self.rows_scene_prepaint_skip_syntax_empty,
+            "rows_scene_prepaint_skip_key_mismatch": self.rows_scene_prepaint_skip_key_mismatch,
+            "rows_scene_fast_miss_no_entry": self.rows_scene_fast_miss_no_entry,
+            "rows_scene_fast_miss_key_mismatch": self.rows_scene_fast_miss_key_mismatch,
+            "rows_scene_full_miss_no_entry": self.rows_scene_full_miss_no_entry,
+            "rows_scene_full_miss_key_mismatch": self.rows_scene_full_miss_key_mismatch,
             "quads_selection": self.quads_selection,
             "quads_caret": self.quads_caret,
             "syntax_rows_stored": self.syntax_rows_stored,
@@ -871,7 +979,19 @@ impl BundleStatsCodeEditorPaintPerf {
             "rows_scene_prepaint_planned": self.rows_scene_prepaint_planned,
             "rows_scene_prepaint_plan_used": self.rows_scene_prepaint_plan_used,
             "rows_scene_stored": self.rows_scene_stored,
+            "rows_scene_stored_at_visible_start": self.rows_scene_stored_at_visible_start,
+            "rows_scene_stored_at_visible_end": self.rows_scene_stored_at_visible_end,
             "row_scene_ops_stored": self.row_scene_ops_stored,
+            "rows_scene_prepaint_candidates": self.rows_scene_prepaint_candidates,
+            "rows_scene_prepaint_skip_no_cache": self.rows_scene_prepaint_skip_no_cache,
+            "rows_scene_prepaint_skip_unsupported_key": self.rows_scene_prepaint_skip_unsupported_key,
+            "rows_scene_prepaint_skip_preedit": self.rows_scene_prepaint_skip_preedit,
+            "rows_scene_prepaint_skip_syntax_empty": self.rows_scene_prepaint_skip_syntax_empty,
+            "rows_scene_prepaint_skip_key_mismatch": self.rows_scene_prepaint_skip_key_mismatch,
+            "rows_scene_fast_miss_no_entry": self.rows_scene_fast_miss_no_entry,
+            "rows_scene_fast_miss_key_mismatch": self.rows_scene_fast_miss_key_mismatch,
+            "rows_scene_full_miss_no_entry": self.rows_scene_full_miss_no_entry,
+            "rows_scene_full_miss_key_mismatch": self.rows_scene_full_miss_key_mismatch,
             "quads_selection": self.quads_selection,
             "quads_caret": self.quads_caret,
             "syntax_rows_stored": self.syntax_rows_stored,
@@ -1486,6 +1606,21 @@ impl BundleStatsReport {
             p.sum.us_row_geom_resolve,
             p.sum.us_row_overlay,
             p.sum.us_frame_overlay_prepare,
+        );
+        println!(
+            "code_editor.paint_perf sum.rows(scene_store_start/end,prepaint_candidates/no_cache/unsupported/preedit/syntax_empty/key_mismatch,fast_miss_no_entry/key_mismatch,full_miss_no_entry/key_mismatch)={}/{}, {}/{}/{}/{}/{}/{}, {}/{}, {}/{}",
+            p.sum.rows_scene_stored_at_visible_start,
+            p.sum.rows_scene_stored_at_visible_end,
+            p.sum.rows_scene_prepaint_candidates,
+            p.sum.rows_scene_prepaint_skip_no_cache,
+            p.sum.rows_scene_prepaint_skip_unsupported_key,
+            p.sum.rows_scene_prepaint_skip_preedit,
+            p.sum.rows_scene_prepaint_skip_syntax_empty,
+            p.sum.rows_scene_prepaint_skip_key_mismatch,
+            p.sum.rows_scene_fast_miss_no_entry,
+            p.sum.rows_scene_fast_miss_key_mismatch,
+            p.sum.rows_scene_full_miss_no_entry,
+            p.sum.rows_scene_full_miss_key_mismatch,
         );
         println!(
             "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",

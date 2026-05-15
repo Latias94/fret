@@ -35,7 +35,25 @@ fn snapshot_code_editor_paint_perf(
         rows_scene_prepaint_planned: u64_field!("rows_scene_prepaint_planned"),
         rows_scene_prepaint_plan_used: u64_field!("rows_scene_prepaint_plan_used"),
         rows_scene_stored: u64_field!("rows_scene_stored"),
+        rows_scene_stored_at_visible_start: u64_field!("rows_scene_stored_at_visible_start"),
+        rows_scene_stored_at_visible_end: u64_field!("rows_scene_stored_at_visible_end"),
         row_scene_ops_stored: u64_field!("row_scene_ops_stored"),
+        rows_scene_prepaint_candidates: u64_field!("rows_scene_prepaint_candidates"),
+        rows_scene_prepaint_skip_no_cache: u64_field!("rows_scene_prepaint_skip_no_cache"),
+        rows_scene_prepaint_skip_unsupported_key: u64_field!(
+            "rows_scene_prepaint_skip_unsupported_key"
+        ),
+        rows_scene_prepaint_skip_preedit: u64_field!("rows_scene_prepaint_skip_preedit"),
+        rows_scene_prepaint_skip_syntax_empty: u64_field!(
+            "rows_scene_prepaint_skip_syntax_empty"
+        ),
+        rows_scene_prepaint_skip_key_mismatch: u64_field!(
+            "rows_scene_prepaint_skip_key_mismatch"
+        ),
+        rows_scene_fast_miss_no_entry: u64_field!("rows_scene_fast_miss_no_entry"),
+        rows_scene_fast_miss_key_mismatch: u64_field!("rows_scene_fast_miss_key_mismatch"),
+        rows_scene_full_miss_no_entry: u64_field!("rows_scene_full_miss_no_entry"),
+        rows_scene_full_miss_key_mismatch: u64_field!("rows_scene_full_miss_key_mismatch"),
         quads_selection: u64_field!("quads_selection"),
         quads_caret: u64_field!("quads_caret"),
         syntax_rows_stored: u64_field!("syntax_rows_stored"),
@@ -2240,7 +2258,23 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_scene_prepaint_planned: metric!(rows_scene_prepaint_planned),
             rows_scene_prepaint_plan_used: metric!(rows_scene_prepaint_plan_used),
             rows_scene_stored: metric!(rows_scene_stored),
+            rows_scene_stored_at_visible_start: metric!(rows_scene_stored_at_visible_start),
+            rows_scene_stored_at_visible_end: metric!(rows_scene_stored_at_visible_end),
             row_scene_ops_stored: metric!(row_scene_ops_stored),
+            rows_scene_prepaint_candidates: metric!(rows_scene_prepaint_candidates),
+            rows_scene_prepaint_skip_no_cache: metric!(rows_scene_prepaint_skip_no_cache),
+            rows_scene_prepaint_skip_unsupported_key: metric!(
+                rows_scene_prepaint_skip_unsupported_key
+            ),
+            rows_scene_prepaint_skip_preedit: metric!(rows_scene_prepaint_skip_preedit),
+            rows_scene_prepaint_skip_syntax_empty: metric!(rows_scene_prepaint_skip_syntax_empty),
+            rows_scene_prepaint_skip_key_mismatch: metric!(
+                rows_scene_prepaint_skip_key_mismatch
+            ),
+            rows_scene_fast_miss_no_entry: metric!(rows_scene_fast_miss_no_entry),
+            rows_scene_fast_miss_key_mismatch: metric!(rows_scene_fast_miss_key_mismatch),
+            rows_scene_full_miss_no_entry: metric!(rows_scene_full_miss_no_entry),
+            rows_scene_full_miss_key_mismatch: metric!(rows_scene_full_miss_key_mismatch),
             quads_selection: metric!(quads_selection),
             quads_caret: metric!(quads_caret),
             syntax_rows_stored: metric!(syntax_rows_stored),

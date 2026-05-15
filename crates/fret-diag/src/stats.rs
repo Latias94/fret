@@ -909,7 +909,19 @@ mod tests {
                                     "rows_scene_prepaint_planned": 6,
                                     "rows_scene_prepaint_plan_used": 5,
                                     "rows_scene_stored": 2,
+                                    "rows_scene_stored_at_visible_start": 1,
+                                    "rows_scene_stored_at_visible_end": 1,
                                     "row_scene_ops_stored": 19,
+                                    "rows_scene_prepaint_candidates": 10,
+                                    "rows_scene_prepaint_skip_no_cache": 2,
+                                    "rows_scene_prepaint_skip_unsupported_key": 1,
+                                    "rows_scene_prepaint_skip_preedit": 0,
+                                    "rows_scene_prepaint_skip_syntax_empty": 1,
+                                    "rows_scene_prepaint_skip_key_mismatch": 1,
+                                    "rows_scene_fast_miss_no_entry": 2,
+                                    "rows_scene_fast_miss_key_mismatch": 1,
+                                    "rows_scene_full_miss_no_entry": 1,
+                                    "rows_scene_full_miss_key_mismatch": 1,
                                     "quads_selection": 4,
                                     "quads_caret": 1,
                                     "syntax_rows_stored": 1,
@@ -965,7 +977,18 @@ mod tests {
         assert_eq!(perf.rows_scene_prepaint_planned, 6);
         assert_eq!(perf.rows_scene_prepaint_plan_used, 5);
         assert_eq!(perf.rows_scene_stored, 2);
+        assert_eq!(perf.rows_scene_stored_at_visible_start, 1);
+        assert_eq!(perf.rows_scene_stored_at_visible_end, 1);
         assert_eq!(perf.row_scene_ops_stored, 19);
+        assert_eq!(perf.rows_scene_prepaint_candidates, 10);
+        assert_eq!(perf.rows_scene_prepaint_skip_no_cache, 2);
+        assert_eq!(perf.rows_scene_prepaint_skip_unsupported_key, 1);
+        assert_eq!(perf.rows_scene_prepaint_skip_syntax_empty, 1);
+        assert_eq!(perf.rows_scene_prepaint_skip_key_mismatch, 1);
+        assert_eq!(perf.rows_scene_fast_miss_no_entry, 2);
+        assert_eq!(perf.rows_scene_fast_miss_key_mismatch, 1);
+        assert_eq!(perf.rows_scene_full_miss_no_entry, 1);
+        assert_eq!(perf.rows_scene_full_miss_key_mismatch, 1);
         assert_eq!(perf.quads_selection, 4);
         assert_eq!(perf.quads_caret, 1);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
@@ -995,6 +1018,16 @@ mod tests {
             json.pointer("/code_editor_paint_perf/sum/rows_scene_prepaint_planned")
                 .and_then(|v| v.as_u64()),
             Some(6)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/rows_scene_prepaint_skip_no_cache")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/rows_scene_full_miss_no_entry")
+                .and_then(|v| v.as_u64()),
+            Some(1)
         );
         assert_eq!(
             json.pointer("/code_editor_paint_perf/sum/us_row_scene_prepaint_plan")
