@@ -509,10 +509,9 @@ The same-mouth editor paint evidence path has been restored and the full three-p
 typical total/paint p95 `850/624us`, complex wheel `1115/838us`, and resize jitter `1563/631us`. Keep baselines
 unchanged from this macOS M4 evidence. Follow-up attribution now shows the Canvas wrapper itself is not the owner:
 Canvas-minus-`WindowedRowsSurface` callback p95 is only `2..4us`, while callback-minus-row-paint p95 is
-`118..149us`. The immediate next work is to inspect `WindowedRowsSurface` callback overhead before deciding whether
-the next reversible owner slice belongs to code-editor row work, generic Canvas paint/cache, or renderer
-text/encode/upload. Keep non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090
-contract set.
+`118..149us`. The subsequent per-row inspection keeps the remaining surface gap in aggregate loop-overhead territory
+rather than a standalone row hot loop. Keep non-Windows machine profiles explicit rather than inferring them from the
+Windows RTX 4090 contract set.
 The 2026-05-16 05:14 +08:00 `diag stats` follow-up added per-row derived fields and shows the three overlay-disabled
 editor bundles at `65/62/62ns` per row for `windowed_surface_paint_callback_minus_row_paint_per_row_ns` and
 `79/48/72ns` per row for `windowed_surface_row_callback_gap_per_row_ns` (typical autoscroll, complex wheel, and resize
