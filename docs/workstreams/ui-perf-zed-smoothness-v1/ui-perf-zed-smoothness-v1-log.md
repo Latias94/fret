@@ -13519,3 +13519,35 @@ Decision:
   when the diagnostic report shows real pointer-move frames. This keeps non-pointer scripts from
   acquiring accidental `0` or stale pointer-move contracts while preserving the existing top/frame
   and renderer thresholds.
+
+## 2026-05-15 21:01:45 +08:00 (renderer payload baseline audit closure)
+
+Question:
+- Does the perf baseline matrix gate actually fail when a payload-aware editor baseline omits
+  renderer payload values or thresholds?
+
+Change:
+- Strengthened `tools/perf/audit_perf_baselines.py` so `--strict` checks
+  `ui-renderer-payload`, `renderer-payload`, `renderer`, and `all` threshold surfaces for
+  `renderer_instance_bytes` and `renderer_encode_scene_text_ops` in every `measured_*` row,
+  `threshold_seed`, and the hard threshold fields.
+- Added `tools/perf/test_audit_perf_baselines.py` to cover complete payload contracts, missing
+  payload fields, and non-payload `ui` baselines.
+
+Validation:
+- `python -m py_compile tools/perf/audit_perf_baselines.py tools/perf/test_audit_perf_baselines.py`
+- `python -m unittest discover -s tools/perf -p "test_*.py"`
+- `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+
+Evidence:
+- The tools/perf unit suite passed 8 tests.
+- The strict matrix audit passed and reported `payload_missing=-` for the three current
+  `ui-renderer-payload` editor paint baselines:
+  `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`,
+  `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`, and
+  `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`.
+
+Decision:
+- Renderer payload contract closure is now machine-checked by the baseline matrix audit instead
+  of relying only on matrix prose. Time-only baselines remain valid unless they opt into a
+  payload-aware threshold surface.

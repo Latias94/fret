@@ -23,6 +23,9 @@ Related:
 - New renderer-aware baselines should also carry payload contract fields:
   `renderer_instance_bytes` and `renderer_encode_scene_text_ops` in `measured_*`, `threshold_seed`, and `thresholds`
   when `threshold_surface` includes `ui-renderer-payload`, `renderer-payload`, `renderer`, or `all`.
+- `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+  enforces those payload fields for renderer-aware threshold surfaces; missing payload measurements, threshold seeds,
+  or hard thresholds are contract failures.
 - Existing checked-in baselines created before `measured_p50` was added remain valid. Do not synthesize p50 into old
   files; add it only by intentionally re-seeding a baseline on the target machine.
 - Existing checked-in baselines created before renderer payload fields were added remain valid as time-only contracts.

@@ -15,6 +15,23 @@ LEGACY_HINTS = (
     "ui-gallery-complex-typical.windows-rtx4090.v1.json",
 )
 
+PAYLOAD_THRESHOLD_SURFACES = {
+    "ui-renderer-payload",
+    "renderer-payload",
+    "renderer",
+    "all",
+}
+
+PAYLOAD_MEASURED_FIELDS = (
+    "renderer_instance_bytes",
+    "renderer_encode_scene_text_ops",
+)
+
+PAYLOAD_THRESHOLD_FIELDS = (
+    "max_renderer_instance_bytes",
+    "max_renderer_encode_scene_text_ops",
+)
+
 
 @dataclass(frozen=True)
 class BaselineReport:
@@ -24,6 +41,7 @@ class BaselineReport:
     threshold_surface: str | None
     legacy: bool
     missing_fields: tuple[str, ...]
+    missing_payload_fields: tuple[str, ...]
 
 
 def repo_root_from(path: pathlib.Path) -> pathlib.Path:
@@ -55,21 +73,74 @@ def classify_legacy(path: pathlib.Path) -> bool:
     return "windows-rtx4090" not in name or any(hint in name for hint in LEGACY_HINTS)
 
 
+def requires_renderer_payload_contract(threshold_surface: str | None) -> bool:
+    if threshold_surface is None:
+        return False
+    return threshold_surface in PAYLOAD_THRESHOLD_SURFACES
+
+
+def missing_payload_contract_fields(rows: list[object]) -> tuple[str, ...]:
+    missing: list[str] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            missing.append(f"row[{index}]")
+            continue
+        script = row.get("script")
+        row_label = str(script) if isinstance(script, str) and script else str(index)
+
+        for measured_key in ("measured_p50", "measured_p90", "measured_p95", "measured_max"):
+            measured = row.get(measured_key)
+            if not isinstance(measured, dict):
+                for field in PAYLOAD_MEASURED_FIELDS:
+                    missing.append(f"{row_label}.{measured_key}.{field}")
+                continue
+            for field in PAYLOAD_MEASURED_FIELDS:
+                if field not in measured:
+                    missing.append(f"{row_label}.{measured_key}.{field}")
+
+        seed = row.get("threshold_seed")
+        if not isinstance(seed, dict):
+            for field in PAYLOAD_MEASURED_FIELDS:
+                missing.append(f"{row_label}.threshold_seed.{field}")
+        else:
+            for field in PAYLOAD_MEASURED_FIELDS:
+                if field not in seed:
+                    missing.append(f"{row_label}.threshold_seed.{field}")
+
+        thresholds = row.get("thresholds")
+        if not isinstance(thresholds, dict):
+            for field in PAYLOAD_THRESHOLD_FIELDS:
+                missing.append(f"{row_label}.thresholds.{field}")
+        else:
+            for field in PAYLOAD_THRESHOLD_FIELDS:
+                if thresholds.get(field) is None:
+                    missing.append(f"{row_label}.thresholds.{field}")
+
+    return tuple(missing)
+
+
 def audit_baseline(path: pathlib.Path) -> BaselineReport:
     data = json.loads(path.read_text(encoding="utf-8"))
     rows = data.get("rows", [])
+    threshold_surface = data.get("threshold_surface")
     missing_fields = tuple(
         field
         for field in ("measured_p50", "measured_p90", "measured_p95", "measured_max")
         if any(field not in row for row in rows)
     )
+    missing_payload_fields = (
+        missing_payload_contract_fields(rows)
+        if requires_renderer_payload_contract(threshold_surface)
+        else ()
+    )
     return BaselineReport(
         path=path,
         rows=len(rows),
         repeat=data.get("repeat"),
-        threshold_surface=data.get("threshold_surface"),
+        threshold_surface=threshold_surface,
         legacy=classify_legacy(path),
         missing_fields=missing_fields,
+        missing_payload_fields=missing_payload_fields,
     )
 
 
@@ -85,7 +156,10 @@ def main() -> int:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="Fail when a non-legacy baseline is missing measured_p50/p90/p95/max or threshold_surface.",
+        help=(
+            "Fail when a non-legacy baseline is missing measured_p50/p90/p95/max, "
+            "threshold_surface, or renderer payload fields required by its threshold surface."
+        ),
     )
     parser.add_argument("paths", nargs="*", type=pathlib.Path, help="Baseline JSON files.")
     args = parser.parse_args()
@@ -107,12 +181,20 @@ def main() -> int:
         report = audit_baseline(path)
         surface = report.threshold_surface or "None"
         missing = ",".join(report.missing_fields) if report.missing_fields else "-"
+        payload_missing = (
+            ",".join(report.missing_payload_fields) if report.missing_payload_fields else "-"
+        )
         status = "legacy" if report.legacy else "contract"
         print(
-            f"{status}\t{path}\trows={report.rows}\trepeat={report.repeat}\tsurface={surface}\tmissing={missing}"
+            f"{status}\t{path}\trows={report.rows}\trepeat={report.repeat}\t"
+            f"surface={surface}\tmissing={missing}\tpayload_missing={payload_missing}"
         )
         if args.strict and not report.legacy:
-            if report.threshold_surface is None or report.missing_fields:
+            if (
+                report.threshold_surface is None
+                or report.missing_fields
+                or report.missing_payload_fields
+            ):
                 exit_code = 1
 
     return exit_code
