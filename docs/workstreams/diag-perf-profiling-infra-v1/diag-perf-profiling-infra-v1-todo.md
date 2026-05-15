@@ -75,8 +75,8 @@
       - Evidence: `crates/fret-ui/src/tree/paint/node.rs`
   - [x] Migrate window runtime snapshot phases to `fret_perf::measure_span`:
     post-dispatch focus/IME repair, pointer-move input context refresh, full-publish input
-    context refresh, command availability, and shortcut overlay refresh now share the same
-    stats/span boundary.
+    context refresh, command availability, command registry collection, command availability
+    evaluation, and shortcut overlay refresh now share the same stats/span boundary.
     - Evidence: `crates/fret-ui/src/tree/commands.rs`
   - [ ] Extend runner/renderer phase spans where needed:
     - [x] Align `ecosystem/fret-bootstrap/src/ui_app_driver.rs` driver phases with
