@@ -1,5 +1,7 @@
 import json
+import io
 import sys
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -58,13 +60,30 @@ class EditorPaintContractCloseoutTests(unittest.TestCase):
                     str(report),
                 ],
             ):
-                rc = closeout.main()
+                with redirect_stdout(io.StringIO()):
+                    rc = closeout.main()
 
             summary = json.loads(report.read_text(encoding="utf-8"))
 
         self.assertEqual(0, rc)
         self.assertTrue(summary["ok"])
         self.assertEqual({"skipped": True, "reason": "dry-run"}, summary["verifier"])
+
+    def test_non_dry_run_requires_attribution_dir(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_closeout.py",
+                    str(root / "validation-dir"),
+                ],
+            ):
+                with redirect_stderr(io.StringIO()):
+                    rc = closeout.main()
+
+        self.assertEqual(2, rc)
 
 
 if __name__ == "__main__":

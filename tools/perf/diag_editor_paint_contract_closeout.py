@@ -107,7 +107,7 @@ def main() -> int:
     ap.add_argument(
         "--attribution-dir",
         default="",
-        help="Optional second directory produced with --with-paint-perf.",
+        help="Second directory produced with --with-paint-perf. Required unless --dry-run is used.",
     )
     ap.add_argument("--matrix", default=DEFAULT_MATRIX)
     ap.add_argument("--workstream-json", default=DEFAULT_WORKSTREAM_JSON)
@@ -123,7 +123,11 @@ def main() -> int:
 
     workspace_root = _workspace_root()
     validation_dir = Path(str(args.validation_dir))
-    attribution_dir = Path(str(args.attribution_dir)) if str(args.attribution_dir).strip() else None
+    attribution_arg = str(args.attribution_dir).strip()
+    if not attribution_arg and not bool(args.dry_run):
+        print("error: --attribution-dir is required for non-dry-run closeout", file=sys.stderr)
+        return 2
+    attribution_dir = Path(attribution_arg) if attribution_arg else None
     out_report = (
         Path(str(args.out_report))
         if str(args.out_report).strip()
