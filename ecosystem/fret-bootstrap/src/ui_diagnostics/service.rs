@@ -111,6 +111,7 @@ thread_local! {
 }
 
 const DIAG_CLIPBOARD_TOKEN_NAMESPACE: u64 = 1u64 << 63;
+const REAL_PERF_SPANS_EXTENSION_KEY_V1: &str = "fret.perf.spans.v1";
 
 fn infer_pointer_source_test_id_from_semantics(
     window: AppWindowId,
@@ -129,6 +130,19 @@ fn infer_pointer_source_test_id_from_semantics(
         .and_then(|n| n.test_id.clone())
 }
 
+fn real_perf_spans_extension_value_v1(
+    frame_id: u64,
+    spans: Vec<UiPerfSpanV1>,
+) -> Option<serde_json::Value> {
+    (!spans.is_empty()).then(|| {
+        serde_json::json!({
+            "schema_version": "v1",
+            "frame_id": frame_id,
+            "spans": spans,
+        })
+    })
+}
+
 impl UiDiagnosticsService {
     fn debug_extensions_registry_mut(&mut self) -> &mut extensions::DebugExtensionsRegistryV1 {
         self.debug_extensions
@@ -142,6 +156,21 @@ impl UiDiagnosticsService {
     ) {
         self.debug_extensions_registry_mut()
             .register_best_effort(key, writer);
+    }
+
+    pub(crate) fn record_perf_spans_v1(
+        &mut self,
+        window: AppWindowId,
+        spans: Vec<UiPerfSpanV1>,
+    ) {
+        if !self.is_enabled() || spans.is_empty() {
+            return;
+        }
+        self.per_window
+            .entry(window)
+            .or_default()
+            .real_perf_spans_this_frame
+            .extend(spans);
     }
 
     pub(super) fn allocate_clipboard_token(&mut self) -> fret_core::ClipboardToken {
@@ -1247,11 +1276,14 @@ impl UiDiagnosticsService {
         if self.cfg.simulate_no_frames {
             // Diagnostics-only test hook: keep windows "seen" but do not record per-frame
             // snapshots. Script liveness should be provided by the keepalive/no-frame path.
+            if let Some(ring) = self.per_window.get_mut(&window) {
+                ring.real_perf_spans_this_frame.clear();
+            }
             self.note_window_seen(window);
             return;
         }
 
-        let extensions = {
+        let mut extensions = {
             let captured = self.debug_extensions_registry_mut().capture(app, window);
             (!captured.is_empty()).then_some(captured)
         };
@@ -1364,6 +1396,7 @@ impl UiDiagnosticsService {
             ring.test_id_bounds_fingerprint = None;
         }
         let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);
+        let real_perf_spans = std::mem::take(&mut ring.real_perf_spans_this_frame);
 
         let changed_models = std::mem::take(&mut ring.last_changed_models);
         let changed_model_sources_top =
@@ -1414,6 +1447,11 @@ impl UiDiagnosticsService {
             );
             debug
         };
+        if let Some(value) = real_perf_spans_extension_value_v1(app.frame_id().0, real_perf_spans) {
+            extensions
+                .get_or_insert_with(Default::default)
+                .insert(REAL_PERF_SPANS_EXTENSION_KEY_V1.to_string(), value);
+        }
         debug.viewport_input = viewport_input;
         debug.extensions = extensions;
 
@@ -1914,6 +1952,43 @@ mod service_tests {
         assert_eq!(stats.renderer_encode_scene_us, 42);
         assert_eq!(stats.renderer_instance_bytes, 2048);
         assert_eq!(stats.renderer_encode_scene_text_ops, 17);
+    }
+
+    #[test]
+    fn real_perf_spans_extension_value_is_v1_payload() {
+        let value = real_perf_spans_extension_value_v1(
+            9,
+            vec![UiPerfSpanV1 {
+                name: "fret.ui.view".to_string(),
+                cat: "ui.driver".to_string(),
+                start_us: 10,
+                dur_us: 25,
+                tid: None,
+                args: Some(serde_json::json!({ "phase": "view" })),
+            }],
+        )
+        .expect("extension payload");
+
+        assert_eq!(
+            value.get("schema_version").and_then(|v| v.as_str()),
+            Some("v1")
+        );
+        assert_eq!(value.get("frame_id").and_then(|v| v.as_u64()), Some(9));
+        let span = value
+            .get("spans")
+            .and_then(|v| v.as_array())
+            .and_then(|spans| spans.first())
+            .expect("span");
+        assert_eq!(
+            span.get("name").and_then(|v| v.as_str()),
+            Some("fret.ui.view")
+        );
+        assert_eq!(span.get("start_us").and_then(|v| v.as_u64()), Some(10));
+        assert_eq!(span.get("dur_us").and_then(|v| v.as_u64()), Some(25));
+        assert_eq!(
+            span.pointer("/args/phase").and_then(|v| v.as_str()),
+            Some("view")
+        );
     }
 
     #[test]

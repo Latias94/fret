@@ -85,7 +85,16 @@ Supported real-span extension payload:
     - `args`: optional JSON payload nested under `traceEvents[].args.span_args`.
 
 This is an additive adapter only: the exporter consumes the extension when present, but runtime-wide
-real-span capture still needs an explicit opt-in writer in the app/runtime owner layer.
+real-span capture must stay explicitly opt-in in the app/runtime owner layer.
+
+Current writer:
+
+- Set `FRET_DIAG_REAL_SPANS=1` for `fret-bootstrap` `ui_app_driver` apps to write
+  `fret.perf.spans.v1` for the View, Overlay, Layout, and Paint driver phases.
+- These are frame-relative real spans measured in the app loop, not synthetic subdivisions derived
+  from aggregate stats.
+- Finer-grained nested spans (for example individual runtime hot paths or external profiler/Tracy
+  correlation) remain follow-up work.
 
 All six outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
 allowed inside the current schema version. Field removals, semantic renames, or type changes require
@@ -105,6 +114,8 @@ Evidence anchors:
   `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
 - Trace artifact focused gate:
   `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
+- Runtime extension writer focused gate:
+  `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast`
 
 ## Core timing fields (per frame, in microseconds)
 

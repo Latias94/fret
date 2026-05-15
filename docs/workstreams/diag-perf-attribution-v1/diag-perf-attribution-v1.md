@@ -91,8 +91,10 @@ Remaining gaps / follow-ups:
   - 2026-05-16: the Chrome trace exporter can merge the additive
     `debug.extensions["fret.perf.spans.v1"]` payload into `traceEvents` and reports
     `real_spans_included=true` when such spans are present.
-  - Still remaining: an explicit runtime/app writer that emits `fret.perf.spans.v1` only when
-    detailed span capture is requested.
+  - 2026-05-16: `fret-bootstrap` `ui_app_driver` apps can emit initial top-level app-loop spans
+    with `FRET_DIAG_REAL_SPANS=1` (View, Overlay, Layout, Paint).
+  - Still remaining: finer nested runtime spans and external profiler/Tracy correlation for
+    concrete attribution cases.
 
 ## Proposed architecture (v1)
 

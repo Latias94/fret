@@ -46,6 +46,10 @@
       "command": "cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast"
     },
     {
+      "name": "perf-trace-runtime-extension-writer",
+      "command": "cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast"
+    },
+    {
       "name": "perf-regression-summary-attribution",
       "command": "cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast"
     },
@@ -72,6 +76,9 @@
     "crates/fret-diag/src/regression_summary.rs",
     "crates/fret-diag/src/trace.rs",
     "crates/fret-diag/src/tests.rs",
+    "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs",
     "apps/fret-devtools/src/native.rs",
     "apps/fret-devtools/src/followup.rs",
     "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1.md",

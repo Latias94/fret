@@ -35,8 +35,14 @@
 - [x] Add a `--trace` toggle to `diag perf` that:
   - [x] exports a Chrome trace JSON (bundle-derived synthetic timeline),
   - [x] records the artifact in a run manifest (`manifest.json` file index).
-- [ ] Future: emit runtime/app `fret.perf.spans.v1` spans when explicitly requested; the Chrome
-      trace exporter can already merge the extension payload when a bundle contains it.
+- [x] Emit initial app-loop `fret.perf.spans.v1` spans when explicitly requested.
+  - `FRET_DIAG_REAL_SPANS=1` enables frame-relative View, Overlay, Layout, and Paint spans in
+    `fret-bootstrap` `ui_app_driver` apps.
+  - The Chrome trace exporter merges the extension payload when a bundle contains it.
+  - Gate:
+    `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast`
+- [ ] Future: expand real-span coverage beyond the top-level app driver phases when a concrete
+      attribution case needs nested runtime spans or external profiler/Tracy correlation.
 
 ## P3 (M3): optional perf hints gate
 
@@ -65,8 +71,8 @@
     `bundle_synthetic_phases_with_extension_spans`, and appending those frame-relative spans to
     Chrome `traceEvents`.
   - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
-  - Runtime-wide span capture is still not claimed complete; the remaining work is the P2
-    explicit opt-in writer for `fret.perf.spans.v1`.
+  - Runtime-wide nested span capture is still not claimed complete; the first opt-in writer covers
+    top-level app driver phases only.
 - [x] Keep perf regression summary rows actionable for attribution follow-ups.
   - New `diag perf` regression items now write `bundle_dir` derived from their `bundle_artifact`.
   - The shared regression-summary drill-down also recovers bundle roots from older
