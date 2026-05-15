@@ -202,8 +202,17 @@ def _check_docs(failures: list[str]) -> None:
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
             "python tools/gate_docking_multiwindow_workstream_source.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py",
+            "python tools/diag_gate_docking_wayland_policy_skip.py --reuse-built",
+            "p3-wayland-policy-skip-local-cold-start",
+            "p3-wayland-policy-skip-local-drift-reuse-built",
+            "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
+        ],
+        forbidden=[
+            "python3 tools/check_workstream_catalog.py",
+            "python3 .agents/skills/fret_skills.py",
+            "python3 -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json > /dev/null",
         ],
         failures=failures,
     )
@@ -226,6 +235,7 @@ def _check_docs(failures: list[str]) -> None:
             "source drift guard now validates docking suite membership",
             "Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution",
             "Local Wayland policy-skip matrix now covers both platform and Linux/X11 capability mismatch",
+            "Workstream gate commands now expose both the cold-start policy-skip path",
         ],
         failures=failures,
     )

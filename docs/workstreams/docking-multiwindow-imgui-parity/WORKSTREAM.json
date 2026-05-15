@@ -116,7 +116,7 @@
       "cargo run -p fretboard-dev -- diag campaign run imui-p3-mixed-dpi-real-host --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
       "cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json --dir target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
       "cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json --dir target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --session-auto --timeout-ms 240000 --launch -- target/release/docking_arbitration_demo.exe",
-      "python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md",
+      "python tools/diag_pick_docking_mixed_dpi_acceptance_pair.py target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md",
       "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-windows-placement-real-host.json --json",
       "cargo run -p fretboard-dev -- diag campaign run imui-p3-windows-placement-real-host --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
       "cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json --dir target/fret-diag/docking-multiwindow-imgui-parity/windows-placement-real-host --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
@@ -143,8 +143,12 @@
       "command": "python tools/gate_docking_multiwindow_workstream_source.py"
     },
     {
-      "name": "p3-wayland-policy-skip-local",
+      "name": "p3-wayland-policy-skip-local-cold-start",
       "command": "python tools/diag_gate_docking_wayland_policy_skip.py"
+    },
+    {
+      "name": "p3-wayland-policy-skip-local-drift-reuse-built",
+      "command": "python tools/diag_gate_docking_wayland_policy_skip.py --reuse-built"
     },
     {
       "name": "p3-wayland-capability-posture",
@@ -184,15 +188,15 @@
     },
     {
       "name": "workstream-catalog",
-      "command": "python3 tools/check_workstream_catalog.py"
+      "command": "python tools/check_workstream_catalog.py"
     },
     {
       "name": "anchor-validate",
-      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
     },
     {
       "name": "json-shape",
-      "command": "python3 -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json > /dev/null"
+      "command": "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
     }
   ],
   "evidence": [

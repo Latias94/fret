@@ -345,6 +345,9 @@ Each TODO is labeled:
         `environment.platform_capabilities.platform_ne` and a Linux/X11-style sidecar that fails on
         `environment.platform_capabilities.ui_window_tear_off_ne`, while still requiring
         `skipped_policy` before any script item files are produced.
+    - [x] Workstream gate commands now expose both the cold-start policy-skip path and the
+      `--reuse-built` drift check, and the machine-readable gate list uses repo-local `python`
+      commands without shell redirection.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

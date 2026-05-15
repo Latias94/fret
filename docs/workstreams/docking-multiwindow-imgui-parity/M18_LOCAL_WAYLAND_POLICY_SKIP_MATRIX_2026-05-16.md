@@ -64,6 +64,8 @@ python tools/diag_gate_docking_wayland_policy_skip.py
   `environment.platform_capabilities.ui_window_tear_off_ne`.
 - `python tools/diag_gate_docking_wayland_policy_skip.py` passed through `cargo run -p fretboard-dev`
   and preserved the same two policy-skip outcomes.
+- 2026-05-16 follow-up: `WORKSTREAM.json` now names both the cold-start policy-skip gate and the
+  `--reuse-built` drift gate, so local maintenance can separate build cost from admission behavior.
 
 ## Verdict
 
