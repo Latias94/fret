@@ -14015,3 +14015,40 @@ Decision:
 - The remaining `paint.widget` residual after Canvas plus sampled top-N non-Canvas work is roughly `90..102us` p95.
 - The next reversible owner lane should focus on generic `ElementHostWidget` / paint traversal aggregate overhead
   before any code-editor row replay or windowed-surface display-list rewrite.
+
+## 2026-05-16 02:01:38 +08:00 (host-widget paint subphase root summaries)
+
+Question:
+- Which existing host-widget subphase accounts for the remaining `paint.widget` residual once Canvas and sampled
+  non-Canvas hotspots are separated?
+
+Change:
+- Promoted `paint_host_widget_observed_models_time_us`, `paint_host_widget_observed_globals_time_us`, and
+  `paint_host_widget_instance_lookup_time_us` to root-level `diag stats` `p50/p95/max` output, along with their
+  matching item/call counts.
+
+Validation:
+```bash
+cargo fmt -p fret-diag --check
+cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
+cargo build -p fretboard-dev
+```
+
+Evidence commands:
+```bash
+target/debug/fretboard-dev diag stats target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3/1778865865185/bundle.schema2.json --sort time --top 1 --json
+target/debug/fretboard-dev diag stats target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3/1778865994148/bundle.schema2.json --sort time --top 1 --json
+target/debug/fretboard-dev diag stats target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3/1778866025069/bundle.schema2.json --sort time --top 1 --json
+```
+
+Results (us):
+| probe | host models p95 | host globals p95 | instance lookup p95 | collapse p95 |
+| --- | ---: | ---: | ---: | ---: |
+| typical autoscroll | 29 | 28 | 47 | 56 |
+| complex wheel | 29 | 29 | 47 | 61 |
+| resize jitter | 28 | 27 | 45 | 50 |
+
+Decision:
+- The existing host-widget subphases are already the same scale as the remaining `paint.widget` residual.
+- `ElementHostWidget::paint_impl` should be treated as the next narrow owner lane, starting with observed-dependency
+  replay and instance-record lookup, not with canvas replay or renderer payload.

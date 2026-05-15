@@ -1412,7 +1412,13 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 900,
-                                "paint_widget_time_us": 400
+                                "paint_widget_time_us": 400,
+                                "paint_host_widget_observed_models_time_us": 10,
+                                "paint_host_widget_observed_models_items": 1,
+                                "paint_host_widget_observed_globals_time_us": 11,
+                                "paint_host_widget_observed_globals_items": 2,
+                                "paint_host_widget_instance_lookup_time_us": 12,
+                                "paint_host_widget_instance_lookup_calls": 4
                             },
                             "paint_widget_hotspots": [
                                 {
@@ -1458,7 +1464,13 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 1900,
-                                "paint_widget_time_us": 700
+                                "paint_widget_time_us": 700,
+                                "paint_host_widget_observed_models_time_us": 20,
+                                "paint_host_widget_observed_models_items": 2,
+                                "paint_host_widget_observed_globals_time_us": 21,
+                                "paint_host_widget_observed_globals_items": 3,
+                                "paint_host_widget_instance_lookup_time_us": 22,
+                                "paint_host_widget_instance_lookup_calls": 5
                             },
                             "paint_widget_hotspots": [
                                 {
@@ -1504,7 +1516,13 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 2900,
-                                "paint_widget_time_us": 2600
+                                "paint_widget_time_us": 2600,
+                                "paint_host_widget_observed_models_time_us": 30,
+                                "paint_host_widget_observed_models_items": 3,
+                                "paint_host_widget_observed_globals_time_us": 31,
+                                "paint_host_widget_observed_globals_items": 4,
+                                "paint_host_widget_instance_lookup_time_us": 32,
+                                "paint_host_widget_instance_lookup_calls": 6
                             },
                             "paint_widget_hotspots": [
                                 {
@@ -1637,6 +1655,26 @@ mod tests {
             json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/canvas_exclusive_minus_windowed_surface_paint_callback")
                 .and_then(|v| v.as_i64()),
             Some(100)
+        );
+        assert_eq!(
+            json.pointer("/p50/paint_host_widget_observed_models_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(20)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_host_widget_observed_models_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(30)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_host_widget_instance_lookup_calls")
+                .and_then(|v| v.as_u64()),
+            Some(6)
+        );
+        assert_eq!(
+            json.pointer("/max/paint_host_widget_instance_lookup_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(32)
         );
     }
 }

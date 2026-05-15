@@ -403,6 +403,13 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Refined owner decision: the residual `paint.widget` cost after Canvas plus sampled top-N non-Canvas work is about
     `90..102us` p95. The next reversible slice should inspect generic `ElementHostWidget` / paint traversal aggregate
     overhead before any editor row replay or windowed-surface display-list rewrite.
+- Host-widget paint subphase summary follow-up:
+  - Existing snapshot fields for `paint_host_widget_observed_models_time_us`,
+    `paint_host_widget_observed_globals_time_us`, `paint_host_widget_instance_lookup_time_us`, and their item/call
+    counts are now promoted to root-level `diag stats` `p50`, `p95`, and `max` output.
+  - On the same formal bundles, p95 host models/globals/lookup are `29/28/47us` typical, `29/29/47us` complex wheel,
+    and `28/27/45us` resize jitter. This matches the scale of the remaining `paint.widget` residual and makes
+    `ElementHostWidget::paint_impl` observed-dependency replay plus instance-record lookup the next narrow owner.
 
 ## Open Gaps
 
@@ -415,10 +422,10 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    near-threshold or failing stressor where row op replay/capture is the measured limiter, not on these passing
    baselines alone.
 3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization, the
-   `WindowedRowsSurface` attribution fields are wired through app snapshots and `fretboard diag stats`, and the
-   paint-widget hotspot summary now proves Canvas hotspot p95 tracks the surface callback p95 within `2..4us`.
-   The remaining unresolved owner is the generic paint-widget aggregate residual after Canvas plus sampled top-N
-   non-Canvas hotspots (`~90..102us` p95 on the 2026-05-16 formal bundles).
+   `WindowedRowsSurface` attribution fields are wired through app snapshots and `fretboard diag stats`, the
+   paint-widget hotspot summary now proves Canvas hotspot p95 tracks the surface callback p95 within `2..4us`, and
+   root-level host-widget paint subphase summaries identify observed-dependency replay plus instance-record lookup
+   as the next owner (`~100us` p95 combined on the 2026-05-16 formal bundles).
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
@@ -434,7 +441,8 @@ v1 contracts. The hit-test torture pointer-move path now also has a formal repea
 for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas replay evidence has now closed one
 renderer-side owner slice without loosening baselines, the `WindowedRowsSurface` paint attribution fields have been
 verified on formal bundles, and `paint_widget_hotspot_summary` narrows the remaining editor paint owner to generic
-paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. The immediate
-next work is one reversible `ElementHostWidget` / paint traversal owner slice, followed by the same formal editor
-probes and only then a contract re-seed decision. Keep non-Windows machine profiles explicit rather than inferring them
-from the Windows RTX 4090 contract set.
+paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. Root-level
+host-widget subphase summaries now make that owner measurable. The immediate next work is one reversible
+`ElementHostWidget::paint_impl` owner slice around observed-dependency replay and instance-record lookup, followed by
+the same formal editor probes and only then a contract re-seed decision. Keep non-Windows machine profiles explicit
+rather than inferring them from the Windows RTX 4090 contract set.

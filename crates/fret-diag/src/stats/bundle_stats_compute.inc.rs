@@ -1863,6 +1863,24 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max(layout_observation_record_globals_items);
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
+            out.max_paint_host_widget_observed_models_time_us = out
+                .max_paint_host_widget_observed_models_time_us
+                .max(paint_host_widget_observed_models_time_us);
+            out.max_paint_host_widget_observed_models_items = out
+                .max_paint_host_widget_observed_models_items
+                .max(paint_host_widget_observed_models_items);
+            out.max_paint_host_widget_observed_globals_time_us = out
+                .max_paint_host_widget_observed_globals_time_us
+                .max(paint_host_widget_observed_globals_time_us);
+            out.max_paint_host_widget_observed_globals_items = out
+                .max_paint_host_widget_observed_globals_items
+                .max(paint_host_widget_observed_globals_items);
+            out.max_paint_host_widget_instance_lookup_time_us = out
+                .max_paint_host_widget_instance_lookup_time_us
+                .max(paint_host_widget_instance_lookup_time_us);
+            out.max_paint_host_widget_instance_lookup_calls = out
+                .max_paint_host_widget_instance_lookup_calls
+                .max(paint_host_widget_instance_lookup_calls);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
             out.max_ui_thread_cpu_time_us =
                 out.max_ui_thread_cpu_time_us.max(ui_thread_cpu_time_us);
@@ -2483,6 +2501,48 @@ pub(super) fn bundle_stats_from_json_with_options(
         p50_p95(rows.iter().map(|r| r.hit_test_time_us));
     (out.p50_paint_widget_time_us, out.p95_paint_widget_time_us) =
         p50_p95(rows.iter().map(|r| r.paint_widget_time_us));
+    (
+        out.p50_paint_host_widget_observed_models_time_us,
+        out.p95_paint_host_widget_observed_models_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_models_time_us),
+    );
+    (
+        out.p50_paint_host_widget_observed_models_items,
+        out.p95_paint_host_widget_observed_models_items,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_models_items as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_globals_time_us,
+        out.p95_paint_host_widget_observed_globals_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_globals_time_us),
+    );
+    (
+        out.p50_paint_host_widget_observed_globals_items,
+        out.p95_paint_host_widget_observed_globals_items,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_globals_items as u64),
+    );
+    (
+        out.p50_paint_host_widget_instance_lookup_time_us,
+        out.p95_paint_host_widget_instance_lookup_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_instance_lookup_time_us),
+    );
+    (
+        out.p50_paint_host_widget_instance_lookup_calls,
+        out.p95_paint_host_widget_instance_lookup_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_instance_lookup_calls as u64),
+    );
     (
         out.p50_paint_text_prepare_time_us,
         out.p95_paint_text_prepare_time_us,

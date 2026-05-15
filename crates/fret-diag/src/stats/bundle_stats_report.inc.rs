@@ -78,6 +78,12 @@ pub(super) struct BundleStatsReport {
     max_layout_observation_record_globals_items: u32,
     pub(super) max_prepaint_time_us: u64,
     pub(super) max_paint_time_us: u64,
+    max_paint_host_widget_observed_models_time_us: u64,
+    max_paint_host_widget_observed_models_items: u32,
+    max_paint_host_widget_observed_globals_time_us: u64,
+    max_paint_host_widget_observed_globals_items: u32,
+    max_paint_host_widget_instance_lookup_time_us: u64,
+    max_paint_host_widget_instance_lookup_calls: u32,
     pub(super) max_total_time_us: u64,
     pub(super) max_ui_thread_cpu_time_us: u64,
     pub(super) max_ui_thread_cpu_cycle_time_delta_cycles: u64,
@@ -149,6 +155,18 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_hit_test_time_us: u64,
     pub(super) p50_paint_widget_time_us: u64,
     pub(super) p95_paint_widget_time_us: u64,
+    p50_paint_host_widget_observed_models_time_us: u64,
+    p95_paint_host_widget_observed_models_time_us: u64,
+    p50_paint_host_widget_observed_models_items: u64,
+    p95_paint_host_widget_observed_models_items: u64,
+    p50_paint_host_widget_observed_globals_time_us: u64,
+    p95_paint_host_widget_observed_globals_time_us: u64,
+    p50_paint_host_widget_observed_globals_items: u64,
+    p95_paint_host_widget_observed_globals_items: u64,
+    p50_paint_host_widget_instance_lookup_time_us: u64,
+    p95_paint_host_widget_instance_lookup_time_us: u64,
+    p50_paint_host_widget_instance_lookup_calls: u64,
+    p95_paint_host_widget_instance_lookup_calls: u64,
     pub(super) p50_paint_text_prepare_time_us: u64,
     pub(super) p95_paint_text_prepare_time_us: u64,
     pub(super) p50_renderer_encode_scene_us: u64,
@@ -4124,6 +4142,30 @@ impl BundleStatsReport {
             Value::from(self.max_paint_time_us),
         );
         max.insert(
+            "paint_host_widget_observed_models_time_us".to_string(),
+            Value::from(self.max_paint_host_widget_observed_models_time_us),
+        );
+        max.insert(
+            "paint_host_widget_observed_models_items".to_string(),
+            Value::from(self.max_paint_host_widget_observed_models_items),
+        );
+        max.insert(
+            "paint_host_widget_observed_globals_time_us".to_string(),
+            Value::from(self.max_paint_host_widget_observed_globals_time_us),
+        );
+        max.insert(
+            "paint_host_widget_observed_globals_items".to_string(),
+            Value::from(self.max_paint_host_widget_observed_globals_items),
+        );
+        max.insert(
+            "paint_host_widget_instance_lookup_time_us".to_string(),
+            Value::from(self.max_paint_host_widget_instance_lookup_time_us),
+        );
+        max.insert(
+            "paint_host_widget_instance_lookup_calls".to_string(),
+            Value::from(self.max_paint_host_widget_instance_lookup_calls),
+        );
+        max.insert(
             "total_time_us".to_string(),
             Value::from(self.max_total_time_us),
         );
@@ -4460,6 +4502,30 @@ impl BundleStatsReport {
             Value::from(self.p50_paint_widget_time_us),
         );
         p50.insert(
+            "paint_host_widget_observed_models_time_us".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_models_time_us),
+        );
+        p50.insert(
+            "paint_host_widget_observed_models_items".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_models_items),
+        );
+        p50.insert(
+            "paint_host_widget_observed_globals_time_us".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_globals_time_us),
+        );
+        p50.insert(
+            "paint_host_widget_observed_globals_items".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_globals_items),
+        );
+        p50.insert(
+            "paint_host_widget_instance_lookup_time_us".to_string(),
+            Value::from(self.p50_paint_host_widget_instance_lookup_time_us),
+        );
+        p50.insert(
+            "paint_host_widget_instance_lookup_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_instance_lookup_calls),
+        );
+        p50.insert(
             "paint_text_prepare_time_us".to_string(),
             Value::from(self.p50_paint_text_prepare_time_us),
         );
@@ -4597,6 +4663,30 @@ impl BundleStatsReport {
         p95.insert(
             "paint_widget_time_us".to_string(),
             Value::from(self.p95_paint_widget_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_observed_models_time_us".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_models_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_observed_models_items".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_models_items),
+        );
+        p95.insert(
+            "paint_host_widget_observed_globals_time_us".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_globals_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_observed_globals_items".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_globals_items),
+        );
+        p95.insert(
+            "paint_host_widget_instance_lookup_time_us".to_string(),
+            Value::from(self.p95_paint_host_widget_instance_lookup_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_instance_lookup_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_instance_lookup_calls),
         );
         p95.insert(
             "paint_text_prepare_time_us".to_string(),

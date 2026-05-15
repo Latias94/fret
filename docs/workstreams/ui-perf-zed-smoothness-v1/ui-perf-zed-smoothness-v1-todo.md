@@ -543,6 +543,23 @@ Conventions:
           reversible owner lane should focus on generic `ElementHostWidget` / paint traversal
           aggregate overhead, not code-editor row replay or a broad windowed-surface display-list
           rewrite.
+      - [x] Promote existing host-widget paint subphase timers to root-level `diag stats`
+        p50/p95/max output before changing `ElementHostWidget`.
+        - Fields: `paint_host_widget_observed_models_time_us`,
+          `paint_host_widget_observed_globals_time_us`,
+          `paint_host_widget_instance_lookup_time_us`, plus the matching item/call counts in
+          `p50`, `p95`, and `max`.
+        - Gate:
+          `cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast`.
+        - Evidence on the same formal 2026-05-16 bundles:
+          - typical autoscroll p95 host models/globals/lookup `29/28/47us`.
+          - complex wheel p95 host models/globals/lookup `29/29/47us`.
+          - resize jitter p95 host models/globals/lookup `28/27/45us`.
+        - Decision: these existing subphase timers account for roughly the same scale as the
+          remaining `paint.widget` residual after Canvas plus sampled non-Canvas top-N work.
+          The next optimization should be a narrow `ElementHostWidget::paint_impl` owner slice
+          around observed-dependency replay and instance-record lookup, with the same three editor
+          probes as formal evidence.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and
