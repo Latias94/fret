@@ -180,6 +180,8 @@ def build_plan(
                 f"{out_dir}/resize-jitter",
                 "--baseline",
                 RESIZE_BASELINE,
+                "--fretboard-bin",
+                fretboard_bin,
                 "--attempts",
                 str(resize_attempts),
                 "--repeat",

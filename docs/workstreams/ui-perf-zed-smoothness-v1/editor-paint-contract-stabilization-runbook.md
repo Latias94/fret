@@ -90,6 +90,7 @@ python tools/perf/diag_resize_probes_gate.py `
   --attempts 3 `
   --repeat 7 `
   --warmup-frames 5 `
+  --fretboard-bin target/release/fretboard-dev.exe `
   --launch-bin target/release/fret-ui-gallery.exe
 ```
 

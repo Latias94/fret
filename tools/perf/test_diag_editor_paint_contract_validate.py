@@ -29,6 +29,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
 
         joined = "\n".join(" ".join(step["cmd"]) for step in plan)
         self.assertIn(validate.RESIZE_BASELINE, joined)
+        self.assertIn("--fretboard-bin target/release/fretboard-dev.exe", joined)
         self.assertIn(validate.TYPICAL_BASELINE, joined)
         self.assertIn(validate.COMPLEX_WHEEL_BASELINE, joined)
         self.assertIn("FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0", joined)
