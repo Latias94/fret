@@ -221,6 +221,8 @@ pub(crate) fn push_perf_repeat_run_json_row(
         "top_code_editor_windowed_surface_paint_callback_us": top_code_editor.windowed_surface_paint_callback_us,
         "top_code_editor_windowed_surface_non_row_us": top_code_editor.windowed_surface_non_row_us,
         "top_code_editor_windowed_surface_row_callback_gap_us": top_code_editor.windowed_surface_row_callback_gap_us,
+        "top_code_editor_torture_autoscroll_us": top_code_editor.torture_autoscroll_us,
+        "top_code_editor_torture_overlay_us": top_code_editor.torture_overlay_us,
         "pointer_move_frames_present": pointer_move_frames_present,
         "pointer_move_frames_considered": pointer_move_frames_considered,
         "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
@@ -323,6 +325,8 @@ mod tests {
                 us_windowed_surface_paint_callback: 110,
                 us_windowed_surface_non_row: 25,
                 us_windowed_surface_row_callback_gap: 6,
+                us_torture_autoscroll: 3,
+                us_torture_overlay: 18,
                 ..Default::default()
             }),
             ..Default::default()
@@ -358,5 +362,7 @@ mod tests {
             rows[0]["top_code_editor_windowed_surface_row_callback_gap_us"],
             6
         );
+        assert_eq!(rows[0]["top_code_editor_torture_autoscroll_us"], 3);
+        assert_eq!(rows[0]["top_code_editor_torture_overlay_us"], 18);
     }
 }

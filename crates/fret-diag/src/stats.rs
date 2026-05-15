@@ -1187,7 +1187,7 @@ mod tests {
                         "code_editor": {
                             "torture": {
                                 "paint_perf": {
-                                    "schema_version": 9,
+                                    "schema_version": 12,
                                     "frame_seq": 7,
                                     "visible_start": 20,
                                     "visible_end": 30,
@@ -1257,7 +1257,11 @@ mod tests {
                                     "us_windowed_surface_row_rect": 4,
                                     "us_windowed_surface_row_paint": 530,
                                     "us_windowed_surface_non_row": 90,
-                                    "us_windowed_surface_row_callback_gap": 30
+                                    "us_windowed_surface_row_callback_gap": 30,
+                                    "us_torture_autoscroll": 18,
+                                    "ns_torture_autoscroll": 19000,
+                                    "us_torture_overlay": 9,
+                                    "ns_torture_overlay": 11000
                                 }
                             }
                         }
@@ -1318,6 +1322,8 @@ mod tests {
         assert_eq!(perf.us_windowed_surface_row_paint, 530);
         assert_eq!(perf.us_windowed_surface_non_row, 90);
         assert_eq!(perf.us_windowed_surface_row_callback_gap, 30);
+        assert_eq!(perf.us_torture_autoscroll, 19);
+        assert_eq!(perf.us_torture_overlay, 11);
 
         let json = report.to_json();
         assert_eq!(
@@ -1376,6 +1382,16 @@ mod tests {
             Some(30)
         );
         assert_eq!(
+            json.pointer("/code_editor_paint_perf/p95/us_torture_autoscroll")
+                .and_then(|v| v.as_u64()),
+            Some(19)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/p95/us_torture_overlay")
+                .and_then(|v| v.as_u64()),
+            Some(11)
+        );
+        assert_eq!(
             json.pointer("/top/0/code_editor_paint_perf/rows_scene_replayed")
                 .and_then(|v| v.as_u64()),
             Some(8)
@@ -1394,6 +1410,16 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/us_windowed_surface_row_paint")
                 .and_then(|v| v.as_u64()),
             Some(530)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_torture_autoscroll")
+                .and_then(|v| v.as_u64()),
+            Some(19)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_torture_overlay")
+                .and_then(|v| v.as_u64()),
+            Some(11)
         );
     }
 

@@ -160,6 +160,8 @@ fn snapshot_code_editor_paint_perf(
             "us_windowed_surface_row_callback_gap",
             "ns_windowed_surface_row_callback_gap"
         ),
+        us_torture_autoscroll: us_field!("us_torture_autoscroll", "ns_torture_autoscroll"),
+        us_torture_overlay: us_field!("us_torture_overlay", "ns_torture_overlay"),
     })
 }
 
@@ -2437,6 +2439,8 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_windowed_surface_row_callback_gap: metric!(
                 us_windowed_surface_row_callback_gap
             ),
+            us_torture_autoscroll: metric!(us_torture_autoscroll),
+            us_torture_overlay: metric!(us_torture_overlay),
         }
     }
 

@@ -319,6 +319,8 @@ pub struct CodeEditorPaintPerfFrame {
     pub us_windowed_surface_row_paint: u64,
     pub us_windowed_surface_non_row: u64,
     pub us_windowed_surface_row_callback_gap: u64,
+    pub us_torture_autoscroll: u64,
+    pub us_torture_overlay: u64,
 
     pub ns_total: u64,
     pub ns_row_text: u64,
@@ -362,6 +364,8 @@ pub struct CodeEditorPaintPerfFrame {
     pub ns_windowed_surface_row_paint: u64,
     pub ns_windowed_surface_non_row: u64,
     pub ns_windowed_surface_row_callback_gap: u64,
+    pub ns_torture_autoscroll: u64,
+    pub ns_torture_overlay: u64,
 }
 
 pub(super) fn paint_perf_enabled_from_env() -> bool {

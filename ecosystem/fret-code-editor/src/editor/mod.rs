@@ -1096,9 +1096,24 @@ impl CodeEditor {
                     let theme_revision = cx.theme().revision();
                     let cell_w = cell_w.get();
                     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                    let plan = paint::prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
-                        cx,
-                        &mut editor_state.borrow_mut(),
+                    let mut st = editor_state.borrow_mut();
+                    #[cfg(feature = "syntax")]
+                    let plan =
+                        paint::prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
+                            cx,
+                            &mut st,
+                            frame,
+                            bounds,
+                            cell_w,
+                            text_cache_max_entries,
+                            &text_style,
+                            fg,
+                            theme_revision,
+                            cx.scale_factor(),
+                        );
+                    #[cfg(not(feature = "syntax"))]
+                    let plan = paint::prepaint_row_scene_replay_plan_for_frame(
+                        &mut st,
                         frame,
                         bounds,
                         cell_w,
@@ -1119,6 +1134,7 @@ impl CodeEditor {
                 let text_style = text_style.clone();
                 let editor_state = editor_state.clone();
                 let prev_stats = Rc::new(Cell::new(CodeEditorCacheStats::default()));
+                let paint_perf_enabled = paint_perf_enabled_from_env();
                 let hook: OnWindowedRowsPaintFrame = Arc::new(
                     move |painter: &mut fret_ui::canvas::CanvasPainter<'_>,
                           frame: WindowedRowsPaintFrame| {
@@ -1126,8 +1142,14 @@ impl CodeEditor {
                             return;
                         }
 
+                        let autoscroll_started = paint_perf_enabled.then(Instant::now);
                         let max = scroll_handle.max_offset();
                         if max.y.0 <= 0.0 {
+                            if let Some(started) = autoscroll_started {
+                                editor_state
+                                    .borrow_mut()
+                                    .record_torture_autoscroll_paint_elapsed(started);
+                            }
                             return;
                         }
 
@@ -1142,10 +1164,17 @@ impl CodeEditor {
                         scroll_handle.set_offset(fret_core::Point::new(offset.x, Px(next_y)));
                         painter.request_animation_frame();
 
+                        if let Some(started) = autoscroll_started {
+                            editor_state
+                                .borrow_mut()
+                                .record_torture_autoscroll_paint_elapsed(started);
+                        }
+
                         if !torture.show_overlay {
                             return;
                         }
 
+                        let overlay_started = paint_perf_enabled.then(Instant::now);
                         let (stats, delta, caret_row, caret_preferred_x, caret_stops, geom_cached) =
                             {
                                 let st = editor_state.borrow();
@@ -1318,6 +1347,11 @@ impl CodeEditor {
                             },
                             painter.scale_factor(),
                         );
+                        if let Some(started) = overlay_started {
+                            editor_state
+                                .borrow_mut()
+                                .record_torture_overlay_paint_elapsed(started);
+                        }
                     },
                 );
                 hook

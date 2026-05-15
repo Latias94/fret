@@ -65,14 +65,14 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(119);
+    let mut out = serde_json::Map::with_capacity(123);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
         };
     }
 
-    insert_u64!("schema_version", 11);
+    insert_u64!("schema_version", 12);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -221,6 +221,8 @@ fn code_editor_paint_perf_json(
         "us_windowed_surface_row_callback_gap",
         frame.us_windowed_surface_row_callback_gap
     );
+    insert_u64!("us_torture_autoscroll", frame.us_torture_autoscroll);
+    insert_u64!("us_torture_overlay", frame.us_torture_overlay);
     insert_u64!("syntax_rows_stored", frame.syntax_rows_stored);
     insert_u64!("us_syntax_slice", frame.us_syntax_slice);
     insert_u64!("us_syntax_highlight", frame.us_syntax_highlight);
@@ -294,6 +296,8 @@ fn code_editor_paint_perf_json(
         "ns_windowed_surface_row_callback_gap",
         frame.ns_windowed_surface_row_callback_gap
     );
+    insert_u64!("ns_torture_autoscroll", frame.ns_torture_autoscroll);
+    insert_u64!("ns_torture_overlay", frame.ns_torture_overlay);
     insert_u64!("ns_syntax_slice", frame.ns_syntax_slice);
     insert_u64!("ns_syntax_highlight", frame.ns_syntax_highlight);
     insert_u64!("ns_syntax_distribute", frame.ns_syntax_distribute);

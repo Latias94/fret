@@ -707,6 +707,30 @@ impl CodeEditorState {
             .saturating_sub(self.paint_perf_frame.ns_total);
     }
 
+    pub(super) fn record_torture_autoscroll_paint_elapsed(&mut self, started: Instant) {
+        if !self.paint_perf_enabled {
+            return;
+        }
+
+        let elapsed = started.elapsed();
+        self.paint_perf_frame.us_torture_autoscroll =
+            u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX);
+        self.paint_perf_frame.ns_torture_autoscroll =
+            u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
+    }
+
+    pub(super) fn record_torture_overlay_paint_elapsed(&mut self, started: Instant) {
+        if !self.paint_perf_enabled {
+            return;
+        }
+
+        let elapsed = started.elapsed();
+        self.paint_perf_frame.us_torture_overlay =
+            u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX);
+        self.paint_perf_frame.ns_torture_overlay =
+            u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
+    }
+
     pub(super) fn set_preedit(&mut self, preedit: Option<PreeditState>) {
         let same = self.preedit == preedit;
         let mut cleared = false;

@@ -625,6 +625,8 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_windowed_surface_row_paint: u64,
     pub(super) us_windowed_surface_non_row: u64,
     pub(super) us_windowed_surface_row_callback_gap: u64,
+    pub(super) us_torture_autoscroll: u64,
+    pub(super) us_torture_overlay: u64,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -706,6 +708,8 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     us_windowed_surface_row_paint: u64,
     us_windowed_surface_non_row: u64,
     us_windowed_surface_row_callback_gap: u64,
+    us_torture_autoscroll: u64,
+    us_torture_overlay: u64,
 }
 
 impl BundleStatsCodeEditorPaintPerfTotals {
@@ -880,6 +884,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_windowed_surface_row_callback_gap = self
             .us_windowed_surface_row_callback_gap
             .saturating_add(p.us_windowed_surface_row_callback_gap);
+        self.us_torture_autoscroll = self
+            .us_torture_autoscroll
+            .saturating_add(p.us_torture_autoscroll);
+        self.us_torture_overlay = self
+            .us_torture_overlay
+            .saturating_add(p.us_torture_overlay);
     }
 
     fn max_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
@@ -1021,6 +1031,8 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_windowed_surface_row_callback_gap = self
             .us_windowed_surface_row_callback_gap
             .max(p.us_windowed_surface_row_callback_gap);
+        self.us_torture_autoscroll = self.us_torture_autoscroll.max(p.us_torture_autoscroll);
+        self.us_torture_overlay = self.us_torture_overlay.max(p.us_torture_overlay);
     }
 
     fn to_json(&self) -> serde_json::Value {
@@ -1093,6 +1105,8 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "us_windowed_surface_row_paint": self.us_windowed_surface_row_paint,
             "us_windowed_surface_non_row": self.us_windowed_surface_non_row,
             "us_windowed_surface_row_callback_gap": self.us_windowed_surface_row_callback_gap,
+            "us_torture_autoscroll": self.us_torture_autoscroll,
+            "us_torture_overlay": self.us_torture_overlay,
         })
     }
 }
@@ -1193,6 +1207,8 @@ impl BundleStatsCodeEditorPaintPerf {
             "us_windowed_surface_row_paint": self.us_windowed_surface_row_paint,
             "us_windowed_surface_non_row": self.us_windowed_surface_non_row,
             "us_windowed_surface_row_callback_gap": self.us_windowed_surface_row_callback_gap,
+            "us_torture_autoscroll": self.us_torture_autoscroll,
+            "us_torture_overlay": self.us_torture_overlay,
         })
     }
 }
@@ -2122,6 +2138,11 @@ impl BundleStatsReport {
             p.sum.us_windowed_surface_row_callback_gap,
         );
         println!(
+            "code_editor.paint_perf sum.us(torture_autoscroll/torture_overlay)={}/{}",
+            p.sum.us_torture_autoscroll,
+            p.sum.us_torture_overlay,
+        );
+        println!(
             "code_editor.paint_perf sum.rows(scene_store_start/end,prepaint_candidates/no_cache/unsupported/preedit/syntax_empty/key_mismatch,fast_miss_no_entry/key_mismatch,full_miss_no_entry/key_mismatch)={}/{}, {}/{}/{}/{}/{}/{}, {}/{}, {}/{}",
             p.sum.rows_scene_stored_at_visible_start,
             p.sum.rows_scene_stored_at_visible_end,
@@ -2137,7 +2158,7 @@ impl BundleStatsReport {
             p.sum.rows_scene_full_miss_key_mismatch,
         );
         println!(
-            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap/torture_autoscroll/torture_overlay)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
             p.p50.us_total,
             p.p95.us_total,
             p.p50.us_row_scene_prepaint_plan,
@@ -2164,6 +2185,10 @@ impl BundleStatsReport {
             p.p95.us_windowed_surface_non_row,
             p.p50.us_windowed_surface_row_callback_gap,
             p.p95.us_windowed_surface_row_callback_gap,
+            p.p50.us_torture_autoscroll,
+            p.p95.us_torture_autoscroll,
+            p.p50.us_torture_overlay,
+            p.p95.us_torture_overlay,
         );
     }
 
@@ -2268,7 +2293,7 @@ impl BundleStatsReport {
             p.quads_caret,
         );
         println!(
-            "    code_editor.paint_perf.us(total/prepaint_plan/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "    code_editor.paint_perf.us(total/prepaint_plan/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay/torture_autoscroll/torture_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.us_total,
             p.us_row_scene_prepaint_plan,
             p.us_row_content_resolve,
@@ -2294,6 +2319,8 @@ impl BundleStatsReport {
             p.us_row_geom_resolve,
             p.us_row_overlay,
             p.us_frame_overlay_prepare,
+            p.us_torture_autoscroll,
+            p.us_torture_overlay,
         );
         println!(
             "    code_editor.paint_perf.surface rows(iterated/with_rect)={}/{} us(total/frame_lookup/hook/row_loop/row_rect/row_paint/non_row/row_callback_gap)={}/{}/{}/{}/{}/{}/{}/{}",
