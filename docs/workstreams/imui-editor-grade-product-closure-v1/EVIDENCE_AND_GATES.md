@@ -1073,3 +1073,29 @@ successfully after rebuilding `fretboard-dev` and validating tool-app discovery,
 gate profile source, and first-open docs. `python tools/diag_gate_imui_product_chain.py --only
 discovery` also passed after validating the broader product-chain source gates, and
 `python tools/report_largest_files.py --top 30 --min-lines 800` remains a drift watchlist only.
+
+## DevTools gate profile copy actions - 2026-05-15 follow-up
+
+Scope: make the first-open `Gate Commands` projection an explicit per-profile action surface before
+adding profile-specific parameter forms or launch/run behavior.
+
+- `apps/fret-devtools/src/native.rs` now renders a `Copy command` button for every shared
+  `fret-diag` DevTools gate profile.
+- The GUI still consumes `devtools_gate_profiles_v1()` / `devtools_gate_profile_lines(...)`; gate
+  taxonomy remains in `crates/fret-diag/src/devtools_gate_profiles.rs`.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` now source-check the copy action surface and the shared
+  profile owner separately.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings
+```
+
+Result: passed. The `fret-devtools` nextest gate reported `1 test run: 1 passed`; the `fret-diag`
+nextest gate reported `2 tests run: 2 passed`; both source/discovery gates completed successfully.

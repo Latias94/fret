@@ -164,6 +164,9 @@ reopen.
       `devtools_gate_profile_lines(...)` rather than owning diagnostics command templates. The
       shared projection includes explicit `check.resource_footprint.json` evidence for thresholded
       resource-footprint gates.
+      Maintenance: the DevTools GUI `Gate Commands` profile rows now expose a `Copy command`
+      action for each shared profile, making stale/pixels/perf/resource-footprint gate templates
+      copyable from structured rows before adding profile-specific run forms.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
       commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
       compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding
