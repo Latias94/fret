@@ -375,6 +375,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
         "kind": crate::perf_schema::PERF_TRACE_CHROME_KIND,
         "schema_policy": crate::perf_schema::schema_policy_json(),
         "source_bundle_schema_version": source_bundle_schema_version,
+        "trace_source": crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES,
+        "real_spans_included": false,
         "displayTimeUnit": "ms",
         "traceEvents": events,
     }))
@@ -526,6 +528,14 @@ mod tests {
                 .get("source_bundle_schema_version")
                 .and_then(|v| v.as_u64()),
             Some(2)
+        );
+        assert_eq!(
+            trace.get("trace_source").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES)
+        );
+        assert_eq!(
+            trace.get("real_spans_included").and_then(|v| v.as_bool()),
+            Some(false)
         );
         assert!(
             trace

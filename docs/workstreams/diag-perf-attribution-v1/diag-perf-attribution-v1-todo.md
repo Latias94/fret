@@ -57,8 +57,8 @@
   - Both gate artifacts emit `schema_policy.compatibility=additive_only`.
   - Gate: `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
 - [x] Add schema policy to Chrome trace artifacts.
-  - `trace.chrome.json` now emits `kind=perf_trace_chrome`, `schema_version`, `schema_policy`, and
-    `source_bundle_schema_version`.
+  - `trace.chrome.json` now emits `kind=perf_trace_chrome`, `schema_version`, `schema_policy`,
+    `source_bundle_schema_version`, `trace_source=bundle_synthetic_phases`, and `real_spans_included=false`.
   - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
   - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`

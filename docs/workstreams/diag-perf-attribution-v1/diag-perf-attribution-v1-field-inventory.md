@@ -64,6 +64,8 @@ schema:
   - `kind`: `perf_trace_chrome`
   - `schema_version`: `1`
   - `source_bundle_schema_version`: copied from the source bundle when available.
+  - `trace_source`: `bundle_synthetic_phases`
+  - `real_spans_included`: `false`
 
 All six outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
 allowed inside the current schema version. Field removals, semantic renames, or type changes require
@@ -215,3 +217,8 @@ Opt-in artifact for timeline correlation:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 1 --trace`
 - `target/release/fretboard.exe diag trace <bundle.json>`
+
+Current trace artifacts are bundle-derived synthetic phase timelines. They are useful for correlating
+`fret.frame`, layout, prepaint, paint, and renderer-adjacent bundle stats in a Chrome trace viewer, but
+they do not contain live `tracing` / Tracy spans. Treat real-span capture as a separate opt-in profiling
+workflow until `real_spans_included=true` exists.

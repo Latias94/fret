@@ -80,6 +80,9 @@ Shipped in this workstream (commit-addressable, additive changes):
 5. **Schema + field inventory hardening**
    - Stats, stats diff, triage, perf threshold, perf hint, and Chrome trace artifacts now emit `kind`,
      `schema_version`, and `schema_policy.compatibility=additive_only`.
+   - Chrome trace artifacts explicitly identify themselves as bundle-derived synthetic phase timelines
+     (`trace_source=bundle_synthetic_phases`, `real_spans_included=false`), so tooling does not confuse them with
+     live `tracing` / Tracy spans.
    - The field inventory is the current reviewer entrypoint for perf artifact keys and measurement ownership.
 
 Remaining gaps / follow-ups:
