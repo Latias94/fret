@@ -48,8 +48,8 @@ before real-span trace export work starts.
 - Real-span export into a local artifact is not implemented. Current Chrome trace output is explicitly synthetic.
 - Tracy capture-to-file is not automated or gateable; the UI must connect and save a capture manually.
 - The typed perf key registry now covers the `debug.stats` frame fields consumed by `diag stats` and keeps a
-  generated inventory in sync. Threshold/config `max_*` gate keys are still a separate contract surface unless
-  a follow-up folds them into the registry.
+  generated inventory in sync. Threshold/config `max_*`/`min_*` gate keys now have a separate generated registry,
+  keeping gate config explicit without mixing it into frame metric keys.
 - The audit proves source coverage, not runtime quality. It does not replace running a specific perf repro and
   comparing bundle stats / trace output for that repro.
 

@@ -55,6 +55,7 @@ pub(crate) fn write_perf_thresholds_json(
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "observed_aggregate": observed_aggregate.as_str(),
+        "threshold_key_registry": crate::perf_keys::perf_threshold_inventory_json(),
         "suite_hooks": {
             "prewarm": prewarm_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
             "prelude": prelude_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
@@ -64,6 +65,9 @@ pub(crate) fn write_perf_thresholds_json(
             "max_top_total_us": cli_thresholds.max_top_total_us,
             "max_top_layout_us": cli_thresholds.max_top_layout_us,
             "max_top_solve_us": cli_thresholds.max_top_solve_us,
+            "max_frame_p95_total_us": cli_thresholds.max_frame_p95_total_us,
+            "max_frame_p95_layout_us": cli_thresholds.max_frame_p95_layout_us,
+            "max_frame_p95_solve_us": cli_thresholds.max_frame_p95_solve_us,
             "max_pointer_move_dispatch_us": cli_thresholds.max_pointer_move_dispatch_us,
             "max_pointer_move_hit_test_us": cli_thresholds.max_pointer_move_hit_test_us,
             "max_pointer_move_global_changes": cli_thresholds.max_pointer_move_global_changes,

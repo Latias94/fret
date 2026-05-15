@@ -13,13 +13,14 @@
   - [x] Seed the registry for trace-exported frame keys in `crates/fret-diag/src/perf_keys.rs`.
   - [x] Expose the registered stats/gate subset from `diag stats --json` via `registered_perf_keys`.
   - [x] Expand the registry to all `diag stats`-consumed `debug.stats` frame fields before treating it as the single source of truth.
-  - [ ] Split the remaining `max_*` threshold/config keys in `crates/fret-diag/src/diag_perf/thresholds.rs` into the registry if we want gate config surfaces to be first-class too.
+  - [x] Split the remaining `max_*`/`min_*` threshold config keys into a first-class threshold registry, separate from frame metric keys.
 - [ ] Add contract tests that ensure:
   - [x] trace-exported keys are unique and include core timeline keys
   - [x] trace-exported key units are consistent (e.g. `*_time_us` is microseconds, `*_cycles` is cycles)
   - [x] registered stats/gate subset keys stay additive and unit-consistent
   - [x] full frame-stats registry stays in sync with the source scan and inventory doc
   - [x] full registry units are consistent
+  - [x] threshold registry covers `PerfThresholds`, `diag perf` CLI threshold flags, and its inventory doc
 - [x] Add a generated field inventory doc (or update `diag-perf-attribution-v1-field-inventory.md` from the registry).
 
 ## Tooling UX (shorten the attribution loop)

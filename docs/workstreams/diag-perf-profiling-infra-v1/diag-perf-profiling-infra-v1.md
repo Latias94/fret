@@ -149,6 +149,10 @@ Example bundle:
   `cargo run -p fretboard-dev -- diag stats --perf-keys-json`
   generates the same content checked into
   `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`.
+- Threshold registry inventory:
+  `cargo run -p fretboard-dev -- diag stats --perf-threshold-keys-json`
+  generates the same content checked into
+  `docs/workstreams/diag-perf-profiling-infra-v1/perf-threshold-key-registry.diag-perf.json`.
 - Interpretation:
   - `registered_perf_keys` describes the current frame-stats registry with unit, kind, scope, and suggested
     aggregate metadata.
@@ -174,6 +178,8 @@ Example bundle:
   `crates/fret-diag/src/perf_keys.rs`
 - Generated registry inventory:
   `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`
+- Generated threshold registry inventory:
+  `docs/workstreams/diag-perf-profiling-infra-v1/perf-threshold-key-registry.diag-perf.json`
 - Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`,
   `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
 - Chrome trace exporter: `crates/fret-diag/src/trace.rs`
@@ -214,8 +220,9 @@ Example bundle:
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
   subset, while `diag stats --json` exposes the frame-stats registry via `registered_perf_keys`.
-  `diag stats --perf-keys-json` emits the reviewable inventory artifact. The remaining open question is whether
-  threshold/config `max_*` gate keys should join the same registry or stay a separate contract surface.
+  `diag stats --perf-keys-json` emits the reviewable inventory artifact. `diag stats --perf-threshold-keys-json`
+  emits the separate threshold key registry so `max_*`/`min_*` gate config stays first-class without polluting
+  frame metric keys.
 - Perf threshold failure rows now attach per-metric evidence via `evidence_bundle`, `evidence_run`,
   `evidence_artifacts`, and optional `evidence_trace_chrome` when a sibling `trace.chrome.json` exists.
 - `diag stats --diff` now reports p95 deltas alongside max deltas and exposes a `typical_tail` highlight set in
