@@ -93,34 +93,59 @@ impl<H: UiHost> UiTree<H> {
                 // has been dispatched yet (ADR 0012).
                 let focus_is_text_input = self.focus_is_text_input(app);
                 self.set_ime_allowed(app, focus_is_text_input);
-                let input_ctx_started = self.debug_enabled.then(Instant::now);
-                let (active_layers, barrier_root) = self.active_input_layers();
-                let _ = active_layers;
-                let input_ctx = self.current_window_input_context(
-                    app,
-                    barrier_root.is_some(),
-                    focus_is_text_input,
+                let (_, input_ctx_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_paint,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.paint.input_context",
+                            window = ?window,
+                            frame_id = frame_id.0,
+                            paint_pass,
+                        )
+                    },
+                    || {
+                        let (active_layers, barrier_root) = self.active_input_layers();
+                        let _ = active_layers;
+                        let input_ctx = self.current_window_input_context(
+                            app,
+                            barrier_root.is_some(),
+                            focus_is_text_input,
+                        );
+                        self.publish_window_input_context_snapshot_untracked(app, &input_ctx, true);
+                    },
                 );
-                self.publish_window_input_context_snapshot_untracked(app, &input_ctx, true);
-                if let Some(input_ctx_started) = input_ctx_started {
+                if let Some(input_ctx_elapsed) = input_ctx_elapsed {
                     self.debug_stats.paint_input_context_time = self
                         .debug_stats
                         .paint_input_context_time
-                        .saturating_add(input_ctx_started.elapsed());
+                        .saturating_add(input_ctx_elapsed);
                 }
 
                 // Scroll offsets can change without triggering layout invalidations (e.g. wheel deltas that
                 // only affect hit-testing/paint, or programmatic scroll handle updates in frames that skip
                 // layout). Ensure we consume scroll-handle change invalidations before paint-cache replay
                 // so cached ancestors cannot replay stale ops.
-                let (_, scroll_inv_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                    self.invalidate_scroll_handle_bindings_for_changed_handles(
-                        app,
-                        crate::layout_pass::LayoutPassKind::Final,
-                        false,
-                        true,
-                    );
-                });
+                let (_, scroll_inv_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_paint,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.paint.scroll_handle_invalidation",
+                            window = ?window,
+                            frame_id = frame_id.0,
+                            paint_pass,
+                        )
+                    },
+                    || {
+                        self.invalidate_scroll_handle_bindings_for_changed_handles(
+                            app,
+                            crate::layout_pass::LayoutPassKind::Final,
+                            false,
+                            true,
+                        );
+                    },
+                );
                 if let Some(scroll_inv_elapsed) = scroll_inv_elapsed {
                     self.debug_stats.paint_scroll_handle_invalidation_time = self
                         .debug_stats
@@ -137,11 +162,23 @@ impl<H: UiHost> UiTree<H> {
 
                 self.scratch_visual_bounds_records.clear();
 
-                let (roots, roots_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                    self.visible_layers_in_paint_order()
-                        .map(|layer| self.layers[layer].root)
-                        .collect::<Vec<NodeId>>()
-                });
+                let (roots, roots_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_paint,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.paint.collect_roots",
+                            window = ?window,
+                            frame_id = frame_id.0,
+                            paint_pass,
+                        )
+                    },
+                    || {
+                        self.visible_layers_in_paint_order()
+                            .map(|layer| self.layers[layer].root)
+                            .collect::<Vec<NodeId>>()
+                    },
+                );
                 if let Some(roots_elapsed) = roots_elapsed {
                     self.debug_stats.paint_collect_roots_time = self
                         .debug_stats
@@ -156,19 +193,33 @@ impl<H: UiHost> UiTree<H> {
                     && !self.scratch_visual_bounds_records.is_empty()
                 {
                     let mut records = std::mem::take(&mut self.scratch_visual_bounds_records);
-                    let (_, flush_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                        crate::elements::with_window_state(app, window, |st| {
-                            for (element, visual) in records.drain(..) {
-                                if st
-                                    .current_bounds(element)
-                                    .is_some_and(|bounds| bounds == visual)
-                                {
-                                    continue;
+                    let records_len = records.len();
+                    let (_, flush_elapsed) = fret_perf::measure_span(
+                        self.debug_enabled,
+                        trace_paint,
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.paint.record_visual_bounds",
+                                window = ?window,
+                                frame_id = frame_id.0,
+                                paint_pass,
+                                records_len,
+                            )
+                        },
+                        || {
+                            crate::elements::with_window_state(app, window, |st| {
+                                for (element, visual) in records.drain(..) {
+                                    if st
+                                        .current_bounds(element)
+                                        .is_some_and(|bounds| bounds == visual)
+                                    {
+                                        continue;
+                                    }
+                                    st.record_visual_bounds(element, visual);
                                 }
-                                st.record_visual_bounds(element, visual);
-                            }
-                        });
-                    });
+                            });
+                        },
+                    );
                     self.scratch_visual_bounds_records = records;
                     if let Some(flush_elapsed) = flush_elapsed {
                         self.debug_stats.paint_record_visual_bounds_time = self
@@ -181,54 +232,67 @@ impl<H: UiHost> UiTree<H> {
                 // Publish a platform-facing text-input snapshot after paint so text widgets can update
                 // their IME cursor area in the same frame (ADR 0012).
                 if let Some(window) = self.window {
-                    let (_, text_snapshot_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                        let mut next = if focus_is_text_input {
-                            if let Some(focus) = self.focus
-                                && let Some(snapshot) =
-                                    crate::declarative::frame::with_element_record_for_node(
-                                        app,
-                                        window,
-                                        focus,
-                                        |r| match &r.instance {
-                                            crate::declarative::ElementInstance::TextInputRegion(
-                                                props,
-                                            ) => Some(
-                                                super::super::ui_tree_text_input::text_input_region_platform_text_input_snapshot(props),
-                                            ),
-                                            _ => None,
-                                        },
-                                    )
-                                    .flatten()
-                            {
-                                snapshot
+                    let (_, text_snapshot_elapsed) = fret_perf::measure_span(
+                        self.debug_enabled,
+                        trace_paint,
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.paint.publish_text_input_snapshot",
+                                window = ?window,
+                                frame_id = frame_id.0,
+                                paint_pass,
+                                focus_is_text_input,
+                            )
+                        },
+                        || {
+                            let mut next = if focus_is_text_input {
+                                if let Some(focus) = self.focus
+                                    && let Some(snapshot) =
+                                        crate::declarative::frame::with_element_record_for_node(
+                                            app,
+                                            window,
+                                            focus,
+                                            |r| match &r.instance {
+                                                crate::declarative::ElementInstance::TextInputRegion(
+                                                    props,
+                                                ) => Some(
+                                                    super::super::ui_tree_text_input::text_input_region_platform_text_input_snapshot(props),
+                                                ),
+                                                _ => None,
+                                            },
+                                        )
+                                        .flatten()
+                                {
+                                    snapshot
+                                } else {
+                                    self.focus
+                                        .and_then(|focus| self.nodes.get(focus))
+                                        .and_then(|n| n.widget.as_ref())
+                                        .and_then(|w| w.platform_text_input_snapshot())
+                                        .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
+                                            focus_is_text_input: true,
+                                            ..Default::default()
+                                        })
+                                }
                             } else {
-                                self.focus
-                                    .and_then(|focus| self.nodes.get(focus))
-                                    .and_then(|n| n.widget.as_ref())
-                                    .and_then(|w| w.platform_text_input_snapshot())
-                                    .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
-                                        focus_is_text_input: true,
-                                        ..Default::default()
-                                    })
-                            }
-                        } else {
-                            fret_runtime::WindowTextInputSnapshot::default()
-                        };
-                        next.focus_is_text_input = focus_is_text_input;
+                                fret_runtime::WindowTextInputSnapshot::default()
+                            };
+                            next.focus_is_text_input = focus_is_text_input;
 
-                        let needs_update = app
-                            .global::<fret_runtime::WindowTextInputSnapshotService>()
-                            .and_then(|svc| svc.snapshot(window))
-                            .is_none_or(|prev| prev != &next);
-                        if needs_update {
-                            app.with_global_mut(
-                                fret_runtime::WindowTextInputSnapshotService::default,
-                                |svc, _app| {
-                                    svc.set_snapshot(window, next);
-                                },
-                            );
-                        }
-                    });
+                            let needs_update = app
+                                .global::<fret_runtime::WindowTextInputSnapshotService>()
+                                .and_then(|svc| svc.snapshot(window))
+                                .is_none_or(|prev| prev != &next);
+                            if needs_update {
+                                app.with_global_mut(
+                                    fret_runtime::WindowTextInputSnapshotService::default,
+                                    |svc, _app| {
+                                        svc.set_snapshot(window, next);
+                                    },
+                                );
+                            }
+                        },
+                    );
                     if let Some(text_snapshot_elapsed) = text_snapshot_elapsed {
                         self.debug_stats.paint_publish_text_input_snapshot_time = self
                             .debug_stats
@@ -246,9 +310,21 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                let (_, collapse_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                    self.collapse_paint_observations_to_view_cache_roots_if_needed();
-                });
+                let (_, collapse_elapsed) = fret_perf::measure_span(
+                    self.debug_enabled,
+                    trace_paint,
+                    || {
+                        tracing::trace_span!(
+                            "fret.ui.paint.collapse_observations",
+                            window = ?window,
+                            frame_id = frame_id.0,
+                            paint_pass,
+                        )
+                    },
+                    || {
+                        self.collapse_paint_observations_to_view_cache_roots_if_needed();
+                    },
+                );
                 if let Some(collapse_elapsed) = collapse_elapsed {
                     self.debug_stats.paint_collapse_observations_time = self
                         .debug_stats

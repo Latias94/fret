@@ -47,6 +47,10 @@
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
     - `crates/fret-ui/src/layout/engine.rs` (solve/measure sub-spans, if we want tighter attribution)
   - [ ] Migrate remaining paint sub-phases and hot node paths:
+    - [x] Migrate `paint_all` entry-layer sub-phases to `fret_perf::measure_span`:
+      input context, scroll-handle invalidation, root collection, visual-bounds flush,
+      text-input snapshot publish, and paint-observation collapse.
+      - Evidence: `crates/fret-ui/src/tree/paint/entry.rs`
     - `crates/fret-ui/src/tree/paint/entry.rs` (input ctx, cache replay, etc.)
     - `crates/fret-ui/src/tree/paint/node.rs` (cache key, hit check, replay/translate, widget paint)
   - [ ] Extend runner/renderer phase spans where needed:

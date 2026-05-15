@@ -35,7 +35,7 @@ before real-span trace export work starts.
 | Layout engine solve | `fret.ui.layout_engine.solve` spans around Taffy solves | `crates/fret-ui/src/layout/engine.rs` | Covered |
 | Cache-root layout | `ui.cache_root.layout` span | `crates/fret-ui/src/tree/layout/node.rs` | Covered |
 | Prepaint | `fret.ui.prepaint.after_layout` and `fret.ui.prepaint.after_layout_stable_frame` | `crates/fret-ui/src/tree/prepaint/entry.rs` | Covered |
-| Paint high-level | `fret.ui.paint_all` | `crates/fret-ui/src/tree/paint/entry.rs` | Covered |
+| Paint high-level | `fret.ui.paint_all`; entry-layer sub-phases for input context, scroll-handle invalidation, root collection, visual-bounds flushing, text-input snapshot publishing, and paint-observation collapse | `crates/fret-ui/src/tree/paint/entry.rs` | Covered |
 | Paint cache replay | `fret.ui.paint_cache.replay` plus cache-root paint span | `crates/fret-ui/src/tree/paint/node.rs` | Covered |
 | Dispatch | `fret.ui.dispatch.*` spans for event body, context build, target routing, pointer arbitration, widget capture/bubble, hover/cursor, and post-dispatch snapshot | `crates/fret-ui/src/tree/dispatch/window.rs` | Covered for common input paths |
 | Hit-test | `fret.ui.hit_test.*` spans for layer walk, cached path, bounds-tree query, fallback traversal, and candidate checks | `crates/fret-ui/src/tree/hit_test.rs` | Covered |

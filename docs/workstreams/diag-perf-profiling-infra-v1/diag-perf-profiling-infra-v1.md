@@ -190,6 +190,9 @@ Example bundle:
 - `layout_all` final tail phases now share `run_layout_post_layout_phases`, so regular frames,
   layout fast-path frames, and skipped-engine stable frames keep prepaint/focus/semantics/deferred-cleanup
   timings and `fret_perf::measure_span` wrappers aligned.
+- `paint_all` entry-layer sub-phases now use `fret_perf::measure_span` for input context,
+  scroll-handle invalidation, root collection, visual-bounds flushing, text-input snapshot publishing,
+  and paint-observation collapse. `paint/node.rs` hot paths remain a separate open migration item.
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
   subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.
