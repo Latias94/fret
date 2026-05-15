@@ -230,9 +230,11 @@ timeline; low overhead).
 - For an existing bundle:
   - `fretboard-dev diag trace <bundle_dir|bundle.json>`
   - Optional output override: `--trace-out <path>`
+  - Metadata report for scripts/automation: `--json`
 
 Open the resulting JSON in Chrome tracing UI (or compatible viewers) to correlate phases with
-`tick_id` / `frame_id`.
+`tick_id` / `frame_id`. Use `--json` when you only need the trace artifact path, trace source, and
+real-span counts/extension keys.
 
 ## Validation / gates
 

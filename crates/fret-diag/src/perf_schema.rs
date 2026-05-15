@@ -11,6 +11,8 @@ pub(crate) const PERF_HINTS_KIND: &str = "perf_hints";
 
 pub(crate) const PERF_TRACE_SCHEMA_VERSION: u32 = 1;
 pub(crate) const PERF_TRACE_CHROME_KIND: &str = "perf_trace_chrome";
+pub(crate) const PERF_TRACE_REPORT_SCHEMA_VERSION: u32 = 1;
+pub(crate) const PERF_TRACE_REPORT_KIND: &str = "diag_trace_report";
 pub(crate) const PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES: &str = "bundle_synthetic_phases";
 pub(crate) const PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES_WITH_EXTENSION_SPANS: &str =
     "bundle_synthetic_phases_with_extension_spans";

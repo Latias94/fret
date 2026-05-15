@@ -1554,6 +1554,7 @@ mod tests {
             "target/fret-diag/demo",
             "--trace-out",
             "target/trace.chrome.json",
+            "--json",
         ])
         .expect("trace contract should parse the supported subset");
 
@@ -1566,6 +1567,7 @@ mod tests {
             args.trace_out,
             Some(PathBuf::from("target/trace.chrome.json"))
         );
+        assert!(args.json);
     }
 
     #[test]
@@ -2789,6 +2791,7 @@ mod tests {
         assert!(test_ids_index_help.contains("--warmup-frames"));
         assert!(!test_ids_index_help.contains("--out"));
         assert!(trace_help.contains("--trace-out"));
+        assert!(trace_help.contains("--json"));
         assert!(triage_help.contains("--lite"));
         assert!(triage_help.contains("--metric"));
         assert!(windows_help.contains("--warmup-frames"));

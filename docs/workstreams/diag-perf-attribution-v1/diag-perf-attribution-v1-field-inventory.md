@@ -70,6 +70,14 @@ schema:
     were merged into `traceEvents`.
   - `real_span_extension_keys`: sorted list of debug-extension keys that contributed real spans.
   - `real_span_event_count`: count of merged real-span events.
+- `diag trace --json`
+  - `kind`: `diag_trace_report`
+  - `schema_version`: `1`
+  - `schema_policy.compatibility`: `additive_only`
+  - `trace_chrome_json_path`: written Chrome trace artifact.
+  - `trace_source`, `real_spans_included`, `real_span_event_count`, and
+    `real_span_extension_keys`: copied from the generated trace so automation can inspect metadata
+    without loading the full `traceEvents` array.
 
 Supported real-span extension payload:
 
@@ -120,6 +128,8 @@ Evidence anchors:
   `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
 - Requested trace artifact reliability gate:
   `cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast`
+- Trace JSON report focused gate:
+  `cargo nextest run -p fret-diag trace_command_report_json_projects_real_span_metadata trace_contract_captures_trace_out migrated_trace_builds_a_real_context contract_help_mentions_the_migrated_command_surfaces chrome_trace_merges_real_span_extension_events --no-fail-fast`
 - Runtime extension writer focused gate:
   `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast`
 - CLI opt-in focused gate:
@@ -255,9 +265,10 @@ Tail perf (worst frames + attribution):
 Opt-in artifact for timeline correlation:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 1 --trace`
-- `target/release/fretboard.exe diag trace <bundle.json>`
+- `target/release/fretboard.exe diag trace <bundle.json> --json`
 
-Current trace artifacts are bundle-derived synthetic phase timelines. They are useful for correlating
-`fret.frame`, layout, prepaint, paint, and renderer-adjacent bundle stats in a Chrome trace viewer, but
-they do not contain live `tracing` / Tracy spans. Treat real-span capture as a separate opt-in profiling
-workflow until `real_spans_included=true` exists.
+Current trace artifacts are bundle-derived synthetic phase timelines, optionally enriched with
+`fret.perf.spans.v1` real spans when `real_spans_included=true`. They are useful for correlating
+`fret.frame`, layout, prepaint, paint, and renderer-adjacent bundle stats in a Chrome trace viewer.
+Treat broader runtime spans and Tracy correlation as separate opt-in profiling work until the source
+bundle provides those spans explicitly.

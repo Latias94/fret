@@ -39,6 +39,10 @@
         dropping the artifact.
     - Gate:
       `cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast`
+  - [x] adds `diag trace --json` metadata output so scripts can see trace source and real-span
+        counts without opening `traceEvents`.
+    - Gate:
+      `cargo nextest run -p fret-diag trace_command_report_json_projects_real_span_metadata trace_contract_captures_trace_out migrated_trace_builds_a_real_context contract_help_mentions_the_migrated_command_surfaces chrome_trace_merges_real_span_extension_events --no-fail-fast`
 - [x] Emit initial app-loop `fret.perf.spans.v1` spans when explicitly requested.
   - `FRET_DIAG_REAL_SPANS=1` enables frame-relative View, Overlay, Layout, and Paint spans in
     `fret-bootstrap` `ui_app_driver` apps.

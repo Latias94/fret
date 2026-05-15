@@ -361,6 +361,7 @@ struct TraceCmdContext {
     rest: Vec<String>,
     workspace_root: PathBuf,
     trace_out: Option<PathBuf>,
+    stats_json: bool,
 }
 
 struct TriageCmdContext {
@@ -2146,6 +2147,7 @@ fn parse_trace_command(
         rest: vec![args.source],
         workspace_root: workspace_root.to_path_buf(),
         trace_out: args.trace_out,
+        stats_json: args.json,
     }))
 }
 
@@ -3445,9 +3447,13 @@ pub(crate) fn dispatch_diag_command_with_mode(
                 ctx.stats_json,
             )
         }
-        Ok(MigratedDiagCommand::Trace(ctx)) => {
-            crate::commands::trace::cmd_trace(&ctx.rest, false, &ctx.workspace_root, ctx.trace_out)
-        }
+        Ok(MigratedDiagCommand::Trace(ctx)) => crate::commands::trace::cmd_trace(
+            &ctx.rest,
+            false,
+            &ctx.workspace_root,
+            ctx.trace_out,
+            ctx.stats_json,
+        ),
         Ok(MigratedDiagCommand::Triage(ctx)) => crate::commands::artifacts::cmd_triage(
             &ctx.rest,
             false,
@@ -5085,6 +5091,7 @@ mod tests {
             "target/fret-diag/demo".to_string(),
             "--trace-out".to_string(),
             "target/trace.chrome.json".to_string(),
+            "--json".to_string(),
         ];
 
         let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
@@ -5100,6 +5107,7 @@ mod tests {
             ctx.trace_out,
             Some(PathBuf::from("target/trace.chrome.json"))
         );
+        assert!(ctx.stats_json);
     }
 
     #[test]

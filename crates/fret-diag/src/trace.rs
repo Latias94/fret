@@ -47,10 +47,18 @@ pub(crate) fn write_chrome_trace_from_bundle_path(
     bundle_path: &Path,
     out_path: &Path,
 ) -> Result<(), String> {
+    let trace = chrome_trace_json_from_bundle_path(bundle_path)?;
+    write_chrome_trace_value(out_path, &trace)
+}
+
+pub(crate) fn chrome_trace_json_from_bundle_path(bundle_path: &Path) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    let trace = chrome_trace_json_from_bundle_value(&bundle)?;
-    write_json_value_compact(out_path, &trace)
+    chrome_trace_json_from_bundle_value(&bundle)
+}
+
+pub(crate) fn write_chrome_trace_value(out_path: &Path, trace: &Value) -> Result<(), String> {
+    write_json_value_compact(out_path, trace)
 }
 
 fn write_json_value_compact(path: &Path, v: &Value) -> Result<(), String> {
