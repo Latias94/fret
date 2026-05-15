@@ -1234,6 +1234,24 @@ impl WinitAppDriver for UiGalleryDriver {
         fret_ui_magic::advanced::ensure_materials(app, renderer);
     }
 
+    fn renderer_perf_sample(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        _state: &mut Self::WindowState,
+        sample: Option<fret_render::RendererPerfFrameSample>,
+    ) {
+        app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| {
+                if let Some(sample) = sample {
+                    svc.patch_latest_renderer_perf_sample(window, sample);
+                }
+                let _ = svc.maybe_dump_if_triggered();
+            },
+        );
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
     }
@@ -2287,7 +2305,11 @@ impl WinitAppDriver for UiGalleryDriver {
                     element_runtime,
                     scene,
                 );
-                let _ = svc.maybe_dump_if_triggered();
+                let defer_dump_until_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
+                    .is_some_and(|v| !v.is_empty());
+                if !defer_dump_until_renderer_perf {
+                    let _ = svc.maybe_dump_if_triggered();
+                }
                 if svc.is_enabled() {
                     app.push_effect(Effect::RequestAnimationFrame(window));
                 }

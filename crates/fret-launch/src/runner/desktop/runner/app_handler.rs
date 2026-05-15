@@ -2029,10 +2029,24 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         RedrawPhase::Present,
                         hitch_config.is_some(),
                         || -> Result<(), fret_render::RenderError> {
-                            let (frame, view) =
-                                surface.get_current_frame_view().map_err(|source| {
-                                    fret_render::RenderError::SurfaceAcquireFailed { source }
-                                })?;
+                            let frame_view = match surface.get_current_frame_view() {
+                                Ok(frame_view) => Some(frame_view),
+                                Err(source) => {
+                                    let diag_renderer_perf =
+                                        std::env::var_os("FRET_DIAG_RENDERER_PERF")
+                                            .is_some_and(|v| !v.is_empty());
+                                    if !diag_renderer_perf
+                                        || source != fret_render::SurfaceAcquireError::Other
+                                    {
+                                        return Err(
+                                            fret_render::RenderError::SurfaceAcquireFailed {
+                                                source,
+                                            },
+                                        );
+                                    }
+                                    None
+                                }
+                            };
 
                             let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
@@ -2046,6 +2060,33 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             } else {
                                 self.config.clear_color
                             };
+                            let fallback_target = if frame_view.is_none() {
+                                Some(context.device.create_texture(&wgpu::TextureDescriptor {
+                                    label: Some("fret diag renderer perf fallback target"),
+                                    size: wgpu::Extent3d {
+                                        width: surface.size().0.max(1),
+                                        height: surface.size().1.max(1),
+                                        depth_or_array_layers: 1,
+                                    },
+                                    mip_level_count: 1,
+                                    sample_count: 1,
+                                    dimension: wgpu::TextureDimension::D2,
+                                    format: surface.format(),
+                                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                                    view_formats: &[],
+                                }))
+                            } else {
+                                None
+                            };
+                            let fallback_view = fallback_target.as_ref().map(|target| {
+                                target.create_view(&wgpu::TextureViewDescriptor::default())
+                            });
+                            let target_view = frame_view
+                                .as_ref()
+                                .map(|(_, view)| view)
+                                .or(fallback_view.as_ref())
+                                .expect("renderer perf fallback should provide a target view");
+
                             let (ui_cmd, _) =
                                 measure_redraw_phase(RedrawPhase::RenderScene, false, || {
                                     renderer.render_scene(
@@ -2053,7 +2094,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         &context.queue,
                                         fret_render::RenderSceneParams {
                                             format: surface.format(),
-                                            target_view: &view,
+                                            target_view,
                                             scene: &state.scene,
                                             clear: clear_color,
                                             scale_factor,
@@ -2100,16 +2141,34 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                             let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
                                 .is_some_and(|v| !v.is_empty());
-                            if diag_renderer_perf
-                                && let Some(perf) = renderer.take_last_frame_perf_snapshot()
-                            {
+                            if diag_renderer_perf {
                                 let tick_id = self.tick_id.0;
                                 let frame_id = self.frame_id.0;
-                                self.app.with_global_mut_untracked(
-                                    fret_render::RendererPerfFrameStore::default,
-                                    |store, _app| {
-                                        store.record(app_window, tick_id, frame_id, perf);
-                                    },
+                                let sample = renderer.take_last_frame_perf_snapshot().map(|perf| {
+                                    fret_render::RendererPerfFrameSample {
+                                        tick_id,
+                                        frame_id,
+                                        perf,
+                                    }
+                                });
+                                if let Some(sample) = sample {
+                                    self.app.with_global_mut_untracked(
+                                        fret_render::RendererPerfFrameStore::default,
+                                        |store, _app| {
+                                            store.record(
+                                                app_window,
+                                                tick_id,
+                                                frame_id,
+                                                sample.perf,
+                                            );
+                                        },
+                                    );
+                                }
+                                self.driver.renderer_perf_sample(
+                                    &mut self.app,
+                                    app_window,
+                                    &mut state.user,
+                                    sample,
                                 );
                             }
 
@@ -2239,7 +2298,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 diag_screenshots::InFlightCapture,
                             > = None;
                             #[cfg(feature = "diag-screenshots")]
-                            if let Some(diag) = self.diag_screenshots.as_mut() {
+                            if let (Some(diag), Some((frame, _view))) =
+                                (self.diag_screenshots.as_mut(), frame_view.as_ref())
+                            {
                                 let window_ffi = app_window.data().as_ffi();
                                 if let Some((cmd, inflight)) = diag.begin_capture_for_window(
                                     &context.device,
@@ -2254,7 +2315,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             }
 
                             let mut pending_bundle_screenshot = None;
-                            if let Some(dir) = screenshot_dir
+                            if let (Some(dir), Some((frame, _view))) =
+                                (screenshot_dir, frame_view.as_ref())
                                 && let Some((pending, copy_cmd)) =
                                     self.diag_bundle_screenshots.begin_readback(
                                         &context.device,
@@ -2268,7 +2330,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             }
 
                             context.queue.submit(cmd_buffers);
-                            frame.present();
+                            if let Some((frame, _view)) = frame_view {
+                                frame.present();
+                            }
                             super::scheduling_diagnostics::commit_presented_frame_for_window(
                                 &mut self.app,
                                 &mut self.frame_id,

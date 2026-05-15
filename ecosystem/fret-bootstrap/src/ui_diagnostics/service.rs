@@ -1209,6 +1209,26 @@ impl UiDiagnosticsService {
             .push(UiViewportInputEventV1::from_event(event));
     }
 
+    pub fn patch_latest_renderer_perf_sample(
+        &mut self,
+        window: AppWindowId,
+        sample: fret_render::RendererPerfFrameSample,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let Some(snapshot) = self
+            .per_window
+            .get_mut(&window)
+            .and_then(|ring| ring.snapshots.back_mut())
+        else {
+            return;
+        };
+
+        snapshot.debug.stats.apply_renderer_perf_sample(sample);
+    }
+
     pub fn record_snapshot(
         &mut self,
         app: &App,
@@ -1819,6 +1839,81 @@ mod service_tests {
             mouse_buttons_override_issued: down_issued,
             release_armed: false,
         }
+    }
+
+    fn minimal_snapshot(window: AppWindowId) -> UiDiagnosticsSnapshotV1 {
+        UiDiagnosticsSnapshotV1 {
+            schema_version: 1,
+            tick_id: 0,
+            frame_id: 0,
+            window_snapshot_seq: 0,
+            window: window.data().as_ffi(),
+            timestamp_unix_ms: 0,
+            frame_clock: None,
+            scale_factor: 1.0,
+            window_bounds: RectV1 {
+                x: 0.0,
+                y: 0.0,
+                w: 1.0,
+                h: 1.0,
+            },
+            scene_ops: 0,
+            scene_fingerprint: 0,
+            semantics_fingerprint: None,
+            changed_models: Vec::new(),
+            changed_globals: Vec::new(),
+            changed_model_sources_top: Vec::new(),
+            resource_caches: None,
+            app_snapshot: None,
+            safe_area_insets: None,
+            occlusion_insets: None,
+            focus_is_text_input: None,
+            is_composing: None,
+            clipboard: None,
+            primary_pointer_type: None,
+            caps: None,
+            wgpu_adapter: None,
+            debug: UiTreeDebugSnapshotV1::default(),
+        }
+    }
+
+    #[test]
+    fn patch_latest_renderer_perf_sample_updates_latest_snapshot_stats() {
+        let window = app_window(1);
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.per_window
+            .entry(window)
+            .or_default()
+            .snapshots
+            .push_back(minimal_snapshot(window));
+
+        let mut perf = fret_render::RendererPerfFrameSample::default().perf;
+        perf.frames = 1;
+        perf.encode_scene_us = 42;
+        perf.instance_bytes = 2048;
+        perf.encode_scene_text_ops = 17;
+        let sample = fret_render::RendererPerfFrameSample {
+            tick_id: 7,
+            frame_id: 9,
+            perf,
+        };
+
+        svc.patch_latest_renderer_perf_sample(window, sample);
+
+        let stats = &svc
+            .per_window
+            .get(&window)
+            .and_then(|ring| ring.snapshots.back())
+            .expect("snapshot should still exist")
+            .debug
+            .stats;
+        assert_eq!(stats.renderer_tick_id, 7);
+        assert_eq!(stats.renderer_frame_id, 9);
+        assert_eq!(stats.renderer_frames, 1);
+        assert_eq!(stats.renderer_encode_scene_us, 42);
+        assert_eq!(stats.renderer_instance_bytes, 2048);
+        assert_eq!(stats.renderer_encode_scene_text_ops, 17);
     }
 
     #[test]

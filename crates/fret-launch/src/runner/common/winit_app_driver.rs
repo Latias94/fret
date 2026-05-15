@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{Event, UiServices, ViewportInputEvent};
-use fret_render::{Renderer, WgpuContext};
+use fret_render::{Renderer, RendererPerfFrameSample, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 
 use super::{
@@ -100,6 +100,15 @@ pub trait WinitAppDriver {
         _frame_id: FrameId,
     ) -> Vec<wgpu::CommandBuffer> {
         Vec::new()
+    }
+
+    fn renderer_perf_sample(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _sample: Option<RendererPerfFrameSample>,
+    ) {
     }
 
     fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}

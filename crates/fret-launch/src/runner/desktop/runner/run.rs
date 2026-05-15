@@ -540,6 +540,16 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
         )
     }
 
+    fn renderer_perf_sample(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        sample: Option<fret_render::RendererPerfFrameSample>,
+    ) {
+        self.inner.renderer_perf_sample(app, window, state, sample);
+    }
+
     fn viewport_input(&mut self, app: &mut App, event: fret_core::ViewportInputEvent) {
         self.inner.viewport_input(app, event);
     }

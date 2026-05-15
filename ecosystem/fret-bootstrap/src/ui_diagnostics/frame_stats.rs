@@ -1237,242 +1237,7 @@ impl UiFrameStatsV1 {
         };
 
         if let Some(sample) = renderer_perf {
-            out.renderer_tick_id = sample.tick_id;
-            out.renderer_frame_id = sample.frame_id;
-            out.renderer_frames = sample.perf.frames;
-            out.renderer_encode_scene_us = sample.perf.encode_scene_us;
-            out.renderer_ensure_pipelines_us = sample.perf.ensure_pipelines_us;
-            out.renderer_plan_compile_us = sample.perf.plan_compile_us;
-            out.renderer_upload_us = sample.perf.upload_us;
-            out.renderer_record_passes_us = sample.perf.record_passes_us;
-            out.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
-            out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
-            out.renderer_prepare_text_us = sample.perf.prepare_text_us;
-            out.renderer_encode_scene_stack_us = sample.perf.encode_scene_stack_us;
-            out.renderer_encode_scene_clip_us = sample.perf.encode_scene_clip_us;
-            out.renderer_encode_scene_mask_us = sample.perf.encode_scene_mask_us;
-            out.renderer_encode_scene_effect_us = sample.perf.encode_scene_effect_us;
-            out.renderer_encode_scene_quad_us = sample.perf.encode_scene_quad_us;
-            out.renderer_encode_scene_image_us = sample.perf.encode_scene_image_us;
-            out.renderer_encode_scene_text_us = sample.perf.encode_scene_text_us;
-            out.renderer_encode_scene_path_us = sample.perf.encode_scene_path_us;
-            out.renderer_encode_scene_viewport_us = sample.perf.encode_scene_viewport_us;
-            out.renderer_encode_scene_flush_us = sample.perf.encode_scene_flush_us;
-            out.renderer_encode_scene_text_shadow_us = sample.perf.encode_scene_text_shadow_us;
-            out.renderer_encode_scene_text_setup_us = sample.perf.encode_scene_text_setup_us;
-            out.renderer_encode_scene_text_glyphs_us = sample.perf.encode_scene_text_glyphs_us;
-            out.renderer_encode_scene_text_glyph_transform_us =
-                sample.perf.encode_scene_text_glyph_transform_us;
-            out.renderer_encode_scene_text_glyph_emit_us = sample.perf.encode_scene_text_glyph_emit_us;
-            out.renderer_encode_scene_text_group_flush_us =
-                sample.perf.encode_scene_text_group_flush_us;
-            out.renderer_encode_scene_text_vertex_grow_events =
-                sample.perf.encode_scene_text_vertex_grow_events;
-            out.renderer_encode_scene_text_transform_fast_path_glyphs =
-                sample.perf.encode_scene_text_transform_fast_path_glyphs;
-            out.renderer_encode_scene_text_transform_generic_glyphs =
-                sample.perf.encode_scene_text_transform_generic_glyphs;
-            out.renderer_encode_scene_stack_ops = sample.perf.encode_scene_stack_ops;
-            out.renderer_encode_scene_clip_ops = sample.perf.encode_scene_clip_ops;
-            out.renderer_encode_scene_mask_ops = sample.perf.encode_scene_mask_ops;
-            out.renderer_encode_scene_effect_ops = sample.perf.encode_scene_effect_ops;
-            out.renderer_encode_scene_quad_ops = sample.perf.encode_scene_quad_ops;
-            out.renderer_encode_scene_image_ops = sample.perf.encode_scene_image_ops;
-            out.renderer_encode_scene_text_ops = sample.perf.encode_scene_text_ops;
-            out.renderer_encode_scene_path_ops = sample.perf.encode_scene_path_ops;
-            out.renderer_encode_scene_viewport_ops = sample.perf.encode_scene_viewport_ops;
-            out.renderer_encode_scene_flushes = sample.perf.encode_scene_flushes;
-            out.renderer_svg_uploads = sample.perf.svg_uploads;
-            out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
-            out.renderer_image_uploads = sample.perf.image_uploads;
-            out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
-            out.renderer_render_target_updates_ingest_unknown =
-                sample.perf.render_target_updates_ingest_unknown;
-            out.renderer_render_target_updates_ingest_owned =
-                sample.perf.render_target_updates_ingest_owned;
-            out.renderer_render_target_updates_ingest_external_zero_copy =
-                sample.perf.render_target_updates_ingest_external_zero_copy;
-            out.renderer_render_target_updates_ingest_gpu_copy =
-                sample.perf.render_target_updates_ingest_gpu_copy;
-            out.renderer_render_target_updates_ingest_cpu_upload =
-                sample.perf.render_target_updates_ingest_cpu_upload;
-            out.renderer_render_target_updates_requested_ingest_unknown =
-                sample.perf.render_target_updates_requested_ingest_unknown;
-            out.renderer_render_target_updates_requested_ingest_owned =
-                sample.perf.render_target_updates_requested_ingest_owned;
-            out.renderer_render_target_updates_requested_ingest_external_zero_copy = sample
-                .perf
-                .render_target_updates_requested_ingest_external_zero_copy;
-            out.renderer_render_target_updates_requested_ingest_gpu_copy =
-                sample.perf.render_target_updates_requested_ingest_gpu_copy;
-            out.renderer_render_target_updates_requested_ingest_cpu_upload = sample
-                .perf
-                .render_target_updates_requested_ingest_cpu_upload;
-            out.renderer_render_target_updates_ingest_fallbacks =
-                sample.perf.render_target_updates_ingest_fallbacks;
-            out.renderer_render_target_metadata_degradations_color_encoding_dropped = sample
-                .perf
-                .render_target_metadata_degradations_color_encoding_dropped;
-            out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
-            out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
-            out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
-            out.renderer_svg_mask_atlas_pages_live = sample.perf.svg_mask_atlas_pages_live;
-            out.renderer_svg_mask_atlas_bytes_live = sample.perf.svg_mask_atlas_bytes_live;
-            out.renderer_svg_mask_atlas_used_px = sample.perf.svg_mask_atlas_used_px;
-            out.renderer_svg_mask_atlas_capacity_px = sample.perf.svg_mask_atlas_capacity_px;
-            out.renderer_svg_raster_cache_hits = sample.perf.svg_raster_cache_hits;
-            out.renderer_svg_raster_cache_misses = sample.perf.svg_raster_cache_misses;
-            out.renderer_svg_raster_budget_evictions = sample.perf.svg_raster_budget_evictions;
-            out.renderer_svg_mask_atlas_page_evictions = sample.perf.svg_mask_atlas_page_evictions;
-            out.renderer_svg_mask_atlas_entries_evicted =
-                sample.perf.svg_mask_atlas_entries_evicted;
-            out.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
-            out.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
-            out.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;
-            out.renderer_text_atlas_evicted_glyphs = sample.perf.text_atlas_evicted_glyphs;
-            out.renderer_text_atlas_evicted_pages = sample.perf.text_atlas_evicted_pages;
-            out.renderer_text_atlas_evicted_page_glyphs =
-                sample.perf.text_atlas_evicted_page_glyphs;
-            out.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
-            out.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
-            out.renderer_intermediate_full_target_bytes =
-                sample.perf.intermediate_full_target_bytes;
-            out.renderer_render_plan_effect_chain_budget_samples =
-                sample.perf.render_plan_effect_chain_budget_samples;
-            out.renderer_render_plan_effect_chain_effective_budget_min_bytes =
-                sample.perf.render_plan_effect_chain_effective_budget_min_bytes;
-            out.renderer_render_plan_effect_chain_effective_budget_max_bytes =
-                sample.perf.render_plan_effect_chain_effective_budget_max_bytes;
-            out.renderer_render_plan_effect_chain_other_live_max_bytes =
-                sample.perf.render_plan_effect_chain_other_live_max_bytes;
-            out.renderer_render_plan_custom_effect_chain_budget_samples =
-                sample.perf.render_plan_custom_effect_chain_budget_samples;
-            out.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes =
-                sample.perf.render_plan_custom_effect_chain_effective_budget_min_bytes;
-            out.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes =
-                sample.perf.render_plan_custom_effect_chain_effective_budget_max_bytes;
-            out.renderer_render_plan_custom_effect_chain_other_live_max_bytes =
-                sample.perf.render_plan_custom_effect_chain_other_live_max_bytes;
-            out.renderer_render_plan_custom_effect_chain_base_required_max_bytes =
-                sample.perf.render_plan_custom_effect_chain_base_required_max_bytes;
-            out.renderer_render_plan_custom_effect_chain_optional_required_max_bytes =
-                sample.perf.render_plan_custom_effect_chain_optional_required_max_bytes;
-            out.renderer_render_plan_custom_effect_chain_base_required_full_targets_max =
-                sample.perf.render_plan_custom_effect_chain_base_required_full_targets_max;
-            out.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes =
-                sample.perf.render_plan_custom_effect_chain_optional_mask_max_bytes;
-            out.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes =
-                sample.perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes;
-            out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
-            out.renderer_intermediate_peak_in_use_bytes =
-                sample.perf.intermediate_peak_in_use_bytes;
-            out.renderer_intermediate_release_targets = sample.perf.intermediate_release_targets;
-            out.renderer_intermediate_pool_allocations = sample.perf.intermediate_pool_allocations;
-            out.renderer_intermediate_pool_reuses = sample.perf.intermediate_pool_reuses;
-            out.renderer_intermediate_pool_releases = sample.perf.intermediate_pool_releases;
-            out.renderer_intermediate_pool_evictions = sample.perf.intermediate_pool_evictions;
-            out.renderer_intermediate_pool_free_bytes = sample.perf.intermediate_pool_free_bytes;
-            out.renderer_intermediate_pool_free_textures =
-                sample.perf.intermediate_pool_free_textures;
-            out.renderer_gpu_images_live = sample.perf.gpu_images_live;
-            out.renderer_gpu_images_bytes_estimate = sample.perf.gpu_images_bytes_estimate;
-            out.renderer_gpu_images_max_bytes_estimate = sample.perf.gpu_images_max_bytes_estimate;
-            out.renderer_gpu_render_targets_live = sample.perf.gpu_render_targets_live;
-            out.renderer_gpu_render_targets_bytes_estimate =
-                sample.perf.gpu_render_targets_bytes_estimate;
-            out.renderer_gpu_render_targets_max_bytes_estimate =
-                sample.perf.gpu_render_targets_max_bytes_estimate;
-            out.renderer_draw_calls = sample.perf.draw_calls;
-            out.renderer_text_draw_calls = sample.perf.text_draw_calls;
-            out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
-            out.renderer_viewport_draw_calls = sample.perf.viewport_draw_calls;
-            out.renderer_viewport_draw_calls_ingest_unknown =
-                sample.perf.viewport_draw_calls_ingest_unknown;
-            out.renderer_viewport_draw_calls_ingest_owned =
-                sample.perf.viewport_draw_calls_ingest_owned;
-            out.renderer_viewport_draw_calls_ingest_external_zero_copy =
-                sample.perf.viewport_draw_calls_ingest_external_zero_copy;
-            out.renderer_viewport_draw_calls_ingest_gpu_copy =
-                sample.perf.viewport_draw_calls_ingest_gpu_copy;
-            out.renderer_viewport_draw_calls_ingest_cpu_upload =
-                sample.perf.viewport_draw_calls_ingest_cpu_upload;
-            out.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
-            out.renderer_pipeline_switches = sample.perf.pipeline_switches;
-            out.renderer_bind_group_switches = sample.perf.bind_group_switches;
-            out.renderer_scissor_sets = sample.perf.scissor_sets;
-            out.renderer_path_msaa_samples_requested = sample.perf.path_msaa_samples_requested;
-            out.renderer_path_msaa_samples_effective = sample.perf.path_msaa_samples_effective;
-            out.renderer_uniform_bytes = sample.perf.uniform_bytes;
-            out.renderer_instance_bytes = sample.perf.instance_bytes;
-            out.renderer_vertex_bytes = sample.perf.vertex_bytes;
-            out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
-            out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
-            out.renderer_material_quad_ops = sample.perf.material_quad_ops;
-            out.renderer_material_sampled_quad_ops = sample.perf.material_sampled_quad_ops;
-            out.renderer_material_distinct = sample.perf.material_distinct;
-            out.renderer_material_unknown_ids = sample.perf.material_unknown_ids;
-            out.renderer_material_degraded_due_to_budget =
-                sample.perf.material_degraded_due_to_budget;
-
-            out.renderer_custom_effect_v1_steps_requested =
-                sample.perf.custom_effect_v1_steps_requested;
-            out.renderer_custom_effect_v1_passes_emitted =
-                sample.perf.custom_effect_v1_passes_emitted;
-            out.renderer_custom_effect_v2_steps_requested =
-                sample.perf.custom_effect_v2_steps_requested;
-            out.renderer_custom_effect_v2_passes_emitted =
-                sample.perf.custom_effect_v2_passes_emitted;
-            out.renderer_custom_effect_v2_user_image_incompatible_fallbacks =
-                sample.perf.custom_effect_v2_user_image_incompatible_fallbacks;
-            out.renderer_custom_effect_v3_steps_requested =
-                sample.perf.custom_effect_v3_steps_requested;
-            out.renderer_custom_effect_v3_passes_emitted =
-                sample.perf.custom_effect_v3_passes_emitted;
-            out.renderer_custom_effect_v3_user0_image_incompatible_fallbacks =
-                sample.perf.custom_effect_v3_user0_image_incompatible_fallbacks;
-            out.renderer_custom_effect_v3_user1_image_incompatible_fallbacks =
-                sample.perf.custom_effect_v3_user1_image_incompatible_fallbacks;
-            out.renderer_custom_effect_v3_pyramid_cache_hits =
-                sample.perf.custom_effect_v3_pyramid_cache_hits;
-            out.renderer_custom_effect_v3_pyramid_cache_misses =
-                sample.perf.custom_effect_v3_pyramid_cache_misses;
-
-            let effects = sample.perf.effect_degradations;
-            out.renderer_custom_effect_v3_sources_raw_requested =
-                effects.custom_effect_v3_sources.raw_requested;
-            out.renderer_custom_effect_v3_sources_raw_distinct =
-                effects.custom_effect_v3_sources.raw_distinct;
-            out.renderer_custom_effect_v3_sources_raw_aliased_to_src =
-                effects.custom_effect_v3_sources.raw_aliased_to_src;
-            out.renderer_custom_effect_v3_sources_pyramid_requested =
-                effects.custom_effect_v3_sources.pyramid_requested;
-            out.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 =
-                effects.custom_effect_v3_sources.pyramid_applied_levels_ge2;
-            out.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero =
-                effects.custom_effect_v3_sources.pyramid_degraded_to_one_budget_zero;
-            out.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient =
-                effects
-                    .custom_effect_v3_sources
-                    .pyramid_degraded_to_one_budget_insufficient;
-
-            out.renderer_backdrop_source_groups_requested = effects.backdrop_source_groups.requested;
-            out.renderer_backdrop_source_groups_applied_raw = effects.backdrop_source_groups.applied_raw;
-            out.renderer_backdrop_source_groups_raw_degraded_budget_zero =
-                effects.backdrop_source_groups.raw_degraded_budget_zero;
-            out.renderer_backdrop_source_groups_raw_degraded_budget_insufficient =
-                effects.backdrop_source_groups.raw_degraded_budget_insufficient;
-            out.renderer_backdrop_source_groups_raw_degraded_target_exhausted =
-                effects.backdrop_source_groups.raw_degraded_target_exhausted;
-            out.renderer_backdrop_source_groups_pyramid_requested =
-                effects.backdrop_source_groups.pyramid_requested;
-            out.renderer_backdrop_source_groups_pyramid_applied_levels_ge2 =
-                effects.backdrop_source_groups.pyramid_applied_levels_ge2;
-            out.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero =
-                effects.backdrop_source_groups.pyramid_degraded_to_one_budget_zero;
-            out.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient =
-                effects.backdrop_source_groups.pyramid_degraded_to_one_budget_insufficient;
-            out.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable =
-                effects.backdrop_source_groups.pyramid_skipped_raw_unavailable;
+            out.apply_renderer_perf_sample(sample);
         }
 
         if let Some(sample) = wgpu_hub_report {
@@ -1517,5 +1282,241 @@ impl UiFrameStatsV1 {
         }
 
         out
+    }
+
+    fn apply_renderer_perf_sample(&mut self, sample: fret_render::RendererPerfFrameSample) {
+        self.renderer_tick_id = sample.tick_id;
+        self.renderer_frame_id = sample.frame_id;
+        self.renderer_frames = sample.perf.frames;
+        self.renderer_encode_scene_us = sample.perf.encode_scene_us;
+        self.renderer_ensure_pipelines_us = sample.perf.ensure_pipelines_us;
+        self.renderer_plan_compile_us = sample.perf.plan_compile_us;
+        self.renderer_upload_us = sample.perf.upload_us;
+        self.renderer_record_passes_us = sample.perf.record_passes_us;
+        self.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
+        self.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
+        self.renderer_prepare_text_us = sample.perf.prepare_text_us;
+        self.renderer_encode_scene_stack_us = sample.perf.encode_scene_stack_us;
+        self.renderer_encode_scene_clip_us = sample.perf.encode_scene_clip_us;
+        self.renderer_encode_scene_mask_us = sample.perf.encode_scene_mask_us;
+        self.renderer_encode_scene_effect_us = sample.perf.encode_scene_effect_us;
+        self.renderer_encode_scene_quad_us = sample.perf.encode_scene_quad_us;
+        self.renderer_encode_scene_image_us = sample.perf.encode_scene_image_us;
+        self.renderer_encode_scene_text_us = sample.perf.encode_scene_text_us;
+        self.renderer_encode_scene_path_us = sample.perf.encode_scene_path_us;
+        self.renderer_encode_scene_viewport_us = sample.perf.encode_scene_viewport_us;
+        self.renderer_encode_scene_flush_us = sample.perf.encode_scene_flush_us;
+        self.renderer_encode_scene_text_shadow_us = sample.perf.encode_scene_text_shadow_us;
+        self.renderer_encode_scene_text_setup_us = sample.perf.encode_scene_text_setup_us;
+        self.renderer_encode_scene_text_glyphs_us = sample.perf.encode_scene_text_glyphs_us;
+        self.renderer_encode_scene_text_glyph_transform_us =
+            sample.perf.encode_scene_text_glyph_transform_us;
+        self.renderer_encode_scene_text_glyph_emit_us =
+            sample.perf.encode_scene_text_glyph_emit_us;
+        self.renderer_encode_scene_text_group_flush_us =
+            sample.perf.encode_scene_text_group_flush_us;
+        self.renderer_encode_scene_text_vertex_grow_events =
+            sample.perf.encode_scene_text_vertex_grow_events;
+        self.renderer_encode_scene_text_transform_fast_path_glyphs =
+            sample.perf.encode_scene_text_transform_fast_path_glyphs;
+        self.renderer_encode_scene_text_transform_generic_glyphs =
+            sample.perf.encode_scene_text_transform_generic_glyphs;
+        self.renderer_encode_scene_stack_ops = sample.perf.encode_scene_stack_ops;
+        self.renderer_encode_scene_clip_ops = sample.perf.encode_scene_clip_ops;
+        self.renderer_encode_scene_mask_ops = sample.perf.encode_scene_mask_ops;
+        self.renderer_encode_scene_effect_ops = sample.perf.encode_scene_effect_ops;
+        self.renderer_encode_scene_quad_ops = sample.perf.encode_scene_quad_ops;
+        self.renderer_encode_scene_image_ops = sample.perf.encode_scene_image_ops;
+        self.renderer_encode_scene_text_ops = sample.perf.encode_scene_text_ops;
+        self.renderer_encode_scene_path_ops = sample.perf.encode_scene_path_ops;
+        self.renderer_encode_scene_viewport_ops = sample.perf.encode_scene_viewport_ops;
+        self.renderer_encode_scene_flushes = sample.perf.encode_scene_flushes;
+        self.renderer_svg_uploads = sample.perf.svg_uploads;
+        self.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
+        self.renderer_image_uploads = sample.perf.image_uploads;
+        self.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
+        self.renderer_render_target_updates_ingest_unknown =
+            sample.perf.render_target_updates_ingest_unknown;
+        self.renderer_render_target_updates_ingest_owned =
+            sample.perf.render_target_updates_ingest_owned;
+        self.renderer_render_target_updates_ingest_external_zero_copy =
+            sample.perf.render_target_updates_ingest_external_zero_copy;
+        self.renderer_render_target_updates_ingest_gpu_copy =
+            sample.perf.render_target_updates_ingest_gpu_copy;
+        self.renderer_render_target_updates_ingest_cpu_upload =
+            sample.perf.render_target_updates_ingest_cpu_upload;
+        self.renderer_render_target_updates_requested_ingest_unknown =
+            sample.perf.render_target_updates_requested_ingest_unknown;
+        self.renderer_render_target_updates_requested_ingest_owned =
+            sample.perf.render_target_updates_requested_ingest_owned;
+        self.renderer_render_target_updates_requested_ingest_external_zero_copy = sample
+            .perf
+            .render_target_updates_requested_ingest_external_zero_copy;
+        self.renderer_render_target_updates_requested_ingest_gpu_copy =
+            sample.perf.render_target_updates_requested_ingest_gpu_copy;
+        self.renderer_render_target_updates_requested_ingest_cpu_upload =
+            sample.perf.render_target_updates_requested_ingest_cpu_upload;
+        self.renderer_render_target_updates_ingest_fallbacks =
+            sample.perf.render_target_updates_ingest_fallbacks;
+        self.renderer_render_target_metadata_degradations_color_encoding_dropped = sample
+            .perf
+            .render_target_metadata_degradations_color_encoding_dropped;
+        self.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
+        self.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
+        self.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
+        self.renderer_svg_mask_atlas_pages_live = sample.perf.svg_mask_atlas_pages_live;
+        self.renderer_svg_mask_atlas_bytes_live = sample.perf.svg_mask_atlas_bytes_live;
+        self.renderer_svg_mask_atlas_used_px = sample.perf.svg_mask_atlas_used_px;
+        self.renderer_svg_mask_atlas_capacity_px = sample.perf.svg_mask_atlas_capacity_px;
+        self.renderer_svg_raster_cache_hits = sample.perf.svg_raster_cache_hits;
+        self.renderer_svg_raster_cache_misses = sample.perf.svg_raster_cache_misses;
+        self.renderer_svg_raster_budget_evictions = sample.perf.svg_raster_budget_evictions;
+        self.renderer_svg_mask_atlas_page_evictions = sample.perf.svg_mask_atlas_page_evictions;
+        self.renderer_svg_mask_atlas_entries_evicted = sample.perf.svg_mask_atlas_entries_evicted;
+        self.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
+        self.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
+        self.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;
+        self.renderer_text_atlas_evicted_glyphs = sample.perf.text_atlas_evicted_glyphs;
+        self.renderer_text_atlas_evicted_pages = sample.perf.text_atlas_evicted_pages;
+        self.renderer_text_atlas_evicted_page_glyphs = sample.perf.text_atlas_evicted_page_glyphs;
+        self.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
+        self.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
+        self.renderer_intermediate_full_target_bytes = sample.perf.intermediate_full_target_bytes;
+        self.renderer_render_plan_effect_chain_budget_samples =
+            sample.perf.render_plan_effect_chain_budget_samples;
+        self.renderer_render_plan_effect_chain_effective_budget_min_bytes =
+            sample.perf.render_plan_effect_chain_effective_budget_min_bytes;
+        self.renderer_render_plan_effect_chain_effective_budget_max_bytes =
+            sample.perf.render_plan_effect_chain_effective_budget_max_bytes;
+        self.renderer_render_plan_effect_chain_other_live_max_bytes =
+            sample.perf.render_plan_effect_chain_other_live_max_bytes;
+        self.renderer_render_plan_custom_effect_chain_budget_samples =
+            sample.perf.render_plan_custom_effect_chain_budget_samples;
+        self.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes =
+            sample.perf.render_plan_custom_effect_chain_effective_budget_min_bytes;
+        self.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes =
+            sample.perf.render_plan_custom_effect_chain_effective_budget_max_bytes;
+        self.renderer_render_plan_custom_effect_chain_other_live_max_bytes =
+            sample.perf.render_plan_custom_effect_chain_other_live_max_bytes;
+        self.renderer_render_plan_custom_effect_chain_base_required_max_bytes =
+            sample.perf.render_plan_custom_effect_chain_base_required_max_bytes;
+        self.renderer_render_plan_custom_effect_chain_optional_required_max_bytes =
+            sample.perf.render_plan_custom_effect_chain_optional_required_max_bytes;
+        self.renderer_render_plan_custom_effect_chain_base_required_full_targets_max =
+            sample
+                .perf
+                .render_plan_custom_effect_chain_base_required_full_targets_max;
+        self.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes =
+            sample.perf.render_plan_custom_effect_chain_optional_mask_max_bytes;
+        self.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes =
+            sample.perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes;
+        self.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
+        self.renderer_intermediate_peak_in_use_bytes = sample.perf.intermediate_peak_in_use_bytes;
+        self.renderer_intermediate_release_targets = sample.perf.intermediate_release_targets;
+        self.renderer_intermediate_pool_allocations = sample.perf.intermediate_pool_allocations;
+        self.renderer_intermediate_pool_reuses = sample.perf.intermediate_pool_reuses;
+        self.renderer_intermediate_pool_releases = sample.perf.intermediate_pool_releases;
+        self.renderer_intermediate_pool_evictions = sample.perf.intermediate_pool_evictions;
+        self.renderer_intermediate_pool_free_bytes = sample.perf.intermediate_pool_free_bytes;
+        self.renderer_intermediate_pool_free_textures = sample.perf.intermediate_pool_free_textures;
+        self.renderer_gpu_images_live = sample.perf.gpu_images_live;
+        self.renderer_gpu_images_bytes_estimate = sample.perf.gpu_images_bytes_estimate;
+        self.renderer_gpu_images_max_bytes_estimate = sample.perf.gpu_images_max_bytes_estimate;
+        self.renderer_gpu_render_targets_live = sample.perf.gpu_render_targets_live;
+        self.renderer_gpu_render_targets_bytes_estimate =
+            sample.perf.gpu_render_targets_bytes_estimate;
+        self.renderer_gpu_render_targets_max_bytes_estimate =
+            sample.perf.gpu_render_targets_max_bytes_estimate;
+        self.renderer_draw_calls = sample.perf.draw_calls;
+        self.renderer_text_draw_calls = sample.perf.text_draw_calls;
+        self.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
+        self.renderer_viewport_draw_calls = sample.perf.viewport_draw_calls;
+        self.renderer_viewport_draw_calls_ingest_unknown =
+            sample.perf.viewport_draw_calls_ingest_unknown;
+        self.renderer_viewport_draw_calls_ingest_owned =
+            sample.perf.viewport_draw_calls_ingest_owned;
+        self.renderer_viewport_draw_calls_ingest_external_zero_copy =
+            sample.perf.viewport_draw_calls_ingest_external_zero_copy;
+        self.renderer_viewport_draw_calls_ingest_gpu_copy =
+            sample.perf.viewport_draw_calls_ingest_gpu_copy;
+        self.renderer_viewport_draw_calls_ingest_cpu_upload =
+            sample.perf.viewport_draw_calls_ingest_cpu_upload;
+        self.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
+        self.renderer_pipeline_switches = sample.perf.pipeline_switches;
+        self.renderer_bind_group_switches = sample.perf.bind_group_switches;
+        self.renderer_scissor_sets = sample.perf.scissor_sets;
+        self.renderer_path_msaa_samples_requested = sample.perf.path_msaa_samples_requested;
+        self.renderer_path_msaa_samples_effective = sample.perf.path_msaa_samples_effective;
+        self.renderer_uniform_bytes = sample.perf.uniform_bytes;
+        self.renderer_instance_bytes = sample.perf.instance_bytes;
+        self.renderer_vertex_bytes = sample.perf.vertex_bytes;
+        self.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
+        self.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
+        self.renderer_material_quad_ops = sample.perf.material_quad_ops;
+        self.renderer_material_sampled_quad_ops = sample.perf.material_sampled_quad_ops;
+        self.renderer_material_distinct = sample.perf.material_distinct;
+        self.renderer_material_unknown_ids = sample.perf.material_unknown_ids;
+        self.renderer_material_degraded_due_to_budget = sample.perf.material_degraded_due_to_budget;
+
+        self.renderer_custom_effect_v1_steps_requested =
+            sample.perf.custom_effect_v1_steps_requested;
+        self.renderer_custom_effect_v1_passes_emitted =
+            sample.perf.custom_effect_v1_passes_emitted;
+        self.renderer_custom_effect_v2_steps_requested =
+            sample.perf.custom_effect_v2_steps_requested;
+        self.renderer_custom_effect_v2_passes_emitted =
+            sample.perf.custom_effect_v2_passes_emitted;
+        self.renderer_custom_effect_v2_user_image_incompatible_fallbacks =
+            sample.perf.custom_effect_v2_user_image_incompatible_fallbacks;
+        self.renderer_custom_effect_v3_steps_requested =
+            sample.perf.custom_effect_v3_steps_requested;
+        self.renderer_custom_effect_v3_passes_emitted =
+            sample.perf.custom_effect_v3_passes_emitted;
+        self.renderer_custom_effect_v3_user0_image_incompatible_fallbacks =
+            sample.perf.custom_effect_v3_user0_image_incompatible_fallbacks;
+        self.renderer_custom_effect_v3_user1_image_incompatible_fallbacks =
+            sample.perf.custom_effect_v3_user1_image_incompatible_fallbacks;
+        self.renderer_custom_effect_v3_pyramid_cache_hits =
+            sample.perf.custom_effect_v3_pyramid_cache_hits;
+        self.renderer_custom_effect_v3_pyramid_cache_misses =
+            sample.perf.custom_effect_v3_pyramid_cache_misses;
+
+        let effects = sample.perf.effect_degradations;
+        self.renderer_custom_effect_v3_sources_raw_requested =
+            effects.custom_effect_v3_sources.raw_requested;
+        self.renderer_custom_effect_v3_sources_raw_distinct =
+            effects.custom_effect_v3_sources.raw_distinct;
+        self.renderer_custom_effect_v3_sources_raw_aliased_to_src =
+            effects.custom_effect_v3_sources.raw_aliased_to_src;
+        self.renderer_custom_effect_v3_sources_pyramid_requested =
+            effects.custom_effect_v3_sources.pyramid_requested;
+        self.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 =
+            effects.custom_effect_v3_sources.pyramid_applied_levels_ge2;
+        self.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero =
+            effects.custom_effect_v3_sources.pyramid_degraded_to_one_budget_zero;
+        self.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient =
+            effects
+                .custom_effect_v3_sources
+                .pyramid_degraded_to_one_budget_insufficient;
+
+        self.renderer_backdrop_source_groups_requested = effects.backdrop_source_groups.requested;
+        self.renderer_backdrop_source_groups_applied_raw =
+            effects.backdrop_source_groups.applied_raw;
+        self.renderer_backdrop_source_groups_raw_degraded_budget_zero =
+            effects.backdrop_source_groups.raw_degraded_budget_zero;
+        self.renderer_backdrop_source_groups_raw_degraded_budget_insufficient =
+            effects.backdrop_source_groups.raw_degraded_budget_insufficient;
+        self.renderer_backdrop_source_groups_raw_degraded_target_exhausted =
+            effects.backdrop_source_groups.raw_degraded_target_exhausted;
+        self.renderer_backdrop_source_groups_pyramid_requested =
+            effects.backdrop_source_groups.pyramid_requested;
+        self.renderer_backdrop_source_groups_pyramid_applied_levels_ge2 =
+            effects.backdrop_source_groups.pyramid_applied_levels_ge2;
+        self.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero =
+            effects.backdrop_source_groups.pyramid_degraded_to_one_budget_zero;
+        self.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient =
+            effects.backdrop_source_groups.pyramid_degraded_to_one_budget_insufficient;
+        self.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable =
+            effects.backdrop_source_groups.pyramid_skipped_raw_unavailable;
     }
 }

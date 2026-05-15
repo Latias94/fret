@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_app::App;
 use fret_core::{Event, UiServices, ViewportInputEvent};
-use fret_render::{Renderer, WgpuContext};
+use fret_render::{Renderer, RendererPerfFrameSample, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 
 use super::{
@@ -80,6 +80,7 @@ pub struct FnDriverHooks<D, S> {
     pub hot_reload_window: Option<FnDriverHotReloadWindowHook<D, S>>,
     pub gpu_frame_prepare: Option<FnDriverGpuFramePrepareHook<D, S>>,
     pub record_engine_frame: Option<FnDriverRecordEngineFrameHook<D, S>>,
+    pub renderer_perf_sample: Option<FnDriverRendererPerfSampleHook<D, S>>,
     pub viewport_input: Option<FnDriverViewportInputHook<D>>,
     pub dock_op: Option<FnDriverDockOpHook<D>>,
     pub handle_command: Option<FnDriverHandleCommandHook<D, S>>,
@@ -127,6 +128,13 @@ pub type FnDriverRecordEngineFrameHook<D, S> = for<'d> fn(
     TickId,
     FrameId,
 ) -> EngineFrameUpdate;
+pub type FnDriverRendererPerfSampleHook<D, S> = for<'d> fn(
+    &'d mut D,
+    &mut App,
+    fret_core::AppWindowId,
+    &mut S,
+    Option<RendererPerfFrameSample>,
+);
 pub type FnDriverViewportInputHook<D> = fn(&mut D, &mut App, ViewportInputEvent);
 pub type FnDriverDockOpHook<D> = fn(&mut D, &mut App, fret_core::DockOp);
 pub type FnDriverHandleCommandHook<D, S> =
@@ -205,6 +213,7 @@ impl<D, S> Default for FnDriverHooks<D, S> {
             hot_reload_window: None,
             gpu_frame_prepare: None,
             record_engine_frame: None,
+            renderer_perf_sample: None,
             viewport_input: None,
             dock_op: None,
             handle_command: None,
@@ -389,6 +398,27 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
             }
         }
         EngineFrameUpdate::default()
+    }
+
+    fn renderer_perf_sample(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        sample: Option<RendererPerfFrameSample>,
+    ) {
+        if let Some(f) = self.hooks.renderer_perf_sample {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, window, state, sample));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, window, state, sample);
+            }
+        }
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {

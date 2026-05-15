@@ -62,6 +62,14 @@ type RecordEngineFrameHookFn<S> = fn(
     FrameId,
 ) -> EngineFrameUpdate;
 
+type RendererPerfSampleHookFn<S> = fn(
+    &mut App,
+    AppWindowId,
+    &mut UiTree<App>,
+    &mut S,
+    Option<fret_render::RendererPerfFrameSample>,
+);
+
 #[cfg(feature = "ui-app-command-palette")]
 pub type CommandPaletteOverlayFn =
     for<'a> fn(&mut ElementContext<'a, App>, CommandPaletteOverlayCx, &mut ViewElements);
@@ -111,6 +119,7 @@ pub struct UiAppDriver<S> {
     viewport_input: Option<fn(&mut App, ViewportInputEvent)>,
     dock_op: Option<fn(&mut App, fret_core::DockOp)>,
     record_engine_frame: Option<RecordEngineFrameHookFn<S>>,
+    renderer_perf_sample: Option<RendererPerfSampleHookFn<S>>,
 
     #[cfg(feature = "ui-app-command-palette")]
     command_palette_enabled: bool,
@@ -145,6 +154,7 @@ impl<S> UiAppDriver<S> {
             viewport_input: None,
             dock_op: None,
             record_engine_frame: None,
+            renderer_perf_sample: None,
 
             #[cfg(feature = "ui-app-command-palette")]
             command_palette_enabled: true,
@@ -312,6 +322,7 @@ impl<S> UiAppDriver<S> {
             hooks.viewport_input = Some(ui_app_viewport_input::<S>);
             hooks.dock_op = Some(ui_app_dock_op::<S>);
             hooks.record_engine_frame = Some(ui_app_record_engine_frame::<S>);
+            hooks.renderer_perf_sample = Some(ui_app_renderer_perf_sample::<S>);
         })
     }
 }
@@ -2378,9 +2389,13 @@ fn ui_app_render<S>(
                     element_runtime,
                     scene,
                 );
-                if let Some(dir) = svc.maybe_dump_if_triggered() {
-                    #[cfg(feature = "tracing")]
-                    tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+                let defer_dump_until_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
+                    .is_some_and(|v| !v.is_empty());
+                if !defer_dump_until_renderer_perf {
+                    if let Some(dir) = svc.maybe_dump_if_triggered() {
+                        #[cfg(feature = "tracing")]
+                        tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+                    }
                 }
                 if svc.poll_exit_trigger() {
                     app.push_effect(Effect::QuitApp);
@@ -2779,6 +2794,30 @@ fn ui_app_record_engine_frame<S>(
             frame_id,
         )
     }
+}
+
+fn ui_app_renderer_perf_sample<S>(
+    driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    sample: Option<fret_render::RendererPerfFrameSample>,
+) {
+    if let Some(f) = driver.renderer_perf_sample {
+        f(app, window, &mut state.ui, &mut state.state, sample);
+        return;
+    }
+
+    #[cfg(feature = "diagnostics")]
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        if let Some(sample) = sample {
+            svc.patch_latest_renderer_perf_sample(window, sample);
+        }
+        if let Some(dir) = svc.maybe_dump_if_triggered() {
+            #[cfg(feature = "tracing")]
+            tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+        }
+    });
 }
 
 fn reset_ui_tree_for_hotpatch(app: &mut App, window: AppWindowId, ui: &mut UiTree<App>) {
