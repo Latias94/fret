@@ -517,6 +517,32 @@ Conventions:
           `paint.widget - surface_callback` gap is still about `155..177us` p95. The next owner
           surface is generic Canvas / `ElementHostWidget` paint bookkeeping, not a broad
           `WindowedRowsSurface` display-list rewrite.
+      - [x] Add `paint_widget_hotspot_summary` so `fretboard diag stats --json` can split the
+        sampled top-N paint-widget hotspots into Canvas and non-Canvas classes before naming the
+        next owner.
+        - Implementation: `diag stats` now exports top-level
+          `paint_widget_hotspot_summary`, with `sampled_top_n_per_frame=16`, per-frame top
+          Canvas and non-Canvas hotspot p50/p95/max, sampled top-N class sums, top hotspot
+          identity, and p95 gaps versus `code_editor.paint_perf.us_total` /
+          `us_windowed_surface_paint_callback`.
+        - Gate:
+          `cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast`.
+        - Evidence on the same formal 2026-05-16 bundles:
+          - typical autoscroll: `paint.widget` p95 `431us`, Canvas hotspot p95 `270us`,
+            sampled non-Canvas top-N sum p95 `71us`, surface callback p95 `268us`, Canvas
+            minus surface callback p95 gap `2us`.
+          - complex wheel: `paint.widget` p95 `653us`, Canvas hotspot p95 `491us`,
+            sampled non-Canvas top-N sum p95 `67us`, surface callback p95 `489us`, Canvas
+            minus surface callback p95 gap `2us`.
+          - resize jitter: `paint.widget` p95 `465us`, Canvas hotspot p95 `292us`,
+            sampled non-Canvas top-N sum p95 `71us`, surface callback p95 `288us`, Canvas
+            minus surface callback p95 gap `4us`.
+        - Decision: the single Canvas hotspot is effectively the `WindowedRowsSurface` callback,
+          not an additional outer Canvas-wrapper tax. The residual `paint.widget` cost after
+          Canvas plus sampled top-N non-Canvas work is roughly `90..102us` p95, so the next
+          reversible owner lane should focus on generic `ElementHostWidget` / paint traversal
+          aggregate overhead, not code-editor row replay or a broad windowed-surface display-list
+          rewrite.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

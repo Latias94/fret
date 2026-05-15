@@ -13975,3 +13975,43 @@ Decision:
   three probes. This points at generic Canvas / `ElementHostWidget` paint bookkeeping as the next owner.
 - Do not start a broad `WindowedRowsSurface` display-list rewrite from this evidence. The next reversible
   slice should instrument and reduce Canvas host-wrapper paint overhead, then re-run the same three probes.
+
+## 2026-05-16 01:48:40 +08:00 (paint widget hotspot summary attribution)
+
+Question:
+- Does the remaining `paint.widget` p95 gap actually belong to a Canvas wrapper, or is the Canvas hotspot already
+  the measured `WindowedRowsSurface` callback while the rest comes from generic paint-widget aggregate work?
+
+Change:
+- `fretboard diag stats --json` now exports `paint_widget_hotspot_summary`, sampling the top 16 paint-widget
+  hotspots per frame and splitting Canvas from non-Canvas classes.
+- The row-level `paint_widget_hotspots` output remains capped to the top 3 rows; the new summary is explicitly
+  labeled as top-N sampled attribution, not a full-widget census.
+
+Validation:
+```bash
+cargo fmt -p fret-diag --check
+cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
+cargo build -p fretboard-dev
+```
+
+Evidence commands:
+```bash
+target/debug/fretboard-dev diag stats target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3/1778865865185/bundle.schema2.json --sort time --top 1 --json
+target/debug/fretboard-dev diag stats target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3/1778865994148/bundle.schema2.json --sort time --top 1 --json
+target/debug/fretboard-dev diag stats target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3/1778866025069/bundle.schema2.json --sort time --top 1 --json
+```
+
+Results (us):
+| probe | `paint.widget` p95 | Canvas hotspot p95 | sampled non-Canvas top-N sum p95 | surface callback p95 | Canvas - surface p95 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | 431 | 270 | 71 | 268 | 2 |
+| complex wheel | 653 | 491 | 67 | 489 | 2 |
+| resize jitter | 465 | 292 | 71 | 288 | 4 |
+
+Decision:
+- The single Canvas hotspot is effectively the `WindowedRowsSurface` callback; it is not an additional outer
+  Canvas-wrapper tax.
+- The remaining `paint.widget` residual after Canvas plus sampled top-N non-Canvas work is roughly `90..102us` p95.
+- The next reversible owner lane should focus on generic `ElementHostWidget` / paint traversal aggregate overhead
+  before any code-editor row replay or windowed-surface display-list rewrite.

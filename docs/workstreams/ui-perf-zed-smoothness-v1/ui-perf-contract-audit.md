@@ -393,6 +393,16 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Contract decision: the inner `WindowedRowsSurface` attribution is now measurable and does not justify a broad
     display-list rewrite. The remaining outer `paint.widget - surface_callback` gap is still about `155..177us`
     p95, so the next optimization owner should be generic Canvas / `ElementHostWidget` paint bookkeeping.
+- Paint-widget hotspot summary follow-up:
+  - `fretboard diag stats --json` now emits `paint_widget_hotspot_summary`, sampling the top 16 paint-widget
+    hotspots per frame and splitting Canvas from non-Canvas classes. Focused coverage:
+    `cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast`.
+  - On the same formal bundles, Canvas hotspot p95 is `270/491/292us` while `WindowedRowsSurface` callback p95 is
+    `268/489/288us`, so the single Canvas hotspot is effectively the surface callback, not a separate wrapper tax.
+    Sampled top-N non-Canvas exclusive sum p95 is only `71/67/71us`.
+  - Refined owner decision: the residual `paint.widget` cost after Canvas plus sampled top-N non-Canvas work is about
+    `90..102us` p95. The next reversible slice should inspect generic `ElementHostWidget` / paint traversal aggregate
+    overhead before any editor row replay or windowed-surface display-list rewrite.
 
 ## Open Gaps
 
@@ -404,11 +414,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    shows healthy row-scene replay/cache. Keep the `WindowedRowsSurface` display-list rewrite gated on a future
    near-threshold or failing stressor where row op replay/capture is the measured limiter, not on these passing
    baselines alone.
-3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization, and the missing
-   `WindowedRowsSurface` attribution fields are now wired through app snapshots and `fretboard diag stats`. The
-   remaining high-leverage owner is still unresolved until the formal probes are re-run with those fields:
-   post-renderer `paint.widget` p95 is `414us` typical, `633us` complex wheel, and `421us` resize jitter while
-   `code_editor.paint_perf` p95 is `123us`, `318us`, and `119us`.
+3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization, the
+   `WindowedRowsSurface` attribution fields are wired through app snapshots and `fretboard diag stats`, and the
+   paint-widget hotspot summary now proves Canvas hotspot p95 tracks the surface callback p95 within `2..4us`.
+   The remaining unresolved owner is the generic paint-widget aggregate residual after Canvas plus sampled top-N
+   non-Canvas hotspots (`~90..102us` p95 on the 2026-05-16 formal bundles).
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
@@ -422,8 +432,9 @@ typical, and complex wheel contracts now have payload-aware baselines with expli
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
 v1 contracts. The hit-test torture pointer-move path now also has a formal repeat=7 dispatch/hit-test threshold gate
 for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas replay evidence has now closed one
-renderer-side owner slice without loosening baselines, and the missing `WindowedRowsSurface` paint attribution fields
-are wired for the next evidence pass. The immediate next work is to re-run the formal editor replay probes with those
-fields and only then choose the next reversible Canvas/renderer optimization before any `WindowedRowsSurface`
-display-list rewrite. Keep non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090
-contract set.
+renderer-side owner slice without loosening baselines, the `WindowedRowsSurface` paint attribution fields have been
+verified on formal bundles, and `paint_widget_hotspot_summary` narrows the remaining editor paint owner to generic
+paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. The immediate
+next work is one reversible `ElementHostWidget` / paint traversal owner slice, followed by the same formal editor
+probes and only then a contract re-seed decision. Keep non-Windows machine profiles explicit rather than inferring them
+from the Windows RTX 4090 contract set.

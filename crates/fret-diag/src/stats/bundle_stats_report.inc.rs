@@ -1,5 +1,8 @@
 use serde_json::{Map, Value};
 
+const PAINT_WIDGET_HOTSPOT_ROW_TOP_N: usize = 3;
+const PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N: usize = 16;
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsReport {
     sort: BundleStatsSort,
@@ -164,6 +167,7 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    paint_widget_hotspot_summary: BundleStatsPaintWidgetHotspotSummary,
     code_editor_paint_perf: BundleStatsCodeEditorPaintPerfSummary,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
@@ -1307,6 +1311,284 @@ pub(super) struct BundleStatsPaintWidgetHotspot {
     pub(super) test_id: Option<String>,
 }
 
+impl BundleStatsPaintWidgetHotspot {
+    fn is_canvas(&self) -> bool {
+        self.element_kind.as_deref() == Some("Canvas")
+    }
+
+    fn to_json(&self) -> Value {
+        let mut h_obj = Map::new();
+        h_obj.insert("node".to_string(), Value::from(self.node));
+        h_obj.insert(
+            "element".to_string(),
+            self.element.map(Value::from).unwrap_or(Value::Null),
+        );
+        h_obj.insert(
+            "element_kind".to_string(),
+            self.element_kind
+                .clone()
+                .map(Value::from)
+                .unwrap_or(Value::Null),
+        );
+        h_obj.insert(
+            "widget_type".to_string(),
+            self.widget_type
+                .clone()
+                .map(Value::from)
+                .unwrap_or(Value::Null),
+        );
+        h_obj.insert("paint_time_us".to_string(), Value::from(self.paint_time_us));
+        h_obj.insert(
+            "inclusive_time_us".to_string(),
+            Value::from(self.inclusive_time_us),
+        );
+        h_obj.insert(
+            "inclusive_scene_ops_delta".to_string(),
+            Value::from(self.inclusive_scene_ops_delta),
+        );
+        h_obj.insert(
+            "exclusive_scene_ops_delta".to_string(),
+            Value::from(self.exclusive_scene_ops_delta),
+        );
+        h_obj.insert(
+            "role".to_string(),
+            self.role.clone().map(Value::from).unwrap_or(Value::Null),
+        );
+        h_obj.insert(
+            "test_id".to_string(),
+            self.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+        );
+        Value::Object(h_obj)
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsPaintWidgetHotspotSummary {
+    sampled_top_n_per_frame: usize,
+    frames_with_hotspots: u32,
+    canvas: BundleStatsPaintWidgetHotspotClassSummary,
+    non_canvas: BundleStatsPaintWidgetHotspotClassSummary,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsPaintWidgetHotspotClassSummary {
+    frames: u32,
+    exclusive_us: Vec<u64>,
+    inclusive_us: Vec<u64>,
+    exclusive_scene_ops: Vec<u64>,
+    inclusive_scene_ops: Vec<u64>,
+    sampled_sum_exclusive_us: Vec<u64>,
+    sampled_sum_inclusive_us: Vec<u64>,
+    sampled_sum_exclusive_scene_ops: Vec<u64>,
+    sampled_sum_inclusive_scene_ops: Vec<u64>,
+    top: Option<BundleStatsPaintWidgetHotspot>,
+}
+
+impl BundleStatsPaintWidgetHotspotClassSummary {
+    fn observe(
+        &mut self,
+        hotspot: &BundleStatsPaintWidgetHotspot,
+        sampled_sum_exclusive_us: u64,
+        sampled_sum_inclusive_us: u64,
+        sampled_sum_exclusive_scene_ops: u64,
+        sampled_sum_inclusive_scene_ops: u64,
+    ) {
+        self.frames = self.frames.saturating_add(1);
+        self.exclusive_us.push(hotspot.paint_time_us);
+        self.inclusive_us.push(hotspot.inclusive_time_us);
+        self.exclusive_scene_ops
+            .push(hotspot.exclusive_scene_ops_delta as u64);
+        self.inclusive_scene_ops
+            .push(hotspot.inclusive_scene_ops_delta as u64);
+        self.sampled_sum_exclusive_us
+            .push(sampled_sum_exclusive_us);
+        self.sampled_sum_inclusive_us
+            .push(sampled_sum_inclusive_us);
+        self.sampled_sum_exclusive_scene_ops
+            .push(sampled_sum_exclusive_scene_ops);
+        self.sampled_sum_inclusive_scene_ops
+            .push(sampled_sum_inclusive_scene_ops);
+
+        let replace_top = self.top.as_ref().is_none_or(|top| {
+            hotspot
+                .paint_time_us
+                .cmp(&top.paint_time_us)
+                .then_with(|| hotspot.inclusive_time_us.cmp(&top.inclusive_time_us))
+                .is_gt()
+        });
+        if replace_top {
+            self.top = Some(hotspot.clone());
+        }
+    }
+
+    fn p50_exclusive_us(&self) -> u64 {
+        hotspot_percentile(&self.exclusive_us, 0.50)
+    }
+
+    fn p95_exclusive_us(&self) -> u64 {
+        hotspot_percentile(&self.exclusive_us, 0.95)
+    }
+
+    fn max_exclusive_us(&self) -> u64 {
+        self.exclusive_us.iter().copied().max().unwrap_or(0)
+    }
+
+    fn to_json(&self) -> Value {
+        serde_json::json!({
+            "frames": self.frames,
+            "exclusive_us": crate::summarize_times_us(&self.exclusive_us),
+            "inclusive_us": crate::summarize_times_us(&self.inclusive_us),
+            "exclusive_scene_ops_delta": hotspot_summary_json(&self.exclusive_scene_ops),
+            "inclusive_scene_ops_delta": hotspot_summary_json(&self.inclusive_scene_ops),
+            "sampled_sum_exclusive_us": crate::summarize_times_us(&self.sampled_sum_exclusive_us),
+            "sampled_sum_inclusive_us": crate::summarize_times_us(&self.sampled_sum_inclusive_us),
+            "sampled_sum_exclusive_scene_ops_delta": hotspot_summary_json(&self.sampled_sum_exclusive_scene_ops),
+            "sampled_sum_inclusive_scene_ops_delta": hotspot_summary_json(&self.sampled_sum_inclusive_scene_ops),
+            "top": self.top.as_ref().map(BundleStatsPaintWidgetHotspot::to_json),
+        })
+    }
+}
+
+impl BundleStatsPaintWidgetHotspotSummary {
+    fn observe_frame(&mut self, hotspots: &[BundleStatsPaintWidgetHotspot], sampled_top_n: usize) {
+        self.sampled_top_n_per_frame = self.sampled_top_n_per_frame.max(sampled_top_n);
+        if hotspots.is_empty() {
+            return;
+        }
+
+        self.frames_with_hotspots = self.frames_with_hotspots.saturating_add(1);
+
+        let mut top_canvas: Option<&BundleStatsPaintWidgetHotspot> = None;
+        let mut top_non_canvas: Option<&BundleStatsPaintWidgetHotspot> = None;
+        let mut canvas_sum_exclusive_us = 0u64;
+        let mut canvas_sum_inclusive_us = 0u64;
+        let mut canvas_sum_exclusive_scene_ops = 0u64;
+        let mut canvas_sum_inclusive_scene_ops = 0u64;
+        let mut non_canvas_sum_exclusive_us = 0u64;
+        let mut non_canvas_sum_inclusive_us = 0u64;
+        let mut non_canvas_sum_exclusive_scene_ops = 0u64;
+        let mut non_canvas_sum_inclusive_scene_ops = 0u64;
+
+        for hotspot in hotspots {
+            let is_canvas = hotspot.is_canvas();
+            if is_canvas {
+                canvas_sum_exclusive_us =
+                    canvas_sum_exclusive_us.saturating_add(hotspot.paint_time_us);
+                canvas_sum_inclusive_us =
+                    canvas_sum_inclusive_us.saturating_add(hotspot.inclusive_time_us);
+                canvas_sum_exclusive_scene_ops = canvas_sum_exclusive_scene_ops
+                    .saturating_add(hotspot.exclusive_scene_ops_delta as u64);
+                canvas_sum_inclusive_scene_ops = canvas_sum_inclusive_scene_ops
+                    .saturating_add(hotspot.inclusive_scene_ops_delta as u64);
+            } else {
+                non_canvas_sum_exclusive_us =
+                    non_canvas_sum_exclusive_us.saturating_add(hotspot.paint_time_us);
+                non_canvas_sum_inclusive_us =
+                    non_canvas_sum_inclusive_us.saturating_add(hotspot.inclusive_time_us);
+                non_canvas_sum_exclusive_scene_ops = non_canvas_sum_exclusive_scene_ops
+                    .saturating_add(hotspot.exclusive_scene_ops_delta as u64);
+                non_canvas_sum_inclusive_scene_ops = non_canvas_sum_inclusive_scene_ops
+                    .saturating_add(hotspot.inclusive_scene_ops_delta as u64);
+            }
+
+            let top = if is_canvas { &mut top_canvas } else { &mut top_non_canvas };
+            let replace = top.as_ref().is_none_or(|current| {
+                hotspot
+                    .paint_time_us
+                    .cmp(&current.paint_time_us)
+                    .then_with(|| hotspot.inclusive_time_us.cmp(&current.inclusive_time_us))
+                    .is_gt()
+            });
+            if replace {
+                *top = Some(hotspot);
+            }
+        }
+
+        if let Some(hotspot) = top_canvas {
+            self.canvas.observe(
+                hotspot,
+                canvas_sum_exclusive_us,
+                canvas_sum_inclusive_us,
+                canvas_sum_exclusive_scene_ops,
+                canvas_sum_inclusive_scene_ops,
+            );
+        }
+        if let Some(hotspot) = top_non_canvas {
+            self.non_canvas.observe(
+                hotspot,
+                non_canvas_sum_exclusive_us,
+                non_canvas_sum_inclusive_us,
+                non_canvas_sum_exclusive_scene_ops,
+                non_canvas_sum_inclusive_scene_ops,
+            );
+        }
+    }
+
+    fn has_samples(&self) -> bool {
+        self.frames_with_hotspots > 0
+    }
+
+    fn canvas_minus_code_editor_p95_us_total(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            self.canvas.p95_exclusive_us() as i64 - code_editor.p95.us_total as i64
+        })
+    }
+
+    fn canvas_minus_windowed_surface_callback_p95(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            self.canvas.p95_exclusive_us() as i64
+                - code_editor.p95.us_windowed_surface_paint_callback as i64
+        })
+    }
+
+    fn to_json(&self, code_editor: &BundleStatsCodeEditorPaintPerfSummary) -> Value {
+        serde_json::json!({
+            "sampled_top_n_per_frame": self.sampled_top_n_per_frame as u64,
+            "frames_with_hotspots": self.frames_with_hotspots,
+            "canvas": self.canvas.to_json(),
+            "non_canvas": self.non_canvas.to_json(),
+            "gap_to_code_editor_p95": {
+                "canvas_exclusive_minus_us_total": self.canvas_minus_code_editor_p95_us_total(code_editor),
+                "canvas_exclusive_minus_windowed_surface_paint_callback": self.canvas_minus_windowed_surface_callback_p95(code_editor),
+            },
+        })
+    }
+}
+
+fn hotspot_percentile(values: &[u64], percentile: f64) -> u64 {
+    if values.is_empty() {
+        return 0;
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    crate::percentile_nearest_rank_sorted(&sorted, percentile)
+}
+
+fn hotspot_summary_json(values: &[u64]) -> Value {
+    if values.is_empty() {
+        return serde_json::json!({
+            "min": 0,
+            "p50": 0,
+            "p95": 0,
+            "max": 0,
+        });
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    serde_json::json!({
+        "min": sorted.first().copied().unwrap_or(0),
+        "p50": crate::percentile_nearest_rank_sorted(&sorted, 0.50),
+        "p95": crate::percentile_nearest_rank_sorted(&sorted, 0.95),
+        "max": sorted.last().copied().unwrap_or(0),
+    })
+}
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsPaintTextPrepareHotspot {
     pub(super) node: u64,
@@ -1798,6 +2080,52 @@ impl BundleStatsReport {
         );
     }
 
+    fn print_paint_widget_hotspot_summary(&self) {
+        let p = &self.paint_widget_hotspot_summary;
+        if !p.has_samples() {
+            return;
+        }
+
+        let canvas_gap_total = p
+            .canvas_minus_code_editor_p95_us_total(&self.code_editor_paint_perf)
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let canvas_gap_surface = p
+            .canvas_minus_windowed_surface_callback_p95(&self.code_editor_paint_perf)
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+
+        println!(
+            "paint_widget.hotspots sample_top_n={} frames={} canvas_frames={} non_canvas_frames={} canvas.top_exclusive_us(p50/p95/max)={}/{}/{} canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.top_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} canvas.gap_p95_us(code_editor_total/surface_callback)={}/{}",
+            p.sampled_top_n_per_frame,
+            p.frames_with_hotspots,
+            p.canvas.frames,
+            p.non_canvas.frames,
+            p.canvas.p50_exclusive_us(),
+            p.canvas.p95_exclusive_us(),
+            p.canvas.max_exclusive_us(),
+            hotspot_percentile(&p.canvas.sampled_sum_exclusive_us, 0.50),
+            hotspot_percentile(&p.canvas.sampled_sum_exclusive_us, 0.95),
+            p.canvas
+                .sampled_sum_exclusive_us
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(0),
+            p.non_canvas.p50_exclusive_us(),
+            p.non_canvas.p95_exclusive_us(),
+            p.non_canvas.max_exclusive_us(),
+            hotspot_percentile(&p.non_canvas.sampled_sum_exclusive_us, 0.50),
+            hotspot_percentile(&p.non_canvas.sampled_sum_exclusive_us, 0.95),
+            p.non_canvas
+                .sampled_sum_exclusive_us
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(0),
+            canvas_gap_total,
+            canvas_gap_surface,
+        );
+    }
+
     fn print_code_editor_paint_perf_row(row: &BundleStatsSnapshotRow) {
         let Some(p) = row.code_editor_paint_perf.as_ref() else {
             return;
@@ -1986,6 +2314,7 @@ impl BundleStatsReport {
             );
         }
         self.print_code_editor_paint_perf_summary();
+        self.print_paint_widget_hotspot_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
             let mode = if self.pointer_move_frames_present {
                 "pointer_move"
@@ -2408,6 +2737,7 @@ impl BundleStatsReport {
             );
         }
         self.print_code_editor_paint_perf_summary();
+        self.print_paint_widget_hotspot_summary();
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -3625,6 +3955,11 @@ impl BundleStatsReport {
         root.insert(
             "code_editor_paint_perf".to_string(),
             self.code_editor_paint_perf.to_json(),
+        );
+        root.insert(
+            "paint_widget_hotspot_summary".to_string(),
+            self.paint_widget_hotspot_summary
+                .to_json(&self.code_editor_paint_perf),
         );
 
         let mut sum = Map::new();
@@ -6109,50 +6444,7 @@ impl BundleStatsReport {
                 let paint_widget_hotspots = row
                     .paint_widget_hotspots
                     .iter()
-                    .map(|h| {
-                        let mut h_obj = Map::new();
-                        h_obj.insert("node".to_string(), Value::from(h.node));
-                        h_obj.insert(
-                            "element".to_string(),
-                            h.element.map(Value::from).unwrap_or(Value::Null),
-                        );
-                        h_obj.insert(
-                            "element_kind".to_string(),
-                            h.element_kind
-                                .clone()
-                                .map(Value::from)
-                                .unwrap_or(Value::Null),
-                        );
-                        h_obj.insert(
-                            "widget_type".to_string(),
-                            h.widget_type
-                                .clone()
-                                .map(Value::from)
-                                .unwrap_or(Value::Null),
-                        );
-                        h_obj.insert("paint_time_us".to_string(), Value::from(h.paint_time_us));
-                        h_obj.insert(
-                            "inclusive_time_us".to_string(),
-                            Value::from(h.inclusive_time_us),
-                        );
-                        h_obj.insert(
-                            "inclusive_scene_ops_delta".to_string(),
-                            Value::from(h.inclusive_scene_ops_delta),
-                        );
-                        h_obj.insert(
-                            "exclusive_scene_ops_delta".to_string(),
-                            Value::from(h.exclusive_scene_ops_delta),
-                        );
-                        h_obj.insert(
-                            "role".to_string(),
-                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
-                        );
-                        h_obj.insert(
-                            "test_id".to_string(),
-                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
-                        );
-                        Value::Object(h_obj)
-                    })
+                    .map(BundleStatsPaintWidgetHotspot::to_json)
                     .collect::<Vec<_>>();
                 obj.insert(
                     "paint_widget_hotspots".to_string(),

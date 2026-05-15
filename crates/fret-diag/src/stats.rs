@@ -1396,4 +1396,247 @@ mod tests {
             Some(530)
         );
     }
+
+    #[test]
+    fn bundle_stats_summarizes_canvas_paint_widget_hotspots() {
+        let bundle = serde_json::json!({
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 10,
+                        "tick_id": 10,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 1000,
+                                "layout_time_us": 50,
+                                "prepaint_time_us": 10,
+                                "paint_time_us": 900,
+                                "paint_widget_time_us": 400
+                            },
+                            "paint_widget_hotspots": [
+                                {
+                                    "node": 1,
+                                    "element": 11,
+                                    "element_kind": "Canvas",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 300,
+                                    "inclusive_time_us": 320,
+                                    "exclusive_scene_ops_delta": 30,
+                                    "inclusive_scene_ops_delta": 35
+                                },
+                                {
+                                    "node": 2,
+                                    "element": 12,
+                                    "element_kind": "Flex",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 50,
+                                    "inclusive_time_us": 90,
+                                    "exclusive_scene_ops_delta": 0,
+                                    "inclusive_scene_ops_delta": 3
+                                }
+                            ]
+                        },
+                        "app_snapshot": {
+                            "code_editor": {
+                                "torture": {
+                                    "paint_perf": {
+                                        "frame_seq": 1,
+                                        "us_total": 100,
+                                        "us_windowed_surface_paint_callback": 250
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "frame_id": 20,
+                        "tick_id": 20,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 2000,
+                                "layout_time_us": 50,
+                                "prepaint_time_us": 10,
+                                "paint_time_us": 1900,
+                                "paint_widget_time_us": 700
+                            },
+                            "paint_widget_hotspots": [
+                                {
+                                    "node": 3,
+                                    "element": 13,
+                                    "element_kind": "Canvas",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 500,
+                                    "inclusive_time_us": 530,
+                                    "exclusive_scene_ops_delta": 50,
+                                    "inclusive_scene_ops_delta": 55
+                                },
+                                {
+                                    "node": 4,
+                                    "element": 14,
+                                    "element_kind": "Flex",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 120,
+                                    "inclusive_time_us": 180,
+                                    "exclusive_scene_ops_delta": 0,
+                                    "inclusive_scene_ops_delta": 4
+                                }
+                            ]
+                        },
+                        "app_snapshot": {
+                            "code_editor": {
+                                "torture": {
+                                    "paint_perf": {
+                                        "frame_seq": 2,
+                                        "us_total": 200,
+                                        "us_windowed_surface_paint_callback": 400
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "frame_id": 30,
+                        "tick_id": 30,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 3000,
+                                "layout_time_us": 50,
+                                "prepaint_time_us": 10,
+                                "paint_time_us": 2900,
+                                "paint_widget_time_us": 2600
+                            },
+                            "paint_widget_hotspots": [
+                                {
+                                    "node": 5,
+                                    "element": 15,
+                                    "element_kind": "Container",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 1000,
+                                    "inclusive_time_us": 1100,
+                                    "exclusive_scene_ops_delta": 2,
+                                    "inclusive_scene_ops_delta": 8
+                                },
+                                {
+                                    "node": 6,
+                                    "element": 16,
+                                    "element_kind": "Flex",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 900,
+                                    "inclusive_time_us": 1000,
+                                    "exclusive_scene_ops_delta": 0,
+                                    "inclusive_scene_ops_delta": 6
+                                },
+                                {
+                                    "node": 7,
+                                    "element": 17,
+                                    "element_kind": "Text",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 800,
+                                    "inclusive_time_us": 850,
+                                    "exclusive_scene_ops_delta": 1,
+                                    "inclusive_scene_ops_delta": 1
+                                },
+                                {
+                                    "node": 8,
+                                    "element": 18,
+                                    "element_kind": "Canvas",
+                                    "widget_type": "fret_ui::declarative::host_widget::ElementHostWidget",
+                                    "paint_time_us": 700,
+                                    "inclusive_time_us": 730,
+                                    "exclusive_scene_ops_delta": 70,
+                                    "inclusive_scene_ops_delta": 75
+                                }
+                            ]
+                        },
+                        "app_snapshot": {
+                            "code_editor": {
+                                "torture": {
+                                    "paint_perf": {
+                                        "frame_seq": 3,
+                                        "us_total": 300,
+                                        "us_windowed_surface_paint_callback": 600
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            3,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats");
+
+        let top = report.top.first().expect("top row");
+        assert_eq!(top.frame_id, 30);
+        assert_eq!(top.paint_widget_hotspots.len(), 3);
+        assert!(
+            top.paint_widget_hotspots
+                .iter()
+                .all(|h| h.element_kind.as_deref() != Some("Canvas"))
+        );
+
+        let json = report.to_json();
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/sampled_top_n_per_frame")
+                .and_then(|v| v.as_u64()),
+            Some(PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N as u64)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/frames_with_hotspots")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/canvas/frames")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/canvas/exclusive_us/p50")
+                .and_then(|v| v.as_u64()),
+            Some(500)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/canvas/exclusive_us/p95")
+                .and_then(|v| v.as_u64()),
+            Some(700)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/canvas/exclusive_scene_ops_delta/p95")
+                .and_then(|v| v.as_u64()),
+            Some(70)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/canvas/top/paint_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(700)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/non_canvas/exclusive_us/p95")
+                .and_then(|v| v.as_u64()),
+            Some(1000)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/non_canvas/sampled_sum_exclusive_us/p95")
+                .and_then(|v| v.as_u64()),
+            Some(2700)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/canvas_exclusive_minus_us_total")
+                .and_then(|v| v.as_i64()),
+            Some(400)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/canvas_exclusive_minus_windowed_surface_paint_callback")
+                .and_then(|v| v.as_i64()),
+            Some(100)
+        );
+    }
 }

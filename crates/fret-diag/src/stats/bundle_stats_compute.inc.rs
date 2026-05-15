@@ -1711,7 +1711,17 @@ pub(super) fn bundle_stats_from_json_with_options(
             let top_layout_engine_solves = snapshot_layout_engine_solves(&semantics, s, 3);
             let layout_hotspots = snapshot_layout_hotspots(&semantics, s, 3);
             let widget_measure_hotspots = snapshot_widget_measure_hotspots(&semantics, s, 3);
-            let paint_widget_hotspots = snapshot_paint_widget_hotspots(&semantics, s, 3);
+            let paint_widget_hotspots_all =
+                snapshot_paint_widget_hotspots(&semantics, s, PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N);
+            out.paint_widget_hotspot_summary.observe_frame(
+                &paint_widget_hotspots_all,
+                PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N,
+            );
+            let paint_widget_hotspots = paint_widget_hotspots_all
+                .iter()
+                .take(PAINT_WIDGET_HOTSPOT_ROW_TOP_N)
+                .cloned()
+                .collect::<Vec<_>>();
             let paint_text_prepare_hotspots =
                 snapshot_paint_text_prepare_hotspots(&semantics, s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
