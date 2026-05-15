@@ -47,7 +47,8 @@ before real-span trace export work starts.
 
 - Real-span export into a local artifact is not implemented. Current Chrome trace output is explicitly synthetic.
 - Tracy capture-to-file is not automated or gateable; the UI must connect and save a capture manually.
-- A typed perf key registry still does not exist, so field inventory remains manually maintained.
+- A typed perf key registry is only partially implemented. `crates/fret-diag/src/perf_keys.rs` owns
+  trace-exported frame keys, but the full bundle/stats/gate registry and generated inventory remain open.
 - The audit proves source coverage, not runtime quality. It does not replace running a specific perf repro and
   comparing bundle stats / trace output for that repro.
 

@@ -152,6 +152,7 @@ Tail-spike triage:
 ## Evidence anchors (current code)
 
 - Bundle exporter and per-frame stats snapshot: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- Initial perf key registry for trace-exported frame keys: `crates/fret-diag/src/perf_keys.rs`
 - Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`
 - Chrome trace exporter: `crates/fret-diag/src/trace.rs`
 - Layout phase timing sources: `crates/fret-ui/src/tree/layout.rs`
@@ -163,3 +164,7 @@ Tail-spike triage:
 - Result: frame, high-level UI phases, layout, prepaint, paint, dispatch, hit-test, and renderer trace names have
   concrete source anchors. Chrome trace artifacts are currently bundle-derived synthetic phase timelines; real
   `tracing` / Tracy span export remains a separate gap.
+- Initial registry status: `crates/fret-diag/src/perf_keys.rs` now owns the trace-exported frame key names, units,
+  scope, suggested aggregates, and Chrome trace event/category mapping. `trace.chrome.json` exposes these keys via
+  `registered_perf_keys` so trace artifacts can explain their managed perf fields. Full bundle/stats/gate key coverage
+  is still open.

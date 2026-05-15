@@ -40,12 +40,21 @@
     {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "trace-perf-key-registry-tests",
+      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique trace_exported_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events --no-fail-fast"
+    },
+    {
+      "name": "fret-diag-clippy",
+      "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
   ],
   "evidence": [
     "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-todo.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md",
+    "crates/fret-diag/src/perf_keys.rs",
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",
