@@ -172,8 +172,12 @@ date: 2026-05-12
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
-- [ ] Promote the Button Group family into an explicit fixture-style matrix for text/icon
+- [x] Promote the Button Group family into an explicit fixture-style matrix for text/icon
   alignment, truncation, and theme/viewport variants.
+  - Result: `ui-gallery-button-group` now runs the family matrix as a durable suite. The first run
+    exposed accessibility lint noise and a real Button Group Select teaching-surface gap:
+    unlabeled Select triggers were fixed in UI Gallery, and `fret-diag` lint now treats
+    `labelled_by` relations as valid accessible-name sources.
 - [x] Add ButtonGroupText prefix/suffix internal label anchors and vertical-centering geometry
   predicates against the middle input.
 - [x] Add Button Group Input Group trailing button icon-centering and input/trailing-control

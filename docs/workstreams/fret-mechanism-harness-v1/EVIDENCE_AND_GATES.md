@@ -570,6 +570,8 @@ Current evidence anchors:
 ## Shadcn Button Group Layout Gates
 
 ```powershell
+target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-family-suite-v3 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe
+cargo nextest run --cargo-profile dev-fast -p fret-diag lint_treats_labelled_by_relation_as_accessible_name_source --no-fail-fast
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json --dir target/fret-diag-button-group-size --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json --dir target/fret-diag-control-chrome-button-group-text --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json --dir target/fret-diag-button-group-input-group-geometry --session-auto --pack --ai-packet --launch -- target/release/fret-ui-gallery.exe
@@ -589,6 +591,19 @@ target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/input-group/ui
 
 Current evidence anchors:
 
+- Button Group family suite:
+  `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`
+  - runs docs, demo, icon, size, ButtonGroupText, Input Group, long-text, RTL addon, input fill,
+    separator, accessibility, and Select screenshot/geometry/lint coverage through one durable
+    family entry point.
+  - current result:
+    `target/fret-diag-button-group-family-suite-v3/sessions/1778810828217-59768/suite.summary.json`
+  - outcome: `status=passed`, `stage_counts.passed=13`, `reason_code_counts={}`, and all generated
+    lint reports have `warning_issues=0`.
+- Diagnostics lint labelled-by accessible-name gate:
+  `crates/fret-diag/src/lint.rs`
+  - test: `lint_treats_labelled_by_relation_as_accessible_name_source`
+  - run id: `d3b80633-a713-4d44-8b88-5fb8af5405a6`.
 - Size gate evidence:
   `target/fret-diag-button-group-size/...`
 - Size layout sidecar:

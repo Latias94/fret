@@ -818,3 +818,22 @@ Status: complete
   runtime gate passed again after the new mechanism was wired into the recipe path.
 - Remaining follow-up: add a second recipe-family runtime gate for disabled-but-focusable items in
   menu/listbox/command-style surfaces.
+
+## M54: Button Group Family Suite and Accessible-Name Lint Cleanup
+
+Status: complete
+
+- Promoted Button Group from scattered conformance entries into a dedicated
+  `ui-gallery-button-group` diagnostics suite covering docs, demo, icon, size, ButtonGroupText,
+  Input Group, long-text, RTL addon, input fill, separator, accessibility, and Select scenarios.
+- The first family-suite run found two actionable accessibility issues: the Button Group Select
+  currency trigger and UI Gallery shell Theme/Motion preset triggers had no explicit accessible
+  names, and `fret-diag` lint treated `labelled_by` relations as missing labels.
+- Fixed the teaching surface by adding `a11y_label(...)` where the Selects are unlabeled by visible
+  FieldLabel content, and fixed the diagnostics harness so `labelled_by` counts as an accessible
+  name source.
+- Focused lint regression passed, the Button Group Select rerun produced zero lint findings, and
+  the full `ui-gallery-button-group` suite passed with 13 scripts and zero lint warnings.
+- Remaining follow-up: add renderer-level glyph/ellipsis evidence for Button Group long text, or
+  move back to the second recipe-family disabled-but-focusable gate if focus/action suppression is
+  the higher-risk next slice.

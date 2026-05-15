@@ -18,6 +18,7 @@ pub fn render(
         .unwrap_or_else(|| Arc::from("theme"));
 
     let select = shadcn::Select::new(motion_preset, motion_preset_open)
+        .a11y_label("Motion preset")
         .value(shadcn::SelectValue::new().placeholder("Motion preset"))
         .trigger_test_id("ui-gallery-motion-presets-preset-trigger")
         .items([

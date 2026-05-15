@@ -99,6 +99,20 @@ fn role_requires_label(role: &str) -> bool {
     )
 }
 
+fn has_accessible_name_source(node: &Value) -> bool {
+    node.get("label")
+        .and_then(|v| v.as_str())
+        .is_some_and(|s| !s.is_empty())
+        || node
+            .get("value")
+            .and_then(|v| v.as_str())
+            .is_some_and(|s| !s.is_empty())
+        || node
+            .get("labelled_by")
+            .and_then(|v| v.as_array())
+            .is_some_and(|ids| !ids.is_empty())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn push_finding(
     findings: &mut Vec<Value>,
@@ -242,10 +256,8 @@ fn lint_nodes_for_window(
             );
         }
 
-        let label = n.get("label").and_then(|v| v.as_str());
-        let value = n.get("value").and_then(|v| v.as_str());
         let role_str = role.as_deref().unwrap_or("");
-        if role_requires_label(role_str) && label.is_none() && value.is_none() {
+        if role_requires_label(role_str) && !has_accessible_name_source(n) {
             push_finding(
                 findings,
                 LintLevel::Warning,
@@ -699,6 +711,84 @@ mod tests {
                     == Some("semantics.active_descendant_missing")
             }),
             "expected active_descendant missing finding"
+        );
+    }
+
+    #[test]
+    fn lint_treats_labelled_by_relation_as_accessible_name_source() {
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                            "debug": {
+                                "semantics": {
+                                    "window": 1,
+                                    "focus": null,
+                                    "captured": null,
+                                    "nodes": [
+                                        {
+                                            "id": 1,
+                                            "parent": null,
+                                            "role": "text",
+                                            "bounds": { "x": 0.0, "y": 0.0, "w": 80.0, "h": 20.0 },
+                                            "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                            "test_id": "country-label",
+                                            "label": "Country",
+                                            "value": null,
+                                            "actions": { "focus": false, "invoke": false, "set_value": false, "set_text_selection": false },
+                                            "labelled_by": [],
+                                            "described_by": [],
+                                            "controls": [2]
+                                        },
+                                        {
+                                            "id": 2,
+                                            "parent": null,
+                                            "role": "combo_box",
+                                            "bounds": { "x": 0.0, "y": 24.0, "w": 120.0, "h": 32.0 },
+                                            "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                            "test_id": "country-select",
+                                            "label": null,
+                                            "value": null,
+                                            "actions": { "focus": true, "invoke": true, "set_value": false, "set_text_selection": false },
+                                            "labelled_by": [1],
+                                            "described_by": [],
+                                            "controls": []
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = lint_bundle_from_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("lint should succeed");
+
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+        assert!(
+            findings.iter().all(|f| {
+                f.get("code").and_then(|v| v.as_str()) != Some("semantics.missing_label")
+            }),
+            "labelled_by should satisfy the accessible-name source check"
         );
     }
 

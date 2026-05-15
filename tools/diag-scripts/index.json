@@ -3880,6 +3880,96 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-accessibility-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-accessibility-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "accessibility",
+        "button-group",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page via the left nav search.",
+        "Captures a bundle + screenshots for the Accessibility section (Preview + Code)."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button",
+        "button-group",
+        "icons",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light then zinc/dark.",
+        "Navigates to Button Group page and captures the Demo preview.",
+        "Gates primary (default) button icon contrast via screenshots."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-demo-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page via the left nav search.",
+        "Captures a bundle + screenshots for the Demo section (Preview + Code)."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "docs",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-button-group-input-group-geometry",
       "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-geometry.json",
       "required_capabilities": [
@@ -3888,6 +3978,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -3912,6 +4003,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -3928,6 +4020,81 @@
       ]
     },
     {
+      "id": "ui-gallery-button-group-select-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "select",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page via the left nav search.",
+        "Captures a bundle + screenshots for the Select section (Preview + Code)."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-separator-text-screenshots-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-separator-text-screenshots-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "separator",
+        "shadcn",
+        "text",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the Button Group page.",
+        "Captures screenshots for the Separator + Text sections."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-group-separator-text-screenshots-zinc-light",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-separator-text-screenshots-zinc-light.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-group"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "separator",
+        "shadcn",
+        "text",
+        "ui-gallery",
+        "zinc-light"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light.",
+        "Navigates to the Button Group page.",
+        "Captures screenshots for the Separator + Text sections."
+      ]
+    },
+    {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [
@@ -3936,6 +4103,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -6812,6 +6980,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -8174,6 +8343,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -8243,6 +8413,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
