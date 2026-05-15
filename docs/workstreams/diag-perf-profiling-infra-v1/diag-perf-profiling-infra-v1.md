@@ -139,6 +139,18 @@ Tail-spike triage:
 - If wall time is high but CPU looks low, re-run with:
   - `--sort cpu_cycles` (Windows) or `--sort cpu_time` (fallback)
 
+Example bundle:
+
+- Sample:
+  `docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini/bundle.schema2.json`
+- Run:
+  `cargo run -p fretboard-dev -- diag stats docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini --sort time --top 5 --json`
+- Interpretation:
+  - Frame 2 is layout-heavy (`layout_engine_solve_time_us` dominates the phase sum).
+  - Frame 3 is paint/text-heavy (`paint_text_prepare_time_us` dominates paint).
+  - Frame 4 has a long frame-clock delta but low phase and CPU values, so it is a schedule-noise-shaped
+    example rather than a proof of app work. Treat this file as a tooling specimen, not a hardware baseline.
+
 ## Comparative notes (how other stacks succeed)
 
 - Chromium/Perfetto: trace event names are stable and treated as a contract; tooling builds on it.

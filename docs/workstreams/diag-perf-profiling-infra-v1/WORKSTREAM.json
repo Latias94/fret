@@ -54,6 +54,10 @@
       "command": "cargo nextest run -p fret-diag stats_diff_sorts_by_abs_delta_then_key stats_diff_includes_typical_and_tail_highlights stats_diff_json_is_versioned_and_additive_only --no-fail-fast"
     },
     {
+      "name": "example-bundle-stats-json",
+      "command": "cargo run -p fretboard-dev -- diag stats docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini --sort time --top 5 --json"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
@@ -62,6 +66,7 @@
     "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-todo.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md",
+    "docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini/bundle.schema2.json",
     "crates/fret-diag/src/perf_keys.rs",
     "crates/fret-diag/src/stats.rs",
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
