@@ -138,6 +138,7 @@
     "tools/perf/audit_perf_baselines.py",
     "tools/perf/test_audit_perf_baselines.py",
     "tools/perf/diag_resize_probes_gate.py",
+    "tools/perf/test_diag_resize_probes_gate.py",
     "tools/perf/diag_hit_test_torture_dispatch_gate.py",
     "tools/perf/diag_editor_paint_contract_preflight.py",
     "tools/perf/test_diag_editor_paint_contract_preflight.py",
