@@ -13483,3 +13483,39 @@ Decision:
 - Promote this as the second non-code-editor proof surface for Frame Pipeline v2 M4R.
 - Treat the result as neutral perf evidence because the slice did not change runtime code; the
   value is the stable contract and canonical boundary diagnostics proof.
+
+## 2026-05-15 11:18:00 +08:00 (pointer-move perf threshold presence gate)
+
+Question:
+- Should `diag perf` apply pointer-move dispatch, hit-test, and global-change thresholds to
+  scripts that did not actually produce pointer-move frames?
+
+Change:
+- Made pointer-move baseline row metrics presence-aware, so no-pointer-move scripts keep measured
+  pointer-move maxima at `0` in baseline output and omit pointer-move thresholds.
+- Made single-run and repeat threshold rows null pointer-move threshold values and threshold
+  sources when `pointer_move_frames_present=false`, even if CLI or baseline pointer-move limits are
+  configured.
+- Made repeat-mode aggregation push `0` for pointer-move dispatch, hit-test, and global-change
+  maxima on runs that did not report pointer-move frames, preventing stale bundle counters from
+  polluting the script-level max.
+- Updated `perf-baseline-from-bundles` to aggregate pointer-move maxima only from bundles with
+  `pointer_move_frames_present=true`.
+
+Validation:
+- `cargo fmt -p fret-diag`
+- `cargo nextest run -p fret-diag baseline_rows_omit_pointer_move_thresholds_when_frames_are_absent single_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent repeat_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent perf_threshold_scan_passes_when_under_limits perf_threshold_scan_reports_each_exceeded_metric --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `crates/fret-diag/src/diag_perf/baseline_rows.rs`,
+  `crates/fret-diag/src/diag_perf/thresholds.rs`,
+  `crates/fret-diag/src/diag_perf.rs`, and
+  `crates/fret-diag/src/diag_perf_baseline.rs`.
+- Focused nextest result: 5 tests passed, 838 skipped.
+
+Decision:
+- Pointer-move perf contracts are now opt-in by evidence: thresholds are only emitted and enforced
+  when the diagnostic report shows real pointer-move frames. This keeps non-pointer scripts from
+  acquiring accidental `0` or stale pointer-move contracts while preserving the existing top/frame
+  and renderer thresholds.

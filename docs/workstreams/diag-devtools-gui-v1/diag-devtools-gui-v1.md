@@ -187,6 +187,10 @@ These are v1 defaults we should treat as “sticky”:
 - **Default left-panel tree is the Semantics tree** (`SemanticsSnapshot`).
   - Rationale: stable selectors (`test_id`) and alignment with inspect/pick/scripts.
   - Layout/element trees can exist as secondary views, but scripts should not depend on them.
+  - 2026-05-15 status: `apps/fret-devtools` exposes secondary `Layout` and `Elements` tabs derived
+    from the same semantics cache. `Layout` shows bounds/parent/test-id rows for layout debugging;
+    `Elements` shows semantics-node identity and authoring relationships. These are not full native
+    layout-engine or declarative element snapshots.
 - **Default real-time transport is WebSocket** (bidirectional, low-latency, web-runner friendly).
   - Session routing uses `session_id` to support multiple app targets concurrently.
 - **Minimize live traffic**:
@@ -529,6 +533,7 @@ They can evolve, but treat them as sticky unless we have strong evidence.
    - hover/focus updates are lossy under load (drop intermediate hover events).
 7. **Tree strategy (live)**:
    - default left panel: semantics tree,
+   - secondary left-panel views: semantics-derived layout bounds and element identity,
    - start with JSON messages, add “operations” patches later if needed.
 8. **Artifact storage (web runner)**:
    - in-memory store + “download zip” export in v1,

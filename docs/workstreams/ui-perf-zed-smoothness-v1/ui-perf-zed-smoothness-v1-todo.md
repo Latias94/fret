@@ -1441,7 +1441,14 @@ Perf acceptance:
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 19:56.
 - [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should ever become default.
   - Current status: keep opt-in only; A/B evidence is mixed across repeated resize probes.
-- [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
+- [x] Gate pointer-move thresholds only when pointer-move frames are present for the script.
+  - `diag perf` threshold rows now null pointer-move threshold values and sources when the script produced no
+    pointer-move frames, even if CLI or baseline pointer-move limits are configured.
+  - Baseline rows and `perf-baseline-from-bundles` now omit pointer-move thresholds for no-pointer-move scripts, and
+    repeat-mode aggregation ignores stale pointer-move maxima from runs that did not report pointer-move frames.
+  - Gate: `cargo nextest run -p fret-diag baseline_rows_omit_pointer_move_thresholds_when_frames_are_absent single_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent repeat_threshold_row_omits_pointer_move_thresholds_when_frames_are_absent perf_threshold_scan_passes_when_under_limits perf_threshold_scan_reports_each_exceeded_metric --no-fail-fast`.
+  - Evidence: perf log entry `2026-05-15` in
+    `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
   - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.
   - Prefer `FRET_DIAG_SCRIPT_AUTO_DUMP=0` for perf probes and clean old run directories periodically.

@@ -1432,7 +1432,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
                         baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
                         baseline_rows::TopTimesUs::new(p95_total, p95_layout, p95_solve),
-                        baseline_rows::PointerMoveMetrics::new(
+                        baseline_rows::PointerMoveMetrics::from_presence(
+                            pointer_move_frames_present,
                             pointer_move_max_dispatch_time_us,
                             pointer_move_max_hit_test_time_us,
                             pointer_move_snapshots_with_global_changes,
@@ -1476,7 +1477,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         thr_total,
                         thr_layout,
                         thr_solve,
-                        baseline_rows::PointerMoveMetrics::new(
+                        baseline_rows::PointerMoveMetrics::from_presence(
+                            pointer_move_frames_present,
                             thr_pointer_move_dispatch,
                             thr_pointer_move_hit_test,
                             thr_pointer_move_global_changes,
@@ -1880,10 +1882,21 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             runs_frame_p95_total.push(report.p95_total_time_us);
             runs_frame_p95_layout.push(report.p95_layout_time_us);
             runs_frame_p95_solve.push(report.p95_layout_engine_solve_time_us);
-            let pointer_move_max_dispatch_time_us = report.pointer_move_max_dispatch_time_us;
-            let pointer_move_max_hit_test_time_us = report.pointer_move_max_hit_test_time_us;
-            let pointer_move_snapshots_with_global_changes =
-                report.pointer_move_snapshots_with_global_changes as u64;
+            let pointer_move_max_dispatch_time_us = if report.pointer_move_frames_present {
+                report.pointer_move_max_dispatch_time_us
+            } else {
+                0
+            };
+            let pointer_move_max_hit_test_time_us = if report.pointer_move_frames_present {
+                report.pointer_move_max_hit_test_time_us
+            } else {
+                0
+            };
+            let pointer_move_snapshots_with_global_changes = if report.pointer_move_frames_present {
+                report.pointer_move_snapshots_with_global_changes as u64
+            } else {
+                0
+            };
             let (
                 run_paint_cache_hit_test_only_replay_allowed_max,
                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
@@ -2494,7 +2507,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                         max_frame_p95_layout,
                         max_frame_p95_solve,
                     ),
-                    baseline_rows::PointerMoveMetrics::new(
+                    baseline_rows::PointerMoveMetrics::from_presence(
+                        pointer_move_frames_present,
                         max_pointer_move_dispatch,
                         max_pointer_move_hit_test,
                         max_pointer_move_global_changes,
@@ -2593,7 +2607,8 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     thr_frame_p95_total,
                     thr_frame_p95_layout,
                     thr_frame_p95_solve,
-                    baseline_rows::PointerMoveMetrics::new(
+                    baseline_rows::PointerMoveMetrics::from_presence(
+                        pointer_move_frames_present,
                         thr_pointer_move_dispatch,
                         thr_pointer_move_hit_test,
                         thr_pointer_move_global_changes,

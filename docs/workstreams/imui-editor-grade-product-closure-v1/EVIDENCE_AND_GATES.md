@@ -1368,3 +1368,94 @@ DevTools discovery/source gates passed after the source guards were corrected to
 `cargo clippy -p fret-devtools --all-targets -- -D warnings`, `python tools/check_layering.py`, and
 `git diff --check` (with only the known CRLF normalization warning for
 `tools/diag_gate_imui_p2_devtools_first_open.py`).
+
+## DevTools MCP AI scenario doc closure - 2026-05-15 follow-up
+
+Scope: close the M7 MCP end-to-end AI scenario doc item while keeping MCP as a diagnostics
+consumer over shared CLI/GUI artifacts, not a new IMUI runtime surface.
+
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md` now records the
+  end-to-end AI path: enable inspect, pick a stable selector, choose/fork a script, run one or more
+  scripts, aggregate regression summaries when needed, pack the latest bundle, and open the offline
+  viewer.
+- The same doc names the artifact resources and freshness contract:
+  `fret-diag://first-open.md`, selected-session bundle/regression resources, resource
+  subscriptions, and resource update notifications.
+- `apps/fret-devtools-mcp/src/native.rs` already owns the matching tool/resource implementation
+  anchors: inspect, pick, scripts list, run script/file/batch, regression summarize/dashboard, pack
+  latest bundle, pack zip bytes, latest bundle dump, compare, first-open resource, and resource
+  update notifications.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` now source-checks this doc plus the MCP
+  implementation anchors through the `devtools mcp ai scenario doc` step, so the AI scenario cannot
+  silently drift away from the actual tool surface.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` marks the M7 AI scenario
+  doc parent item complete.
+
+Focused gate:
+
+```text
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed. The gate reported the new `devtools mcp ai scenario doc` step and completed the
+first-open discovery check successfully.
+
+## DevTools cross-cutting hygiene closure - 2026-05-15 follow-up
+
+Scope: close the DevTools hygiene checklist items that protect architecture boundaries rather than
+add new GUI scope.
+
+- `tools/diag_gate_imui_p2_devtools_first_open.py` now runs a `devtools cross-cutting hygiene`
+  discovery check.
+- The check validates `bundle.json` forward compatibility from both sides of the contract:
+  `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md` requires unknown fields to be
+  ignored, while `tools/fret-bundle-viewer/README.md`,
+  `tools/fret-bundle-viewer/lib/parser.ts`, and `tools/fret-bundle-viewer/lib/zip.ts` keep the
+  offline viewer on best-effort parsing and `bundle.json` / `bundle.schema2.json` / zip inputs.
+- The check validates the policy boundary: `crates/fret-ui/README.md` remains the mechanism-layer
+  contract, and the gate fails if DevTools-specific policy markers are added under
+  `crates/fret-ui/src`.
+- The check validates stable selector guidance: the DevTools workstream doc, GUI default selector
+  state, `test_id` selector option, UI-gallery preferred selector, and `devtools.gate.test_id`
+  input all stay aligned.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` now marks the three
+  cross-cutting hygiene items complete with this gate as evidence.
+
+Focused gate:
+
+```text
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed. This closes the hygiene checklist only; broader DevTools GUI product maturity,
+real-host Wayland acceptance, and full perf/smoothness attribution remain outside this slice.
+
+## DevTools secondary tree views closure - 2026-05-15 follow-up
+
+Scope: close the DevTools M0 secondary tree entrypoints without widening the runtime protocol or
+claiming full native layout/element snapshots.
+
+- `apps/fret-devtools/src/native.rs` now adds `Layout` and `Elements` tabs beside the default
+  `Semantics` tree in the left Inspect Workspace.
+- The new tabs are lazily materialized from the active tab, so adding secondary tree views does not
+  build three 50k-row virtual-list projections in the same frame.
+- `apps/fret-devtools/src/semantics.rs` keeps one shared tree index and adds projection labels:
+  layout rows surface parent + bounds + role + `test_id`; element rows surface semantics-node
+  identity plus authoring relationships (`labelled_by`, `described_by`, `controls`).
+- Search now covers node id, `parent=<id>`, and bounds text, so the secondary views are useful for
+  layout and identity debugging without adding a new bundle schema.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` source-checks the secondary tabs, lazy active-tab
+  construction, projection labels, and focused tests.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` marks the M0 layout/element
+  tree items complete with the explicit caveat that these are semantics-derived secondary views,
+  not full layout-engine or declarative runtime snapshots.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools compute_rows_search_matches_id_parent_and_bounds secondary_tree_labels_surface_layout_and_identity_fields --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed. This removes the stale M0 secondary-view TODOs while keeping broader DevTools GUI
+product maturity, real-host Wayland acceptance, and full perf/smoothness attribution open.

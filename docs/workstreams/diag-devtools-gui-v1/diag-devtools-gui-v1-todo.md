@@ -31,8 +31,18 @@ Conventions:
   - [x] max message size + hover event backpressure rules.
 - [x] Decide the default tree shown in the left panel:
   - [x] semantics tree (recommended default),
-  - [ ] layout tree (debugging layout engine),
-  - [ ] element tree (authoring identity / caching boundaries).
+  - [x] layout tree (debugging layout engine),
+        Evidence: `apps/fret-devtools` now exposes a secondary `Layout` tab in the left Inspect
+        Workspace. It is a semantics-derived layout-bounds view over the existing bundle/live
+        semantics cache, not a full native layout-engine snapshot. Guarded by
+        `cargo nextest run -p fret-devtools compute_rows_search_matches_id_parent_and_bounds secondary_tree_labels_surface_layout_and_identity_fields --no-fail-fast`
+        and `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+  - [x] element tree (authoring identity / caching boundaries).
+        Evidence: `apps/fret-devtools` now exposes a secondary `Elements` tab in the left Inspect
+        Workspace. It is a semantics-derived identity/relationship view (`sem_node`, parent,
+        `test_id`, `labelled_by`, `described_by`, `controls`) over the existing cache, not a full
+        declarative runtime element snapshot. Guarded by the same focused nextest and first-open
+        source gate.
 
 ### M1: Extract reusable tooling into crates
 
@@ -147,11 +157,17 @@ Conventions:
   - [x] pixels changed launch/run + result artifact history,
   - [x] perf thresholds,
   - [x] resource footprint thresholds.
-- [ ] Live inspect payloads (keep minimal):
+- [x] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
   - [x] focus events (`inspect.focus`) with summary + path (best-effort),
   - [x] hovered node bounds + viewport overlay hooks,
   - [x] overlay barrier root id + blocking roots summary.
+        Evidence: IMUI product-closure
+        `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
+        "DevTools live inspect overlay payload closure - 2026-05-15 follow-up"; focused gates:
+        `cargo nextest run -p fret-diag-protocol live_inspect_payloads_roundtrip_bounds_and_overlay_summary --no-fail-fast`,
+        `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics-ws" inspect_node_summary_v1_includes_bounds_and_root_hint overlay_summary_v1_reports_barrier_and_blocking_roots --no-fail-fast`, and
+        `cargo nextest run -p fret-devtools inspect_hover_bounds_lines_project_bounds_and_selector inspect_hover_bounds_lines_missing_bounds_returns_none inspect_overlay_hook_lines_project_overlay_summary --no-fail-fast`.
 - [x] Add at least one “dogfood” demo workflow:
   - [x] open UI gallery, pick a button, generate a script, run it, pack zip, open viewer.
         The GUI first-open shell now exposes the `ui-gallery-button-dogfood` path with the
@@ -193,11 +209,27 @@ Conventions:
   - [x] `repro.summary.json` (when present on disk),
   - [x] `bundle.zip` (generated on read; same layout as `diag pack`).
 - [x] Support resource subscriptions + notifications for artifact updates.
-- [ ] Add an end-to-end AI scenario doc:
+- [x] Add an end-to-end AI scenario doc:
   - [x] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
+        Evidence: `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md`
+        now participates in
+        `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
+        through the `devtools mcp ai scenario doc` check, which validates the scenario steps,
+        artifact resources, subscriptions, and matching `apps/fret-devtools-mcp` tool/resource
+        implementation anchors.
 
 ## Cross-cutting hygiene
 
-- [ ] Keep `bundle.json` forward-compatible (unknown fields ignored by viewer).
-- [ ] Keep `fret-ui` policy-free; DevTools policy stays in `ecosystem/*` and apps/tooling.
-- [ ] Prefer authoring `test_id` in recipes to make scripts stable.
+- [x] Keep `bundle.json` forward-compatible (unknown fields ignored by viewer).
+      Evidence: `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
+      now runs the `devtools cross-cutting hygiene` check, which validates the DevTools protocol
+      forward-compatibility doc, the bundle viewer best-effort parser/zip input path, and the
+      viewer README forward-compatibility note.
+- [x] Keep `fret-ui` policy-free; DevTools policy stays in `ecosystem/*` and apps/tooling.
+      Evidence: the same `devtools cross-cutting hygiene` check validates the `fret-ui` README
+      mechanism-layer boundary and fails if DevTools-specific policy markers appear in
+      `crates/fret-ui/src`.
+- [x] Prefer authoring `test_id` in recipes to make scripts stable.
+      Evidence: the same gate validates the DevTools authoring-loop guidance, the GUI default
+      selector kind, the `test_id` selector option, the UI-gallery preferred selector, and the
+      gated `devtools.gate.test_id` input.

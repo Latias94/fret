@@ -1307,7 +1307,28 @@ fn left_panel(
     _theme: fret_ui::ThemeSnapshot,
     st: &State,
 ) -> AnyElement {
-    let semantics = semantics_panel(cx, st);
+    let active_left_tab = cx
+        .app
+        .models()
+        .read(&st.left_tab, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("semantics"));
+    let semantics = if active_left_tab.as_ref() == "semantics" {
+        semantics_panel(cx, st)
+    } else {
+        cx.text("")
+    };
+    let layout_tree = if active_left_tab.as_ref() == "layout" {
+        layout_tree_panel(cx, st)
+    } else {
+        cx.text("")
+    };
+    let element_tree = if active_left_tab.as_ref() == "elements" {
+        element_tree_panel(cx, st)
+    } else {
+        cx.text("")
+    };
     let lines = cx
         .app
         .models()
@@ -1330,6 +1351,8 @@ fn left_panel(
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items([
             shadcn::TabsItem::new("semantics", "Semantics", [semantics]),
+            shadcn::TabsItem::new("layout", "Layout", [layout_tree]),
+            shadcn::TabsItem::new("elements", "Elements", [element_tree]),
             shadcn::TabsItem::new("events", "Events", [list]),
         ])
         .into_element(cx);
@@ -1338,7 +1361,7 @@ fn left_panel(
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Inspect Workspace").into_element(cx),
             shadcn::CardDescription::new(
-                "Semantics navigation, live selection, and recent diagnostics events.",
+                "Semantics navigation, layout bounds, element identity, and recent diagnostics events.",
             )
             .into_element(cx),
         ])
@@ -1348,7 +1371,84 @@ fn left_panel(
     .into_element(cx)
 }
 
+#[derive(Debug, Clone, Copy)]
+enum InspectTreeMode {
+    Semantics,
+    Layout,
+    Elements,
+}
+
+impl InspectTreeMode {
+    fn search_label(self) -> &'static str {
+        match self {
+            Self::Semantics => "Semantics search",
+            Self::Layout => "Layout tree search",
+            Self::Elements => "Element tree search",
+        }
+    }
+
+    fn search_placeholder(self) -> &'static str {
+        match self {
+            Self::Semantics => "Search role/test_id/label/value...",
+            Self::Layout => "Search role/test_id/bounds/parent...",
+            Self::Elements => "Search role/test_id/id/relationships...",
+        }
+    }
+
+    fn empty_text(self) -> &'static str {
+        match self {
+            Self::Semantics => "No semantics yet. Use 'Dump Bundle' or run a script that dumps a bundle.",
+            Self::Layout => {
+                "No layout-bounds tree yet. Use 'Dump Bundle' or run a script that dumps semantics bounds."
+            }
+            Self::Elements => {
+                "No element-identity tree yet. Use 'Dump Bundle' or run a script that dumps semantics identity."
+            }
+        }
+    }
+
+    fn error_prefix(self) -> &'static str {
+        match self {
+            Self::Semantics => "semantics error",
+            Self::Layout => "layout tree error",
+            Self::Elements => "element tree error",
+        }
+    }
+
+    fn stats_prefix(self) -> &'static str {
+        match self {
+            Self::Semantics => "semantics",
+            Self::Layout => "layout-derived",
+            Self::Elements => "element-derived",
+        }
+    }
+
+    fn cache_discriminant(self) -> u8 {
+        match self {
+            Self::Semantics => 0,
+            Self::Layout => 1,
+            Self::Elements => 2,
+        }
+    }
+}
+
 fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    diagnostics_tree_panel(cx, st, InspectTreeMode::Semantics)
+}
+
+fn layout_tree_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    diagnostics_tree_panel(cx, st, InspectTreeMode::Layout)
+}
+
+fn element_tree_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    diagnostics_tree_panel(cx, st, InspectTreeMode::Elements)
+}
+
+fn diagnostics_tree_panel(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+    mode: InspectTreeMode,
+) -> AnyElement {
     let index = cx
         .app
         .models()
@@ -1386,8 +1486,8 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .unwrap_or(0);
 
     let search_input = shadcn::Input::new(st.semantics_search.clone())
-        .a11y_label("Semantics search")
-        .placeholder("Search role/test_id/label/value...")
+        .a11y_label(mode.search_label())
+        .placeholder(mode.search_placeholder())
         .into_element(cx);
 
     let header = ui::h_row(|_cx| [search_input])
@@ -1396,10 +1496,8 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .into_element(cx);
 
     let content: AnyElement = match (index, error) {
-        (_index, Some(err)) => cx.text(format!("semantics error: {err}")),
-        (None, None) => {
-            cx.text("No semantics yet. Use 'Dump Bundle' or run a script that dumps a bundle.")
-        }
+        (_index, Some(err)) => cx.text(format!("{}: {err}", mode.error_prefix())),
+        (None, None) => cx.text(mode.empty_text()),
         (Some(index), None) => {
             #[derive(Debug, Default)]
             struct RowsCache {
@@ -1415,6 +1513,7 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             let rows_key = {
                 use std::hash::{Hash, Hasher};
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                mode.cache_discriminant().hash(&mut hasher);
                 source_hash.hash(&mut hasher);
                 search.trim().to_lowercase().hash(&mut hasher);
                 let mut expanded_sorted: Vec<u64> = expanded.iter().copied().collect();
@@ -1461,7 +1560,8 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             options.items_revision = rows_key;
 
             let stats = cx.text(format!(
-                "window={} roots={} nodes={} rows={}",
+                "{} window={} roots={} nodes={} rows={}",
+                mode.stats_prefix(),
                 index.window,
                 index.roots.len(),
                 index.nodes_by_id.len(),
@@ -1519,7 +1619,11 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
 
                     let label = index_for_list
                         .node(id)
-                        .map(semantics::node_label)
+                        .map(|node| match mode {
+                            InspectTreeMode::Semantics => semantics::node_label(node),
+                            InspectTreeMode::Layout => semantics::layout_node_label(node),
+                            InspectTreeMode::Elements => semantics::element_node_label(node),
+                        })
                         .unwrap_or_else(|| format!("<missing semantics node id={id}>"));
 
                     let selected_id_model = st.semantics_selected_id.clone();
