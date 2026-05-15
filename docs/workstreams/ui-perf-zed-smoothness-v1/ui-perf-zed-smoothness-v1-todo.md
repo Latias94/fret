@@ -684,6 +684,14 @@ Conventions:
           `python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`.
           Use `tools/perf/diag_editor_paint_contract_verify_artifacts.py` only when the artifact-only check is needed
           without the repo-level closeout gates.
+        - Post-sync verifier hard requirements:
+          - both validation summaries must carry a non-empty `date_tag`;
+          - stored commands must match the Windows validation shape: release `fretboard-dev.exe` /
+            `fret-ui-gallery.exe`, standard prewarm/prelude hooks, `--reuse-launch` on direct `diag perf`, and the
+            overlay-disabled env set;
+          - the baseline-validation directory must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
+          - the attribution directory must include paint-perf coverage and the verifier must reject missing
+            `code_editor_paint_perf`.
         - Required evidence: `selection-summary.json` or `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf,
           renderer text/encode/upload, and no threshold loosening unless intentionally justified.

@@ -105,6 +105,27 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:06:35 +0800 (local head `8e86524023`)
+
+Change:
+- Updated the P1.5 TODO closeout checklist with the latest post-sync verifier hard requirements:
+  - non-empty `date_tag` in both summaries,
+  - stored commands matching the Windows validation shape,
+  - baseline-validation artifact free of paint-perf env,
+  - and attribution artifact carrying `code_editor_paint_perf` coverage.
+
+Command:
+```powershell
+git diff --check
+```
+
+Results:
+- Diff whitespace check PASS.
+
+Notes:
+- This keeps the execution checklist aligned with the verifier/runbook/audit, but the required Windows RTX4090
+  artifacts are still missing.
+
 ## 2026-05-16 07:05:02 +0800 (local head `97a870253d`)
 
 Change:
