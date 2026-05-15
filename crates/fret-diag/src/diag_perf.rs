@@ -97,6 +97,24 @@ fn build_script_env_defaults_for_perf_launch(
     Ok(script_launch_env)
 }
 
+fn apply_trace_real_spans_launch_env(
+    launch_env: &mut Vec<(String, String)>,
+    trace_real_spans: bool,
+    has_launch: bool,
+) -> Result<(), String> {
+    if !trace_real_spans {
+        return Ok(());
+    }
+    if !has_launch {
+        return Err(
+            "--trace-real-spans requires --launch so diag perf can inject FRET_DIAG_REAL_SPANS into the app process"
+                .to_string(),
+        );
+    }
+    let _ = ensure_env_var(launch_env, "FRET_DIAG_REAL_SPANS", "1");
+    Ok(())
+}
+
 fn perf_row_status_and_reason(
     row: &serde_json::Value,
     threshold_failures: &[serde_json::Value],
@@ -576,6 +594,7 @@ pub(crate) struct PerfCmdContext {
     pub suite_prewarm_scripts: Vec<PathBuf>,
     pub timeout_ms: u64,
     pub trace_chrome: bool,
+    pub trace_real_spans: bool,
     pub warmup_frames: u64,
 }
 
@@ -644,6 +663,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         suite_prewarm_scripts,
         timeout_ms,
         trace_chrome,
+        trace_real_spans,
         warmup_frames,
     } = ctx;
 
@@ -791,6 +811,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
     std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
     let perf_capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
     let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+    apply_trace_real_spans_launch_env(&mut perf_launch_env, trace_real_spans, launch.is_some())?;
     if let Some(name) = suite_name.as_deref() {
         // Make the common UI gallery perf suites reproducible without requiring callers
         // to remember a pile of `--env` flags. Callers can still override them explicitly
@@ -3152,6 +3173,43 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(a.parent().unwrap());
         let _ = std::fs::remove_dir_all(b.parent().unwrap());
+    }
+
+    #[test]
+    fn trace_real_spans_launch_env_injects_opt_in_flag() {
+        let mut launch_env = Vec::new();
+
+        apply_trace_real_spans_launch_env(&mut launch_env, true, true)
+            .expect("trace real spans should inject launch env");
+
+        assert_eq!(
+            launch_env,
+            vec![("FRET_DIAG_REAL_SPANS".to_string(), "1".to_string())]
+        );
+    }
+
+    #[test]
+    fn trace_real_spans_launch_env_preserves_explicit_override() {
+        let mut launch_env = vec![("FRET_DIAG_REAL_SPANS".to_string(), "0".to_string())];
+
+        apply_trace_real_spans_launch_env(&mut launch_env, true, true)
+            .expect("explicit env should be preserved");
+
+        assert_eq!(
+            launch_env,
+            vec![("FRET_DIAG_REAL_SPANS".to_string(), "0".to_string())]
+        );
+    }
+
+    #[test]
+    fn trace_real_spans_launch_env_requires_launched_process() {
+        let mut launch_env = Vec::new();
+
+        let err = apply_trace_real_spans_launch_env(&mut launch_env, true, false)
+            .expect_err("trace real spans should need launch");
+
+        assert!(err.contains("--trace-real-spans requires --launch"));
+        assert!(launch_env.is_empty());
     }
 
     #[test]

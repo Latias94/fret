@@ -2732,7 +2732,8 @@ fn parse_perf_command(
             suite_prelude_scripts: args.prelude_scripts,
             suite_prewarm_scripts: args.prewarm_scripts,
             timeout_ms: args.timing.timeout_ms,
-            trace_chrome: args.trace_chrome,
+            trace_chrome: args.trace_chrome || args.trace_real_spans,
+            trace_real_spans: args.trace_real_spans,
             warmup_frames: args.timing.warmup_frames,
         },
     ))
@@ -5433,6 +5434,7 @@ mod tests {
             "target/fret-diag-cutover-perf".to_string(),
             "--repeat".to_string(),
             "7".to_string(),
+            "--trace-real-spans".to_string(),
             "--top".to_string(),
             "9".to_string(),
             "--sort".to_string(),
@@ -5473,6 +5475,8 @@ mod tests {
 
         assert_eq!(ctx.rest, vec!["ui-gallery".to_string()]);
         assert_eq!(ctx.perf_repeat, 7);
+        assert!(ctx.trace_chrome);
+        assert!(ctx.trace_real_spans);
         assert_eq!(ctx.stats_top, 9);
         assert_eq!(ctx.sort_override, Some(crate::BundleStatsSort::Time));
         assert!(ctx.suite_prelude_each_run);

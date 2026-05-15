@@ -91,6 +91,10 @@ Current writer:
 
 - Set `FRET_DIAG_REAL_SPANS=1` for `fret-bootstrap` `ui_app_driver` apps to write
   `fret.perf.spans.v1` for the View, Overlay, Layout, and Paint driver phases.
+- Prefer `fretboard-dev diag perf ... --trace-real-spans --launch -- <app command>` when the tool
+  launches the app; this also requests a Chrome trace artifact and injects
+  `FRET_DIAG_REAL_SPANS=1` into the launched process unless the caller already set the variable
+  explicitly.
 - These are frame-relative real spans measured in the app loop, not synthetic subdivisions derived
   from aggregate stats.
 - Finer-grained nested spans (for example individual runtime hot paths or external profiler/Tracy
@@ -116,6 +120,8 @@ Evidence anchors:
   `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
 - Runtime extension writer focused gate:
   `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase --no-fail-fast`
+- CLI opt-in focused gate:
+  `cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast`
 
 ## Core timing fields (per frame, in microseconds)
 

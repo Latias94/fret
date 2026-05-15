@@ -383,6 +383,8 @@ mod tests {
             "time",
             "--repeat",
             "11",
+            "--trace",
+            "--trace-real-spans",
             "--prewarm-script",
             "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json",
             "--prelude-script",
@@ -420,6 +422,8 @@ mod tests {
         assert_eq!(args.top, 7);
         assert_eq!(args.sort, Some(crate::BundleStatsSort::Time));
         assert_eq!(args.repeat, 11);
+        assert!(args.trace_chrome);
+        assert!(args.trace_real_spans);
         assert!(args.prelude_each_run);
         assert_eq!(
             args.prewarm_scripts,
