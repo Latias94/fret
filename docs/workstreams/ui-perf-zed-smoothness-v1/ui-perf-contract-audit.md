@@ -345,18 +345,36 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     the candidate's measured value still fits the old contract.
   - Validation: `python -m unittest discover -s tools/perf -p 'test_*.py'`;
     `python tools/perf/diag_perf_baseline_select.py --help`; `git diff --check`.
+- Editor Canvas replay formal evidence pass:
+  - The 2026-05-16 repeat=3/warmup=5 macOS M4 evidence pass covers typical autoscroll, complex wheel, and resize
+    jitter with `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1` and the standard prewarm/prelude hooks. See perf log entry
+    `2026-05-16 01:03:00 +08:00`.
+  - Worst bundles:
+    `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-typical-r3/1778862709522/bundle.schema2.json`,
+    `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-complex-wheel-r3/1778862752553/bundle.schema2.json`,
+    and
+    `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-resize-jitter-r3/1778862785344/bundle.schema2.json`.
+  - Attribution result: row replay/cache is healthy (`100%`, `99%`, `100%` hit rates; stores `0`, p95 `1`, `0`),
+    while frame-level `paint.widget` remains `439..634us` p95 and renderer text prepare remains `419..435us`
+    p95/max with atlas upload/eviction still `0`.
+  - Conclusion: the next owner split is Canvas wrapper overhead versus renderer text/encode payload. Do not use this
+    evidence to justify a broad `WindowedRowsSurface` display-list rewrite.
 
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its
    membership is intentionally narrowed. Its former broad-only members are now covered by dedicated Windows contracts;
    do not try to re-promote the broad suite by loosening thresholds.
-2. The autoscroll typical v2 and complex wheel v1 contracts cover stricter editor paint/payload surfaces, and the
-   complex wheel overlay hotspot now has a narrower frame-derived-state fix. Keep the `WindowedRowsSurface`
-   display-list rewrite gated on a future near-threshold or failing stressor where row op replay/capture is the
-   measured limiter, not on these passing baselines alone.
-3. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
-4. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
+2. The autoscroll typical v2 and complex wheel v1 contracts cover stricter editor paint/payload surfaces, the complex
+   wheel overlay hotspot now has a narrower frame-derived-state fix, and the 2026-05-16 formal macOS evidence pass
+   shows healthy row-scene replay/cache. Keep the `WindowedRowsSurface` display-list rewrite gated on a future
+   near-threshold or failing stressor where row op replay/capture is the measured limiter, not on these passing
+   baselines alone.
+3. The next high-leverage implementation owner is still open: split generic Canvas `paint.widget` overhead from
+   renderer text/encode payload and land one reversible optimization or diagnostic gate before tightening editor
+   paint/payload baselines.
+4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
+5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
    checked-in Linux editor-grade baseline from this run.
 ## Audit Conclusion
@@ -367,6 +385,7 @@ typical, and complex wheel contracts now have payload-aware baselines with expli
 `ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
 v1 contracts. The hit-test torture pointer-move path now also has a formal repeat=7 dispatch/hit-test threshold gate
-for the optimized dispatch snapshot cache path. The next work should only start a `WindowedRowsSurface` display-list
-rewrite from a near-threshold or failing editor paint stressor, and keep non-Windows machine profiles explicit rather
-than inferring them from the Windows RTX 4090 contract set.
+for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas replay evidence says the immediate next
+work should split Canvas wrapper overhead from renderer text/encode payload; only start a `WindowedRowsSurface`
+display-list rewrite from a near-threshold or failing editor paint stressor, and keep non-Windows machine profiles
+explicit rather than inferring them from the Windows RTX 4090 contract set.

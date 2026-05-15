@@ -453,6 +453,26 @@ Conventions:
         on the target machine profile and compare Canvas `paint.widget`, row content resolve,
         row-scene replay/cache replay, and renderer encode/upload payload before tightening any
         baseline or starting a broader display-list rewrite.
+    - [x] Run the formal repeat=3 editor Canvas replay evidence pass after the planned row replay
+      short-circuit.
+      - Evidence: perf log entry `2026-05-16 01:03:00 +08:00` (`editor canvas replay formal
+        evidence pass`).
+      - Result:
+        - typical autoscroll: total p50/p95=`777/887us`, `paint.widget` p50/p95=`384/439us`,
+          code-editor paint p50/p95=`105/131us`, row replay hit rate `100%`, stores `0`.
+        - complex wheel: total p50/p95=`894/1037us`, `paint.widget` p50/p95=`539/634us`,
+          code-editor paint p50/p95=`255/330us`, row replay hit rate `99%`, stored-row p95 `1`.
+        - resize jitter: total p50/p95=`883/1145us`, `paint.widget` p50/p95=`432/446us`,
+          code-editor paint p50/p95=`123/138us`, row replay hit rate `100%`, stores `0`.
+      - Decision: row replay/cache and prepaint planning are not the next mainline bottlenecks.
+        Keep the display-list rewrite gated on a future near-threshold/failing stressor where row
+        replay/capture itself is measured as the limiter.
+    - [ ] Split the next owner lane between Canvas wrapper overhead and renderer text/encode payload.
+      - Target: explain why `paint.widget` remains roughly `439..634us` p95 while
+        `code_editor.paint_perf` is only `131..330us` p95, and why renderer text prepare remains
+        roughly `419..435us` p95/max with atlas upload/eviction at `0`.
+      - Deliverable: one small reversible optimization or diagnostic split plus a focused gate;
+        do not tighten editor paint/payload baselines before this owner split is backed by evidence.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

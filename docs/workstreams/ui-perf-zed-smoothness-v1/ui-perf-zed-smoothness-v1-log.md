@@ -13759,3 +13759,49 @@ Decision:
 - Treat the two repeat=1 smoke bundles as direction evidence, not as formal baseline replacement.
   Before tightening any checked-in baseline, re-run the relevant editor paint probe with the lane's
   repeat/warmup policy on the target machine profile.
+
+## 2026-05-16 01:03:00 +08:00 (editor canvas replay formal evidence pass)
+
+Question:
+- After the planned row replay paint short-circuit, is the editor row replay/cache path still the
+  bottleneck, or should the next optimization owner move to generic Canvas paint/widget and renderer
+  payload work?
+
+Change:
+- No code change. Ran the P1.5 Editor Canvas replay probes with repeat/warmup policy and paint-detail
+  attribution enabled.
+- Commands used `target/release/fretboard-dev diag perf`, `--repeat 3`, `--warmup-frames 5`,
+  `--reuse-launch`, the tooling-suite font prewarm and diagnostics reset preludes, and launched:
+  `cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`.
+- Directly launching the prebuilt `target/release/fret-ui-gallery` binary is not equivalent for this
+  evidence pass because diag preflight cannot prove the required launch features; keep the `cargo run`
+  feature list in future reproductions.
+
+Evidence:
+
+| probe | output dir | worst bundle | total p50/p95 | paint.widget p50/p95 | code_editor.paint_perf p50/p95 | row replay/cache | renderer p95/max upload/encode/text |
+| --- | --- | --- | ---: | ---: | ---: | --- | --- |
+| typical autoscroll | `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-typical-r3` | `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-typical-r3/1778862709522/bundle.schema2.json` | `777/887us` | `384/439us` | `105/131us` | 100% hit; rows painted/replayed/prepaint-planned/used all `52020`; stores `0` | `89/264us`, `163/206us`, `392/422us` |
+| complex wheel | `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-complex-wheel-r3` | `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-complex-wheel-r3/1778862752553/bundle.schema2.json` | `894/1037us` | `539/634us` | `255/330us` | 99% hit; `rows_scene_stored` p95 `1`; fast/full misses `19/34` | `77/78us`, `145/150us`, `412/435us` |
+| resize jitter | `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-resize-jitter-r3` | `target/fret-diag/editor-canvas-replay-contract-evidence-20260516-resize-jitter-r3/1778862785344/bundle.schema2.json` | `883/1145us` | `432/446us` | `123/138us` | 100% hit; rows painted/replayed/prepaint-planned/used all `2890`; stores `0` | `107/107us`, `173/173us`, `419/419us` |
+
+Additional stats:
+- Typical autoscroll: layout p50/p95=`32/37us`, prepaint=`172/222us`, paint=`579/651us`,
+  prepaint_plan=`67/93us`, and renderer text atlas upload/evict=`0`.
+- Complex wheel: layout p50/p95=`34/183us`, prepaint=`38/113us`, paint=`745/853us`,
+  code-editor content=`13/22us`, row_text=`7/15us`, fast_path=`70/89us`, and renderer text
+  atlas upload/evict=`0`.
+- Resize jitter: layout p50/p95=`35/375us`, prepaint=`131/245us`, paint=`639/661us`,
+  hot `layout.engine_solve` p95=`127us`, prepaint_plan=`81/89us`, and renderer text atlas
+  upload/evict=`0`.
+
+Decision:
+- The row-scene replay/cache path is healthy on all three formal probes. Typical autoscroll and
+  resize jitter are full hot-cache replay with no row-scene stores; complex wheel is still 99% hit
+  with only one stored row on the p95 surface.
+- Do not start a broad `WindowedRowsSurface` display-list rewrite from this evidence. The measured
+  remaining cost is frame-level `paint.widget`/Canvas wrapper work plus renderer text prepare/encode
+  payload, not row content materialization, row-scene capture, or prepaint planning.
+- The next landable owner lane should be narrow and reversible: split attribution between generic
+  Canvas paint/widget overhead and renderer text/encode payload, then land one measured optimization
+  with a checked gate before considering any baseline tightening.
