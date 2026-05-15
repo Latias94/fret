@@ -141,9 +141,15 @@ impl ElementHostWidget {
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);
         let record = with_element_record_for_node(cx.app, window, cx.node, |record| {
+            let inherited_text_style = match &record.instance {
+                ElementInstance::Text(_)
+                | ElementInstance::StyledText(_)
+                | ElementInstance::SelectableText(_) => record.inherited_text_style.clone(),
+                _ => None,
+            };
             (
                 record.inherited_foreground,
-                record.inherited_text_style.clone(),
+                inherited_text_style,
                 record.instance.clone(),
             )
         });
