@@ -1,7 +1,11 @@
+import io
 import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
 import json
+import sys
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
 import diag_editor_paint_contract_validate as validate
 
@@ -138,6 +142,29 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertTrue(coverage["paint_widget"])
         self.assertFalse(coverage["renderer_text_encode_upload"])
         self.assertFalse(coverage["code_editor_paint_perf"])
+
+    def test_dry_run_summary_records_date_tag(self) -> None:
+        with TemporaryDirectory() as td:
+            out_dir = Path(td) / "validation"
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_validate.py",
+                    "--dry-run",
+                    "--date-tag",
+                    "unit-date",
+                    "--out-dir",
+                    str(out_dir),
+                ],
+            ):
+                with redirect_stdout(io.StringIO()):
+                    rc = validate.main()
+
+            summary = json.loads((out_dir / "validation-plan.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(0, rc)
+        self.assertEqual("unit-date", summary["date_tag"])
 
 
 if __name__ == "__main__":
