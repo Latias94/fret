@@ -47,6 +47,20 @@ python tools/perf/diag_editor_paint_contract_preflight.py
 This checks the three editor probe JSON files, the diag script registry, and the strict baseline matrix audit without
 running the long perf validation passes.
 
+## Target-Machine Runner
+
+Prefer the checked-in runner for the full Windows RTX4090 validation pass:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py `
+  --date-tag <date>
+```
+
+Run the release builds above first; the runner fails fast if the expected Windows binaries are missing.
+Use `--dry-run` on non-target hosts to inspect the exact command plan without producing misleading local evidence.
+Use `--with-paint-perf` for a target-machine attribution pass after the baseline validation pass; do not use its output
+to loosen checked-in thresholds without the re-seed policy below.
+
 ## Validate Current Contracts First
 
 Resize:
