@@ -260,6 +260,8 @@ struct State {
     regression_selected_capability_sources: Model<Vec<Arc<str>>>,
     regression_selected_capabilities_checks: Model<Vec<Arc<str>>>,
     regression_selected_perf_evidence: Model<Vec<Arc<str>>>,
+    regression_selected_first_open_evidence: Model<Vec<Arc<str>>>,
+    regression_selected_share_artifacts: Model<Vec<Arc<str>>>,
     regression_selected_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
 
@@ -475,6 +477,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let regression_selected_capability_sources = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_capabilities_checks = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_perf_evidence = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_first_open_evidence = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_share_artifacts = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
         DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
@@ -636,6 +640,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         regression_selected_capability_sources,
         regression_selected_capabilities_checks,
         regression_selected_perf_evidence,
+        regression_selected_first_open_evidence,
+        regression_selected_share_artifacts,
         regression_selected_error,
         log_lines,
         semantics_cache,
@@ -834,6 +840,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         Invalidation::Paint,
     );
     cx.observe_model(&st.regression_selected_perf_evidence, Invalidation::Paint);
+    cx.observe_model(
+        &st.regression_selected_first_open_evidence,
+        Invalidation::Paint,
+    );
+    cx.observe_model(&st.regression_selected_share_artifacts, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_error, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
     cx.observe_model(&st.semantics_cache, Invalidation::Paint);
@@ -2953,6 +2964,16 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.regression_selected_perf_evidence, |v| v.clone())
         .unwrap_or_default();
+    let selected_first_open_evidence = cx
+        .app
+        .models()
+        .read(&st.regression_selected_first_open_evidence, |v| v.clone())
+        .unwrap_or_default();
+    let selected_share_artifacts = cx
+        .app
+        .models()
+        .read(&st.regression_selected_share_artifacts, |v| v.clone())
+        .unwrap_or_default();
     let selected_error = cx
         .app
         .models()
@@ -3048,6 +3069,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_capability_source_count = selected_capability_sources.len();
     let selected_capabilities_check_count = selected_capabilities_checks.len();
     let selected_perf_evidence_count = selected_perf_evidence.len();
+    let selected_first_open_evidence_count = selected_first_open_evidence.len();
+    let selected_share_artifact_count = selected_share_artifacts.len();
     let summarize_status_line = {
         let err = summarize_last_error
             .as_deref()
@@ -3150,6 +3173,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             let selected_capabilities_checks_model =
                 st.regression_selected_capabilities_checks.clone();
             let selected_perf_evidence_model = st.regression_selected_perf_evidence.clone();
+            let selected_first_open_evidence_model =
+                st.regression_selected_first_open_evidence.clone();
+            let selected_share_artifacts_model = st.regression_selected_share_artifacts.clone();
             let selected_error_model = st.regression_selected_error.clone();
             let log_lines_model = st.log_lines.clone();
             let copy_path = resolved_summary_path_str.clone();
@@ -3194,6 +3220,25 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                                     .map(Arc::<str>::from)
                                     .collect();
                             });
+                            let _ = host.models_mut().update(
+                                &selected_first_open_evidence_model,
+                                |v| {
+                                    *v = data
+                                        .first_open_evidence_lines
+                                        .into_iter()
+                                        .map(Arc::<str>::from)
+                                        .collect();
+                                },
+                            );
+                            let _ =
+                                host.models_mut()
+                                    .update(&selected_share_artifacts_model, |v| {
+                                        *v = data
+                                            .share_artifacts
+                                            .into_iter()
+                                            .map(Arc::<str>::from)
+                                            .collect();
+                                    });
                             let _ = host
                                 .models_mut()
                                 .update(&selected_error_model, |v| *v = None);
@@ -3217,6 +3262,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                             let _ = host
                                 .models_mut()
                                 .update(&selected_perf_evidence_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_first_open_evidence_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_share_artifacts_model, |v| v.clear());
                             let _ = host.models_mut().update(&selected_error_model, |v| {
                                 *v = Some(Arc::<str>::from(format!(
                                     "failed to load selected regression summary {}: {err}",
@@ -3343,6 +3394,16 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
         .join("\r\n");
+    let selected_first_open_evidence_text = selected_first_open_evidence
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
+    let selected_share_artifacts_text = selected_share_artifacts
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
     let selected_followup_commands =
         regression_bundle_followup_commands(selected_bundle_dirs.iter().map(|v| v.as_ref()));
     let selected_runnable_followup_command_lines = selected_followup_commands
@@ -3409,6 +3470,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             parts.push(format!("First perf evidence: {}", first.as_ref()));
         }
         parts.push(format!(
+            "Selected first-open evidence lines: {selected_first_open_evidence_count}"
+        ));
+        if let Some(first) = selected_first_open_evidence.first() {
+            parts.push(format!("First first-open evidence: {}", first.as_ref()));
+        }
+        parts.push(format!(
+            "Selected share artifacts: {selected_share_artifact_count}"
+        ));
+        if let Some(first) = selected_share_artifacts.first() {
+            parts.push(format!("First share artifact: {}", first.as_ref()));
+        }
+        parts.push(format!(
             "Runnable follow-up commands: {selected_runnable_followup_count}"
         ));
         parts.push(format!(
@@ -3439,6 +3512,14 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if !selected_perf_evidence_text.trim().is_empty() {
             parts.push("perf_evidence:".to_string());
             parts.push(selected_perf_evidence_text.clone());
+        }
+        if !selected_first_open_evidence_text.trim().is_empty() {
+            parts.push("first_open_evidence:".to_string());
+            parts.push(selected_first_open_evidence_text.clone());
+        }
+        if !selected_share_artifacts_text.trim().is_empty() {
+            parts.push("share_artifacts:".to_string());
+            parts.push(selected_share_artifacts_text.clone());
         }
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("error: {err}"));
@@ -3738,6 +3819,44 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_copy)
+                .into_element(cx),
+            );
+        }
+        if !selected_first_open_evidence_text.trim().is_empty() {
+            let first_open_evidence = selected_first_open_evidence_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
+                    text: first_open_evidence.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy first-open evidence")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
+        if !selected_share_artifacts_text.trim().is_empty() {
+            let share_artifacts = selected_share_artifacts_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let token = host.next_clipboard_token();
+                host.push_effect(Effect::ClipboardWriteText {
+                    window: action_cx.window,
+                    token,
+                    text: share_artifacts.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy share artifacts")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
                     .into_element(cx),
             );
         }
@@ -3786,6 +3905,22 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             .into_element(cx),
             shadcn::Badge::new(format!("perf evidence {selected_perf_evidence_count}"))
                 .variant(if selected_perf_evidence_count > 0 {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
+            shadcn::Badge::new(format!(
+                "first-open evidence {selected_first_open_evidence_count}"
+            ))
+            .variant(if selected_first_open_evidence_count > 0 {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(format!("share artifacts {selected_share_artifact_count}"))
+                .variant(if selected_share_artifact_count > 0 {
                     shadcn::BadgeVariant::Default
                 } else {
                     shadcn::BadgeVariant::Outline
@@ -3965,6 +4100,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         text_blob_sized(cx, selected_capabilities_checks_text.clone(), Px(96.0));
     let selected_perf_evidence_blob =
         text_blob_sized(cx, selected_perf_evidence_text.clone(), Px(120.0));
+    let selected_first_open_evidence_blob =
+        text_blob_sized(cx, selected_first_open_evidence_text.clone(), Px(120.0));
+    let selected_share_artifacts_blob =
+        text_blob_sized(cx, selected_share_artifacts_text.clone(), Px(96.0));
     let selected_followup_commands_blob =
         text_blob_sized(cx, selected_followup_commands_display, Px(116.0));
     let selected_runnable_followup_commands_blob =
@@ -4059,6 +4198,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Perf summary paths, threshold artifacts, curated metrics, and threshold failures stay above the raw JSON.",
         vec![selected_perf_evidence_blob],
     );
+    let selected_first_open_evidence_section = diag_section(
+        cx,
+        "First-open Evidence",
+        "Canonical summary-level paths for triage, script results, screenshots, and share packs use the shared diagnostics drill-down projection.",
+        vec![selected_first_open_evidence_blob],
+    );
+    let selected_share_artifacts_section = diag_section(
+        cx,
+        "Share Artifacts",
+        "Compact handoff packages stay optional, but visible beside canonical evidence when the selected summary exposes them.",
+        vec![selected_share_artifacts_blob],
+    );
     let selected_raw_summary_section = diag_section(
         cx,
         "Raw Selected Summary",
@@ -4085,6 +4236,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_capability_sources_section,
             selected_capabilities_section,
             selected_perf_evidence_section,
+            selected_first_open_evidence_section,
+            selected_share_artifacts_section,
             selected_raw_summary_section,
         ],
     );
@@ -6341,6 +6494,12 @@ pub(crate) fn clear_regression_selection(app: &mut App, st: &State) {
         .update(&st.regression_selected_perf_evidence, |v| v.clear());
     let _ = app
         .models_mut()
+        .update(&st.regression_selected_first_open_evidence, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_selected_share_artifacts, |v| v.clear());
+    let _ = app
+        .models_mut()
         .update(&st.regression_selected_error, |v| *v = None);
 }
 
@@ -6429,6 +6588,8 @@ struct RegressionSummaryDrilldownData {
     capability_sources: Vec<String>,
     capabilities_check_paths: Vec<String>,
     perf_evidence_lines: Vec<String>,
+    first_open_evidence_lines: Vec<String>,
+    share_artifacts: Vec<String>,
 }
 
 fn regression_failing_summary_rows(
@@ -6463,6 +6624,8 @@ fn load_regression_summary_drilldown(
         capability_sources: drilldown.capability_sources,
         capabilities_check_paths: drilldown.capabilities_check_paths,
         perf_evidence_lines: drilldown.perf_evidence_lines,
+        first_open_evidence_lines: drilldown.first_open_evidence_lines,
+        share_artifacts: drilldown.share_artifacts,
     })
 }
 
@@ -6516,6 +6679,24 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
                 });
             let _ = app
                 .models_mut()
+                .update(&st.regression_selected_first_open_evidence, |v| {
+                    *v = data
+                        .first_open_evidence_lines
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_share_artifacts, |v| {
+                    *v = data
+                        .share_artifacts
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
                 .update(&st.regression_selected_error, |v| *v = None);
         }
         Err(err) => {
@@ -6534,6 +6715,12 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
             let _ = app
                 .models_mut()
                 .update(&st.regression_selected_perf_evidence, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_first_open_evidence, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_share_artifacts, |v| v.clear());
             let _ = app.models_mut().update(&st.regression_selected_error, |v| {
                 *v = Some(Arc::<str>::from(format!(
                     "failed to load selected regression summary {}: {err}",
@@ -7556,6 +7743,10 @@ mod tests {
                     "lane": "perf",
                     "evidence": {
                         "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "triage_artifact": "target/fret-diag/perf-docking/run-a/triage.json",
+                        "script_result": "target/fret-diag/perf-docking/run-a/script.result.json",
+                        "screenshots_manifest": "target/fret-diag/perf-docking/run-a/screenshots.manifest.json",
+                        "share_artifact": "target/fret-diag/perf-docking/share/perf-case.ai.zip",
                         "perf_summary_json": "target/fret-diag/perf-docking/layout.perf.summary.v1.json",
                         "compare_json": "target/fret-diag/perf-docking/check.perf_thresholds.json",
                         "extra": {
@@ -7605,6 +7796,23 @@ mod tests {
         ));
         assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
         assert!(text.contains("threshold_failures_json"));
+        let first_open_text = data.first_open_evidence_lines.join("\n");
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] triage_artifact: target/fret-diag/perf-docking/run-a/triage.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] script_result: target/fret-diag/perf-docking/run-a/script.result.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] screenshots_manifest: target/fret-diag/perf-docking/run-a/screenshots.manifest.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] share_artifact: target/fret-diag/perf-docking/share/perf-case.ai.zip"
+        ));
+        assert_eq!(
+            data.share_artifacts,
+            vec!["target/fret-diag/perf-docking/share/perf-case.ai.zip".to_string()]
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

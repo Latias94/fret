@@ -387,7 +387,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] first automatic failing evidence export for campaign and batch roots,
   - [x] first best-effort `triage.json` export through the share manifest path,
   - [x] first batch-level combined failure zip for handoff,
-  - [ ] failing evidence bundles,
+  - [x] DevTools GUI and MCP now consume shared first-open/share evidence path projections from
+    `regression.summary.json` instead of parsing those paths independently,
+  - [x] failing evidence bundles now surface as canonical `bundle_artifact` paths in
+    `share.manifest.json` and are included in `share/combined-failures.zip` when present,
   - [x] copy/share-friendly paths.
 - [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
 - [x] Extend those selectors into `diag campaign run` so filtered campaign batches can execute without enumerating ids by hand.

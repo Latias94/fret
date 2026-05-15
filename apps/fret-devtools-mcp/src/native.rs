@@ -1669,6 +1669,10 @@ struct RegressionDashboardEvidenceV1 {
     #[serde(default)]
     perf_evidence_lines: Vec<String>,
     #[serde(default)]
+    first_open_evidence_lines: Vec<String>,
+    #[serde(default)]
+    share_artifacts: Vec<String>,
+    #[serde(default)]
     followup_command_lines: Vec<String>,
     #[serde(default)]
     runnable_followup_command_lines: Vec<String>,
@@ -1700,6 +1704,10 @@ struct RegressionDashboardResultV1 {
     capabilities_check_paths: Vec<String>,
     #[serde(default)]
     perf_evidence_lines: Vec<String>,
+    #[serde(default)]
+    first_open_evidence_lines: Vec<String>,
+    #[serde(default)]
+    share_artifacts: Vec<String>,
     #[serde(default)]
     followup_command_lines: Vec<String>,
     #[serde(default)]
@@ -2289,6 +2297,8 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
         capability_sources: drilldown.capability_sources,
         capabilities_check_paths: drilldown.capabilities_check_paths,
         perf_evidence_lines: drilldown.perf_evidence_lines,
+        first_open_evidence_lines: drilldown.first_open_evidence_lines,
+        share_artifacts: drilldown.share_artifacts,
         followup_command_lines,
         runnable_followup_command_lines,
         manual_followup_command_lines,
@@ -2336,6 +2346,24 @@ fn build_regression_dashboard_result(
                 .perf_evidence_lines
                 .iter()
                 .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.first_open_evidence_lines.is_empty() {
+        human_lines.push("first-open evidence:".to_string());
+        human_lines.extend(
+            evidence
+                .first_open_evidence_lines
+                .iter()
+                .map(|line| format!("  - {line}")),
+        );
+    }
+    if !evidence.share_artifacts.is_empty() {
+        human_lines.push("share artifacts:".to_string());
+        human_lines.extend(
+            evidence
+                .share_artifacts
+                .iter()
+                .map(|path| format!("  - {path}")),
         );
     }
     if !evidence.followup_command_lines.is_empty() {
@@ -2404,6 +2432,8 @@ fn build_regression_dashboard_result(
         capability_sources: evidence.capability_sources,
         capabilities_check_paths: evidence.capabilities_check_paths,
         perf_evidence_lines: evidence.perf_evidence_lines,
+        first_open_evidence_lines: evidence.first_open_evidence_lines,
+        share_artifacts: evidence.share_artifacts,
         followup_command_lines: evidence.followup_command_lines,
         runnable_followup_command_lines: evidence.runnable_followup_command_lines,
         manual_followup_command_lines: evidence.manual_followup_command_lines,
@@ -3059,6 +3089,9 @@ mod tests {
                     "reason_code": "capability.missing",
                     "evidence": {
                         "bundle_dir": "target/fret-diag/campaigns/ui-gallery/run-a",
+                        "triage_artifact": "target/fret-diag/campaigns/ui-gallery/run-a/triage.json",
+                        "script_result": "target/fret-diag/campaigns/ui-gallery/run-a/script.result.json",
+                        "share_artifact": "target/fret-diag/campaigns/ui-gallery/share/capability-check.ai.zip",
                         "perf_summary_json": "target/fret-diag/campaigns/ui-gallery/layout.perf.summary.v1.json",
                         "compare_json": "target/fret-diag/campaigns/ui-gallery/check.perf_thresholds.json",
                         "extra": {
@@ -3120,6 +3153,13 @@ mod tests {
         assert!(result.perf_evidence_lines.iter().any(|line| line.contains(
             "capability-check [skipped_policy] perf_summary_json: target/fret-diag/campaigns/ui-gallery/layout.perf.summary.v1.json"
         )));
+        assert!(result.first_open_evidence_lines.iter().any(|line| line.contains(
+            "capability-check [skipped_policy] triage_artifact: target/fret-diag/campaigns/ui-gallery/run-a/triage.json"
+        )));
+        assert_eq!(
+            result.share_artifacts,
+            vec!["target/fret-diag/campaigns/ui-gallery/share/capability-check.ai.zip".to_string()]
+        );
         assert!(result.followup_command_lines.iter().any(|line| line.contains(
             "diag stats: cargo run -p fretboard-dev -- diag stats target/fret-diag/campaigns/ui-gallery/run-a --json"
         )));
@@ -3137,6 +3177,8 @@ mod tests {
         assert!(result.human_summary.contains("capability sources:"));
         assert!(result.human_summary.contains("capability checks:"));
         assert!(result.human_summary.contains("perf evidence:"));
+        assert!(result.human_summary.contains("first-open evidence:"));
+        assert!(result.human_summary.contains("share artifacts:"));
         assert!(result.human_summary.contains("follow-up commands:"));
         assert!(
             result

@@ -96,6 +96,7 @@ Key anchor:
 
 For each selected item, the canonical compact-pack item fields are:
 
+- `bundle_artifact`
 - `bundle_dir`
 - `triage_artifact`
 - `screenshots_manifest`
@@ -128,6 +129,7 @@ When present, the zip should contain:
 
 Each failing item may contribute:
 
+- `items/<nn>-<safe-item-id>.bundle.schema2.json` or `items/<nn>-<safe-item-id>.bundle.json`
 - `items/<nn>-<safe-item-id>.ai.zip`
 - `items/<nn>-<safe-item-id>.triage.json`
 - `items/<nn>-<safe-item-id>.screenshots.manifest.json`

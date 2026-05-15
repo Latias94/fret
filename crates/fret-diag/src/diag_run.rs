@@ -1745,6 +1745,50 @@ mod tests {
     }
 
     #[test]
+    fn prepare_cmd_run_setup_plans_bundle_artifact_for_post_run_checks_without_pack() {
+        let workspace_root = make_temp_dir("prepare-setup-post-run-checks");
+        let script_path = workspace_root.join("script.json");
+        std::fs::write(&script_path, b"{}" as &[u8]).expect("write script");
+        let mut checks = RunChecks::default();
+        checks.check_idle_no_paint_min = Some(2);
+
+        let prepared = prepare_cmd_run_setup(RunCommandSetupRequest {
+            rest: &[
+                "--bundle-doctor=check".to_string(),
+                script_path.to_string_lossy().to_string(),
+            ],
+            workspace_root: &workspace_root,
+            checks,
+            pack_after_run: false,
+            pack_out: None,
+            pack_include_root_artifacts: false,
+            pack_include_triage: false,
+            pack_include_screenshots: false,
+            ensure_ai_packet: false,
+            devtools_ws_url: None,
+            devtools_token: None,
+            devtools_session_id: None,
+            launch_requested: true,
+            reuse_launch: false,
+            keep_open: false,
+            trace_chrome: false,
+            launch_write_bundle_json: false,
+        })
+        .expect("prepare setup");
+
+        assert_eq!(prepared.bundle_doctor_mode, BundleDoctorMode::CheckRequired);
+        assert!(prepared.wants_post_run_checks);
+        assert!(prepared.wants_bundle_artifact);
+        assert!(!prepared.wants_pack_zip);
+        assert!(!prepared.wants_post_run_bundle);
+        assert!(!prepared.prefers_external_no_diag_post_run);
+        assert_eq!(
+            prepared.execution_route(),
+            PreparedRunExecutionRoute::Filesystem
+        );
+    }
+
+    #[test]
     fn prepare_cmd_run_setup_applies_hello_world_compare_policy_and_external_preference() {
         let workspace_root = make_temp_dir("prepare-setup-hello-world-compare");
         let script_path = workspace_root.join("hello-world-compare-idle-present-gate.json");

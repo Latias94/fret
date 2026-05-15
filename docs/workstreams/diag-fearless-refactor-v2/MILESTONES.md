@@ -76,6 +76,10 @@ Progress update:
   - argument normalization and script-source resolution,
   - check-derived defaults and pack/bundle intent derivation,
   - transport-mode validation before exclusive branch dispatch.
+- The `diag_run` post-run doctor/check seam now has an explicit covered gate in the seam matrix:
+  - command setup now has a named regression test for bundle-artifact planning when post-run checks
+    are requested without pack output,
+  - the existing bundle-missing helper coverage remains the paired execution guard.
 - `diag_run` is now effectively parked: the remaining body is mostly resolved-path setup plus
   exclusive branch dispatch, so the next higher-ROI seam has shifted back to `diag_campaign`
   summary/finalize execution and report shaping rather than a speculative sixth `cmd_run` slice.
@@ -144,6 +148,15 @@ Progress update:
 - `diag_campaign` has now landed another share-manifest seam around combined-zip field mutation:
   - `apply_campaign_share_manifest_combined_zip` now routes through dedicated field-building and share-section apply helpers,
   - helper-level regression coverage now locks combined-zip field projection plus section-local mutation without going through the full finalize path.
+- `regression_summary_drilldown` has now landed a non-CLI consumer evidence projection:
+  - shared first-open/share evidence projection now flows through `regression_summary_drilldown`,
+    `apps/fret-devtools`, and `apps/fret-devtools-mcp`,
+  - DevTools GUI and MCP no longer need local parsing for `triage_artifact`, `script_result`,
+    `share_artifact`, or `packed_report` paths.
+- `diag_campaign` share handoff now carries failing evidence bundle artifacts:
+  - `share.manifest.json` item rows now expose canonical `bundle_artifact` paths,
+  - `share/combined-failures.zip` now includes each existing failing item bundle artifact alongside
+    the bounded AI zip, triage, and screenshot manifest entries.
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.
