@@ -122,8 +122,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             let frame_ts_us = frame_start_us.min(frame_end_us_hint.saturating_sub(frame_dur_us));
 
             events.push(chrome_x(
-                perf_keys::TOTAL_TIME_US.trace_event,
-                perf_keys::TOTAL_TIME_US.trace_category,
+                perf_keys::TOTAL_TIME_US.trace_event_name(),
+                perf_keys::TOTAL_TIME_US.trace_category_name(),
                 pid,
                 tid,
                 frame_ts_us,
@@ -151,8 +151,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 tid,
                 cursor,
                 &mut remaining,
-                perf_keys::DISPATCH_TIME_US.trace_event,
-                perf_keys::DISPATCH_TIME_US.trace_category,
+                perf_keys::DISPATCH_TIME_US.trace_event_name(),
+                perf_keys::DISPATCH_TIME_US.trace_category_name(),
                 dispatch_time_us,
             );
             cursor = push_phase(
@@ -161,8 +161,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 tid,
                 cursor,
                 &mut remaining,
-                perf_keys::HIT_TEST_TIME_US.trace_event,
-                perf_keys::HIT_TEST_TIME_US.trace_category,
+                perf_keys::HIT_TEST_TIME_US.trace_event_name(),
+                perf_keys::HIT_TEST_TIME_US.trace_category_name(),
                 hit_test_time_us,
             );
 
@@ -174,8 +174,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 tid,
                 cursor,
                 &mut remaining,
-                perf_keys::LAYOUT_TIME_US.trace_event,
-                perf_keys::LAYOUT_TIME_US.trace_category,
+                perf_keys::LAYOUT_TIME_US.trace_event_name(),
+                perf_keys::LAYOUT_TIME_US.trace_category_name(),
                 layout_time_us,
             );
             if layout_dur_us > 0 {
@@ -185,34 +185,36 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                     tid,
                     layout_ts,
                     layout_dur_us,
-                    perf_keys::LAYOUT_TIME_US.trace_category,
+                    perf_keys::LAYOUT_TIME_US.trace_category_name(),
                     &[
                         (
-                            perf_keys::LAYOUT_COLLECT_ROOTS_TIME_US.trace_event,
+                            perf_keys::LAYOUT_COLLECT_ROOTS_TIME_US.trace_event_name(),
                             layout_collect_roots_time_us,
                         ),
                         (
-                            perf_keys::LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US.trace_event,
+                            perf_keys::LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US
+                                .trace_event_name(),
                             layout_invalidate_scroll_handle_bindings_time_us,
                         ),
                         (
-                            perf_keys::LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US.trace_event,
+                            perf_keys::LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US
+                                .trace_event_name(),
                             layout_expand_view_cache_invalidations_time_us,
                         ),
                         (
-                            perf_keys::LAYOUT_REQUEST_BUILD_ROOTS_TIME_US.trace_event,
+                            perf_keys::LAYOUT_REQUEST_BUILD_ROOTS_TIME_US.trace_event_name(),
                             layout_request_build_roots_time_us,
                         ),
                         (
-                            perf_keys::LAYOUT_ENGINE_SOLVE_TIME_US.trace_event,
+                            perf_keys::LAYOUT_ENGINE_SOLVE_TIME_US.trace_event_name(),
                             layout_engine_solve_time_us,
                         ),
                         (
-                            perf_keys::LAYOUT_ROOTS_TIME_US.trace_event,
+                            perf_keys::LAYOUT_ROOTS_TIME_US.trace_event_name(),
                             layout_roots_time_us,
                         ),
                         (
-                            perf_keys::LAYOUT_VIEW_CACHE_TIME_US.trace_event,
+                            perf_keys::LAYOUT_VIEW_CACHE_TIME_US.trace_event_name(),
                             layout_view_cache_time_us,
                         ),
                     ],
@@ -221,8 +223,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             if layout_obs_record_time_us > 0 && layout_time_us > 0 {
                 let dur = layout_obs_record_time_us.min(layout_dur_us);
                 events.push(chrome_x(
-                    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US.trace_event,
-                    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US.trace_category,
+                    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US.trace_event_name(),
+                    perf_keys::LAYOUT_OBSERVATION_RECORD_TIME_US.trace_category_name(),
                     pid,
                     tid,
                     layout_ts,
@@ -240,8 +242,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 tid,
                 cursor,
                 &mut remaining,
-                perf_keys::PREPAINT_TIME_US.trace_event,
-                perf_keys::PREPAINT_TIME_US.trace_category,
+                perf_keys::PREPAINT_TIME_US.trace_event_name(),
+                perf_keys::PREPAINT_TIME_US.trace_category_name(),
                 prepaint_time_us,
             );
 
@@ -253,8 +255,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 tid,
                 cursor,
                 &mut remaining,
-                perf_keys::PAINT_TIME_US.trace_event,
-                perf_keys::PAINT_TIME_US.trace_category,
+                perf_keys::PAINT_TIME_US.trace_event_name(),
+                perf_keys::PAINT_TIME_US.trace_category_name(),
                 paint_time_us,
             );
             if paint_dur_us > 0 {
@@ -264,38 +266,38 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                     tid,
                     paint_ts,
                     paint_dur_us,
-                    perf_keys::PAINT_TIME_US.trace_category,
+                    perf_keys::PAINT_TIME_US.trace_category_name(),
                     &[
                         (
-                            perf_keys::PAINT_RECORD_VISUAL_BOUNDS_TIME_US.trace_event,
+                            perf_keys::PAINT_RECORD_VISUAL_BOUNDS_TIME_US.trace_event_name(),
                             paint_record_visual_bounds_time_us,
                         ),
                         (
-                            perf_keys::PAINT_CACHE_KEY_TIME_US.trace_event,
+                            perf_keys::PAINT_CACHE_KEY_TIME_US.trace_event_name(),
                             paint_cache_key_time_us,
                         ),
                         (
-                            perf_keys::PAINT_CACHE_HIT_CHECK_TIME_US.trace_event,
+                            perf_keys::PAINT_CACHE_HIT_CHECK_TIME_US.trace_event_name(),
                             paint_cache_hit_check_time_us,
                         ),
                         (
-                            perf_keys::PAINT_CACHE_REPLAY_TIME_US.trace_event,
+                            perf_keys::PAINT_CACHE_REPLAY_TIME_US.trace_event_name(),
                             paint_cache_replay_time_us,
                         ),
                         (
-                            perf_keys::PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US.trace_event,
+                            perf_keys::PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US.trace_event_name(),
                             paint_cache_bounds_translate_time_us,
                         ),
                         (
-                            perf_keys::PAINT_WIDGET_TIME_US.trace_event,
+                            perf_keys::PAINT_WIDGET_TIME_US.trace_event_name(),
                             paint_widget_time_us,
                         ),
                         (
-                            perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_event,
+                            perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_event_name(),
                             paint_text_prepare_time_us,
                         ),
                         (
-                            perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_event,
+                            perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_event_name(),
                             paint_obs_record_time_us,
                         ),
                     ],
@@ -304,8 +306,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             if paint_obs_record_time_us > 0 && paint_time_us > 0 {
                 let dur = paint_obs_record_time_us.min(paint_dur_us);
                 events.push(chrome_x(
-                    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_event,
-                    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_category,
+                    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_event_name(),
+                    perf_keys::PAINT_OBSERVATION_RECORD_TIME_US.trace_category_name(),
                     pid,
                     tid,
                     paint_ts,
@@ -319,8 +321,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             if paint_text_prepare_time_us > 0 && paint_time_us > 0 {
                 let dur = paint_text_prepare_time_us.min(paint_dur_us);
                 events.push(chrome_x(
-                    perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_event,
-                    perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_category,
+                    perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_event_name(),
+                    perf_keys::PAINT_TEXT_PREPARE_TIME_US.trace_category_name(),
                     pid,
                     tid,
                     paint_ts,

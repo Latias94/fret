@@ -11,10 +11,12 @@
 
 - [ ] Define a perf key registry (name/unit/kind/scope/aggregate).
   - [x] Seed the registry for trace-exported frame keys in `crates/fret-diag/src/perf_keys.rs`.
+  - [x] Expose the registered stats/gate subset from `diag stats --json` via `registered_perf_keys`.
   - [ ] Expand the registry to all bundle/stats/gate fields before treating it as the single source of truth.
 - [ ] Add contract tests that ensure:
   - [x] trace-exported keys are unique and include core timeline keys
   - [x] trace-exported key units are consistent (e.g. `*_time_us` is microseconds, `*_cycles` is cycles)
+  - [x] registered stats/gate subset keys stay additive and unit-consistent
   - [ ] full registry keys are additive only (no accidental rename)
   - [ ] full registry units are consistent
 - [ ] Add a generated field inventory doc (or update `diag-perf-attribution-v1-field-inventory.md` from the registry).

@@ -1110,6 +1110,18 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("additive_only")
         );
+        let registered_keys = json
+            .get("registered_perf_keys")
+            .and_then(|v| v.as_array())
+            .expect("registered perf keys");
+        assert!(registered_keys.iter().any(|key| {
+            key.get("key").and_then(|v| v.as_str()) == Some("renderer_encode_scene_us")
+                && key.get("unit").and_then(|v| v.as_str()) == Some("us")
+        }));
+        assert!(registered_keys.iter().any(|key| {
+            key.get("key").and_then(|v| v.as_str()) == Some("pointer_move.max_dispatch_time_us")
+                && key.get("scope").and_then(|v| v.as_str()) == Some("pointer_move")
+        }));
         assert!(json.get("avg").is_some());
         assert!(json.get("budget_pct").is_some());
     }

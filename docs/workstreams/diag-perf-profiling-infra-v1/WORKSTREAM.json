@@ -42,8 +42,8 @@
       "command": "python tools/check_workstream_catalog.py"
     },
     {
-      "name": "trace-perf-key-registry-tests",
-      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique trace_exported_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events --no-fail-fast"
+      "name": "perf-key-registry-tests",
+      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
     },
     {
       "name": "perf-threshold-evidence-tests",
@@ -69,6 +69,7 @@
     "docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini/bundle.schema2.json",
     "crates/fret-diag/src/perf_keys.rs",
     "crates/fret-diag/src/stats.rs",
+    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",

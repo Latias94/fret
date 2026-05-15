@@ -146,6 +146,8 @@ Example bundle:
 - Run:
   `cargo run -p fretboard-dev -- diag stats docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini --sort time --top 5 --json`
 - Interpretation:
+  - `registered_perf_keys` describes the currently registered frame/stats/gate perf key subset with unit, kind,
+    scope, and suggested aggregate metadata.
   - Frame 2 is layout-heavy (`layout_engine_solve_time_us` dominates the phase sum).
   - Frame 3 is paint/text-heavy (`paint_text_prepare_time_us` dominates paint).
   - Frame 4 has a long frame-clock delta but low phase and CPU values, so it is a schedule-noise-shaped
@@ -164,8 +166,10 @@ Example bundle:
 ## Evidence anchors (current code)
 
 - Bundle exporter and per-frame stats snapshot: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- Initial perf key registry for trace-exported frame keys: `crates/fret-diag/src/perf_keys.rs`
-- Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`
+- Perf key registry for trace-exported keys and the current stats/gate subset:
+  `crates/fret-diag/src/perf_keys.rs`
+- Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`,
+  `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
 - Chrome trace exporter: `crates/fret-diag/src/trace.rs`
 - Layout phase timing sources: `crates/fret-ui/src/tree/layout.rs`
 
@@ -176,10 +180,10 @@ Example bundle:
 - Result: frame, high-level UI phases, layout, prepaint, paint, dispatch, hit-test, and renderer trace names have
   concrete source anchors. Chrome trace artifacts are currently bundle-derived synthetic phase timelines; real
   `tracing` / Tracy span export remains a separate gap.
-- Initial registry status: `crates/fret-diag/src/perf_keys.rs` now owns the trace-exported frame key names, units,
-  scope, suggested aggregates, and Chrome trace event/category mapping. `trace.chrome.json` exposes these keys via
-  `registered_perf_keys` so trace artifacts can explain their managed perf fields. Full bundle/stats/gate key coverage
-  is still open.
+- Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
+  so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
+  subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.
+  Full bundle/stats/gate key coverage is still open before this can be treated as the sole source of truth.
 - Perf threshold failure rows now attach per-metric evidence via `evidence_bundle`, `evidence_run`,
   `evidence_artifacts`, and optional `evidence_trace_chrome` when a sibling `trace.chrome.json` exists.
 - `diag stats --diff` now reports p95 deltas alongside max deltas and exposes a `typical_tail` highlight set in

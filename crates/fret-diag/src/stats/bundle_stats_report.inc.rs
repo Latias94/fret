@@ -3257,6 +3257,10 @@ impl BundleStatsReport {
             crate::perf_schema::schema_policy_json(),
         );
         root.insert(
+            "registered_perf_keys".to_string(),
+            crate::perf_keys::registered_frame_stats_keys_json(),
+        );
+        root.insert(
             "source_bundle_schema_version".to_string(),
             Value::from(self.source_bundle_schema_version),
         );
