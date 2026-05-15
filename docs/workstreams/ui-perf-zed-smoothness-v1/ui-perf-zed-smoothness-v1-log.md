@@ -13551,3 +13551,35 @@ Decision:
 - Renderer payload contract closure is now machine-checked by the baseline matrix audit instead
   of relying only on matrix prose. Time-only baselines remain valid unless they opt into a
   payload-aware threshold surface.
+
+## 2026-05-15 21:34:00 +08:00 (code-editor set_text idempotency)
+
+Question:
+- Can render-time `CodeEditorHandle::set_text(...)` re-application avoid replacing the document
+  when the app-owned text is unchanged?
+
+Change:
+- Added `TextBuffer::text_eq(&str)` to compare buffer contents against app-owned text without
+  materializing the rope.
+- Made `CodeEditorHandle::set_text(...)` return early when the incoming text is identical, while
+  keeping changed text and explicit `replace_buffer(...)` as document replacement paths.
+- Added regression tests covering same-text no-op behavior, changed-text replacement behavior, and
+  the buffer-level comparison helper.
+
+Validation:
+- `cargo fmt -p fret-code-editor-buffer -p fret-code-editor`
+- `cargo nextest run -p fret-code-editor-buffer text_eq_compares_without_materializing_text --no-fail-fast`
+- `cargo nextest run -p fret-code-editor set_text_is_idempotent_for_same_text set_text_replaces_buffer_when_text_changes replace_buffer_resets_state --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-code-editor-buffer/src/lib.rs`,
+  `ecosystem/fret-code-editor/src/editor/handle/model.rs`, and
+  `ecosystem/fret-code-editor/src/editor/tests/state_lifecycle.rs`.
+- Focused nextest result: buffer comparison test passed; the three code-editor lifecycle tests
+  passed.
+
+Decision:
+- Treat `set_text(...)` as the declarative render-safe path for publishing app-owned text and
+  `replace_buffer(...)` as the explicit imperative document replacement path. This closes another
+  high-risk P0.6 setter-idempotency footgun without changing the public handle surface.

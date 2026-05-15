@@ -80,10 +80,12 @@ handle.set_selection(Selection {
 });
 ```
 
-Use `with_buffer(...)` for read-only buffer inspection and `replace_buffer(...)` or `set_text(...)`
-for explicit document replacement. Workspace/document persistence remains app-owned. If the app
-needs global document undo/redo, keep that history above the editor and bridge through explicit
-transactions; do not treat the editor-local history as a framework-global undo stack.
+Use `with_buffer(...)` for read-only buffer inspection. Use `set_text(...)` when render code is
+re-publishing app-owned text; it is a no-op when the contents are unchanged. Use
+`replace_buffer(...)` when the app intentionally installs a new `TextBuffer` / `DocId`. Workspace
+/ document persistence remains app-owned. If the app needs global document undo/redo, keep that
+history above the editor and bridge through explicit transactions; do not treat the editor-local
+history as a framework-global undo stack.
 
 Focused command routing accepts `text.undo` / `text.redo` for editor-local history. The existing
 `edit.undo` / `edit.redo` ids remain accepted by the editor route during the transition, but app

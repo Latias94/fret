@@ -115,8 +115,12 @@ impl CodeEditorHandle {
     }
 
     pub fn set_text(&self, text: impl Into<String>) {
+        let text = text.into();
+        if self.state.borrow().buffer.text_eq(text.as_str()) {
+            return;
+        }
         let doc = DocId::new();
-        let buffer = TextBuffer::new(doc, text.into()).unwrap_or_else(|_| {
+        let buffer = TextBuffer::new(doc, text).unwrap_or_else(|_| {
             TextBuffer::new(doc, String::new()).expect("empty buffer must be valid")
         });
         self.replace_buffer(buffer);

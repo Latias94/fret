@@ -315,11 +315,11 @@ Conventions:
   - Evidence: editor resize drag fix (commit `1778ba563`) was a ~2.6× win by making `set_language` idempotent.
   - [x] Audit + fix code-editor `CodeEditorHandle::set_*` methods that can be called from render and clear caches/epochs.
     - Gate: `ui-code-editor-resize-probes` must remain PASS.
-    - Evidence: `set_language` idempotent (commit `1778ba563`), `set_line_folds`/`set_line_inlays` idempotent (commit `007006b28`).
+    - Evidence: `set_language` idempotent (commit `1778ba563`), `set_line_folds`/`set_line_inlays` idempotent (commit `007006b28`), and `set_text` idempotent for identical content (perf log entry `2026-05-15 21:34:00`).
   - [ ] Audit other “handle-style” surfaces used from render (markdown editor, docking, viewport tooling) for the same pattern.
     - Deliverable: list of audited setters + commit references in the perf log.
   - [x] Add at least one regression test per high-risk surface.
-    - Evidence: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`) + fold/inlay idempotency tests (commit `007006b28`).
+    - Evidence: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`) + fold/inlay idempotency tests (commit `007006b28`) + `set_text_is_idempotent_for_same_text`.
   - [x] Add a short guidelines note describing the contract and common pitfalls.
     - Deliverable: `docs/workstreams/standalone/ui-perf-setter-idempotency-v1.md` (commit `420845878`).
   - [x] Extend the audit to retained text-input surfaces where render-time state re-application is likely.

@@ -244,6 +244,24 @@ impl TextBuffer {
         self.rope.to_string()
     }
 
+    /// Compare the full buffer contents with a string without materializing the rope.
+    pub fn text_eq(&self, text: &str) -> bool {
+        if self.len_bytes() != text.len() {
+            return false;
+        }
+
+        let mut offset = 0usize;
+        for chunk in self.rope.chunks() {
+            let end = offset.saturating_add(chunk.len());
+            if text.get(offset..end) != Some(chunk) {
+                return false;
+            }
+            offset = end;
+        }
+
+        offset == text.len()
+    }
+
     pub fn is_char_boundary(&self, idx: usize) -> bool {
         if idx == 0 || idx == self.len_bytes() {
             return true;
@@ -662,6 +680,16 @@ mod tests {
         assert_eq!(buf.line_text(2), Some(String::new()));
         assert_eq!(buf.line_byte_range_including_newline(1), Some(2..4));
         assert_eq!(buf.line_byte_range(1), Some(2..3));
+    }
+
+    #[test]
+    fn text_eq_compares_without_materializing_text() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "a\nb\n😃".to_string()).unwrap();
+
+        assert!(buf.text_eq("a\nb\n😃"));
+        assert!(!buf.text_eq("a\nb\n"));
+        assert!(!buf.text_eq("a\nb\nx"));
     }
 
     #[test]
