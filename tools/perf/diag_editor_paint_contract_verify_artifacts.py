@@ -63,6 +63,54 @@ def _cmd_contains(cmd: object, needle: str) -> bool:
     return isinstance(cmd, list) and any(item == needle for item in cmd)
 
 
+def _cmd_has_flag_value(cmd: object, flag: str, expected: str) -> bool:
+    return _cmd_value(cmd, flag) == expected
+
+
+def _cmd_env_values(cmd: object) -> set[str]:
+    if not isinstance(cmd, list):
+        return set()
+    envs: set[str] = set()
+    for i, item in enumerate(cmd):
+        if item == "--env" and i + 1 < len(cmd) and isinstance(cmd[i + 1], str):
+            envs.add(str(cmd[i + 1]))
+    return envs
+
+
+def _check_direct_diag_perf_cmd(
+    *,
+    cmd: object,
+    errors: list[str],
+    prefix: str,
+    expect_with_paint_perf: bool,
+) -> None:
+    if not _cmd_contains(cmd, "--reuse-launch"):
+        errors.append(f"{prefix}: direct diag perf command must use --reuse-launch")
+    if not _cmd_has_flag_value(cmd, "--prewarm-script", validate.PREWARM_SCRIPT):
+        errors.append(f"{prefix}: direct diag perf command must use the standard prewarm script")
+    if not _cmd_has_flag_value(cmd, "--prelude-script", validate.PRELUDE_SCRIPT):
+        errors.append(f"{prefix}: direct diag perf command must use the standard prelude script")
+    if not _cmd_contains(cmd, "--json"):
+        errors.append(f"{prefix}: direct diag perf command must emit --json")
+    if not _cmd_contains(cmd, "--launch"):
+        errors.append(f"{prefix}: direct diag perf command must launch the target binary")
+    if not _cmd_contains(cmd, validate._default_launch_bin()):
+        errors.append(f"{prefix}: direct diag perf command must launch {validate._default_launch_bin()}")
+
+    envs = _cmd_env_values(cmd)
+    required_envs = set(validate.COMMON_ENVS)
+    missing_envs = sorted(required_envs - envs)
+    if missing_envs:
+        errors.append(f"{prefix}: direct diag perf command missing required envs {missing_envs}")
+
+    paint_perf_env = "FRET_CODE_EDITOR_DIAG_PAINT_PERF=1"
+    has_paint_perf = paint_perf_env in envs
+    if expect_with_paint_perf and not has_paint_perf:
+        errors.append(f"{prefix}: attribution direct diag perf command must set {paint_perf_env}")
+    if not expect_with_paint_perf and has_paint_perf:
+        errors.append(f"{prefix}: baseline-validation direct diag perf command must not set {paint_perf_env}")
+
+
 def _check_threshold_file(path: Path, errors: list[str], prefix: str) -> None:
     if not path.is_file():
         errors.append(f"{prefix}: missing threshold report: {path}")
@@ -181,14 +229,32 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
             errors.append(f"{prefix}: --attempts must be {expected['attempts']}")
 
         if name == "resize-jitter":
+            if not _cmd_has_flag_value(cmd, "--suite", validate.RESIZE_SUITE):
+                errors.append(f"{prefix}: resize suite must be {validate.RESIZE_SUITE}")
             if not _cmd_contains(cmd, validate.RESIZE_BASELINE):
                 errors.append(f"{prefix}: resize baseline missing from command")
+            if not _cmd_has_flag_value(cmd, "--fretboard-bin", validate._default_fretboard_bin()):
+                errors.append(f"{prefix}: resize command must use release fretboard-dev.exe")
+            if not _cmd_has_flag_value(cmd, "--launch-bin", validate._default_launch_bin()):
+                errors.append(f"{prefix}: resize command must use release fret-ui-gallery.exe")
         elif name == "typical-autoscroll":
             if not _cmd_contains(cmd, validate.TYPICAL_BASELINE):
                 errors.append(f"{prefix}: typical baseline missing from command")
+            _check_direct_diag_perf_cmd(
+                cmd=cmd,
+                errors=errors,
+                prefix=prefix,
+                expect_with_paint_perf=expect_with_paint_perf,
+            )
         elif name == "complex-wheel":
             if not _cmd_contains(cmd, validate.COMPLEX_WHEEL_BASELINE):
                 errors.append(f"{prefix}: complex wheel baseline missing from command")
+            _check_direct_diag_perf_cmd(
+                cmd=cmd,
+                errors=errors,
+                prefix=prefix,
+                expect_with_paint_perf=expect_with_paint_perf,
+            )
 
         artifacts = step.get("artifacts")
         if not isinstance(artifacts, dict):

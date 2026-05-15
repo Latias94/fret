@@ -105,6 +105,37 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 06:57:24 +0800 (local head `d23f59af47`)
+
+Change:
+- Hardened the post-sync editor paint artifact verifier so the closeout path now checks the target command shape, not
+  only the summary outcome:
+  - `resize-jitter` must use the Windows code-editor resize suite, checked-in Windows baseline, release
+    `fretboard-dev.exe`, release `fret-ui-gallery.exe`, repeat=7, warmup=5, and attempts=3.
+  - direct `diag perf` probes must use `--reuse-launch`, the standard font prewarm and reset-diagnostics prelude,
+    `--json`, the release gallery binary, and the required editor contract envs including
+    `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0`.
+  - baseline-validation summaries must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, while attribution summaries
+    must include it and still provide `code_editor_paint_perf` coverage.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 -m unittest discover -s tools/perf -p 'test_*.py'
+python3 tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag verifier-command-shape-check
+git diff --check
+```
+
+Results:
+- Focused editor paint contract tests PASS (21 tests).
+- Full Python perf-tool tests PASS (31 tests).
+- Validation dry-run PASS and emits the expected Windows RTX4090 command shape.
+- Diff whitespace check PASS.
+
+Notes:
+- This is still local closeout tooling evidence only. P1.5 remains open until the Windows RTX4090 validation and
+  attribution artifact directories are copied back and pass non-dry-run closeout.
+
 ## 2026-05-16 06:50:50 (local head `c63ecb47c0`)
 
 Change:

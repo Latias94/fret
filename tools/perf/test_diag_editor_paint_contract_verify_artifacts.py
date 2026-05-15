@@ -36,45 +36,20 @@ def _step(
         stats_doc["code_editor_paint_perf"] = {"p95": {"us_total": 14}}
     _write_json(stats_path, stats_doc)
 
-    if name == "resize-jitter":
-        cmd = [
-            "python",
-            "tools/perf/diag_resize_probes_gate.py",
-            "--baseline",
-            validate.RESIZE_BASELINE,
-            "--attempts",
-            "3",
-            "--repeat",
-            str(repeat),
-            "--warmup-frames",
-            "5",
-        ]
-    elif name == "typical-autoscroll":
-        cmd = [
-            "target/release/fretboard-dev.exe",
-            "diag",
-            "perf",
-            validate.TYPICAL_SCRIPT,
-            "--repeat",
-            str(repeat),
-            "--warmup-frames",
-            "5",
-            "--perf-baseline",
-            validate.TYPICAL_BASELINE,
-        ]
-    else:
-        cmd = [
-            "target/release/fretboard-dev.exe",
-            "diag",
-            "perf",
-            validate.COMPLEX_WHEEL_SCRIPT,
-            "--repeat",
-            str(repeat),
-            "--warmup-frames",
-            "5",
-            "--perf-baseline",
-            validate.COMPLEX_WHEEL_BASELINE,
-        ]
+    plan = validate.build_plan(
+        python_bin="python",
+        fretboard_bin=validate._default_fretboard_bin(),
+        launch_bin=validate._default_launch_bin(),
+        out_dir=str(root),
+        resize_attempts=3,
+        resize_repeat=repeat if name == "resize-jitter" else 7,
+        typical_repeat=repeat if name == "typical-autoscroll" else 15,
+        complex_repeat=repeat if name == "complex-wheel" else 7,
+        warmup_frames=5,
+        skip_preflight=True,
+        with_paint_perf=with_paint_perf,
+    )
+    cmd = {str(step["name"]): list(step["cmd"]) for step in plan}[name]
 
     summary_check_path = Path("Z:/target-machine/stale/check.perf_thresholds.json") if stale_summary_paths else check_path
     summary_stats_path = Path("Z:/target-machine/stale/stats.stdout.json") if stale_summary_paths else stats_path
@@ -142,6 +117,14 @@ def _write_summary(
     )
 
 
+def _remove_cmd_item(summary_path: Path, step_name: str, value: str) -> None:
+    doc = json.loads(summary_path.read_text(encoding="utf-8"))
+    for step in doc["steps"]:
+        if step["name"] == step_name:
+            step["cmd"] = [item for item in step["cmd"] if item != value]
+    summary_path.write_text(json.dumps(doc), encoding="utf-8")
+
+
 class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
     def test_validation_summary_passes_without_code_editor_paint_perf(self) -> None:
         with TemporaryDirectory() as td:
@@ -193,6 +176,31 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
 
         self.assertFalse(report["ok"])
         self.assertTrue(any("--repeat must be 7" in error for error in report["errors"]))
+
+    def test_direct_diag_perf_steps_require_overlay_disabled_env(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=False)
+            _remove_cmd_item(
+                root / "summary.json",
+                "typical-autoscroll",
+                "FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0",
+            )
+
+            report = verify.verify_summary_dir(root, expect_with_paint_perf=False)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("missing required envs" in error for error in report["errors"]))
+
+    def test_validation_pass_rejects_paint_perf_env_on_direct_diag_perf_steps(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=True)
+
+            report = verify.verify_summary_dir(root, expect_with_paint_perf=False)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("must not set FRET_CODE_EDITOR_DIAG_PAINT_PERF=1" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":
