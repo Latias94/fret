@@ -3306,6 +3306,7 @@ struct CampaignShareManifestItems {
 #[derive(Debug, Clone)]
 struct CampaignCombinedFailureEntry {
     item_id: String,
+    bundle_artifact: Option<PathBuf>,
     share_zip: Option<PathBuf>,
     triage_path: Option<PathBuf>,
     screenshots_manifest: Option<PathBuf>,
@@ -3313,9 +3314,13 @@ struct CampaignCombinedFailureEntry {
 
 impl CampaignCombinedFailureEntry {
     fn has_exported_artifact(&self) -> bool {
-        self.share_zip.is_some()
-            || self.triage_path.is_some()
-            || self.screenshots_manifest.is_some()
+        self.bundle_artifact.as_deref().is_some_and(Path::is_file)
+            || self.share_zip.as_deref().is_some_and(Path::is_file)
+            || self.triage_path.as_deref().is_some_and(Path::is_file)
+            || self
+                .screenshots_manifest
+                .as_deref()
+                .is_some_and(Path::is_file)
     }
 }
 
@@ -3337,6 +3342,7 @@ struct CampaignShareManifestItem {
 #[derive(Debug, Clone)]
 struct CampaignShareManifestItemArtifacts {
     counters: CampaignShareManifestCounters,
+    bundle_artifact: Option<PathBuf>,
     bundle_dir: Option<PathBuf>,
     triage_path: Option<PathBuf>,
     triage_error: Option<String>,
@@ -3414,6 +3420,20 @@ fn build_campaign_combined_failure_item_zip_entries(
     let mut zip_entries = Vec::new();
     for (index, entry) in entries.iter().enumerate() {
         let safe_item_id = zip_safe_component(&entry.item_id);
+        if let Some(bundle_artifact) = entry.bundle_artifact.as_deref()
+            && bundle_artifact.is_file()
+        {
+            let bundle_name = bundle_artifact
+                .file_name()
+                .and_then(|name| name.to_str())
+                .filter(|name| !name.trim().is_empty())
+                .map(zip_safe_component)
+                .unwrap_or_else(|| "bundle.json".to_string());
+            zip_entries.push(CampaignCombinedZipEntry {
+                src: bundle_artifact.to_path_buf(),
+                dest: format!("items/{:02}-{safe_item_id}.{bundle_name}", index + 1),
+            });
+        }
         if let Some(share_zip) = entry.share_zip.as_deref()
             && share_zip.is_file()
         {
@@ -3686,6 +3706,7 @@ fn build_campaign_share_manifest_item(
         run_entry,
         combined_entry: CampaignCombinedFailureEntry {
             item_id: request.item.item_id.clone(),
+            bundle_artifact: artifacts.bundle_artifact.clone(),
             share_zip: artifacts.share_zip.clone(),
             triage_path: artifacts.triage_path.clone(),
             screenshots_manifest: artifacts.screenshots_manifest.clone(),
@@ -3697,6 +3718,8 @@ fn collect_campaign_share_manifest_item_artifacts(
     request: &CampaignShareManifestItemRequest<'_>,
 ) -> CampaignShareManifestItemArtifacts {
     let bundle_dir = resolve_campaign_share_manifest_item_bundle_dir(request.item);
+    let bundle_artifact =
+        resolve_campaign_share_manifest_item_bundle_artifact(request.item, bundle_dir.as_deref());
     let mut counters = CampaignShareManifestCounters::default();
     if bundle_dir.is_none() {
         counters.bundles_missing = 1;
@@ -3713,6 +3736,7 @@ fn collect_campaign_share_manifest_item_artifacts(
 
     CampaignShareManifestItemArtifacts {
         counters,
+        bundle_artifact,
         bundle_dir,
         triage_path: supporting_artifacts.triage_path,
         triage_error: supporting_artifacts.triage_error,
@@ -3729,6 +3753,18 @@ fn resolve_campaign_share_manifest_item_bundle_dir(
         .as_ref()
         .and_then(|evidence| evidence.bundle_dir.as_deref())
         .map(PathBuf::from)
+}
+
+fn resolve_campaign_share_manifest_item_bundle_artifact(
+    item: &RegressionItemSummaryV1,
+    bundle_dir: Option<&Path>,
+) -> Option<PathBuf> {
+    item.evidence
+        .as_ref()
+        .and_then(|evidence| evidence.bundle_artifact.as_deref())
+        .filter(|path| !path.trim().is_empty())
+        .map(PathBuf::from)
+        .or_else(|| bundle_dir.and_then(resolve_bundle_artifact_path_no_materialize))
 }
 
 fn collect_campaign_share_manifest_item_supporting_artifacts(
@@ -3814,6 +3850,7 @@ fn build_campaign_share_manifest_item_run_entry(
         "status": item.status,
         "reason_code": item.reason_code,
         "source_reason_code": item.source_reason_code,
+        "bundle_artifact": artifacts.bundle_artifact.as_ref().map(|path| path.display().to_string()),
         "bundle_dir": artifacts.bundle_dir.as_ref().map(|path| path.display().to_string()),
         "triage_artifact": artifacts.triage_path.as_ref().map(|path| path.display().to_string()),
         "triage_json": artifacts.triage_path.as_ref().map(|path| path.display().to_string()),
@@ -5113,9 +5150,11 @@ mod tests {
     #[test]
     fn build_campaign_combined_failure_item_zip_entries_orders_existing_item_artifacts() {
         let root = temp_test_root("combined-item-entries");
+        let bundle_artifact = root.join("bundle.schema2.json");
         let share_zip = root.join("accordion.ai.zip");
         let triage_path = root.join("accordion.triage.json");
         let screenshots_manifest = root.join("accordion.screenshots.manifest.json");
+        std::fs::write(&bundle_artifact, b"{}" as &[u8]).expect("write bundle artifact");
         std::fs::write(&share_zip, b"zip" as &[u8]).expect("write share zip");
         std::fs::write(&triage_path, b"{}" as &[u8]).expect("write triage");
         std::fs::write(&screenshots_manifest, b"{}" as &[u8]).expect("write screenshots manifest");
@@ -5123,12 +5162,14 @@ mod tests {
         let entries = build_campaign_combined_failure_item_zip_entries(&[
             CampaignCombinedFailureEntry {
                 item_id: "accordion/basic".to_string(),
+                bundle_artifact: Some(bundle_artifact.clone()),
                 share_zip: Some(share_zip.clone()),
                 triage_path: Some(triage_path.clone()),
                 screenshots_manifest: Some(screenshots_manifest.clone()),
             },
             CampaignCombinedFailureEntry {
                 item_id: "missing".to_string(),
+                bundle_artifact: Some(root.join("missing.bundle.schema2.json")),
                 share_zip: Some(root.join("missing.ai.zip")),
                 triage_path: None,
                 screenshots_manifest: None,
@@ -5138,6 +5179,10 @@ mod tests {
         assert_eq!(
             entries,
             vec![
+                CampaignCombinedZipEntry {
+                    src: bundle_artifact,
+                    dest: "items/01-accordion-basic.bundle.schema2.json".to_string(),
+                },
                 CampaignCombinedZipEntry {
                     src: share_zip,
                     dest: "items/01-accordion-basic.ai.zip".to_string(),
@@ -5235,6 +5280,36 @@ mod tests {
     }
 
     #[test]
+    fn resolve_campaign_share_manifest_item_bundle_artifact_prefers_item_path_then_bundle_dir() {
+        let root = temp_test_root("share-item-bundle-artifact");
+        let bundle_dir = root.join("bundle-a");
+        let bundle_artifact = bundle_dir.join("bundle.schema2.json");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(&bundle_artifact, b"{}" as &[u8]).expect("write bundle artifact");
+        let mut item = sample_regression_item_summary(
+            "accordion-basic",
+            RegressionStatusV1::FailedDeterministic,
+            Some(&bundle_dir),
+        );
+
+        let resolved =
+            resolve_campaign_share_manifest_item_bundle_artifact(&item, Some(&bundle_dir));
+
+        assert_eq!(resolved, Some(bundle_artifact));
+
+        let explicit = root.join("explicit").join("bundle.json");
+        item.evidence
+            .as_mut()
+            .expect("sample evidence")
+            .bundle_artifact = Some(explicit.display().to_string());
+
+        let resolved =
+            resolve_campaign_share_manifest_item_bundle_artifact(&item, Some(&bundle_dir));
+
+        assert_eq!(resolved, Some(explicit));
+    }
+
+    #[test]
     fn collect_campaign_share_manifest_item_supporting_artifacts_reuses_existing_triage_and_screenshots()
      {
         let root = temp_test_root("share-item-supporting-artifacts");
@@ -5309,6 +5384,7 @@ mod tests {
                 triage_generated: 1,
                 triage_failed: 0,
             },
+            bundle_artifact: Some(PathBuf::from("bundle-a/bundle.schema2.json")),
             bundle_dir: Some(PathBuf::from("bundle-a")),
             triage_path: Some(PathBuf::from("bundle-a.triage.json")),
             triage_error: Some("triage warning".to_string()),
@@ -5319,6 +5395,12 @@ mod tests {
 
         let run_entry = build_campaign_share_manifest_item_run_entry(&item, &artifacts);
 
+        assert_eq!(
+            run_entry
+                .get("bundle_artifact")
+                .and_then(|value| value.as_str()),
+            Some("bundle-a/bundle.schema2.json")
+        );
         assert_eq!(
             run_entry.get("bundle_dir").and_then(|value| value.as_str()),
             Some("bundle-a")
@@ -5575,6 +5657,7 @@ mod tests {
             &mut payload,
             &[CampaignCombinedFailureEntry {
                 item_id: "accordion-basic".to_string(),
+                bundle_artifact: None,
                 share_zip: Some(share_zip),
                 triage_path: None,
                 screenshots_manifest: None,
@@ -8843,6 +8926,7 @@ mod tests {
         let bundle_dir = root.join("bundle-a");
         let packet_dir = bundle_dir.join("ai.packet");
         std::fs::create_dir_all(&packet_dir).unwrap();
+        std::fs::write(bundle_dir.join("bundle.schema2.json"), b"{}" as &[u8]).unwrap();
         std::fs::write(packet_dir.join("summary.json"), b"{}" as &[u8]).unwrap();
         let screenshots_dir = root.join("screenshots").join("bundle-a");
         std::fs::create_dir_all(&screenshots_dir).unwrap();
@@ -8933,6 +9017,11 @@ mod tests {
             .and_then(|v| v.as_str())
             .expect("share artifact path");
         assert!(PathBuf::from(share_zip).is_file());
+        let bundle_artifact = manifest
+            .pointer("/items/0/bundle_artifact")
+            .and_then(|v| v.as_str())
+            .expect("bundle artifact path");
+        assert!(PathBuf::from(bundle_artifact).is_file());
         let legacy_share_zip = manifest
             .pointer("/items/0/share_zip")
             .and_then(|v| v.as_str())

@@ -149,6 +149,10 @@ Progress update:
     `apps/fret-devtools`, and `apps/fret-devtools-mcp`,
   - DevTools GUI and MCP no longer need local parsing for `triage_artifact`, `script_result`,
     `share_artifact`, or `packed_report` paths.
+- `diag_campaign` share handoff now carries failing evidence bundle artifacts:
+  - `share.manifest.json` item rows now expose canonical `bundle_artifact` paths,
+  - `share/combined-failures.zip` now includes each existing failing item bundle artifact alongside
+    the bounded AI zip, triage, and screenshot manifest entries.
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.

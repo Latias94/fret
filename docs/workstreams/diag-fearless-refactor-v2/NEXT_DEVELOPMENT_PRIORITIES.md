@@ -93,6 +93,9 @@ Recent landing in this priority bucket:
 - `regression_summary_drilldown` now projects first-open evidence paths and compact share
   artifacts, and DevTools GUI plus MCP dashboard consumers expose that shared projection instead of
   reparsing `regression.summary.json` evidence fields locally.
+- Campaign share handoff now carries failing item `bundle_artifact` paths in
+  `share.manifest.json` and includes present bundle artifacts in `share/combined-failures.zip`,
+  keeping raw bundle evidence additive without changing the Layer A `bundle_json` chunk contract.
 
 Definition of done:
 
