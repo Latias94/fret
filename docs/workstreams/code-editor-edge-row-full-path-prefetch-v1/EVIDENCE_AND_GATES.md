@@ -109,3 +109,65 @@ Comparison against previous row-content snapshot worst bundle:
 Interpretation: M1 improves the code-editor-owned paint path and increases replay-plan coverage,
 but it is not a full edge-row payload prebuild. The next slice should make candidate planning
 cheaper and more edge-aware before adding broader prebuild mechanics.
+
+## M2 Diagnostics
+
+Additional validation for the diagnostics slice:
+
+```bash
+cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot --no-fail-fast
+```
+
+Result on 2026-05-15: passed.
+
+Perf repro:
+
+```bash
+target/release/fretboard-dev diag perf ui-code-editor-resize-probes \
+  --repeat 3 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --sort time \
+  --top 15 \
+  --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json \
+  --dir target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515 \
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
+```
+
+Worst bundle:
+
+- `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515/1778832028679/bundle.schema2.json`
+
+Aggregate p95 from the M2 diagnostics perf run:
+
+- total: `1336us`
+- paint: `753us`
+- prepaint: `241us`
+- layout: `342us`
+
+Worst-bundle `code_editor_paint_perf.p95` after M2 diagnostics:
+
+- `us_total`: `313us`
+- `us_row_content_resolve`: `210us`
+- `us_row_scene_prepaint_plan`: `90us`
+- `rows_scene_prepaint_candidates`: `289`
+- `rows_scene_prepaint_planned`: `289`
+- `rows_scene_prepaint_skip_key_mismatch`: `72`
+- `rows_scene_prepaint_skip_no_cache`: `1`
+- `rows_scene_fast_miss_no_entry`: `1`
+- `rows_scene_full_miss_no_entry`: `1`
+- `rows_scene_stored_at_visible_end`: `1`
+- `rows_scene_stored_at_visible_start`: `0`
+
+Interpretation: the remaining paint full miss is a no-cache row at the newly exposed visible end.
+Key-mismatch skips are also meaningful because they make prepaint planning do work that paint can
+often recover from later. Continue with code-editor-local planner-cost reduction and visible-end row
+seeding; do not start a broad `fret-ui` architecture refactor from this evidence.

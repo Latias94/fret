@@ -31,26 +31,32 @@ Evidence:
 
 ## M2 - Edge Miss Taxonomy And Candidate Cost
 
-Status: Pending
+Status: Diagnostics shipped on 2026-05-15; candidate-cost reduction remains open
 
 Exit criteria:
 
-- Worst frames can identify why any newly exposed row still misses the replay plan.
-- Candidate planning is biased toward edge rows or otherwise capped so `us_row_scene_prepaint_plan`
+- [x] Worst frames can identify why any newly exposed row still misses the replay plan.
+- [ ] Candidate planning is biased toward edge rows or otherwise capped so `us_row_scene_prepaint_plan`
   does not erase row-content savings.
-- The same `ui-code-editor-resize-probes` perf surface shows whether code-editor p95 moves in the
+- [x] The same `ui-code-editor-resize-probes` perf surface shows whether code-editor p95 moves in the
   right direction.
+
+Evidence:
+
+- `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M2_DIAGNOSTICS_2026-05-15.md`
+- `target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515/1778832028679/bundle.schema2.json`
 
 ## M3 - True Edge Payload Prebuild
 
-Status: Conditional
+Status: Recommended next code slice, but keep it code-editor-local first
 
-Start only if M2 shows that edge rows still need a prebuilt payload and the missing work cannot be
-covered by cheaper replay-plan candidate selection.
+M2 shows that the remaining full miss is a no-cache row at `visible_end`. Start with the smallest
+code-editor-owned edge seeding path. If it requires new `CanvasPainter`, `Scene`, or framework-level
+prepaint contracts, split that contract work into a separate lane before implementing it.
 
 Exit criteria:
 
-- The implementation prebuilds only the smallest needed edge-row payload.
+- The implementation seeds or prebuilds only the smallest needed visible-edge row payload.
 - Any new `CanvasPainter`, `Scene`, or framework-level prepaint contract is handled in a separate
   ADR/workstream if needed.
 - Code-editor paint p95 improves without a larger prepaint/layout regression.
