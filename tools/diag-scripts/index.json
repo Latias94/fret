@@ -6771,6 +6771,34 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-retained-active-descendant-action-state",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command",
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "a11y",
+        "action_state",
+        "active_descendant",
+        "command",
+        "regression_pack",
+        "retained",
+        "semantics",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Proves a retained/windowed active-descendant row clears while detached.",
+        "Proves the reattached active row exposes updated disabled/invoke action state."
+      ]
+    },
+    {
       "id": "ui-gallery-command-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
       "required_capabilities": [

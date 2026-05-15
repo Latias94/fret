@@ -43,6 +43,86 @@
         "upstream_ref": "ARIA combobox active descendant follows the filtered highlighted option",
         "note": "Typing a prefix should move the active descendant to the matching option that the listbox exposes."
       }
+    },
+    {
+      "id": "retained-windowed-active-descendant-reattaches-with-disabled-action-state",
+      "scenario": {
+        "kind": "retained_virtual_list_active_descendant_action_state",
+        "len": 48,
+        "viewport_width": 260.0,
+        "viewport_height": 64.0,
+        "row_height": 20.0,
+        "overscan": 0,
+        "keep_alive": 16,
+        "warmup_frames": 3,
+        "frames_per_step": 2,
+        "active_index": 2,
+        "away_offset_y": 180.0
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "retained_active.initial.active_item_matches",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "retained_active.away.active_item_none",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "retained_active.away.row_exists",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "active_item_is",
+              "container": { "kind": "test_id", "id": "retained-active-input" },
+              "item": { "kind": "test_id", "id": "retained-active-row-2" }
+            }
+          },
+          {
+            "kind": "semantics_flag_is",
+            "target": { "kind": "test_id", "id": "retained-active-row-2" },
+            "flag": "disabled",
+            "expected": true
+          },
+          {
+            "kind": "semantics_action_is",
+            "target": { "kind": "test_id", "id": "retained-active-row-2" },
+            "action": "invoke",
+            "expected": false
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "retained_active.final.active_item_matches",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "retained_active.final.disabled",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "retained_active.final.invoke",
+            "comparison": "eq",
+            "value": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "ARIA active-descendant listbox state must track the currently mounted option, while disabled options must suppress invocation.",
+        "note": "A retained virtual-list row scrolls out of the active render window, then reattaches after its disabled/invoke state changes. The input must not point at the detached row while it is off-window, and must resolve to the reattached disabled row without stale invoke state. Keep-alive reuse telemetry is covered separately by retained_virtual_list_reconcile_v1.json."
+      }
     }
   ]
 }

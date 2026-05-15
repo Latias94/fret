@@ -360,8 +360,20 @@ date: 2026-05-12
     would index it.
 - [x] Add a command/listbox-style disabled-but-focusable runtime gate so the next proof exercises
   active-descendant/list semantics instead of menu roving focus.
-- [ ] Add retained/windowed active-descendant action-state mutation coverage where a disabled or
+- [x] Add retained/windowed active-descendant action-state mutation coverage where a disabled or
   invokable row detaches, reattaches, or changes availability under filtering/virtualization.
+  - Result: `combobox_active_descendant_interaction_v1.json` now includes a retained virtual-list
+    case where row 2 is the active descendant, scrolls out of the rendered semantics window, then
+    reattaches after its disabled/invoke state changes. The synthetic harness found a real
+    `fret-ui` mechanism defect: the row disappeared from the snapshot while the input still
+    resolved `active_descendant` to its old node. `UiTree::refresh_semantics_snapshot` now filters
+    `active_descendant`, `labelled_by`, `described_by`, and `controls` relations to nodes present in
+    the current snapshot. `ui-gallery-command-retained-active-descendant-action-state.json` gates
+    the same flow through the Command page, and the rerun bundles lint cleanly after adding an
+    accessible label to the demo input.
+- [ ] Add relation-edge normalization coverage for `labelled_by`, `described_by`, and `controls`
+  targets that detach, reattach, or cross overlay/root boundaries, so the active-descendant fix is
+  not the only snapshot-local relation proof.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

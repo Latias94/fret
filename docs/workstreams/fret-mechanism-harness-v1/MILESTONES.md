@@ -906,3 +906,27 @@ Status: complete
 - Remaining follow-up: add retained/windowed active-descendant action-state mutation coverage where
   a disabled or invokable row detaches, reattaches, or changes availability under filtering or
   virtualization.
+
+## M58: Retained Active-Descendant Relation Normalization Gate
+
+Status: complete
+
+- Added a fixture-driven retained virtual-list active-descendant action-state case to
+  `combobox_active_descendant_interaction_v1.json`.
+- The first synthetic run found a real `fret-ui` mechanism defect: when the active retained row
+  scrolled out of the current semantics traversal, the input still published an `active_descendant`
+  edge to the detached row's old node.
+- Fixed `UiTree::refresh_semantics_snapshot` so relation edges are snapshot-local before reverse
+  relation normalization: detached `active_descendant` edges are cleared, and `labelled_by`,
+  `described_by`, and `controls` drop targets absent from the current snapshot.
+- Added the Command page runtime demo and promoted
+  `ui-gallery-command-retained-active-descendant-action-state.json` into the Command family,
+  shadcn conformance, and runtime-evidence suites.
+- The runtime gate found one harness-quality issue after suite promotion: the demo combobox input
+  had no accessible label. The demo and synthetic fixture now stamp `a11y_label`, and rerun bundles
+  lint with zero warnings.
+- Focused synthetic test, UI Gallery build, single runtime gate, lint checks, registry check, and
+  workstream catalog check passed. The full `ui-gallery-command` suite passed with 18 scripts.
+- Remaining follow-up: add synthetic/runtime relation-edge mutation coverage for `labelled_by`,
+  `described_by`, and `controls`, especially when the target detaches or crosses overlay/root
+  boundaries.

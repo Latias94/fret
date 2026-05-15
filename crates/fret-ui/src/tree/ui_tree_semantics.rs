@@ -424,6 +424,20 @@ impl<H: UiHost> UiTree<H> {
         for (idx, node) in nodes.iter().enumerate() {
             index_by_id.insert(node.id, idx);
         }
+        for node in nodes.iter_mut() {
+            if node
+                .active_descendant
+                .is_some_and(|target| !index_by_id.contains_key(&target))
+            {
+                node.active_descendant = None;
+            }
+            node.labelled_by
+                .retain(|target| index_by_id.contains_key(target));
+            node.described_by
+                .retain(|target| index_by_id.contains_key(target));
+            node.controls
+                .retain(|target| index_by_id.contains_key(target));
+        }
         for idx in 0..nodes.len() {
             let controlled = nodes[idx].id;
             let controlled_role = nodes[idx].role;

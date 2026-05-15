@@ -1555,6 +1555,39 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     passed; 17 scripts, zero lint errors, zero reason codes.
   - suite evidence:
     `target/fret-diag-command-suite-disabled-focusable-v7/sessions/1778825524424-52724/suite.summary.json`
+- Retained/windowed active-descendant action-state mutation gate:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`
+  - synthetic mechanism gate:
+    `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture`
+  - synthetic result:
+    passed, 1 test.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json --dir target/fret-diag-command-retained-active-descendant-action-state-v3 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778832051741`.
+  - runtime evidence:
+    `target/fret-diag-command-retained-active-descendant-action-state-v3/sessions/1778832029259-77072/script.result.json`
+  - detached bundle:
+    `target/fret-diag-command-retained-active-descendant-action-state-v3/sessions/1778832029259-77072/1778832142314-ui-gallery-command-retained-active-descendant-detached`
+  - final action-state bundle:
+    `target/fret-diag-command-retained-active-descendant-action-state-v3/sessions/1778832029259-77072/1778832143417-ui-gallery-command-retained-active-descendant-action-state`
+  - bundle lint:
+    both captured bundles passed `target/dev-fast/fretboard-dev.exe diag lint ... --json` with
+    `error_issues=0` and `warning_issues=0`.
+  - full Command suite:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-retained-active-descendant-v2 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed; 18 scripts, zero reason codes.
+  - suite evidence:
+    `target/fret-diag-command-suite-retained-active-descendant-v2/sessions/1778831271030-63304/suite.summary.json`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
