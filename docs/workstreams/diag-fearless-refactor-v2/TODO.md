@@ -381,7 +381,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] move canonical manifest authoring from top-level `suites`/`scripts` to ordered `items`,
   - [x] persist one batch artifact root for filtered or multi-id runs that resolve to multiple campaigns,
   - [ ] decide when legacy top-level `suites`/`scripts` compatibility can be removed,
-  - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.
+  - [x] emit a persisted `dashboard.txt` projection for campaign/batch roots; HTML remains
+    intentionally deferred until there is a concrete consumer.
 - [ ] Make failed automation runs leave predictable evidence by default:
   - [x] summary/index artifacts,
   - [x] first automatic failing evidence export for campaign and batch roots,
@@ -391,6 +392,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     `regression.summary.json` instead of parsing those paths independently,
   - [x] failing evidence bundles now surface as canonical `bundle_artifact` paths in
     `share.manifest.json` and are included in `share/combined-failures.zip` when present,
+  - [x] aggregate `dashboard.txt` now persists the shared first-open dashboard projection and is
+    included in `share/combined-failures.zip` when present,
   - [x] copy/share-friendly paths.
 - [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
 - [x] Extend those selectors into `diag campaign run` so filtered campaign batches can execute without enumerating ids by hand.

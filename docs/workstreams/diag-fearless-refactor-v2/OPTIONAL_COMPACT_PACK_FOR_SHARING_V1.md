@@ -124,6 +124,7 @@ When present, the zip should contain:
 - `_root/share.manifest.json`
 - `_root/regression.summary.json`
 - `_root/regression.index.json` when present
+- `_root/dashboard.txt` when present
 
 ### Item entries
 

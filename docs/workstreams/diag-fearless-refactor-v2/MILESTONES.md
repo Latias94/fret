@@ -157,6 +157,12 @@ Progress update:
   - `share.manifest.json` item rows now expose canonical `bundle_artifact` paths,
   - `share/combined-failures.zip` now includes each existing failing item bundle artifact alongside
     the bounded AI zip, triage, and screenshot manifest entries.
+- `diag_campaign` roots now persist a first-open dashboard text projection:
+  - campaign and batch result aggregates expose additive `dashboard_text_path` /
+    `dashboard_text_error` fields,
+  - `dashboard.txt` reuses the shared `diag_dashboard` human projection instead of creating another
+    summary wording path,
+  - `share/combined-failures.zip` includes `_root/dashboard.txt` when present.
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.
