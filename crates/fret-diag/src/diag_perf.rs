@@ -241,6 +241,10 @@ fn perf_row_to_regression_item(
         .and_then(|v| v.as_str())
         .or_else(|| row.get("bundle").and_then(|v| v.as_str()))
         .map(|v| v.to_string());
+    let bundle_dir = bundle_artifact
+        .as_deref()
+        .and_then(|path| crate::resolve_bundle_root_dir(Path::new(path)).ok())
+        .map(|path| path.display().to_string());
     let (status, reason_code, source_reason_code) =
         perf_row_status_and_reason(row, threshold_failures, hint_failures);
     let threshold_failure_count = threshold_failures.len();
@@ -277,7 +281,7 @@ fn perf_row_to_regression_item(
         attempts: None,
         evidence: Some(RegressionEvidenceV1 {
             bundle_artifact,
-            bundle_dir: None,
+            bundle_dir,
             triage_json: None,
             script_result_json: None,
             ai_packet_dir: None,
@@ -3435,6 +3439,10 @@ mod tests {
         assert_eq!(
             evidence.bundle_artifact.as_deref(),
             Some("F:/repo/.fret/single-run/bundle.schema2.json")
+        );
+        assert_eq!(
+            evidence.bundle_dir.as_deref(),
+            Some("F:/repo/.fret/single-run")
         );
         assert_eq!(
             evidence

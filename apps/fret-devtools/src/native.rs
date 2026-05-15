@@ -8103,7 +8103,7 @@ mod tests {
                     "status": "failed_deterministic",
                     "lane": "perf",
                     "evidence": {
-                        "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "bundle_artifact": "target/fret-diag/perf-docking/run-a/bundle.schema2.json",
                         "triage_artifact": "target/fret-diag/perf-docking/run-a/triage.json",
                         "script_result": "target/fret-diag/perf-docking/run-a/script.result.json",
                         "screenshots_manifest": "target/fret-diag/perf-docking/run-a/screenshots.manifest.json",
@@ -8124,7 +8124,8 @@ mod tests {
                                 {
                                     "metric": "top_total_time_us",
                                     "observed": 24000,
-                                    "threshold": 20000
+                                    "threshold": 20000,
+                                    "evidence_bundle": "target/fret-diag/perf-docking/run-threshold/bundle.schema2.json"
                                 }
                             ]
                         }
@@ -8137,7 +8138,10 @@ mod tests {
         let data = load_regression_summary_drilldown(&path).expect("load drilldown");
         assert_eq!(
             data.bundle_dirs,
-            vec!["target/fret-diag/perf-docking/run-a".to_string()]
+            vec![
+                "target/fret-diag/perf-docking/run-threshold".to_string(),
+                "target/fret-diag/perf-docking/run-a".to_string(),
+            ]
         );
         let text = data.perf_evidence_lines.join("\n");
         assert!(text.contains(

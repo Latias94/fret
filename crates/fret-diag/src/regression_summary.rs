@@ -95,12 +95,11 @@ pub fn regression_summary_drilldown(summary: &RegressionSummaryV1) -> Regression
             push_unique_line(&mut drilldown.capability_sources, source);
         }
         if let Some(evidence) = item.evidence.as_ref() {
-            if let Some(dir) = evidence
-                .bundle_dir
-                .as_deref()
-                .filter(|dir| !dir.trim().is_empty())
-            {
-                push_unique_line(&mut drilldown.bundle_dirs, dir.to_string());
+            for dir in regression_item_perf_threshold_bundle_dirs(evidence) {
+                push_unique_line(&mut drilldown.bundle_dirs, dir);
+            }
+            if let Some(dir) = regression_evidence_bundle_dir(evidence) {
+                push_unique_line(&mut drilldown.bundle_dirs, dir);
             }
             if let Some(path) = evidence
                 .extra
@@ -239,6 +238,53 @@ fn push_unique_line(lines: &mut Vec<String>, line: String) {
     if !lines.iter().any(|existing| existing == &line) {
         lines.push(line);
     }
+}
+
+fn bundle_root_dir_string_from_artifact(path: &str) -> Option<String> {
+    let path = path.trim();
+    if path.is_empty() {
+        return None;
+    }
+    crate::resolve_bundle_root_dir(std::path::Path::new(path))
+        .ok()
+        .map(|path| path.display().to_string())
+}
+
+fn regression_evidence_bundle_dir(evidence: &RegressionEvidenceV1) -> Option<String> {
+    evidence
+        .bundle_dir
+        .as_deref()
+        .filter(|dir| !dir.trim().is_empty())
+        .map(ToString::to_string)
+        .or_else(|| {
+            evidence
+                .bundle_artifact
+                .as_deref()
+                .and_then(bundle_root_dir_string_from_artifact)
+        })
+}
+
+fn regression_item_perf_threshold_bundle_dirs(evidence: &RegressionEvidenceV1) -> Vec<String> {
+    let Some(failures) = evidence
+        .extra
+        .as_ref()
+        .and_then(|extra| extra.get("threshold_failures"))
+        .and_then(|value| value.as_array())
+    else {
+        return Vec::new();
+    };
+
+    let mut dirs = Vec::new();
+    for failure in failures {
+        if let Some(dir) = failure
+            .get("evidence_bundle")
+            .and_then(|value| value.as_str())
+            .and_then(bundle_root_dir_string_from_artifact)
+        {
+            push_unique_line(&mut dirs, dir);
+        }
+    }
+    dirs
 }
 
 fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
@@ -823,7 +869,6 @@ mod tests {
                     "status": "failed_deterministic",
                     "lane": "perf",
                     "evidence": {
-                        "bundle_dir": "target/fret-diag/perf-docking/run-a",
                         "bundle_artifact": "target/fret-diag/perf-docking/run-a/bundle.schema2.json",
                         "triage_artifact": "target/fret-diag/perf-docking/run-a/triage.json",
                         "script_result": "target/fret-diag/perf-docking/run-a/script.result.json",
@@ -854,7 +899,8 @@ mod tests {
                                 {
                                     "metric": "top_total_time_us",
                                     "observed": 24000,
-                                    "threshold": 20000
+                                    "threshold": 20000,
+                                    "evidence_bundle": "target/fret-diag/perf-docking/run-threshold/bundle.schema2.json"
                                 }
                             ]
                         }
@@ -867,7 +913,10 @@ mod tests {
         let drilldown = regression_summary_drilldown(&summary);
         assert_eq!(
             drilldown.bundle_dirs,
-            vec!["target/fret-diag/perf-docking/run-a".to_string()]
+            vec![
+                "target/fret-diag/perf-docking/run-threshold".to_string(),
+                "target/fret-diag/perf-docking/run-a".to_string(),
+            ]
         );
         assert_eq!(
             drilldown.capability_sources,

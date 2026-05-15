@@ -60,6 +60,16 @@
   - `trace.chrome.json` now emits `kind=perf_trace_chrome`, `schema_version`, `schema_policy`,
     `source_bundle_schema_version`, `trace_source=bundle_synthetic_phases`, and `real_spans_included=false`.
   - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
+- [x] Keep perf regression summary rows actionable for attribution follow-ups.
+  - New `diag perf` regression items now write `bundle_dir` derived from their `bundle_artifact`.
+  - The shared regression-summary drill-down also recovers bundle roots from older
+    `bundle_artifact` fields and threshold failure `evidence_bundle` paths, so DevTools can offer
+    concrete stats/triage/hotspots follow-up commands for perf-threshold failures without a fresh
+    run.
+  - Gate:
+    `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
+  - GUI bridge gate:
+    `cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast`
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
   - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
 - [x] Ensure additive-only changes unless a migration plan is documented.

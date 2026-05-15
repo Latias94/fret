@@ -790,11 +790,17 @@ DevTools GUI perf-threshold preset closure (2026-05-16):
   pointer-move dispatch/hit-test/global-change thresholds, renderer encode/upload/record/finish,
   text/SVG prepare, instance bytes, and encode-scene text ops, then delegates command generation
   and `diag_args` validation back to the shared `fret-diag` projection.
+- Perf regression summaries now keep attribution follow-ups runnable: new `diag perf` rows include
+  `bundle_dir`, and the shared regression-summary drill-down recovers bundle roots from older
+  `bundle_artifact` / threshold failure `evidence_bundle` paths for DevTools stats/triage/hotspots
+  follow-up commands.
 - Focused source gates:
 
 ```text
 cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast
+cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+cargo nextest run -p fret-devtools load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
 python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
 ```
 
