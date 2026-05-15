@@ -1373,6 +1373,7 @@ impl<TData> DataTableToolbar<TData> {
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.filter_placeholder.clone())
                         .test_id("data-table-toolbar-global-filter-input")
+                        .chrome_motion(false)
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });
@@ -1383,6 +1384,7 @@ impl<TData> DataTableToolbar<TData> {
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.column_filter_placeholder.clone())
                         .test_id("data-table-toolbar-column-filter-input")
+                        .chrome_motion(false)
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });

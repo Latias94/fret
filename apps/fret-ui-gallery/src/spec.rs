@@ -237,12 +237,18 @@ mod tests {
 
     #[cfg(feature = "gallery-dev")]
     #[test]
-    fn code_editor_pages_use_boundary_layout_containment_hint() {
+    fn editor_grade_pages_use_boundary_layout_containment_hint() {
         assert!(page_content_cache_contain_layout_when_bounds_known(
             PAGE_CODE_EDITOR_MVP
         ));
         assert!(page_content_cache_contain_layout_when_bounds_known(
             PAGE_CODE_EDITOR_TORTURE
+        ));
+        assert!(page_content_cache_contain_layout_when_bounds_known(
+            PAGE_DATA_TABLE_TORTURE
+        ));
+        assert!(page_content_cache_contain_layout_when_bounds_known(
+            PAGE_TABLE_RETAINED_TORTURE
         ));
     }
 }
@@ -871,7 +877,10 @@ pub(crate) fn page_content_cache_policy(id: &str) -> PageContentCachePolicy {
 pub(crate) fn page_content_cache_contain_layout_when_bounds_known(id: &str) -> bool {
     match id {
         #[cfg(feature = "gallery-dev")]
-        PAGE_CODE_EDITOR_MVP | PAGE_CODE_EDITOR_TORTURE => true,
+        PAGE_CODE_EDITOR_MVP
+        | PAGE_CODE_EDITOR_TORTURE
+        | PAGE_DATA_TABLE_TORTURE
+        | PAGE_TABLE_RETAINED_TORTURE => true,
         _ => false,
     }
 }

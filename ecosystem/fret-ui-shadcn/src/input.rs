@@ -106,6 +106,7 @@ pub struct Input {
     style: InputStyle,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    chrome_motion_enabled: bool,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
 }
@@ -133,6 +134,7 @@ impl Input {
             style: InputStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            chrome_motion_enabled: true,
             border_width_override: BorderWidthOverride::default(),
             corner_radii_override: None,
         }
@@ -275,6 +277,15 @@ impl Input {
         self
     }
 
+    /// Enables or disables decorative border/ring motion for this input.
+    ///
+    /// The default remains enabled for shadcn parity. High-frequency controls such as data-table
+    /// filter fields can disable it while keeping focus chrome semantically immediate.
+    pub fn chrome_motion(mut self, enabled: bool) -> Self {
+        self.chrome_motion_enabled = enabled;
+        self
+    }
+
     /// Overrides per-edge border widths (in px) for this input's chrome.
     ///
     /// This is primarily used by shadcn recipe compositions that merge borders (e.g. input groups).
@@ -329,6 +340,7 @@ impl Input {
             self.style,
             self.chrome,
             self.layout,
+            self.chrome_motion_enabled,
             self.labelled_by_element,
             self.control_id,
             self.border_width_override,
@@ -364,6 +376,7 @@ fn input_element<H: UiHost>(
     style_override: InputStyle,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
+    chrome_motion_enabled: bool,
     labelled_by_element: Option<GlobalElementId>,
     control_id: Option<ControlId>,
     border_width_override: BorderWidthOverride,
@@ -547,25 +560,35 @@ fn input_element<H: UiHost>(
         } else {
             props.chrome.border_color
         };
-        let border_motion = drive_tween_color_for_element(
-            cx,
-            id,
-            "input.chrome.border",
-            target_border,
-            duration,
-            tailwind_transition_ease_in_out,
-        );
-        props.chrome.border_color = border_motion.value;
-        props.chrome.border_color_focused = border_motion.value;
+        let ring_alpha = if chrome_motion_enabled {
+            let border_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "input.chrome.border",
+                target_border,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            props.chrome.border_color = border_motion.value;
+            props.chrome.border_color_focused = border_motion.value;
 
-        let ring_alpha = drive_tween_f32_for_element(
-            cx,
-            id,
-            "input.chrome.ring.alpha",
-            if focused { 1.0 } else { 0.0 },
-            duration,
-            tailwind_transition_ease_in_out,
-        );
+            drive_tween_f32_for_element(
+                cx,
+                id,
+                "input.chrome.ring.alpha",
+                if focused { 1.0 } else { 0.0 },
+                duration,
+                tailwind_transition_ease_in_out,
+            )
+        } else {
+            props.chrome.border_color = target_border;
+            props.chrome.border_color_focused = target_border;
+            fret_ui_kit::declarative::motion::DrivenMotionF32 {
+                value: if focused { 1.0 } else { 0.0 },
+                velocity: 0.0,
+                animating: false,
+            }
+        };
         if let Some(mut ring) = props.chrome.focus_ring.take() {
             ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
             if let Some(offset_color) = ring.offset_color {
@@ -1042,6 +1065,164 @@ mod tests {
         assert!(
             !always_paint_final,
             "expected focus ring to stop requesting painting after settling"
+        );
+    }
+
+    #[test]
+    fn input_chrome_motion_can_be_disabled_for_high_frequency_controls() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        use fret_core::{Rect, Size};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+        let model = app.models_mut().insert(String::new());
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<String>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "input-chrome-motion-disabled",
+                move |cx| {
+                    let el = Input::new(model)
+                        .a11y_label("Input")
+                        .chrome_motion(false)
+                        .into_element(cx);
+
+                    let ElementKind::Container(_) = &el.kind else {
+                        panic!("expected Input to wrap in a Container");
+                    };
+                    let child = el.children.first().expect("input inner child");
+                    let ElementKind::TextInput(props) = &child.kind else {
+                        panic!("expected Input inner to be TextInput");
+                    };
+
+                    let a = props
+                        .chrome
+                        .focus_ring
+                        .map(|ring| ring.color.a)
+                        .unwrap_or(0.0);
+                    ring_alpha_out.set(Some(a));
+                    always_paint_out.set(Some(props.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        let has_raf = |effects: &[Effect]| {
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window))
+        };
+
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        assert!(
+            !has_raf(&app.flush_effects()),
+            "disabled chrome motion should not request animation frames on the initial render"
+        );
+        assert!(
+            ring_alpha_out.get().expect("a0").abs() <= 1e-6,
+            "unfocused disabled motion input should hide the ring"
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable input");
+        ui.set_focus(Some(focusable));
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        assert!(
+            !has_raf(&app.flush_effects()),
+            "disabled chrome motion should snap focus chrome without scheduling animation frames"
+        );
+        let focused_alpha = ring_alpha_out.get().expect("focused alpha");
+        assert!(
+            focused_alpha > 0.0,
+            "focused disabled motion input should show the ring immediately"
+        );
+        assert!(
+            always_paint_out.get().expect("always_paint_focus"),
+            "focused disabled motion input should still paint focus chrome on pointer focus"
+        );
+
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(3));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        assert!(
+            !has_raf(&app.flush_effects()),
+            "disabled chrome motion should snap blur chrome without scheduling animation frames"
+        );
+        assert!(
+            ring_alpha_out.get().expect("blur alpha").abs() <= 1e-6,
+            "blurred disabled motion input should hide the ring immediately"
+        );
+        assert!(
+            !always_paint_out.get().expect("always_paint_blur"),
+            "blurred disabled motion input should not force ring painting"
         );
     }
 
