@@ -50,6 +50,7 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
 DEVTOOLS_MCP_SOURCE = "apps/fret-devtools-mcp/src/native.rs"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
@@ -339,11 +340,13 @@ def _validate_tool_apps_json(payload: dict) -> None:
 def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     name = "devtools gui product workflow source"
     path = repo_root / DEVTOOLS_GUI_SOURCE
+    gate_profile_path = repo_root / DEVTOOLS_GATE_PROFILE_SOURCE
     print(f"[diag-gate-imui-product-chain] {name}", flush=True)
     try:
         source = path.read_text(encoding="utf-8")
+        gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
     except OSError as err:
-        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
+        raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
 
     for marker in (
         'const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain"',
@@ -358,11 +361,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_STALE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
-        'const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
-        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
+        "use fret_diag::devtools_gate_profile_lines;",
         "mod followup;",
         'const CMD_REGRESSION_RUN_FOLLOWUP_STATS: &str =',
         'const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =',
@@ -396,20 +395,12 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "Gate Commands",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
+        "devtools_gate_profile_lines(artifacts_root)",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
-        "gate route: first-class-gates",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
-        "stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}",
-        "pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}",
-        "perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}",
-        "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}",
-        "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}",
-        "check.pixels_changed.json",
-        "check.perf_thresholds.json",
-        "resource.footprint.json",
         "devtools_demo_metrics_debug_lines_surface_canonical_routes",
         "devtools_gate_command_lines_surface_first_class_gates",
         "file_url_from_path_projects_native_artifact_paths",
@@ -468,6 +459,31 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
     ):
         _assert_contains(source, marker, name)
+    for marker in (
+        "pub struct DevtoolsGateProfileV1",
+        'pub const DEVTOOLS_GATE_STALE_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLDS_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
+        'id: "stale-paint-scene"',
+        'id: "pixels-changed"',
+        'id: "perf-thresholds"',
+        'id: "resource-footprint-thresholds"',
+        'id: "resource-footprint-compare"',
+        "gate route: first-class-gates",
+        "stale paint/scene",
+        "pixels changed",
+        "perf thresholds",
+        "resource footprint thresholds",
+        "resource footprint compare",
+        "check.pixels_changed.json",
+        "check.perf_thresholds.json",
+        "check.resource_footprint.json",
+        "resource.footprint.json",
+        "pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String>",
+    ):
+        _assert_contains(gate_profile_source, marker, name)
 
 
 def _validate_devtools_gui_followup_source(repo_root: Path) -> None:

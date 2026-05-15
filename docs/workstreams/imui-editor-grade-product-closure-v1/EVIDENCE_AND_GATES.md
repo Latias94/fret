@@ -1043,3 +1043,33 @@ git diff --check
 Result: passed. The affected nextest gate reported `1059 tests run: 1059 passed`. The largest-file
 report remains a drift watchlist only for this slice; no new large-file expansion was introduced
 outside the touched `fret-ui` mechanism files.
+
+## DevTools gate profile owner split - 2026-05-15 follow-up
+
+Scope: continue DevTools GUI productization without widening `fret-imui` or turning
+`apps/fret-devtools` into a diagnostics-policy owner.
+
+- `crates/fret-diag/src/devtools_gate_profiles.rs` now owns the shared DevTools gate taxonomy for
+  stale paint/scene, pixels-changed, perf thresholds, resource-footprint thresholds, and
+  resource-footprint compare profiles.
+- `apps/fret-devtools/src/native.rs` now renders the first-open `Gate Commands` panel from
+  `fret_diag::devtools_gate_profile_lines(...)`, keeping the GUI as a thin consumer of the shared
+  diagnostics projection.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` source-checks both the GUI consumer and the
+  shared profile owner, so the first-open gate catches drift without requiring GUI-owned command
+  constants.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+```
+
+Result: passed. The `fret-diag` nextest gate reported `2 tests run: 2 passed`; the `fret-devtools`
+nextest gate reported `1 test run: 1 passed`; the DevTools first-open discovery gate completed
+successfully after rebuilding `fretboard-dev` and validating tool-app discovery, GUI source, shared
+gate profile source, and first-open docs. `python tools/diag_gate_imui_product_chain.py --only
+discovery` also passed after validating the broader product-chain source gates, and
+`python tools/report_largest_files.py --top 30 --min-lines 800` remains a drift watchlist only.

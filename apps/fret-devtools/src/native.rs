@@ -8,6 +8,7 @@ use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
+use fret_diag::devtools_gate_profile_lines;
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
     regression_bundle_followup_command_lines, regression_bundle_followup_commands,
@@ -115,17 +116,6 @@ const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
 const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
-const DEVTOOLS_GATE_STALE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json";
-const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json";
-const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json";
-const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>";
-const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
-
 #[derive(Clone)]
 struct DevtoolsConfig {
     transport: DiagTransportKind,
@@ -5884,26 +5874,7 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
 }
 
 fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
-    };
-    vec![
-        "gate route: first-class-gates".to_string(),
-        format!("artifacts root: {artifacts_root}"),
-        format!("stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}"),
-        format!("pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}"),
-        format!("perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}"),
-        format!(
-            "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}"
-        ),
-        format!(
-            "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}"
-        ),
-        "gate evidence files: check.pixels_changed.json, check.perf_thresholds.json, resource.footprint.json".to_string(),
-    ]
+    devtools_gate_profile_lines(artifacts_root)
 }
 
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
@@ -6081,13 +6052,14 @@ mod tests {
             "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json"
         ));
         assert!(text.contains(
-            "resource footprint capture: cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>"
+            "resource footprint thresholds: cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>"
         ));
         assert!(text.contains(
             "resource footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json"
         ));
         assert!(text.contains("check.pixels_changed.json"));
         assert!(text.contains("check.perf_thresholds.json"));
+        assert!(text.contains("check.resource_footprint.json"));
         assert!(text.contains("resource.footprint.json"));
     }
 

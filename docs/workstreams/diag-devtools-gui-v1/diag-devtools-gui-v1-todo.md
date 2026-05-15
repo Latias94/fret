@@ -104,6 +104,8 @@ Conventions:
 - [ ] First-class UI for gates:
   - [x] First-open `Gate Commands` block for existing stale paint/scene, pixels-changed,
         perf-threshold, and resource-footprint diagnostics command templates.
+  - [x] Shared `fret-diag` gate profile projection owns gate ids, command templates, evidence
+        files, and notes; the GUI now renders that projection instead of owning the taxonomy.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
         stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from

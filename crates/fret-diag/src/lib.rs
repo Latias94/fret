@@ -38,6 +38,7 @@ mod commands;
 mod compare;
 mod compat;
 pub mod devtools;
+pub mod devtools_gate_profiles;
 mod diag_campaign;
 mod diag_compare;
 mod diag_dashboard;
@@ -156,6 +157,9 @@ use tooling_failures::{
 };
 use util::{advance_target_run_id, now_unix_ms, read_json_value, touch, write_json_value};
 
+pub use devtools_gate_profiles::{
+    DevtoolsGateProfileV1, devtools_gate_profile_lines, devtools_gate_profiles_v1,
+};
 pub use diag_dashboard::{
     DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
     DashboardSummaryProjection, dashboard_counter_entries, dashboard_failing_summary_entries,

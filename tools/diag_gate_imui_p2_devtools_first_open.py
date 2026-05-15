@@ -21,6 +21,7 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -297,14 +298,21 @@ def _validate_devtools_gui_first_open_source(
     name = "fret-devtools gui first-open source"
     print(f"[diag-gate-imui-p2-devtools] {name}")
     path = cwd / DEVTOOLS_GUI_SOURCE
+    gate_profile_path = cwd / DEVTOOLS_GATE_PROFILE_SOURCE
     if progress is not None:
-        progress.record("step.start", name=name, path=str(path))
+        progress.record(
+            "step.start",
+            name=name,
+            path=str(path),
+            gate_profile_path=str(gate_profile_path),
+        )
     try:
         source = path.read_text(encoding="utf-8")
+        gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
     except OSError as err:
         if progress is not None:
             progress.record("step.fail", name=name, error=str(err))
-        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
+        raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
 
     for marker in (
         f'const DEVTOOLS_FIRST_OPEN_DOC: &str = "{FIRST_OPEN_DOC}"',
@@ -326,11 +334,7 @@ def _validate_devtools_gui_first_open_source(
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =',
-        'const DEVTOOLS_GATE_STALE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
-        'const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
-        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
+        "use fret_diag::devtools_gate_profile_lines;",
         "First-open Evidence Path",
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         "Demo / Metrics / Debug Routes",
@@ -340,23 +344,15 @@ def _validate_devtools_gui_first_open_source(
         "devtools_first_open_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
+        "devtools_gate_profile_lines(artifacts_root)",
         "fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
         "direct loop: diag run -> diag latest -> diag compare",
         "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
-        "gate route: first-class-gates",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
-        "stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}",
-        "pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}",
-        "perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}",
-        "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}",
-        "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}",
-        "check.pixels_changed.json",
-        "check.perf_thresholds.json",
-        "resource.footprint.json",
         "regression_selected_perf_evidence",
         "regression_summary_drilldown(&summary)",
         "regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()))",
@@ -380,8 +376,38 @@ def _validate_devtools_gui_first_open_source(
         "devtools_gate_command_lines_surface_first_class_gates",
     ):
         _assert_text_contains(name, source, marker)
+    for marker in (
+        "pub struct DevtoolsGateProfileV1",
+        'pub const DEVTOOLS_GATE_STALE_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLDS_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
+        'id: "stale-paint-scene"',
+        'id: "pixels-changed"',
+        'id: "perf-thresholds"',
+        'id: "resource-footprint-thresholds"',
+        'id: "resource-footprint-compare"',
+        "gate route: first-class-gates",
+        "stale paint/scene",
+        "pixels changed",
+        "perf thresholds",
+        "resource footprint thresholds",
+        "resource footprint compare",
+        "check.pixels_changed.json",
+        "check.perf_thresholds.json",
+        "check.resource_footprint.json",
+        "resource.footprint.json",
+        "pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String>",
+    ):
+        _assert_text_contains(name, gate_profile_source, marker)
     if progress is not None:
-        progress.record("step.pass", name=name, path=str(path))
+        progress.record(
+            "step.pass",
+            name=name,
+            path=str(path),
+            gate_profile_path=str(gate_profile_path),
+        )
 
 
 def _validate_first_open_docs(
