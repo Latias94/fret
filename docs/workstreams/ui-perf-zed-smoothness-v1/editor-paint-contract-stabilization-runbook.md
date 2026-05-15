@@ -36,6 +36,18 @@ cargo build -p fretboard-dev --release
 cargo build -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
 ```
 
+## Preflight
+
+Run this before a long target-machine validation pass:
+
+```powershell
+python -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json
+python -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json
+python -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json
+python tools/check_diag_scripts_registry.py
+python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
+```
+
 ## Validate Current Contracts First
 
 Resize:
@@ -43,6 +55,7 @@ Resize:
 ```powershell
 python tools/perf/diag_resize_probes_gate.py `
   --suite ui-code-editor-resize-probes `
+  --out-dir target/fret-diag/editor-paint-contract-validate-<date>-resize `
   --attempts 3 `
   --repeat 7 `
   --warmup-frames 5 `
@@ -54,6 +67,7 @@ Typical autoscroll:
 ```powershell
 target/release/fretboard-dev.exe diag perf `
   tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json `
+  --dir target/fret-diag/editor-paint-contract-validate-<date>-typical `
   --repeat 15 `
   --warmup-frames 5 `
   --reuse-launch `
@@ -78,6 +92,7 @@ Complex wheel:
 ```powershell
 target/release/fretboard-dev.exe diag perf `
   tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json `
+  --dir target/fret-diag/editor-paint-contract-validate-<date>-complex-wheel `
   --repeat 7 `
   --warmup-frames 5 `
   --reuse-launch `
