@@ -57,5 +57,8 @@
       and paint-observation record.
       - Evidence: `crates/fret-ui/src/tree/paint/node.rs`
   - [ ] Extend runner/renderer phase spans where needed:
-    - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (frame phase spans)
+    - [x] Align `ecosystem/fret-bootstrap/src/ui_app_driver.rs` driver phases with
+      `fret_perf::measure_span` while preserving frame-hitch log fields:
+      view, overlay, layout, paint, and diagnostics script drive.
+      - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
     - `crates/fret-render-*` (prepare/record/submit/present boundaries)

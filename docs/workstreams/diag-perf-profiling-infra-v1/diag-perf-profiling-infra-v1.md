@@ -196,6 +196,9 @@ Example bundle:
 - `paint_node` hot-path timers now also use `fret_perf::measure_span` for visual-bounds record,
   cache key, cache hit check, cache bounds translate, widget paint, and observation record while
   preserving the existing debug stats buckets.
+- `ui_app_render` driver phases now use the shared `fret_perf` helper so the frame-hitch timers
+  and tracing spans have one instrumentation boundary for view, overlay, layout, paint, and
+  diagnostics script drive. Existing hitch log field names are unchanged.
 - Registry status: `crates/fret-diag/src/perf_keys.rs` now supports perf keys with optional Chrome trace metadata,
   so stats/gate-only fields do not need fake trace events. `trace.chrome.json` still exposes the trace-exported
   subset, while `diag stats --json` exposes the broader registered frame/stats/gate subset via `registered_perf_keys`.
