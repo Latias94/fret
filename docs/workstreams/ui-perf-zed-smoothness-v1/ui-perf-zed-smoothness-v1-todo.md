@@ -576,16 +576,30 @@ Conventions:
           completed, but the same-command `--reuse-launch` repeat=3 formal run timed out after
           navigation state drift. Treat the slice as a small reversible lookup optimization and
           keep formal contract closure blocked on stable same-mouth evidence.
-      - [ ] Fix or replace the editor paint `--reuse-launch` formal evidence path before the next
+      - [x] Fix or replace the editor paint `--reuse-launch` formal evidence path before the next
         baseline decision.
-        - Current failure: `target/fret-diag/editor-host-record-slim-20260516-typical-r3` and
+        - Failure: `target/fret-diag/editor-host-record-slim-20260516-typical-r3` and
           `target/fret-diag/editor-host-record-slim-20260516-typical-r3-reuse-prelude-each`
-          timed out while the app was already on `code_editor_torture`.
-        - Goal: either make the reused launch reset/navigation path deterministic for the three
-          editor paint probes, or define an explicit no-reuse formal sample policy with matching
-          baseline semantics.
+          timed out at the nav-item wait because the reused process retained stale nav search
+          state (`nav_query_len_bytes=37`, no visible nav items).
+        - Fix: `ui-gallery-code-editor-torture-autoscroll-steady` and
+          `ui-gallery-code-editor-window-resize-drag-jitter-steady` now use `type_text_into`
+          with `clear_before_type=true` for the gallery nav search, matching the already-stable
+          complex wheel probe.
+        - Gate:
+          `python3 -m json.tool ...autoscroll-steady.json`;
+          `python3 -m json.tool ...window-resize-drag-jitter-steady.json`;
+          `python3 tools/check_diag_scripts_registry.py`;
+          `cargo nextest run -p fret-diag-protocol --no-fail-fast`.
+        - Evidence: perf log entry `2026-05-16 02:31:15 +08:00`. The three editor paint probes
+          now pass same-mouth `--reuse-launch --repeat 3 --warmup-frames 5` evidence again:
+          typical `target/fret-diag/editor-paint-contract-formal-20260516-typical-r3`,
+          complex wheel `target/fret-diag/editor-paint-contract-formal-20260516-complex-wheel-r3`,
+          and resize jitter `target/fret-diag/editor-paint-contract-formal-20260516-resize-jitter-r3`.
       - [ ] Continue host-widget paint aggregate attribution only after the formal evidence path is
         stable.
+        - Current formal evidence path status: stable enough to continue this lane. The next slice
+          should use the same three editor paint probes before and after the change.
         - Candidate owners: observed model/global dependency replay, collapse observation cost,
           generic paint traversal aggregation, and the remaining sampled non-Canvas top-N hotspots.
         - Avoid: broad `WindowedRowsSurface` display-list rewrite, row replay rewrite, or renderer

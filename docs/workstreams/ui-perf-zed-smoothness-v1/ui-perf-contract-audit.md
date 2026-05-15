@@ -423,6 +423,25 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Contract decision: keep baselines unchanged because the comparable `--reuse-launch` repeat=3 formal run timed out
     after navigation state drift. The next contract-quality step is to stabilize that evidence path or define an
     explicit no-reuse formal policy before any re-seed.
+- Editor paint reuse-launch evidence path recovery:
+  - The timeout root cause was stale gallery nav search state under a reused process. At timeout, the app had not
+    selected a page, `nav_query_len_bytes=37`, and the filtered nav list had no visible items while step 10 waited
+    for `ui-gallery-nav-code-editor-torture`.
+  - `ui-gallery-code-editor-torture-autoscroll-steady` and
+    `ui-gallery-code-editor-window-resize-drag-jitter-steady` now use `type_text_into` with
+    `clear_before_type=true` for the gallery nav search, matching the already-stable complex wheel probe.
+  - Validation: JSON parse checks for both edited scripts, `python3 tools/check_diag_scripts_registry.py`, and
+    `cargo nextest run -p fret-diag-protocol --no-fail-fast`.
+  - Same-mouth formal evidence is restored with `--reuse-launch --repeat 3 --warmup-frames 5`:
+    `target/fret-diag/editor-paint-contract-formal-20260516-typical-r3`,
+    `target/fret-diag/editor-paint-contract-formal-20260516-complex-wheel-r3`, and
+    `target/fret-diag/editor-paint-contract-formal-20260516-resize-jitter-r3`.
+  - Results: typical total/paint p95 `807/572us`, complex wheel `1077/915us`, and resize jitter `1599/648us`.
+    Worst-bundle row replay/cache remains healthy (`289/0`, `288/3`, `289/0` replay/store p95-equivalent rows),
+    Canvas hotspot p95 tracks `WindowedRowsSurface` callback p95 within `1..4us`, and renderer text/encode top values
+    stay in the `321..357us` / `149..190us` range without atlas upload/eviction pressure.
+  - Contract decision: do not update baselines from this macOS M4 evidence. It restores the formal evidence path and
+    confirms the next owner remains generic `ElementHostWidget` paint aggregate overhead.
 
 ## Open Gaps
 
@@ -436,10 +455,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    baselines alone.
 3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization, the
    `WindowedRowsSurface` attribution fields are wired through app snapshots and `fretboard diag stats`, the
-   paint-widget hotspot summary now proves Canvas hotspot p95 tracks the surface callback p95 within `2..4us`, and
+   paint-widget hotspot summary now proves Canvas hotspot p95 tracks the surface callback p95 within `1..4us`, and
    root-level host-widget paint subphase summaries identify observed-dependency replay plus instance-record lookup
-   as the next owner (`~100us` p95 combined on the 2026-05-16 formal bundles). The first narrow lookup optimization
-   is landed as exploratory evidence only; stable same-mouth evidence is still needed before a baseline decision.
+   as the next owner. The first narrow lookup optimization is landed, and the script-level reuse-launch drift that
+   blocked same-mouth formal evidence has been fixed. A baseline decision still requires a deliberate re-seed rather
+   than using this macOS M4 evidence to loosen or silently update thresholds.
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
@@ -457,7 +477,7 @@ renderer-side owner slice without loosening baselines, the `WindowedRowsSurface`
 verified on formal bundles, and `paint_widget_hotspot_summary` narrows the remaining editor paint owner to generic
 paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. Root-level
 host-widget subphase summaries now make that owner measurable, and the first lookup-slimming slice is directionally
-positive but not baseline-grade. The immediate next work is to stabilize the same-mouth editor paint evidence path,
-then continue reversible `ElementHostWidget::paint_impl` owner slices around observed-dependency replay and generic
-paint traversal aggregate overhead. Keep non-Windows machine profiles explicit rather than inferring them from the
-Windows RTX 4090 contract set.
+positive. The same-mouth editor paint evidence path has been restored, so the immediate next work is to continue
+reversible `ElementHostWidget::paint_impl` owner slices around observed-dependency replay and generic paint traversal
+aggregate overhead, then make an explicit baseline re-seed decision only if stable repeat evidence justifies it. Keep
+non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090 contract set.

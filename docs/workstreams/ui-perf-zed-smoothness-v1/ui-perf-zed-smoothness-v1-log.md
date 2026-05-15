@@ -14098,3 +14098,122 @@ Decision:
   around `39..43us`, so the optimization is directionally useful but intentionally small.
 - Keep existing perf baselines unchanged. The next contract-quality step is to fix the reuse-launch navigation/state
   issue or define a no-reuse formal sample policy before making a baseline decision.
+
+## 2026-05-16 02:31:15 +08:00 (editor paint reuse-launch formal evidence restored)
+
+Question:
+- Can the editor paint probes run as same-mouth `--reuse-launch` repeat evidence again after the host-record lookup
+  slice, and what does that evidence say about the remaining owner?
+
+Change:
+- Hardened the `ui-gallery-code-editor-torture-autoscroll-steady` and
+  `ui-gallery-code-editor-window-resize-drag-jitter-steady` navigation setup by using `type_text_into` with
+  `clear_before_type=true` for the gallery nav search, matching the already-stable complex wheel probe.
+- The previous failure mode was stale nav-query state in a reused process: step 10 waited for
+  `ui-gallery-nav-code-editor-torture` while `nav_query_len_bytes=37` and the filtered nav list was empty.
+
+Validation:
+```bash
+python3 -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json >/dev/null
+python3 -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json >/dev/null
+python3 tools/check_diag_scripts_registry.py
+cargo nextest run -p fret-diag-protocol --no-fail-fast
+```
+
+Reuse-launch smoke:
+```bash
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --repeat 2 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 5 --json \
+  --dir target/fret-diag/editor-paint-reuse-nav-fix-typical-r2 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Formal evidence commands:
+```bash
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-contract-formal-20260516-typical-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-contract-formal-20260516-complex-wheel-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-contract-formal-20260516-resize-jitter-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Results (us, repeat=3 stats):
+| probe | worst bundle | total p50/p95/max | paint p50/p95/max | layout p95 | solve p95 | renderer text p95 | renderer encode p95 | payload bytes/text ops p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `target/fret-diag/editor-paint-contract-formal-20260516-typical-r3/1778869811859/bundle.schema2.json` | `744/807/807` | `543/572/572` | `33` | `0` | `321` | `149` | `201712/342` |
+| complex wheel | `target/fret-diag/editor-paint-contract-formal-20260516-complex-wheel-r3/1778869849219/bundle.schema2.json` | `1000/1077/1077` | `732/915/915` | `182` | `0` | `341` | `155` | `207096/342` |
+| resize jitter | `target/fret-diag/editor-paint-contract-formal-20260516-resize-jitter-r3/1778869871217/bundle.schema2.json` | `1566/1599/1599` | `590/648/648` | `841` | `400` | `357` | `190` | `185416/342` |
+
+Worst-bundle attribution:
+| probe | paint.widget top | Canvas hotspot p95 | surface callback p95 | code-editor p95 | row replay/store p95 | host models/globals/lookup/collapse top | renderer text/encode/upload top |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `376` | `249` | `245` | `106` | `289/0` | `23/22/35/50` | `321/149/91` |
+| complex wheel | `704` | `458` | `456` | `292` | `288/3` | `25/24/38/50` | `341/155/65` |
+| resize jitter | `431` | `274` | `273` | `129` | `289/0` | `28/27/43/50` | `357/190/97` |
+
+Decision:
+- The `--reuse-launch` formal evidence path is restored for the editor paint probes; no no-reuse policy is needed for
+  this lane.
+- Row replay/cache remains healthy: typical and resize replay all visible rows with zero stores; complex wheel stores
+  only p95 `3` rows.
+- Canvas hotspot p95 still tracks `WindowedRowsSurface` callback p95 within `1..4us`, so the hotspot is not a hidden
+  generic Canvas wrapper tax.
+- Renderer text/encode remains a meaningful payload surface, but the already-landed renderer slice keeps text prepare
+  in the `321..357us` p95/top range on this machine and there is no atlas upload/eviction pressure in the worst
+  bundles.
+- The next reversible optimization owner is still generic `ElementHostWidget` paint aggregate overhead, especially
+  observed model/global replay, instance lookup, and collapse observation. Keep baselines unchanged until a deliberate
+  re-seed with stable repeat evidence is chosen.
