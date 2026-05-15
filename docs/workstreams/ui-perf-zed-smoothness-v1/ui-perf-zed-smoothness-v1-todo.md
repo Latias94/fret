@@ -691,7 +691,7 @@ Conventions:
           - stored commands must match the Windows validation shape: release `fretboard-dev.exe` /
             `fret-ui-gallery.exe`, standard prewarm/prelude hooks, `--reuse-launch` on direct `diag perf`, and the
             overlay-disabled env set;
-          - the baseline-validation directory must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
+          - baseline-validation direct `diag perf` commands must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
           - the attribution directory must include paint-perf coverage and the verifier must reject missing
             `code_editor_paint_perf`.
         - Required evidence: ordinary validation must provide `check.perf_thresholds.json` with

@@ -105,6 +105,21 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:27:00 +0800 (local head `efe4979a60`)
+
+Question:
+- Does the closeout wording incorrectly imply that the entire baseline-validation directory must be free of
+  `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, even though the resize helper may collect code-editor paint fields internally?
+
+Change:
+- Clarified that the verifier rejects paint-perf env only on baseline-validation direct `diag perf` commands.
+- Kept attribution requirements unchanged: the attribution directory must provide `code_editor_paint_perf` coverage,
+  and direct attribution probes must set `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+
+Validation:
+- Documentation-only alignment with `tools/perf/diag_editor_paint_contract_verify_artifacts.py`.
+- This does not replace the still-missing Windows RTX4090 validation and attribution artifact directories.
+
 ## 2026-05-16 07:20:00 +0800 (local head `a039e42085`)
 
 Question:
@@ -170,7 +185,7 @@ Change:
 - Updated the P1.5 TODO closeout checklist with the latest post-sync verifier hard requirements:
   - non-empty `date_tag` in both summaries,
   - stored commands matching the Windows validation shape,
-  - baseline-validation artifact free of paint-perf env,
+  - baseline-validation direct `diag perf` commands free of paint-perf env,
   - and attribution artifact carrying `code_editor_paint_perf` coverage.
 
 Command:
@@ -191,7 +206,7 @@ Change:
 - Synchronized the contract audit completion table with the latest verifier/closeout hardening:
   - target summaries must carry non-empty `date_tag` fields,
   - stored commands must match the required Windows validation shape,
-  - baseline-validation summaries must not use paint-perf env,
+  - baseline-validation direct `diag perf` commands must not use paint-perf env,
   - attribution summaries must include paint-perf coverage,
   - and closeout non-dry-run behavior now has fail/pass path unit coverage.
 
@@ -237,7 +252,8 @@ Change:
 - Updated the editor paint stabilization runbook so it matches the stricter verifier behavior:
   - both synced summaries must carry a non-empty `date_tag`,
   - the stored commands must still match the required resize/direct-perf contract shape,
-  - and the baseline-validation summary must stay free of `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+  - and baseline-validation direct `diag perf` commands must stay free of
+    `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
 
 Command:
 ```powershell
@@ -291,8 +307,8 @@ Change:
   - direct `diag perf` probes must use `--reuse-launch`, the standard font prewarm and reset-diagnostics prelude,
     `--json`, the release gallery binary, and the required editor contract envs including
     `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0`.
-  - baseline-validation summaries must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, while attribution summaries
-    must include it and still provide `code_editor_paint_perf` coverage.
+  - baseline-validation direct `diag perf` commands must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, while
+    attribution direct probes must include it and still provide `code_editor_paint_perf` coverage.
 
 Command:
 ```powershell

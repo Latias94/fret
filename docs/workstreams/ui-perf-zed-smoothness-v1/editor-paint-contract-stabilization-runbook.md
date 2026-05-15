@@ -86,8 +86,9 @@ expected repeat/warmup shape, that every probe has `check.perf_thresholds.json` 
 It also rejects target summaries whose stored commands drift from the contract shape: resize must use the Windows
 code-editor resize suite plus release `fretboard-dev.exe` / `fret-ui-gallery.exe`, while the direct `diag perf` probes
 must use `--reuse-launch`, the standard font prewarm and reset-diagnostics prelude, `--json`, the release gallery
-binary, and the required overlay-disabled env set. The baseline-validation directory must not be collected with
-`FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory.
+binary, and the required overlay-disabled env set. The baseline-validation direct `diag perf` commands must not set
+`FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory for direct probes. The resize
+helper may still collect its code-editor paint-perf fields internally.
 
 ## Validate Current Contracts First
 
