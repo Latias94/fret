@@ -134,6 +134,7 @@ def _write_summary(
             "kind": "editor_paint_contract_validate_summary",
             "ok": True,
             "target_profile": validate.TARGET_PROFILE,
+            "date_tag": "test-date",
             "with_paint_perf": with_paint_perf,
             "stats_enabled": True,
             "steps": steps,
@@ -150,6 +151,7 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
             report = verify.verify_summary_dir(root, expect_with_paint_perf=False)
 
         self.assertTrue(report["ok"], report["errors"])
+        self.assertEqual("test-date", report["date_tag"])
 
     def test_attribution_summary_requires_code_editor_paint_perf(self) -> None:
         with TemporaryDirectory() as td:

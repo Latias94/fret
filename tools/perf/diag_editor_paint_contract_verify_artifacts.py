@@ -224,6 +224,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
     return {
         "ok": not errors,
         "summary": str(summary_path),
+        "date_tag": summary.get("date_tag") if isinstance(summary.get("date_tag"), str) else None,
         "expect_with_paint_perf": expect_with_paint_perf,
         "errors": errors,
         "steps": step_reports,
