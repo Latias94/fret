@@ -1925,6 +1925,8 @@ fn write_frame_hitch_log(line: &str) {
 #[derive(Debug, Clone, Copy)]
 enum UiDriverPhase {
     View,
+    #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+    ViewCommandPaletteOverlay,
     #[cfg(feature = "diagnostics")]
     ViewPreferencesOverlay,
     Overlay,
@@ -1939,6 +1941,8 @@ impl UiDriverPhase {
     fn perf_span_name(self) -> &'static str {
         match self {
             Self::View => "fret.ui.view",
+            #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+            Self::ViewCommandPaletteOverlay => "fret.ui.view.command_palette_overlay",
             #[cfg(feature = "diagnostics")]
             Self::ViewPreferencesOverlay => "fret.ui.view.preferences_overlay",
             Self::Overlay => "fret.ui.overlay",
@@ -1953,6 +1957,8 @@ impl UiDriverPhase {
     fn perf_span_phase(self) -> &'static str {
         match self {
             Self::View => "view",
+            #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+            Self::ViewCommandPaletteOverlay => "view_command_palette_overlay",
             #[cfg(feature = "diagnostics")]
             Self::ViewPreferencesOverlay => "view_preferences_overlay",
             Self::Overlay => "overlay",
@@ -1969,6 +1975,10 @@ impl UiDriverPhase {
     fn make_span(self) -> tracing::Span {
         match self {
             Self::View => tracing::info_span!("fret.ui.view"),
+            #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+            Self::ViewCommandPaletteOverlay => {
+                tracing::info_span!("fret.ui.view.command_palette_overlay")
+            }
             #[cfg(feature = "diagnostics")]
             Self::ViewPreferencesOverlay => {
                 tracing::info_span!("fret.ui.view.preferences_overlay")
@@ -1996,7 +2006,7 @@ impl UiDriverPerfSpanCapture {
     fn new_if_enabled() -> Option<Self> {
         diag_real_perf_spans_enabled().then(|| Self {
             frame_start: Instant::now(),
-            spans: Vec::with_capacity(6),
+            spans: Vec::with_capacity(7),
         })
     }
 
@@ -2314,7 +2324,21 @@ fn ui_app_render<S>(
                                 hot.call((cx, &mut state.state))
                             };
 
-                            #[cfg(feature = "ui-app-command-palette")]
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                feature = "diagnostics"
+                            ))]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewCommandPaletteOverlay,
+                                false,
+                                || render_command_palette_overlay_if_needed(driver, cx, &mut out),
+                            );
+
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                not(feature = "diagnostics")
+                            ))]
                             render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
                             #[cfg(feature = "diagnostics")]
@@ -2344,7 +2368,21 @@ fn ui_app_render<S>(
                             #[cfg(feature = "ui-app-command-palette")]
                             let mut out = out;
 
-                            #[cfg(feature = "ui-app-command-palette")]
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                feature = "diagnostics"
+                            ))]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewCommandPaletteOverlay,
+                                false,
+                                || render_command_palette_overlay_if_needed(driver, cx, &mut out),
+                            );
+
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                not(feature = "diagnostics")
+                            ))]
                             render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
                             #[cfg(feature = "diagnostics")]
@@ -3193,6 +3231,36 @@ mod tests {
                 .and_then(|args| args.get("phase"))
                 .and_then(|v| v.as_str()),
             Some("view_preferences_overlay")
+        );
+    }
+
+    #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+    #[test]
+    fn perf_span_capture_records_view_command_palette_overlay_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(
+            UiDriverPhase::ViewCommandPaletteOverlay,
+            177,
+            Duration::from_micros(211),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.view.command_palette_overlay");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 177);
+        assert_eq!(spans[0].dur_us, 211);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("view_command_palette_overlay")
         );
     }
 

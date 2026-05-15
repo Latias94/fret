@@ -108,9 +108,9 @@ Current writer:
 
 - Set `FRET_DIAG_REAL_SPANS=1` for `fret-bootstrap` `ui_app_driver` apps to write
   `fret.perf.spans.v1` for the View, Overlay, Layout, and Paint driver phases.
-- The default preferences overlay is recorded as the first nested View subphase,
-  `fret.ui.view.preferences_overlay`, so overlay cost can be correlated separately from the
-  parent View span.
+- The command palette and default preferences overlays are recorded as nested View subphases:
+  `fret.ui.view.command_palette_overlay` and `fret.ui.view.preferences_overlay`, so editor overlay
+  costs can be correlated separately from the parent View span.
 - Diagnostics-enabled `ui_app_driver` frames also record `fret.ui.diagnostics.drive_script` so
   scripted-input overhead is visible without folding it into View/Layout/Paint.
 - Prefer `fretboard-dev diag perf ... --trace-real-spans --launch -- <app command>` when the tool
@@ -150,7 +150,7 @@ Evidence anchors:
   `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts --no-fail-fast`
   and `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - Runtime extension writer focused gate:
-  `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
+  `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver,ui-app-command-palette real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_command_palette_overlay_phase perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
 - CLI opt-in focused gate:
   `cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast`
 
