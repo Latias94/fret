@@ -338,7 +338,9 @@ impl BundleStatsDiffReport {
             })
             .collect::<Vec<_>>();
         serde_json::json!({
-            "schema_version": 1,
+            "schema_version": crate::perf_schema::PERF_STATS_SCHEMA_VERSION,
+            "kind": crate::perf_schema::PERF_STATS_DIFF_KIND,
+            "schema_policy": crate::perf_schema::schema_policy_json(),
             "bundle_a": self.a_path.display().to_string(),
             "bundle_b": self.b_path.display().to_string(),
             "sort": self.sort.as_str(),
@@ -650,6 +652,13 @@ fn bundle_stats_from_frames_index(
         sort,
         warmup_frames,
         derived_from_frames_index: true,
+        source_bundle_schema_version: crate::compat::bundle::sniff_bundle_schema_version(
+            bundle_path,
+        )
+        .ok()
+        .flatten()
+        .unwrap_or(0)
+        .min(u32::MAX as u64) as u32,
         windows: windows.len().min(u32::MAX as usize) as u32,
         ..Default::default()
     };
@@ -817,6 +826,33 @@ mod tests {
     }
 
     #[test]
+    fn stats_diff_json_is_versioned_and_additive_only() {
+        let report = BundleStatsDiffReport {
+            a_path: PathBuf::from("a/bundle.schema2.json"),
+            b_path: PathBuf::from("b/bundle.schema2.json"),
+            sort: BundleStatsSort::Time,
+            warmup_frames: 3,
+            top: 5,
+            deltas: Vec::new(),
+        };
+
+        let json = report.to_json();
+        assert_eq!(
+            json.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_STATS_DIFF_KIND)
+        );
+        assert_eq!(
+            json.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_STATS_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            json.pointer("/schema_policy/compatibility")
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
+    }
+
+    #[test]
     fn stats_json_includes_avg_and_budget() {
         let report = BundleStatsReport {
             sort: BundleStatsSort::Time,
@@ -830,6 +866,19 @@ mod tests {
         };
 
         let json = report.to_json();
+        assert_eq!(
+            json.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_STATS_KIND)
+        );
+        assert_eq!(
+            json.get("schema_version").and_then(|v| v.as_u64()),
+            Some(crate::perf_schema::PERF_STATS_SCHEMA_VERSION as u64)
+        );
+        assert_eq!(
+            json.pointer("/schema_policy/compatibility")
+                .and_then(|v| v.as_str()),
+            Some("additive_only")
+        );
         assert!(json.get("avg").is_some());
         assert!(json.get("budget_pct").is_some());
     }

@@ -5,6 +5,7 @@ pub(super) struct BundleStatsReport {
     sort: BundleStatsSort,
     warmup_frames: u64,
     derived_from_frames_index: bool,
+    source_bundle_schema_version: u32,
     pub(super) windows: u32,
     pub(super) snapshots: u32,
     pub(super) snapshots_considered: u32,
@@ -3243,7 +3244,22 @@ impl BundleStatsReport {
         }
 
         let mut root = Map::new();
-        root.insert("schema_version".to_string(), Value::from(1));
+        root.insert(
+            "schema_version".to_string(),
+            Value::from(crate::perf_schema::PERF_STATS_SCHEMA_VERSION),
+        );
+        root.insert(
+            "kind".to_string(),
+            Value::from(crate::perf_schema::PERF_STATS_KIND),
+        );
+        root.insert(
+            "schema_policy".to_string(),
+            crate::perf_schema::schema_policy_json(),
+        );
+        root.insert(
+            "source_bundle_schema_version".to_string(),
+            Value::from(self.source_bundle_schema_version),
+        );
         root.insert(
             "derived_from_frames_index".to_string(),
             Value::from(self.derived_from_frames_index),

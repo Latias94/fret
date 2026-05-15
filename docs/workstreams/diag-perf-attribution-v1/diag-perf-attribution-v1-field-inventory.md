@@ -37,6 +37,37 @@ Key wiring points:
 - Perf triage (hints + unit costs):
   - `crates/fret-diag/src/lib.rs` (triage section)
 
+## Output schema contract
+
+The perf attribution JSON outputs are versioned independently from the raw diagnostics bundle
+schema:
+
+- `diag stats <bundle> --json`
+  - `kind`: `perf_stats`
+  - `schema_version`: `1`
+  - `source_bundle_schema_version`: copied from the source bundle when available.
+- `diag stats --diff <a> <b> --json`
+  - `kind`: `perf_stats_diff`
+  - `schema_version`: `1`
+- `triage.json`
+  - `kind`: `perf_triage`
+  - `schema_version`: `1`
+  - `source_bundle_schema_version`: sniffed from the source bundle file.
+  - `stats_schema_version`: copied from the nested `stats.schema_version`.
+
+All three outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
+allowed inside the current schema version. Field removals, semantic renames, or type changes require
+either a schema version bump or a documented migration/compatibility window.
+
+Evidence anchors:
+
+- Contract constants: `crates/fret-diag/src/perf_schema.rs`
+- Stats output: `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
+- Stats diff output: `crates/fret-diag/src/stats.rs`
+- Triage output: `crates/fret-diag/src/triage_json.rs`
+- Focused gate:
+  `cargo nextest run -p fret-diag stats_json_includes_avg_and_budget stats_diff_json_is_versioned_and_additive_only triage_includes_hints_and_unit_costs_for_worst_frame --no-fail-fast`
+
 ## Core timing fields (per frame, in microseconds)
 
 These are the “first line” metrics that explain where a frame went:
@@ -168,4 +199,3 @@ Opt-in artifact for timeline correlation:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 1 --trace`
 - `target/release/fretboard.exe diag trace <bundle.json>`
-
