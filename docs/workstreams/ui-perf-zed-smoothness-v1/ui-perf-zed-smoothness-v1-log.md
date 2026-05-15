@@ -13519,3 +13519,41 @@ Decision:
   when the diagnostic report shows real pointer-move frames. This keeps non-pointer scripts from
   acquiring accidental `0` or stale pointer-move contracts while preserving the existing top/frame
   and renderer thresholds.
+
+## 2026-05-15 20:21:29 +08:00 (layout/prepaint/paint closure post-merge audit)
+
+Question:
+- After the post-merge layout tail-phase consolidation, did the prepaint path remain correct and
+  what should the next performance optimization lane target?
+
+Change:
+- Kept the merge resolution intact and narrowed the after-layout prepaint API by introducing
+  `PrepaintAfterLayoutInputs` plus internal `PrepaintInteractionInputs`.
+- This is a boundary cleanup: layout still triggers the post-layout prepaint phase, but the prepaint
+  module now owns how services, scale factor, and theme revision flow into interaction prepaint.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo check -p fret-ui --all-targets`
+- `cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups prepaint_interaction_cache_replays_for_clean_view_cache_root prepaint_output_store_is_keyed_by_cache_root_prepaint_key view_cache_disables_paint_cache_for_non_boundary_nodes view_cache_allows_paint_cache_for_boundary_nodes paint_publishes_window_text_input_snapshot_for_focused_text_widget snapshot_resets_when_focus_is_not_text_input paint_cache_replays_ops_when_plain_node_translates_from_boundary_entry_store paint_cache_hit_test_only_invalidation_replays_when_cache_key_matches paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch model_change_invalidates_bound_text_input --no-fail-fast`
+- `git diff --check`
+
+Evidence:
+- Worst code-editor typical bundle without editor paint detail:
+  `target/fret-diag/layout-prepaint-paint-closure-code-editor-typical-r3/1778847170326/bundle.schema2.json`.
+  It reports worst total/layout/prepaint/paint=`1118/40/335/743us`.
+- Worst code-editor typical bundle with `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`:
+  `target/fret-diag/layout-prepaint-paint-closure-code-editor-typical-paintperf-r3/1778847498911/bundle.schema2.json`.
+  It reports worst total/layout/prepaint/paint=`1147/31/215/901us`, time p50/p95
+  total=`720/819us`, layout=`30/34us`, prepaint=`129/169us`, and paint=`568/631us`.
+- Editor row-scene replay is already hot-cache on this sample:
+  row replay hit rate=`100%`, rows painted/scene-replayed/scene-stored=`289/289/0`, and
+  code-editor paint p50/p95 total=`126/149us`.
+
+Decision:
+- Do not continue a code-editor prepaint-planner rewrite from this evidence. The current macOS
+  typical autoscroll sample is paint/widget dominated, not layout, VirtualList, cache-miss, or
+  row-scene planner dominated.
+- The next optimization lane should either target broader `paint.widget`/Canvas attribution or add
+  a stronger editor paint stressor that can separate Canvas replay, content resolution, and renderer
+  encode/upload cost.

@@ -3,6 +3,38 @@ use crate::cache_key::CacheKeyBuilder;
 
 const RETAINED_HOST_PREFETCH_STEP_MAX: usize = 12;
 
+pub(crate) struct PrepaintAfterLayoutInputs<'a> {
+    services: &'a mut dyn UiServices,
+    scale_factor: f32,
+}
+
+impl<'a> PrepaintAfterLayoutInputs<'a> {
+    pub(in crate::tree) fn new(services: &'a mut dyn UiServices, scale_factor: f32) -> Self {
+        Self {
+            services,
+            scale_factor,
+        }
+    }
+
+    fn scale_factor(&self) -> f32 {
+        self.scale_factor
+    }
+
+    fn into_interaction_inputs(self, theme_revision: u64) -> PrepaintInteractionInputs<'a> {
+        PrepaintInteractionInputs {
+            services: self.services,
+            scale_factor: self.scale_factor,
+            theme_revision,
+        }
+    }
+}
+
+pub(super) struct PrepaintInteractionInputs<'a> {
+    services: &'a mut dyn UiServices,
+    scale_factor: f32,
+    theme_revision: u64,
+}
+
 #[derive(Clone)]
 struct VirtualListPrepaintInputs {
     element: GlobalElementId,

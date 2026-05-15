@@ -654,7 +654,12 @@ impl<H: UiHost> UiTree<H> {
                             scale_factor,
                         )
                     },
-                    || self.prepaint_after_layout(app, services, scale_factor),
+                    || {
+                        self.prepaint_after_layout(
+                            app,
+                            PrepaintAfterLayoutInputs::new(services, scale_factor),
+                        )
+                    },
                 ),
             };
             timings.prepaint_after_layout = elapsed;

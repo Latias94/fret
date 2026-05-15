@@ -44,6 +44,14 @@
     regular frames, layout fast-path frames, and skipped-engine stable frames now share the
     prepaint/focus/semantics/deferred-cleanup timing and span wrapper surface.
     - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
+    - Follow-up: `prepaint_after_layout` now receives a compact
+      `PrepaintAfterLayoutInputs` value and derives `PrepaintInteractionInputs` inside the prepaint
+      module, keeping the layout tail helper from owning raw prepaint dependency wiring.
+      - Evidence:
+        `crates/fret-ui/src/tree/layout/entrypoints.rs`,
+        `crates/fret-ui/src/tree/prepaint/mod.rs`,
+        `crates/fret-ui/src/tree/prepaint/entry.rs`,
+        `crates/fret-ui/src/tree/prepaint/interaction.rs`
   - [ ] Migrate more layout sub-phases beyond request/build + roots:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
     - [x] Align `crates/fret-ui/src/layout/engine.rs` solve spans with `fret_perf::measure_span_with_finish`

@@ -25,10 +25,8 @@ impl<H: UiHost> UiTree<H> {
     pub(super) fn prepaint_interaction_node(
         &mut self,
         app: &mut H,
-        services: &mut dyn fret_core::UiServices,
         node: NodeId,
-        scale_factor: f32,
-        theme_revision: u64,
+        inputs: &mut PrepaintInteractionInputs<'_>,
     ) {
         if self.debug_enabled {
             self.debug_stats.prepaint_nodes_visited =
@@ -59,6 +57,7 @@ impl<H: UiHost> UiTree<H> {
             ),
             None => return,
         };
+        let scale_factor = inputs.scale_factor;
 
         let child_transform = self
             .node_children_render_transform(node)
@@ -66,7 +65,7 @@ impl<H: UiHost> UiTree<H> {
         let key = PaintCacheKey::new(
             bounds,
             scale_factor,
-            theme_revision,
+            inputs.theme_revision,
             crate::tree::paint_style::PaintStyleState::default(),
             None,
             child_transform,
@@ -88,18 +87,17 @@ impl<H: UiHost> UiTree<H> {
 
         if runs_widget_prepaint {
             let window = self.window;
-            let sf = scale_factor;
             self.begin_prepaint_outputs_for_node(node, key);
             self.begin_scene_fragment_for_node(node, key);
             self.with_widget_mut(node, |widget, tree| {
                 let mut cx = crate::widget::PrepaintCx {
                     app,
-                    services,
+                    services: &mut *inputs.services,
                     tree,
                     node,
                     window,
                     bounds,
-                    scale_factor: sf,
+                    scale_factor,
                 };
                 widget.prepaint(&mut cx);
             });
@@ -258,7 +256,7 @@ impl<H: UiHost> UiTree<H> {
             children_buf.set(children);
         }
         for &child in children_buf.as_slice() {
-            self.prepaint_interaction_node(app, services, child, scale_factor, theme_revision);
+            self.prepaint_interaction_node(app, child, inputs);
         }
 
         let end = self.interaction_cache.records.len();

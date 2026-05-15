@@ -4,8 +4,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn prepaint_after_layout(
         &mut self,
         app: &mut H,
-        services: &mut dyn fret_core::UiServices,
-        scale_factor: f32,
+        inputs: PrepaintAfterLayoutInputs<'_>,
     ) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
@@ -16,6 +15,7 @@ impl<H: UiHost> UiTree<H> {
         let trace_prepaint = tracing::enabled!(tracing::Level::TRACE);
         let window = self.window;
         let frame_id = app.frame_id();
+        let scale_factor = inputs.scale_factor();
 
         let ((), elapsed) = fret_perf::measure_span(
             self.debug_enabled,
@@ -48,19 +48,14 @@ impl<H: UiHost> UiTree<H> {
                 self.hit_test_bounds_trees.begin_frame(app.frame_id());
 
                 let theme_revision = Theme::global(&*app).revision();
+                let mut interaction_inputs = inputs.into_interaction_inputs(theme_revision);
                 let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
                 for layer_id in layers {
                     let root = self.layers[layer_id].root;
                     let hit_testable = self.layers[layer_id].hit_testable;
 
                     let start = self.interaction_cache.records.len();
-                    self.prepaint_interaction_node(
-                        app,
-                        services,
-                        root,
-                        scale_factor,
-                        theme_revision,
-                    );
+                    self.prepaint_interaction_node(app, root, &mut interaction_inputs);
                     let end = self.interaction_cache.records.len();
 
                     if hit_testable {

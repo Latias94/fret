@@ -40,7 +40,7 @@ mod paint;
 mod paint_cache;
 pub(crate) mod paint_style;
 mod prepaint;
-pub(crate) use prepaint::VirtualListPrepaintWindowOutput;
+pub(crate) use prepaint::{PrepaintAfterLayoutInputs, VirtualListPrepaintWindowOutput};
 mod profiling;
 mod propagation_depth;
 mod semantics;
