@@ -1002,3 +1002,74 @@ another parallel P3 gate entry.
 - `cargo nextest run -p fret-selector --features ui deps_builder_model_rev_includes_model_identity_before_revision --no-fail-fast`
 - This locks the real `ElementContext` + `ModelStore` path so same-revision model switches still
   invalidate selector memoization correctly.
+
+## Maintenance gate refresh - 2026-05-15 follow-up
+
+Scope: close the `fret-ui` layout/view-cache regressions left by the previous affected gate without
+changing the IMUI layer split. The fixes stay in `crates/fret-ui` mechanism code:
+
+- `crates/fret-ui/src/tree/commands.rs` refreshes window command action availability after
+  post-layout runtime snapshot refinement by clearing the cached availability signature before
+  publishing snapshots.
+- `crates/fret-ui/src/tree/dispatch/window.rs` treats the post-wheel scroll-handle invalidation pass
+  as the final baseline consumer, so non-retained virtual lists schedule their one-shot view-cache
+  rerender immediately after a wheel-driven visible-window escape.
+- `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` keeps scroll deep-scan validation
+  from trusting a synthetic content-bounds barrier root as the authoritative extent when descendants
+  provide the real frontier.
+- `crates/fret-ui/src/layout/engine/flow.rs` carries definite parent flex-axis information into
+  wrapper fill promotion, so viewport-root auto wrappers can promote to fill under a definite
+  cross-axis without globally stretching shrink-wrapped wrappers.
+
+Focused repro gates:
+
+```text
+cargo nextest run -p fret-ui layout_refines_focus_traversal_availability_after_structural_fallback scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached --no-fail-fast
+```
+
+Result: passed, `5 tests run: 5 passed`.
+
+Affected/full maintenance gates:
+
+```text
+cargo fmt -p fret-ui
+cargo nextest run -p fret-ui -p fret-launch -p fret-bootstrap --no-fail-fast
+cargo clippy -p fret-devtools --all-targets -- -D warnings
+python tools/check_layering.py
+python tools/report_largest_files.py --top 30 --min-lines 800
+git diff --check
+```
+
+Result: passed. The affected nextest gate reported `1059 tests run: 1059 passed`. The largest-file
+report remains a drift watchlist only for this slice; no new large-file expansion was introduced
+outside the touched `fret-ui` mechanism files.
+
+## DevTools gate profile owner split - 2026-05-15 follow-up
+
+Scope: continue DevTools GUI productization without widening `fret-imui` or turning
+`apps/fret-devtools` into a diagnostics-policy owner.
+
+- `crates/fret-diag/src/devtools_gate_profiles.rs` now owns the shared DevTools gate taxonomy for
+  stale paint/scene, pixels-changed, perf thresholds, resource-footprint thresholds, and
+  resource-footprint compare profiles.
+- `apps/fret-devtools/src/native.rs` now renders the first-open `Gate Commands` panel from
+  `fret_diag::devtools_gate_profile_lines(...)`, keeping the GUI as a thin consumer of the shared
+  diagnostics projection.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` source-checks both the GUI consumer and the
+  shared profile owner, so the first-open gate catches drift without requiring GUI-owned command
+  constants.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+```
+
+Result: passed. The `fret-diag` nextest gate reported `2 tests run: 2 passed`; the `fret-devtools`
+nextest gate reported `1 test run: 1 passed`; the DevTools first-open discovery gate completed
+successfully after rebuilding `fretboard-dev` and validating tool-app discovery, GUI source, shared
+gate profile source, and first-open docs. `python tools/diag_gate_imui_product_chain.py --only
+discovery` also passed after validating the broader product-chain source gates, and
+`python tools/report_largest_files.py --top 30 --min-lines 800` remains a drift watchlist only.

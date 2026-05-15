@@ -3213,7 +3213,7 @@ impl<H: UiHost> UiTree<H> {
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
                 /* consume_deferred_scroll_to_item */ false,
-                /* commit_scroll_handle_baselines */ false,
+                /* commit_scroll_handle_baselines */ true,
             );
 
             self.hit_test_path_cache = None;

@@ -159,6 +159,11 @@ reopen.
       pixels-changed, perf-threshold, and resource-footprint diagnostics command templates. This is
       tracked in `docs/workstreams/diag-devtools-gui-v1/`, keeping gate UX in the diagnostics owner
       lane rather than the IMUI runtime.
+      Maintenance: the Gate Commands taxonomy now lives in
+      `crates/fret-diag/src/devtools_gate_profiles.rs`, and the GUI consumes
+      `devtools_gate_profile_lines(...)` rather than owning diagnostics command templates. The
+      shared projection includes explicit `check.resource_footprint.json` evidence for thresholded
+      resource-footprint gates.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
       commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
       compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding

@@ -943,10 +943,13 @@ impl<H: UiHost> UiTree<H> {
             self.pending_declarative_window_snapshot_roots.remove(&root);
         }
 
-        if !std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine)
-            && !had_attached_pending
-        {
+        let had_pending_refine =
+            std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine);
+        if !had_pending_refine && !had_attached_pending {
             return;
+        }
+        if had_pending_refine || had_attached_pending {
+            self.last_window_command_action_availability_snapshot_signature = None;
         }
         self.publish_window_runtime_snapshots(app);
     }

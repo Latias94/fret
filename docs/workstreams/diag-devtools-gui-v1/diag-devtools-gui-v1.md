@@ -66,6 +66,10 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints. This keeps the
   gate vocabulary visible in the product surface without moving gate policy into `fret-ui` or
   `fret-imui`.
+- That `Gate Commands` block now consumes the shared `fret-diag` DevTools gate profile projection
+  instead of hard-coding gate taxonomy in the GUI. The shared projection names each gate profile,
+  command template, evidence files, and scan-speed notes, including explicit
+  `check.resource_footprint.json` threshold evidence for resource-footprint gates.
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,

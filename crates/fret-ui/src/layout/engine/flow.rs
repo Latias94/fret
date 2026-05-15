@@ -21,7 +21,11 @@ use taffy::style::{
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum ParentLayoutKind {
     Root,
-    Flex { direction: fret_core::Axis },
+    Flex {
+        direction: fret_core::Axis,
+        definite_width: bool,
+        definite_height: bool,
+    },
     Grid,
     PassthroughOverlayNoStretch,
     Overlay,
@@ -31,20 +35,29 @@ fn should_promote_auto_wrapper_for_fill(
     parent_kind: ParentLayoutKind,
     axis: fret_core::Axis,
 ) -> bool {
-    !matches!(
-        (parent_kind, axis),
+    match (parent_kind, axis) {
         (
             ParentLayoutKind::Flex {
                 direction: fret_core::Axis::Horizontal,
+                definite_height,
+                ..
             },
-            fret_core::Axis::Vertical
-        ) | (
+            fret_core::Axis::Vertical,
+        ) => definite_height,
+        (
             ParentLayoutKind::Flex {
                 direction: fret_core::Axis::Vertical,
+                definite_width,
+                ..
             },
-            fret_core::Axis::Horizontal
-        )
-    )
+            fret_core::Axis::Horizontal,
+        ) => definite_width,
+        _ => true,
+    }
+}
+
+fn size_style_is_definite_or_fill(length: crate::element::Length) -> bool {
+    !matches!(length, crate::element::Length::Auto)
 }
 
 pub(crate) fn layout_children_from_engine_if_solved<H: UiHost>(
@@ -456,6 +469,13 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
             engine.set_measured(node, false);
+            let parent_kind_for_children = ParentLayoutKind::Flex {
+                direction: props.direction,
+                definite_width: root_override_size.is_some()
+                    || size_style_is_definite_or_fill(props.layout.size.width),
+                definite_height: root_override_size.is_some()
+                    || size_style_is_definite_or_fill(props.layout.size.height),
+            };
             for &child in children.as_ref() {
                 build_flow_subtree(
                     engine,
@@ -463,9 +483,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                     tree,
                     window,
                     sf,
-                    ParentLayoutKind::Flex {
-                        direction: props.direction,
-                    },
+                    parent_kind_for_children,
                     child,
                 );
             }
@@ -507,6 +525,13 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
             engine.set_measured(node, false);
+            let parent_kind_for_children = ParentLayoutKind::Flex {
+                direction: props.direction,
+                definite_width: root_override_size.is_some()
+                    || size_style_is_definite_or_fill(props.layout.size.width),
+                definite_height: root_override_size.is_some()
+                    || size_style_is_definite_or_fill(props.layout.size.height),
+            };
             for &child in children.as_ref() {
                 build_flow_subtree(
                     engine,
@@ -514,9 +539,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                     tree,
                     window,
                     sf,
-                    ParentLayoutKind::Flex {
-                        direction: props.direction,
-                    },
+                    parent_kind_for_children,
                     child,
                 );
             }
@@ -558,6 +581,13 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
             engine.set_measured(node, false);
+            let parent_kind_for_children = ParentLayoutKind::Flex {
+                direction: props.direction,
+                definite_width: root_override_size.is_some()
+                    || size_style_is_definite_or_fill(props.layout.size.width),
+                definite_height: root_override_size.is_some()
+                    || size_style_is_definite_or_fill(props.layout.size.height),
+            };
             for &child in children.as_ref() {
                 build_flow_subtree(
                     engine,
@@ -565,9 +595,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                     tree,
                     window,
                     sf,
-                    ParentLayoutKind::Flex {
-                        direction: props.direction,
-                    },
+                    parent_kind_for_children,
                     child,
                 );
             }
@@ -1087,7 +1115,7 @@ fn style_for_item_in_parent<H: UiHost>(
         crate::element::Length::Px(px) => Some(px.0),
         _ => None,
     });
-    if let ParentLayoutKind::Flex { direction } = parent_kind {
+    if let ParentLayoutKind::Flex { direction, .. } = parent_kind {
         let spacer_min = with_element_record_for_node(app, window, node, |r| {
             if let ElementInstance::Spacer(p) = &r.instance {
                 Some(p.min)
