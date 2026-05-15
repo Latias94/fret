@@ -670,8 +670,8 @@ Conventions:
           `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
           territory rather than a separate row hot loop.
       - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
-        - Required artifact: Windows RTX4090 overlay-disabled validation/re-seed for typical autoscroll,
-          complex wheel, and code-editor resize jitter.
+        - Required artifact: Windows RTX4090 overlay-disabled validation for typical autoscroll, complex wheel, and
+          code-editor resize jitter; use a deliberate re-seed path only if the validation evidence justifies it.
         - Target-machine runner:
           `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`.
           Use `--dry-run` on non-target hosts to inspect the command plan. Use a fresh `--date-tag` / `--out-dir` for
