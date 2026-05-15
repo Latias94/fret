@@ -208,6 +208,9 @@ Readiness order for the next locally testable review slices:
    Follow-on: `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` and
    `docs/workstreams/diag-fearless-refactor-v2/README.md` keep the GUI
    productization / first-open workflow on the existing diagnostics-consumer lane.
+   2026-05-16 first-open gate wording follow-up: the IMUI gap lane now distinguishes the
+   cold-start `--discovery-only` entry from the fast `--discovery-only --reuse-built` drift check,
+   so diagnostics discoverability failures are not conflated with large Rust build cost.
 6. Collection helper readiness: keep app-owned until both proof surfaces require one helper.
    Current readiness audit: `P3_COLLECTION_HELPER_READINESS_2026-05-06.md`. The collection proof is
    editor-grade, but most behavior remains app-owned; the already-extracted shared pieces are

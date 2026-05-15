@@ -190,8 +190,12 @@
       "command": "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py"
     },
     {
-      "name": "imui diagnostics devtools discovery",
+      "name": "imui diagnostics devtools discovery cold-start",
       "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only"
+    },
+    {
+      "name": "imui diagnostics devtools discovery drift reuse-built",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built"
     },
     {
       "name": "imui diagnostics devtools first-open",

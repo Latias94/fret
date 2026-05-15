@@ -205,6 +205,9 @@ Exit criteria:
   implementation queue. Product/golden workflow coherence, runner/backend multi-window hand-feel,
   and diagnostics/DevTools discoverability remain higher-value Dear ImGui-grade closure work than
   blind widget/API mirroring.
+  2026-05-16 first-open gate wording result: diagnostics/DevTools entrypoint discovery now has an
+  explicit cold-start gate and an explicit `--reuse-built` drift check. This keeps DevTools
+  discoverability source-backed without treating Rust build latency as a GUI/MCP product failure.
   Current performance-alignment review result: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   belongs in the active gap lane's evidence set. Keep runtime smoothness work in
   `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;

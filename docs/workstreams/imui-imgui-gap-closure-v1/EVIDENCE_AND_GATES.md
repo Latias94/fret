@@ -563,18 +563,20 @@ Run evidence:
 
 ## P3 Diagnostics / DevTools First-Open Gate
 
-Use these gates for the current Dear ImGui-class diagnostics discoverability read. The fast gate
-verifies the first-open DevTools/tool-app discovery index and repo-owned campaign preflight that a
-maintainer should find before opening the GUI/MCP branch. The launched gate verifies the shared
-CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle capture,
-latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare, campaign
-execution, `diag summarize`, and `diag dashboard`. The gate writes `gate.progress.jsonl` in launched
-mode so an outer timeout still leaves the last reached stage. Use `--reuse-built` when the binaries
-are already present and the goal is to re-check the diagnostics path without hiding it behind a
-large Rust build.
+Use these gates for the current Dear ImGui-class diagnostics discoverability read. The discovery
+gate verifies the first-open DevTools/tool-app discovery index and repo-owned campaign preflight
+that a maintainer should find before opening the GUI/MCP branch. `--discovery-only` is the
+cold-start entry and may still build `fretboard-dev`; use `--discovery-only --reuse-built` for the
+fast drift check when the binary is already present and the goal is to validate the discovery path
+without hiding it behind a large Rust build. The launched gate verifies the shared CLI-first path
+that DevTools GUI and MCP consume later: direct script run, named bundle capture, latest bundle
+resolution through `script.result.json:last_bundle_dir`, bundle compare, campaign execution,
+`diag summarize`, and `diag dashboard`. The gate writes `gate.progress.jsonl` in launched mode so
+an outer timeout still leaves the last reached stage.
 
 ```powershell
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
 python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke
 python tools/diag_gate_imui_p2_devtools_first_open.py --reuse-built --out-dir target/imui-p2-devtools-first-open-smoke
 ```
@@ -598,6 +600,10 @@ Run evidence:
   locally. The gate now validates `fretboard-dev list tool-apps` human and JSON output, the
   `docs/diagnostics-first-open.md` first-open anchor, the DevTools GUI and MCP launch/docs/gate
   entries, and `fretboard-dev diag doctor campaigns --json` with `ok=true`.
+- 2026-05-16: `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
+  passed locally. This is the preferred quick drift check for the first-open discovery surface when
+  `target/debug/fretboard-dev.exe` already exists; the non-`--reuse-built` discovery form remains
+  the cold-start entry that also proves the maintainer build path.
 - 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
   maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
   checklist, while preserving the distinction between `capability_source` and
