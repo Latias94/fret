@@ -20,6 +20,20 @@ impl PaintFrameOverlayState {
     pub(super) fn selection_range(self) -> Range<usize> {
         self.selection_start..self.selection_end
     }
+
+    pub(super) fn touches_row(self, row: usize, row_range: &Range<usize>) -> bool {
+        if self.caret.is_some_and(|caret| caret.row == row) {
+            return true;
+        }
+
+        if self.selection_start >= self.selection_end {
+            return false;
+        }
+
+        row >= self.selection_start_point.row
+            && row <= self.selection_end_point.row
+            && self.selection_start.max(row_range.start) < self.selection_end.min(row_range.end)
+    }
 }
 
 #[derive(Debug, Clone)]

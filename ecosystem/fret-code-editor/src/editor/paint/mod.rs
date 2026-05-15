@@ -553,11 +553,12 @@ pub(super) fn paint_row(
     if replay_plan_entry_matches_rect {
         painter.record_scene_fragment_used_entries(1);
     }
+
     let row_content = if let Some(entry) = replay_plan_entry
         .as_ref()
         .filter(|_| replay_plan_entry_matches_rect)
     {
-        entry.payload.content.clone()
+        Arc::clone(&entry.payload.content)
     } else if perf_enabled {
         let started = Instant::now();
         let out = cached_row_content_snapshot(st, row, text_cache_max_entries);
@@ -566,20 +567,19 @@ pub(super) fn paint_row(
             &mut st.paint_perf_frame.ns_row_text,
             started,
         );
+        add_paint_perf_elapsed(
+            &mut st.paint_perf_frame.us_row_content_resolve,
+            &mut st.paint_perf_frame.ns_row_content_resolve,
+            started,
+        );
         out
     } else {
         cached_row_content_snapshot(st, row, text_cache_max_entries)
     };
     let row_range = row_content.range.clone();
-    let line = Arc::clone(&row_content.text);
-    let row_folds = row_content.fold_map.clone();
-    let row_preedit_range = row_content.preedit_range.clone();
-    let row_spans = Arc::clone(&row_content.row_spans);
     if replay_plan_entry.is_some() && !replay_plan_entry_matches_rect {
         painter.record_scene_fragment_rejected_entries(1, "rect_mismatch");
     }
-    #[cfg(not(feature = "syntax"))]
-    let _ = &row_spans;
     // Rows do not emit an inert transparent background quad here.
     // Hit-testing already lives in the surrounding PointerRegion.
     //
@@ -676,14 +676,15 @@ pub(super) fn paint_row(
     let mut row_scene_syntax_replay_key = None::<RowSceneSyntaxReplayKey>;
     let mut fresh_geom = None::<RowGeom>;
     let row_scene_ops_start = painter.scene().ops_len();
+    let overlay = st.paint_frame_overlay;
+    let can_return_after_planned_replay =
+        replay_plan_entry_matches_rect && !overlay.touches_row(row, &row_range);
     let compose_inline_preedit = st.compose_inline_preedit
         || st
             .preedit_replace_range
             .as_ref()
             .is_some_and(|r| !r.is_empty());
-    let overlay = st.paint_frame_overlay;
 
-    let row_content_resolve_started = perf_enabled.then(Instant::now);
     if let Some(entry) = replay_plan_entry.as_ref() {
         if entry.local_bounds == rect {
             row_scene_key = None;
@@ -695,6 +696,40 @@ pub(super) fn paint_row(
             scene::replay_row_scene_plan_entry(painter, st, entry, origin);
         }
     }
+
+    if can_return_after_planned_replay {
+        let geom_for_cache = replay_plan_entry.as_ref().and_then(|entry| {
+            (!st.row_geom_cache.contains_key(&row)).then(|| entry.payload.geom.clone())
+        });
+        geom_cache::store_row_geom_cache(
+            st,
+            row,
+            geom_for_cache,
+            text_cache_max_entries,
+            perf_enabled,
+        );
+        if perf_enabled {
+            st.paint_perf_frame.rows_drew_rich = st
+                .paint_perf_frame
+                .rows_drew_rich
+                .saturating_add(drew_rich as u64);
+            if let Some(row_started) = row_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_total,
+                    &mut st.paint_perf_frame.ns_total,
+                    row_started,
+                );
+            }
+        }
+        return;
+    }
+
+    let line = Arc::clone(&row_content.text);
+    let row_folds = row_content.fold_map.clone();
+    let row_preedit_range = row_content.preedit_range.clone();
+    let row_spans = Arc::clone(&row_content.row_spans);
+    #[cfg(not(feature = "syntax"))]
+    let _ = &row_spans;
 
     if !row_scene_replayed && let Some(preedit) = st.preedit.clone() {
         if compose_inline_preedit {
@@ -1388,14 +1423,6 @@ pub(super) fn paint_row(
             }
         }
     }
-    if let Some(started) = row_content_resolve_started {
-        add_paint_perf_elapsed(
-            &mut st.paint_perf_frame.us_row_content_resolve,
-            &mut st.paint_perf_frame.ns_row_content_resolve,
-            started,
-        );
-    }
-
     let row_geom_resolve_started = perf_enabled.then(Instant::now);
     let mut caret_stops = &[][..];
     let mut caret_rect_top = None::<Px>;
@@ -1751,6 +1778,10 @@ pub(super) fn paint_row(
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
+                    if perf_enabled {
+                        st.paint_perf_frame.quads_selection =
+                            st.paint_perf_frame.quads_selection.saturating_add(1);
+                    }
                 }
             }
         }

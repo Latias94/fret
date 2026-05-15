@@ -252,6 +252,18 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         "paint should not probe rich row content for planned replay rows"
     );
     assert_eq!(
+        perf.us_row_content_resolve, 0,
+        "planned replay rows without overlays should not be attributed to row content resolve"
+    );
+    assert_eq!(
+        perf.us_row_geom_resolve, 0,
+        "planned replay rows without overlays should not re-resolve row geometry in paint"
+    );
+    assert_eq!(
+        perf.us_row_overlay, 0,
+        "planned replay rows without overlays should not run row overlay paint"
+    );
+    assert_eq!(
         perf.rows_scene_prepaint_skip_no_cache, 0,
         "prepaint should seed newly exposed edge rows before replay planning observes no-cache skips"
     );
@@ -282,6 +294,69 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     assert!(
         scene_hits_delta >= perf.rows_scene_prepaint_planned,
         "prepaint planning should account for row scene cache hits"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn planned_replay_rows_with_selection_still_paint_overlay() {
+    let text = "fn main() {\n    let x = 1;\n}\n".repeat(64);
+    let handle = CodeEditorHandle::new(text);
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = editor_ui_bounds();
+    let mut services = FakeServices::default();
+
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+
+    handle.set_selection(Selection {
+        anchor: 0,
+        focus: 8,
+    });
+    let before = handle.cache_stats();
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        Rect::new(bounds.origin, Size::new(Px(704.0), bounds.size.height)),
+    );
+    let after = handle.cache_stats();
+    let perf = handle
+        .paint_perf_frame()
+        .expect("paint perf frame should be enabled in tests that set the env");
+
+    assert!(
+        perf.rows_scene_prepaint_planned > 0,
+        "expected prepaint to plan cached row scene entries"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
+        "paint should consume each planned row scene entry"
+    );
+    assert!(
+        perf.quads_selection > 0,
+        "selected planned-replay rows must still paint the selection overlay"
+    );
+    assert_eq!(
+        after
+            .row_text_get_calls
+            .saturating_sub(before.row_text_get_calls),
+        0,
+        "selection overlay should reuse planned replay content snapshots"
     );
 }
 
