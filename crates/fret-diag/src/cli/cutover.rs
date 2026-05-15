@@ -2613,7 +2613,12 @@ fn parse_repro_command(
             renderdoc_after_frames: None,
             renderdoc_markers: Vec::new(),
             renderdoc_no_outputs_png: false,
-            resource_footprint_thresholds: crate::ResourceFootprintThresholds::default(),
+            resource_footprint_thresholds: crate::ResourceFootprintThresholds {
+                max_working_set_bytes: args.max_working_set_bytes,
+                max_peak_working_set_bytes: args.max_peak_working_set_bytes,
+                max_cpu_avg_percent_total_cores: args.max_cpu_avg_percent_total_cores,
+                ..crate::ResourceFootprintThresholds::default()
+            },
             max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images: None,
             renderer_gpu_budget_thresholds: crate::RendererGpuBudgetThresholds::default(),
             code_editor_memory_thresholds: crate::CodeEditorMemoryThresholds::default(),

@@ -89,6 +89,10 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The same generated-gate builder now includes a perf-threshold profile. `fret-diag` owns the
   structured `diag perf` command projection for target, repeat, warmup frames, aggregate, and the
   first threshold fields; the GUI only renders the form and runs the shared `diag_args`.
+- Resource-footprint thresholds are also first-class in the generated-gate builder. The slice fixed
+  the `diag repro` CLI contract so `--max-working-set-bytes`,
+  `--max-peak-working-set-bytes`, and `--max-cpu-avg-percent-total-cores` are real parsed inputs,
+  then exposed a GUI form that passes a single launch argv item without shell parsing.
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,

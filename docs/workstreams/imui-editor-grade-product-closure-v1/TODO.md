@@ -183,6 +183,9 @@ reopen.
       Maintenance: the generated gate builder now supports the `perf-thresholds` profile from a
       shared `fret-diag` structured `diag perf` command projection, so the GUI can copy/run
       target/repeat/warmup/aggregate/threshold commands without parsing shell templates.
+      Maintenance: the same generated gate builder now supports `resource-footprint-thresholds`;
+      this also repairs the underlying `diag repro` contract so working-set, peak-working-set, and
+      CPU-average thresholds are real parsed CLI inputs before the GUI exposes them.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
       commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
       compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding

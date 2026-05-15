@@ -316,6 +316,10 @@ Current status:
   `perf-thresholds`: `fret-diag` owns the structured `diag perf` command projection, while the GUI
   renders target/repeat/warmup/aggregate/threshold inputs and reuses the generated gate runner plus
   `.fret/diag/gate-runs/*.json` result history.
+- 2026-05-15 DevTools resource-footprint generated gate builder closes the remaining first-class
+  gate UI item by first wiring the missing `diag repro` resource threshold CLI contract, then
+  exposing `resource-footprint-thresholds` as a shared generated command with GUI inputs for target,
+  working-set/peak/CPU thresholds, and a single launch argv item.
 - 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
   projection that converts the selected `bundle_dir` into concrete `diag stats`,
   `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and

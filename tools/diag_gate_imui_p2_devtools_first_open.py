@@ -23,6 +23,8 @@ DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-a
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
+DEVTOOLS_REPRO_CONTRACT_SOURCE = "crates/fret-diag/src/cli/contracts/commands/repro.rs"
+DEVTOOLS_CUTOVER_SOURCE = "crates/fret-diag/src/cli/cutover.rs"
 MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -301,6 +303,8 @@ def _validate_devtools_gui_first_open_source(
     path = cwd / DEVTOOLS_GUI_SOURCE
     gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
     gate_profile_path = cwd / DEVTOOLS_GATE_PROFILE_SOURCE
+    repro_contract_path = cwd / DEVTOOLS_REPRO_CONTRACT_SOURCE
+    cutover_path = cwd / DEVTOOLS_CUTOVER_SOURCE
     if progress is not None:
         progress.record(
             "step.start",
@@ -308,16 +312,20 @@ def _validate_devtools_gui_first_open_source(
             path=str(path),
             gate_run_path=str(gate_run_path),
             gate_profile_path=str(gate_profile_path),
+            repro_contract_path=str(repro_contract_path),
+            cutover_path=str(cutover_path),
         )
     try:
         source = path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
+        repro_contract_source = repro_contract_path.read_text(encoding="utf-8")
+        cutover_source = cutover_path.read_text(encoding="utf-8")
     except OSError as err:
         if progress is not None:
             progress.record("step.fail", name=name, error=str(err))
         raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
-    source = source + "\n" + gate_run_source
+    source = "\n".join([source, gate_run_source, repro_contract_source, cutover_source])
 
     for marker in (
         f'const DEVTOOLS_FIRST_OPEN_DOC: &str = "{FIRST_OPEN_DOC}"',
@@ -341,9 +349,11 @@ def _validate_devtools_gui_first_open_source(
         'const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =',
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
+        "DevtoolsGateResourceFootprintThresholdCommandInputV1",
         "devtools_gate_profile_lines",
         "devtools_gate_profiles_v1",
         "devtools_gate_perf_threshold_command",
+        "devtools_gate_resource_footprint_threshold_command",
         "devtools_gate_script_target_command",
         "devtools_gate_script_target_profile_ids_v1",
         "mod gate_run;",
@@ -404,9 +414,21 @@ def _validate_devtools_gui_first_open_source(
         "devtools.gate.perf_threshold_agg",
         "devtools.gate.perf_max_top_total_us",
         "devtools.gate.perf_max_renderer_encode_scene_us",
+        "devtools.gate.resource_target",
+        "devtools.gate.resource_launch_command",
+        "devtools.gate.resource_max_working_set_bytes",
+        "devtools.gate.resource_max_peak_working_set_bytes",
+        "devtools.gate.resource_max_cpu_avg_percent_total_cores",
+        "max_working_set_bytes: args.max_working_set_bytes",
+        "max_peak_working_set_bytes: args.max_peak_working_set_bytes",
+        "max_cpu_avg_percent_total_cores: args.max_cpu_avg_percent_total_cores",
+        "pub max_working_set_bytes: Option<u64>",
+        "pub max_peak_working_set_bytes: Option<u64>",
+        "pub max_cpu_avg_percent_total_cores: Option<f64>",
         "fn generated_gate_command_from_state(",
         "fn script_target_gate_inputs(",
         "fn perf_threshold_gate_inputs(",
+        "fn resource_footprint_threshold_gate_inputs(",
         "fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
@@ -445,8 +467,10 @@ def _validate_devtools_gui_first_open_source(
         "pub struct DevtoolsGateCommandV1",
         "pub struct DevtoolsGateScriptTargetCommandInputV1",
         "pub struct DevtoolsGatePerfThresholdCommandInputV1",
+        "pub struct DevtoolsGateResourceFootprintThresholdCommandInputV1",
         "pub type DevtoolsGateScriptTargetCommandV1 = DevtoolsGateCommandV1",
         'pub const DEVTOOLS_GATE_PERF_THRESHOLD_PROFILE_ID_V1: &str = "perf-thresholds"',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLD_PROFILE_ID_V1: &str =',
         "pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1",
         'pub const DEVTOOLS_GATE_STALE_COMMAND: &str =',
         'pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
@@ -472,6 +496,8 @@ def _validate_devtools_gui_first_open_source(
         "pub fn devtools_gate_profiles_v1() -> &'static [DevtoolsGateProfileV1]",
         "pub fn devtools_gate_perf_threshold_command(",
         "pub fn devtools_gate_perf_threshold_command_line(",
+        "pub fn devtools_gate_resource_footprint_threshold_command(",
+        "pub fn devtools_gate_resource_footprint_threshold_command_line(",
         "pub fn devtools_gate_script_target_profile_ids_v1() -> &'static [&'static str]",
         "pub fn devtools_gate_script_target_command(",
         "pub fn devtools_gate_script_target_command_line(",
@@ -479,6 +505,7 @@ def _validate_devtools_gui_first_open_source(
         "devtools_gate_script_target_profiles_are_parameterized",
         "devtools_gate_script_target_commands_include_runnable_diag_args",
         "devtools_gate_perf_threshold_command_includes_runnable_diag_args",
+        "devtools_gate_resource_footprint_threshold_command_includes_runnable_diag_args",
     ):
         _assert_text_contains(name, gate_profile_source, marker)
     if progress is not None:

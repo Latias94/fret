@@ -159,9 +159,11 @@ use util::{advance_target_run_id, now_unix_ms, read_json_value, touch, write_jso
 
 pub use devtools_gate_profiles::{
     DevtoolsGateCommandV1, DevtoolsGatePerfThresholdCommandInputV1, DevtoolsGateProfileV1,
-    DevtoolsGateScriptTargetCommandInputV1, DevtoolsGateScriptTargetCommandV1,
-    devtools_gate_perf_threshold_command, devtools_gate_perf_threshold_command_line,
-    devtools_gate_profile_lines, devtools_gate_profiles_v1, devtools_gate_script_target_command,
+    DevtoolsGateResourceFootprintThresholdCommandInputV1, DevtoolsGateScriptTargetCommandInputV1,
+    DevtoolsGateScriptTargetCommandV1, devtools_gate_perf_threshold_command,
+    devtools_gate_perf_threshold_command_line, devtools_gate_profile_lines,
+    devtools_gate_profiles_v1, devtools_gate_resource_footprint_threshold_command,
+    devtools_gate_resource_footprint_threshold_command_line, devtools_gate_script_target_command,
     devtools_gate_script_target_command_line, devtools_gate_script_target_profile_ids_v1,
 };
 pub use diag_dashboard::{

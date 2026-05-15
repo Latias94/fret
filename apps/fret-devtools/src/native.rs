@@ -10,8 +10,10 @@ use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::{
     DevtoolsGatePerfThresholdCommandInputV1, DevtoolsGateScriptTargetCommandInputV1,
-    devtools_gate_perf_threshold_command, devtools_gate_profile_lines, devtools_gate_profiles_v1,
-    devtools_gate_script_target_command, devtools_gate_script_target_profile_ids_v1,
+    DevtoolsGateResourceFootprintThresholdCommandInputV1, devtools_gate_perf_threshold_command,
+    devtools_gate_profile_lines, devtools_gate_profiles_v1,
+    devtools_gate_resource_footprint_threshold_command, devtools_gate_script_target_command,
+    devtools_gate_script_target_profile_ids_v1,
 };
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
@@ -155,6 +157,11 @@ struct State {
     gate_profile_perf_threshold_agg: Model<String>,
     gate_profile_perf_max_top_total_us: Model<String>,
     gate_profile_perf_max_renderer_encode_scene_us: Model<String>,
+    gate_profile_resource_target: Model<String>,
+    gate_profile_resource_max_working_set_bytes: Model<String>,
+    gate_profile_resource_max_peak_working_set_bytes: Model<String>,
+    gate_profile_resource_max_cpu_avg_percent_total_cores: Model<String>,
+    gate_profile_resource_launch_command: Model<String>,
     gate_run_in_flight: Model<bool>,
     gate_run_last_command_line: Model<Option<Arc<str>>>,
     gate_run_last_result_path: Model<Option<Arc<str>>>,
@@ -350,6 +357,14 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let gate_profile_perf_threshold_agg = app.models_mut().insert("p95".to_string());
     let gate_profile_perf_max_top_total_us = app.models_mut().insert(String::new());
     let gate_profile_perf_max_renderer_encode_scene_us = app.models_mut().insert(String::new());
+    let gate_profile_resource_target = app
+        .models_mut()
+        .insert("tools/diag-scripts/ui-gallery-intro-idle.json".to_string());
+    let gate_profile_resource_max_working_set_bytes = app.models_mut().insert(String::new());
+    let gate_profile_resource_max_peak_working_set_bytes = app.models_mut().insert(String::new());
+    let gate_profile_resource_max_cpu_avg_percent_total_cores =
+        app.models_mut().insert(String::new());
+    let gate_profile_resource_launch_command = app.models_mut().insert(String::new());
     let gate_run_in_flight = app.models_mut().insert(false);
     let gate_run_last_command_line = app.models_mut().insert(None::<Arc<str>>);
     let gate_run_last_result_path = app.models_mut().insert(None::<Arc<str>>);
@@ -520,6 +535,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         gate_profile_perf_threshold_agg,
         gate_profile_perf_max_top_total_us,
         gate_profile_perf_max_renderer_encode_scene_us,
+        gate_profile_resource_target,
+        gate_profile_resource_max_working_set_bytes,
+        gate_profile_resource_max_peak_working_set_bytes,
+        gate_profile_resource_max_cpu_avg_percent_total_cores,
+        gate_profile_resource_launch_command,
         gate_run_in_flight,
         gate_run_last_command_line,
         gate_run_last_result_path,
@@ -687,6 +707,23 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.gate_profile_perf_max_top_total_us, Invalidation::Paint);
     cx.observe_model(
         &st.gate_profile_perf_max_renderer_encode_scene_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(&st.gate_profile_resource_target, Invalidation::Paint);
+    cx.observe_model(
+        &st.gate_profile_resource_max_working_set_bytes,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_resource_max_peak_working_set_bytes,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_resource_max_cpu_avg_percent_total_cores,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_resource_launch_command,
         Invalidation::Paint,
     );
     cx.observe_model(&st.gate_run_in_flight, Invalidation::Paint);
@@ -4389,6 +4426,38 @@ fn generated_gate_command_from_state(
         );
         return Some(devtools_gate_perf_threshold_command(input));
     }
+    if selected_profile_id.as_ref() == "resource-footprint-thresholds" {
+        let target = app
+            .models()
+            .read(&st.gate_profile_resource_target, |v| v.clone())
+            .unwrap_or_default();
+        let max_working_set_bytes = app
+            .models()
+            .read(&st.gate_profile_resource_max_working_set_bytes, |v| v.clone())
+            .unwrap_or_default();
+        let max_peak_working_set_bytes = app
+            .models()
+            .read(&st.gate_profile_resource_max_peak_working_set_bytes, |v| v.clone())
+            .unwrap_or_default();
+        let max_cpu_avg_percent_total_cores = app
+            .models()
+            .read(&st.gate_profile_resource_max_cpu_avg_percent_total_cores, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let launch_command = app
+            .models()
+            .read(&st.gate_profile_resource_launch_command, |v| v.clone())
+            .unwrap_or_default();
+        let input = DevtoolsGateResourceFootprintThresholdCommandInputV1::new(
+            &target,
+            &max_working_set_bytes,
+            &max_peak_working_set_bytes,
+            &max_cpu_avg_percent_total_cores,
+            &launch_command,
+        );
+        return Some(devtools_gate_resource_footprint_threshold_command(input));
+    }
 
     let script_json = app
         .models()
@@ -6231,6 +6300,7 @@ fn devtools_gate_profile_command_builder(
         .filter(|profile| {
             devtools_gate_script_target_profile_ids_v1().contains(&profile.id)
                 || profile.id == "perf-thresholds"
+                || profile.id == "resource-footprint-thresholds"
         })
         .map(|profile| shadcn::SelectItem::new(profile.id, format!("{} ({})", profile.label, profile.id)))
         .collect::<Vec<_>>();
@@ -6240,10 +6310,10 @@ fn devtools_gate_profile_command_builder(
             .items(profile_items)
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(260.0)))
             .into_element(cx);
-    let gate_inputs = if selected_profile_id.as_ref() == "perf-thresholds" {
-        perf_threshold_gate_inputs(cx, st)
-    } else {
-        script_target_gate_inputs(cx, st)
+    let gate_inputs = match selected_profile_id.as_ref() {
+        "perf-thresholds" => perf_threshold_gate_inputs(cx, st),
+        "resource-footprint-thresholds" => resource_footprint_threshold_gate_inputs(cx, st),
+        _ => script_target_gate_inputs(cx, st),
     };
     let command_state_line = generated_command
         .as_ref()
@@ -6521,6 +6591,59 @@ fn perf_threshold_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> A
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx);
     ui::v_stack(|_cx| [run_inputs, threshold_inputs])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn resource_footprint_threshold_gate_inputs(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+) -> AnyElement {
+    let target_input = shadcn::Input::new(st.gate_profile_resource_target.clone())
+        .placeholder("script-or-suite")
+        .a11y_label("Resource footprint gate target")
+        .test_id("devtools.gate.resource_target")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let launch_input = shadcn::Input::new(st.gate_profile_resource_launch_command.clone())
+        .placeholder("target/release/app.exe")
+        .a11y_label("Resource footprint gate launch command")
+        .test_id("devtools.gate.resource_launch_command")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let max_working_input =
+        shadcn::Input::new(st.gate_profile_resource_max_working_set_bytes.clone())
+            .placeholder("max working bytes")
+            .a11y_label("Resource footprint max working set bytes")
+            .test_id("devtools.gate.resource_max_working_set_bytes")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+            .into_element(cx);
+    let max_peak_input =
+        shadcn::Input::new(st.gate_profile_resource_max_peak_working_set_bytes.clone())
+            .placeholder("max peak bytes")
+            .a11y_label("Resource footprint max peak working set bytes")
+            .test_id("devtools.gate.resource_max_peak_working_set_bytes")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+            .into_element(cx);
+    let max_cpu_input =
+        shadcn::Input::new(st.gate_profile_resource_max_cpu_avg_percent_total_cores.clone())
+            .placeholder("max cpu %")
+            .a11y_label("Resource footprint max CPU average percent total cores")
+            .test_id("devtools.gate.resource_max_cpu_avg_percent_total_cores")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(150.0)))
+            .into_element(cx);
+    let target_inputs = ui::h_row(|_cx| [target_input, launch_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    let threshold_inputs = ui::h_row(|_cx| [max_working_input, max_peak_input, max_cpu_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    ui::v_stack(|_cx| [target_inputs, threshold_inputs])
         .gap(fret_ui_kit::Space::N2)
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx)

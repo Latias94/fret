@@ -1225,3 +1225,41 @@ completed successfully when run sequentially; `cargo clippy -p fret-diag -p fret
 --all-targets -- -D warnings`, `python tools/check_layering.py`, and `git diff --check` passed.
 `git diff --check` reported only the existing CRLF normalization warning for
 `tools/diag_gate_imui_p2_devtools_first_open.py`.
+
+## DevTools resource footprint generated gate builder - 2026-05-15 follow-up
+
+Scope: close the remaining first-class DevTools gate UI item by making resource-footprint threshold
+commands real, structured, and GUI-runnable without shell parsing.
+
+- `crates/fret-diag/src/cli/contracts/commands/repro.rs` now exposes the documented
+  `--max-working-set-bytes`, `--max-peak-working-set-bytes`, and
+  `--max-cpu-avg-percent-total-cores` options.
+- `crates/fret-diag/src/cli/cutover.rs` now passes those options into
+  `ResourceFootprintThresholds`, so `diag repro` writes/enforces `check.resource_footprint.json`
+  instead of advertising inert flags.
+- `crates/fret-diag/src/devtools_gate_profiles.rs` now owns
+  `DevtoolsGateResourceFootprintThresholdCommandInputV1` and
+  `devtools_gate_resource_footprint_threshold_command(...)`.
+- `apps/fret-devtools/src/native.rs` now includes `resource-footprint-thresholds` in the generated
+  gate builder and reuses the same generated gate runner/result history. The launch input is a
+  single argv item, not a shell command string.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check the CLI contract, cutover mapping, shared
+  command projection, GUI test ids, and helper split.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-diag repro_contract_captures_resource_footprint_thresholds contract_help_mentions_the_migrated_command_surfaces high_risk_main_lane_help_has_drift_guards devtools_gate_resource_footprint_threshold_command_preserves_placeholders_until_filled devtools_gate_resource_footprint_threshold_command_includes_runnable_diag_args devtools_gate_resource_footprint_threshold_command_quotes_paths_and_rejects_invalid_numbers --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates gate_run_result_record_has_stable_shape --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings
+```
+
+Result: passed. The `fret-diag` nextest gate reported `6 tests run: 6 passed`; the
+`fret-devtools` nextest gate reported `2 tests run: 2 passed`; both source/discovery gates
+completed successfully when run sequentially; `cargo clippy -p fret-diag -p fret-devtools
+--all-targets -- -D warnings`, `python tools/check_layering.py`, and `git diff --check` passed.
+`git diff --check` reported only the existing CRLF normalization warning for
+`tools/diag_gate_imui_p2_devtools_first_open.py`.

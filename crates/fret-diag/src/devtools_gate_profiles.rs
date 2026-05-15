@@ -18,6 +18,8 @@ pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str = "cargo run -p
 pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1: &[&str] =
     &["stale-paint-scene", "pixels-changed"];
 pub const DEVTOOLS_GATE_PERF_THRESHOLD_PROFILE_ID_V1: &str = "perf-thresholds";
+pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLD_PROFILE_ID_V1: &str =
+    "resource-footprint-thresholds";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DevtoolsGateScriptTargetCommandInputV1<'a> {
@@ -60,6 +62,33 @@ impl<'a> DevtoolsGatePerfThresholdCommandInputV1<'a> {
             perf_threshold_agg,
             max_top_total_us,
             max_renderer_encode_scene_us,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DevtoolsGateResourceFootprintThresholdCommandInputV1<'a> {
+    pub target: &'a str,
+    pub max_working_set_bytes: &'a str,
+    pub max_peak_working_set_bytes: &'a str,
+    pub max_cpu_avg_percent_total_cores: &'a str,
+    pub launch_command: &'a str,
+}
+
+impl<'a> DevtoolsGateResourceFootprintThresholdCommandInputV1<'a> {
+    pub fn new(
+        target: &'a str,
+        max_working_set_bytes: &'a str,
+        max_peak_working_set_bytes: &'a str,
+        max_cpu_avg_percent_total_cores: &'a str,
+        launch_command: &'a str,
+    ) -> Self {
+        Self {
+            target,
+            max_working_set_bytes,
+            max_peak_working_set_bytes,
+            max_cpu_avg_percent_total_cores,
+            launch_command,
         }
     }
 }
@@ -231,6 +260,45 @@ pub fn devtools_gate_perf_threshold_command(
     }
 }
 
+pub fn devtools_gate_resource_footprint_threshold_command_line(
+    input: DevtoolsGateResourceFootprintThresholdCommandInputV1<'_>,
+) -> String {
+    devtools_gate_resource_footprint_threshold_command(input).command_line
+}
+
+pub fn devtools_gate_resource_footprint_threshold_command(
+    input: DevtoolsGateResourceFootprintThresholdCommandInputV1<'_>,
+) -> DevtoolsGateCommandV1 {
+    let profile = DEVTOOLS_GATE_PROFILES_V1
+        .iter()
+        .find(|profile| profile.id == DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLD_PROFILE_ID_V1)
+        .expect("resource footprint threshold profile must exist");
+    let target = shell_quote_arg_or_placeholder(input.target, "<script-or-suite>");
+    let max_working_set_bytes =
+        shell_quote_arg_or_placeholder(input.max_working_set_bytes, "<bytes>");
+    let max_peak_working_set_bytes =
+        shell_quote_arg_or_placeholder(input.max_peak_working_set_bytes, "<bytes>");
+    let max_cpu_avg_percent_total_cores =
+        shell_quote_arg_or_placeholder(input.max_cpu_avg_percent_total_cores, "<percent>");
+    let launch_command = shell_quote_arg_or_placeholder(input.launch_command, "<app-command>");
+    let command_line = format!(
+        "cargo run -p fretboard-dev -- diag repro {target} --max-working-set-bytes {max_working_set_bytes} --max-peak-working-set-bytes {max_peak_working_set_bytes} --max-cpu-avg-percent-total-cores {max_cpu_avg_percent_total_cores} --json --launch -- {launch_command}"
+    );
+    let missing_inputs = resource_footprint_threshold_missing_inputs(input);
+    let diag_args = if missing_inputs.is_empty() {
+        resource_footprint_threshold_diag_args(input)
+    } else {
+        Vec::new()
+    };
+    DevtoolsGateCommandV1 {
+        id: profile.id.to_string(),
+        label: profile.label.to_string(),
+        command_line,
+        diag_args,
+        missing_inputs,
+    }
+}
+
 pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -347,12 +415,61 @@ fn perf_threshold_diag_args(input: DevtoolsGatePerfThresholdCommandInputV1<'_>) 
     ]
 }
 
+fn resource_footprint_threshold_missing_inputs(
+    input: DevtoolsGateResourceFootprintThresholdCommandInputV1<'_>,
+) -> Vec<&'static str> {
+    let mut missing = Vec::new();
+    if input.target.trim().is_empty() {
+        missing.push("script-or-suite");
+    }
+    if parse_nonzero_u64(input.max_working_set_bytes).is_none() {
+        missing.push("max-working-set-bytes");
+    }
+    if parse_nonzero_u64(input.max_peak_working_set_bytes).is_none() {
+        missing.push("max-peak-working-set-bytes");
+    }
+    if parse_positive_f64(input.max_cpu_avg_percent_total_cores).is_none() {
+        missing.push("max-cpu-avg-percent-total-cores");
+    }
+    if input.launch_command.trim().is_empty() {
+        missing.push("app-command");
+    }
+    missing
+}
+
+fn resource_footprint_threshold_diag_args(
+    input: DevtoolsGateResourceFootprintThresholdCommandInputV1<'_>,
+) -> Vec<String> {
+    vec![
+        "repro".to_string(),
+        input.target.trim().to_string(),
+        "--max-working-set-bytes".to_string(),
+        input.max_working_set_bytes.trim().to_string(),
+        "--max-peak-working-set-bytes".to_string(),
+        input.max_peak_working_set_bytes.trim().to_string(),
+        "--max-cpu-avg-percent-total-cores".to_string(),
+        input.max_cpu_avg_percent_total_cores.trim().to_string(),
+        "--json".to_string(),
+        "--launch".to_string(),
+        "--".to_string(),
+        input.launch_command.trim().to_string(),
+    ]
+}
+
 fn parse_u64(value: &str) -> Option<u64> {
     value.trim().parse::<u64>().ok()
 }
 
 fn parse_nonzero_u64(value: &str) -> Option<u64> {
     parse_u64(value).filter(|value| *value > 0)
+}
+
+fn parse_positive_f64(value: &str) -> Option<f64> {
+    value
+        .trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|value| *value > 0.0)
 }
 
 #[cfg(test)]
@@ -583,6 +700,103 @@ mod tests {
                 "perf-threshold-agg",
                 "max-top-total-us",
                 "max-renderer-encode-scene-us",
+            ]
+        );
+    }
+
+    #[test]
+    fn devtools_gate_resource_footprint_threshold_command_preserves_placeholders_until_filled() {
+        let command = devtools_gate_resource_footprint_threshold_command(
+            DevtoolsGateResourceFootprintThresholdCommandInputV1::default(),
+        );
+
+        assert_eq!(command.id, "resource-footprint-thresholds");
+        assert_eq!(command.label, "resource footprint thresholds");
+        assert!(!command.is_runnable());
+        assert_eq!(
+            command.missing_inputs,
+            vec![
+                "script-or-suite",
+                "max-working-set-bytes",
+                "max-peak-working-set-bytes",
+                "max-cpu-avg-percent-total-cores",
+                "app-command",
+            ]
+        );
+        assert!(command.diag_args.is_empty());
+        assert!(command.command_line.contains("<script-or-suite>"));
+        assert!(
+            command
+                .command_line
+                .contains("--max-working-set-bytes <bytes>")
+        );
+        assert!(
+            command
+                .command_line
+                .contains("--max-cpu-avg-percent-total-cores <percent>")
+        );
+        assert!(command.command_line.contains("--launch -- <app-command>"));
+    }
+
+    #[test]
+    fn devtools_gate_resource_footprint_threshold_command_includes_runnable_diag_args() {
+        let command = devtools_gate_resource_footprint_threshold_command(
+            DevtoolsGateResourceFootprintThresholdCommandInputV1::new(
+                "tools/diag-scripts/ui-gallery-intro-idle.json",
+                "1200000000",
+                "1600000000",
+                "250.5",
+                "target/release/fret-ui-gallery.exe",
+            ),
+        );
+
+        assert!(command.is_runnable());
+        assert!(command.missing_inputs.is_empty());
+        assert_eq!(
+            command.command_line,
+            "cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-intro-idle.json --max-working-set-bytes 1200000000 --max-peak-working-set-bytes 1600000000 --max-cpu-avg-percent-total-cores 250.5 --json --launch -- target/release/fret-ui-gallery.exe"
+        );
+        assert_eq!(
+            command.diag_args,
+            vec![
+                "repro",
+                "tools/diag-scripts/ui-gallery-intro-idle.json",
+                "--max-working-set-bytes",
+                "1200000000",
+                "--max-peak-working-set-bytes",
+                "1600000000",
+                "--max-cpu-avg-percent-total-cores",
+                "250.5",
+                "--json",
+                "--launch",
+                "--",
+                "target/release/fret-ui-gallery.exe",
+            ]
+        );
+    }
+
+    #[test]
+    fn devtools_gate_resource_footprint_threshold_command_quotes_paths_and_rejects_invalid_numbers()
+    {
+        let command = devtools_gate_resource_footprint_threshold_command(
+            DevtoolsGateResourceFootprintThresholdCommandInputV1::new(
+                "target/my suite",
+                "0",
+                "abc",
+                "-1",
+                "target/release/my app.exe",
+            ),
+        );
+
+        assert!(!command.is_runnable());
+        assert!(command.command_line.contains("'target/my suite'"));
+        assert!(command.command_line.contains("'target/release/my app.exe'"));
+        assert_eq!(
+            command.missing_inputs,
+            vec![
+                "max-working-set-bytes",
+                "max-peak-working-set-bytes",
+                "max-cpu-avg-percent-total-cores",
             ]
         );
     }

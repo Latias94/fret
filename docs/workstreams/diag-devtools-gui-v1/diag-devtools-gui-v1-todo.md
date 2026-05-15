@@ -146,7 +146,7 @@ Conventions:
   - [x] stale paint/scene launch/run + result artifact history,
   - [x] pixels changed launch/run + result artifact history,
   - [x] perf thresholds,
-  - [ ] resource footprint thresholds.
+  - [x] resource footprint thresholds.
 - [ ] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
   - [x] focus events (`inspect.focus`) with summary + path (best-effort),
