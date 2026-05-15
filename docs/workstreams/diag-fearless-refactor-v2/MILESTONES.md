@@ -76,6 +76,10 @@ Progress update:
   - argument normalization and script-source resolution,
   - check-derived defaults and pack/bundle intent derivation,
   - transport-mode validation before exclusive branch dispatch.
+- The `diag_run` post-run doctor/check seam now has an explicit covered gate in the seam matrix:
+  - command setup now has a named regression test for bundle-artifact planning when post-run checks
+    are requested without pack output,
+  - the existing bundle-missing helper coverage remains the paired execution guard.
 - `diag_run` is now effectively parked: the remaining body is mostly resolved-path setup plus
   exclusive branch dispatch, so the next higher-ROI seam has shifted back to `diag_campaign`
   summary/finalize execution and report shaping rather than a speculative sixth `cmd_run` slice.
