@@ -1369,9 +1369,17 @@ pub(crate) fn triage_json_from_stats(
         .filter(|p| p.is_file())
         .map(|p| p.display().to_string());
 
+    let source_bundle_schema_version =
+        crate::compat::bundle::sniff_bundle_schema_version(bundle_path)
+            .ok()
+            .flatten();
     let stats_json = report.to_json();
     json!({
-        "schema_version": 1,
+        "schema_version": crate::perf_schema::PERF_TRIAGE_SCHEMA_VERSION,
+        "kind": crate::perf_schema::PERF_TRIAGE_KIND,
+        "schema_policy": crate::perf_schema::schema_policy_json(),
+        "source_bundle_schema_version": source_bundle_schema_version,
+        "stats_schema_version": stats_json.get("schema_version").and_then(|v| v.as_u64()),
         "generated_unix_ms": generated_unix_ms,
         "bundle": {
             "bundle_path": bundle_path.display().to_string(),

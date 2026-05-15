@@ -1764,6 +1764,30 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
     .expect("bundle stats");
 
     let triage = triage_json_from_stats(&bundle_path, &report, BundleStatsSort::Time, 0);
+    assert_eq!(
+        triage.get("kind").and_then(|v| v.as_str()),
+        Some(crate::perf_schema::PERF_TRIAGE_KIND)
+    );
+    assert_eq!(
+        triage.get("schema_version").and_then(|v| v.as_u64()),
+        Some(crate::perf_schema::PERF_TRIAGE_SCHEMA_VERSION as u64)
+    );
+    assert_eq!(
+        triage
+            .pointer("/schema_policy/compatibility")
+            .and_then(|v| v.as_str()),
+        Some("additive_only")
+    );
+    assert_eq!(
+        triage.get("stats_schema_version").and_then(|v| v.as_u64()),
+        Some(crate::perf_schema::PERF_STATS_SCHEMA_VERSION as u64)
+    );
+    assert_eq!(
+        triage
+            .get("source_bundle_schema_version")
+            .and_then(|v| v.as_u64()),
+        Some(1)
+    );
     let codes = triage
         .get("hints")
         .and_then(|v| v.as_array())

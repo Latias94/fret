@@ -48,7 +48,14 @@
 
 ## Maintenance / hygiene
 
-- [ ] Add schema versioning for perf stats outputs (bundle + triage).
+- [x] Add schema versioning for perf stats outputs (stats + stats diff + triage).
+  - Contract constants: `crates/fret-diag/src/perf_schema.rs`
+  - Outputs now include `kind`, `schema_version`, `schema_policy`, and source/nested schema links where applicable.
+  - Gate: `cargo nextest run -p fret-diag stats_json_includes_avg_and_budget stats_diff_json_is_versioned_and_additive_only triage_includes_hints_and_unit_costs_for_worst_frame --no-fail-fast`
+  - Note: `check.perf_thresholds.json` and `check.perf_hints.json` already carry `schema_version=1`; this slice does
+    not rename or bump those gate-artifact schemas.
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
   - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md`
-- [ ] Ensure additive-only changes unless a migration plan is documented.
+- [x] Ensure additive-only changes unless a migration plan is documented.
+  - `schema_policy.compatibility=additive_only` is emitted by stats, stats diff, and triage JSON.
+  - Field removals, semantic renames, or type changes now require either a schema bump or a documented compatibility window.
