@@ -487,10 +487,13 @@ Conventions:
         `cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_overlay_env --no-fail-fast`.
       - Evidence: perf log entry `2026-05-16 04:54:35 +08:00`
         (`formal editor probes exclude torture overlay`).
-      - Result: overlay-disabled repeat=3 typical smoke
-        `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`
-        reports `top_code_editor_torture_overlay_us=0` in all three runs, while row replay remains healthy
-        (`top_code_editor_rows_scene_replayed=289`, `top_code_editor_rows_scene_stored=0`).
+      - Result: overlay-disabled repeat=3 evidence now covers typical autoscroll, complex wheel, and resize
+        jitter:
+        `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`,
+        `target/fret-diag/editor-paint-overlay-disabled-20260516-complex-wheel-r3/1778878778260/bundle.schema2.json`,
+        and `target/fret-diag/editor-paint-overlay-disabled-20260516-resize-jitter-r3/1778878807245/bundle.schema2.json`.
+        All three report `top_code_editor_torture_overlay_us=0`; row replay remains healthy (`289/0`,
+        `287/2`, and `289/0` replay/store p95).
     - [ ] Close the remaining Canvas wrapper / `paint.widget` attribution gap.
       - Current evidence after the renderer slice: `paint.widget` p95 is still `414us` typical,
         `633us` complex wheel, and `421us` resize jitter, while `code_editor.paint_perf` p95 is

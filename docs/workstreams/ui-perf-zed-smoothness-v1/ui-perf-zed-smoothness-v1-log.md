@@ -14435,13 +14435,24 @@ target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor
     --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
 ```
 
+Same command shape was also run for:
+- `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`
+- `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+
 Evidence:
-- `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`
-  reported `top_code_editor_torture_overlay_us=0`, `top_code_editor_rows_scene_replayed=289`, and
-  `top_code_editor_rows_scene_stored=0` in the worst repeat=3 run.
-- The three repeat=3 runs stayed in the same low-paint range as the earlier formal pass while removing the
-  diagnostic HUD from the contract surface.
+| probe | worst bundle | frame total p50/p95 | paint p50/p95 | paint.widget p50/p95 | code_editor p50/p95 | surface callback/row_paint/gap p95 | renderer text/encode/upload p95 | replay/store p95 | overlay p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json` | `642/779` | `459/524` | `268/318` | `100/130` | `172/153/23` | `354/149/98` | `289/0` | `0` |
+| complex wheel | `target/fret-diag/editor-paint-overlay-disabled-20260516-complex-wheel-r3/1778878778260/bundle.schema2.json` | `772/928` | `617/720` | `415/516` | `243/341` | `373/355/14` | `355/136/85` | `287/2` | `0` |
+| resize jitter | `target/fret-diag/editor-paint-overlay-disabled-20260516-resize-jitter-r3/1778878807245/bundle.schema2.json` | `761/1540` | `499/740` | `294/518` | `109/133` | `171/153/21` | `364/168/130` | `289/0` | `0` |
+
+Repeat top totals:
+- typical autoscroll total p50/p95/max `810/1574/1574us`, paint `533/1087/1087us`.
+- complex wheel total p50/p95/max `962/993/993us`, paint `690/720/720us`.
+- resize jitter total p50/p95/max `1537/1540/1540us`, paint `530/544/544us`.
 
 Decision:
 - The torture overlay is now isolated from the formal editor perf contract. Keep it available for manual diagnosis,
   but do not count it in the baseline contract surface.
+- Row replay/cache remains healthy with overlay removed, and renderer text/encode/upload remains bounded on this
+  macOS M4 pass. Do not re-seed or loosen baselines from this local evidence.
