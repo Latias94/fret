@@ -121,6 +121,10 @@ These knobs are read via `OnceLock` and require a process restart to take effect
 
 If/when we resume “fearless refactor” work, prefer these directions over additional threshold tuning:
 
+Current direction as of 2026-05-16: the stale code-editor prepaint-planner follow-on is closed.
+Continue through Editor/Canvas paint replay evidence first; only split renderer or generic
+display-list ownership after a bundle proves that owner boundary is the measured limiter.
+
 1) **Reduce width-driven `Text::prepare` frequency**, not just per-prepare cost.
    - Candidate levers: stronger/column-based wrap-width quantization for editor-like surfaces, guarded live-resize
      LOD/deferral with reconcile-on-idle, and aligning `measure` and `prepare` cache keys more aggressively.

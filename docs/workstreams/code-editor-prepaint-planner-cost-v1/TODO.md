@@ -1,7 +1,7 @@
 # TODO
 
-Status: Active
-Date: 2026-05-15
+Status: Closed
+Date: 2026-05-16
 
 ## Done
 
@@ -11,13 +11,17 @@ Date: 2026-05-15
 - [x] Add a focused regression test that proves the planner trusts cached replay context.
 - [x] Run the focused replay-plan gate.
 - [x] Run resize perf and confirm paint `no_entry` / `full_miss` counters stay at `0`.
+- [x] Re-run package/check/layering gates against the final code and keep the lane evidence current.
+- [x] Decide that the remaining prepaint planner cost is low enough to close this lane.
+- [x] Stop this lane after fresh perf evidence moved the dominant hotspot away from code-editor
+      replay planning.
 
-## Next Executable Slices
+## Closeout Decision
 
-- [ ] Re-run package/check/layering gates against the final code and keep the lane evidence current.
-- [ ] Decide whether the remaining prepaint planner cost is low enough to close this lane.
-- [ ] If the planner still dominates the worst bundle, split a narrower follow-on for the next
-      reducer rather than broadening this folder.
+- [x] Keep `code-editor-edge-row-full-path-prefetch-v1` closed.
+- [x] Keep this lane closed after the cached replay-context fast path.
+- [x] Continue the performance mainline in `ui-perf-zed-smoothness-v1` P1.5 (`Editor canvas paint
+      replay`) with Canvas paint/cache replay and renderer payload attribution evidence.
 
 ## Stop Conditions
 

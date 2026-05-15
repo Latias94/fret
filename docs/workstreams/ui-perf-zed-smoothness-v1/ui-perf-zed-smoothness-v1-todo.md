@@ -427,6 +427,32 @@ Conventions:
     - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
     - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
   - Work items (fearless refactor allowed; log every perf-affecting change):
+    - [x] Close the stale prepaint-planner follow-on before widening the editor paint lane.
+      - Decision: `code-editor-prepaint-planner-cost-v1` is closed by
+        `docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
+        The lane reduced `us_row_scene_prepaint_plan` p95 from `91us` to `67us` and preserved
+        `rows_scene_fast_miss_no_entry == 0` / `rows_scene_full_miss_no_entry == 0`, but fresh
+        post-merge evidence moved the dominant hotspot to paint/widget and Canvas replay/cache
+        attribution.
+    - [x] Short-circuit planned row replay paint when no selection/preedit/overlay work remains.
+      - Implementation: `perf(code-editor): short-circuit planned row replay paint` (`3086481679`).
+      - Evidence:
+        `ecosystem/fret-code-editor/src/editor/paint/mod.rs`,
+        `ecosystem/fret-code-editor/src/editor/state.rs`, and
+        `ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs`.
+      - Gate:
+        `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`.
+      - Smoke evidence:
+        `target/fret-diag/paint-widget-canvas-replay-fast-return-smoke-20260515/1778856015202-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady/bundle.schema2.json`
+        and
+        `target/fret-diag/code-editor-resize-replay-fast-return-smoke-20260515/1778856345501-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`.
+        These show low code-editor paint p95 (`229us` complex wheel, `113us` resize replay) while
+        frame-level `paint.widget` and renderer text/encode/upload remain the attribution surfaces
+        to watch.
+      - Next formal evidence requirement: re-run the editor paint probes with repeat/warmup policy
+        on the target machine profile and compare Canvas `paint.widget`, row content resolve,
+        row-scene replay/cache replay, and renderer encode/upload payload before tightening any
+        baseline or starting a broader display-list rewrite.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

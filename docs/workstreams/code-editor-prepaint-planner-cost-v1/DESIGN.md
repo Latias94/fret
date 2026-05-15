@@ -1,7 +1,7 @@
 # Code Editor Prepaint Planner Cost V1
 
 Date: 2026-05-15
-Status: Active
+Status: Closed on 2026-05-16
 
 ## Goal
 
@@ -24,6 +24,18 @@ The current code path now trusts cached row-scene replay context for rows that a
 row-scene entries. That removes an extra syntax span lookup from the prepaint planner and keeps the
 planner focused on validating already-cached replay state.
 
+## Closeout Read
+
+This lane is closed. The cached replay-context fast path reduced
+`us_row_scene_prepaint_plan` from `91us` to `67us` p95 on the carried resize evidence while keeping
+the paint miss invariants at `0`.
+
+Fresh post-merge evidence then moved the dominant editor perf question away from prepaint planning:
+the current typical autoscroll sample is paint/widget dominated, with hot row-scene replay already
+at `100%`. Continue editor performance work from
+`docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md` P1.5
+(`Editor canvas paint replay`) rather than reopening this prepaint-planner folder.
+
 ## Success Criteria
 
 - `us_row_scene_prepaint_plan` drops materially from the closed-lane baseline.
@@ -39,6 +51,8 @@ planner focused on validating already-cached replay state.
 
 ## Likely Next Levers
 
-- Keep reducing planner validation cost inside `ecosystem/fret-code-editor`.
-- Only split a broader architecture lane if future bundles point to renderer encoding, layout, or
-  virtual-surface ownership instead of row-scene planning.
+- Keep this lane closed unless a future bundle again proves prepaint replay planning is the
+  dominant bottleneck.
+- Continue the main perf line through Editor Canvas paint/cache replay evidence, then split a
+  renderer/display-list or virtual-surface owner lane only if that evidence points outside
+  `fret-code-editor`.

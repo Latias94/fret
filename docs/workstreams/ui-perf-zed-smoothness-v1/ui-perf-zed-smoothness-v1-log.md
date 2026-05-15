@@ -13716,3 +13716,46 @@ Decision:
   idempotency. Note that `CodeBlockPreparedState` still keys by hash+length for performance; if we
   later need collision-proof source identity, that should be a separate correctness/design slice,
   not a setter-idempotency change.
+
+## 2026-05-16 00:04:04 +08:00 (prepaint-planner closeout and editor paint replay pivot)
+
+Question:
+- Should the active perf mainline continue reducing code-editor prepaint replay-planner cost, or
+  pivot to Editor Canvas paint/cache replay evidence?
+
+Change:
+- Closed `code-editor-prepaint-planner-cost-v1` with an explicit closeout audit.
+- Promoted the next perf mainline back into this lane's P1.5 Editor Canvas paint replay work:
+  verify planned row replay paint short-circuit behavior, then attribute remaining Canvas
+  paint/cache replay and renderer payload costs before tightening baselines or widening ownership.
+
+Validation / evidence:
+- Prepaint-planner closeout:
+  `docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
+- Planned replay paint short-circuit implementation:
+  `3086481679 perf(code-editor): short-circuit planned row replay paint`.
+- Focused gate for the already-landed implementation:
+  `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`.
+- Existing post-change complex wheel smoke bundle:
+  `target/fret-diag/paint-widget-canvas-replay-fast-return-smoke-20260515/1778856015202-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady/bundle.schema2.json`.
+  `diag stats --sort time --top 5` reports total p50/p95=`553/712us`, paint p50/p95=`367/513us`,
+  `paint.widget` p95=`394us`, renderer p95 upload/encode/text=`70/112/309us`, and
+  code-editor paint p50/p95 total=`154/229us`.
+- Existing post-change resize replay smoke bundle:
+  `target/fret-diag/code-editor-resize-replay-fast-return-smoke-20260515/1778856345501-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`.
+  `diag stats --sort time --top 5` reports total p50/p95=`636/1698us`, paint p50/p95=`313/562us`,
+  `paint.widget` p95=`395us`, renderer p95 upload/encode/text=`97/168/392us`, and
+  code-editor paint p50/p95 total=`103/113us` with rows painted/replayed/prepaint-planned/used
+  all `2890`.
+
+Decision:
+- Do not keep optimizing `us_row_scene_prepaint_plan` as the mainline after the current evidence:
+  that lane reduced planner p95 from `91us` to `67us` while preserving miss invariants, and the
+  newer typical autoscroll evidence is paint/widget dominated with row-scene replay already
+  hot-cache.
+- Continue the next optimization loop through Editor Canvas paint/cache replay evidence. If the
+  next bundles point to renderer encode/upload, split a renderer owner lane; if they point to
+  generic Canvas/display-list ownership, split a narrow Canvas owner lane.
+- Treat the two repeat=1 smoke bundles as direction evidence, not as formal baseline replacement.
+  Before tightening any checked-in baseline, re-run the relevant editor paint probe with the lane's
+  repeat/warmup policy on the target machine profile.

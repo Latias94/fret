@@ -3,7 +3,7 @@
   "slug": "ui-perf-zed-smoothness-v1",
   "title": "UI Performance Zed Smoothness v1",
   "status": "active",
-  "updated": "2026-05-15",
+  "updated": "2026-05-16",
   "scope_kind": "execution",
   "problem": "Establish and maintain Fret's editor-grade UI performance and architecture closure against Zed/GPUI and egui by keeping real editor scenarios such as scroll, input, resize, text, rendering, caching, and view reuse under repeatable p50/p95/max and renderer payload contracts. Core contracts, resource semantics, and redundant code cleanup should be fixed before broad optimization, and fearless refactors should proceed only when measured evidence proves the hot path.",
   "authoritative_docs": [
@@ -45,7 +45,7 @@
     }
   ],
   "repro": {
-    "summary": "Start with the contract matrix, then run the resize and code-editor resize gates on the target machine profile before attributing a narrower editor paint or renderer payload hotspot.",
+    "summary": "Start with the contract matrix, keep the resize gates green, then attribute the Editor Canvas paint/cache replay path before widening any renderer or display-list owner lane.",
     "commands": [
       "python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7",
       "python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7",
@@ -65,6 +65,10 @@
     {
       "name": "code-editor-resize-probes-gate",
       "command": "python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7"
+    },
+    {
+      "name": "code-editor-planned-replay-paint-gate",
+      "command": "cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast"
     },
     {
       "name": "imui-hello-semantic-smoke-suite",
@@ -93,6 +97,7 @@
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
+    "docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md",
     "docs/workstreams/perf-baselines/README.md",
     "docs/workstreams/standalone/ui-perf-setter-idempotency-v1.md",
     "docs/workstreams/diag-v2-hardening-and-switches-v1/README.md",
@@ -102,6 +107,7 @@
     "ecosystem/fret-code-editor-buffer/src/lib.rs",
     "ecosystem/fret-code-editor/src/editor/handle/model.rs",
     "ecosystem/fret-code-editor/src/editor/handle/view.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/mod.rs",
     "ecosystem/fret-code-editor/src/editor/state.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_geom_cache.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
