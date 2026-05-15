@@ -1890,6 +1890,15 @@ pub enum UiSemanticsActionV1 {
     SetTextSelection,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsRelationV1 {
+    ActiveDescendant,
+    LabelledBy,
+    DescribedBy,
+    Controls,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -2170,6 +2179,24 @@ pub enum UiPredicateV1 {
         /// Container node used for composite focus + `active_descendant` models (typically the
         /// focused input or listbox root).
         container: UiSelectorV1,
+    },
+    /// True when `source` contains a semantics relation edge to `target`.
+    ///
+    /// This is the direct relation-edge companion to higher-level predicates such as
+    /// `active_item_is`. Use it when a script needs to prove `aria-labelledby`,
+    /// `aria-describedby`, `aria-controls`, or raw `aria-activedescendant` wiring.
+    SemanticsRelationIncludes {
+        source: UiSelectorV1,
+        relation: UiSemanticsRelationV1,
+        target: UiSelectorV1,
+    },
+    /// True when `source` has no targets for the specified semantics relation.
+    ///
+    /// This is useful for retained/windowed detach cases where a source may keep a last-known
+    /// declarative element id, but the exported snapshot must not publish dangling relation edges.
+    SemanticsRelationIsEmpty {
+        source: UiSelectorV1,
+        relation: UiSemanticsRelationV1,
     },
     BarrierRoots {
         #[serde(default)]
@@ -4497,6 +4524,58 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::SemanticsActionIs { .. }));
+    }
+
+    #[test]
+    fn predicate_semantics_relation_serializes_and_deserializes() {
+        let source = UiSelectorV1::TestId {
+            id: "relation-source".to_string(),
+            root_z_index: None,
+        };
+        let target = UiSelectorV1::TestId {
+            id: "relation-label".to_string(),
+            root_z_index: None,
+        };
+
+        let includes_value = serde_json::to_value(UiPredicateV1::SemanticsRelationIncludes {
+            source: source.clone(),
+            relation: UiSemanticsRelationV1::LabelledBy,
+            target,
+        })
+        .unwrap();
+        assert_eq!(
+            includes_value,
+            serde_json::json!({
+                "kind": "semantics_relation_includes",
+                "source": { "kind": "test_id", "id": "relation-source" },
+                "relation": "labelled_by",
+                "target": { "kind": "test_id", "id": "relation-label" },
+            })
+        );
+        let includes_roundtrip: UiPredicateV1 = serde_json::from_value(includes_value).unwrap();
+        assert!(matches!(
+            includes_roundtrip,
+            UiPredicateV1::SemanticsRelationIncludes { .. }
+        ));
+
+        let empty_value = serde_json::to_value(UiPredicateV1::SemanticsRelationIsEmpty {
+            source,
+            relation: UiSemanticsRelationV1::Controls,
+        })
+        .unwrap();
+        assert_eq!(
+            empty_value,
+            serde_json::json!({
+                "kind": "semantics_relation_is_empty",
+                "source": { "kind": "test_id", "id": "relation-source" },
+                "relation": "controls",
+            })
+        );
+        let empty_roundtrip: UiPredicateV1 = serde_json::from_value(empty_value).unwrap();
+        assert!(matches!(
+            empty_roundtrip,
+            UiPredicateV1::SemanticsRelationIsEmpty { .. }
+        ));
     }
 
     #[test]

@@ -50,7 +50,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::SelectTrigger::new().refine_layout(LayoutRefinement::default().w_px(Px(180.0))),
         )
         .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
-        .content(shadcn::SelectContent::new())
+        .content(shadcn::SelectContent::new().test_id("ui-gallery-select-diag-surface-listbox"))
         .entries(entries)
         .into_element(cx);
 

@@ -114,6 +114,29 @@ where
     FScope: Fn(u64) -> bool,
     FRoot: Fn(u64) -> bool,
 {
+    extend_test_id_chrome_fallback_with_visibility(
+        snapshot,
+        id,
+        in_scope,
+        matches_root_z,
+        &|node_id| index.is_selectable(node_id),
+        matches,
+    )
+}
+
+fn extend_test_id_chrome_fallback_with_visibility<'a, FScope, FRoot, FVisible>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    id: &str,
+    in_scope: &FScope,
+    matches_root_z: &FRoot,
+    is_visible: &FVisible,
+    matches: &mut Vec<&'a fret_core::SemanticsNode>,
+) -> bool
+where
+    FScope: Fn(u64) -> bool,
+    FRoot: Fn(u64) -> bool,
+    FVisible: Fn(u64) -> bool,
+{
     if !matches.is_empty() {
         return false;
     }
@@ -128,7 +151,7 @@ where
         .iter()
         .filter(|n| {
             let node_id = n.id.data().as_ffi();
-            index.is_selectable(node_id)
+            is_visible(node_id)
                 && in_scope(node_id)
                 && matches_root_z(node_id)
                 && n.test_id.as_deref() == Some(chrome_id)
@@ -258,6 +281,118 @@ pub(super) fn select_semantics_node_scoped<'a>(
                 let id = n.id.data().as_ffi();
                 index.is_selectable(id) && in_scope(id) && matches_root_z(id)
             })
+        }
+    }
+}
+
+pub(super) fn select_semantics_relation_endpoint_scoped<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    selector: &UiSelectorV1,
+    scope_root: Option<u64>,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+    let want_root_z_index = match selector {
+        UiSelectorV1::RoleAndName { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::RoleAndPath { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::TestId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::GlobalElementId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::NodeId { root_z_index, .. } => *root_z_index,
+    };
+
+    let in_scope = |id: u64| -> bool {
+        scope_root
+            .map(|root| index.is_descendant_of_or_self(id, root))
+            .unwrap_or(true)
+    };
+    let matches_root_z = |id: u64| -> bool {
+        want_root_z_index
+            .map(|z| index.root_z_for(id) == z)
+            .unwrap_or(true)
+    };
+    let is_endpoint_visible = |id: u64| {
+        index.is_in_visible_root(id)
+            && index
+                .nearest_semantics_hidden_ancestor_or_self(id)
+                .is_none()
+            && in_scope(id)
+            && matches_root_z(id)
+    };
+
+    match selector {
+        UiSelectorV1::NodeId { node, .. } => index
+            .by_id
+            .get(node)
+            .copied()
+            .filter(|n| is_endpoint_visible(n.id.data().as_ffi())),
+        UiSelectorV1::RoleAndName { role, name, .. } => {
+            let role = parse_semantics_role(role)?;
+            super::pick::pick_best_match(
+                snapshot.nodes.iter().filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    is_endpoint_visible(id)
+                        && n.role == role
+                        && n.label.as_deref().is_some_and(|label| label == name)
+                }),
+                &index,
+            )
+        }
+        UiSelectorV1::RoleAndPath {
+            role,
+            name,
+            ancestors,
+            ..
+        } => {
+            let role = parse_semantics_role(role)?;
+
+            let mut parsed_ancestors: Vec<(SemanticsRole, &str)> =
+                Vec::with_capacity(ancestors.len());
+            for a in ancestors {
+                parsed_ancestors.push((parse_semantics_role(&a.role)?, a.name.as_str()));
+            }
+
+            super::pick::pick_best_match(
+                snapshot.nodes.iter().filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    is_endpoint_visible(id)
+                        && n.role == role
+                        && n.label.as_deref().is_some_and(|label| label == name)
+                        && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
+                }),
+                &index,
+            )
+        }
+        UiSelectorV1::TestId { id, .. } => super::pick::pick_best_match(
+            snapshot.nodes.iter().filter(|n| {
+                let node_id = n.id.data().as_ffi();
+                is_endpoint_visible(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+            }),
+            &index,
+        )
+        .or_else(|| {
+            let mut matches = Vec::new();
+            extend_test_id_chrome_fallback_with_visibility(
+                snapshot,
+                id,
+                &in_scope,
+                &matches_root_z,
+                &is_endpoint_visible,
+                &mut matches,
+            )
+            .then(|| super::pick::pick_best_match(matches.into_iter(), &index))
+            .flatten()
+        }),
+        UiSelectorV1::GlobalElementId { element, .. } => {
+            let node = element_runtime.and_then(|runtime| {
+                runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
+            })?;
+            let node_id = node.data().as_ffi();
+            index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .filter(|n| is_endpoint_visible(n.id.data().as_ffi()))
         }
     }
 }

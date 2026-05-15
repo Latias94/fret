@@ -123,6 +123,35 @@ fn script_v1_roundtrip_active_item_is_none_predicate() {
 }
 
 #[test]
+fn script_v1_roundtrip_semantics_relation_predicates() {
+    assert_script_v1_roundtrip(
+        r#"{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "relation-source" },
+        "relation": "labelled_by",
+        "target": { "kind": "test_id", "id": "relation-label" }
+      },
+      "timeout_frames": 1
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "relation-source" },
+        "relation": "controls"
+      }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v1_roundtrip_window_style_effective_hit_test() {
     assert_script_v1_roundtrip(
         r#"{

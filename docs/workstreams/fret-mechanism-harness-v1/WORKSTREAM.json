@@ -45,7 +45,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, and the Select cross-root relation-edge runtime gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -119,6 +119,10 @@
       "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics level_is_matches_semantics_hierarchy_level --no-fail-fast",
       "cargo nextest run --cargo-profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast",
       "cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_relation_serializes_and_deserializes --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v1_roundtrip_semantics_relation_predicates --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol builder_v2_semantics_relation_predicates_serialize --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges --no-fail-fast",
       "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit tree_item_a11y select_tree_item toggle_tree_item file_tree_item_a11y --no-fail-fast",
       "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json --dir target/fret-diag-tree-retained-disabled-focus-action-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe",
       "$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tree-retained --dir target/fret-diag-tree-retained-suite-after-disabled-focus-action-v1 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe",
@@ -127,7 +131,10 @@
       "cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib accordion_trigger_open_non_collapsible_is_aria_disabled --no-fail-fast",
       "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe",
       "cargo test --profile dev-fast -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture",
-      "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture"
+      "cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture",
+      "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges semantics_relation_includes_can_cross_scope_roots semantics_relation_includes_can_cross_modal_barrier_to_underlay_source --no-fail-fast",
+      "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-relation-edge-runtime-v8 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib select_content_test_id_stamps_listbox_without_renaming_viewport select_test_id_prefix_stamps_listbox_items_and_scroll_viewport --no-fail-fast"
     ]
   },
   "gates": [
@@ -170,6 +177,26 @@
     {
       "name": "semantics-relations-fixture",
       "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture"
+    },
+    {
+      "name": "diag-protocol-semantics-relation-predicates",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_relation_serializes_and_deserializes script_v1_roundtrip_semantics_relation_predicates builder_v2_semantics_relation_predicates_serialize --no-fail-fast"
+    },
+    {
+      "name": "diag-bootstrap-semantics-relation-predicates",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges --no-fail-fast"
+    },
+    {
+      "name": "diag-bootstrap-semantics-relation-cross-modal-barrier-predicates",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges semantics_relation_includes_can_cross_scope_roots semantics_relation_includes_can_cross_modal_barrier_to_underlay_source --no-fail-fast"
+    },
+    {
+      "name": "ui-gallery-select-cross-root-relation-edge-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-relation-edge-runtime-v8 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "shadcn-select-content-listbox-test-id-focused-gate",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib select_content_test_id_stamps_listbox_without_renaming_viewport select_test_id_prefix_stamps_listbox_items_and_scroll_viewport --no-fail-fast"
     },
     {
       "name": "combobox-active-descendant-interaction-fixture",
@@ -750,6 +777,7 @@
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-diag-protocol/src/lib.rs",
     "crates/fret-diag-protocol/src/builder.rs",
+    "crates/fret-diag-protocol/tests/builder_smoke.rs",
     "crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
     "apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/drag_baseline.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs",
@@ -801,7 +829,9 @@
     "tools/diag-scripts/suites/docking-arbitration/common/suite.json",
     "tools/diag-scripts/suites/docking-arbitration/suite.json",
     "docs/ui-diagnostics-and-scripted-tests.md",
-    "tools/diag-scripts/index.json"
+    "tools/diag-scripts/index.json",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

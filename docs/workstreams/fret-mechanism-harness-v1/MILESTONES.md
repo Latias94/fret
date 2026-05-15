@@ -930,3 +930,42 @@ Status: complete
 - Remaining follow-up: add synthetic/runtime relation-edge mutation coverage for `labelled_by`,
   `described_by`, and `controls`, especially when the target detaches or crosses overlay/root
   boundaries.
+
+## M59: Semantics Relation-Edge Detach/Reattach Harness Gate
+
+Status: complete
+
+- Added `relation-targets-detach-reattach-clear-stale-edges` to the semantics relation fixture
+  suite, with a multi-frame observer for `labelled_by`, `described_by`, and `controls`.
+- The fixture proved the F98 snapshot-local relation filtering already clears those edges while
+  targets are detached and resolves them again after reattach; no additional `fret-ui` mechanism
+  defect was reproduced.
+- Added diagnostics protocol predicates `semantics_relation_includes` and
+  `semantics_relation_is_empty` so runtime scripts can directly prove raw relation edges and
+  empty-state invariants.
+- Added typed diagnostics builder helpers for the same predicates.
+- Added bootstrap predicate evaluator support and focused tests covering `active_descendant`,
+  `labelled_by`, `described_by`, and `controls`.
+- Focused nextest gates passed for `fret-ui`, `fret-diag-protocol`, and `fret-bootstrap`.
+- Remaining follow-up: connect these new predicates to a UI Gallery runtime relation-edge gate for
+  cross overlay/root-boundary source-target ownership.
+
+## M60: Cross-root Select Relation Runtime Gate
+
+Status: complete
+
+- Extended the promoted Select commit/reopen runtime script with raw relation-edge predicates:
+  trigger `controls` listbox after open, listbox `labelled_by` trigger after open, trigger
+  `controls` empty after commit/close, and trigger `controls` restored after reopen.
+- Added `SelectContent::test_id(...)` so the UI Gallery gate can name the mounted listbox panel
+  without reusing `test_id_prefix` and renaming the long-lived `select-scroll-viewport` selector.
+- The first runtime gate found a real diagnostics harness defect: relation predicate endpoint
+  resolution reused ordinary modal-barrier-scoped selectors, so the underlay Select trigger could
+  not be selected while the popup barrier was active even though the semantics edge was present.
+- Added relation-endpoint selector resolution for diagnostics predicates. Ordinary selectors still
+  respect modal barrier scoping, while relation predicates can inspect visible, non-hidden source
+  and target endpoints across the barrier/root boundary.
+- Focused bootstrap tests, the Select runtime gate, the semantics relation fixture gate, protocol
+  predicate gates, and Select test-id focused gates passed.
+- Remaining follow-up: use the same runtime path to stress overlay/listbox placement ownership
+  under scroll-container clipping, RTL, and viewport resize rather than only relation correctness.

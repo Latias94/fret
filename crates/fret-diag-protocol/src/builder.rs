@@ -9,7 +9,8 @@ use crate::{
     UiActionScriptV2, UiActionStepV2, UiBoundsMetricV1, UiCommandDispatchTraceQueryV1,
     UiComparisonV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1,
     UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
-    UiSemanticsActionV1, UiSemanticsLiveV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
+    UiSemanticsActionV1, UiSemanticsLiveV1, UiSemanticsRelationV1, UiShortcutRoutingTraceQueryV1,
+    UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -61,6 +62,25 @@ pub fn active_item_is(container: UiSelectorV1, item: UiSelectorV1) -> UiPredicat
 
 pub fn active_item_is_none(container: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::ActiveItemIsNone { container }
+}
+
+pub fn semantics_relation_includes(
+    source: UiSelectorV1,
+    relation: UiSemanticsRelationV1,
+    target: UiSelectorV1,
+) -> UiPredicateV1 {
+    UiPredicateV1::SemanticsRelationIncludes {
+        source,
+        relation,
+        target,
+    }
+}
+
+pub fn semantics_relation_is_empty(
+    source: UiSelectorV1,
+    relation: UiSemanticsRelationV1,
+) -> UiPredicateV1 {
+    UiPredicateV1::SemanticsRelationIsEmpty { source, relation }
 }
 
 pub fn selected_is(target: UiSelectorV1, selected: bool) -> UiPredicateV1 {

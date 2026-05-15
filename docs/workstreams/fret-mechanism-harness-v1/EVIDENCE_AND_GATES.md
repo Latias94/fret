@@ -1588,6 +1588,74 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     passed; 18 scripts, zero reason codes.
   - suite evidence:
     `target/fret-diag-command-suite-retained-active-descendant-v2/sessions/1778831271030-63304/suite.summary.json`
+- Semantics relation-edge detach/reattach fixture and diagnostics predicates:
+  `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json`
+  - fixture case:
+    `relation-targets-detach-reattach-clear-stale-edges`
+  - mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles`
+  - mechanism result:
+    passed, 1 test.
+  - protocol serialization gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_relation_serializes_and_deserializes`
+  - protocol serialization result:
+    passed, 1 test.
+  - script roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v1_roundtrip_semantics_relation_predicates`
+  - script roundtrip result:
+    passed, 1 test.
+  - builder helper gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol builder_v2_semantics_relation_predicates_serialize`
+  - builder helper result:
+    passed, 1 test.
+  - bootstrap predicate evaluator gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges`
+  - bootstrap predicate result:
+    passed, 1 test.
+  - implementation anchors:
+    `crates/fret-diag-protocol/src/lib.rs`,
+    `crates/fret-diag-protocol/src/builder.rs`,
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+    `crates/fret-diag-protocol/tests/builder_smoke.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+- Cross-root Select relation runtime gate:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json`
+  - runtime assertions:
+    trigger `controls` listbox after open, listbox `labelled_by` trigger after open, trigger
+    `controls` empty after commit/close, and trigger `controls` restored after reopen.
+  - focused bootstrap relation endpoint gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_relation_predicates_match_semantics_edges semantics_relation_includes_can_cross_scope_roots semantics_relation_includes_can_cross_modal_barrier_to_underlay_source`
+  - focused bootstrap result:
+    passed, 3 tests.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-relation-edge-runtime-v8 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778839948330`.
+  - runtime evidence:
+    `target/fret-diag-select-relation-edge-runtime-v8/sessions/1778839940868-81380/script.result.json`
+  - AI packet:
+    `target/fret-diag-select-relation-edge-runtime-v8/sessions/1778839940868-81380/1778839948330/ai.packet`
+  - packed evidence:
+    `target/fret-diag-select-relation-edge-runtime-v8/sessions/1778839940868-81380/share/1778839948330.zip`
+  - protocol companion gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_relation_serializes_and_deserializes script_v1_roundtrip_semantics_relation_predicates builder_v2_semantics_relation_predicates_serialize --no-fail-fast`
+  - protocol companion result:
+    passed, 3 tests.
+  - Select content selector gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib select_content_test_id_stamps_listbox_without_renaming_viewport select_test_id_prefix_stamps_listbox_items_and_scroll_viewport`
+  - Select content selector result:
+    passed, 2 tests.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `ecosystem/fret-ui-shadcn/src/select.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs`,
+    `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

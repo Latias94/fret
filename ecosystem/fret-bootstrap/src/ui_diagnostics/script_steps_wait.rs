@@ -1911,7 +1911,6 @@ pub(super) fn handle_wait_until_step(
             }
         },
     };
-
     if ok {
         active.wait_until = None;
         active.next_step = active.next_step.saturating_add(1);

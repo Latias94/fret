@@ -371,9 +371,30 @@ date: 2026-05-12
     the current snapshot. `ui-gallery-command-retained-active-descendant-action-state.json` gates
     the same flow through the Command page, and the rerun bundles lint cleanly after adding an
     accessible label to the demo input.
-- [ ] Add relation-edge normalization coverage for `labelled_by`, `described_by`, and `controls`
+- [x] Add relation-edge normalization coverage for `labelled_by`, `described_by`, and `controls`
   targets that detach, reattach, or cross overlay/root boundaries, so the active-descendant fix is
   not the only snapshot-local relation proof.
+  - Result: `semantics_relations_v1.json` now includes
+    `relation-targets-detach-reattach-clear-stale-edges`, a multi-frame fixture where the source
+    keeps last-known declarative element ids while label, description, and controlled targets
+    detach and reattach. The fixture proves detached targets are absent, relation arrays are empty
+    while detached, and all three relations resolve again after reattach. No new mechanism defect
+    was reproduced because the F98 snapshot-local relation filtering already covers these edges.
+    The fixed gap was diagnostics/harness capability: scripts now have
+    `semantics_relation_includes` and `semantics_relation_is_empty` predicates for raw relation
+    edges, plus typed builder helpers for script generation.
+- [x] Add a UI Gallery runtime relation-edge gate for cross overlay/root-boundary source-target
+  ownership, using the new `semantics_relation_includes`/`semantics_relation_is_empty` predicates.
+  - Result: `ui-gallery-select-commit-and-label-update.json` now proves Select trigger
+    `controls` the mounted listbox, the listbox is `labelled_by` the trigger, the trigger controls
+    relation clears after commit/close, and the relation returns after reopen. The runtime gate
+    found a diagnostics harness defect: relation predicates reused ordinary modal-barrier-scoped
+    selectors, so the underlay trigger was clipped out while the popup barrier was active even
+    though the semantics edge existed. Relation predicates now use endpoint-specific selector
+    resolution, while ordinary selectors still respect modal barrier scoping.
+- [ ] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
+  exercises scroll-container clipping, modal boundary choice, RTL direction, and viewport resize
+  with placement/layout sidecar evidence.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
