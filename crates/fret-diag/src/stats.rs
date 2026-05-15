@@ -1417,6 +1417,10 @@ mod tests {
                                 "paint_host_widget_observed_models_items": 1,
                                 "paint_host_widget_observed_globals_time_us": 11,
                                 "paint_host_widget_observed_globals_items": 2,
+                                "paint_host_widget_observed_deps_calls": 4,
+                                "paint_host_widget_observed_deps_empty_calls": 3,
+                                "paint_host_widget_observed_models_non_empty_calls": 1,
+                                "paint_host_widget_observed_globals_non_empty_calls": 1,
                                 "paint_host_widget_instance_lookup_time_us": 12,
                                 "paint_host_widget_instance_lookup_calls": 4
                             },
@@ -1469,6 +1473,10 @@ mod tests {
                                 "paint_host_widget_observed_models_items": 2,
                                 "paint_host_widget_observed_globals_time_us": 21,
                                 "paint_host_widget_observed_globals_items": 3,
+                                "paint_host_widget_observed_deps_calls": 5,
+                                "paint_host_widget_observed_deps_empty_calls": 3,
+                                "paint_host_widget_observed_models_non_empty_calls": 2,
+                                "paint_host_widget_observed_globals_non_empty_calls": 2,
                                 "paint_host_widget_instance_lookup_time_us": 22,
                                 "paint_host_widget_instance_lookup_calls": 5
                             },
@@ -1521,6 +1529,10 @@ mod tests {
                                 "paint_host_widget_observed_models_items": 3,
                                 "paint_host_widget_observed_globals_time_us": 31,
                                 "paint_host_widget_observed_globals_items": 4,
+                                "paint_host_widget_observed_deps_calls": 6,
+                                "paint_host_widget_observed_deps_empty_calls": 3,
+                                "paint_host_widget_observed_models_non_empty_calls": 2,
+                                "paint_host_widget_observed_globals_non_empty_calls": 3,
                                 "paint_host_widget_instance_lookup_time_us": 32,
                                 "paint_host_widget_instance_lookup_calls": 6
                             },
@@ -1670,6 +1682,21 @@ mod tests {
             json.pointer("/p95/paint_host_widget_instance_lookup_calls")
                 .and_then(|v| v.as_u64()),
             Some(6)
+        );
+        assert_eq!(
+            json.pointer("/p50/paint_host_widget_observed_deps_calls")
+                .and_then(|v| v.as_u64()),
+            Some(5)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_host_widget_observed_deps_empty_calls")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            json.pointer("/max/paint_host_widget_observed_globals_non_empty_calls")
+                .and_then(|v| v.as_u64()),
+            Some(3)
         );
         assert_eq!(
             json.pointer("/max/paint_host_widget_instance_lookup_time_us")

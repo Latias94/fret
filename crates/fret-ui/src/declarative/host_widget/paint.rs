@@ -137,6 +137,8 @@ impl ElementHostWidget {
                 globals_loop.saturating_add(overhead_globals),
                 globals_len,
             );
+            cx.tree
+                .debug_record_paint_host_widget_observed_deps_call(models_len, globals_len);
         }
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);

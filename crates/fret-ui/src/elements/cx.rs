@@ -919,6 +919,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             .window_state
             .current_view_cache_root()
             .unwrap_or_else(|| self.root_id());
+        self.window_state.record_observed_deps_presence(id);
         let list = self
             .window_state
             .observed_models_next
@@ -942,6 +943,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             .window_state
             .current_view_cache_root()
             .unwrap_or_else(|| self.root_id());
+        self.window_state.record_observed_deps_presence(id);
         let list = self
             .window_state
             .observed_globals_next

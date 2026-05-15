@@ -82,6 +82,10 @@ pub(super) struct BundleStatsReport {
     max_paint_host_widget_observed_models_items: u32,
     max_paint_host_widget_observed_globals_time_us: u64,
     max_paint_host_widget_observed_globals_items: u32,
+    max_paint_host_widget_observed_deps_calls: u32,
+    max_paint_host_widget_observed_deps_empty_calls: u32,
+    max_paint_host_widget_observed_models_non_empty_calls: u32,
+    max_paint_host_widget_observed_globals_non_empty_calls: u32,
     max_paint_host_widget_instance_lookup_time_us: u64,
     max_paint_host_widget_instance_lookup_calls: u32,
     pub(super) max_total_time_us: u64,
@@ -163,6 +167,14 @@ pub(super) struct BundleStatsReport {
     p95_paint_host_widget_observed_globals_time_us: u64,
     p50_paint_host_widget_observed_globals_items: u64,
     p95_paint_host_widget_observed_globals_items: u64,
+    p50_paint_host_widget_observed_deps_calls: u64,
+    p95_paint_host_widget_observed_deps_calls: u64,
+    p50_paint_host_widget_observed_deps_empty_calls: u64,
+    p95_paint_host_widget_observed_deps_empty_calls: u64,
+    p50_paint_host_widget_observed_models_non_empty_calls: u64,
+    p95_paint_host_widget_observed_models_non_empty_calls: u64,
+    p50_paint_host_widget_observed_globals_non_empty_calls: u64,
+    p95_paint_host_widget_observed_globals_non_empty_calls: u64,
     p50_paint_host_widget_instance_lookup_time_us: u64,
     p95_paint_host_widget_instance_lookup_time_us: u64,
     p50_paint_host_widget_instance_lookup_calls: u64,
@@ -241,6 +253,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_host_widget_observed_models_items: u32,
     pub(super) paint_host_widget_observed_globals_time_us: u64,
     pub(super) paint_host_widget_observed_globals_items: u32,
+    pub(super) paint_host_widget_observed_deps_calls: u32,
+    pub(super) paint_host_widget_observed_deps_empty_calls: u32,
+    pub(super) paint_host_widget_observed_models_non_empty_calls: u32,
+    pub(super) paint_host_widget_observed_globals_non_empty_calls: u32,
     pub(super) paint_host_widget_instance_lookup_time_us: u64,
     pub(super) paint_host_widget_instance_lookup_calls: u32,
     pub(super) paint_text_prepare_time_us: u64,
@@ -3070,15 +3086,20 @@ impl BundleStatsReport {
             if row.paint_host_widget_observed_models_time_us > 0
                 || row.paint_host_widget_observed_globals_time_us > 0
                 || row.paint_host_widget_instance_lookup_time_us > 0
+                || row.paint_host_widget_observed_deps_calls > 0
             {
                 println!(
-                    "    paint_host_widget.us(models/globals/instance)={}/{}/{} items={}/{} calls={}",
+                    "    paint_host_widget.us(models/globals/instance)={}/{}/{} items={}/{} calls(instance/deps/empty/model_non_empty/global_non_empty)={}/{}/{}/{}/{}",
                     row.paint_host_widget_observed_models_time_us,
                     row.paint_host_widget_observed_globals_time_us,
                     row.paint_host_widget_instance_lookup_time_us,
                     row.paint_host_widget_observed_models_items,
                     row.paint_host_widget_observed_globals_items,
                     row.paint_host_widget_instance_lookup_calls,
+                    row.paint_host_widget_observed_deps_calls,
+                    row.paint_host_widget_observed_deps_empty_calls,
+                    row.paint_host_widget_observed_models_non_empty_calls,
+                    row.paint_host_widget_observed_globals_non_empty_calls,
                 );
             }
             if row.paint_text_prepare_time_us > 0 || row.paint_text_prepare_calls > 0 {
@@ -4158,6 +4179,22 @@ impl BundleStatsReport {
             Value::from(self.max_paint_host_widget_observed_globals_items),
         );
         max.insert(
+            "paint_host_widget_observed_deps_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_deps_calls),
+        );
+        max.insert(
+            "paint_host_widget_observed_deps_empty_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_deps_empty_calls),
+        );
+        max.insert(
+            "paint_host_widget_observed_models_non_empty_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_models_non_empty_calls),
+        );
+        max.insert(
+            "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_globals_non_empty_calls),
+        );
+        max.insert(
             "paint_host_widget_instance_lookup_time_us".to_string(),
             Value::from(self.max_paint_host_widget_instance_lookup_time_us),
         );
@@ -4518,6 +4555,22 @@ impl BundleStatsReport {
             Value::from(self.p50_paint_host_widget_observed_globals_items),
         );
         p50.insert(
+            "paint_host_widget_observed_deps_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_deps_calls),
+        );
+        p50.insert(
+            "paint_host_widget_observed_deps_empty_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_deps_empty_calls),
+        );
+        p50.insert(
+            "paint_host_widget_observed_models_non_empty_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_models_non_empty_calls),
+        );
+        p50.insert(
+            "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_globals_non_empty_calls),
+        );
+        p50.insert(
             "paint_host_widget_instance_lookup_time_us".to_string(),
             Value::from(self.p50_paint_host_widget_instance_lookup_time_us),
         );
@@ -4679,6 +4732,22 @@ impl BundleStatsReport {
         p95.insert(
             "paint_host_widget_observed_globals_items".to_string(),
             Value::from(self.p95_paint_host_widget_observed_globals_items),
+        );
+        p95.insert(
+            "paint_host_widget_observed_deps_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_deps_calls),
+        );
+        p95.insert(
+            "paint_host_widget_observed_deps_empty_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_deps_empty_calls),
+        );
+        p95.insert(
+            "paint_host_widget_observed_models_non_empty_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_models_non_empty_calls),
+        );
+        p95.insert(
+            "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_globals_non_empty_calls),
         );
         p95.insert(
             "paint_host_widget_instance_lookup_time_us".to_string(),
@@ -5377,6 +5446,22 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_host_widget_observed_globals_items".to_string(),
                     Value::from(row.paint_host_widget_observed_globals_items),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_deps_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_deps_calls),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_deps_empty_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_deps_empty_calls),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_models_non_empty_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_models_non_empty_calls),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_globals_non_empty_calls),
                 );
                 obj.insert(
                     "paint_host_widget_instance_lookup_time_us".to_string(),

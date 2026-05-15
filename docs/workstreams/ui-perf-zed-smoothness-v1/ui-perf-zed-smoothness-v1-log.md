@@ -14217,3 +14217,49 @@ Decision:
 - The next reversible optimization owner is still generic `ElementHostWidget` paint aggregate overhead, especially
   observed model/global replay, instance lookup, and collapse observation. Keep baselines unchanged until a deliberate
   re-seed with stable repeat evidence is chosen.
+
+## 2026-05-16 03:38:00 +08:00 (host-widget observed-deps empty fast path)
+
+Question:
+- Do the remaining `ElementHostWidget::paint_impl` observed-dependency costs come from a few non-empty dependency
+  lists, or from many empty dependency lookups?
+
+Change:
+- Added root-level diagnostics for `paint_host_widget_observed_deps_calls`,
+  `paint_host_widget_observed_deps_empty_calls`,
+  `paint_host_widget_observed_models_non_empty_calls`, and
+  `paint_host_widget_observed_globals_non_empty_calls`.
+- Added an element-level observed-deps presence set to `WindowElementState`, carried through frame advance and
+  view-cache touch paths. `with_observed_deps_for_element` now short-circuits the empty case before probing the
+  model/global dependency maps.
+
+Validation:
+```bash
+cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check
+cargo check -p fret-ui -p fret-diag -p fret-bootstrap
+cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
+cargo nextest run -p fret-ui observed_deps_presence_tracks_rendered_and_touched_observations --no-fail-fast
+cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast
+```
+
+Evidence:
+- Before fast path, typical autoscroll repeat=3 evidence:
+  `target/fret-diag/editor-host-observed-deps-attrib-20260516-typical-r3`.
+  Worst bundle:
+  `target/fret-diag/editor-host-observed-deps-attrib-20260516-typical-r3/1778872805684/bundle.schema2.json`.
+- After fast path, typical autoscroll repeat=3 evidence:
+  `target/fret-diag/editor-host-observed-deps-fastpath-20260516-typical-r3`.
+  Worst bundle:
+  `target/fret-diag/editor-host-observed-deps-fastpath-20260516-typical-r3/1778873742025/bundle.schema2.json`.
+- The worst post-fast-path frame reports `paint_host_widget_observed_deps_calls=252`,
+  `paint_host_widget_observed_deps_empty_calls=244`,
+  `paint_host_widget_observed_models_non_empty_calls=8`, and
+  `paint_host_widget_observed_globals_non_empty_calls=2`.
+- Same-script repeat summary moved total p50/p95/max from `809/993/993us` to `824/839/839us`, and paint p50/p95/max
+  from `600/675/675us` to `600/604/604us`. Treat this as directional macOS M4 evidence only; do not update or loosen
+  baselines from this local run.
+
+Decision:
+- Empty dependency lookups are the dominant host-widget dependency replay shape in the typical editor paint probe.
+- The presence-set fast path is the right narrow reversible optimization for this owner slice.
+- The full three-probe editor paint set should be re-run before any baseline re-seed or claim that P1.5 is complete.

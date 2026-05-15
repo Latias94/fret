@@ -371,6 +371,30 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0)
                 .min(u32::MAX as u64)
                 as u32;
+            let paint_host_widget_observed_deps_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_deps_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_deps_empty_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_deps_empty_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_models_non_empty_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_models_non_empty_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_globals_non_empty_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_globals_non_empty_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let paint_host_widget_instance_lookup_time_us = stats
                 .and_then(|m| m.get("paint_host_widget_instance_lookup_time_us"))
                 .and_then(|v| v.as_u64())
@@ -1875,6 +1899,18 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_paint_host_widget_observed_globals_items = out
                 .max_paint_host_widget_observed_globals_items
                 .max(paint_host_widget_observed_globals_items);
+            out.max_paint_host_widget_observed_deps_calls = out
+                .max_paint_host_widget_observed_deps_calls
+                .max(paint_host_widget_observed_deps_calls);
+            out.max_paint_host_widget_observed_deps_empty_calls = out
+                .max_paint_host_widget_observed_deps_empty_calls
+                .max(paint_host_widget_observed_deps_empty_calls);
+            out.max_paint_host_widget_observed_models_non_empty_calls = out
+                .max_paint_host_widget_observed_models_non_empty_calls
+                .max(paint_host_widget_observed_models_non_empty_calls);
+            out.max_paint_host_widget_observed_globals_non_empty_calls = out
+                .max_paint_host_widget_observed_globals_non_empty_calls
+                .max(paint_host_widget_observed_globals_non_empty_calls);
             out.max_paint_host_widget_instance_lookup_time_us = out
                 .max_paint_host_widget_instance_lookup_time_us
                 .max(paint_host_widget_instance_lookup_time_us);
@@ -2000,6 +2036,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_host_widget_observed_models_items,
                 paint_host_widget_observed_globals_time_us,
                 paint_host_widget_observed_globals_items,
+                paint_host_widget_observed_deps_calls,
+                paint_host_widget_observed_deps_empty_calls,
+                paint_host_widget_observed_models_non_empty_calls,
+                paint_host_widget_observed_globals_non_empty_calls,
                 paint_host_widget_instance_lookup_time_us,
                 paint_host_widget_instance_lookup_calls,
                 paint_text_prepare_time_us,
@@ -2528,6 +2568,34 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(
         rows.iter()
             .map(|r| r.paint_host_widget_observed_globals_items as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_deps_calls,
+        out.p95_paint_host_widget_observed_deps_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_deps_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_deps_empty_calls,
+        out.p95_paint_host_widget_observed_deps_empty_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_deps_empty_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_models_non_empty_calls,
+        out.p95_paint_host_widget_observed_models_non_empty_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_models_non_empty_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_globals_non_empty_calls,
+        out.p95_paint_host_widget_observed_globals_non_empty_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_globals_non_empty_calls as u64),
     );
     (
         out.p50_paint_host_widget_instance_lookup_time_us,

@@ -410,6 +410,22 @@ pub(crate) const PAINT_HOST_WIDGET_OBSERVED_GLOBALS_ITEMS: PerfKey = count_key(
     "paint_host_widget_observed_globals_items",
     PerfKeyAggregate::Max,
 );
+pub(crate) const PAINT_HOST_WIDGET_OBSERVED_DEPS_CALLS: PerfKey = count_key(
+    "paint_host_widget_observed_deps_calls",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const PAINT_HOST_WIDGET_OBSERVED_DEPS_EMPTY_CALLS: PerfKey = count_key(
+    "paint_host_widget_observed_deps_empty_calls",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const PAINT_HOST_WIDGET_OBSERVED_MODELS_NON_EMPTY_CALLS: PerfKey = count_key(
+    "paint_host_widget_observed_models_non_empty_calls",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const PAINT_HOST_WIDGET_OBSERVED_GLOBALS_NON_EMPTY_CALLS: PerfKey = count_key(
+    "paint_host_widget_observed_globals_non_empty_calls",
+    PerfKeyAggregate::Max,
+);
 pub(crate) const PAINT_HOST_WIDGET_INSTANCE_LOOKUP_CALLS: PerfKey = count_key(
     "paint_host_widget_instance_lookup_calls",
     PerfKeyAggregate::Max,
@@ -857,6 +873,10 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     PAINT_HOST_WIDGET_OBSERVED_MODELS_ITEMS,
     PAINT_HOST_WIDGET_OBSERVED_GLOBALS_TIME_US,
     PAINT_HOST_WIDGET_OBSERVED_GLOBALS_ITEMS,
+    PAINT_HOST_WIDGET_OBSERVED_DEPS_CALLS,
+    PAINT_HOST_WIDGET_OBSERVED_DEPS_EMPTY_CALLS,
+    PAINT_HOST_WIDGET_OBSERVED_MODELS_NON_EMPTY_CALLS,
+    PAINT_HOST_WIDGET_OBSERVED_GLOBALS_NON_EMPTY_CALLS,
     PAINT_HOST_WIDGET_INSTANCE_LOOKUP_TIME_US,
     PAINT_HOST_WIDGET_INSTANCE_LOOKUP_CALLS,
     PAINT_TEXT_PREPARE_TIME_US,

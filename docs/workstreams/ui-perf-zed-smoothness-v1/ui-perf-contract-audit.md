@@ -457,9 +457,11 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    `WindowedRowsSurface` attribution fields are wired through app snapshots and `fretboard diag stats`, the
    paint-widget hotspot summary now proves Canvas hotspot p95 tracks the surface callback p95 within `1..4us`, and
    root-level host-widget paint subphase summaries identify observed-dependency replay plus instance-record lookup
-   as the next owner. The first narrow lookup optimization is landed, and the script-level reuse-launch drift that
-   blocked same-mouth formal evidence has been fixed. A baseline decision still requires a deliberate re-seed rather
-   than using this macOS M4 evidence to loosen or silently update thresholds.
+   as the next owner. The first narrow lookup optimization is landed, the script-level reuse-launch drift that
+   blocked same-mouth formal evidence has been fixed, and the observed-deps presence-set fast path now makes the
+   empty lookup case explicit (`244/252` empty calls in the typical autoscroll evidence bundle). A baseline decision
+   still requires a deliberate re-seed rather than using this macOS M4 evidence to loosen or silently update
+   thresholds.
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
@@ -476,8 +478,9 @@ for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas rep
 renderer-side owner slice without loosening baselines, the `WindowedRowsSurface` paint attribution fields have been
 verified on formal bundles, and `paint_widget_hotspot_summary` narrows the remaining editor paint owner to generic
 paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. Root-level
-host-widget subphase summaries now make that owner measurable, and the first lookup-slimming slice is directionally
-positive. The same-mouth editor paint evidence path has been restored, so the immediate next work is to continue
-reversible `ElementHostWidget::paint_impl` owner slices around observed-dependency replay and generic paint traversal
-aggregate overhead, then make an explicit baseline re-seed decision only if stable repeat evidence justifies it. Keep
-non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090 contract set.
+host-widget subphase summaries now make that owner measurable, the first lookup-slimming slice is directionally
+positive, and the observed-deps presence-set fast path identifies and short-circuits the dominant empty lookup case.
+The same-mouth editor paint evidence path has been restored, so the immediate next work is to re-run the full three
+probe set after the host-widget fast path and make an explicit baseline re-seed decision only if stable repeat
+evidence justifies it. Keep non-Windows machine profiles explicit rather than inferring them from the Windows RTX
+4090 contract set.

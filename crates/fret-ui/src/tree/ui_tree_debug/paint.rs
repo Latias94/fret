@@ -61,6 +61,40 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(items.min(u32::MAX as usize) as u32);
     }
 
+    pub(crate) fn debug_record_paint_host_widget_observed_deps_call(
+        &mut self,
+        models: usize,
+        globals: usize,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_observed_deps_calls = self
+            .debug_stats
+            .paint_host_widget_observed_deps_calls
+            .saturating_add(1);
+        if models == 0 && globals == 0 {
+            self.debug_stats.paint_host_widget_observed_deps_empty_calls = self
+                .debug_stats
+                .paint_host_widget_observed_deps_empty_calls
+                .saturating_add(1);
+        }
+        if models > 0 {
+            self.debug_stats
+                .paint_host_widget_observed_models_non_empty_calls = self
+                .debug_stats
+                .paint_host_widget_observed_models_non_empty_calls
+                .saturating_add(1);
+        }
+        if globals > 0 {
+            self.debug_stats
+                .paint_host_widget_observed_globals_non_empty_calls = self
+                .debug_stats
+                .paint_host_widget_observed_globals_non_empty_calls
+                .saturating_add(1);
+        }
+    }
+
     pub(crate) fn debug_record_paint_host_widget_instance_lookup(&mut self, elapsed: Duration) {
         if !self.debug_enabled {
             return;

@@ -92,6 +92,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub paint_host_widget_observed_globals_items: u32,
     #[serde(default)]
+    pub paint_host_widget_observed_deps_calls: u32,
+    #[serde(default)]
+    pub paint_host_widget_observed_deps_empty_calls: u32,
+    #[serde(default)]
+    pub paint_host_widget_observed_models_non_empty_calls: u32,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_non_empty_calls: u32,
+    #[serde(default)]
     pub paint_host_widget_instance_lookup_time_us: u64,
     #[serde(default)]
     pub paint_host_widget_instance_lookup_calls: u32,
@@ -848,6 +856,14 @@ impl UiFrameStatsV1 {
                 .as_micros() as u64,
             paint_host_widget_observed_globals_items: stats
                 .paint_host_widget_observed_globals_items,
+            paint_host_widget_observed_deps_calls: stats
+                .paint_host_widget_observed_deps_calls,
+            paint_host_widget_observed_deps_empty_calls: stats
+                .paint_host_widget_observed_deps_empty_calls,
+            paint_host_widget_observed_models_non_empty_calls: stats
+                .paint_host_widget_observed_models_non_empty_calls,
+            paint_host_widget_observed_globals_non_empty_calls: stats
+                .paint_host_widget_observed_globals_non_empty_calls,
             paint_host_widget_instance_lookup_time_us: stats
                 .paint_host_widget_instance_lookup_time
                 .as_micros() as u64,

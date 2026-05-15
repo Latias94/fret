@@ -596,7 +596,7 @@ Conventions:
           typical `target/fret-diag/editor-paint-contract-formal-20260516-typical-r3`,
           complex wheel `target/fret-diag/editor-paint-contract-formal-20260516-complex-wheel-r3`,
           and resize jitter `target/fret-diag/editor-paint-contract-formal-20260516-resize-jitter-r3`.
-      - [ ] Continue host-widget paint aggregate attribution only after the formal evidence path is
+      - [x] Continue host-widget paint aggregate attribution only after the formal evidence path is
         stable.
         - Current formal evidence path status: stable enough to continue this lane. The next slice
           should use the same three editor paint probes before and after the change.
@@ -604,6 +604,15 @@ Conventions:
           generic paint traversal aggregation, and the remaining sampled non-Canvas top-N hotspots.
         - Avoid: broad `WindowedRowsSurface` display-list rewrite, row replay rewrite, or renderer
           payload threshold changes unless new evidence makes one of those surfaces the limiter.
+        - Evidence: the typical autoscroll formal bundle now reports
+          `paint_host_widget_observed_deps_calls=252`, `paint_host_widget_observed_deps_empty_calls=244`,
+          `paint_host_widget_observed_models_non_empty_calls=8`, and
+          `paint_host_widget_observed_globals_non_empty_calls=2`, so empty dependency lookups are the
+          dominant candidate. The presence-set fast path now short-circuits the empty case before the
+          model/global map lookups.
+        - Gates:
+          `cargo nextest run -p fret-ui observed_deps_presence_tracks_rendered_and_touched_observations --no-fail-fast`;
+          `cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast`.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and
