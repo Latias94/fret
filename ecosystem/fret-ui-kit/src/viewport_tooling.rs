@@ -353,6 +353,11 @@ impl ViewportToolArbitrator {
         self.active
     }
 
+    /// Replaces the installed tool set and cancels any routed interaction state.
+    ///
+    /// This is a registration/update command, not a render-time idempotent setter. Re-applying the
+    /// same logical tools every frame would intentionally clear hot/active state because boxed
+    /// tools do not expose a stable equality contract.
     pub fn set_tools(&mut self, tools: impl IntoIterator<Item = Box<dyn ViewportTool>>) {
         let mut tools: Vec<Box<dyn ViewportTool>> = tools.into_iter().collect();
         tools.sort_by_key(|t| Reverse(t.priority().0));
@@ -764,6 +769,32 @@ mod tests {
             click_count: 1,
         }));
         assert_eq!(arb.active_tool(), None);
+    }
+
+    #[test]
+    fn set_tools_replaces_tools_and_clears_interaction_state() {
+        let mut a = TestTool::new(1, 10);
+        a.hit = true;
+        a.down_handled = true;
+        a.down_capture = true;
+
+        let mut arb = ViewportToolArbitrator::new(Default::default());
+        arb.set_tools(vec![Box::new(a) as Box<dyn ViewportTool>]);
+
+        assert!(
+            arb.handle_event(&dummy_event(ViewportInputKind::PointerDown {
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+            }))
+        );
+        assert_eq!(arb.active_tool(), Some(ViewportToolId(1)));
+        assert_eq!(arb.hot_tool(), Some(ViewportToolId(1)));
+
+        arb.set_tools(vec![Box::new(TestTool::new(1, 10)) as Box<dyn ViewportTool>]);
+
+        assert_eq!(arb.active_tool(), None);
+        assert_eq!(arb.hot_tool(), None);
     }
 
     #[test]

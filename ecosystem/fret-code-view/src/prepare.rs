@@ -337,4 +337,35 @@ mod tests {
         assert!(text.is_char_boundary(out[0].range.start));
         assert!(text.is_char_boundary(out[0].range.end));
     }
+
+    #[test]
+    fn prepared_state_is_idempotent_for_identical_inputs() {
+        let mut state = CodeBlockPreparedState::default();
+        state.prepare("fn main() {}", Some("rust"), true);
+        let first = state.prepared.clone();
+        let first_revision = first.revision;
+
+        state.prepare("fn main() {}", Some("rust"), true);
+
+        assert!(
+            Arc::ptr_eq(&state.prepared, &first),
+            "identical code block inputs must not rebuild prepared state"
+        );
+        assert_eq!(state.prepared.revision, first_revision);
+    }
+
+    #[test]
+    fn prepared_state_rebuilds_when_inputs_change() {
+        let mut state = CodeBlockPreparedState::default();
+        state.prepare("fn main() {}", Some("rust"), true);
+        let first = state.prepared.clone();
+
+        state.prepare("fn main() {}", Some("rust"), false);
+
+        assert!(
+            !Arc::ptr_eq(&state.prepared, &first),
+            "changed code block inputs must rebuild prepared state"
+        );
+        assert_ne!(state.prepared.revision, first.revision);
+    }
 }

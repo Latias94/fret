@@ -19,6 +19,7 @@ pub(crate) struct StatsCmdContext {
     pub stats_json: bool,
     pub stats_lite_checks_json: bool,
     pub stats_perf_keys_json: bool,
+    pub stats_perf_threshold_keys_json: bool,
     pub stats_verbose: bool,
     pub warmup_frames: u64,
     pub check_stale_paint_test_id: Option<String>,
@@ -70,6 +71,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         stats_json,
         stats_lite_checks_json,
         stats_perf_keys_json,
+        stats_perf_threshold_keys_json,
         stats_verbose,
         warmup_frames,
         check_stale_paint_test_id,
@@ -136,6 +138,21 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         println!(
             "{}",
             serde_json::to_string_pretty(&crate::perf_keys::registered_frame_stats_inventory_json())
+                .unwrap_or_else(|_| "{}".to_string())
+        );
+        return Ok(());
+    }
+
+    if stats_perf_threshold_keys_json {
+        if stats_diff.is_some() {
+            return Err("--perf-threshold-keys-json cannot be combined with --diff".to_string());
+        }
+        if !rest.is_empty() {
+            return Err(format!("unexpected arguments: {}", rest.join(" ")));
+        }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&crate::perf_keys::perf_threshold_inventory_json())
                 .unwrap_or_else(|_| "{}".to_string())
         );
         return Ok(());

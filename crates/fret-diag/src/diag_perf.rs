@@ -3257,6 +3257,23 @@ mod tests {
             Some(&serde_json::json!(5_000))
         );
         assert_eq!(
+            payload
+                .pointer("/threshold_key_registry/kind")
+                .and_then(|v| v.as_str()),
+            Some(crate::perf_keys::PERF_THRESHOLD_KEY_REGISTRY_KIND)
+        );
+        assert!(
+            payload
+                .pointer("/threshold_key_registry/keys")
+                .and_then(|v| v.as_array())
+                .is_some_and(|keys| keys
+                    .iter()
+                    .any(|key| key.get("key").and_then(|v| v.as_str())
+                        == Some("max_renderer_encode_scene_us")
+                        && key.get("metric").and_then(|v| v.as_str())
+                            == Some("renderer_encode_scene_us")))
+        );
+        assert_eq!(
             payload.pointer("/thresholds/max_renderer_instance_bytes"),
             Some(&serde_json::json!(500_000))
         );

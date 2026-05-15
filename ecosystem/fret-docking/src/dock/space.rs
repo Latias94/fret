@@ -7649,7 +7649,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 self.tab_widths.insert(node_id, Arc::from(widths));
             }
 
-            dock.clear_viewport_layout_for_window(self.window);
+            let mut viewport_layouts = Vec::new();
             for (&node_id, &rect) in layout_all.iter() {
                 let (_tab_bar, content) = split_tab_bar(rect);
                 let viewport = (|| {
@@ -7666,17 +7666,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         target_px_size: viewport.target_px_size,
                         fit: viewport.fit,
                     };
-                    dock.set_viewport_layout(
-                        self.window,
+                    viewport_layouts.push((
                         viewport.target,
                         super::DockViewportLayout {
                             content_rect: content,
                             mapping,
                             draw_rect: mapping.map().draw_rect,
                         },
-                    );
+                    ));
                 }
             }
+            let _ = dock.sync_viewport_layouts_for_window(self.window, viewport_layouts);
 
             paint_dock(
                 theme.clone(),

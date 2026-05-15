@@ -292,3 +292,46 @@ fn set_code_wrap_policy_clears_row_geom_cache_when_wrapped() {
     assert!(st.row_geom_cache.is_empty());
     assert_eq!(st.row_geom_cache_wrap_cols, st.display_wrap_cols);
 }
+
+#[test]
+fn set_soft_wrap_cols_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("left->right->tail");
+    handle.set_soft_wrap_cols(Some(6));
+
+    let (display_map_epoch_before, row_scene_resets_before) = {
+        let mut st = handle.state.borrow_mut();
+        st.row_geom_cache.insert(
+            0,
+            (
+                RowGeom {
+                    row_range: 0.."left->".len(),
+                    key: row_geom_key_for_tests(&Arc::from("left->")),
+                    caret_stops: vec![(0, Px(0.0))],
+                    fold_map: None,
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    has_preedit: false,
+                    preedit: None,
+                },
+                0,
+            ),
+        );
+        (st.display_map_epoch, st.cache_stats.row_scene_resets)
+    };
+
+    handle.set_soft_wrap_cols(Some(6));
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.display_map_epoch, display_map_epoch_before,
+        "idempotent set_soft_wrap_cols must not rebuild the display map"
+    );
+    assert_eq!(
+        st.cache_stats.row_scene_resets, row_scene_resets_before,
+        "idempotent set_soft_wrap_cols must not reset row scene caches"
+    );
+    assert!(
+        st.row_geom_cache.contains_key(&0),
+        "idempotent set_soft_wrap_cols must preserve row geometry cache entries"
+    );
+}

@@ -79,6 +79,74 @@ fn replace_buffer_preserves_text_boundary_mode() {
 }
 
 #[test]
+fn set_text_is_idempotent_for_same_text() {
+    let handle = CodeEditorHandle::new("hello");
+    handle.set_selection(Selection {
+        anchor: 1,
+        focus: 3,
+    });
+    handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+
+    let (doc_before, revision_before, selection_before, row_scene_resets_before) = {
+        let st = handle.state.borrow();
+        (
+            st.buffer.doc(),
+            st.buffer.revision(),
+            st.selection,
+            st.cache_stats.row_scene_resets,
+        )
+    };
+
+    handle.set_text("hello");
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.buffer.doc(),
+        doc_before,
+        "idempotent set_text must not allocate a replacement document"
+    );
+    assert_eq!(
+        st.buffer.revision(),
+        revision_before,
+        "idempotent set_text must not replace the buffer"
+    );
+    assert_eq!(
+        st.selection, selection_before,
+        "render-time set_text re-application must not reset selection"
+    );
+    assert_eq!(
+        st.text_boundary_mode_override,
+        Some(TextBoundaryMode::UnicodeWord)
+    );
+    assert_eq!(
+        st.cache_stats.row_scene_resets, row_scene_resets_before,
+        "idempotent set_text must not reset row scene caches"
+    );
+}
+
+#[test]
+fn set_text_replaces_buffer_when_text_changes() {
+    let handle = CodeEditorHandle::new("hello");
+    handle.set_selection(Selection {
+        anchor: 1,
+        focus: 3,
+    });
+
+    let doc_before = handle.with_buffer(|buffer| buffer.doc());
+
+    handle.set_text("world");
+
+    let st = handle.state.borrow();
+    assert_eq!(st.buffer.text_string(), "world");
+    assert_ne!(
+        st.buffer.doc(),
+        doc_before,
+        "changed set_text should still allocate a replacement document"
+    );
+    assert_eq!(st.selection, Selection::default());
+}
+
+#[test]
 fn text_boundary_mode_override_can_be_cleared() {
     let handle = CodeEditorHandle::new("hello");
     assert_eq!(

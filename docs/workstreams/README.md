@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 375
+- Dedicated directories: 377
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1098,6 +1098,21 @@ Current source of truth for the in-tree immediate-mode stack:
     flattening, and begin-return posture still require stronger first-party proof in a different
     narrow lane instead of widening generic `fret-ui-kit::imui` here.
 
+- Closed child-region ResizeY follow-on:
+  - `docs/workstreams/imui-child-region-resize-y-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-resize-y-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/TODO.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/MILESTONES.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/CLOSEOUT_AUDIT_2026-05-15.md`
+  - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
+  - `ecosystem/fret-ui-kit/src/imui/options/containers.rs`
+  - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
+  - Scope: closed narrow follow-on for vertical child-region resize policy in `fret-ui-kit::imui`;
+    height state stays app-owned through response helpers and the lane must not broaden into
+    `ResizeX`, auto-resize, focus-boundary flattening, or a generic Dear ImGui `BeginChild()` flag
+    mirror.
+
 - Closed narrow P1 collection box-select closeout record:
   - `docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-collection-box-select-v1/DESIGN.md`
@@ -1882,6 +1897,7 @@ Rule:
 - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/` — first 2026-03-25, latest 2026-03-25, 5 markdown docs
 - `docs/workstreams/code-editor-ecosystem-v1/` — first 2026-01-27, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (active narrow follow-on for code-editor resize edge-row replay/prefetch work; includes `WORKSTREAM.json`)
+- `docs/workstreams/code-editor-prepaint-planner-cost-v1/` — first 2026-05-15, latest 2026-05-15, 4 markdown docs (active narrow follow-on for code-editor replay-plan construction cost after edge-row payload prebuild; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-public-api-and-architecture-v1/` — first n/a, latest n/a, 18 markdown docs (active narrow follow-on for stabilizing the code editor public API, model boundaries, extension points, and perf/diagnostics gates; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-resize-paint-cache-replay-v1/` — first 2026-05-15, latest 2026-05-15, 6 markdown docs (closed narrow follow-on for code-editor resize paint/cache replay short paths; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-row-content-snapshot-cache-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (closed narrow follow-on for shared row content snapshot payloads across text, scene cache, replay plan, and paint; includes `WORKSTREAM.json`)
@@ -2037,6 +2053,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-child-region-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the landed `ChildRegionChrome::{Framed, Bare}` slice and the no-further-generic-growth verdict for `BeginChild()`-scale child-region depth above the maintenance IMUI umbrella)
+- `docs/workstreams/imui-child-region-resize-y-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for `fret-ui-kit::imui` child-region vertical resize policy with app-owned height state and focused child-region gates)
 - `docs/workstreams/imui-collection-box-select-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned background marquee / box-select slice on the collection-first proof surface while the frozen proof-budget rule still blocks shared helper growth)
 - `docs/workstreams/imui-collection-keyboard-owner-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned collection-scope keyboard-owner slice on the collection-first proof surface while the generic key-owner verdict and the frozen proof-budget rule still block shared helper growth)
 - `docs/workstreams/imui-collection-delete-action-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned collection delete-selected slice on the collection-first proof surface while broader collection action semantics and the frozen proof-budget rule still block shared helper growth)

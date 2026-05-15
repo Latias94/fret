@@ -449,8 +449,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         &mut self,
         id: &str,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        self.child_region_with_options(id, ChildRegionOptions::default(), f);
+    ) -> ChildRegionResponse {
+        self.child_region_with_options(id, ChildRegionOptions::default(), f)
     }
 
     fn child_region_with_options(
@@ -458,10 +458,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         options: ChildRegionOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let element =
+    ) -> ChildRegionResponse {
+        let (element, response) =
             self.with_cx_mut(|cx| child_region::child_region_element(cx, id, None, options, f));
         self.add(element);
+        response
     }
 
     /// Render a window-scoped floating window layer that manages z-order (bring-to-front).

@@ -2,6 +2,7 @@ use serde_json::{Map, Value};
 
 pub(crate) const PERF_KEY_REGISTRY_SCHEMA_VERSION: u32 = 1;
 pub(crate) const PERF_KEY_REGISTRY_KIND: &str = "perf_key_registry";
+pub(crate) const PERF_THRESHOLD_KEY_REGISTRY_KIND: &str = "perf_threshold_key_registry";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PerfKeyUnit {
@@ -115,6 +116,32 @@ impl PerfKey {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PerfThresholdDirection {
+    Max,
+    Min,
+}
+
+impl PerfThresholdDirection {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Max => "max",
+            Self::Min => "min",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PerfThresholdKey {
+    pub(crate) key: &'static str,
+    pub(crate) metric: &'static str,
+    pub(crate) source_metric: Option<&'static str>,
+    pub(crate) unit: PerfKeyUnit,
+    pub(crate) direction: PerfThresholdDirection,
+    pub(crate) scope: &'static str,
+    pub(crate) observed_aggregate: &'static str,
+}
+
 pub(crate) const TOTAL_TIME_US: PerfKey = trace_timing_key(
     "total_time_us",
     "fret.frame",
@@ -214,20 +241,28 @@ pub(crate) const LAYOUT_ENGINE_SOLVE_TIME_US: PerfKey = trace_timing_key(
     "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US: PerfKey = trace_timing_key(
     "layout_pending_barrier_relayouts_time_us",
+    "layout.pending_barriers",
+    "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US: PerfKey = trace_timing_key(
     "layout_repair_view_cache_bounds_time_us",
+    "layout.view_cache.repair_bounds",
+    "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US: PerfKey = trace_timing_key(
     "layout_contained_view_cache_roots_time_us",
+    "layout.view_cache.layout_contained_roots",
+    "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US: PerfKey = timing_key(
+pub(crate) const LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US: PerfKey = trace_timing_key(
     "layout_collapse_layout_observations_time_us",
+    "layout.view_cache.collapse_observations",
+    "layout",
     PerfKeyAggregate::P95,
 );
 pub(crate) const LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US: PerfKey = timing_key(
@@ -236,12 +271,24 @@ pub(crate) const LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US: PerfKey = timing_key(
 );
 pub(crate) const LAYOUT_BARRIER_RELAYOUTS_TIME_US: PerfKey =
     timing_key("layout_barrier_relayouts_time_us", PerfKeyAggregate::P95);
-pub(crate) const LAYOUT_SEMANTICS_REFRESH_TIME_US: PerfKey =
-    timing_key("layout_semantics_refresh_time_us", PerfKeyAggregate::P95);
-pub(crate) const LAYOUT_FOCUS_REPAIR_TIME_US: PerfKey =
-    timing_key("layout_focus_repair_time_us", PerfKeyAggregate::P95);
-pub(crate) const LAYOUT_DEFERRED_CLEANUP_TIME_US: PerfKey =
-    timing_key("layout_deferred_cleanup_time_us", PerfKeyAggregate::P95);
+pub(crate) const LAYOUT_SEMANTICS_REFRESH_TIME_US: PerfKey = trace_timing_key(
+    "layout_semantics_refresh_time_us",
+    "layout.refresh_semantics",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_FOCUS_REPAIR_TIME_US: PerfKey = trace_timing_key(
+    "layout_focus_repair_time_us",
+    "layout.focus_repair",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_DEFERRED_CLEANUP_TIME_US: PerfKey = trace_timing_key(
+    "layout_deferred_cleanup_time_us",
+    "layout.flush_deferred_cleanup",
+    "layout",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const LAYOUT_ENGINE_CHILD_RECT_TIME_US: PerfKey =
     timing_key("layout_engine_child_rect_time_us", PerfKeyAggregate::P95);
 pub(crate) const LAYOUT_OBSERVATION_RECORD_MODELS_ITEMS: PerfKey = count_key(
@@ -311,20 +358,36 @@ pub(crate) const PAINT_WIDGET_TIME_US: PerfKey = trace_timing_key(
     "paint",
     PerfKeyAggregate::P95,
 );
-pub(crate) const PAINT_INPUT_CONTEXT_TIME_US: PerfKey =
-    timing_key("paint_input_context_time_us", PerfKeyAggregate::P95);
-pub(crate) const PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US: PerfKey = timing_key(
+pub(crate) const PAINT_INPUT_CONTEXT_TIME_US: PerfKey = trace_timing_key(
+    "paint_input_context_time_us",
+    "paint.input_context",
+    "paint",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US: PerfKey = trace_timing_key(
     "paint_scroll_handle_invalidation_time_us",
+    "paint.scroll_handle_invalidation",
+    "paint",
     PerfKeyAggregate::P95,
 );
-pub(crate) const PAINT_COLLECT_ROOTS_TIME_US: PerfKey =
-    timing_key("paint_collect_roots_time_us", PerfKeyAggregate::P95);
-pub(crate) const PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US: PerfKey = timing_key(
+pub(crate) const PAINT_COLLECT_ROOTS_TIME_US: PerfKey = trace_timing_key(
+    "paint_collect_roots_time_us",
+    "paint.collect_roots",
+    "paint",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US: PerfKey = trace_timing_key(
     "paint_publish_text_input_snapshot_time_us",
+    "paint.publish_text_input_snapshot",
+    "paint",
     PerfKeyAggregate::P95,
 );
-pub(crate) const PAINT_COLLAPSE_OBSERVATIONS_TIME_US: PerfKey =
-    timing_key("paint_collapse_observations_time_us", PerfKeyAggregate::P95);
+pub(crate) const PAINT_COLLAPSE_OBSERVATIONS_TIME_US: PerfKey = trace_timing_key(
+    "paint_collapse_observations_time_us",
+    "paint.collapse_observations",
+    "paint",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const PAINT_HOST_WIDGET_OBSERVED_MODELS_TIME_US: PerfKey = timing_key(
     "paint_host_widget_observed_models_time_us",
     PerfKeyAggregate::P95,
@@ -619,6 +682,96 @@ pub(crate) const POINTER_MOVE_SNAPSHOTS_WITH_GLOBAL_CHANGES: PerfKey = pointer_m
     PerfKeyAggregate::Max,
 );
 
+pub(crate) const PERF_THRESHOLD_KEYS: &[PerfThresholdKey] = &[
+    threshold_max_us_key("max_top_total_us", "top_total_time_us", "top_frame"),
+    threshold_max_us_key("max_top_layout_us", "top_layout_time_us", "top_frame"),
+    threshold_max_us_key(
+        "max_top_solve_us",
+        "top_layout_engine_solve_time_us",
+        "top_frame",
+    ),
+    threshold_max_us_key(
+        "max_frame_p95_total_us",
+        "frame_p95_total_time_us",
+        "frame_distribution",
+    ),
+    threshold_max_us_key(
+        "max_frame_p95_layout_us",
+        "frame_p95_layout_time_us",
+        "frame_distribution",
+    ),
+    threshold_max_us_key(
+        "max_frame_p95_solve_us",
+        "frame_p95_layout_engine_solve_time_us",
+        "frame_distribution",
+    ),
+    threshold_max_us_key(
+        "max_pointer_move_dispatch_us",
+        "pointer_move_max_dispatch_time_us",
+        "pointer_move",
+    ),
+    threshold_max_us_key(
+        "max_pointer_move_hit_test_us",
+        "pointer_move_max_hit_test_time_us",
+        "pointer_move",
+    ),
+    threshold_max_count_key(
+        "max_pointer_move_global_changes",
+        "pointer_move_snapshots_with_global_changes",
+        "pointer_move",
+    ),
+    PerfThresholdKey {
+        key: "min_run_paint_cache_hit_test_only_replay_allowed_max",
+        metric: "run_paint_cache_hit_test_only_replay_allowed_max",
+        source_metric: Some("paint_cache_hit_test_only_replay_allowed"),
+        unit: PerfKeyUnit::Count,
+        direction: PerfThresholdDirection::Min,
+        scope: "run",
+        observed_aggregate: "max",
+    },
+    threshold_max_count_key(
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max",
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max",
+        "run",
+    ),
+    threshold_max_us_key(
+        "max_renderer_encode_scene_us",
+        "renderer_encode_scene_us",
+        "renderer",
+    ),
+    threshold_max_us_key("max_renderer_upload_us", "renderer_upload_us", "renderer"),
+    threshold_max_us_key(
+        "max_renderer_record_passes_us",
+        "renderer_record_passes_us",
+        "renderer",
+    ),
+    threshold_max_us_key(
+        "max_renderer_encoder_finish_us",
+        "renderer_encoder_finish_us",
+        "renderer",
+    ),
+    threshold_max_us_key(
+        "max_renderer_prepare_text_us",
+        "renderer_prepare_text_us",
+        "renderer",
+    ),
+    threshold_max_us_key(
+        "max_renderer_prepare_svg_us",
+        "renderer_prepare_svg_us",
+        "renderer",
+    ),
+    threshold_max_bytes_key(
+        "max_renderer_instance_bytes",
+        "renderer_instance_bytes",
+        "renderer",
+    ),
+    threshold_max_count_key(
+        "max_renderer_encode_scene_text_ops",
+        "renderer_encode_scene_text_ops",
+        "renderer",
+    ),
+];
+
 pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     TOTAL_TIME_US,
     LAYOUT_TIME_US,
@@ -637,6 +790,13 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     LAYOUT_ROOTS_TIME_US,
     LAYOUT_VIEW_CACHE_TIME_US,
     LAYOUT_ENGINE_SOLVE_TIME_US,
+    LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
+    LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US,
+    LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US,
+    LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US,
+    LAYOUT_FOCUS_REPAIR_TIME_US,
+    LAYOUT_SEMANTICS_REFRESH_TIME_US,
+    LAYOUT_DEFERRED_CLEANUP_TIME_US,
     PAINT_OBSERVATION_RECORD_TIME_US,
     PAINT_TEXT_PREPARE_TIME_US,
     PAINT_RECORD_VISUAL_BOUNDS_TIME_US,
@@ -645,6 +805,11 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     PAINT_CACHE_REPLAY_TIME_US,
     PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US,
     PAINT_WIDGET_TIME_US,
+    PAINT_INPUT_CONTEXT_TIME_US,
+    PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US,
+    PAINT_COLLECT_ROOTS_TIME_US,
+    PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US,
+    PAINT_COLLAPSE_OBSERVATIONS_TIME_US,
 ];
 
 pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
@@ -1246,6 +1411,41 @@ pub(crate) fn registered_frame_stats_inventory_json() -> Value {
     })
 }
 
+pub(crate) fn perf_threshold_keys_json() -> Value {
+    Value::Array(
+        PERF_THRESHOLD_KEYS
+            .iter()
+            .map(|key| {
+                let mut obj = serde_json::json!({
+                    "key": key.key,
+                    "metric": key.metric,
+                    "unit": key.unit.as_str(),
+                    "direction": key.direction.as_str(),
+                    "scope": key.scope,
+                    "observed_aggregate": key.observed_aggregate,
+                });
+                if let Some(source_metric) = key.source_metric {
+                    obj["source_metric"] = Value::from(source_metric);
+                }
+                obj
+            })
+            .collect(),
+    )
+}
+
+pub(crate) fn perf_threshold_inventory_json() -> Value {
+    serde_json::json!({
+        "schema_version": PERF_KEY_REGISTRY_SCHEMA_VERSION,
+        "kind": PERF_THRESHOLD_KEY_REGISTRY_KIND,
+        "scope": "diag_perf_thresholds",
+        "coverage": "diag_perf_threshold_config_keys",
+        "complete": true,
+        "note": "Registry for diag perf threshold configuration keys. Each entry maps a CLI/baseline threshold key to the observed metric used in check.perf_thresholds.json failure rows.",
+        "schema_policy": crate::perf_schema::schema_policy_json(),
+        "keys": perf_threshold_keys_json(),
+    })
+}
+
 fn perf_keys_json(keys: &[PerfKey]) -> Value {
     Value::Array(
         keys.iter()
@@ -1350,6 +1550,54 @@ const fn byte_key(key: &'static str, suggested_aggregate: PerfKeyAggregate) -> P
     }
 }
 
+const fn threshold_max_us_key(
+    key: &'static str,
+    metric: &'static str,
+    scope: &'static str,
+) -> PerfThresholdKey {
+    PerfThresholdKey {
+        key,
+        metric,
+        source_metric: None,
+        unit: PerfKeyUnit::Microseconds,
+        direction: PerfThresholdDirection::Max,
+        scope,
+        observed_aggregate: "max",
+    }
+}
+
+const fn threshold_max_count_key(
+    key: &'static str,
+    metric: &'static str,
+    scope: &'static str,
+) -> PerfThresholdKey {
+    PerfThresholdKey {
+        key,
+        metric,
+        source_metric: None,
+        unit: PerfKeyUnit::Count,
+        direction: PerfThresholdDirection::Max,
+        scope,
+        observed_aggregate: "max",
+    }
+}
+
+const fn threshold_max_bytes_key(
+    key: &'static str,
+    metric: &'static str,
+    scope: &'static str,
+) -> PerfThresholdKey {
+    PerfThresholdKey {
+        key,
+        metric,
+        source_metric: None,
+        unit: PerfKeyUnit::Bytes,
+        direction: PerfThresholdDirection::Max,
+        scope,
+        observed_aggregate: "max",
+    }
+}
+
 const fn pixel_key(key: &'static str, suggested_aggregate: PerfKeyAggregate) -> PerfKey {
     PerfKey {
         key,
@@ -1427,6 +1675,54 @@ mod tests {
         keys.iter().map(|key| key.key).collect()
     }
 
+    fn threshold_key_set() -> std::collections::BTreeSet<&'static str> {
+        PERF_THRESHOLD_KEYS.iter().map(|key| key.key).collect()
+    }
+
+    fn scan_struct_option_fields<'a>(
+        source: &'a str,
+        struct_name: &str,
+    ) -> std::collections::BTreeSet<&'a str> {
+        let mut fields = std::collections::BTreeSet::new();
+        let Some(start) = source.find(&format!("struct {struct_name}")) else {
+            return fields;
+        };
+        let source = &source[start..];
+        let Some(open) = source.find('{') else {
+            return fields;
+        };
+        let source = &source[open + 1..];
+        let Some(close) = source.find("}\n") else {
+            return fields;
+        };
+        for line in source[..close].lines() {
+            let line = line.trim();
+            if !line.contains("Option<u64>") {
+                continue;
+            }
+            let Some(name_start) = line.rfind(' ') else {
+                continue;
+            };
+            let Some(name_end) = line[name_start + 1..].find(':') else {
+                continue;
+            };
+            fields.insert(&line[name_start + 1..name_start + 1 + name_end]);
+        }
+        fields
+    }
+
+    fn scan_cli_perf_threshold_fields() -> std::collections::BTreeSet<&'static str> {
+        scan_struct_option_fields(
+            include_str!("cli/contracts/commands/perf.rs"),
+            "PerfCommandArgs",
+        )
+        .into_iter()
+        .filter(|key: &&str| {
+            key.starts_with("max_") || key.starts_with("min_run_paint_cache_hit_test_only_replay")
+        })
+        .collect()
+    }
+
     fn consumed_debug_stats_keys_from_bundle_stats_compute_source()
     -> std::collections::BTreeSet<&'static str> {
         let mut keys = std::collections::BTreeSet::new();
@@ -1489,6 +1785,37 @@ mod tests {
         }
     }
 
+    fn assert_threshold_units_match_names(keys: &[PerfThresholdKey]) {
+        for key in keys {
+            if key.key.ends_with("_us")
+                || key.metric.ends_with("_time_us")
+                || key.metric.ends_with("_us")
+            {
+                assert_eq!(key.unit, PerfKeyUnit::Microseconds, "{}", key.key);
+            }
+            if key.key.ends_with("_bytes") || key.metric.ends_with("_bytes") {
+                assert_eq!(key.unit, PerfKeyUnit::Bytes, "{}", key.key);
+            }
+            if key.key.ends_with("_ops")
+                || key.key.ends_with("_changes")
+                || key.key.ends_with("_max")
+                || key.metric.ends_with("_ops")
+                || key.metric.ends_with("_changes")
+                || key.metric.ends_with("_max")
+            {
+                assert_eq!(key.unit, PerfKeyUnit::Count, "{}", key.key);
+            }
+            if key.key.starts_with("min_") {
+                assert_eq!(key.direction, PerfThresholdDirection::Min, "{}", key.key);
+            }
+            if key.key.starts_with("max_") {
+                assert_eq!(key.direction, PerfThresholdDirection::Max, "{}", key.key);
+            }
+            assert!(!key.metric.is_empty(), "{}", key.key);
+            assert!(!key.scope.is_empty(), "{}", key.key);
+        }
+    }
+
     #[test]
     fn trace_exported_perf_keys_are_unique() {
         assert_unique(TRACE_EXPORTED_FRAME_KEYS);
@@ -1507,6 +1834,15 @@ mod tests {
     }
 
     #[test]
+    fn perf_threshold_keys_are_unique() {
+        let mut keys: Vec<&str> = PERF_THRESHOLD_KEYS.iter().map(|key| key.key).collect();
+        let len = keys.len();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), len);
+    }
+
+    #[test]
     fn trace_exported_perf_key_units_match_names() {
         assert_units_match_names(TRACE_EXPORTED_FRAME_KEYS);
         for key in TRACE_EXPORTED_FRAME_KEYS {
@@ -1518,6 +1854,11 @@ mod tests {
     #[test]
     fn registered_perf_key_units_match_names() {
         assert_units_match_names(REGISTERED_FRAME_STATS_KEYS);
+    }
+
+    #[test]
+    fn perf_threshold_key_units_match_names() {
+        assert_threshold_units_match_names(PERF_THRESHOLD_KEYS);
     }
 
     #[test]
@@ -1598,12 +1939,73 @@ mod tests {
     }
 
     #[test]
+    fn perf_threshold_registry_covers_threshold_struct_fields() {
+        let registered = threshold_key_set();
+        let fields = scan_struct_option_fields(include_str!("compare.rs"), "PerfThresholds");
+        let missing: Vec<&str> = fields.difference(&registered).copied().collect();
+        assert!(
+            missing.is_empty(),
+            "PerfThresholds fields missing from threshold registry: {missing:?}"
+        );
+    }
+
+    #[test]
+    fn perf_threshold_registry_covers_diag_perf_cli_flags() {
+        let registered = threshold_key_set();
+        let fields = scan_cli_perf_threshold_fields();
+        let missing: Vec<&str> = fields.difference(&registered).copied().collect();
+        assert!(
+            missing.is_empty(),
+            "diag perf CLI threshold fields missing from threshold registry: {missing:?}"
+        );
+    }
+
+    #[test]
+    fn perf_threshold_registry_metric_names_are_frame_stats_or_known_derived_metrics() {
+        let frame_stats = key_set(REGISTERED_FRAME_STATS_KEYS);
+        let known_derived = [
+            "top_total_time_us",
+            "top_layout_time_us",
+            "top_layout_engine_solve_time_us",
+            "frame_p95_total_time_us",
+            "frame_p95_layout_time_us",
+            "frame_p95_layout_engine_solve_time_us",
+            "pointer_move_max_dispatch_time_us",
+            "pointer_move_max_hit_test_time_us",
+            "pointer_move_snapshots_with_global_changes",
+            "run_paint_cache_hit_test_only_replay_allowed_max",
+            "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max",
+        ]
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>();
+        let missing: Vec<&str> = PERF_THRESHOLD_KEYS
+            .iter()
+            .map(|key| key.metric)
+            .filter(|metric| !frame_stats.contains(metric) && !known_derived.contains(metric))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "threshold registry metrics are not registered frame stats or known derived metrics: {missing:?}"
+        );
+    }
+
+    #[test]
     fn registered_perf_key_inventory_doc_is_in_sync() {
         let expected = registered_frame_stats_inventory_json();
         let doc: Value = serde_json::from_str(include_str!(
             "../../../docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json"
         ))
         .expect("parse perf key registry inventory doc");
+        assert_eq!(doc, expected);
+    }
+
+    #[test]
+    fn perf_threshold_key_inventory_doc_is_in_sync() {
+        let expected = perf_threshold_inventory_json();
+        let doc: Value = serde_json::from_str(include_str!(
+            "../../../docs/workstreams/diag-perf-profiling-infra-v1/perf-threshold-key-registry.diag-perf.json"
+        ))
+        .expect("parse perf threshold key registry inventory doc");
         assert_eq!(doc, expected);
     }
 }

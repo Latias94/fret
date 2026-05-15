@@ -11,8 +11,8 @@ pub use collections::{
     TableSortDirection, VirtualListOptions,
 };
 pub use containers::{
-    ChildRegionChrome, ChildRegionOptions, GridOptions, HorizontalOptions, ScrollOptions,
-    VerticalOptions,
+    ChildRegionChrome, ChildRegionOptions, ChildRegionResizeYOptions, GridOptions,
+    HorizontalOptions, ScrollOptions, VerticalOptions,
 };
 pub use controls::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, CheckboxOptions, CollapsingHeaderOptions,

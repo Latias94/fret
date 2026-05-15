@@ -13557,3 +13557,162 @@ Decision:
 - The next optimization lane should either target broader `paint.widget`/Canvas attribution or add
   a stronger editor paint stressor that can separate Canvas replay, content resolution, and renderer
   encode/upload cost.
+
+## 2026-05-15 21:01:45 +08:00 (renderer payload baseline audit closure)
+
+Question:
+- Does the perf baseline matrix gate actually fail when a payload-aware editor baseline omits
+  renderer payload values or thresholds?
+
+Change:
+- Strengthened `tools/perf/audit_perf_baselines.py` so `--strict` checks
+  `ui-renderer-payload`, `renderer-payload`, `renderer`, and `all` threshold surfaces for
+  `renderer_instance_bytes` and `renderer_encode_scene_text_ops` in every `measured_*` row,
+  `threshold_seed`, and the hard threshold fields.
+- Added `tools/perf/test_audit_perf_baselines.py` to cover complete payload contracts, missing
+  payload fields, and non-payload `ui` baselines.
+
+Validation:
+- `python -m py_compile tools/perf/audit_perf_baselines.py tools/perf/test_audit_perf_baselines.py`
+- `python -m unittest discover -s tools/perf -p "test_*.py"`
+- `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+
+Evidence:
+- The tools/perf unit suite passed 8 tests.
+- The strict matrix audit passed and reported `payload_missing=-` for the three current
+  `ui-renderer-payload` editor paint baselines:
+  `ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v4.json`,
+  `ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v2.json`, and
+  `ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.windows-rtx4090.v1.json`.
+
+Decision:
+- Renderer payload contract closure is now machine-checked by the baseline matrix audit instead
+  of relying only on matrix prose. Time-only baselines remain valid unless they opt into a
+  payload-aware threshold surface.
+
+## 2026-05-15 21:34:00 +08:00 (code-editor set_text idempotency)
+
+Question:
+- Can render-time `CodeEditorHandle::set_text(...)` re-application avoid replacing the document
+  when the app-owned text is unchanged?
+
+Change:
+- Added `TextBuffer::text_eq(&str)` to compare buffer contents against app-owned text without
+  materializing the rope.
+- Made `CodeEditorHandle::set_text(...)` return early when the incoming text is identical, while
+  keeping changed text and explicit `replace_buffer(...)` as document replacement paths.
+- Added regression tests covering same-text no-op behavior, changed-text replacement behavior, and
+  the buffer-level comparison helper.
+
+Validation:
+- `cargo fmt -p fret-code-editor-buffer -p fret-code-editor`
+- `cargo nextest run -p fret-code-editor-buffer text_eq_compares_without_materializing_text --no-fail-fast`
+- `cargo nextest run -p fret-code-editor set_text_is_idempotent_for_same_text set_text_replaces_buffer_when_text_changes replace_buffer_resets_state --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-code-editor-buffer/src/lib.rs`,
+  `ecosystem/fret-code-editor/src/editor/handle/model.rs`, and
+  `ecosystem/fret-code-editor/src/editor/tests/state_lifecycle.rs`.
+- Focused nextest result: buffer comparison test passed; the three code-editor lifecycle tests
+  passed.
+
+Decision:
+- Treat `set_text(...)` as the declarative render-safe path for publishing app-owned text and
+  `replace_buffer(...)` as the explicit imperative document replacement path. This closes another
+  high-risk P0.6 setter-idempotency footgun without changing the public handle surface.
+
+## 2026-05-15 21:45:00 +08:00 (docking viewport layout publication idempotency)
+
+Question:
+- Can docking avoid clearing and reinserting identical viewport layout cache entries during
+  render-frame publication, while keeping graph/runtime mutations explicit?
+
+Change:
+- Added `DockManager::sync_viewport_layouts_for_window(...)`, which reconciles the live viewport
+  layouts for one window and returns `false` when the incoming layout set is identical.
+- Changed `DockSpace` to collect viewport layouts from the current layout pass and synchronize them
+  instead of calling `clear_viewport_layout_for_window(...)` before every paint.
+- Audited `ViewportToolArbitrator::set_tools(...)` and documented it as a replacement/cancellation
+  command, not a render-time idempotent setter. A regression test now locks that reapplying tools
+  clears hot/active interaction state.
+
+Validation:
+- `cargo fmt -p fret-docking -p fret-ui-kit`
+- `cargo nextest run -p fret-docking sync_viewport_layouts_for_window_is_unchanged_for_identical_layouts sync_viewport_layouts_for_window_removes_stale_entries_for_that_window_only --no-fail-fast`
+- `cargo nextest run -p fret-ui-kit set_tools_replaces_tools_and_clears_interaction_state --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-docking/src/dock/manager.rs`,
+  `ecosystem/fret-docking/src/dock/space.rs`, and
+  `ecosystem/fret-ui-kit/src/viewport_tooling.rs`.
+- Setter contract ledger:
+  `docs/workstreams/standalone/ui-perf-setter-idempotency-v1.md`.
+
+Decision:
+- Treat docking viewport layout publication as a render-frame reconciliation API: same layout set is
+  a no-op, stale entries for the same window are pruned, and runtime graph mutations can still use
+  explicit `clear_viewport_layout_for_window(...)` invalidation. Keep viewport tool registration out
+  of the render-safe setter contract until tools have stable identities/revisions.
+
+## 2026-05-15 22:05:00 +08:00 (code-editor render-time view setter guards)
+
+Question:
+- Are the `CodeEditor::render`-time view setters guarded against equal-value re-application, and
+  do we have tests that prevent future refactors from reintroducing per-frame cache resets?
+
+Change:
+- Audited the render path that calls `CodeEditorHandle::set_soft_wrap_cols(...)`,
+  `set_code_font_feature_policy(...)`, and `set_interaction(...)`.
+- Confirmed each setter already returns early for equal values.
+- Added regression tests proving repeated soft-wrap publication does not rebuild the display map or
+  reset row scene/geometry caches, and repeated font-feature policy publication does not bump the
+  policy revision or reset row text/scene caches.
+
+Validation:
+- `cargo fmt -p fret-code-editor`
+- `cargo nextest run -p fret-code-editor set_soft_wrap_cols_is_idempotent_for_same_value code_font_feature_policy_is_idempotent_for_same_value --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `ecosystem/fret-code-editor/src/editor/handle/view.rs`,
+  `ecosystem/fret-code-editor/src/editor/state.rs`,
+  `ecosystem/fret-code-editor/src/editor/tests/row_geom_cache.rs`, and
+  `ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs`.
+- Focused nextest result: both new tests passed. The crate still emits the existing
+  `render_code_editor_frame` dead-code warning from `editor/tests/support.rs`.
+
+Decision:
+- Treat `set_soft_wrap_cols(...)`, `set_code_font_feature_policy(...)`, and `set_interaction(...)`
+  as audited render-safe configuration setters. This is a contract-locking slice rather than a
+  runtime behavior change.
+
+## 2026-05-15 22:20:00 +08:00 (markdown and code-view render-state audit)
+
+Question:
+- Do markdown/editor preview surfaces introduce any independent render-time setter or prepare-state
+  churn beyond the already-audited code editor handle setters?
+
+Change:
+- Audited the UI gallery markdown editor preview. Its per-frame `set_language(...)` and text-boundary
+  publication use the already-audited `CodeEditorHandle` path; fold and inlay fixtures are gated by
+  slot-local last-value checks, and preview text is cached by buffer revision.
+- Added `fret-code-view` prepared-state regression tests proving identical code block inputs keep
+  the same `Arc<PreparedCodeBlock>` and changed inputs rebuild the prepared state.
+
+Validation:
+- `cargo fmt -p fret-code-view`
+- `cargo nextest run -p fret-code-view prepared_state_is_idempotent_for_identical_inputs prepared_state_rebuilds_when_inputs_change --no-fail-fast`
+
+Evidence:
+- Code anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs` and
+  `ecosystem/fret-code-view/src/prepare.rs`.
+- Focused nextest result: both `fret-code-view` prepared-state tests passed.
+
+Decision:
+- Treat markdown preview and code-view code block preparation as audited for P0.6 render-state
+  idempotency. Note that `CodeBlockPreparedState` still keys by hash+length for performance; if we
+  later need collision-proof source identity, that should be a separate correctness/design slice,
+  not a setter-idempotency change.

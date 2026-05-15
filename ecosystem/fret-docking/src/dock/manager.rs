@@ -168,6 +168,44 @@ impl DockManager {
         self.viewport_layouts.retain(|(w, _), _| *w != window);
     }
 
+    /// Reconciles the viewport layouts observed during a render pass for one window.
+    ///
+    /// This is intentionally idempotent for identical layout sets. `DockSpace` calls it from
+    /// paint/layout code, so repeated frames with unchanged viewport geometry should not churn the
+    /// retained cache. Graph/runtime mutations can still use `clear_viewport_layout_for_window(...)`
+    /// as an explicit invalidation path.
+    pub fn sync_viewport_layouts_for_window(
+        &mut self,
+        window: fret_core::AppWindowId,
+        layouts: impl IntoIterator<Item = (RenderTargetId, DockViewportLayout)>,
+    ) -> bool {
+        let mut changed = false;
+        let mut live_targets = Vec::new();
+
+        for (target, layout) in layouts {
+            if !live_targets.contains(&target) {
+                live_targets.push(target);
+            }
+            let key = (window, target);
+            match self.viewport_layouts.get_mut(&key) {
+                Some(existing) if *existing == layout => {}
+                Some(existing) => {
+                    *existing = layout;
+                    changed = true;
+                }
+                None => {
+                    self.viewport_layouts.insert(key, layout);
+                    changed = true;
+                }
+            }
+        }
+
+        let before = self.viewport_layouts.len();
+        self.viewport_layouts
+            .retain(|(w, target), _| *w != window || live_targets.contains(target));
+        changed || self.viewport_layouts.len() != before
+    }
+
     /// Legacy API: records only a content rect and leaves mapping details unspecified.
     ///
     /// Prefer `set_viewport_layout(...)` so the cached entry includes `ViewportMapping` and the
@@ -216,5 +254,79 @@ impl DockManager {
             vp.target_px_size = target_px_size;
             panel.viewport = Some(vp);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn window(raw: u64) -> fret_core::AppWindowId {
+        fret_core::AppWindowId::from(KeyData::from_ffi(raw))
+    }
+
+    fn target(raw: u64) -> RenderTargetId {
+        RenderTargetId::from(KeyData::from_ffi(raw))
+    }
+
+    fn rect(x: f32, y: f32, width: f32, height: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(width), Px(height)))
+    }
+
+    fn layout(rect: Rect) -> DockViewportLayout {
+        let mapping = ViewportMapping {
+            content_rect: rect,
+            target_px_size: (320, 240),
+            fit: ViewportFit::Stretch,
+        };
+        DockViewportLayout {
+            content_rect: rect,
+            mapping,
+            draw_rect: mapping.map().draw_rect,
+        }
+    }
+
+    #[test]
+    fn sync_viewport_layouts_for_window_is_unchanged_for_identical_layouts() {
+        let mut dock = DockManager::default();
+        let window = window(1);
+        let target = target(1);
+        let layout = layout(rect(10.0, 20.0, 300.0, 200.0));
+
+        assert!(dock.sync_viewport_layouts_for_window(window, [(target, layout)]));
+        assert_eq!(dock.viewport_layouts.len(), 1);
+
+        assert!(!dock.sync_viewport_layouts_for_window(window, [(target, layout)]));
+        assert_eq!(dock.viewport_layouts.len(), 1);
+        assert_eq!(dock.viewport_layout(window, target), Some(layout));
+    }
+
+    #[test]
+    fn sync_viewport_layouts_for_window_removes_stale_entries_for_that_window_only() {
+        let mut dock = DockManager::default();
+        let window_a = window(1);
+        let window_b = window(2);
+        let target_a = target(1);
+        let target_b = target(2);
+        let target_other = target(3);
+        let layout_a = layout(rect(0.0, 0.0, 300.0, 200.0));
+        let layout_b = layout(rect(300.0, 0.0, 300.0, 200.0));
+        let layout_other = layout(rect(0.0, 0.0, 100.0, 100.0));
+
+        assert!(dock.sync_viewport_layouts_for_window(
+            window_a,
+            [(target_a, layout_a), (target_b, layout_b)]
+        ));
+        assert!(dock.sync_viewport_layouts_for_window(window_b, [(target_other, layout_other)]));
+
+        assert!(dock.sync_viewport_layouts_for_window(window_a, [(target_b, layout_b)]));
+
+        assert_eq!(dock.viewport_layout(window_a, target_a), None);
+        assert_eq!(dock.viewport_layout(window_a, target_b), Some(layout_b));
+        assert_eq!(
+            dock.viewport_layout(window_b, target_other),
+            Some(layout_other)
+        );
     }
 }

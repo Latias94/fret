@@ -43,11 +43,15 @@
     },
     {
       "name": "perf-key-registry-tests",
-      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
+      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events chrome_trace_synthetic_ui_subphases_cover_registered_timing_events stats_json_includes_avg_and_budget perf_threshold_keys_are_unique perf_threshold_key_units_match_names perf_threshold_registry_covers_threshold_struct_fields perf_threshold_registry_covers_diag_perf_cli_flags perf_threshold_registry_metric_names_are_frame_stats_or_known_derived_metrics perf_threshold_key_inventory_doc_is_in_sync --no-fail-fast"
     },
     {
       "name": "perf-key-registry-inventory-json",
       "command": "cargo run -p fretboard-dev -- diag stats --perf-keys-json"
+    },
+    {
+      "name": "perf-threshold-key-registry-inventory-json",
+      "command": "cargo run -p fretboard-dev -- diag stats --perf-threshold-keys-json"
     },
     {
       "name": "perf-threshold-evidence-tests",
@@ -70,12 +74,20 @@
       "command": "cargo nextest run -p fret-ui multiple_roots_do_not_couple_layout_results barrier_batch_solve_stamps_multiple_roots_in_one_generation flex_wrap_patch_profile_skips_roots_without_wrap_descendants flex_wrap_patch_profile_records_intrinsic_auto_min_work --no-fail-fast"
     },
     {
+      "name": "fret-ui-semantics-profile-phase-tests",
+      "command": "cargo nextest run -p fret-ui semantics_snapshot_includes_visible_roots_and_barrier semantics_snapshot_exposes_focus_barrier_root_independently_of_pointer_barrier semantics_snapshot_dirty_gate_rearms_on_semantic_invalidations semantics_snapshot_dirty_gate_tracks_pointer_capture_owner mechanism_harness_semantics_relations_match_oracles text_input_semantics_controls_element_is_exposed text_input_semantics_active_descendant_element_is_exposed declarative_attach_semantics_can_override_state_and_relations --no-fail-fast"
+    },
+    {
       "name": "fret-ui-paint-entry-phase-tests",
       "command": "cargo nextest run -p fret-ui view_cache_disables_paint_cache_for_non_boundary_nodes view_cache_allows_paint_cache_for_boundary_nodes paint_publishes_window_text_input_snapshot_for_focused_text_widget snapshot_resets_when_focus_is_not_text_input --no-fail-fast"
     },
     {
       "name": "fret-ui-paint-node-phase-tests",
       "command": "cargo nextest run -p fret-ui paint_cache_replays_ops_when_plain_node_translates_from_boundary_entry_store paint_cache_hit_test_only_invalidation_replays_when_cache_key_matches paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch model_change_invalidates_bound_text_input --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-window-runtime-snapshot-tests",
+      "command": "cargo nextest run -p fret-ui dispatch_event_publishes_post_dispatch_input_context_snapshot timer_dispatch_publishes_post_dispatch_input_context_snapshot focused_node_text_boundary_mode_override_is_published_in_input_context_snapshot layout_in_focus_mutation_publishes_post_layout_input_context_snapshot dispatch_command_publishes_post_dispatch_input_context_snapshot paint_all_publishes_programmatic_input_context_snapshot action_availability_snapshot_marks_unhandled_commands_unavailable publish_window_runtime_snapshots_refreshes_pending_shortcut_overlay_input_context --no-fail-fast"
     },
     {
       "name": "fret-bootstrap-driver-phase-check",
@@ -108,6 +120,7 @@
     "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini/bundle.schema2.json",
     "docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json",
+    "docs/workstreams/diag-perf-profiling-infra-v1/perf-threshold-key-registry.diag-perf.json",
     "crates/fret-diag/src/perf_keys.rs",
     "crates/fret-diag/src/stats.rs",
     "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
@@ -115,10 +128,12 @@
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",
+    "crates/fret-ui/src/tree/ui_tree_semantics.rs",
     "crates/fret-ui/src/layout/engine.rs",
     "crates/fret-ui/src/tree/prepaint/entry.rs",
     "crates/fret-ui/src/tree/paint/entry.rs",
     "crates/fret-ui/src/tree/paint/node.rs",
+    "crates/fret-ui/src/tree/commands.rs",
     "crates/fret-ui/src/tree/dispatch/window.rs",
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-render-wgpu/src/renderer",

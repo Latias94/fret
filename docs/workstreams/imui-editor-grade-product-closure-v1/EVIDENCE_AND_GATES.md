@@ -1459,3 +1459,29 @@ python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-b
 
 Result: passed. This removes the stale M0 secondary-view TODOs while keeping broader DevTools GUI
 product maturity, real-host Wayland acceptance, and full perf/smoothness attribution open.
+
+## IMUI source gate owner-anchor refresh - 2026-05-15 follow-up
+
+Scope: repair the active IMUI source gate after the DevTools first-class gate commands moved to the
+shared diagnostics owner.
+
+- `tools/gate_imui_workstream_source.py` now checks `crates/fret-diag/src/devtools_gate_profiles.rs`
+  for the first-class stale/pixels/perf/resource-footprint gate taxonomy, structured command
+  builders, evidence names, and focused tests.
+- `apps/fret-devtools/src/native.rs` remains a GUI consumer of
+  `devtools_gate_profiles_v1()` / `devtools_gate_profile_lines(...)` rather than re-owning command
+  template constants.
+- `crates/fret-diag/src/regression_summary.rs` remains a follow-up command projection consumer of
+  `crate::util::shell_quote_arg`, and the source gate now checks the quoting helper in
+  `crates/fret-diag/src/util.rs`.
+- `GOAL_COMPLETION_AUDIT_2026-05-15.md` now includes the explicit sentence
+  "GUI productization is still not complete" so the overall editor-grade goal remains open until
+  broader always-available tooling evidence exists.
+
+Focused gate:
+
+```text
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed. This is a gate-anchor repair only; it does not claim new DevTools GUI maturity.

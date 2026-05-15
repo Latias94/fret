@@ -9,17 +9,18 @@
 
 ## Contract & schema discipline
 
-- [ ] Define a perf key registry (name/unit/kind/scope/aggregate).
+- [x] Define a perf key registry (name/unit/kind/scope/aggregate).
   - [x] Seed the registry for trace-exported frame keys in `crates/fret-diag/src/perf_keys.rs`.
   - [x] Expose the registered stats/gate subset from `diag stats --json` via `registered_perf_keys`.
   - [x] Expand the registry to all `diag stats`-consumed `debug.stats` frame fields before treating it as the single source of truth.
-  - [ ] Split the remaining `max_*` threshold/config keys in `crates/fret-diag/src/diag_perf/thresholds.rs` into the registry if we want gate config surfaces to be first-class too.
-- [ ] Add contract tests that ensure:
+  - [x] Split the remaining `max_*`/`min_*` threshold config keys into a first-class threshold registry, separate from frame metric keys.
+- [x] Add contract tests that ensure:
   - [x] trace-exported keys are unique and include core timeline keys
   - [x] trace-exported key units are consistent (e.g. `*_time_us` is microseconds, `*_cycles` is cycles)
   - [x] registered stats/gate subset keys stay additive and unit-consistent
   - [x] full frame-stats registry stays in sync with the source scan and inventory doc
   - [x] full registry units are consistent
+  - [x] threshold registry covers `PerfThresholds`, `diag perf` CLI threshold flags, and its inventory doc
 - [x] Add a generated field inventory doc (or update `diag-perf-attribution-v1-field-inventory.md` from the registry).
 
 ## Tooling UX (shorten the attribution loop)
@@ -38,7 +39,13 @@
   - Result: existing spans/timers cover the major runtime phases, but Chrome trace output remains
     bundle-derived synthetic phases and does not include live `tracing` / Tracy spans.
 - [ ] Add missing always-on phase timers for known uninstrumented work (keep additive keys).
-- [ ] Ensure chrome trace emits stable event names for new sub-phases.
+- [x] Ensure chrome trace emits stable event names for new sub-phases.
+  - Evidence:
+    `crates/fret-diag/src/perf_keys.rs`,
+    `crates/fret-diag/src/trace.rs`,
+    `docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json`
+  - Gate:
+    `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_synthetic_ui_subphases_cover_registered_timing_events trace_exported_perf_key_units_match_names registered_perf_key_inventory_doc_is_in_sync --no-fail-fast`
 - [ ] Adopt `crates/fret-perf` helpers for new/updated timers so stats + spans stay aligned.
   - [x] Migrate `layout_all` final tail phases through a shared `fret_perf::measure_span` path:
     regular frames, layout fast-path frames, and skipped-engine stable frames now share the
@@ -52,12 +59,20 @@
         `crates/fret-ui/src/tree/prepaint/mod.rs`,
         `crates/fret-ui/src/tree/prepaint/entry.rs`,
         `crates/fret-ui/src/tree/prepaint/interaction.rs`
-  - [ ] Migrate more layout sub-phases beyond request/build + roots:
+  - [ ] Migrate more layout sub-phases beyond request/build + root layout:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
+    - [x] Align visible-root collection with `fret_perf::measure_span` so
+      `layout_collect_roots_time_us`, `fret.ui.layout.collect_roots`, and the
+      `layout_all profile` `collect_roots_ms` field share one measurement boundary.
+      - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
     - [x] Align `crates/fret-ui/src/layout/engine.rs` solve spans with `fret_perf::measure_span_with_finish`
       for batched independent-root solves and single-root solves while preserving `elapsed_us`,
       `measure_calls`, `measure_cache_hits`, `measure_us`, and existing solve/profile stats.
       - Evidence: `crates/fret-perf/src/lib.rs`, `crates/fret-ui/src/layout/engine.rs`
+    - [x] Align semantics snapshot profiling with `fret_perf::measure_span`:
+      element-id map lookup, window-frame child graph lookup, semantics traversal, and
+      relation normalization now share the same opt-in profile timer and trace-span surface.
+      - Evidence: `crates/fret-ui/src/tree/ui_tree_semantics.rs`
     - Remaining: per-widget measure hotspot timing is intentionally still a local debug profiling
       timer until a repro needs per-measure trace events; avoid per-node span explosion by default.
   - [x] Migrate remaining paint sub-phases and hot node paths:
@@ -70,6 +85,11 @@
       visual-bounds record, cache key, cache hit check, cache bounds translate, widget paint,
       and paint-observation record.
       - Evidence: `crates/fret-ui/src/tree/paint/node.rs`
+  - [x] Migrate window runtime snapshot phases to `fret_perf::measure_span`:
+    post-dispatch focus/IME repair, pointer-move input context refresh, full-publish input
+    context refresh, command availability, command registry collection, command availability
+    evaluation, and shortcut overlay refresh now share the same stats/span boundary.
+    - Evidence: `crates/fret-ui/src/tree/commands.rs`
   - [ ] Extend runner/renderer phase spans where needed:
     - [x] Align `ecosystem/fret-bootstrap/src/ui_app_driver.rs` driver phases with
       `fret_perf::measure_span` while preserving frame-hitch log fields:
