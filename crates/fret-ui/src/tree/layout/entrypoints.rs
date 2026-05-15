@@ -7,6 +7,7 @@ use crate::layout_pass::LayoutPassKind;
 
 #[derive(Default)]
 struct LayoutAllProfileTimings {
+    collect_roots: Option<Duration>,
     invalidate_scroll_handle_bindings: Option<Duration>,
     expand_view_cache_invalidations: Option<Duration>,
     request_build_roots: Option<Duration>,
@@ -68,6 +69,7 @@ impl LayoutAllProfileTimings {
         tracing::info!(
             window = ?tree.window,
             total_ms = total.as_millis(),
+            collect_roots_ms = self.collect_roots.map(|d| d.as_millis()),
             invalidate_scroll_handle_bindings_ms =
                 self.invalidate_scroll_handle_bindings.map(|d| d.as_millis()),
             expand_view_cache_invalidations_ms =
@@ -177,23 +179,40 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
 
-        let roots_started = self.debug_enabled.then(Instant::now);
-        let roots: Vec<NodeId> = self
-            .visible_layers_in_paint_order()
-            .map(|layer| self.layers[layer].root)
-            .collect();
-        if let Some(roots_started) = roots_started {
-            self.debug_stats.layout_collect_roots_time += roots_started.elapsed();
-        }
-
-        let roots_len = roots.len();
         let trace_layout = tracing::enabled!(tracing::Level::TRACE);
-
-        let mut viewport_cursor: usize = 0;
-
         let layout_phase_time_enabled = self.debug_enabled || profile_layout_all;
         let window = self.window;
         let frame_id = app.frame_id();
+
+        let (roots, collect_roots_elapsed) = fret_perf::measure_span(
+            layout_phase_time_enabled,
+            trace_layout,
+            || {
+                tracing::trace_span!(
+                    "fret.ui.layout.collect_roots",
+                    window = ?window,
+                    frame_id = frame_id.0,
+                    pass_kind = ?pass_kind,
+                )
+            },
+            || {
+                self.visible_layers_in_paint_order()
+                    .map(|layer| self.layers[layer].root)
+                    .collect::<Vec<NodeId>>()
+            },
+        );
+        if profile_layout_all {
+            profile_timings.collect_roots = collect_roots_elapsed;
+        }
+        if self.debug_enabled
+            && let Some(collect_roots_elapsed) = collect_roots_elapsed
+        {
+            self.debug_stats.layout_collect_roots_time += collect_roots_elapsed;
+        }
+
+        let roots_len = roots.len();
+        let mut viewport_cursor: usize = 0;
+
         let (_, invalidate_elapsed) = fret_perf::measure_span(
             layout_phase_time_enabled,
             trace_layout,

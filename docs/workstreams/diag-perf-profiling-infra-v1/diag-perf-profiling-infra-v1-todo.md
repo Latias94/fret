@@ -45,8 +45,12 @@
     regular frames, layout fast-path frames, and skipped-engine stable frames now share the
     prepaint/focus/semantics/deferred-cleanup timing and span wrapper surface.
     - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
-  - [ ] Migrate more layout sub-phases beyond request/build + roots:
+  - [ ] Migrate more layout sub-phases beyond request/build + root layout:
     - `crates/fret-ui/src/tree/layout/*.rs` (invalidate bindings, expand invalidations, contained roots, semantics refresh, etc.)
+    - [x] Align visible-root collection with `fret_perf::measure_span` so
+      `layout_collect_roots_time_us`, `fret.ui.layout.collect_roots`, and the
+      `layout_all profile` `collect_roots_ms` field share one measurement boundary.
+      - Evidence: `crates/fret-ui/src/tree/layout/entrypoints.rs`
     - [x] Align `crates/fret-ui/src/layout/engine.rs` solve spans with `fret_perf::measure_span_with_finish`
       for batched independent-root solves and single-root solves while preserving `elapsed_us`,
       `measure_calls`, `measure_cache_hits`, `measure_us`, and existing solve/profile stats.
