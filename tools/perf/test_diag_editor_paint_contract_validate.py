@@ -1,4 +1,7 @@
 import unittest
+from tempfile import TemporaryDirectory
+from pathlib import Path
+import json
 
 import diag_editor_paint_contract_validate as validate
 
@@ -52,6 +55,49 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertNotIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[0]["cmd"]))
         self.assertIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[1]["cmd"]))
         self.assertIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[2]["cmd"]))
+
+    def test_artifact_summary_prefers_threshold_bundle(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "check.perf_thresholds.json").write_text(
+                json.dumps(
+                    {
+                        "failures": [],
+                        "layout_perf_summary": {
+                            "bundle_artifact": "target/fret-diag/run/worst/bundle.schema2.json"
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            summary = validate.artifact_summary_for_step(root)
+
+        self.assertEqual(0, summary["check_perf_thresholds_failures"])
+        self.assertEqual("target/fret-diag/run/worst/bundle.schema2.json", summary["worst_bundle"])
+
+    def test_artifact_summary_falls_back_to_regression_summary(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "regression.summary.json").write_text(
+                json.dumps(
+                    {
+                        "items": [
+                            {
+                                "evidence": {
+                                    "bundle_artifact": "target/fret-diag/run/from-regression/bundle.schema2.json"
+                                }
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            summary = validate.artifact_summary_for_step(root)
+
+        self.assertIsNone(summary["check_perf_thresholds_failures"])
+        self.assertEqual("target/fret-diag/run/from-regression/bundle.schema2.json", summary["worst_bundle"])
 
 
 if __name__ == "__main__":

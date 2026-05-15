@@ -60,6 +60,8 @@ Run the release builds above first; the runner fails fast if the expected Window
 Use `--dry-run` on non-target hosts to inspect the exact command plan without producing misleading local evidence.
 Use `--with-paint-perf` for a target-machine attribution pass after the baseline validation pass; do not use its output
 to loosen checked-in thresholds without the re-seed policy below.
+After each validation probe, the runner collects the worst bundle and writes `diag stats --sort cpu_cycles --top 15
+--json` output under that probe's `runner-logs/<probe>/stats.stdout.json`.
 
 ## Validate Current Contracts First
 

@@ -72,6 +72,10 @@ def _write_json(path: Path, v: object) -> None:
     path.write_text(json.dumps(v, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
+def _read_json(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def _default_date_tag() -> str:
     return time.strftime("%Y%m%d-%H%M%S")
 
@@ -151,6 +155,8 @@ def build_plan(
         steps.append(
             {
                 "name": "preflight",
+                "out_dir": f"{out_dir}/preflight",
+                "wants_stats": False,
                 "cmd": [
                     python_bin,
                     "tools/perf/diag_editor_paint_contract_preflight.py",
@@ -163,6 +169,8 @@ def build_plan(
     steps.append(
         {
             "name": "resize-jitter",
+            "out_dir": f"{out_dir}/resize-jitter",
+            "wants_stats": True,
             "cmd": [
                 python_bin,
                 "tools/perf/diag_resize_probes_gate.py",
@@ -186,6 +194,8 @@ def build_plan(
     steps.append(
         {
             "name": "typical-autoscroll",
+            "out_dir": f"{out_dir}/typical-autoscroll",
+            "wants_stats": True,
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
                 launch_bin=launch_bin,
@@ -201,6 +211,8 @@ def build_plan(
     steps.append(
         {
             "name": "complex-wheel",
+            "out_dir": f"{out_dir}/complex-wheel",
+            "wants_stats": True,
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
                 launch_bin=launch_bin,
@@ -244,6 +256,62 @@ def _validate_inputs(workspace_root: Path, args: argparse.Namespace) -> list[str
     return missing
 
 
+def _bundle_from_regression_summary(path: Path) -> str | None:
+    try:
+        doc = _read_json(path)
+    except Exception:
+        return None
+    if not isinstance(doc, dict):
+        return None
+    items = doc.get("items")
+    if not isinstance(items, list):
+        return None
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        evidence = item.get("evidence")
+        if not isinstance(evidence, dict):
+            continue
+        bundle = evidence.get("bundle_artifact")
+        if isinstance(bundle, str) and bundle:
+            return bundle
+    return None
+
+
+def artifact_summary_for_step(step_out_dir: Path) -> dict[str, Any]:
+    check_path = step_out_dir / "check.perf_thresholds.json"
+    regression_path = step_out_dir / "regression.summary.json"
+
+    failures_count: int | None = None
+    bundle: str | None = None
+
+    if check_path.is_file():
+        try:
+            check = _read_json(check_path)
+        except Exception:
+            check = None
+        if isinstance(check, dict):
+            failures = check.get("failures")
+            if isinstance(failures, list):
+                failures_count = len(failures)
+            layout_summary = check.get("layout_perf_summary")
+            if isinstance(layout_summary, dict):
+                bundle_artifact = layout_summary.get("bundle_artifact")
+                if isinstance(bundle_artifact, str) and bundle_artifact:
+                    bundle = bundle_artifact
+
+    if bundle is None and regression_path.is_file():
+        bundle = _bundle_from_regression_summary(regression_path)
+
+    return {
+        "step_out_dir": str(step_out_dir),
+        "check_perf_thresholds": str(check_path) if check_path.is_file() else None,
+        "check_perf_thresholds_failures": failures_count,
+        "regression_summary": str(regression_path) if regression_path.is_file() else None,
+        "worst_bundle": bundle,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Run the Windows RTX4090 editor paint contract validation plan.",
@@ -271,6 +339,12 @@ def main() -> int:
         ),
     )
     ap.add_argument("--dry-run", action="store_true", default=False)
+    ap.add_argument(
+        "--skip-stats",
+        action="store_true",
+        default=False,
+        help="Do not run `diag stats` for the worst bundle collected from each validation probe.",
+    )
     ap.add_argument(
         "--allow-non-windows",
         action="store_true",
@@ -336,6 +410,7 @@ def main() -> int:
             "target_profile": str(args.target_profile),
             "out_dir": out_dir,
             "with_paint_perf": bool(args.with_paint_perf),
+            "stats_enabled": not bool(args.skip_stats),
             "steps": plan,
         }
         _write_json(out_dir_path / "validation-plan.json", summary)
@@ -358,6 +433,44 @@ def main() -> int:
         elapsed_ms = int((time.time() - started) * 1000.0)
         ok = rc == 0
         pass_all = pass_all and ok
+        artifacts = artifact_summary_for_step(_resolve_workspace_path(workspace_root, str(step.get("out_dir", ""))))
+        stats_result: dict[str, Any] | None = None
+        if bool(step.get("wants_stats")) and not bool(args.skip_stats):
+            bundle = artifacts.get("worst_bundle")
+            if isinstance(bundle, str) and bundle:
+                stats_cmd = [
+                    str(args.fretboard_bin),
+                    "diag",
+                    "stats",
+                    bundle,
+                    "--sort",
+                    "cpu_cycles",
+                    "--top",
+                    "15",
+                    "--json",
+                ]
+                stats_stdout = step_dir / "stats.stdout.json"
+                stats_stderr = step_dir / "stats.stderr.log"
+                _write_json(step_dir / "stats.cmd.json", {"cmd": stats_cmd})
+                stats_started = time.time()
+                stats_rc = _run_step(stats_cmd, workspace_root, stats_stdout, stats_stderr)
+                stats_ok = stats_rc == 0
+                pass_all = pass_all and stats_ok
+                stats_result = {
+                    "ok": stats_ok,
+                    "rc": stats_rc,
+                    "elapsed_ms": int((time.time() - stats_started) * 1000.0),
+                    "cmd": stats_cmd,
+                    "stdout": str(stats_stdout),
+                    "stderr": str(stats_stderr),
+                }
+            else:
+                pass_all = False
+                stats_result = {
+                    "ok": False,
+                    "rc": None,
+                    "error": "worst bundle not found for stats collection",
+                }
         step_results.append(
             {
                 "name": name,
@@ -367,9 +480,11 @@ def main() -> int:
                 "cmd": cmd,
                 "stdout": str(stdout_path),
                 "stderr": str(stderr_path),
+                "artifacts": artifacts,
+                "stats": stats_result,
             }
         )
-        if not ok and not bool(args.keep_going):
+        if (not ok or (stats_result is not None and not bool(stats_result.get("ok")))) and not bool(args.keep_going):
             break
 
     summary = {
@@ -378,6 +493,7 @@ def main() -> int:
         "target_profile": str(args.target_profile),
         "out_dir": str(out_dir_path),
         "with_paint_perf": bool(args.with_paint_perf),
+        "stats_enabled": not bool(args.skip_stats),
         "steps": step_results,
     }
     summary_path = out_dir_path / "summary.json"
