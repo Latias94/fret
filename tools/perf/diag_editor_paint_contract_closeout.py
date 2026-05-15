@@ -130,7 +130,6 @@ def main() -> int:
         else validation_dir / "editor-paint-contract-closeout.summary.json"
     )
 
-    verifier = verify.verify_artifact_dirs(validation_dir, attribution_dir)
     plan = build_plan(
         python_bin=str(args.python_bin),
         matrix=str(args.matrix),
@@ -142,15 +141,20 @@ def main() -> int:
         summary = {
             "kind": "editor_paint_contract_closeout_plan",
             "dry_run": True,
-            "ok": bool(verifier.get("ok")),
+            "ok": True,
             "validation_dir": str(validation_dir),
             "attribution_dir": str(attribution_dir) if attribution_dir is not None else None,
-            "verifier": verifier,
+            "verifier": {
+                "skipped": True,
+                "reason": "dry-run",
+            },
             "steps": plan,
         }
         _write_json(out_report, summary)
         print(f"[closeout] dry-run report: {out_report}")
-        return 0 if bool(verifier.get("ok")) else 1
+        return 0
+
+    verifier = verify.verify_artifact_dirs(validation_dir, attribution_dir)
 
     if not bool(verifier.get("ok")):
         summary = {

@@ -1,4 +1,9 @@
+import json
+import sys
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 import diag_editor_paint_contract_closeout as closeout
 
@@ -35,6 +40,31 @@ class EditorPaintContractCloseoutTests(unittest.TestCase):
             ["perf-baseline-matrix-audit", "workstream-json-valid", "workstream-catalog"],
             [step["name"] for step in plan],
         )
+
+    def test_dry_run_does_not_require_synced_artifacts(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            report = root / "closeout-plan.json"
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_closeout.py",
+                    str(root / "missing-validation-dir"),
+                    "--attribution-dir",
+                    str(root / "missing-attribution-dir"),
+                    "--dry-run",
+                    "--out-report",
+                    str(report),
+                ],
+            ):
+                rc = closeout.main()
+
+            summary = json.loads(report.read_text(encoding="utf-8"))
+
+        self.assertEqual(0, rc)
+        self.assertTrue(summary["ok"])
+        self.assertEqual({"skipped": True, "reason": "dry-run"}, summary["verifier"])
 
 
 if __name__ == "__main__":

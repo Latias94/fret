@@ -183,6 +183,8 @@ python tools/perf/diag_editor_paint_contract_closeout.py `
 
 It verifies the synced artifacts, then runs the strict baseline matrix audit, `WORKSTREAM.json` parsing, workstream
 catalog check, and `git diff --check`.
+Use `--dry-run` before artifacts arrive to inspect the local closeout plan; dry-run intentionally skips artifact
+verification.
 
 Equivalent manual gates before closing P1.5:
 
