@@ -116,7 +116,8 @@ pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, best_selector_for_node_validated, format_inspect_path,
     inspect_selector_candidates_report, parent_node_id, parse_semantics_role,
-    select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
+    select_raw_semantics_node_scoped, select_semantics_node_scoped, suggest_selectors,
+    truncate_debug_value,
 };
 
 mod trace_helpers;

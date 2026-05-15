@@ -182,10 +182,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             ..Default::default()
                         },
                         |_cx| vec![content],
-                    )
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-scroll-area-drag-baseline-viewport"),
                     );
 
                 let scrollbar_layout = fret_ui::element::LayoutStyle {
@@ -224,6 +220,29 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 stack_layout.size.width = fret_ui::element::Length::Px(Px(240.0));
                 stack_layout.size.height = fret_ui::element::Length::Px(Px(200.0));
 
+                let mut viewport_probe_layout = fret_ui::element::LayoutStyle::default();
+                viewport_probe_layout.position = fret_ui::element::PositionStyle::Absolute;
+                viewport_probe_layout.inset = fret_ui::element::InsetStyle {
+                    top: Some(Px(24.0)).into(),
+                    right: Some(Px(24.0)).into(),
+                    bottom: None.into(),
+                    left: Some(Px(24.0)).into(),
+                };
+                viewport_probe_layout.size.height = fret_ui::element::Length::Px(Px(32.0));
+
+                let viewport_probe = cx
+                    .container(
+                        fret_ui::element::ContainerProps {
+                            layout: viewport_probe_layout,
+                            ..Default::default()
+                        },
+                        |_cx| Vec::new(),
+                    )
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .test_id("ui-gallery-scroll-area-drag-baseline-viewport-probe"),
+                    );
+
                 let scroll_group = scroll.attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Group)
@@ -237,6 +256,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     move |_cx| {
                         vec![
                             scroll_group,
+                            viewport_probe,
                             _cx.interactivity_gate_props(
                                 fret_ui::element::InteractivityGateProps {
                                     layout: scrollbar_layout,

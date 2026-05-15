@@ -3,7 +3,8 @@
     "name": "ui-gallery command palette: controllable selection value updates active item",
     "required_capabilities": [
       "diag.script_v2"
-    ]
+    ],
+    "tags": ["ui_gallery", "shadcn", "command", "active_descendant"]
   },
   "schema_version": 2,
   "steps": [

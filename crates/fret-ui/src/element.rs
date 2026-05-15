@@ -841,6 +841,10 @@ pub struct SemanticsDecoration {
     pub scroll_y: Option<f64>,
     pub scroll_y_min: Option<f64>,
     pub scroll_y_max: Option<f64>,
+    /// 1-based position in a collection, matching ARIA `aria-posinset`.
+    pub pos_in_set: Option<u32>,
+    /// Total collection size, matching ARIA `aria-setsize`.
+    pub set_size: Option<u32>,
     /// Declarative-only: element ID of the active descendant for composite widgets.
     pub active_descendant_element: Option<u64>,
     /// Declarative-only: element ID of a node which labels this node (`aria-labelledby`).
@@ -893,6 +897,8 @@ impl SemanticsDecoration {
             scroll_y: other.scroll_y.or(self.scroll_y),
             scroll_y_min: other.scroll_y_min.or(self.scroll_y_min),
             scroll_y_max: other.scroll_y_max.or(self.scroll_y_max),
+            pos_in_set: other.pos_in_set.or(self.pos_in_set),
+            set_size: other.set_size.or(self.set_size),
             active_descendant_element: other
                 .active_descendant_element
                 .or(self.active_descendant_element),
@@ -1048,6 +1054,22 @@ impl SemanticsDecoration {
         self
     }
 
+    pub fn collection_position(mut self, pos_in_set: u32, set_size: u32) -> Self {
+        self.pos_in_set = Some(pos_in_set);
+        self.set_size = Some(set_size);
+        self
+    }
+
+    pub fn pos_in_set(mut self, pos_in_set: u32) -> Self {
+        self.pos_in_set = Some(pos_in_set);
+        self
+    }
+
+    pub fn set_size(mut self, set_size: u32) -> Self {
+        self.set_size = Some(set_size);
+        self
+    }
+
     pub fn active_descendant_element(mut self, element: u64) -> Self {
         self.active_descendant_element = Some(element);
         self
@@ -1108,6 +1130,10 @@ pub struct SemanticsProps {
     pub scroll_y: Option<f64>,
     pub scroll_y_min: Option<f64>,
     pub scroll_y_max: Option<f64>,
+    /// 1-based position in a collection, matching ARIA `aria-posinset`.
+    pub pos_in_set: Option<u32>,
+    /// Total collection size, matching ARIA `aria-setsize`.
+    pub set_size: Option<u32>,
     /// Whether this semantics wrapper participates in focus traversal.
     ///
     /// Note: this is intentionally separate from pointer hit-testing. `Semantics` remains
@@ -1178,6 +1204,8 @@ impl Default for SemanticsProps {
             scroll_y: None,
             scroll_y_min: None,
             scroll_y_max: None,
+            pos_in_set: None,
+            set_size: None,
             focusable: false,
             value_editable: None,
             disabled: false,

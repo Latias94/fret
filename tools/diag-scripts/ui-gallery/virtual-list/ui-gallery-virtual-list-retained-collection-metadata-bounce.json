@@ -1,0 +1,266 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-virtual-list-retained-collection-metadata-bounce",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "ui_gallery",
+      "scroll",
+      "virtual_list",
+      "semantics",
+      "collection_metadata",
+      "mechanism_harness",
+      "feature:gallery-dev"
+    ],
+    "target_hints": [
+      "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+      "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
+      "The gate asserts ListItem collection metadata before scrolling, after a retained window-boundary scroll, and after bouncing back to the top."
+    ]
+  },
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 20
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
+      "text": "virtual_list_torture",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-virtual-list-torture"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-virtual-list-torture"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-virtual-list-torture"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-0-label"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport-virtual_list_torture"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 8,
+      "timeout_frames": 300
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-0"
+        },
+        "pos_in_set": 1
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-0"
+        },
+        "set_size": 10000
+      }
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport-virtual_list_torture"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 4,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-25"
+        },
+        "pos_in_set": 26
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-25"
+        },
+        "set_size": 10000
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-0"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "retained_virtual_list_reconciles_matching_ge",
+        "min": 1,
+        "reconcile_kind": "escape",
+        "attached_items_min": 1,
+        "detached_items_min": 1
+      }
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": 720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport-virtual_list_torture"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 4,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-0"
+        },
+        "pos_in_set": 1
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-0"
+        },
+        "set_size": 10000
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-virtual-list-retained-collection-metadata-bounce"
+    }
+  ]
+}

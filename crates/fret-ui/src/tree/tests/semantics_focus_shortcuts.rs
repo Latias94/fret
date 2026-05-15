@@ -156,6 +156,57 @@ fn semantics_snapshot_dirty_gate_ignores_animation_frame_paint() {
 }
 
 #[test]
+fn semantics_snapshot_dirty_gate_tracks_pointer_capture_owner() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+    let capture = ui.create_node(TestStack);
+    ui.add_child(root, capture);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    assert!(ui.request_semantics_snapshot_if_dirty());
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(ui.semantics_snapshot().expect("snapshot").captured, None);
+    assert!(!ui.request_semantics_snapshot_if_dirty());
+
+    ui.captured.insert(fret_core::PointerId(0), capture);
+    assert!(
+        ui.request_semantics_snapshot_if_dirty(),
+        "pointer capture changes semantic owner state even when layout is otherwise clean"
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("snapshot");
+    assert_eq!(snap.captured, Some(capture));
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|node| node.id == capture && node.flags.captured)
+    );
+
+    ui.captured.remove(&fret_core::PointerId(0));
+    assert!(
+        ui.request_semantics_snapshot_if_dirty(),
+        "pointer capture release must clear stale semantic owner state"
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("snapshot");
+    assert_eq!(snap.captured, None);
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|node| node.id != capture || !node.flags.captured)
+    );
+}
+
+#[test]
 fn modal_barrier_clears_focus_and_capture_in_underlay() {
     struct CaptureOnDown;
 

@@ -237,16 +237,17 @@ pub(super) fn select_semantics_node_scoped<'a>(
             &index,
         )
         .or_else(|| {
-            // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
-            super::pick::pick_best_match(
-                snapshot.nodes.iter().filter(|n| {
-                    let node_id = n.id.data().as_ffi();
-                    in_scope(node_id)
-                        && matches_root_z(node_id)
-                        && n.test_id.as_deref().is_some_and(|v| v == id)
-                }),
+            let mut matches = Vec::new();
+            extend_test_id_chrome_fallback(
+                snapshot,
                 &index,
+                id,
+                &in_scope,
+                &matches_root_z,
+                &mut matches,
             )
+            .then(|| super::pick::pick_best_match(matches.into_iter(), &index))
+            .flatten()
         }),
         UiSelectorV1::GlobalElementId { element, .. } => {
             let node = element_runtime.and_then(|runtime| {
@@ -257,6 +258,99 @@ pub(super) fn select_semantics_node_scoped<'a>(
                 let id = n.id.data().as_ffi();
                 index.is_selectable(id) && in_scope(id) && matches_root_z(id)
             })
+        }
+    }
+}
+
+pub(super) fn select_raw_semantics_node_scoped<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    selector: &UiSelectorV1,
+    scope_root: Option<u64>,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+    let want_root_z_index = match selector {
+        UiSelectorV1::RoleAndName { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::RoleAndPath { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::TestId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::GlobalElementId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::NodeId { root_z_index, .. } => *root_z_index,
+    };
+
+    let in_scope = |id: u64| -> bool {
+        scope_root
+            .map(|root| index.is_descendant_of_or_self(id, root))
+            .unwrap_or(true)
+    };
+    let matches_root_z = |id: u64| -> bool {
+        want_root_z_index
+            .map(|z| index.root_z_for(id) == z)
+            .unwrap_or(true)
+    };
+    let is_raw_visible =
+        |id: u64| index.is_in_visible_root(id) && in_scope(id) && matches_root_z(id);
+
+    match selector {
+        UiSelectorV1::NodeId { node, .. } => index
+            .by_id
+            .get(node)
+            .copied()
+            .filter(|n| is_raw_visible(n.id.data().as_ffi())),
+        UiSelectorV1::RoleAndName { role, name, .. } => {
+            let role = parse_semantics_role(role)?;
+            super::pick::pick_best_match(
+                snapshot.nodes.iter().filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    is_raw_visible(id)
+                        && n.role == role
+                        && n.label.as_deref().is_some_and(|label| label == name)
+                }),
+                &index,
+            )
+        }
+        UiSelectorV1::RoleAndPath {
+            role,
+            name,
+            ancestors,
+            ..
+        } => {
+            let role = parse_semantics_role(role)?;
+
+            let mut parsed_ancestors: Vec<(SemanticsRole, &str)> =
+                Vec::with_capacity(ancestors.len());
+            for a in ancestors {
+                parsed_ancestors.push((parse_semantics_role(&a.role)?, a.name.as_str()));
+            }
+
+            super::pick::pick_best_match(
+                snapshot.nodes.iter().filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    is_raw_visible(id)
+                        && n.role == role
+                        && n.label.as_deref().is_some_and(|label| label == name)
+                        && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
+                }),
+                &index,
+            )
+        }
+        UiSelectorV1::TestId { id, .. } => super::pick::pick_best_match(
+            snapshot.nodes.iter().filter(|n| {
+                let node_id = n.id.data().as_ffi();
+                is_raw_visible(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+            }),
+            &index,
+        ),
+        UiSelectorV1::GlobalElementId { element, .. } => {
+            let node = element_runtime.and_then(|runtime| {
+                runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
+            })?;
+            let node_id = node.data().as_ffi();
+            index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .filter(|n| is_raw_visible(n.id.data().as_ffi()))
         }
     }
 }
@@ -301,14 +395,31 @@ impl<'a> SemanticsIndex<'a> {
         }
     }
 
+    pub(super) fn is_in_visible_root(&self, id: u64) -> bool {
+        self.visible_ids.contains(&id)
+    }
+
     pub(super) fn is_selectable(&self, id: u64) -> bool {
         if !self.visible_ids.contains(&id) {
+            return false;
+        }
+        if self.nearest_semantics_hidden_ancestor_or_self(id).is_some() {
             return false;
         }
         if let Some(barrier) = self.barrier_root {
             return self.is_descendant_of_or_self(id, barrier);
         }
         true
+    }
+
+    pub(super) fn nearest_semantics_hidden_ancestor_or_self(&self, mut id: u64) -> Option<u64> {
+        loop {
+            let node = self.by_id.get(&id).copied()?;
+            if node.flags.hidden {
+                return Some(id);
+            }
+            id = node.parent.map(|p| p.data().as_ffi())?;
+        }
     }
 
     pub(super) fn is_descendant_of_or_self(&self, mut id: u64, ancestor: u64) -> bool {
@@ -675,16 +786,6 @@ mod legacy_inline_validate {
                     ) {
                         note = Some("fallback_chrome_suffix");
                     }
-                }
-                if matches.is_empty() {
-                    // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
-                    note = Some("fallback_hidden_nodes");
-                    matches.extend(snapshot.nodes.iter().filter(|n| {
-                        let node_id = n.id.data().as_ffi();
-                        in_scope(node_id)
-                            && matches_root_z(node_id)
-                            && n.test_id.as_deref() == Some(id)
-                    }));
                 }
             }
             UiSelectorV1::GlobalElementId { element, .. } => {

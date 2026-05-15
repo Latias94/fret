@@ -236,27 +236,92 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routin
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_occlusion -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib pointer_move_layers -- --nocapture
+cargo nextest run -p fret-diag-protocol predicate_captured_is_serializes --no-fail-fast
+cargo nextest run -p fret-diag-protocol pointer_session_step_pointer_id_defaults_and_round_trips --no-fail-fast
+cargo nextest run -p fret-mechanism-harness captured_is_oracle_tracks_current_capture_owner --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics ui_diagnostics::predicate_tests::captured_is_matches_semantics_capture_owner --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics no_frame_pointer_move --no-fail-fast
+cargo nextest run -p fret-ui semantics_snapshot_dirty_gate_tracks_pointer_capture_owner --no-fail-fast
+cargo nextest run -p fret-diag-protocol script_v2_roundtrip_dock_viewport_capture_active_is_predicate --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics dock_viewport_capture_active_matches_docking_snapshot --no-fail-fast
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-pointer-capture --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json --dir target/fret-diag-scrollbar-drag-cancel-release-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json --dir target/fret-diag-scrollbar-drag-multipointer-underlay-touch-v5 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json --dir target/fret-diag-docking-multiwindow-dock-drag-suppresses-viewport-touch-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/docking_arbitration_demo.exe
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json --dir target/fret-diag-context-menu-submenu-branch-corridor-routing-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json --dir target/fret-diag-context-menu-occlusion-wheel-structured-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
 ```
 
 Current runtime evidence:
 
-- Scrollbar drag pointer-capture lifecycle:
+- Scrollbar drag pointer-capture lifecycle and owner:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
   - asserts `input_pointer_capture_active_is active=true` after `pointer_down` on
     `ui-gallery-scroll-area-drag-baseline-y-scrollbar`, asserts it stays true during the drag,
-    keeps the existing `semantics_scroll_approx_eq y=20` scroll-progress oracle, and asserts
-    `active=false` after `pointer_up`.
-  - current run result:
-    `target/fret-diag-scrollbar-drag-pointer-capture/sessions/1778752007390-149896/1778752011220/script.result.json`
-  - current AI packet:
-    `target/fret-diag-scrollbar-drag-pointer-capture/sessions/1778752007390-149896/1778752011220/ai.packet`
-  - current share pack:
-    `target/fret-diag-scrollbar-drag-pointer-capture/sessions/1778752007390-149896/share/1778752011220.zip`
+    asserts `captured_is=true` for the scrollbar owner, keeps the existing
+    `semantics_scroll_approx_eq y=20` scroll-progress oracle, and asserts both `active=false` and
+    `captured_is=false` after `pointer_up`.
+  - current owner run evidence:
+    `target/fret-diag-scrollbar-drag-owner-content-growth-v3/sessions/1778758997885-141672/1778759002275`
+  - current owner share pack:
+    `target/fret-diag-scrollbar-drag-owner-content-growth-v3/sessions/1778758997885-141672/share/1778759002275.zip`
   - result:
-    passed; no pointer-capture mechanism defect reproduced. The fixed defect was a harness
-    observability gap: runtime scripts could not directly gate capture active/release state.
+    passed after the mechanism fix. The first owner-level runtime gate exposed stale semantics
+    capture-owner publication; `UiTree::request_semantics_snapshot_if_dirty()` now refreshes when
+    focus/capture owner input state differs from the current snapshot.
+- Scrollbar drag pointer-cancel release:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json`
+  - asserts `active=true` and `captured_is=true` after `pointer_down`, dispatches
+    `pointer_cancel`, waits two frames, and asserts `active=false` plus `captured_is=false`.
+  - current run evidence:
+    `target/fret-diag-scrollbar-drag-cancel-release-v2/sessions/1778758997885-128560/1778759002526`
+  - current share pack:
+    `target/fret-diag-scrollbar-drag-cancel-release-v2/sessions/1778758997885-128560/share/1778759002526.zip`
+  - result:
+    passed; no recipe defect reproduced. This locks release-on-cancel behavior through the same
+    owner-level semantics predicate that found the stale snapshot mechanism defect.
+- Scrollbar drag multi-pointer underlay touch:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json`
+  - asserts pointer `0` captures the scrollbar, pointer `1` performs a touch down/up on the
+    viewport probe while capture is still held, the scrollbar remains the capture owner, and
+    pointer `0` cancel releases capture at the end.
+  - current run evidence:
+    `target/fret-diag-scrollbar-drag-multipointer-underlay-touch-v5/sessions/1778766146942-159636/1778766151512`
+  - current share pack:
+    `target/fret-diag-scrollbar-drag-multipointer-underlay-touch-v5/sessions/1778766146942-159636/share/1778766151512.zip`
+  - companion baseline evidence after adding the viewport probe:
+    `target/fret-diag-scrollbar-drag-baseline-content-growth-after-probe-v1/sessions/1778765762647-151848/1778765769291`
+  - result:
+    passed; no core pointer-capture routing defect reproduced. The fixed defect was a runtime
+    diagnostics harness gap: schema-v2 pointer-session steps and the runner could only model one
+    hardcoded `PointerId(0)` session, so they could not probe captured-underlay behavior with a
+    second pointer.
+- Cross-window docking drag suppresses secondary viewport capture:
+  `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json`
+  - tears off a dock tab into a second OS window, starts a dock drag from the overlapping moving
+    window with pointer `0`, probes the main-window viewport with pointer `1` touch down/up, and
+    asserts `dock_drag_active_is=true` while `dock_viewport_capture_active_is=false`.
+  - current run evidence:
+    `target/fret-diag-docking-multiwindow-dock-drag-suppresses-viewport-touch-v1/sessions/1778768809522-14036/1778768814411`
+  - current share pack:
+    `target/fret-diag-docking-multiwindow-dock-drag-suppresses-viewport-touch-v1/sessions/1778768809522-14036/share/1778768814411.zip`
+  - result:
+    passed; no core docking defect reproduced. The fixed defect was a diagnostics harness
+    observability gap: runtime scripts could not directly assert absence of a competing docking
+    viewport capture.
+- ContextMenu submenu branch/corridor routing:
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`
+  - proves entering submenu content and returning to the parent trigger keeps the nested submenu
+    open, moving to another parent-menu item closes the nested submenu while preserving the root
+    menu, moving away from the trigger closes the nested submenu, and sweeping toward the submenu
+    keeps it open.
+  - current run evidence:
+    `target/fret-diag-context-menu-submenu-branch-corridor-routing-v1/sessions/1778770209711-161288/1778770215056`
+  - current share pack:
+    `target/fret-diag-context-menu-submenu-branch-corridor-routing-v1/sessions/1778770209711-161288/share/1778770215056.zip`
+  - result:
+    passed; no core hit-test or ContextMenu recipe defect reproduced. The fixed defect was runtime
+    coverage weakness: branch/corridor behavior was only indirectly covered by placement traces.
 - Context-menu pointer occlusion wheel pass-through:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
   - asserts `ui-gallery-content-viewport.scroll.y_max != 0` and `scroll.y == 0` before the wheel,
@@ -286,12 +351,59 @@ cargo test --profile dev-fast -p fret-ui --lib focus_scope -- --nocapture
 ```powershell
 cargo test --profile dev-fast -p fret-mechanism-harness --lib semantics_relation_and_flag_oracles_match_observed_nodes -- --nocapture
 cargo test --profile dev-fast -p fret-mechanism-harness --lib default_selectors_exclude_semantics_hidden_subtrees_but_flags_remain_queryable -- --nocapture
+cargo nextest run -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics default_predicates_exclude_semantics_hidden_subtrees_but_flags_remain_observable --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics expanded_is_matches_semantics_expanded_flag --no-fail-fast
+cargo nextest run -p fret-diag-protocol predicate_raw_semantics_hidden_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_separator_decorative_hidden_semantics --no-fail-fast
+cargo nextest run -p fret-diag-protocol predicate_expanded_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_accordion_usage_toggle --no-fail-fast
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_semantics_relations_match_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_combobox_active_descendant_interaction_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_controls_element_is_exposed -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib text_input_semantics_active_descendant_element_is_exposed -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib declarative_attach_semantics_can_override_state_and_relations -- --nocapture
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json --dir target/fret-diag-separator-decorative-hidden-semantics-v3 --launch -- cargo run -p fret-ui-gallery
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json --dir target/fret-diag-accordion-expanded-semantics-v1 --launch -- cargo run -p fret-ui-gallery
+cargo nextest run -p fret-diag-protocol predicate_selected_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_select_commit_and_label_update --no-fail-fast
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json --dir target/fret-diag-select-selected-state-mutation-v2 --launch -- cargo run -p fret-ui-gallery
+cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation --no-fail-fast
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json --dir target/fret-diag-tabs-selected-state-mutation-v1 --launch -- cargo run -p fret-ui-gallery
 ```
+
+Current semantics runtime evidence anchors:
+
+- Separator decorative hidden semantics gate:
+  `tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - protocol predicate:
+    `crates/fret-diag-protocol/src/lib.rs` (`raw_semantics_hidden_is`)
+  - runtime predicate and selector implementation:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`
+  - current evidence:
+    `target/fret-diag-separator-decorative-hidden-semantics-v3/script.result.json`
+  - current bundle artifact dir:
+    `target/fret-diag-separator-decorative-hidden-semantics-v3/1778775274012-ui-gallery-separator-decorative-hidden-semantics`
+  - result:
+    passed; the fixed defect was a diagnostics/runtime selector mismatch where hidden semantics
+    could satisfy default selectors or become hard to assert through a reusable raw predicate.
+- Accordion expanded-state mutation gate:
+  `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - protocol predicate:
+    `crates/fret-diag-protocol/src/lib.rs` (`expanded_is`)
+  - runtime predicate:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+  - current evidence:
+    `target/fret-diag-accordion-expanded-semantics-v1/script.result.json`
+  - current bundle artifact dirs:
+    `target/fret-diag-accordion-expanded-semantics-v1/1778777596692-ui-gallery-accordion-usage-toggle-closed`,
+    `target/fret-diag-accordion-expanded-semantics-v1/1778777597965-ui-gallery-accordion-usage-toggle-open`
+  - result:
+    passed; no Accordion recipe defect reproduced. The fixed defect was a harness observability gap:
+    runtime scripts could not assert expanded-state mutation directly.
 
 ## Roving Focus Gates
 
@@ -667,6 +779,38 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-diag-protocol/src/lib.rs` (`input_pointer_capture_active_is`)
 - Pointer-capture lifecycle runtime gate:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
+- Pointer-capture owner predicate:
+  `crates/fret-diag-protocol/src/lib.rs` (`captured_is`)
+- Pointer-capture owner runtime predicate evaluator:
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+- Pointer-capture owner synthetic oracle:
+  `crates/fret-mechanism-harness/src/oracle.rs`
+- Pointer-capture semantics dirty-gate fix:
+  `crates/fret-ui/src/tree/ui_tree_semantics.rs`
+- Pointer-capture owner and cancel runtime gates:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`,
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json`
+- Multi-pointer pointer-session protocol support:
+  `crates/fret-diag-protocol/src/lib.rs` (`pointer_id` on pointer-session steps),
+  `crates/fret-diag-protocol/src/builder.rs`
+- Multi-pointer runtime session support:
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer_session.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
+- ScrollArea multi-pointer diagnostics surface:
+  `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/drag_baseline.rs`
+- Multi-pointer captured-underlay runtime gate:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json`
+- ScrollArea diagnostics suite and registry:
+  `tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json`,
+  `tools/diag-scripts/index.json`
+- Dock viewport-capture predicate:
+  `crates/fret-diag-protocol/src/lib.rs` (`dock_viewport_capture_active_is`),
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+- Cross-window docking multi-pointer runtime gate:
+  `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json`
+- ContextMenu branch/corridor runtime gate:
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`
 - Focus barrier routing fixture:
   `crates/fret-ui/src/tree/tests/fixtures/focus_barrier_routing_v1.json`
 - Focus barrier routing runner:
@@ -866,6 +1010,326 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/share/1778634605262.zip`
   - current screenshot:
     `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/screenshots/1778634607431-ui-gallery-command-docs-demo-long-query-text/window-4294967297-tick-80-frame-80.png`
+- Composite active-descendant runtime gates:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json`,
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-first-match.json`,
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-arrowdown.json`,
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-controlled-selection-value.json`
+  - assert that active item semantics remain empty when Combobox auto-highlight is disabled, move
+    to the first matching Combobox item when auto-highlight is enabled, follow Command controlled
+    selection value changes, and advance after Command ArrowDown while focus remains on the
+    composite input
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - diagnostics catalog entries:
+    `tools/diag-scripts/index.json`
+    (`ui-gallery-combobox-auto-highlight-disabled-none-on-open`,
+    `ui-gallery-combobox-auto-highlight-first-match`,
+    `ui-gallery-command-palette-controlled-selection-arrowdown`,
+    `ui-gallery-command-palette-controlled-selection-value`)
+  - current evidence:
+    `target/fret-diag-combobox-active-descendant-disabled-v1/script.result.json`,
+    `target/fret-diag-combobox-active-descendant-first-match-v1/script.result.json`,
+    `target/fret-diag-command-active-descendant-arrowdown-v1/script.result.json`,
+    `target/fret-diag-command-active-descendant-value-v1/script.result.json`
+  - protocol gate:
+    `cargo nextest run -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+  - result: passed, Nextest run id `556c42bf-ff61-4bcb-aa90-5a12a27ba7c9`
+- Sonner live-region mutation gate:
+  `tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json`
+  - asserts the `Notifications` toast viewport is absent before showing a toast, exposes
+    `semantics_live_is=polite` and `semantics_live_atomic_is=false` while the toast is mounted, and
+    disappears after swipe dismissal
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-sonner-docs/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-sonner-live-region-mutation`)
+  - current evidence:
+    `target/fret-diag-sonner-live-region-mutation-v2/script.result.json`
+  - current bundle artifact dirs:
+    `target/fret-diag-sonner-live-region-mutation-v2/1778783117449-ui-gallery-sonner-live-region-open`,
+    `target/fret-diag-sonner-live-region-mutation-v2/1778783117667-ui-gallery-sonner-live-region-closed`
+  - focused gates:
+    `cargo nextest run -p fret-diag-protocol predicate_semantics_live_is_serializes_and_deserializes predicate_semantics_live_atomic_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_sonner_live_region_mutation --no-fail-fast`,
+    `cargo nextest run -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast`,
+    `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics semantics_live_predicates_match_semantics_live_flags --no-fail-fast`
+- Select selected-state mutation gate:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json`
+  - asserts Select commits Banana, updates the external selected-label text, restores focus to the
+    trigger, reopens the popup, and exposes Banana as `selected_is=true` while Apple is
+    `selected_is=false`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-select-commit-and-label-update`)
+  - first failed evidence before overlay-placement/bounds stabilization:
+    `target/fret-diag-select-selected-state-mutation-v1/script.result.json`
+  - failure bundle:
+    `target/fret-diag-select-selected-state-mutation-v1/1778784037422-script-step-0019-wait_until-timeout`
+  - current passing evidence:
+    `target/fret-diag-select-selected-state-mutation-v2/script.result.json`
+  - protocol/script gate:
+    `cargo nextest run -p fret-diag-protocol predicate_selected_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_select_commit_and_label_update --no-fail-fast`
+  - result:
+    passed after the script stability fix. No Select recipe defect was reproduced; the fixed defect
+    was a diagnostics harness timing gap where item clicks could run before overlay placement and
+    visible bounds were ready.
+- Tabs selected-state mutation gate:
+  `tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json`
+  - asserts the Tabs demo starts with Account `selected_is=true` and Password
+    `selected_is=false`, clicks the Password trigger, then asserts Account becomes false and
+    Password becomes true while focus moves to Password
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-tabs-selected-state-mutation.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json` and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-tabs-selected-state-mutation`)
+  - current evidence:
+    `target/fret-diag-tabs-selected-state-mutation-v1/script.result.json`
+  - current bundle artifact dir:
+    `target/fret-diag-tabs-selected-state-mutation-v1/1778785691560-ui-gallery-tabs-selected-state-mutation`
+  - protocol/script gate:
+    `cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation --no-fail-fast`
+  - result:
+    passed; no Tabs mechanism or recipe defect was reproduced. This gate broadens selected-state
+    coverage beyond Select's overlay-backed item semantics to inline tab triggers.
+- Command collection metadata mutation gate:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json`
+  - asserts the shadcn Command scrollable dialog exposes `Code Editor` as item 23/23 before
+    filtering, then updates it to item 1/1 after filtering to `code editor`
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-command-scrollable-collection-metadata-mutation`)
+  - current evidence:
+    `target/fret-diag-command-collection-metadata-mutation-v1/script.result.json`
+  - current bundle artifact dir:
+    `target/fret-diag-command-collection-metadata-mutation-v1/1778787013289-ui-gallery-command-scrollable-collection-metadata-mutation`
+  - focused gates:
+    `cargo nextest run -p fret-diag-protocol predicate_collection_position_serializes_and_deserializes script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation --no-fail-fast`,
+    `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics collection_metadata_predicates_match_semantics_position_fields --no-fail-fast`
+  - result:
+    passed; no Command mechanism or recipe defect was reproduced. This closes the first shadcn
+    runtime mutation gate for collection metadata and leaves pagination/windowed reuse as the next
+    higher-risk collection semantics gap.
+- DataTable pagination collection metadata gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json`
+  - asserts the default DataTable row anchors expose page-local collection metadata across page
+    changes: page 1 rows 1/2 and 2/2, page 2 rows 1/2 and 2/2, and final page row 1/1
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-data-table-default-pagination-collection-metadata.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-data-table/suite.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`, and
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json`
+    (`ui-gallery-data-table-default-pagination-collection-metadata`)
+  - first failed evidence before the `Next` bounds gate:
+    `target/fret-diag-data-table-pagination-collection-metadata-v1/script.result.json`
+  - failure bundle:
+    `target/fret-diag-data-table-pagination-collection-metadata-v1/1778787896483-script-step-0018-wait_until-timeout`
+  - current passing evidence:
+    `target/fret-diag-data-table-pagination-collection-metadata-v2/script.result.json`
+  - current bundle artifact dir:
+    `target/fret-diag-data-table-pagination-collection-metadata-v2/1778788248207-ui-gallery-data-table-default-pagination-collection-metadata`
+  - focused gate:
+    `cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata --no-fail-fast`
+  - result:
+    passed after the script scrolled `Next` into view and asserted visible bounds before clicking.
+    No DataTable pagination or core semantics defect was reproduced; retained/windowed row reuse
+    remains the next collection-metadata risk.
+- Retained Virtual List collection metadata bounce gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json`
+  - asserts row-root `ListItem` collection metadata on Virtual List Torture before scrolling
+    (row 0 is 1/10000), after a retained boundary scroll (row 25 is 26/10000 and row 0 is
+    detached), and after bouncing back (row 0 returns to 1/10000)
+  - mechanism support:
+    `crates/fret-ui/src/element.rs` and
+    `crates/fret-ui/src/declarative/host_widget/semantics.rs`
+  - UI Gallery anchors:
+    `apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs`
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-window-boundary-retained/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json`
+    (`ui-gallery-virtual-list-retained-collection-metadata-bounce`)
+  - focused mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui declarative_attach_semantics_can_stamp_collection_metadata --no-fail-fast`
+  - focused script gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_bounce --no-fail-fast`
+  - current passing evidence:
+    `target/fret-diag-vlist-retained-collection-metadata-bounce-v3/sessions/1778790236440-163244/1778790240041/script.result.json`
+  - current AI packet:
+    `target/fret-diag-vlist-retained-collection-metadata-bounce-v3/sessions/1778790236440-163244/1778790240041/ai.packet`
+  - current retained suite summary:
+    `target/fret-diag-vlist-window-boundary-retained-after-collection-metadata-v2/sessions/1778790349931-163108/suite.summary.json`
+  - ecosystem compile guard:
+    `cargo check --profile dev-fast -p fret-ui-material3 --all-targets`
+  - result:
+    passed after narrowing the new script to collection metadata plus retained attach/detach. The
+    slice found a mechanism observability gap: generic semantics surfaces could not previously
+    stamp collection metadata without pressable policy.
+- Retained Tree hierarchy semantics mutation gate:
+  `tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json`
+  - asserts root/folder/leaf `level_is`, parent-row `expanded_is`, child detachment after collapse,
+    and restored hierarchy metadata after expansion under retained row reuse
+  - suite redirect:
+    `tools/diag-scripts/ui-gallery-tree-retained-hierarchy-semantics-toggle.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-tree-retained/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-tree-retained-hierarchy-semantics-toggle`)
+  - mechanism support:
+    `crates/fret-diag-protocol/src/lib.rs`, `crates/fret-diag-protocol/src/builder.rs`,
+    `crates/fret-mechanism-harness/src/observe.rs`, `crates/fret-mechanism-harness/src/oracle.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`, and
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/semantics.rs`
+  - component support:
+    `ecosystem/fret-ui-kit/src/declarative/tree.rs` and
+    `ecosystem/fret-ui-kit/src/declarative/file_tree.rs`
+  - focused gates:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_level_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle --no-fail-fast`,
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics level_is_matches_semantics_hierarchy_level --no-fail-fast`,
+    `cargo nextest run --cargo-profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast`,
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --no-fail-fast`, and
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit tree_item_a11y select_tree_item toggle_tree_item file_tree_item_a11y --no-fail-fast`
+  - first valid failed evidence:
+    `target/fret-diag-tree-retained-hierarchy-semantics-v3/sessions/1778793173277-91896/1778793181464/script.result.json`
+  - failure proof:
+    `tree.toggle.0` was dispatched from `ui-gallery-tree-row-0-toggle` with `handled=false`, so
+    `ui-gallery-tree-row-0` remained `expanded=true` after collapse.
+  - current passing evidence:
+    `target/fret-diag-tree-retained-hierarchy-semantics-v5/sessions/1778793872096-160900/1778793880135/script.result.json`
+  - current AI packet:
+    `target/fret-diag-tree-retained-hierarchy-semantics-v5/sessions/1778793872096-160900/1778793880135/ai.packet`
+  - current share pack:
+    `target/fret-diag-tree-retained-hierarchy-semantics-v5/sessions/1778793872096-160900/share/1778793880135.zip`
+  - current retained Tree suite summary:
+    `target/fret-diag-tree-retained-suite-after-hierarchy-semantics-v2/sessions/1778793907189-162608/suite.summary.json`
+  - result:
+    passed after adding the `level_is` observation surface, row-level expanded metadata, and direct
+    TreeState selection/toggle updates in the Tree component policy layer.
+- DataTable pagination disabled/invoke action-state mutation gate:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json`
+  - extends the existing pagination metadata gate to assert Prev/Next `disabled_is` and
+    `semantics_action_is(invoke)` before and after page changes
+  - page 1 invariant:
+    Prev is disabled and non-invokable; Next is enabled and invokable
+  - final-page invariant:
+    Prev is enabled and invokable; Next is disabled and non-invokable
+  - diagnostics protocol support:
+    `crates/fret-diag-protocol/src/lib.rs` and `crates/fret-diag-protocol/src/builder.rs`
+  - runtime predicate and bundle export support:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs` and
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/semantics.rs`
+  - synthetic fixture support:
+    `crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json` and
+    `crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs`
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_disabled_is_serializes_and_deserializes predicate_semantics_action_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata --no-fail-fast`
+  - focused bootstrap gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics disabled_is_matches_semantics_disabled_flag semantics_action_is_matches_all_exported_action_flags semantics_node_exports_all_action_flags --no-fail-fast`
+  - mechanism oracle gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --no-fail-fast`
+  - synthetic fixture gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --no-fail-fast`
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json --dir target/fret-diag-data-table-default-pagination-collection-metadata-v2 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-data-table-default-pagination-collection-metadata-v2/sessions/1778795941512-76048/1778795949700/script.result.json`
+  - current AI packet:
+    `target/fret-diag-data-table-default-pagination-collection-metadata-v2/sessions/1778795941512-76048/1778795949700/ai.packet`
+  - current share pack:
+    `target/fret-diag-data-table-default-pagination-collection-metadata-v2/sessions/1778795941512-76048/share/1778795949700.zip`
+  - result:
+    passed after rebuilding `fretboard-dev`. No DataTable pagination component defect was
+    reproduced; the fixed defect was a diagnostics/mechanism observability gap around disabled
+    state, generic semantics actions, and complete action export.
+- Retained Tree selected/invoke action-state mutation gate:
+  `tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json`
+  - extends the existing retained Tree hierarchy script with row `selected_is`, `disabled_is`, and
+    `semantics_action_is(invoke)` assertions
+  - proves row `1000000` can become selected, detach while root is collapsed, reattach still
+    selected after root expands, and then lose selection when row `2000000` is selected
+  - script redirect:
+    `tools/diag-scripts/ui-gallery-tree-retained-hierarchy-semantics-toggle.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-tree-retained/suite.json`
+  - diagnostics catalog entry:
+    `tools/diag-scripts/index.json` (`ui-gallery-tree-retained-hierarchy-semantics-toggle`)
+  - focused script gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle --no-fail-fast`
+  - runtime command:
+    `$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json --dir target/fret-diag-tree-retained-action-state-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-tree-retained-action-state-v1/sessions/1778797137996-128620/1778797146847/script.result.json`
+  - current AI packet:
+    `target/fret-diag-tree-retained-action-state-v1/sessions/1778797137996-128620/1778797146847/ai.packet`
+  - current share pack:
+    `target/fret-diag-tree-retained-action-state-v1/sessions/1778797137996-128620/share/1778797146847.zip`
+  - retained Tree suite command:
+    `$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tree-retained --dir target/fret-diag-tree-retained-suite-after-action-state-v1 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current retained Tree suite summary:
+    `target/fret-diag-tree-retained-suite-after-action-state-v1/sessions/1778797176571-37148/suite.summary.json`
+  - result:
+    passed; no retained Tree stale selected/invoke defect was reproduced. The remaining gap is
+    dynamic disabled/invoke suppression on reused retained rows.
+- Retained Tree dynamic disabled/focus/invoke suppression gate:
+  `tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json`
+  - extends the same retained Tree lifecycle with diagnostics-only disabled-state mutation for row
+    `2000000`
+  - proves `disabled_is=true`, `semantics_action_is(focus)=false`, and
+    `semantics_action_is(invoke)=false` after toggling the row disabled, proves clicking that
+    disabled row does not move selection away from row `1000000`, then proves re-enabling restores
+    `disabled_is=false`, `semantics_action_is(invoke)=true`, and click selection
+  - diagnostics control:
+    `apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs`
+    (`ui-gallery-tree-toggle-target-disabled`)
+  - focused compile/check gates:
+    `cargo fmt --package fret-ui-gallery`,
+    `cargo check --profile dev-fast -p fret-ui-gallery --features gallery-dev`, and
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - focused script gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle --no-fail-fast`
+  - failed keyboard-route probes:
+    `target/fret-diag-tree-retained-disabled-keyboard-v1/sessions/1778799162763-12836/1778799170889/script.result.json`
+    and
+    `target/fret-diag-tree-retained-disabled-keyboard-v2/sessions/1778799309973-128636/1778799318772/script.result.json`
+  - keyboard-route conclusion:
+    disabled Tree rows correctly lose focus/invoke action, so this surface is not a valid
+    disabled-but-focusable Enter/Space activation target
+  - runtime command:
+    `$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-hierarchy-semantics-toggle.json --dir target/fret-diag-tree-retained-disabled-focus-action-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-tree-retained-disabled-focus-action-v1/sessions/1778799548520-155404/1778799557705/script.result.json`
+  - current AI packet:
+    `target/fret-diag-tree-retained-disabled-focus-action-v1/sessions/1778799548520-155404/1778799557705/ai.packet`
+  - current share pack:
+    `target/fret-diag-tree-retained-disabled-focus-action-v1/sessions/1778799548520-155404/share/1778799557705.zip`
+  - retained Tree suite command:
+    `$env:FRET_UI_GALLERY_TREE_RETAINED='1'; target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tree-retained --dir target/fret-diag-tree-retained-suite-after-disabled-focus-action-v1 --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current retained Tree suite summary:
+    `target/fret-diag-tree-retained-suite-after-disabled-focus-action-v1/sessions/1778799592687-38760/suite.summary.json`
+  - result:
+    passed; no retained Tree stale disabled/focus/invoke defect was reproduced. The next uncovered
+    route is keyboard/action activation suppression on a focusable-disabled recipe/primitive
+    surface rather than Tree disabled rows.
 - Input Basic + File long-text visible-text gate:
   `tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json`
   - asserts a plain Input and the file-composition Input both expose direct editable text-field

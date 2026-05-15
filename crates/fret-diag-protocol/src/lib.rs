@@ -685,6 +685,8 @@ pub enum UiActionStepV2 {
     PointerDown {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "is_default_pointer_id")]
+        pointer_id: u64,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
@@ -716,6 +718,8 @@ pub enum UiActionStepV2 {
     PointerMove {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "is_default_pointer_id")]
+        pointer_id: u64,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pointer_kind: Option<UiPointerKindV1>,
         delta_x: f32,
@@ -730,6 +734,8 @@ pub enum UiActionStepV2 {
     PointerUp {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "is_default_pointer_id")]
+        pointer_id: u64,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pointer_kind: Option<UiPointerKindV1>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -742,6 +748,8 @@ pub enum UiActionStepV2 {
     PointerCancel {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "is_default_pointer_id")]
+        pointer_id: u64,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pointer_kind: Option<UiPointerKindV1>,
     },
@@ -1496,6 +1504,10 @@ fn is_default_drag_steps(v: &u32) -> bool {
     *v == default_drag_steps()
 }
 
+fn is_default_pointer_id(v: &u64) -> bool {
+    *v == 0
+}
+
 fn default_wheel_burst_count() -> u32 {
     8
 }
@@ -1826,6 +1838,26 @@ pub enum UiComparisonV1 {
     Le,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsLiveV1 {
+    Off,
+    Polite,
+    Assertive,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsActionV1 {
+    Focus,
+    Invoke,
+    SetValue,
+    Decrement,
+    Increment,
+    ScrollBy,
+    SetTextSelection,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -1834,6 +1866,19 @@ pub enum UiPredicateV1 {
     },
     NotExists {
         target: UiSelectorV1,
+    },
+    /// True when the raw semantics node matching `target` is effectively hidden.
+    ///
+    /// A node is effectively hidden when it has `flags.hidden` itself or is inside a hidden
+    /// semantics ancestor.
+    ///
+    /// Unlike `Exists`/`NotExists`, this predicate deliberately reads from the raw diagnostics
+    /// snapshot instead of the default selectable semantics tree. Use it only for triage and
+    /// accessibility conformance gates that need to prove `aria-hidden`/decorative semantics
+    /// remain observable while staying excluded from normal selectors.
+    RawSemanticsHiddenIs {
+        target: UiSelectorV1,
+        hidden: bool,
     },
     /// True when `target` resolves to a node that is a descendant of (or equal to) `scope`.
     ///
@@ -1921,13 +1966,59 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         set_size: u32,
     },
+    /// True when the target exists and its semantics hierarchy level equals `level`.
+    ///
+    /// This gates ARIA-like `aria-level` outcomes on tree/outline surfaces without relying on
+    /// layout indentation as a proxy.
+    LevelIs {
+        target: UiSelectorV1,
+        level: u32,
+    },
     CheckedIs {
         target: UiSelectorV1,
         checked: bool,
     },
+    ExpandedIs {
+        target: UiSelectorV1,
+        expanded: bool,
+    },
+    /// True when the target exists and its live-region politeness matches `live`.
+    ///
+    /// Use `null` to assert that no live-region politeness is exposed.
+    SemanticsLiveIs {
+        target: UiSelectorV1,
+        live: Option<UiSemanticsLiveV1>,
+    },
+    /// True when the target exists and its `aria-atomic` equivalent matches `live_atomic`.
+    SemanticsLiveAtomicIs {
+        target: UiSelectorV1,
+        live_atomic: bool,
+    },
     SelectedIs {
         target: UiSelectorV1,
         selected: bool,
+    },
+    DisabledIs {
+        target: UiSelectorV1,
+        disabled: bool,
+    },
+    /// True when the target exists and its structured accessibility action surface matches.
+    ///
+    /// This intentionally checks the semantics action contract, not whether an input gesture can
+    /// currently reach the widget through hit-testing.
+    SemanticsActionIs {
+        target: UiSelectorV1,
+        action: UiSemanticsActionV1,
+        enabled: bool,
+    },
+    /// True when `target` resolves to the currently captured semantics node.
+    ///
+    /// This is the owner-level counterpart to `input_pointer_capture_active_is`: it proves which
+    /// UI node owns capture while a self-drawn drag is active, instead of only proving that some
+    /// capture exists.
+    CapturedIs {
+        target: UiSelectorV1,
+        captured: bool,
     },
     /// True when the target exists and its structured semantics numeric field is approximately
     /// equal to the specified value.
@@ -2663,6 +2754,13 @@ pub enum UiPredicateV1 {
     ///
     /// This is intended to gate "floating window" hand-feel regressions without relying on pixels.
     DockFloatingDragActiveIs {
+        active: bool,
+    },
+    /// True when the latest docking diagnostics report an active viewport capture session.
+    ///
+    /// This is intended to gate cross-mechanism arbitration while a dock drag is active: a second
+    /// pointer probing an underlay viewport must not start a competing viewport capture.
+    DockViewportCaptureActiveIs {
         active: bool,
     },
     /// True when the current docking drop preview kind matches `kind`.
@@ -4020,6 +4118,253 @@ mod tests {
     }
 
     #[test]
+    fn predicate_raw_semantics_hidden_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::RawSemanticsHiddenIs {
+            target: UiSelectorV1::TestId {
+                id: "decorative-divider".to_string(),
+                root_z_index: None,
+            },
+            hidden: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "raw_semantics_hidden_is",
+                "target": { "kind": "test_id", "id": "decorative-divider" },
+                "hidden": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::RawSemanticsHiddenIs { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_expanded_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::ExpandedIs {
+            target: UiSelectorV1::TestId {
+                id: "accordion-trigger".to_string(),
+                root_z_index: None,
+            },
+            expanded: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "expanded_is",
+                "target": { "kind": "test_id", "id": "accordion-trigger" },
+                "expanded": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ExpandedIs { .. }));
+    }
+
+    #[test]
+    fn predicate_selected_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::SelectedIs {
+            target: UiSelectorV1::TestId {
+                id: "select-item-banana".to_string(),
+                root_z_index: None,
+            },
+            selected: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "selected_is",
+                "target": { "kind": "test_id", "id": "select-item-banana" },
+                "selected": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::SelectedIs { .. }));
+    }
+
+    #[test]
+    fn predicate_disabled_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::DisabledIs {
+            target: UiSelectorV1::TestId {
+                id: "pagination-prev".to_string(),
+                root_z_index: None,
+            },
+            disabled: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "disabled_is",
+                "target": { "kind": "test_id", "id": "pagination-prev" },
+                "disabled": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::DisabledIs { .. }));
+    }
+
+    #[test]
+    fn predicate_semantics_action_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::SemanticsActionIs {
+            target: UiSelectorV1::TestId {
+                id: "pagination-next".to_string(),
+                root_z_index: None,
+            },
+            action: UiSemanticsActionV1::Invoke,
+            enabled: false,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "semantics_action_is",
+                "target": { "kind": "test_id", "id": "pagination-next" },
+                "action": "invoke",
+                "enabled": false,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::SemanticsActionIs { .. }));
+    }
+
+    #[test]
+    fn predicate_collection_position_serializes_and_deserializes() {
+        let target = UiSelectorV1::TestId {
+            id: "command-item-code-editor".to_string(),
+            root_z_index: None,
+        };
+
+        let pos_value = serde_json::to_value(UiPredicateV1::PosInSetIs {
+            target: target.clone(),
+            pos_in_set: 23,
+        })
+        .unwrap();
+        assert_eq!(
+            pos_value,
+            serde_json::json!({
+                "kind": "pos_in_set_is",
+                "target": { "kind": "test_id", "id": "command-item-code-editor" },
+                "pos_in_set": 23,
+            })
+        );
+        let pos_roundtrip: UiPredicateV1 = serde_json::from_value(pos_value).unwrap();
+        assert!(matches!(pos_roundtrip, UiPredicateV1::PosInSetIs { .. }));
+
+        let size_value = serde_json::to_value(UiPredicateV1::SetSizeIs {
+            target,
+            set_size: 23,
+        })
+        .unwrap();
+        assert_eq!(
+            size_value,
+            serde_json::json!({
+                "kind": "set_size_is",
+                "target": { "kind": "test_id", "id": "command-item-code-editor" },
+                "set_size": 23,
+            })
+        );
+        let size_roundtrip: UiPredicateV1 = serde_json::from_value(size_value).unwrap();
+        assert!(matches!(size_roundtrip, UiPredicateV1::SetSizeIs { .. }));
+    }
+
+    #[test]
+    fn predicate_level_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::LevelIs {
+            target: UiSelectorV1::TestId {
+                id: "tree-row-root".to_string(),
+                root_z_index: None,
+            },
+            level: 2,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "level_is",
+                "target": { "kind": "test_id", "id": "tree-row-root" },
+                "level": 2,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::LevelIs { .. }));
+    }
+
+    #[test]
+    fn predicate_semantics_live_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::SemanticsLiveIs {
+            target: UiSelectorV1::TestId {
+                id: "toast-viewport".to_string(),
+                root_z_index: None,
+            },
+            live: Some(UiSemanticsLiveV1::Polite),
+        })
+        .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "semantics_live_is",
+                "target": { "kind": "test_id", "id": "toast-viewport" },
+                "live": "polite",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::SemanticsLiveIs {
+                live: Some(UiSemanticsLiveV1::Polite),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn predicate_semantics_live_atomic_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::SemanticsLiveAtomicIs {
+            target: UiSelectorV1::TestId {
+                id: "toast-viewport".to_string(),
+                root_z_index: None,
+            },
+            live_atomic: false,
+        })
+        .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "semantics_live_atomic_is",
+                "target": { "kind": "test_id", "id": "toast-viewport" },
+                "live_atomic": false,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::SemanticsLiveAtomicIs {
+                live_atomic: false,
+                ..
+            }
+        ));
+    }
+
+    #[test]
     fn predicate_bounds_approx_equal_serializes_and_deserializes() {
         let value = serde_json::to_value(UiPredicateV1::BoundsApproxEqual {
             a: UiSelectorV1::TestId {
@@ -4553,6 +4898,36 @@ mod tests {
     }
 
     #[test]
+    fn predicate_captured_is_serializes() {
+        let value = serde_json::to_value(UiPredicateV1::CapturedIs {
+            target: UiSelectorV1::TestId {
+                id: "scrollbar".to_string(),
+                root_z_index: None,
+            },
+            captured: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "captured_is",
+                "target": {
+                    "kind": "test_id",
+                    "id": "scrollbar"
+                },
+                "captured": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::CapturedIs { captured: true, .. }
+        ));
+    }
+
+    #[test]
     fn diag_screenshot_request_round_trips_and_defaults_scale_factor() {
         let json = serde_json::json!({
             "schema_version": 1,
@@ -4760,6 +5135,58 @@ mod tests {
                 pointer_kind: Some(UiPointerKindV1::Pen),
                 ..
             }
+        ));
+    }
+
+    #[test]
+    fn pointer_session_step_pointer_id_defaults_and_round_trips() {
+        let step = UiActionStepV2::PointerDown {
+            window: None,
+            pointer_id: 0,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "a".to_string(),
+                root_z_index: None,
+            },
+            button: UiMouseButtonV1::Left,
+            modifiers: None,
+        };
+        let value = serde_json::to_value(step).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+              "type": "pointer_down",
+              "target": {"kind":"test_id","id":"a"},
+              "button": "left"
+            })
+        );
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "pointer_move",
+          "pointer_id": 7,
+          "pointer_kind": "touch",
+          "delta_x": 1.0,
+          "delta_y": 2.0,
+          "steps": 3
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::PointerMove {
+                pointer_id: 7,
+                pointer_kind: Some(UiPointerKindV1::Touch),
+                steps: 3,
+                ..
+            }
+        ));
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "pointer_cancel"
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::PointerCancel { pointer_id: 0, .. }
         ));
     }
 

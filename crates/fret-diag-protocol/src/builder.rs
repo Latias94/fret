@@ -9,7 +9,7 @@ use crate::{
     UiActionScriptV2, UiActionStepV2, UiBoundsMetricV1, UiCommandDispatchTraceQueryV1,
     UiComparisonV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1,
     UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
-    UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
+    UiSemanticsActionV1, UiSemanticsLiveV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -33,6 +33,10 @@ pub fn exists(target: UiSelectorV1) -> UiPredicateV1 {
 
 pub fn not_exists(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::NotExists { target }
+}
+
+pub fn raw_semantics_hidden_is(target: UiSelectorV1, hidden: bool) -> UiPredicateV1 {
+    UiPredicateV1::RawSemanticsHiddenIs { target, hidden }
 }
 
 pub fn exists_under(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
@@ -61,6 +65,49 @@ pub fn active_item_is_none(container: UiSelectorV1) -> UiPredicateV1 {
 
 pub fn selected_is(target: UiSelectorV1, selected: bool) -> UiPredicateV1 {
     UiPredicateV1::SelectedIs { target, selected }
+}
+
+pub fn disabled_is(target: UiSelectorV1, disabled: bool) -> UiPredicateV1 {
+    UiPredicateV1::DisabledIs { target, disabled }
+}
+
+pub fn semantics_action_is(
+    target: UiSelectorV1,
+    action: UiSemanticsActionV1,
+    enabled: bool,
+) -> UiPredicateV1 {
+    UiPredicateV1::SemanticsActionIs {
+        target,
+        action,
+        enabled,
+    }
+}
+
+pub fn pos_in_set_is(target: UiSelectorV1, pos_in_set: u32) -> UiPredicateV1 {
+    UiPredicateV1::PosInSetIs { target, pos_in_set }
+}
+
+pub fn set_size_is(target: UiSelectorV1, set_size: u32) -> UiPredicateV1 {
+    UiPredicateV1::SetSizeIs { target, set_size }
+}
+
+pub fn level_is(target: UiSelectorV1, level: u32) -> UiPredicateV1 {
+    UiPredicateV1::LevelIs { target, level }
+}
+
+pub fn expanded_is(target: UiSelectorV1, expanded: bool) -> UiPredicateV1 {
+    UiPredicateV1::ExpandedIs { target, expanded }
+}
+
+pub fn semantics_live_is(target: UiSelectorV1, live: Option<UiSemanticsLiveV1>) -> UiPredicateV1 {
+    UiPredicateV1::SemanticsLiveIs { target, live }
+}
+
+pub fn semantics_live_atomic_is(target: UiSelectorV1, live_atomic: bool) -> UiPredicateV1 {
+    UiPredicateV1::SemanticsLiveAtomicIs {
+        target,
+        live_atomic,
+    }
 }
 
 pub fn text_composition_is(target: UiSelectorV1, composing: bool) -> UiPredicateV1 {
@@ -276,6 +323,7 @@ impl ScriptV2Builder {
     pub fn pointer_down(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::PointerDown {
             window: None,
+            pointer_id: 0,
             pointer_kind: None,
             target,
             button: UiMouseButtonV1::Left,
@@ -286,6 +334,7 @@ impl ScriptV2Builder {
     pub fn pointer_down_touch(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::PointerDown {
             window: None,
+            pointer_id: 0,
             pointer_kind: Some(UiPointerKindV1::Touch),
             target,
             button: UiMouseButtonV1::Left,
@@ -296,6 +345,7 @@ impl ScriptV2Builder {
     pub fn pointer_down_pen(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::PointerDown {
             window: None,
+            pointer_id: 0,
             pointer_kind: Some(UiPointerKindV1::Pen),
             target,
             button: UiMouseButtonV1::Left,
@@ -310,6 +360,7 @@ impl ScriptV2Builder {
     ) -> Self {
         self.push(UiActionStepV2::PointerDown {
             window: None,
+            pointer_id: 0,
             pointer_kind: None,
             target,
             button: UiMouseButtonV1::Left,
@@ -320,6 +371,7 @@ impl ScriptV2Builder {
     pub fn pointer_move(self, delta_x: f32, delta_y: f32) -> Self {
         self.push(UiActionStepV2::PointerMove {
             window: None,
+            pointer_id: 0,
             pointer_kind: None,
             delta_x,
             delta_y,
@@ -330,6 +382,7 @@ impl ScriptV2Builder {
     pub fn pointer_up(self) -> Self {
         self.push(UiActionStepV2::PointerUp {
             window: None,
+            pointer_id: 0,
             pointer_kind: None,
             button: None,
         })
@@ -338,6 +391,7 @@ impl ScriptV2Builder {
     pub fn pointer_cancel(self) -> Self {
         self.push(UiActionStepV2::PointerCancel {
             window: None,
+            pointer_id: 0,
             pointer_kind: None,
         })
     }

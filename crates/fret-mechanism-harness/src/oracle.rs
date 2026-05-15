@@ -1,7 +1,7 @@
 use fret_core::Rect;
 use fret_diag_protocol::{
-    UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsNumericFieldV1,
-    UiSemanticsScrollFieldV1,
+    UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsActionV1,
+    UiSemanticsLiveV1, UiSemanticsNumericFieldV1, UiSemanticsScrollFieldV1,
 };
 use serde::{Deserialize, Serialize};
 
@@ -653,6 +653,15 @@ fn eval_ui_predicate(
                 )
             })
         }
+        UiPredicateV1::LevelIs { target, level } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.level == Some(*level), || {
+                format!(
+                    "level_is mismatch target={target:?} expected={level} actual={:?}",
+                    node.level
+                )
+            })
+        }
         UiPredicateV1::CheckedIs { target, checked } => {
             let node = tree.select_best(target).map_err(fail)?;
             pass_bool(node.checked == Some(*checked), || {
@@ -662,12 +671,75 @@ fn eval_ui_predicate(
                 )
             })
         }
+        UiPredicateV1::ExpandedIs { target, expanded } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.expanded == Some(*expanded), || {
+                format!(
+                    "expanded_is mismatch target={target:?} expected={expanded} actual={:?}",
+                    node.expanded
+                )
+            })
+        }
+        UiPredicateV1::SemanticsLiveIs { target, live } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let expected = live.map(observed_live_from_protocol);
+            pass_bool(node.live == expected, || {
+                format!(
+                    "semantics_live_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.live
+                )
+            })
+        }
+        UiPredicateV1::SemanticsLiveAtomicIs {
+            target,
+            live_atomic,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.live_atomic == Some(*live_atomic), || {
+                format!(
+                    "semantics_live_atomic_is mismatch target={target:?} expected={live_atomic} actual={:?}",
+                    node.live_atomic
+                )
+            })
+        }
         UiPredicateV1::SelectedIs { target, selected } => {
             let node = tree.select_best(target).map_err(fail)?;
             pass_bool(node.selected == Some(*selected), || {
                 format!(
                     "selected_is mismatch target={target:?} expected={selected} actual={:?}",
                     node.selected
+                )
+            })
+        }
+        UiPredicateV1::DisabledIs { target, disabled } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.disabled == Some(*disabled), || {
+                format!(
+                    "disabled_is mismatch target={target:?} expected={disabled} actual={:?}",
+                    node.disabled
+                )
+            })
+        }
+        UiPredicateV1::SemanticsActionIs {
+            target,
+            action,
+            enabled,
+        } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let actual = node.actions.get(observed_action_from_protocol(*action));
+            pass_bool(actual == *enabled, || {
+                format!(
+                    "semantics_action_is mismatch target={target:?} action={action:?} expected={enabled} actual={actual}"
+                )
+            })
+        }
+        UiPredicateV1::CapturedIs { target, captured } => {
+            let node = tree.select_best_unfiltered(target).map_err(fail)?;
+            let actual = node.node_id == tree.captured_node_id;
+            pass_bool(actual == *captured, || {
+                format!(
+                    "captured_is mismatch target={target:?} expected={captured} actual={actual} captured={:?} target_node={:?}",
+                    tree.captured_node_id, node.node_id
                 )
             })
         }
@@ -960,6 +1032,26 @@ fn eval_ui_predicate(
         _ => Err(failure(format!(
             "UiPredicateV1 variant is not supported by mechanism harness oracle: {predicate:?}"
         ))),
+    }
+}
+
+fn observed_live_from_protocol(live: UiSemanticsLiveV1) -> ObservedSemanticsLive {
+    match live {
+        UiSemanticsLiveV1::Off => ObservedSemanticsLive::Off,
+        UiSemanticsLiveV1::Polite => ObservedSemanticsLive::Polite,
+        UiSemanticsLiveV1::Assertive => ObservedSemanticsLive::Assertive,
+    }
+}
+
+fn observed_action_from_protocol(action: UiSemanticsActionV1) -> ObservedSemanticsAction {
+    match action {
+        UiSemanticsActionV1::Focus => ObservedSemanticsAction::Focus,
+        UiSemanticsActionV1::Invoke => ObservedSemanticsAction::Invoke,
+        UiSemanticsActionV1::SetValue => ObservedSemanticsAction::SetValue,
+        UiSemanticsActionV1::Decrement => ObservedSemanticsAction::Decrement,
+        UiSemanticsActionV1::Increment => ObservedSemanticsAction::Increment,
+        UiSemanticsActionV1::ScrollBy => ObservedSemanticsAction::ScrollBy,
+        UiSemanticsActionV1::SetTextSelection => ObservedSemanticsAction::SetTextSelection,
     }
 }
 

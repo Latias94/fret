@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-separator-decorative-hidden-semantics",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "separator", "semantics", "a11y", "regression_pack"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "separator"
+    },
+    "target_hints": [
+      "Proves shadcn decorative Separator nodes are excluded from default diagnostics selectors.",
+      "Also proves the raw semantics diagnostics surface can still observe the effective hidden flag for targeted a11y triage."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-separator" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-separator-menu" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-separator-menu" },
+      "delta_y": -160.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-separator-menu-divider-primary" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "raw_semantics_hidden_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-separator-menu-divider-primary" },
+        "hidden": true
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-separator-decorative-hidden-semantics" }
+  ]
+}

@@ -23,6 +23,7 @@ enum SemanticsRelationScenario {
     TextInputRegionValueAndEditingMetadata,
     PressableCollectionMetadata,
     SemanticsWrapperLiveAndStructuredMetadata,
+    SemanticsWrapperHierarchyMetadata,
     HiddenSubtreePolicy,
 }
 
@@ -225,7 +226,8 @@ fn build_scenario(
                           label: &'static str,
                           pos_in_set: u32,
                           selected: bool,
-                          checked: Option<bool>| {
+                          checked: Option<bool>,
+                          enabled: bool| {
                 cx.pressable(
                     crate::element::PressableProps {
                         layout: {
@@ -234,6 +236,7 @@ fn build_scenario(
                             layout.size.height = Length::Px(Px(24.0));
                             layout
                         },
+                        enabled,
                         a11y: crate::element::PressableA11y {
                             role: Some(fret_core::SemanticsRole::ListBoxOption),
                             label: Some(Arc::from(label)),
@@ -258,8 +261,9 @@ fn build_scenario(
                 },
                 |cx, _id| {
                     vec![
-                        option(cx, "option-two", "Two", 2, true, Some(true)),
-                        option(cx, "option-three", "Three", 3, false, None),
+                        option(cx, "option-two", "Two", 2, true, Some(true), true),
+                        option(cx, "option-three", "Three", 3, false, None, true),
+                        option(cx, "option-disabled", "Disabled", 4, false, None, false),
                     ]
                 },
             )]
@@ -309,6 +313,33 @@ fn build_scenario(
             );
 
             vec![live, range, viewport]
+        }
+        SemanticsRelationScenario::SemanticsWrapperHierarchyMetadata => {
+            let root = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::TreeItem,
+                    label: Some(Arc::from("Root")),
+                    test_id: Some(Arc::from("tree-root")),
+                    level: Some(1),
+                    expanded: Some(true),
+                    ..Default::default()
+                },
+                |cx, _id| {
+                    vec![cx.semantics_with_id(
+                        crate::element::SemanticsProps {
+                            role: fret_core::SemanticsRole::TreeItem,
+                            label: Some(Arc::from("Child")),
+                            test_id: Some(Arc::from("tree-child")),
+                            level: Some(2),
+                            expanded: Some(false),
+                            ..Default::default()
+                        },
+                        |_cx, _id| Vec::new(),
+                    )]
+                },
+            );
+
+            vec![root]
         }
         SemanticsRelationScenario::HiddenSubtreePolicy => {
             let visible = cx.semantics_with_id(

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
-use fret_runtime::{CommandId, Model};
+use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, Elements, LayoutStyle, Length, PressableA11y, PressableProps,
     SpacerProps,
@@ -101,11 +101,38 @@ fn rebuild_entries(
     (entries, index_by_id)
 }
 
+fn tree_item_a11y(
+    entry: &TreeEntry,
+    is_selected: bool,
+    is_expanded: bool,
+    test_id: Option<Arc<str>>,
+) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::TreeItem),
+        label: Some(entry.label.clone()),
+        level: u32::try_from(entry.depth.saturating_add(1)).ok(),
+        selected: is_selected,
+        expanded: entry.has_children.then_some(is_expanded),
+        test_id,
+        ..Default::default()
+    }
+}
+
+fn select_tree_item(state: &mut TreeState, id: TreeItemId) {
+    state.selected = Some(id);
+}
+
+fn toggle_tree_item_expanded(state: &mut TreeState, id: TreeItemId) {
+    if !state.expanded.insert(id) {
+        state.expanded.remove(&id);
+    }
+}
+
 /// Declarative tree view helper (virtualized, component-friendly).
 ///
 /// This is intentionally minimal:
-/// - selection/expand policies live in the parent `TreeView` widget,
-/// - this function only renders rows and dispatches `tree.select.<id>` / `tree.toggle.<id>` commands.
+/// - selection/expand policies live in this UI-kit helper because it owns the `TreeState` model,
+/// - consumers can still use a custom row renderer for content policy.
 #[track_caller]
 pub fn tree_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -142,6 +169,61 @@ pub fn tree_view_retained<H: UiHost + 'static>(
         fret_ui::element::VirtualListMeasureMode::Fixed,
         debug_row_test_id_prefix,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(has_children: bool, depth: usize) -> TreeEntry {
+        TreeEntry {
+            id: 42,
+            label: Arc::from("Folder"),
+            depth,
+            parent: None,
+            has_children,
+            disabled: false,
+        }
+    }
+
+    #[test]
+    fn tree_item_a11y_sets_level_and_expanded_for_parent_rows() {
+        let a11y = tree_item_a11y(&entry(true, 1), true, false, Some(Arc::from("row")));
+
+        assert_eq!(a11y.role, Some(SemanticsRole::TreeItem));
+        assert_eq!(a11y.level, Some(2));
+        assert!(a11y.selected);
+        assert_eq!(a11y.expanded, Some(false));
+        assert_eq!(a11y.test_id.as_deref(), Some("row"));
+    }
+
+    #[test]
+    fn tree_item_a11y_omits_expanded_for_leaf_rows() {
+        let a11y = tree_item_a11y(&entry(false, 2), false, false, None);
+
+        assert_eq!(a11y.level, Some(3));
+        assert_eq!(a11y.expanded, None);
+    }
+
+    #[test]
+    fn select_tree_item_updates_state_selection() {
+        let mut state = TreeState::default();
+
+        select_tree_item(&mut state, 42);
+
+        assert_eq!(state.selected, Some(42));
+    }
+
+    #[test]
+    fn toggle_tree_item_expanded_flips_state_membership() {
+        let mut state = TreeState::default();
+
+        toggle_tree_item_expanded(&mut state, 42);
+        assert!(state.expanded.contains(&42));
+
+        toggle_tree_item_expanded(&mut state, 42);
+        assert!(!state.expanded.contains(&42));
+    }
 }
 
 /// A variant of [`tree_view_retained`] that allows opting into measured (variable-height) rows.
@@ -259,32 +341,23 @@ pub fn tree_view_with_renderer<H: UiHost>(
                         depth: entry.depth,
                         has_children: entry.has_children,
                     };
-                    let a11y_level = u32::try_from(entry.depth.saturating_add(1)).ok();
-
                     let bg = if is_selected { Some(row_active) } else { None };
                     let enabled = !entry.disabled;
 
                     let pad_left = Px(row_px.0 + indent.0 * (entry.depth as f32).max(0.0));
-                    let toggle_cmd = entry
-                        .has_children
-                        .then(|| CommandId::new(format!("tree.toggle.{}", entry.id)));
-                    let select_cmd =
-                        enabled.then(|| CommandId::new(format!("tree.select.{}", entry.id)));
-
                     cx.pressable(
                         PressableProps {
                             enabled,
-                            a11y: PressableA11y {
-                                role: Some(SemanticsRole::TreeItem),
-                                label: Some(entry.label.clone()),
-                                level: a11y_level,
-                                selected: is_selected,
-                                ..Default::default()
-                            },
+                            a11y: tree_item_a11y(&entry, is_selected, is_expanded, None),
                             ..Default::default()
                         },
                         |cx, st| {
-                            cx.pressable_dispatch_command_if_enabled_opt(select_cmd);
+                            if enabled {
+                                let row_id = entry.id;
+                                cx.pressable_update_model(&state, move |st| {
+                                    select_tree_item(st, row_id);
+                                });
+                            }
                             let row_bg = if bg.is_some() {
                                 bg
                             } else if enabled && st.pressed {
@@ -322,23 +395,29 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                                             ">"
                                                         });
                                                     out.push(cx.pressable(
-                                                PressableProps {
-                                                    enabled: toggle_cmd.is_some(),
-                                                    a11y: PressableA11y {
-                                                        role: Some(SemanticsRole::Button),
-                                                        label: Some(Arc::from("Toggle")),
-                                                        selected: false,
-                                                        ..Default::default()
-                                                    },
-                                                    ..Default::default()
-                                                },
-                                                |cx, _st| {
-                                                    cx.pressable_dispatch_command_if_enabled_opt(
-                                                        toggle_cmd,
-                                                    );
-                                                    vec![cx.text(glyph.as_ref())]
-                                                },
-                                            ));
+                                                        PressableProps {
+                                                            enabled: entry.has_children,
+                                                            a11y: PressableA11y {
+                                                                role: Some(SemanticsRole::Button),
+                                                                label: Some(Arc::from("Toggle")),
+                                                                expanded: Some(is_expanded),
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        |cx, _st| {
+                                                            let row_id = entry.id;
+                                                            cx.pressable_update_model(
+                                                                &state,
+                                                                move |st| {
+                                                                    toggle_tree_item_expanded(
+                                                                        st, row_id,
+                                                                    );
+                                                                },
+                                                            );
+                                                            vec![cx.text(glyph.as_ref())]
+                                                        },
+                                                    ));
                                                 } else {
                                                     out.push(cx.spacer(SpacerProps {
                                                         min: Px(14.0),
@@ -472,18 +551,10 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                         depth: entry.depth,
                         has_children: entry.has_children,
                     };
-                    let a11y_level = u32::try_from(entry.depth.saturating_add(1)).ok();
-
                     let bg = if is_selected { Some(row_active) } else { None };
                     let enabled = !entry.disabled;
 
                     let pad_left = Px(row_px.0 + indent.0 * (entry.depth as f32).max(0.0));
-                    let toggle_cmd = entry
-                        .has_children
-                        .then(|| CommandId::new(format!("tree.toggle.{}", entry.id)));
-                    let select_cmd =
-                        enabled.then(|| CommandId::new(format!("tree.select.{}", entry.id)));
-
                     let debug_test_id: Option<Arc<str>> = row_test_id_prefix
                         .as_ref()
                         .map(|prefix| Arc::from(format!("{prefix}-{}", entry.id)));
@@ -494,18 +565,21 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                     cx.pressable(
                         PressableProps {
                             enabled,
-                            a11y: PressableA11y {
-                                role: Some(SemanticsRole::TreeItem),
-                                label: Some(entry.label.clone()),
-                                level: a11y_level,
-                                selected: is_selected,
-                                test_id: debug_test_id.clone(),
-                                ..Default::default()
-                            },
+                            a11y: tree_item_a11y(
+                                &entry,
+                                is_selected,
+                                is_expanded,
+                                debug_test_id.clone(),
+                            ),
                             ..Default::default()
                         },
                         |cx, st| {
-                            cx.pressable_dispatch_command_if_enabled_opt(select_cmd);
+                            if enabled {
+                                let row_id = entry.id;
+                                cx.pressable_update_model(&state, move |st| {
+                                    select_tree_item(st, row_id);
+                                });
+                            }
                             let row_bg = if bg.is_some() {
                                 bg
                             } else if enabled && st.pressed {
@@ -531,50 +605,64 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                                         ..Default::default()
                                     },
                                     |cx| {
-                                        vec![ui::h_row(|cx| {
-                                            let mut out = Vec::new();
+                                        vec![
+                                            ui::h_row(|cx| {
+                                                let mut out = Vec::new();
 
-                                            if entry.has_children {
-                                                let glyph: Arc<str> = Arc::from(if is_expanded {
-                                                    "v"
-                                                } else {
-                                                    ">"
-                                                });
-                                                out.push(cx.pressable(
-                                                    PressableProps {
-                                                        enabled: toggle_cmd.is_some(),
-                                                        a11y: PressableA11y {
-                                                            role: Some(SemanticsRole::Button),
-                                                            label: Some(Arc::from("Toggle")),
-                                                            selected: false,
-                                                            test_id: debug_toggle_test_id.clone(),
+                                                if entry.has_children {
+                                                    let glyph: Arc<str> =
+                                                        Arc::from(if is_expanded {
+                                                            "v"
+                                                        } else {
+                                                            ">"
+                                                        });
+                                                    out.push(cx.pressable(
+                                                        PressableProps {
+                                                            enabled: entry.has_children,
+                                                            a11y: PressableA11y {
+                                                                role: Some(SemanticsRole::Button),
+                                                                label: Some(Arc::from("Toggle")),
+                                                                expanded: Some(is_expanded),
+                                                                test_id:
+                                                                    debug_toggle_test_id.clone(),
+                                                                ..Default::default()
+                                                            },
                                                             ..Default::default()
                                                         },
+                                                        |cx, _st| {
+                                                            let row_id = entry.id;
+                                                            cx.pressable_update_model(
+                                                                &state,
+                                                                move |st| {
+                                                                    toggle_tree_item_expanded(
+                                                                        st, row_id,
+                                                                    );
+                                                                },
+                                                            );
+                                                            vec![cx.text(glyph.as_ref())]
+                                                        },
+                                                    ));
+                                                } else {
+                                                    out.push(cx.spacer(SpacerProps {
+                                                        min: Px(14.0),
                                                         ..Default::default()
-                                                    },
-                                                    |cx, _st| {
-                                                        cx.pressable_dispatch_command_if_enabled_opt(
-                                                            toggle_cmd,
-                                                        );
-                                                        vec![cx.text(glyph.as_ref())]
-                                                    },
-                                                ));
-                                            } else {
-                                                out.push(cx.spacer(SpacerProps {
-                                                    min: Px(14.0),
-                                                    ..Default::default()
-                                                }));
-                                            }
+                                                    }));
+                                                }
 
-                                            out.extend(renderer.render_row(cx, &entry, row_state));
-                                            out.push(cx.spacer(SpacerProps::default()));
-                                            out.extend(renderer.render_trailing(cx, &entry, row_state));
-                                            out
-                                        })
-                                        .gap(Space::N2)
-                                        .justify_start()
-                                        .items_center()
-                                        .into_element(cx)]
+                                                out.extend(
+                                                    renderer.render_row(cx, &entry, row_state),
+                                                );
+                                                out.push(cx.spacer(SpacerProps::default()));
+                                                out.extend(
+                                                    renderer.render_trailing(cx, &entry, row_state),
+                                                );
+                                                out
+                                            })
+                                            .gap(Space::N2)
+                                            .justify_start()
+                                            .items_center()
+                                            .into_element(cx),
+                                        ]
                                     },
                                 ),
                             ]

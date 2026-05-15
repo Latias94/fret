@@ -723,7 +723,7 @@ impl UiDiagnosticsService {
             // Prefer preserving captured-pointer continuity over window-target pinning. During
             // cross-window drags, the runner may temporarily starve the "under" window of redraw
             // callbacks; pinning to `first_seen` in that state can stall scripts indefinitely.
-            if let Some(session) = active.pointer_session.as_ref() {
+            if let Some((_pointer_id, session)) = active.sole_pointer_session() {
                 return Some(session.window);
             }
             if let Some(state) = active.v2_step_state.as_ref() {
@@ -853,7 +853,7 @@ impl UiDiagnosticsService {
         new_window: AppWindowId,
         allow_remap_captured_drag: bool,
     ) {
-        if let Some(session) = active.pointer_session.as_mut() {
+        for session in active.pointer_sessions.values_mut() {
             session.window = new_window;
         }
         if let Some(state) = active.v2_step_state.as_mut() {
@@ -1723,13 +1723,16 @@ mod service_tests {
             wait_overlay_placement_trace: None,
             screenshot_wait: None,
             v2_step_state: None,
-            pointer_session: Some(V2PointerSessionState {
-                window: app_window(2),
-                button: UiMouseButtonV1::Left,
-                pointer_type: fret_core::PointerType::Mouse,
-                modifiers: Modifiers::default(),
-                position: Point::default(),
-            }),
+            pointer_sessions: HashMap::from([(
+                PointerId(0),
+                V2PointerSessionState {
+                    window: app_window(2),
+                    button: UiMouseButtonV1::Left,
+                    pointer_type: fret_core::PointerType::Mouse,
+                    modifiers: Modifiers::default(),
+                    position: Point::default(),
+                },
+            )]),
             pending_cancel_cross_window_drag: None,
             last_reported_step: None,
             last_reported_unix_ms: 0,
@@ -1840,7 +1843,7 @@ mod service_tests {
     #[test]
     fn migration_remaps_drag_pointer_until_before_pointer_down() {
         let mut active = active_script_for_step(drag_pointer_until_step());
-        active.pointer_session = None;
+        active.pointer_sessions.clear();
         active.v2_step_state = Some(V2StepState::DragPointerUntil(drag_pointer_until_state(
             app_window(1),
             0,
@@ -1862,7 +1865,7 @@ mod service_tests {
     #[test]
     fn ordinary_migration_keeps_drag_pointer_until_window_after_pointer_down() {
         let mut active = active_script_for_step(drag_pointer_until_step());
-        active.pointer_session = None;
+        active.pointer_sessions.clear();
         active.v2_step_state = Some(V2StepState::DragPointerUntil(drag_pointer_until_state(
             app_window(1),
             4,
@@ -1884,7 +1887,7 @@ mod service_tests {
     #[test]
     fn dock_drag_migration_remaps_drag_pointer_until_after_pointer_down() {
         let mut active = active_script_for_step(drag_pointer_until_step());
-        active.pointer_session = None;
+        active.pointer_sessions.clear();
         active.v2_step_state = Some(V2StepState::DragPointerUntil(drag_pointer_until_state(
             app_window(1),
             4,
@@ -1932,6 +1935,7 @@ mod service_tests {
     fn preferred_window_pointer_move_without_window_stays_migratable_during_pointer_session() {
         let mut active = active_script_for_step(UiActionStepV2::PointerMove {
             window: None,
+            pointer_id: 0,
             pointer_kind: None,
             delta_x: 12.0,
             delta_y: 0.0,

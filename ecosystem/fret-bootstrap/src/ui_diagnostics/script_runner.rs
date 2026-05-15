@@ -67,7 +67,7 @@ impl UiDiagnosticsService {
             wait_overlay_placement_trace: None,
             screenshot_wait: None,
             v2_step_state: None,
-            pointer_session: None,
+            pointer_sessions: HashMap::new(),
             pending_cancel_cross_window_drag: None,
             last_reported_step: Some(0),
             last_reported_unix_ms: 0,

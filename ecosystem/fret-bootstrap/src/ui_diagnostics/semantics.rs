@@ -124,6 +124,8 @@ pub struct UiSemanticsNodeV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub set_size: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -246,6 +248,10 @@ pub struct UiSemanticsActionsV1 {
     #[serde(default, skip_serializing_if = "is_false")]
     pub set_value: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    pub decrement: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub increment: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub scroll_by: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub set_text_selection: bool,
@@ -253,7 +259,13 @@ pub struct UiSemanticsActionsV1 {
 
 impl UiSemanticsActionsV1 {
     fn is_default(v: &Self) -> bool {
-        !v.focus && !v.invoke && !v.set_value && !v.scroll_by && !v.set_text_selection
+        !v.focus
+            && !v.invoke
+            && !v.set_value
+            && !v.decrement
+            && !v.increment
+            && !v.scroll_by
+            && !v.set_text_selection
     }
 }
 
@@ -374,6 +386,7 @@ impl UiSemanticsNodeV1 {
             active_descendant: node.active_descendant.map(key_to_u64),
             pos_in_set: node.pos_in_set,
             set_size: node.set_size,
+            level: node.extra.level,
             label,
             value,
             text_selection: node.text_selection,
@@ -382,6 +395,8 @@ impl UiSemanticsNodeV1 {
                 focus: node.actions.focus,
                 invoke: node.actions.invoke,
                 set_value: node.actions.set_value,
+                decrement: node.actions.decrement,
+                increment: node.actions.increment,
                 scroll_by: node.actions.scroll_by,
                 set_text_selection: node.actions.set_text_selection,
             },
@@ -426,6 +441,7 @@ mod tests {
             active_descendant: None,
             pos_in_set: None,
             set_size: None,
+            level: None,
             label: None,
             value: None,
             text_selection: None,
@@ -492,6 +508,7 @@ mod tests {
                 tag: Some("settings://workspace".to_string()),
             }],
             extra: fret_core::SemanticsNodeExtra {
+                level: Some(2),
                 scroll: fret_core::SemanticsScroll {
                     x: Some(12.5),
                     x_min: Some(0.0),
@@ -505,6 +522,7 @@ mod tests {
         };
 
         let exported = UiSemanticsNodeV1::from_node(&node, false, 512);
+        assert_eq!(exported.level, Some(2));
         assert_eq!(exported.inline_spans.len(), 1);
         assert_eq!(exported.inline_spans[0].range_utf8, (5, 13));
         assert_eq!(exported.inline_spans[0].role, "link");
@@ -523,5 +541,50 @@ mod tests {
                 y_max: Some(480.0),
             }
         );
+    }
+
+    #[test]
+    fn semantics_node_exports_all_action_flags() {
+        let node = fret_core::SemanticsNode {
+            id: fret_core::NodeId::from(slotmap::KeyData::from_ffi(1)),
+            parent: None,
+            role: fret_core::SemanticsRole::Slider,
+            bounds: fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            flags: fret_core::SemanticsFlags::default(),
+            test_id: Some("volume".to_string()),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: fret_core::SemanticsActions {
+                focus: true,
+                invoke: false,
+                set_value: true,
+                decrement: true,
+                increment: true,
+                scroll_by: true,
+                set_text_selection: true,
+            },
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+            extra: fret_core::SemanticsNodeExtra::default(),
+        };
+
+        let exported = UiSemanticsNodeV1::from_node(&node, false, 512);
+        assert!(exported.actions.focus);
+        assert!(!exported.actions.invoke);
+        assert!(exported.actions.set_value);
+        assert!(exported.actions.decrement);
+        assert!(exported.actions.increment);
+        assert!(exported.actions.scroll_by);
+        assert!(exported.actions.set_text_selection);
     }
 }
