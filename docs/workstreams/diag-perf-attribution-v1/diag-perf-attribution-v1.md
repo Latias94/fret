@@ -95,6 +95,9 @@ Remaining gaps / follow-ups:
     with `FRET_DIAG_REAL_SPANS=1` (View, Overlay, Layout, Paint).
   - 2026-05-16: diagnostics drive-script overhead is split into its own real span
     (`fret.ui.diagnostics.drive_script`) instead of being folded into the snapshot/driver block.
+  - 2026-05-16: the first nested app-loop span landed for the default preferences overlay
+    (`fret.ui.view.preferences_overlay`), so that overlay cost no longer has to be inferred from
+    the parent View span alone.
   - 2026-05-16: `diag perf --trace-real-spans --launch -- <app command>` requests a Chrome trace
     artifact and injects that opt-in flag for launched perf runs while preserving explicit caller
     overrides.
@@ -107,8 +110,8 @@ Remaining gaps / follow-ups:
     generated `trace.chrome.json`, and the GUI summary/details surface that path directly.
   - 2026-05-16: MCP regression dashboards now expose structured follow-up command rows with
     `diag_args`, keeping AI-driven trace/stats/triage actions aligned with the GUI projection.
-  - Still remaining: finer nested runtime spans and external profiler/Tracy correlation for
-    concrete attribution cases.
+  - Still remaining: broader nested runtime spans beyond this first overlay case and external
+    profiler/Tracy correlation for concrete attribution cases.
 
 ## Proposed architecture (v1)
 

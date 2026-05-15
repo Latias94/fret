@@ -48,16 +48,18 @@
     `fret-bootstrap` `ui_app_driver` apps.
   - Diagnostics drive-script overhead is recorded separately as
     `fret.ui.diagnostics.drive_script`, so scripted-input cost does not disappear into app phases.
+  - The default preferences overlay is recorded as the first nested app-loop span,
+    `fret.ui.view.preferences_overlay`, so overlay cost can be separated from the parent View span.
   - `diag perf --trace-real-spans --launch -- <app command>` now requests a Chrome trace artifact
     and injects that environment flag into the launched app process, while preserving an explicit
     caller-provided `FRET_DIAG_REAL_SPANS` override.
   - The Chrome trace exporter merges the extension payload when a bundle contains it.
   - Gate:
-    `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
+    `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
   - CLI gate:
     `cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast`
-- [ ] Future: expand real-span coverage beyond the top-level app driver phases when a concrete
-      attribution case needs nested runtime spans or external profiler/Tracy correlation.
+- [ ] Future: expand real-span coverage beyond the first nested preferences-overlay case when a
+      concrete attribution case needs deeper runtime spans or external profiler/Tracy correlation.
 
 ## P3 (M3): optional perf hints gate
 
@@ -87,7 +89,7 @@
     Chrome `traceEvents`.
   - Gate: `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
   - Runtime-wide nested span capture is still not claimed complete; the first opt-in writer covers
-    top-level app driver phases only.
+    top-level app driver phases plus the first nested preferences-overlay subphase.
 - [x] Keep perf regression summary rows actionable for attribution follow-ups.
   - New `diag perf` regression items now write `bundle_dir` derived from their `bundle_artifact`.
   - The shared regression-summary drill-down also recovers bundle roots from older

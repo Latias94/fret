@@ -1925,6 +1925,8 @@ fn write_frame_hitch_log(line: &str) {
 #[derive(Debug, Clone, Copy)]
 enum UiDriverPhase {
     View,
+    #[cfg(feature = "diagnostics")]
+    ViewPreferencesOverlay,
     Overlay,
     Layout,
     Paint,
@@ -1933,9 +1935,12 @@ enum UiDriverPhase {
 }
 
 impl UiDriverPhase {
+    #[cfg(feature = "diagnostics")]
     fn perf_span_name(self) -> &'static str {
         match self {
             Self::View => "fret.ui.view",
+            #[cfg(feature = "diagnostics")]
+            Self::ViewPreferencesOverlay => "fret.ui.view.preferences_overlay",
             Self::Overlay => "fret.ui.overlay",
             Self::Layout => "fret.ui.layout",
             Self::Paint => "fret.ui.paint",
@@ -1944,9 +1949,12 @@ impl UiDriverPhase {
         }
     }
 
+    #[cfg(feature = "diagnostics")]
     fn perf_span_phase(self) -> &'static str {
         match self {
             Self::View => "view",
+            #[cfg(feature = "diagnostics")]
+            Self::ViewPreferencesOverlay => "view_preferences_overlay",
             Self::Overlay => "overlay",
             Self::Layout => "layout",
             Self::Paint => "paint",
@@ -1961,6 +1969,10 @@ impl UiDriverPhase {
     fn make_span(self) -> tracing::Span {
         match self {
             Self::View => tracing::info_span!("fret.ui.view"),
+            #[cfg(feature = "diagnostics")]
+            Self::ViewPreferencesOverlay => {
+                tracing::info_span!("fret.ui.view.preferences_overlay")
+            }
             Self::Overlay => tracing::info_span!("fret.ui.overlay"),
             Self::Layout => tracing::info_span!("fret.ui.layout"),
             Self::Paint => tracing::info_span!("fret.ui.paint"),
@@ -1984,7 +1996,7 @@ impl UiDriverPerfSpanCapture {
     fn new_if_enabled() -> Option<Self> {
         diag_real_perf_spans_enabled().then(|| Self {
             frame_start: Instant::now(),
-            spans: Vec::with_capacity(5),
+            spans: Vec::with_capacity(6),
         })
     }
 
@@ -2026,6 +2038,7 @@ fn diag_real_perf_spans_enabled() -> bool {
     })
 }
 
+#[cfg(feature = "diagnostics")]
 fn duration_micros_u64(duration: Duration) -> u64 {
     duration.as_micros().min(u64::MAX as u128) as u64
 }
@@ -2053,16 +2066,17 @@ fn measure_ui_driver_phase<T>(
 }
 
 #[cfg(feature = "diagnostics")]
-fn measure_ui_driver_phase_for_frame<T>(
+fn measure_ui_driver_phase_for_frame_with_capture<T>(
     capture: &mut Option<UiDriverPerfSpanCapture>,
     phase: UiDriverPhase,
     time_enabled: bool,
-    f: impl FnOnce() -> T,
+    f: impl FnOnce(&mut Option<UiDriverPerfSpanCapture>) -> T,
 ) -> (T, Option<Duration>) {
     let capture_start_us = capture
         .as_ref()
         .map(|capture| duration_micros_u64(capture.frame_start.elapsed()));
-    let (out, elapsed) = measure_ui_driver_phase(phase, time_enabled || capture.is_some(), f);
+    let (out, elapsed) =
+        measure_ui_driver_phase(phase, time_enabled || capture.is_some(), || f(capture));
     if let (Some(capture), Some(start_us), Some(elapsed)) =
         (capture.as_mut(), capture_start_us, elapsed)
     {
@@ -2071,14 +2085,34 @@ fn measure_ui_driver_phase_for_frame<T>(
     (out, elapsed)
 }
 
-#[cfg(not(feature = "diagnostics"))]
+#[cfg(feature = "diagnostics")]
 fn measure_ui_driver_phase_for_frame<T>(
-    _capture: &mut (),
+    capture: &mut Option<UiDriverPerfSpanCapture>,
     phase: UiDriverPhase,
     time_enabled: bool,
     f: impl FnOnce() -> T,
 ) -> (T, Option<Duration>) {
-    measure_ui_driver_phase(phase, time_enabled, f)
+    measure_ui_driver_phase_for_frame_with_capture(capture, phase, time_enabled, |_| f())
+}
+
+#[cfg(not(feature = "diagnostics"))]
+fn measure_ui_driver_phase_for_frame_with_capture<T>(
+    capture: &mut (),
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce(&mut ()) -> T,
+) -> (T, Option<Duration>) {
+    measure_ui_driver_phase(phase, time_enabled, || f(capture))
+}
+
+#[cfg(not(feature = "diagnostics"))]
+fn measure_ui_driver_phase_for_frame<T>(
+    capture: &mut (),
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce() -> T,
+) -> (T, Option<Duration>) {
+    measure_ui_driver_phase_for_frame_with_capture(capture, phase, time_enabled, |_| f())
 }
 
 fn ui_app_render<S>(
@@ -2163,11 +2197,11 @@ fn ui_app_render<S>(
         }
     }
 
-    let (root, view_elapsed) = measure_ui_driver_phase_for_frame(
+    let (root, view_elapsed) = measure_ui_driver_phase_for_frame_with_capture(
         &mut perf_span_capture,
         UiDriverPhase::View,
         hitch_config.is_some(),
-        || {
+        |_frame_perf_span_capture| {
             fret_ui::frame_pipeline::render_base_root_with_changes(
                 &mut state.ui,
                 app,
@@ -2283,6 +2317,15 @@ fn ui_app_render<S>(
                             #[cfg(feature = "ui-app-command-palette")]
                             render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
+                            #[cfg(feature = "diagnostics")]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewPreferencesOverlay,
+                                false,
+                                || drive_preferences_overlay(cx),
+                            );
+
+                            #[cfg(not(feature = "diagnostics"))]
                             drive_preferences_overlay(cx);
                             out
                         });
@@ -2304,6 +2347,15 @@ fn ui_app_render<S>(
                             #[cfg(feature = "ui-app-command-palette")]
                             render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
+                            #[cfg(feature = "diagnostics")]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewPreferencesOverlay,
+                                false,
+                                || drive_preferences_overlay(cx),
+                            );
+
+                            #[cfg(not(feature = "diagnostics"))]
                             drive_preferences_overlay(cx);
                             out
                         });
@@ -3111,6 +3163,70 @@ mod tests {
                 .and_then(|args| args.get("phase"))
                 .and_then(|v| v.as_str()),
             Some("diagnostics_drive_script")
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_records_view_preferences_overlay_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(
+            UiDriverPhase::ViewPreferencesOverlay,
+            89,
+            Duration::from_micros(123),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.view.preferences_overlay");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 89);
+        assert_eq!(spans[0].dur_us, 123);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("view_preferences_overlay")
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_allows_nested_phase_recording() {
+        let mut capture = Some(UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        });
+
+        let (value, _) = measure_ui_driver_phase_for_frame_with_capture(
+            &mut capture,
+            UiDriverPhase::View,
+            false,
+            |capture| {
+                capture.as_mut().expect("active capture").push_phase(
+                    UiDriverPhase::ViewPreferencesOverlay,
+                    144,
+                    Duration::from_micros(55),
+                );
+                7
+            },
+        );
+
+        assert_eq!(value, 7);
+        let spans = capture.as_mut().expect("capture").take_spans();
+        assert!(
+            spans
+                .iter()
+                .any(|span| span.name == "fret.ui.view.preferences_overlay"
+                    && span.start_us == 144
+                    && span.dur_us == 55),
+            "expected nested preferences overlay span in {spans:?}"
         );
     }
 }
